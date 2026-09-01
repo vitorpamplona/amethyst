@@ -62,6 +62,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist_empty
+import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist_manage_all
+import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist_title
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_create_action
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_new_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_untitled
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -98,7 +105,7 @@ fun AddToMusicPlaylistSheet(
         modifier = Modifier.fillMaxSize().recalculateWindowInsets(),
         topBar = {
             TopBarWithBackButton(
-                caption = stringRes(R.string.add_to_music_playlist_title),
+                caption = stringRes(Res.string.add_to_music_playlist_title),
                 nav = nav,
             )
         },
@@ -138,7 +145,7 @@ private fun CreatePlaylistRow(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            placeholder = { Text(stringRes(R.string.music_playlist_new_title_placeholder)) },
+            placeholder = { Text(stringRes(Res.string.music_playlist_new_title_placeholder)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             modifier = Modifier.weight(1f),
@@ -155,7 +162,7 @@ private fun CreatePlaylistRow(
             },
             enabled = name.trim().isNotBlank() && !vm.isWorking.value,
         ) {
-            Text(stringRes(R.string.music_playlist_create_action))
+            Text(stringRes(Res.string.music_playlist_create_action))
         }
     }
 }
@@ -169,7 +176,7 @@ private fun ColumnScope.PlaylistPickerBody(
 
     if (playlists.isEmpty()) {
         Text(
-            text = stringRes(R.string.add_to_music_playlist_empty),
+            text = stringRes(Res.string.add_to_music_playlist_empty),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -229,7 +236,7 @@ private fun PlaylistPickerRow(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
-                text = summary.title.ifBlank { stringRes(R.string.music_playlist_untitled) },
+                text = summary.title.ifBlank { stringRes(Res.string.music_playlist_untitled) },
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (summary.containsTrack) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 1,
@@ -264,7 +271,7 @@ private fun ManageAllPlaylistsLink(nav: INav) {
         )
         Spacer(Modifier.width(12.dp))
         Text(
-            text = stringRes(R.string.add_to_music_playlist_manage_all),
+            text = stringRes(Res.string.add_to_music_playlist_manage_all),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
         )

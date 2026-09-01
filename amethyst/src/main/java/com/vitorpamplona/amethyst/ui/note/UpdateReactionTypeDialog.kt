@@ -73,6 +73,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_reaction_symbol
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.util.firstFullChar
 import com.vitorpamplona.amethyst.model.Account
@@ -222,7 +224,7 @@ fun UpdateReactionTypeScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedTextField(
-                                label = { Text(text = stringRes(R.string.new_reaction_symbol)) },
+                                label = { Text(text = stringRes(Res.string.new_reaction_symbol)) },
                                 value = postViewModel.nextChoice,
                                 onValueChange = { postViewModel.nextChoice = it },
                                 keyboardOptions =

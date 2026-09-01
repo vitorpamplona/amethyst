@@ -55,6 +55,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wallet_receive
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.resources.wallet_send
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -125,7 +130,7 @@ fun WalletDetailScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
-                    text = stringRes(R.string.wallet_sats),
+                    text = stringRes(Res.string.wallet_sats),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -167,7 +172,7 @@ fun WalletDetailScreen(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringRes(R.string.wallet_receive), fontWeight = FontWeight.SemiBold)
+                    Text(stringRes(Res.string.wallet_receive), fontWeight = FontWeight.SemiBold)
                 }
 
                 Button(
@@ -184,7 +189,7 @@ fun WalletDetailScreen(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringRes(R.string.wallet_send), fontWeight = FontWeight.SemiBold)
+                    Text(stringRes(Res.string.wallet_send), fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -205,7 +210,7 @@ fun WalletDetailScreen(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringRes(R.string.wallet_transactions))
+                Text(stringRes(Res.string.wallet_transactions))
             }
 
             Spacer(modifier = Modifier.height(24.dp))

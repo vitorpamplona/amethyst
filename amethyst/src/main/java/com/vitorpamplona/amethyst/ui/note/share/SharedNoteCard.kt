@@ -46,6 +46,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.article
+import com.vitorpamplona.amethyst.commons.resources.content_warning_with_reason
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr_kind_picture
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr_thumbnail_hidden_sensitive
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -167,8 +172,8 @@ fun SharedNoteCard(
                     Icon(
                         symbol = MaterialSymbols.Warning,
                         contentDescription =
-                            reasons.firstOrNull()?.let { stringRes(R.string.content_warning_with_reason, it) }
-                                ?: stringRes(R.string.share_as_qr_thumbnail_hidden_sensitive),
+                            reasons.firstOrNull()?.let { stringRes(Res.string.content_warning_with_reason, it) }
+                                ?: stringRes(Res.string.share_as_qr_thumbnail_hidden_sensitive),
                         modifier = Modifier.size(22.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -271,10 +276,10 @@ private fun secondaryLineFor(
     if (bodyText != null) return bodyText
 
     return when {
-        event is PictureEvent -> stringRes(R.string.share_as_qr_kind_picture)
+        event is PictureEvent -> stringRes(Res.string.share_as_qr_kind_picture)
         event is VideoEvent -> stringRes(R.string.kind_video)
-        event is LongTextNoteEvent -> stringRes(R.string.article)
-        hasContentImage -> stringRes(R.string.share_as_qr_kind_picture)
+        event is LongTextNoteEvent -> stringRes(Res.string.article)
+        hasContentImage -> stringRes(Res.string.share_as_qr_kind_picture)
         else -> ""
     }
 }

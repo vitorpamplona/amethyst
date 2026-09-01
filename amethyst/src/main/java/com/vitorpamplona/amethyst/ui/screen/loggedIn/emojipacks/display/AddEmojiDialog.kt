@@ -46,6 +46,13 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.emoji_add_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_address_label
+import com.vitorpamplona.amethyst.commons.resources.emoji_private_toggle
+import com.vitorpamplona.amethyst.commons.resources.emoji_shortcode_invalid
+import com.vitorpamplona.amethyst.commons.resources.emoji_shortcode_label
+import com.vitorpamplona.amethyst.commons.resources.emoji_url_label
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -85,7 +92,7 @@ fun AddEmojiDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = stringRes(R.string.emoji_add_dialog_title)) },
+        title = { Text(text = stringRes(Res.string.emoji_add_dialog_title)) },
         text = {
             Column(
                 verticalArrangement = Arrangement.Top,
@@ -94,11 +101,11 @@ fun AddEmojiDialog(
                     modifier = Modifier.fillMaxWidth(),
                     value = shortcode,
                     onValueChange = { shortcode = it.trim(':').trim() },
-                    label = { Text(stringRes(R.string.emoji_shortcode_label)) },
+                    label = { Text(stringRes(Res.string.emoji_shortcode_label)) },
                     isError = shortcodeShowError,
                     supportingText = {
                         if (shortcodeShowError) {
-                            Text(stringRes(R.string.emoji_shortcode_invalid))
+                            Text(stringRes(Res.string.emoji_shortcode_invalid))
                         }
                     },
                 )
@@ -107,7 +114,7 @@ fun AddEmojiDialog(
                     modifier = Modifier.fillMaxWidth(),
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text(stringRes(R.string.emoji_url_label)) },
+                    label = { Text(stringRes(Res.string.emoji_url_label)) },
                     leadingIcon = {
                         val context = LocalContext.current
                         SelectSingleFromGallery(
@@ -129,7 +136,7 @@ fun AddEmojiDialog(
                     modifier = Modifier.fillMaxWidth(),
                     value = packAddressText,
                     onValueChange = { packAddressText = it },
-                    label = { Text(stringRes(R.string.emoji_pack_address_label)) },
+                    label = { Text(stringRes(Res.string.emoji_pack_address_label)) },
                 )
                 Spacer(DoubleVertSpacer)
                 Row(
@@ -143,7 +150,7 @@ fun AddEmojiDialog(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = stringRes(R.string.emoji_private_toggle),
+                        text = stringRes(Res.string.emoji_private_toggle),
                         modifier = Modifier.weight(1f),
                     )
                     Switch(

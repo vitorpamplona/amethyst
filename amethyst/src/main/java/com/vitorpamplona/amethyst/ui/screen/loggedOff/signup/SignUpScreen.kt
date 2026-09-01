@@ -49,9 +49,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.already_have_an_account
+import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.how_should_we_call_you
+import com.vitorpamplona.amethyst.commons.resources.my_awesome_name
+import com.vitorpamplona.amethyst.commons.resources.welcome
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
@@ -111,18 +116,18 @@ fun SignUpPage(
     ) {
         Image(
             imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringRes(R.string.app_logo),
+            contentDescription = stringRes(Res.string.app_logo),
             modifier = Modifier.size(150.dp),
             contentScale = ContentScale.Inside,
         )
 
         Spacer(modifier = Modifier.height(Size40dp))
 
-        Text(text = stringRes(R.string.welcome), style = MaterialTheme.typography.titleLarge)
+        Text(text = stringRes(Res.string.welcome), style = MaterialTheme.typography.titleLarge)
 
         Spacer(modifier = Modifier.height(Size20dp))
 
-        Text(text = stringRes(R.string.how_should_we_call_you), style = MaterialTheme.typography.titleMedium)
+        Text(text = stringRes(Res.string.how_should_we_call_you), style = MaterialTheme.typography.titleMedium)
 
         Spacer(modifier = Modifier.height(Size20dp))
 
@@ -137,7 +142,7 @@ fun SignUpPage(
                 ),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.my_awesome_name),
+                    text = stringRes(Res.string.my_awesome_name),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -204,7 +209,7 @@ fun SignUpPage(
 
         Spacer(modifier = Modifier.height(Size40dp))
 
-        Text(text = stringRes(R.string.already_have_an_account))
+        Text(text = stringRes(Res.string.already_have_an_account))
 
         Spacer(modifier = Modifier.height(Size20dp))
 

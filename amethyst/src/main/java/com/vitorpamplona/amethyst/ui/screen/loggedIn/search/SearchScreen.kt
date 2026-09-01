@@ -77,6 +77,24 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.npub_hex_username
+import com.vitorpamplona.amethyst.commons.resources.search_by_hashtag
+import com.vitorpamplona.amethyst.commons.resources.search_filters_open
+import com.vitorpamplona.amethyst.commons.resources.search_filters_reset
+import com.vitorpamplona.amethyst.commons.resources.search_filters_section_sort
+import com.vitorpamplona.amethyst.commons.resources.search_filters_section_source
+import com.vitorpamplona.amethyst.commons.resources.search_filters_title
+import com.vitorpamplona.amethyst.commons.resources.search_follows_only
+import com.vitorpamplona.amethyst.commons.resources.search_scope_all
+import com.vitorpamplona.amethyst.commons.resources.search_scope_notes
+import com.vitorpamplona.amethyst.commons.resources.search_scope_people
+import com.vitorpamplona.amethyst.commons.resources.search_sort_newest
+import com.vitorpamplona.amethyst.commons.resources.search_sort_oldest
+import com.vitorpamplona.amethyst.commons.resources.search_sort_popular
+import com.vitorpamplona.amethyst.commons.resources.search_sort_relevance
+import com.vitorpamplona.amethyst.commons.resources.search_source_local
+import com.vitorpamplona.amethyst.commons.resources.search_source_relays
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -273,9 +291,9 @@ private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
                     Text(
                         text =
                             when (s) {
-                                SearchScope.ALL -> stringRes(R.string.search_scope_all)
-                                SearchScope.PEOPLE -> stringRes(R.string.search_scope_people)
-                                SearchScope.NOTES -> stringRes(R.string.search_scope_notes)
+                                SearchScope.ALL -> stringRes(Res.string.search_scope_all)
+                                SearchScope.PEOPLE -> stringRes(Res.string.search_scope_people)
+                                SearchScope.NOTES -> stringRes(Res.string.search_scope_notes)
                             },
                     )
                 }
@@ -322,7 +340,7 @@ private fun FilterIconButton(
         IconButton(onClick = onClick) {
             Icon(
                 symbol = MaterialSymbols.Tune,
-                contentDescription = stringRes(R.string.search_filters_open),
+                contentDescription = stringRes(Res.string.search_filters_open),
             )
         }
         if (hasBadge) {
@@ -366,13 +384,13 @@ private fun SearchFiltersSheet(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
-                text = stringRes(R.string.search_filters_title),
+                text = stringRes(Res.string.search_filters_title),
                 style = MaterialTheme.typography.titleMedium,
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = stringRes(R.string.search_filters_section_source),
+                    text = stringRes(Res.string.search_filters_section_source),
                     style = MaterialTheme.typography.labelLarge,
                 )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -386,8 +404,8 @@ private fun SearchFiltersSheet(
                             Text(
                                 text =
                                     when (s) {
-                                        SearchSource.LOCAL -> stringRes(R.string.search_source_local)
-                                        SearchSource.RELAYS -> stringRes(R.string.search_source_relays)
+                                        SearchSource.LOCAL -> stringRes(Res.string.search_source_local)
+                                        SearchSource.RELAYS -> stringRes(Res.string.search_source_relays)
                                     },
                             )
                         }
@@ -404,7 +422,7 @@ private fun SearchFiltersSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(R.string.search_follows_only),
+                    text = stringRes(Res.string.search_follows_only),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyLarge,
                 )
@@ -417,7 +435,7 @@ private fun SearchFiltersSheet(
             if (scope != SearchScope.PEOPLE) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = stringRes(R.string.search_filters_section_sort),
+                        text = stringRes(Res.string.search_filters_section_sort),
                         style = MaterialTheme.typography.labelLarge,
                     )
                     SearchSortOrder.EVENT_OPTIONS.forEach { opt ->
@@ -446,7 +464,7 @@ private fun SearchFiltersSheet(
             }
 
             TextButton(onClick = onReset) {
-                Text(stringRes(R.string.search_filters_reset))
+                Text(stringRes(Res.string.search_filters_reset))
             }
         }
     }
@@ -455,10 +473,10 @@ private fun SearchFiltersSheet(
 @Composable
 private fun sortLabel(opt: SearchSortOrder): String =
     when (opt) {
-        SearchSortOrder.NEWEST -> stringRes(R.string.search_sort_newest)
-        SearchSortOrder.RELEVANCE -> stringRes(R.string.search_sort_relevance)
-        SearchSortOrder.POPULAR -> stringRes(R.string.search_sort_popular)
-        SearchSortOrder.OLDEST -> stringRes(R.string.search_sort_oldest)
+        SearchSortOrder.NEWEST -> stringRes(Res.string.search_sort_newest)
+        SearchSortOrder.RELEVANCE -> stringRes(Res.string.search_sort_relevance)
+        SearchSortOrder.POPULAR -> stringRes(Res.string.search_sort_popular)
+        SearchSortOrder.OLDEST -> stringRes(Res.string.search_sort_oldest)
         SearchSortOrder.NAME_AZ, SearchSortOrder.NAME_ZA -> opt.label
     }
 
@@ -490,7 +508,7 @@ private fun SearchTextField(
                     .focusRequester(searchBarViewModel.focusRequester),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.npub_hex_username),
+                    text = stringRes(Res.string.npub_hex_username),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -713,7 +731,7 @@ fun HashtagLine(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                stringRes(R.string.search_by_hashtag, tag),
+                stringRes(Res.string.search_by_hashtag, tag),
                 fontWeight = FontWeight.Bold,
             )
         }

@@ -80,11 +80,40 @@ import com.davotoula.lightcompressor.utils.CompressorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.content_warning
+import com.vitorpamplona.amethyst.commons.resources.hls_change_video
+import com.vitorpamplona.amethyst.commons.resources.hls_codec_fallback_notice
+import com.vitorpamplona.amethyst.commons.resources.hls_codec_h264
+import com.vitorpamplona.amethyst.commons.resources.hls_codec_h265
+import com.vitorpamplona.amethyst.commons.resources.hls_codec_label
+import com.vitorpamplona.amethyst.commons.resources.hls_content_warning_reason_placeholder
+import com.vitorpamplona.amethyst.commons.resources.hls_description_label
+import com.vitorpamplona.amethyst.commons.resources.hls_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.hls_done
+import com.vitorpamplona.amethyst.commons.resources.hls_pick_video_helper
+import com.vitorpamplona.amethyst.commons.resources.hls_pick_video_primary
+import com.vitorpamplona.amethyst.commons.resources.hls_publish_button
+import com.vitorpamplona.amethyst.commons.resources.hls_publishing_header_format
+import com.vitorpamplona.amethyst.commons.resources.hls_renditions_label
+import com.vitorpamplona.amethyst.commons.resources.hls_renditions_source_format
+import com.vitorpamplona.amethyst.commons.resources.hls_state_failure_title
+import com.vitorpamplona.amethyst.commons.resources.hls_state_publishing
+import com.vitorpamplona.amethyst.commons.resources.hls_state_success_body
+import com.vitorpamplona.amethyst.commons.resources.hls_state_success_title
+import com.vitorpamplona.amethyst.commons.resources.hls_state_transcoding_format
+import com.vitorpamplona.amethyst.commons.resources.hls_state_uploaded_format
+import com.vitorpamplona.amethyst.commons.resources.hls_state_uploading_format
+import com.vitorpamplona.amethyst.commons.resources.hls_state_uploading_idle
+import com.vitorpamplona.amethyst.commons.resources.hls_title_label
+import com.vitorpamplona.amethyst.commons.resources.hls_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.hls_try_again
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -174,7 +203,7 @@ private fun IdleBody(vm: NewHlsVideoViewModel) {
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                text = stringResource(R.string.hls_pick_video_helper),
+                text = stringRes(Res.string.hls_pick_video_helper),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -196,7 +225,7 @@ private fun IdleBody(vm: NewHlsVideoViewModel) {
                 enabled = vm.title.isNotBlank() && vm.selectedServer != null && vm.selectedRenditionLabels.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.hls_publish_button))
+                Text(stringRes(Res.string.hls_publish_button))
             }
         }
     }
@@ -225,7 +254,7 @@ private fun EmptyPickVideoCard(onClick: () -> Unit) {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.hls_pick_video_primary),
+                text = stringRes(Res.string.hls_pick_video_primary),
                 style = MaterialTheme.typography.titleMedium,
             )
         }
@@ -268,7 +297,7 @@ private fun PickedVideoCard(
                 }
             }
             TextButton(onClick = onChange) {
-                Text(stringResource(R.string.hls_change_video))
+                Text(stringRes(Res.string.hls_change_video))
             }
         }
     }
@@ -279,8 +308,8 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
     OutlinedTextField(
         value = vm.title,
         onValueChange = { vm.title = it },
-        label = { Text(stringResource(R.string.hls_title_label)) },
-        placeholder = { Text(stringResource(R.string.hls_title_placeholder)) },
+        label = { Text(stringRes(Res.string.hls_title_label)) },
+        placeholder = { Text(stringRes(Res.string.hls_title_placeholder)) },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
     )
@@ -290,8 +319,8 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
     OutlinedTextField(
         value = vm.description,
         onValueChange = { vm.description = it },
-        label = { Text(stringResource(R.string.hls_description_label)) },
-        placeholder = { Text(stringResource(R.string.hls_description_placeholder)) },
+        label = { Text(stringRes(Res.string.hls_description_label)) },
+        placeholder = { Text(stringRes(Res.string.hls_description_placeholder)) },
         modifier = Modifier.fillMaxWidth().height(120.dp),
     )
 
@@ -303,7 +332,7 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(R.string.content_warning),
+            text = stringRes(Res.string.content_warning),
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge,
         )
@@ -317,7 +346,7 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
         OutlinedTextField(
             value = vm.contentWarningReason,
             onValueChange = { vm.contentWarningReason = it },
-            placeholder = { Text(stringResource(R.string.hls_content_warning_reason_placeholder)) },
+            placeholder = { Text(stringRes(Res.string.hls_content_warning_reason_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -366,7 +395,7 @@ private fun CodecToggle(
     val hevcSupported = remember { CompressorUtils.isHevcEncodingSupported() }
 
     Text(
-        text = stringResource(R.string.hls_codec_label),
+        text = stringRes(Res.string.hls_codec_label),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -378,19 +407,19 @@ private fun CodecToggle(
             selected = useH265 && hevcSupported,
             enabled = hevcSupported,
             onClick = { onChange(true) },
-            label = { Text(stringResource(R.string.hls_codec_h265)) },
+            label = { Text(stringRes(Res.string.hls_codec_h265)) },
             colors = FilterChipDefaults.filterChipColors(),
         )
         FilterChip(
             selected = !useH265 || !hevcSupported,
             onClick = { onChange(false) },
-            label = { Text(stringResource(R.string.hls_codec_h264)) },
+            label = { Text(stringRes(Res.string.hls_codec_h264)) },
         )
     }
     if (!hevcSupported) {
         Spacer(Modifier.height(4.dp))
         Text(
-            text = stringResource(R.string.hls_codec_fallback_notice),
+            text = stringRes(Res.string.hls_codec_fallback_notice),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -400,7 +429,7 @@ private fun CodecToggle(
 @Composable
 private fun RenditionsCheckboxes(vm: NewHlsVideoViewModel) {
     Text(
-        text = stringResource(R.string.hls_renditions_label),
+        text = stringRes(Res.string.hls_renditions_label),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -410,7 +439,7 @@ private fun RenditionsCheckboxes(vm: NewHlsVideoViewModel) {
     val sourceShortSide = metadata?.let { minOf(it.width, it.height) }
     if (metadata != null) {
         Text(
-            text = stringResource(R.string.hls_renditions_source_format, metadata.width, metadata.height),
+            text = stringRes(Res.string.hls_renditions_source_format, metadata.width, metadata.height),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -483,13 +512,13 @@ private fun ProgressBody(
                 .padding(horizontal = 16.dp, vertical = 24.dp),
     ) {
         Text(
-            text = stringResource(R.string.hls_publishing_header_format, vm.title),
+            text = stringRes(Res.string.hls_publishing_header_format, vm.title),
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(Modifier.height(24.dp))
 
         PhaseRow(
-            label = stringResource(R.string.hls_state_transcoding_format, (state as? HlsPublishState.Transcoding)?.currentLabel?.ifBlank { "…" } ?: "…"),
+            label = stringRes(Res.string.hls_state_transcoding_format, (state as? HlsPublishState.Transcoding)?.currentLabel?.ifBlank { "…" } ?: "…"),
             active = state is HlsPublishState.Transcoding,
             done = state is HlsPublishState.Uploading || state is HlsPublishState.Publishing,
             progressFraction = (state as? HlsPublishState.Transcoding)?.percent?.let { it / 100f },
@@ -534,7 +563,7 @@ private fun ProgressBody(
                 // Currently in flight, no file label (unreachable in practice — orchestrator
                 // always sets a label — but kept for completeness).
                 state is HlsPublishState.Uploading -> {
-                    stringResource(R.string.hls_state_uploading_format, state.done, state.total)
+                    stringRes(Res.string.hls_state_uploading_format, state.done, state.total)
                 }
 
                 // Between uploads or after all uploads finish: past-tense, monotonic count.
@@ -542,12 +571,12 @@ private fun ProgressBody(
                 // works on the next rendition, and lands on "Uploaded N of N" when the row
                 // flips to its checkmark/done state.
                 lastTotal > 0 -> {
-                    stringResource(R.string.hls_state_uploaded_format, lastDone, lastTotal)
+                    stringRes(Res.string.hls_state_uploaded_format, lastDone, lastTotal)
                 }
 
                 // Nothing has started uploading yet (very beginning of publish flow).
                 else -> {
-                    stringResource(R.string.hls_state_uploading_idle)
+                    stringRes(Res.string.hls_state_uploading_idle)
                 }
             }
         PhaseRow(
@@ -560,7 +589,7 @@ private fun ProgressBody(
         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
         PhaseRow(
-            label = stringResource(R.string.hls_state_publishing),
+            label = stringRes(Res.string.hls_state_publishing),
             active = state is HlsPublishState.Publishing,
             done = false,
             progressFraction = null,
@@ -644,12 +673,12 @@ private fun SuccessBody(
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = stringResource(R.string.hls_state_success_title),
+            text = stringRes(Res.string.hls_state_success_title),
             style = MaterialTheme.typography.headlineSmall,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = stringResource(R.string.hls_state_success_body),
+            text = stringRes(Res.string.hls_state_success_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -668,7 +697,7 @@ private fun SuccessBody(
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.hls_done))
+            Text(stringRes(Res.string.hls_done))
         }
     }
 }
@@ -691,7 +720,7 @@ private fun FailureBody(
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = stringResource(R.string.hls_state_failure_title),
+            text = stringRes(Res.string.hls_state_failure_title),
             style = MaterialTheme.typography.headlineSmall,
         )
         Spacer(Modifier.height(8.dp))
@@ -705,7 +734,7 @@ private fun FailureBody(
             onClick = { vm.reset() },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.hls_try_again))
+            Text(stringRes(Res.string.hls_try_again))
         }
     }
 }

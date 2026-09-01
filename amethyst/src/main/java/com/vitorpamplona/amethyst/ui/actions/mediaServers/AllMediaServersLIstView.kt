@@ -62,6 +62,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_media_server
+import com.vitorpamplona.amethyst.commons.resources.blossom_mirror_uploads
+import com.vitorpamplona.amethyst.commons.resources.blossom_mirror_uploads_caption
+import com.vitorpamplona.amethyst.commons.resources.blossom_optimize_media
+import com.vitorpamplona.amethyst.commons.resources.blossom_optimize_media_caption
+import com.vitorpamplona.amethyst.commons.resources.delete_media_server
+import com.vitorpamplona.amethyst.commons.resources.media_server_added
+import com.vitorpamplona.amethyst.commons.resources.media_server_primary_badge
+import com.vitorpamplona.amethyst.commons.resources.media_server_reorder
+import com.vitorpamplona.amethyst.commons.resources.media_servers_add_section
+import com.vitorpamplona.amethyst.commons.resources.media_servers_add_url_label
+import com.vitorpamplona.amethyst.commons.resources.media_servers_cache_section
+import com.vitorpamplona.amethyst.commons.resources.media_servers_priority_section
+import com.vitorpamplona.amethyst.commons.resources.media_servers_recommended_label
+import com.vitorpamplona.amethyst.commons.resources.media_servers_reorder_hint
+import com.vitorpamplona.amethyst.commons.resources.media_servers_upload_section
+import com.vitorpamplona.amethyst.commons.resources.no_blossom_server_message
+import com.vitorpamplona.amethyst.commons.resources.use_default_servers
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -119,8 +138,8 @@ fun AllMediaBody(
     ) {
         item {
             SectionLabel(
-                title = stringRes(id = R.string.media_servers_priority_section),
-                caption = stringRes(id = R.string.media_servers_reorder_hint),
+                title = stringRes(id = Res.string.media_servers_priority_section),
+                caption = stringRes(id = Res.string.media_servers_reorder_hint),
                 topPadding = 4.dp,
             )
         }
@@ -128,7 +147,7 @@ fun AllMediaBody(
         if (blossomServersState.isEmpty()) {
             item {
                 Text(
-                    text = stringRes(id = R.string.no_blossom_server_message),
+                    text = stringRes(id = Res.string.no_blossom_server_message),
                     modifier = DoubleVertPadding,
                 )
             }
@@ -162,12 +181,12 @@ fun AllMediaBody(
         }
 
         item {
-            SectionLabel(title = stringRes(id = R.string.media_servers_upload_section))
+            SectionLabel(title = stringRes(id = Res.string.media_servers_upload_section))
             UploadBehaviorSection(accountViewModel, nav)
         }
 
         item {
-            SectionLabel(title = stringRes(id = R.string.media_servers_cache_section))
+            SectionLabel(title = stringRes(id = Res.string.media_servers_cache_section))
             MediaCacheSection(accountViewModel)
         }
 
@@ -199,8 +218,8 @@ private fun UploadBehaviorSection(
                 .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         UploadToggleRow(
-            title = stringRes(id = R.string.blossom_mirror_uploads),
-            caption = stringRes(id = R.string.blossom_mirror_uploads_caption),
+            title = stringRes(id = Res.string.blossom_mirror_uploads),
+            caption = stringRes(id = Res.string.blossom_mirror_uploads_caption),
             checked = mirror,
             onCheckedChange = { accountViewModel.account.settings.changeMirrorUploadsToAllServers(it) },
         )
@@ -211,8 +230,8 @@ private fun UploadBehaviorSection(
         )
 
         UploadToggleRow(
-            title = stringRes(id = R.string.blossom_optimize_media),
-            caption = stringRes(id = R.string.blossom_optimize_media_caption),
+            title = stringRes(id = Res.string.blossom_optimize_media),
+            caption = stringRes(id = Res.string.blossom_optimize_media_caption),
             checked = optimize,
             onCheckedChange = { accountViewModel.account.settings.changeOptimizeMediaOnUpload(it) },
         )
@@ -331,7 +350,7 @@ fun MediaServerRow(
     ) {
         Icon(
             symbol = MaterialSymbols.DragIndicator,
-            contentDescription = stringRes(id = R.string.media_server_reorder),
+            contentDescription = stringRes(id = Res.string.media_server_reorder),
             modifier = Modifier.size(22.dp).relayDragHandle(index, dragState),
             tint = MaterialTheme.colorScheme.grayText,
         )
@@ -370,7 +389,7 @@ fun MediaServerRow(
         IconButton(onClick = { onDelete(serverEntry.baseUrl) }) {
             Icon(
                 symbol = MaterialSymbols.Delete,
-                contentDescription = stringRes(id = R.string.delete_media_server),
+                contentDescription = stringRes(id = Res.string.delete_media_server),
                 tint = MaterialTheme.colorScheme.grayText,
             )
         }
@@ -387,7 +406,7 @@ private fun AddServerSection(
     onAddServer: (String) -> Unit,
     onAddAll: () -> Unit,
 ) {
-    SectionLabel(title = stringRes(id = R.string.media_servers_add_section))
+    SectionLabel(title = stringRes(id = Res.string.media_servers_add_section))
 
     // Recommended servers first — one tap adds a known-good host.
     Row(
@@ -395,13 +414,13 @@ private fun AddServerSection(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringRes(id = R.string.media_servers_recommended_label),
+            text = stringRes(id = Res.string.media_servers_recommended_label),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.grayText,
             modifier = Modifier.weight(1f),
         )
         TextButton(onClick = onAddAll) {
-            Text(text = stringRes(id = R.string.use_default_servers))
+            Text(text = stringRes(id = Res.string.use_default_servers))
         }
     }
 
@@ -425,7 +444,7 @@ private fun AddServerSection(
 
     // ...or paste any server address.
     Text(
-        text = stringRes(id = R.string.media_servers_add_url_label),
+        text = stringRes(id = Res.string.media_servers_add_url_label),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.grayText,
         modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
@@ -466,9 +485,9 @@ private fun RecommendedChip(
             symbol = if (added) MaterialSymbols.CheckCircle else MaterialSymbols.Add,
             contentDescription =
                 if (added) {
-                    stringRes(id = R.string.media_server_added)
+                    stringRes(id = Res.string.media_server_added)
                 } else {
-                    stringRes(id = R.string.add_media_server)
+                    stringRes(id = Res.string.add_media_server)
                 },
             modifier = Modifier.size(18.dp),
             tint = if (added) MaterialTheme.colorScheme.grayText else MaterialTheme.colorScheme.primary,
@@ -565,7 +584,7 @@ private fun PrimaryBadge() {
                 .padding(horizontal = 6.dp, vertical = 1.dp),
     ) {
         Text(
-            text = stringRes(id = R.string.media_server_primary_badge),
+            text = stringRes(id = Res.string.media_server_primary_badge),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onPrimaryContainer,

@@ -48,9 +48,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.TopZapperEntry
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_zap_anonymous
 import com.vitorpamplona.amethyst.commons.viewmodels.LiveStreamTopZappersViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -149,7 +150,7 @@ private fun ZapperPill(
         ) {
             if (entry.isAnonymous) {
                 Text(
-                    text = stringRes(R.string.chat_zap_anonymous),
+                    text = stringRes(Res.string.chat_zap_anonymous),
                     style = MaterialTheme.typography.labelMedium,
                 )
             } else {

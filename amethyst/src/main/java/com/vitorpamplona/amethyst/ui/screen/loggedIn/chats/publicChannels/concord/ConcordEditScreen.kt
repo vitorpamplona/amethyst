@@ -49,6 +49,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_edit_relays_desc
+import com.vitorpamplona.amethyst.commons.resources.concord_edit_save
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
@@ -146,7 +149,7 @@ fun ConcordEditScreen(
 
             ConcordSectionHeader(
                 title = stringRes(R.string.concord_create_relays),
-                description = stringRes(R.string.concord_edit_relays_desc),
+                description = stringRes(Res.string.concord_edit_relays_desc),
             )
             ConcordRelayListEditor(
                 relays = relays,
@@ -181,7 +184,7 @@ fun ConcordEditScreen(
                 enabled = name.value.isNotBlank() && !working,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                Text(stringRes(R.string.concord_edit_save))
+                Text(stringRes(Res.string.concord_edit_save))
             }
         }
     }

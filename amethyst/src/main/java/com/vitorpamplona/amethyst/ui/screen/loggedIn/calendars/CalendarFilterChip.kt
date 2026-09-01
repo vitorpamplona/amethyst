@@ -47,7 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_filter_all
+import com.vitorpamplona.amethyst.commons.resources.calendar_filter_no_calendars
+import com.vitorpamplona.amethyst.commons.resources.calendar_filter_sheet_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -79,7 +83,7 @@ fun CalendarFilterChip(
     val selected = ownCalendars.firstOrNull { it.dTag() == selectedDTag }
     val label =
         selected?.title()?.takeIf { it.isNotBlank() }
-            ?: stringRes(R.string.calendar_filter_all)
+            ?: stringRes(Res.string.calendar_filter_all)
 
     var showSheet by remember { mutableStateOf(false) }
 
@@ -100,12 +104,12 @@ fun CalendarFilterChip(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.calendar_filter_sheet_title),
+                    text = stringRes(Res.string.calendar_filter_sheet_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
                 FilterChoiceRow(
-                    title = stringRes(R.string.calendar_filter_all),
+                    title = stringRes(Res.string.calendar_filter_all),
                     isSelected = selectedDTag == null,
                     onClick = {
                         onSelect(null)
@@ -118,7 +122,7 @@ fun CalendarFilterChip(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = stringRes(R.string.calendar_filter_no_calendars),
+                            text = stringRes(Res.string.calendar_filter_no_calendars),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -127,7 +131,7 @@ fun CalendarFilterChip(
                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
                         items(ownCalendars, key = { it.dTag() }) { calendar ->
                             FilterChoiceRow(
-                                title = calendar.title() ?: stringRes(R.string.calendar_untitled),
+                                title = calendar.title() ?: stringRes(Res.string.calendar_untitled),
                                 isSelected = selectedDTag == calendar.dTag(),
                                 onClick = {
                                     onSelect(calendar.dTag())

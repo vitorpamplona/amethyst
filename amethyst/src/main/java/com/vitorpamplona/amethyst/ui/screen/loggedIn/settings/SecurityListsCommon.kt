@@ -51,9 +51,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.num_selected
+import com.vitorpamplona.amethyst.commons.resources.unblock
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
@@ -107,7 +109,7 @@ internal fun BlockListTopBar(
         ShorterTopAppBar(
             title = {
                 Text(
-                    text = stringRes(R.string.num_selected, selectedCount),
+                    text = stringRes(Res.string.num_selected, selectedCount),
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Start,
                     overflow = TextOverflow.Ellipsis,
@@ -119,7 +121,7 @@ internal fun BlockListTopBar(
             },
             actions = {
                 Button(modifier = HalfHorzPadding, onClick = onUnblock) {
-                    Text(text = stringRes(R.string.unblock))
+                    Text(text = stringRes(Res.string.unblock))
                 }
             },
             colors =

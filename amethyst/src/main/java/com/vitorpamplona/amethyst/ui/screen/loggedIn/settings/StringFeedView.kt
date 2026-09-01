@@ -35,7 +35,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
+import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
@@ -89,8 +91,8 @@ fun StringFeedEmpty(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(stringRes(R.string.feed_is_empty))
-            OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
+            Text(stringRes(Res.string.feed_is_empty))
+            OutlinedButton(onClick = onRefresh) { Text(text = stringRes(Res.string.refresh)) }
         }
 
         post?.let { it() }

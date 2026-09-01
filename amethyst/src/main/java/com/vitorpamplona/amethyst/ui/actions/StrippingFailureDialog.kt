@@ -25,6 +25,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_body
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload
 import com.vitorpamplona.amethyst.service.uploads.ConfirmationCallbacks
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -40,10 +43,10 @@ fun StrippingFailureDialog(dialogState: ConfirmationCallbacks) {
     AlertDialog(
         onDismissRequest = { dialogState.onCancel() },
         title = { Text(stringRes(R.string.metadata_strip_failed_title)) },
-        text = { Text(stringRes(R.string.metadata_strip_failed_body)) },
+        text = { Text(stringRes(Res.string.metadata_strip_failed_body)) },
         confirmButton = {
             Button(onClick = { dialogState.onConfirm() }) {
-                Text(stringRes(R.string.metadata_strip_failed_upload))
+                Text(stringRes(Res.string.metadata_strip_failed_upload))
             }
         },
         dismissButton = {

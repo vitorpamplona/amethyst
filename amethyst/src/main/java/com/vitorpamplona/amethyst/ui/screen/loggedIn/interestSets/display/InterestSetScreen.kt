@@ -50,6 +50,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.interest_set_add_hashtag
+import com.vitorpamplona.amethyst.commons.resources.interest_set_hashtag_add_placeholder
+import com.vitorpamplona.amethyst.commons.resources.interest_set_hashtag_private_toggle
+import com.vitorpamplona.amethyst.commons.resources.interest_set_toggle_visibility
+import com.vitorpamplona.amethyst.commons.resources.interest_sets_empty
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -76,7 +82,7 @@ fun InterestSetScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringRes(R.string.interest_sets_empty))
+                Text(stringRes(Res.string.interest_sets_empty))
             }
         } else {
             InterestSetContent(
@@ -112,7 +118,7 @@ private fun InterestSetContent(
             OutlinedTextField(
                 value = newHashtag,
                 onValueChange = { newHashtag = it.trimStart('#').trim() },
-                label = { Text(stringRes(R.string.interest_set_hashtag_add_placeholder)) },
+                label = { Text(stringRes(Res.string.interest_set_hashtag_add_placeholder)) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 keyboardOptions =
@@ -137,14 +143,14 @@ private fun InterestSetContent(
                 },
                 enabled = newHashtag.isNotBlank(),
             ) {
-                Icon(MaterialSymbols.Add, contentDescription = stringRes(R.string.interest_set_add_hashtag))
+                Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.interest_set_add_hashtag))
             }
         }
 
         FilterChip(
             selected = isPrivate,
             onClick = { isPrivate = !isPrivate },
-            label = { Text(stringRes(R.string.interest_set_hashtag_private_toggle)) },
+            label = { Text(stringRes(Res.string.interest_set_hashtag_private_toggle)) },
             leadingIcon = {
                 Icon(
                     symbol = if (isPrivate) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
@@ -227,7 +233,7 @@ private fun HashtagRow(
             IconButton(onClick = onToggle) {
                 Icon(
                     symbol = if (isPrivate) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
-                    contentDescription = stringRes(R.string.interest_set_toggle_visibility),
+                    contentDescription = stringRes(Res.string.interest_set_toggle_visibility),
                 )
             }
         },

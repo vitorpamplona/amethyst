@@ -54,9 +54,19 @@ import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
+import com.vitorpamplona.amethyst.commons.resources.push_server_explainer
+import com.vitorpamplona.amethyst.commons.resources.push_server_install_app
+import com.vitorpamplona.amethyst.commons.resources.push_server_install_app_description
+import com.vitorpamplona.amethyst.commons.resources.push_server_none
+import com.vitorpamplona.amethyst.commons.resources.push_server_none_explainer
+import com.vitorpamplona.amethyst.commons.resources.push_server_title
+import com.vitorpamplona.amethyst.commons.resources.push_server_uses_app_explainer
+import com.vitorpamplona.amethyst.commons.resources.quick_action_dont_show_again_button
+import com.vitorpamplona.amethyst.commons.resources.select_push_server
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
@@ -100,7 +110,7 @@ fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
                 LoadDistributors { currentDistributor, list, readableListWithExplainer ->
                     if (readableListWithExplainer.size > 1) {
                         SpinnerSelectionDialog(
-                            title = stringRes(id = R.string.select_push_server),
+                            title = stringRes(id = Res.string.select_push_server),
                             options = readableListWithExplainer,
                             onSelect = { index ->
                                 if (list[index] == "None") {
@@ -122,9 +132,9 @@ fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
                     } else {
                         AlertDialog(
                             onDismissRequest = { distributorPresent = true },
-                            title = { Text(stringRes(R.string.push_server_install_app)) },
+                            title = { Text(stringRes(Res.string.push_server_install_app)) },
                             text = {
-                                val content = stringRes(R.string.push_server_install_app_description)
+                                val content = stringRes(Res.string.push_server_install_app_description)
 
                                 val astNode =
                                     remember {
@@ -149,7 +159,7 @@ fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
                                             sharedPrefs.dontShowPushNotificationSelector()
                                         },
                                     ) {
-                                        Text(stringRes(R.string.quick_action_dont_show_again_button))
+                                        Text(stringRes(Res.string.quick_action_dont_show_again_button))
                                     }
                                     Button(
                                         onClick = { distributorPresent = true },
@@ -163,7 +173,7 @@ fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
                                                 contentDescription = null,
                                             )
                                             Spacer(Modifier.width(8.dp))
-                                            Text(stringRes(R.string.error_dialog_button_ok))
+                                            Text(stringRes(Res.string.error_dialog_button_ok))
                                         }
                                     }
                                 }
@@ -191,12 +201,12 @@ fun LoadDistributors(onInner: @Composable (String, ImmutableList<String>, Immuta
             .mapIndexed { index, name ->
                 TitleExplainer(
                     name,
-                    stringRes(id = R.string.push_server_uses_app_explainer, list[index]),
+                    stringRes(id = Res.string.push_server_uses_app_explainer, list[index]),
                 )
             }.plus(
                 TitleExplainer(
-                    stringRes(id = R.string.push_server_none),
-                    stringRes(id = R.string.push_server_none_explainer),
+                    stringRes(id = Res.string.push_server_none),
+                    stringRes(id = Res.string.push_server_none_explainer),
                 ),
             ).toImmutableList()
 
@@ -217,8 +227,8 @@ fun PushNotificationProviderTile(sharedPrefs: UiSettingsFlow) {
         val selectedIndex = list.indexOf(currentDistributor).coerceAtLeast(0)
         SettingsBlockTile(
             icon = MaterialSymbols.CloudSync,
-            title = stringRes(R.string.push_server_title),
-            description = stringRes(R.string.push_server_explainer),
+            title = stringRes(Res.string.push_server_title),
+            description = stringRes(Res.string.push_server_explainer),
         ) {
             TextSpinner(
                 label = null,

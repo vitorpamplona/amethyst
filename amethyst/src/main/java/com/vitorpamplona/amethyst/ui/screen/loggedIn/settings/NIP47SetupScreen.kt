@@ -44,6 +44,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.delete_payment_target
+import com.vitorpamplona.amethyst.commons.resources.lightning_address
+import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetAddField
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -139,7 +143,7 @@ private fun LightningAddressSetupSection(walletViewModel: WalletViewModel) {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringRes(R.string.lightning_address),
+            text = stringRes(Res.string.lightning_address),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
             modifier = SettingsCategorySpacingModifier,
@@ -171,7 +175,7 @@ private fun PaymentTargetsInlineSection(viewModel: PaymentTargetsViewModel) {
 
     if (targets.isEmpty()) {
         Text(
-            text = stringRes(id = R.string.no_payment_targets_message),
+            text = stringRes(id = Res.string.no_payment_targets_message),
             modifier = Modifier.padding(vertical = 8.dp),
             color = MaterialTheme.colorScheme.grayText,
             style = MaterialTheme.typography.bodyMedium,
@@ -216,7 +220,7 @@ private fun PaymentTargetInlineEntry(
         IconButton(onClick = onDelete) {
             Icon(
                 symbol = MaterialSymbols.Delete,
-                contentDescription = stringRes(id = R.string.delete_payment_target),
+                contentDescription = stringRes(id = Res.string.delete_payment_target),
             )
         }
     }

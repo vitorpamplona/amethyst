@@ -35,9 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_relay_not_nip29
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.looksLikeNonNip29Relay
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
@@ -106,7 +107,7 @@ fun RelayGroupServerRow(
                         modifier = Modifier.size(14.dp),
                     )
                     Text(
-                        text = stringRes(R.string.relay_group_relay_not_nip29),
+                        text = stringRes(Res.string.relay_group_relay_not_nip29),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.warningColor,
                         maxLines = 1,

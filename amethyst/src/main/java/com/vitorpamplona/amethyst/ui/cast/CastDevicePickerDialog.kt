@@ -29,8 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cast_searching_for_devices
+import com.vitorpamplona.amethyst.commons.resources.cast_to_device_dialog_title
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
@@ -67,12 +69,12 @@ fun CastDevicePickerDialog(
     val castScope = Amethyst.instance.applicationIOScope
 
     M3ActionDialog(
-        title = stringRes(R.string.cast_to_device_dialog_title),
+        title = stringRes(Res.string.cast_to_device_dialog_title),
         onDismiss = onDismiss,
     ) {
         if (devices.isEmpty()) {
             Text(
-                text = stringRes(R.string.cast_searching_for_devices),
+                text = stringRes(Res.string.cast_searching_for_devices),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),

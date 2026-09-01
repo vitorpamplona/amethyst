@@ -64,6 +64,18 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_content
+import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_dismiss
+import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_hint
+import com.vitorpamplona.amethyst.commons.resources.content_description
+import com.vitorpamplona.amethyst.commons.resources.content_description_example
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -273,7 +285,7 @@ fun ImageVideoDescription(
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.content_description)) },
+                    label = { Text(text = stringRes(Res.string.content_description)) },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -285,7 +297,7 @@ fun ImageVideoDescription(
                     },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.content_description_example),
+                            text = stringRes(Res.string.content_description_example),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -317,7 +329,7 @@ fun ImageVideoDescription(
                             message = ""
                             aiSuggested = false
                         },
-                        label = { Text(text = stringRes(R.string.ai_suggested_alt_text_hint)) },
+                        label = { Text(text = stringRes(Res.string.ai_suggested_alt_text_hint)) },
                         leadingIcon = {
                             Icon(
                                 symbol = MaterialSymbols.AutoAwesome,
@@ -328,7 +340,7 @@ fun ImageVideoDescription(
                         trailingIcon = {
                             Icon(
                                 symbol = MaterialSymbols.Close,
-                                contentDescription = stringRes(R.string.ai_suggested_alt_text_dismiss),
+                                contentDescription = stringRes(Res.string.ai_suggested_alt_text_dismiss),
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )
                         },
@@ -366,12 +378,12 @@ fun ImageVideoDescription(
                         verticalArrangement = Arrangement.spacedBy(Size5dp),
                     ) {
                         Text(
-                            text = stringRes(R.string.media_compression_quality_label),
+                            text = stringRes(Res.string.media_compression_quality_label),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = stringRes(R.string.media_compression_quality_explainer),
+                            text = stringRes(Res.string.media_compression_quality_explainer),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray,
                             maxLines = 5,
@@ -384,11 +396,11 @@ fun ImageVideoDescription(
                         Text(
                             text =
                                 when (mediaQualitySlider) {
-                                    0 -> stringRes(R.string.media_compression_quality_low)
-                                    1 -> stringRes(R.string.media_compression_quality_medium)
-                                    2 -> stringRes(R.string.media_compression_quality_high)
-                                    3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                                    else -> stringRes(R.string.media_compression_quality_medium)
+                                    0 -> stringRes(Res.string.media_compression_quality_low)
+                                    1 -> stringRes(Res.string.media_compression_quality_medium)
+                                    2 -> stringRes(Res.string.media_compression_quality_high)
+                                    3 -> stringRes(Res.string.media_compression_quality_uncompressed)
+                                    else -> stringRes(Res.string.media_compression_quality_medium)
                                 },
                             modifier = Modifier.align(Alignment.Center),
                         )
@@ -445,7 +457,7 @@ fun ImageVideoDescription(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
             ) {
-                Text(text = stringRes(R.string.add_content), color = Color.White, fontSize = 20.sp)
+                Text(text = stringRes(Res.string.add_content), color = Color.White, fontSize = 20.sp)
             }
         }
     }

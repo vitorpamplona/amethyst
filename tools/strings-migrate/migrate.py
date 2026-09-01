@@ -32,8 +32,11 @@ BARE_FORMAT = re.compile(r"%(?!%)(?!\d+\$)[-#+ 0,(]*\d*(?:\.\d+)?[a-zA-Z]")
 
 
 def element_pattern(key: str) -> re.Pattern:
+    # `name` is not always the first attribute (Crowdin emits e.g.
+    # `<string xmlns:ns0="..." name="key" ns0:ignore="Typos">`), so allow
+    # any attributes before it.
     return re.compile(
-        r"[ \t]*<(string|plurals)\s+name=\"" + re.escape(key) + r"\"[^>]*?(?:/>|>.*?</\1>)[ \t]*\n?",
+        r"[ \t]*<(string|plurals)\b[^>]*?\sname=\"" + re.escape(key) + r"\"[^>]*?(?:/>|>.*?</\1>)[ \t]*\n?",
         re.S,
     )
 

@@ -41,9 +41,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_title
+import com.vitorpamplona.amethyst.commons.resources.profile_apps_empty_hint
+import com.vitorpamplona.amethyst.commons.resources.profile_apps_header
+import com.vitorpamplona.amethyst.commons.resources.profile_apps_header_empty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -80,7 +84,7 @@ fun DisplayAppRecommendations(
                     Column(modifier = Modifier.padding(vertical = 6.dp)) {
                         AppsHeader(appCount = 0, isMe = true, nav = nav)
                         Text(
-                            text = stringRes(R.string.profile_apps_empty_hint),
+                            text = stringRes(Res.string.profile_apps_empty_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -106,9 +110,9 @@ private fun AppsHeader(
         Text(
             text =
                 if (appCount > 0) {
-                    stringRes(R.string.profile_apps_header, appCount)
+                    stringRes(Res.string.profile_apps_header, appCount)
                 } else {
-                    stringRes(R.string.profile_apps_header_empty)
+                    stringRes(Res.string.profile_apps_header_empty)
                 },
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -121,7 +125,7 @@ private fun AppsHeader(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Settings,
-                    contentDescription = stringRes(R.string.profile_app_recommendations_title),
+                    contentDescription = stringRes(Res.string.profile_app_recommendations_title),
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

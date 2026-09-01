@@ -73,11 +73,20 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_last_used
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_reconnect
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_apps_empty
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_manage_apps
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -128,7 +137,7 @@ fun Nip46ConnectedAppsScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringResource(R.string.nip46_signer_manage_apps), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.nip46_signer_manage_apps), nav) },
     ) { padding ->
         val current = items
         when {
@@ -150,7 +159,7 @@ fun Nip46ConnectedAppsScreen(
                             modifier = Modifier.size(56.dp),
                         )
                         Text(
-                            stringResource(R.string.nip46_signer_apps_empty),
+                            stringRes(Res.string.nip46_signer_apps_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -228,7 +237,7 @@ private fun Nip46AppCard(
                 val meta =
                     buildList {
                         if (relayCount > 0) add(pluralStringResource(R.plurals.nip46_signer_app_relay_count, relayCount, relayCount))
-                        entry.lastUsedSeconds?.let { add(stringResource(R.string.nip46_signer_app_last_used, it.toTimeAgo().trim())) }
+                        entry.lastUsedSeconds?.let { add(stringRes(Res.string.nip46_signer_app_last_used, it.toTimeAgo().trim())) }
                     }.joinToString("  ·  ")
                 if (meta.isNotEmpty()) {
                     Text(
@@ -269,9 +278,9 @@ private fun Nip46AppCard(
 @Composable
 private fun AppSignerPolicy.shortLabel(): String =
     when (this) {
-        AppSignerPolicy.FULL_TRUST -> stringResource(R.string.napplet_policy_full_trust)
-        AppSignerPolicy.REASONABLE -> stringResource(R.string.napplet_policy_reasonable)
-        AppSignerPolicy.PARANOID -> stringResource(R.string.napplet_policy_paranoid)
+        AppSignerPolicy.FULL_TRUST -> stringRes(Res.string.napplet_policy_full_trust)
+        AppSignerPolicy.REASONABLE -> stringRes(Res.string.napplet_policy_reasonable)
+        AppSignerPolicy.PARANOID -> stringRes(Res.string.napplet_policy_paranoid)
     }
 
 private val LiveGreen = Color(0xFF3DDC84)
@@ -290,7 +299,7 @@ internal fun Nip46StatusDot(online: Boolean) {
 @Composable
 internal fun Nip46ReconnectPill(onClick: () -> Unit) {
     Text(
-        stringResource(R.string.nip46_signer_app_reconnect),
+        stringRes(Res.string.nip46_signer_app_reconnect),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.primary,
         modifier =

@@ -47,6 +47,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.interest_set_create_btn_label
+import com.vitorpamplona.amethyst.commons.resources.interest_sets_empty
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -150,7 +153,7 @@ private fun EmptyInterestSets() {
             modifier = Modifier.size(64.dp),
         )
         Text(
-            text = stringRes(R.string.interest_sets_empty),
+            text = stringRes(Res.string.interest_sets_empty),
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
@@ -165,7 +168,7 @@ fun InterestSetFab(
 ) {
     ExtendedFloatingActionButton(
         text = {
-            Text(text = stringRes(R.string.interest_set_create_btn_label))
+            Text(text = stringRes(Res.string.interest_set_create_btn_label))
         },
         icon = {
             Icon(

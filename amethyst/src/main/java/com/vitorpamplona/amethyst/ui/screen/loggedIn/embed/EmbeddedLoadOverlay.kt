@@ -39,6 +39,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.embedded_tab_load_failed
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Cover for an embedded tab's (z-below) surface while it has nothing to show yet: a spinner until the
@@ -62,7 +65,7 @@ fun BoxScope.EmbeddedLoadOverlay(
     ) {
         if (failed) {
             Text(
-                text = stringResource(R.string.embedded_tab_load_failed),
+                text = stringRes(Res.string.embedded_tab_load_failed),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )

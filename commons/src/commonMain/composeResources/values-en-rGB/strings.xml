@@ -13,4 +13,11 @@
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <!-- Custom emoji suggestions (NIP-30) -->
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="point_to_the_qr_code">Point to the QR Code</string>
+    <string name="show_qr">Show QR</string>
+    <string name="profile_image">Profile Image</string>
+    <string name="your_profile_image">Your Profile Picture</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="show_anyway">Show Anyway</string>
+    <string name="post_not_found_short">👀</string>
 </resources>

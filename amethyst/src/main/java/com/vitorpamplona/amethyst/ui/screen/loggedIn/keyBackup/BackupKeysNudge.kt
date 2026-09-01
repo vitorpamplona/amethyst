@@ -42,9 +42,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_already_saved
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_backup_now
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_body
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_dismiss
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -135,7 +140,7 @@ private fun BackupKeysNudgeCard(
                 )
                 Spacer(modifier = StdHorzSpacer)
                 Text(
-                    text = stringRes(R.string.backup_keys_nudge_title),
+                    text = stringRes(Res.string.backup_keys_nudge_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
@@ -143,7 +148,7 @@ private fun BackupKeysNudgeCard(
                 IconButton(onClick = onAlreadySaved) {
                     Icon(
                         symbol = MaterialSymbols.Close,
-                        contentDescription = stringRes(R.string.backup_keys_nudge_dismiss),
+                        contentDescription = stringRes(Res.string.backup_keys_nudge_dismiss),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -152,7 +157,7 @@ private fun BackupKeysNudgeCard(
             Spacer(modifier = StdVertSpacer)
 
             Text(
-                text = stringRes(R.string.backup_keys_nudge_body),
+                text = stringRes(Res.string.backup_keys_nudge_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -165,11 +170,11 @@ private fun BackupKeysNudgeCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedButton(onClick = onAlreadySaved) {
-                    Text(stringRes(R.string.backup_keys_nudge_already_saved))
+                    Text(stringRes(Res.string.backup_keys_nudge_already_saved))
                 }
                 Spacer(modifier = StdHorzSpacer)
                 Button(onClick = onBackupNow) {
-                    Text(stringRes(R.string.backup_keys_nudge_backup_now))
+                    Text(stringRes(Res.string.backup_keys_nudge_backup_now))
                 }
             }
         }

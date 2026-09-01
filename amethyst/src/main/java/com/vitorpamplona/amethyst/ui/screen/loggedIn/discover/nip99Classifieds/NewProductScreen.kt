@@ -46,6 +46,10 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -305,8 +309,8 @@ private fun NewProductBody(
                             lud16,
                             accountViewModel.account.userProfile(),
                             accountViewModel,
-                            stringRes(id = R.string.lightning_invoice),
-                            stringRes(id = R.string.lightning_create_and_add_invoice),
+                            stringRes(id = Res.string.lightning_invoice),
+                            stringRes(id = Res.string.lightning_create_and_add_invoice),
                             onNewInvoice = {
                                 postViewModel.insertAtCursor(it)
                                 postViewModel.wantsInvoice = false
@@ -337,7 +341,7 @@ private fun NewProductBody(
                     modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ZapRaiserRequest(
-                        stringRes(id = R.string.zapraiser),
+                        stringRes(id = Res.string.zapraiser),
                         postViewModel,
                     )
                 }

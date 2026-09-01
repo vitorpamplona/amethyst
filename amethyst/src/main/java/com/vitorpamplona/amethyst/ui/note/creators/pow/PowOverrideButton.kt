@@ -47,6 +47,9 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pow_option_default_off
+import com.vitorpamplona.amethyst.commons.resources.pow_option_off
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
@@ -137,7 +140,7 @@ fun PowOverrideButton(
                                 defaultDifficulty,
                             )
                         } else {
-                            stringRes(R.string.pow_option_default_off)
+                            stringRes(Res.string.pow_option_default_off)
                         },
                         fontWeight = if (!isOverridden) FontWeight.Bold else null,
                     )
@@ -150,7 +153,7 @@ fun PowOverrideButton(
             DropdownMenuItem(
                 text = {
                     Text(
-                        stringRes(R.string.pow_option_off),
+                        stringRes(Res.string.pow_option_off),
                         fontWeight = if (isOverridden && !isActive) FontWeight.Bold else null,
                     )
                 },

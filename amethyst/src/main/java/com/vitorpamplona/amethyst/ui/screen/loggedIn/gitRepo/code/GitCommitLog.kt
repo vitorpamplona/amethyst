@@ -54,10 +54,16 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_pr_no_changes
+import com.vitorpamplona.amethyst.commons.resources.git_repo_code_error
+import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
+import com.vitorpamplona.amethyst.commons.resources.git_repo_commits
+import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
+import com.vitorpamplona.amethyst.commons.resources.git_repo_no_commits
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -100,7 +106,7 @@ fun GitCommitLog(
             LogHeader(title = commit?.shortOid ?: "", onBack = { openCommit = null })
             HorizontalDivider(thickness = 0.5.dp)
             if (commit == null) {
-                GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_file_load_error))
+                GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_file_load_error))
             } else {
                 CommitDiff(snapshot, viewModel, commit)
             }
@@ -110,12 +116,12 @@ fun GitCommitLog(
 
     BackHandler { onBack() }
     Column(Modifier.fillMaxSize()) {
-        LogHeader(title = stringRes(R.string.git_repo_commits), onBack = onBack)
+        LogHeader(title = stringRes(Res.string.git_repo_commits), onBack = onBack)
         HorizontalDivider(thickness = 0.5.dp)
         when {
-            history == null -> GitLoadingBox(stringRes(R.string.git_repo_code_loading))
-            history!!.isFailure -> GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_code_error))
-            commits.isNullOrEmpty() -> GitMessageBox(MaterialSymbols.History, stringRes(R.string.git_repo_no_commits))
+            history == null -> GitLoadingBox(stringRes(Res.string.git_repo_code_loading))
+            history!!.isFailure -> GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_code_error))
+            commits.isNullOrEmpty() -> GitMessageBox(MaterialSymbols.History, stringRes(Res.string.git_repo_no_commits))
             else ->
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(commits, key = { it.oid }) { commit ->
@@ -150,10 +156,10 @@ private fun CommitDiff(
         }
 
     when (val r = result) {
-        null -> GitLoadingBox(stringRes(R.string.git_repo_code_loading))
+        null -> GitLoadingBox(stringRes(Res.string.git_repo_code_loading))
         else ->
             if (r.isFailure || r.getOrThrow().files.isEmpty()) {
-                GitMessageBox(MaterialSymbols.Code, stringRes(R.string.git_pr_no_changes))
+                GitMessageBox(MaterialSymbols.Code, stringRes(Res.string.git_pr_no_changes))
             } else {
                 Column(
                     Modifier

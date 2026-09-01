@@ -40,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy_stack_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg2
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -127,7 +129,7 @@ fun InformationDialog(
                             clipboardManager.setText(it)
                         }
                     }) {
-                        Text(stringRes(R.string.copy_stack_to_clipboard))
+                        Text(stringRes(Res.string.copy_stack_to_clipboard))
                     }
                 }
 
@@ -144,7 +146,7 @@ fun InformationDialog(
                             contentDescription = null,
                         )
                         Spacer(StdHorzSpacer)
-                        Text(stringRes(R.string.error_dialog_button_ok))
+                        Text(stringRes(Res.string.error_dialog_button_ok))
                     }
                 }
             }

@@ -39,9 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.and_more
+import com.vitorpamplona.amethyst.commons.resources.relay_reorder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -114,7 +116,7 @@ fun BasicRelaySetupInfoClickableRow(
                 val handleModifier = Modifier.height(24.dp).relayDragHandle(index, dragState)
                 Icon(
                     MaterialSymbols.DragIndicator,
-                    contentDescription = stringRes(R.string.relay_reorder),
+                    contentDescription = stringRes(Res.string.relay_reorder),
                     modifier = handleModifier,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -205,7 +207,7 @@ fun UsedBy(
             if (item.users.size > 4) {
                 Box(contentAlignment = Alignment.Center, modifier = Height25Modifier) {
                     Text(
-                        text = stringRes(R.string.and_more, item.users.size - 4),
+                        text = stringRes(Res.string.and_more, item.users.size - 4),
                         maxLines = 1,
                     )
                 }

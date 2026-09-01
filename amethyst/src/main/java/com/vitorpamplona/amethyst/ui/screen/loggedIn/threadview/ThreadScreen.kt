@@ -23,7 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.thread_title
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -63,7 +64,7 @@ fun ThreadScreen(
         isInvertedLayout = false,
         topBar = {
             TopBarExtensibleWithBackButton(
-                title = { Text(stringRes(id = R.string.thread_title)) },
+                title = { Text(stringRes(id = Res.string.thread_title)) },
                 popBack = nav::popBack,
             )
         },

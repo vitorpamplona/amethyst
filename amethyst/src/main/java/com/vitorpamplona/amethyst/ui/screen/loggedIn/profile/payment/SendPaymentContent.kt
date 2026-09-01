@@ -72,6 +72,22 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.amount_in_sats
+import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_example
+import com.vitorpamplona.amethyst.commons.resources.send_payment_amount
+import com.vitorpamplona.amethyst.commons.resources.send_payment_done
+import com.vitorpamplona.amethyst.commons.resources.send_payment_fixed_price
+import com.vitorpamplona.amethyst.commons.resources.send_payment_from
+import com.vitorpamplona.amethyst.commons.resources.send_payment_message_recipient
+import com.vitorpamplona.amethyst.commons.resources.send_payment_method
+import com.vitorpamplona.amethyst.commons.resources.send_payment_method_cashu
+import com.vitorpamplona.amethyst.commons.resources.send_payment_method_clink
+import com.vitorpamplona.amethyst.commons.resources.send_payment_method_lightning
+import com.vitorpamplona.amethyst.commons.resources.send_payment_method_onchain
+import com.vitorpamplona.amethyst.commons.resources.send_payment_no_methods
+import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_section
+import com.vitorpamplona.amethyst.commons.resources.send_payment_try_again
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -220,10 +236,10 @@ private fun MethodIcon(
 @Composable
 private fun ProfilePaymentMethod.label(): String =
     when (this) {
-        ProfilePaymentMethod.LIGHTNING -> stringRes(R.string.send_payment_method_lightning)
-        ProfilePaymentMethod.CLINK -> stringRes(R.string.send_payment_method_clink)
-        ProfilePaymentMethod.ONCHAIN -> stringRes(R.string.send_payment_method_onchain)
-        ProfilePaymentMethod.CASHU -> stringRes(R.string.send_payment_method_cashu)
+        ProfilePaymentMethod.LIGHTNING -> stringRes(Res.string.send_payment_method_lightning)
+        ProfilePaymentMethod.CLINK -> stringRes(Res.string.send_payment_method_clink)
+        ProfilePaymentMethod.ONCHAIN -> stringRes(Res.string.send_payment_method_onchain)
+        ProfilePaymentMethod.CASHU -> stringRes(Res.string.send_payment_method_cashu)
     }
 
 /**
@@ -278,7 +294,7 @@ fun SendPaymentContent(
 
         if (methods.isEmpty()) {
             Text(
-                text = stringRes(R.string.send_payment_no_methods),
+                text = stringRes(Res.string.send_payment_no_methods),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -326,7 +342,7 @@ fun SendPaymentContent(
                     ),
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.custom_zaps_add_a_message_example),
+                        text = stringRes(Res.string.custom_zaps_add_a_message_example),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -371,7 +387,7 @@ fun SendPaymentContent(
                     shape = ButtonBorder,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringRes(R.string.send_payment_done))
+                    Text(stringRes(Res.string.send_payment_done))
                 }
             }
 
@@ -388,14 +404,14 @@ fun SendPaymentContent(
                         shape = ButtonBorder,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(stringRes(R.string.send_payment_done))
+                        Text(stringRes(Res.string.send_payment_done))
                     }
                     Button(
                         onClick = onRetry,
                         shape = ButtonBorder,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(stringRes(R.string.send_payment_try_again))
+                        Text(stringRes(Res.string.send_payment_try_again))
                     }
                 }
                 if (onMessageRecipient != null) {
@@ -403,7 +419,7 @@ fun SendPaymentContent(
                         onClick = onMessageRecipient,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringRes(R.string.send_payment_message_recipient))
+                        Text(stringRes(Res.string.send_payment_message_recipient))
                     }
                 }
             }
@@ -422,7 +438,7 @@ private fun MethodSelector(
     onSelect: (ProfilePaymentMethod) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SectionLabel(stringRes(R.string.send_payment_method))
+        SectionLabel(stringRes(Res.string.send_payment_method))
 
         ChipFlowRow {
             methods.forEach { entry ->
@@ -515,7 +531,7 @@ private fun FromSelector(
     onSelect: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SectionLabel(stringRes(R.string.send_payment_from))
+        SectionLabel(stringRes(Res.string.send_payment_from))
 
         ChipFlowRow {
             sources.forEach { source ->
@@ -569,7 +585,7 @@ private fun AmountSection(
     isError: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SectionLabel(stringRes(R.string.send_payment_amount))
+        SectionLabel(stringRes(Res.string.send_payment_amount))
 
         if (!locked && presetAmounts.isNotEmpty()) {
             ChipFlowRow {
@@ -584,7 +600,7 @@ private fun AmountSection(
         }
 
         OutlinedTextField(
-            label = { Text(stringRes(R.string.amount_in_sats)) },
+            label = { Text(stringRes(Res.string.amount_in_sats)) },
             value = amountInput,
             onValueChange = { new -> onAmountChange(new.filter(Char::isDigit)) },
             enabled = enabled && !locked,
@@ -597,7 +613,7 @@ private fun AmountSection(
                         { Text(supportText) }
                     }
                     locked -> {
-                        { Text(stringRes(R.string.send_payment_fixed_price)) }
+                        { Text(stringRes(Res.string.send_payment_fixed_price)) }
                     }
                     else -> null
                 },
@@ -617,7 +633,7 @@ private fun ReceiptSection(
     enabled: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SectionLabel(stringRes(R.string.send_payment_receipt_section))
+        SectionLabel(stringRes(Res.string.send_payment_receipt_section))
 
         if (zapTypes != null) {
             ChipFlowRow {

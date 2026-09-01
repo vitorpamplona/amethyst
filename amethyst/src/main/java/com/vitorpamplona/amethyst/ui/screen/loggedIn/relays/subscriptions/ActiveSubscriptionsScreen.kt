@@ -71,6 +71,16 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurposeGroup
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.active_subs_no_entity
+import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_algo
+import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_all_communities
+import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_authors
+import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_follows
+import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_global
+import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_muted
+import com.vitorpamplona.amethyst.commons.resources.active_subs_unattributed
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -169,7 +179,7 @@ private fun TotalsHeader(state: ActiveSubscriptionsState) {
 
 @Composable
 private fun AccountHeader(account: SubscriptionAccountRow) {
-    val name = account.accountPubKey?.let { displayNameOf(it) } ?: stringRes(R.string.active_subs_unattributed)
+    val name = account.accountPubKey?.let { displayNameOf(it) } ?: stringRes(Res.string.active_subs_unattributed)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -307,12 +317,12 @@ private fun PurposeCard(
 @Composable
 private fun scopeLabel(scope: IFeedTopNavPerRelayFilter): String? =
     when (scope) {
-        is GlobalTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_global)
-        is AllFollowsTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_follows)
-        is AuthorsTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_authors)
-        is MutedAuthorsTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_muted)
-        is AllCommunitiesTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_all_communities)
-        is FavoriteAlgoFeedTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_algo)
+        is GlobalTopNavPerRelayFilter -> stringRes(Res.string.active_subs_scope_global)
+        is AllFollowsTopNavPerRelayFilter -> stringRes(Res.string.active_subs_scope_follows)
+        is AuthorsTopNavPerRelayFilter -> stringRes(Res.string.active_subs_scope_authors)
+        is MutedAuthorsTopNavPerRelayFilter -> stringRes(Res.string.active_subs_scope_muted)
+        is AllCommunitiesTopNavPerRelayFilter -> stringRes(Res.string.active_subs_scope_all_communities)
+        is FavoriteAlgoFeedTopNavPerRelayFilter -> stringRes(Res.string.active_subs_scope_algo)
         is HashtagTopNavPerRelayFilter -> scope.hashtags.sorted().joinToString(", ") { "#$it" }
         is LocationTopNavPerRelayFilter -> scope.geotags.sorted().joinToString(", ")
         // The community and the relay already name themselves — the community through its own
@@ -441,7 +451,7 @@ private fun EntityBlock(
     // serving ones already named — but it does carry the selection it searches within, which is a
     // far better answer than "no entity". The scope arrives as a typed value for exactly this
     // reason: the wording is chosen here, where translations exist.
-    val label = resolved?.name ?: entity.scope?.let { scopeLabel(it) } ?: stringRes(R.string.active_subs_no_entity)
+    val label = resolved?.name ?: entity.scope?.let { scopeLabel(it) } ?: stringRes(Res.string.active_subs_no_entity)
 
     Column {
         Row(
@@ -587,7 +597,7 @@ private fun rememberMarmotEntity(
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
     // Same name/icon precedence the chat-rooms list uses, so a group reads identically in both places.
-    val name = displayName?.takeIf { it.isNotBlank() } ?: stringRes(R.string.marmot_group_fallback_name, id.take(8))
+    val name = displayName?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.marmot_group_fallback_name, id.take(8))
     val picture =
         if (image != null) {
             rememberMarmotGroupIconUrl(image, accountViewModel, adminPubkeys)

@@ -73,7 +73,22 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.namecoin_device_info
+import com.vitorpamplona.amethyst.commons.resources.namecoin_diagnostics
+import com.vitorpamplona.amethyst.commons.resources.namecoin_last_test
+import com.vitorpamplona.amethyst.commons.resources.namecoin_no_test_yet
+import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_accept
+import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_body
+import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_reject
+import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_title
+import com.vitorpamplona.amethyst.commons.resources.namecoin_test_connection
+import com.vitorpamplona.amethyst.commons.resources.namecoin_test_results
+import com.vitorpamplona.amethyst.commons.resources.namecoin_test_success
+import com.vitorpamplona.amethyst.commons.resources.namecoin_testing
+import com.vitorpamplona.amethyst.commons.resources.namecoin_tls_info
 import com.vitorpamplona.amethyst.ui.note.formatMediumDateTime
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
@@ -264,11 +279,11 @@ private fun TestConnectionSection(
                 pendingCerts = pendingCerts.drop(1)
                 confirmingCert = pendingCerts.firstOrNull()
             },
-            title = { Text(stringResource(R.string.namecoin_pin_cert_title)) },
+            title = { Text(stringRes(Res.string.namecoin_pin_cert_title)) },
             text = {
                 Column {
                     Text(
-                        stringResource(R.string.namecoin_pin_cert_body, pending.serverHost),
+                        stringRes(Res.string.namecoin_pin_cert_body, pending.serverHost),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -292,7 +307,7 @@ private fun TestConnectionSection(
                     pendingCerts = pendingCerts.drop(1)
                     confirmingCert = pendingCerts.firstOrNull()
                 }) {
-                    Text(stringResource(R.string.namecoin_pin_cert_accept))
+                    Text(stringRes(Res.string.namecoin_pin_cert_accept))
                 }
             },
             dismissButton = {
@@ -300,7 +315,7 @@ private fun TestConnectionSection(
                     pendingCerts = pendingCerts.drop(1)
                     confirmingCert = pendingCerts.firstOrNull()
                 }) {
-                    Text(stringResource(R.string.namecoin_pin_cert_reject))
+                    Text(stringRes(Res.string.namecoin_pin_cert_reject))
                 }
             },
         )
@@ -354,9 +369,9 @@ private fun TestConnectionSection(
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.namecoin_testing))
+                Text(stringRes(Res.string.namecoin_testing))
             } else {
-                Text(stringResource(R.string.namecoin_test_connection))
+                Text(stringRes(Res.string.namecoin_test_connection))
             }
         }
 
@@ -365,7 +380,7 @@ private fun TestConnectionSection(
             Spacer(Modifier.height(12.dp))
 
             Text(
-                stringResource(R.string.namecoin_test_results),
+                stringRes(Res.string.namecoin_test_results),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
             )
@@ -443,7 +458,7 @@ private fun ServerTestResultRow(result: ServerTestResult) {
             }
             if (result.success) {
                 Text(
-                    text = stringResource(R.string.namecoin_test_success),
+                    text = stringRes(Res.string.namecoin_test_success),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFF2E8B57),
                 )
@@ -489,7 +504,7 @@ private fun DiagnosticCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                stringResource(R.string.namecoin_diagnostics),
+                stringRes(Res.string.namecoin_diagnostics),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -505,13 +520,13 @@ private fun DiagnosticCard(
                 val successCount = testResults.count { it.success }
                 val totalCount = testResults.size
                 DiagnosticRow(
-                    label = stringResource(R.string.namecoin_last_test),
+                    label = stringRes(Res.string.namecoin_last_test),
                     value = "$formatted ($successCount/$totalCount OK)",
                 )
             } else {
                 DiagnosticRow(
-                    label = stringResource(R.string.namecoin_last_test),
-                    value = stringResource(R.string.namecoin_no_test_yet),
+                    label = stringRes(Res.string.namecoin_last_test),
+                    value = stringRes(Res.string.namecoin_no_test_yet),
                 )
             }
 
@@ -519,7 +534,7 @@ private fun DiagnosticCard(
 
             // Device info
             DiagnosticRow(
-                label = stringResource(R.string.namecoin_device_info),
+                label = stringRes(Res.string.namecoin_device_info),
                 value = "${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
             )
 
@@ -537,7 +552,7 @@ private fun DiagnosticCard(
                     "—"
                 }
             DiagnosticRow(
-                label = stringResource(R.string.namecoin_tls_info),
+                label = stringRes(Res.string.namecoin_tls_info),
                 value = tlsDisplay,
             )
         }
@@ -901,11 +916,11 @@ private fun NamecoinCoreRpcSection(
     pendingPin?.let { pin ->
         AlertDialog(
             onDismissRequest = { pendingPin = null },
-            title = { Text(stringResource(R.string.namecoin_pin_cert_title)) },
+            title = { Text(stringRes(Res.string.namecoin_pin_cert_title)) },
             text = {
                 Column {
                     Text(
-                        stringResource(R.string.namecoin_pin_cert_body, pin.serverHost),
+                        stringRes(Res.string.namecoin_pin_cert_body, pin.serverHost),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -939,12 +954,12 @@ private fun NamecoinCoreRpcSection(
                     )
                     pendingPin = null
                 }) {
-                    Text(stringResource(R.string.namecoin_pin_cert_accept))
+                    Text(stringRes(Res.string.namecoin_pin_cert_accept))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { pendingPin = null }) {
-                    Text(stringResource(R.string.namecoin_pin_cert_reject))
+                    Text(stringRes(Res.string.namecoin_pin_cert_reject))
                 }
             },
         )

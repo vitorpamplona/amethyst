@@ -59,6 +59,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_picked
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_url_placeholder
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_season_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_title_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_url_label
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -138,7 +145,7 @@ fun NewPodcastTrailerScreen(
                     Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                         Text(text = pickedName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         Text(
-                            text = stringRes(R.string.podcast_episode_audio_picked),
+                            text = stringRes(Res.string.podcast_episode_audio_picked),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -161,8 +168,8 @@ fun NewPodcastTrailerScreen(
             OutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
-                label = { Text(stringRes(R.string.podcast_episode_title_label)) },
-                placeholder = { Text(stringRes(R.string.podcast_trailer_title_placeholder)) },
+                label = { Text(stringRes(Res.string.podcast_episode_title_label)) },
+                placeholder = { Text(stringRes(Res.string.podcast_trailer_title_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -172,8 +179,8 @@ fun NewPodcastTrailerScreen(
             OutlinedTextField(
                 value = vm.url.value,
                 onValueChange = { vm.url.value = it },
-                label = { Text(stringRes(R.string.podcast_trailer_url_label)) },
-                placeholder = { Text(stringRes(R.string.podcast_episode_audio_url_placeholder)) },
+                label = { Text(stringRes(Res.string.podcast_trailer_url_label)) },
+                placeholder = { Text(stringRes(Res.string.podcast_episode_audio_url_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -182,7 +189,7 @@ fun NewPodcastTrailerScreen(
             OutlinedTextField(
                 value = vm.season.value,
                 onValueChange = { input -> vm.season.value = input.filter { it.isDigit() } },
-                label = { Text(stringRes(R.string.podcast_episode_season_label)) },
+                label = { Text(stringRes(Res.string.podcast_episode_season_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

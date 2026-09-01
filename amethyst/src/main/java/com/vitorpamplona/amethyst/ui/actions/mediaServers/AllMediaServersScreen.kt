@@ -50,6 +50,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_detected
+import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_not_detected
+import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_profile_pics_only
+import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_profile_pics_only_caption
+import com.vitorpamplona.amethyst.commons.resources.use_local_blossom_cache
+import com.vitorpamplona.amethyst.commons.resources.use_local_blossom_cache_caption
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -147,11 +154,11 @@ fun MediaCacheSection(accountViewModel: AccountViewModel) {
             }
             Column(modifier = Modifier.weight(1f).padding(start = 14.dp, end = 12.dp)) {
                 Text(
-                    text = stringRes(id = R.string.use_local_blossom_cache),
+                    text = stringRes(id = Res.string.use_local_blossom_cache),
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
-                    text = stringRes(id = R.string.use_local_blossom_cache_caption),
+                    text = stringRes(id = Res.string.use_local_blossom_cache_caption),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
                 )
@@ -179,11 +186,11 @@ fun MediaCacheSection(accountViewModel: AccountViewModel) {
             ) {
                 Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                     Text(
-                        text = stringRes(id = R.string.local_blossom_cache_profile_pics_only),
+                        text = stringRes(id = Res.string.local_blossom_cache_profile_pics_only),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        text = stringRes(id = R.string.local_blossom_cache_profile_pics_only_caption),
+                        text = stringRes(id = Res.string.local_blossom_cache_profile_pics_only_caption),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.grayText,
                     )
@@ -225,9 +232,9 @@ private fun CacheDetectionChip(accountViewModel: AccountViewModel) {
         Text(
             text =
                 if (probeAvailable) {
-                    stringRes(id = R.string.local_blossom_cache_detected)
+                    stringRes(id = Res.string.local_blossom_cache_detected)
                 } else {
-                    stringRes(id = R.string.local_blossom_cache_not_detected)
+                    stringRes(id = Res.string.local_blossom_cache_not_detected)
                 },
             style = MaterialTheme.typography.labelMedium,
             color = color,

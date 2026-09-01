@@ -36,9 +36,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.hashtag_exclusive
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -66,7 +67,7 @@ fun DisplayHashtagExternalId(
     Row(modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(
             symbol = MaterialSymbols.Tag,
-            contentDescription = stringRes(id = R.string.hashtag_exclusive),
+            contentDescription = stringRes(id = Res.string.hashtag_exclusive),
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary,
         )

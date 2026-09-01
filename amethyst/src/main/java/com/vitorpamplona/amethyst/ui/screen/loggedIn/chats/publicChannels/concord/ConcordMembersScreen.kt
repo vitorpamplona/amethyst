@@ -59,6 +59,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_members_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_members_remove
+import com.vitorpamplona.amethyst.commons.resources.concord_members_remove_confirm
+import com.vitorpamplona.amethyst.commons.resources.concord_members_remove_message
+import com.vitorpamplona.amethyst.commons.resources.concord_members_remove_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_message
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_none_assignable
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_out_of_reach
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_save
+import com.vitorpamplona.amethyst.commons.resources.concord_role_admin
+import com.vitorpamplona.amethyst.commons.resources.concord_role_banned
+import com.vitorpamplona.amethyst.commons.resources.concord_role_owner
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -176,7 +190,7 @@ fun ConcordMembersScreen(
         if (roster.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    stringRes(R.string.concord_members_empty),
+                    stringRes(Res.string.concord_members_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 32.dp),
@@ -247,8 +261,8 @@ private fun ConcordMemberRow(
     // is unremovable and outranks everyone, so canManageRolesOnTarget is false there.
     val rolesBlockedReason =
         when {
-            !canManageRolesOnTarget -> stringRes(R.string.concord_members_roles_out_of_reach)
-            assignableRoles.isEmpty() -> stringRes(R.string.concord_members_roles_none_assignable)
+            !canManageRolesOnTarget -> stringRes(Res.string.concord_members_roles_out_of_reach)
+            assignableRoles.isEmpty() -> stringRes(Res.string.concord_members_roles_none_assignable)
             else -> null
         }
     val hasMenu = canToggleAdmin || canBan || canRemove || viewerCanManageRoles
@@ -313,7 +327,7 @@ private fun ConcordMemberRow(
                         DropdownMenuItem(
                             text = {
                                 Column {
-                                    Text(stringRes(R.string.concord_members_roles))
+                                    Text(stringRes(Res.string.concord_members_roles))
                                     rolesBlockedReason?.let {
                                         Text(
                                             it,
@@ -343,7 +357,7 @@ private fun ConcordMemberRow(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    stringRes(R.string.concord_members_remove),
+                                    stringRes(Res.string.concord_members_remove),
                                     color = MaterialTheme.colorScheme.error,
                                 )
                             },
@@ -367,13 +381,13 @@ private fun MemberBadge(
 ) {
     val label =
         when {
-            membership == ConcordMembership.BANNED -> stringRes(R.string.concord_role_banned)
-            membership == ConcordMembership.OWNER -> stringRes(R.string.concord_role_owner)
+            membership == ConcordMembership.BANNED -> stringRes(Res.string.concord_role_banned)
+            membership == ConcordMembership.OWNER -> stringRes(Res.string.concord_role_owner)
             // Show the actual granted role ("Admin", "Moderator", or a custom role) rather than a
             // one-size-fits-all badge; fall back to the generic "Admin" label if a role-holder's
             // role name somehow didn't resolve.
             roleName != null -> roleName
-            membership == ConcordMembership.ADMIN -> stringRes(R.string.concord_role_admin)
+            membership == ConcordMembership.ADMIN -> stringRes(Res.string.concord_role_admin)
             else -> return
         }
     val container = if (membership == ConcordMembership.BANNED) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
@@ -413,7 +427,7 @@ private fun ConcordRolesDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    stringRes(R.string.concord_members_roles_message),
+                    stringRes(Res.string.concord_members_roles_message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -437,7 +451,7 @@ private fun ConcordRolesDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(selected.toList()) }) {
-                Text(stringRes(R.string.concord_members_roles_save))
+                Text(stringRes(Res.string.concord_members_roles_save))
             }
         },
         dismissButton = {
@@ -454,11 +468,11 @@ private fun ConcordRemoveMemberDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.concord_members_remove_title)) },
-        text = { Text(stringRes(R.string.concord_members_remove_message)) },
+        title = { Text(stringRes(Res.string.concord_members_remove_title)) },
+        text = { Text(stringRes(Res.string.concord_members_remove_message)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(R.string.concord_members_remove_confirm), color = MaterialTheme.colorScheme.error)
+                Text(stringRes(Res.string.concord_members_remove_confirm), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {

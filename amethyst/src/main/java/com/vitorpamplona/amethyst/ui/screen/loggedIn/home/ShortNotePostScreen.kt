@@ -83,6 +83,18 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.disable_poll
+import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
+import com.vitorpamplona.amethyst.commons.resources.poll
+import com.vitorpamplona.amethyst.commons.resources.post_anonymously
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_continue
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_message
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_open_settings
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_title
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
@@ -418,7 +430,7 @@ private fun NewPostScreenBody(
                                 singleLine = true,
                                 placeholder = {
                                     Text(
-                                        text = stringRes(R.string.messages_new_message_subject_caption),
+                                        text = stringRes(Res.string.messages_new_message_subject_caption),
                                         color = MaterialTheme.colorScheme.placeholderText,
                                     )
                                 },
@@ -445,7 +457,7 @@ private fun NewPostScreenBody(
                             ) {
                                 Icon(
                                     symbol = MaterialSymbols.NoAccounts,
-                                    contentDescription = stringRes(R.string.post_anonymously),
+                                    contentDescription = stringRes(Res.string.post_anonymously),
                                     modifier = Size30Modifier,
                                     tint = MaterialTheme.colorScheme.onBackground,
                                 )
@@ -659,8 +671,8 @@ private fun NewPostScreenBody(
                                 lud16,
                                 accountViewModel.account.userProfile(),
                                 accountViewModel,
-                                stringRes(id = R.string.lightning_invoice),
-                                stringRes(id = R.string.lightning_create_and_add_invoice),
+                                stringRes(id = Res.string.lightning_invoice),
+                                stringRes(id = Res.string.lightning_create_and_add_invoice),
                                 onNewInvoice = {
                                     postViewModel.insertAtCursor(it)
                                     postViewModel.wantsInvoice = false
@@ -691,7 +703,7 @@ private fun NewPostScreenBody(
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ZapRaiserRequest(
-                            stringRes(id = R.string.zapraiser),
+                            stringRes(id = Res.string.zapraiser),
                             postViewModel,
                         )
                     }
@@ -756,14 +768,14 @@ private fun NewPostScreenBody(
         if (showAlwaysOnPrompt) {
             AlertDialog(
                 onDismissRequest = { showAlwaysOnPrompt = false },
-                title = { Text(stringRes(R.string.schedule_post_always_on_prompt_title)) },
-                text = { Text(stringRes(R.string.schedule_post_always_on_prompt_message)) },
+                title = { Text(stringRes(Res.string.schedule_post_always_on_prompt_title)) },
+                text = { Text(stringRes(Res.string.schedule_post_always_on_prompt_message)) },
                 confirmButton = {
                     TextButton(onClick = {
                         showAlwaysOnPrompt = false
                         nav.nav(Route.NotificationSettings)
                     }) {
-                        Text(stringRes(R.string.schedule_post_always_on_prompt_open_settings))
+                        Text(stringRes(Res.string.schedule_post_always_on_prompt_open_settings))
                     }
                 },
                 dismissButton = {
@@ -772,7 +784,7 @@ private fun NewPostScreenBody(
                         postViewModel.scheduledForSec =
                             roundUpToNextQuarterHour((System.currentTimeMillis() / 1000) + 60 * 60)
                     }) {
-                        Text(stringRes(R.string.schedule_post_always_on_prompt_continue))
+                        Text(stringRes(Res.string.schedule_post_always_on_prompt_continue))
                     }
                 },
             )
@@ -1019,14 +1031,14 @@ private fun AddPollButton(
         if (!isPollActive) {
             Icon(
                 symbol = MaterialSymbols.Poll,
-                contentDescription = stringRes(id = R.string.poll),
+                contentDescription = stringRes(id = Res.string.poll),
                 modifier = Modifier.height(22.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 symbol = MaterialSymbols.Poll,
-                contentDescription = stringRes(id = R.string.disable_poll),
+                contentDescription = stringRes(id = Res.string.disable_poll),
                 modifier = Modifier.height(22.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )

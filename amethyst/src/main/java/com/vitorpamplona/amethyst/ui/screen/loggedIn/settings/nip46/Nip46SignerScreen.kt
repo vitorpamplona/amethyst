@@ -84,6 +84,28 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_title
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_background_hint
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_cancel
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_button
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_hint
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_label
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_copy
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_explainer
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_hero_title
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_live
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_manage_apps
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_paste_link
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_regenerate
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_relays_some_down
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_rotate_confirm_button
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_rotate_confirm_message
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_rotate_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_scan_caption
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_scan_connect
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_status_no_relays
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_turn_on
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -93,6 +115,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
+import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 
 private val LiveGreen = Color(0xFF3DDC84)
@@ -180,7 +203,7 @@ fun Nip46SignerScreen(
                 )
 
                 if (relays.isEmpty()) {
-                    WarningCard(stringResource(R.string.nip46_signer_status_no_relays))
+                    WarningCard(stringRes(Res.string.nip46_signer_status_no_relays))
                 }
 
                 bunkerUri?.let { uri ->
@@ -217,7 +240,7 @@ fun Nip46SignerScreen(
 
             if (enabled) {
                 Text(
-                    stringResource(R.string.nip46_signer_background_hint),
+                    stringRes(Res.string.nip46_signer_background_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -245,16 +268,16 @@ private fun RotateAddressDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(24.dp)) },
-        title = { Text(stringResource(R.string.nip46_signer_rotate_confirm_title)) },
-        text = { Text(stringResource(R.string.nip46_signer_rotate_confirm_message)) },
+        title = { Text(stringRes(Res.string.nip46_signer_rotate_confirm_title)) },
+        text = { Text(stringRes(Res.string.nip46_signer_rotate_confirm_message)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.nip46_signer_rotate_confirm_button))
+                Text(stringRes(Res.string.nip46_signer_rotate_confirm_button))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.nip46_signer_cancel))
+                Text(stringRes(Res.string.nip46_signer_cancel))
             }
         },
     )
@@ -288,13 +311,13 @@ private fun DisabledHero(onEnable: () -> Unit) {
             )
         }
         Text(
-            stringResource(R.string.nip46_signer_hero_title),
+            stringRes(Res.string.nip46_signer_hero_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Text(
-            stringResource(R.string.nip46_signer_explainer),
+            stringRes(Res.string.nip46_signer_explainer),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -309,7 +332,7 @@ private fun DisabledHero(onEnable: () -> Unit) {
         ) {
             Icon(MaterialSymbols.Key, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.nip46_signer_turn_on), fontWeight = FontWeight.SemiBold)
+            Text(stringRes(Res.string.nip46_signer_turn_on), fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -334,14 +357,14 @@ private fun LiveStatusCard(
             LiveDot()
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    stringResource(R.string.nip46_signer_live),
+                    stringRes(Res.string.nip46_signer_live),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 val relayStatus =
                     if (liveRelayCount < relayCount) {
-                        stringResource(R.string.nip46_signer_relays_some_down, liveRelayCount, relayCount)
+                        stringRes(Res.string.nip46_signer_relays_some_down, liveRelayCount, relayCount)
                     } else {
                         pluralStringResource(R.plurals.nip46_signer_relays_all_live, relayCount, relayCount)
                     }
@@ -406,7 +429,7 @@ private fun QrHeroCard(
                 )
             }
             Text(
-                stringResource(R.string.nip46_signer_scan_caption),
+                stringRes(Res.string.nip46_signer_scan_caption),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
@@ -418,12 +441,12 @@ private fun QrHeroCard(
                 FilledTonalButton(onClick = onCopy, modifier = Modifier.weight(1f)) {
                     Icon(MaterialSymbols.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.nip46_signer_copy))
+                    Text(stringRes(Res.string.nip46_signer_copy))
                 }
                 FilledTonalButton(onClick = onRegenerate, modifier = Modifier.weight(1f)) {
                     Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.nip46_signer_regenerate))
+                    Text(stringRes(Res.string.nip46_signer_regenerate))
                 }
             }
         }
@@ -440,7 +463,7 @@ private fun ConnectSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            stringResource(R.string.nip46_signer_connect_label),
+            stringRes(Res.string.nip46_signer_connect_label),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -454,11 +477,11 @@ private fun ConnectSection(
         ) {
             Icon(MaterialSymbols.CameraAlt, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.nip46_signer_scan_connect), fontWeight = FontWeight.SemiBold)
+            Text(stringRes(Res.string.nip46_signer_scan_connect), fontWeight = FontWeight.SemiBold)
         }
 
         TextButton(onClick = { showPaste = !showPaste }, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.nip46_signer_paste_link))
+            Text(stringRes(Res.string.nip46_signer_paste_link))
         }
 
         AnimatedVisibility(visible = showPaste) {
@@ -469,7 +492,7 @@ private fun ConnectSection(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
-                    placeholder = { Text(stringResource(R.string.nip46_signer_connect_hint)) },
+                    placeholder = { Text(stringRes(Res.string.nip46_signer_connect_hint)) },
                 )
                 Button(
                     onClick = {
@@ -483,7 +506,7 @@ private fun ConnectSection(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(),
                 ) {
-                    Text(stringResource(R.string.nip46_signer_connect_button))
+                    Text(stringRes(Res.string.nip46_signer_connect_button))
                 }
             }
         }
@@ -513,7 +536,7 @@ private fun ConnectedAppsRow(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.nip46_signer_manage_apps),
+                    stringRes(Res.string.nip46_signer_manage_apps),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
@@ -536,7 +559,7 @@ private fun ConnectedAppsRow(
 private fun ActivitySection(entries: List<Nip46ActivityEntry>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            stringResource(R.string.nip46_signer_activity_title),
+            stringRes(Res.string.nip46_signer_activity_title),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )

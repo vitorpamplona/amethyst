@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.hide_new_word_label
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
@@ -229,14 +231,14 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
     OutlinedTextField(
         value = currentWordToAdd.value,
         onValueChange = { currentWordToAdd.value = it },
-        label = { Text(text = stringRes(R.string.hide_new_word_label)) },
+        label = { Text(text = stringRes(Res.string.hide_new_word_label)) },
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(10.dp),
         placeholder = {
             Text(
-                text = stringRes(R.string.hide_new_word_label),
+                text = stringRes(Res.string.hide_new_word_label),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

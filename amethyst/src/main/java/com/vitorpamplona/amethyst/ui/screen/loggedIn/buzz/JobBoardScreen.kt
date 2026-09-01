@@ -79,12 +79,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.JobState
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_job_board_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -134,7 +135,7 @@ fun JobBoardScreen(
     var composing by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_job_board_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_job_board_title), nav) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { composing = true },

@@ -73,6 +73,13 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_available
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_expand
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_pinned
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_pinned_empty
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_remove
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_reorder_hint
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarCategories
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
@@ -180,7 +187,7 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
         Spacer(Modifier.height(4.dp))
 
         // --- Available catalogue, grouped into collapsible category cards. ---
-        PickerSectionHeader(title = stringRes(R.string.bottom_bar_settings_available))
+        PickerSectionHeader(title = stringRes(Res.string.bottom_bar_settings_available))
 
         BottomBarCategories.forEach { category ->
             CategoryCard(
@@ -209,7 +216,7 @@ private fun EditableBarCard(
     accountViewModel: AccountViewModel,
 ) {
     PickerHeroCard(
-        title = stringRes(R.string.bottom_bar_settings_pinned),
+        title = stringRes(Res.string.bottom_bar_settings_pinned),
         trailing = {
             Text(
                 text = "${pinned.size} / $RECOMMENDED_SLOTS",
@@ -228,7 +235,7 @@ private fun EditableBarCard(
             if (pinned.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        stringRes(R.string.bottom_bar_settings_pinned_empty),
+                        stringRes(Res.string.bottom_bar_settings_pinned_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -240,7 +247,7 @@ private fun EditableBarCard(
         }
 
         Text(
-            text = stringRes(R.string.bottom_bar_settings_reorder_hint),
+            text = stringRes(Res.string.bottom_bar_settings_reorder_hint),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp),
@@ -398,7 +405,7 @@ private fun BoxScope.RemoveBadge(
     ) {
         Icon(
             symbol = MaterialSymbols.Close,
-            contentDescription = stringRes(R.string.bottom_bar_settings_remove),
+            contentDescription = stringRes(Res.string.bottom_bar_settings_remove),
             modifier = Modifier.size(12.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -727,7 +734,7 @@ private fun ExpandableAvailableRow(
     ) {
         Icon(
             symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-            contentDescription = stringRes(R.string.bottom_bar_settings_expand),
+            contentDescription = stringRes(Res.string.bottom_bar_settings_expand),
             modifier = Size22Modifier,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )

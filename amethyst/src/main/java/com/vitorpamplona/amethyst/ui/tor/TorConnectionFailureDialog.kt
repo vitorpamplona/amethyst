@@ -29,7 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.tor_connection_failed_body
+import com.vitorpamplona.amethyst.commons.resources.tor_connection_failed_title
+import com.vitorpamplona.amethyst.commons.resources.tor_continue_without_for_session
+import com.vitorpamplona.amethyst.commons.resources.tor_keep_waiting
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
@@ -59,16 +63,16 @@ fun TorConnectionFailureDialog(torManager: TorManager) {
 
     AlertDialog(
         onDismissRequest = { /* sticky — user must pick a button */ },
-        title = { Text(stringRes(R.string.tor_connection_failed_title)) },
-        text = { Text(stringRes(R.string.tor_connection_failed_body)) },
+        title = { Text(stringRes(Res.string.tor_connection_failed_title)) },
+        text = { Text(stringRes(Res.string.tor_connection_failed_body)) },
         confirmButton = {
             Button(onClick = { torManager.approveBypassForOneHour() }) {
-                Text(stringRes(R.string.tor_continue_without_for_session))
+                Text(stringRes(Res.string.tor_continue_without_for_session))
             }
         },
         dismissButton = {
             Button(onClick = { dismissedForCurrentSpan = true }) {
-                Text(stringRes(R.string.tor_keep_waiting))
+                Text(stringRes(Res.string.tor_keep_waiting))
             }
         },
     )

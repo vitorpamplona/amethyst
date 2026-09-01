@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.blossom_sync_done
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -118,7 +120,7 @@ fun DisplayBlossomSyncProgress() {
                             tint = if (s.running) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.allGoodColor,
                         )
                         Text(
-                            text = if (s.running) stringRes(R.string.blossom_syncing) else stringRes(R.string.blossom_sync_done),
+                            text = if (s.running) stringRes(R.string.blossom_syncing) else stringRes(Res.string.blossom_sync_done),
                             style = MaterialTheme.typography.titleSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

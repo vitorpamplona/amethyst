@@ -42,6 +42,10 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_explainer
+import com.vitorpamplona.amethyst.commons.resources.content_warning
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -66,7 +70,7 @@ fun ContentSensitivityExplainer(
             ) {
                 Icon(
                     symbol = MaterialSymbols.VisibilityOff,
-                    contentDescription = stringRes(id = R.string.content_warning),
+                    contentDescription = stringRes(id = Res.string.content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -75,7 +79,7 @@ fun ContentSensitivityExplainer(
                 )
                 Icon(
                     symbol = MaterialSymbols.Warning,
-                    contentDescription = stringRes(id = R.string.content_warning),
+                    contentDescription = stringRes(id = Res.string.content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -95,7 +99,7 @@ fun ContentSensitivityExplainer(
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringRes(R.string.add_sensitive_content_explainer),
+            text = stringRes(Res.string.add_sensitive_content_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
@@ -106,7 +110,7 @@ fun ContentSensitivityExplainer(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.add_sensitive_content_description_placeholder),
+                    text = stringRes(Res.string.add_sensitive_content_description_placeholder),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

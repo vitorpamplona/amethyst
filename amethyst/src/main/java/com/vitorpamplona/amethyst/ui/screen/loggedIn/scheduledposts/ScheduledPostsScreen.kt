@@ -94,6 +94,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_post
+import com.vitorpamplona.amethyst.commons.resources.relays
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_empty_hint
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_empty_title
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
@@ -407,7 +412,7 @@ private fun ScheduledPostCardExpandedPanel(
         HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
 
         Column {
-            SectionLabel(stringRes(R.string.relays))
+            SectionLabel(stringRes(Res.string.relays))
             post.relayUrls.forEach { url ->
                 Text(
                     text = url,
@@ -609,16 +614,16 @@ private fun EmptyState(
                 )
             }
             Text(
-                text = stringRes(R.string.scheduled_posts_empty_title),
+                text = stringRes(Res.string.scheduled_posts_empty_title),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = stringRes(R.string.scheduled_posts_empty_hint),
+                text = stringRes(Res.string.scheduled_posts_empty_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Button(onClick = onCompose) {
-                Text(stringRes(R.string.new_post))
+                Text(stringRes(Res.string.new_post))
             }
         }
     }

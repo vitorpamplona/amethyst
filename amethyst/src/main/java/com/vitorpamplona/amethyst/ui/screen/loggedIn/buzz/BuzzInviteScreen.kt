@@ -52,10 +52,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_after_browser
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_body
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_continue
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_expired
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_heading
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_invalid
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_open_workspace
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_role
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_workspace
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -90,7 +100,7 @@ fun BuzzInviteScreen(
     var launched by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_invite_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_invite_title), nav) },
     ) { padding ->
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().padding(20.dp),
@@ -98,7 +108,7 @@ fun BuzzInviteScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (invite == null) {
-                Text(stringRes(R.string.buzz_invite_invalid), style = MaterialTheme.typography.bodyLarge)
+                Text(stringRes(Res.string.buzz_invite_invalid), style = MaterialTheme.typography.bodyLarge)
                 return@Column
             }
 
@@ -122,7 +132,7 @@ fun BuzzInviteScreen(
             }
 
             Text(
-                text = stringRes(R.string.buzz_invite_heading),
+                text = stringRes(Res.string.buzz_invite_heading),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
@@ -135,20 +145,20 @@ fun BuzzInviteScreen(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    InviteRow(stringRes(R.string.buzz_invite_workspace), invite.host)
-                    InviteRow(stringRes(R.string.buzz_invite_role), invite.role)
+                    InviteRow(stringRes(Res.string.buzz_invite_workspace), invite.host)
+                    InviteRow(stringRes(Res.string.buzz_invite_role), invite.role)
                 }
             }
 
             Text(
-                text = stringRes(R.string.buzz_invite_body),
+                text = stringRes(Res.string.buzz_invite_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             if (expired) {
                 Text(
-                    text = stringRes(R.string.buzz_invite_expired),
+                    text = stringRes(Res.string.buzz_invite_expired),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -160,7 +170,7 @@ fun BuzzInviteScreen(
                 // After the browser hand-off: gently point back to the workspace, which now
                 // authenticates + discovers its channels (the claim granted membership).
                 Text(
-                    text = stringRes(R.string.buzz_invite_after_browser),
+                    text = stringRes(Res.string.buzz_invite_after_browser),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -178,7 +188,7 @@ fun BuzzInviteScreen(
                 ) {
                     Icon(symbol = MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(stringRes(R.string.buzz_invite_open_workspace))
+                    Text(stringRes(Res.string.buzz_invite_open_workspace))
                 }
             } else {
                 Button(
@@ -199,7 +209,7 @@ fun BuzzInviteScreen(
                 ) {
                     Icon(symbol = MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(stringRes(R.string.buzz_invite_continue))
+                    Text(stringRes(Res.string.buzz_invite_continue))
                 }
             }
         }

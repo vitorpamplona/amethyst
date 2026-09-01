@@ -37,9 +37,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_bookmark_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.bookmark_absence_indicator
+import com.vitorpamplona.amethyst.commons.resources.bookmark_add_action_desc
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_icon_label
+import com.vitorpamplona.amethyst.commons.resources.bookmark_remove_action_desc
+import com.vitorpamplona.amethyst.commons.resources.private_bookmark_add_action_label
+import com.vitorpamplona.amethyst.commons.resources.private_bookmark_presence_indicator
+import com.vitorpamplona.amethyst.commons.resources.public_bookmark_add_action_label
+import com.vitorpamplona.amethyst.commons.resources.public_bookmark_presence_indicator
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -82,7 +91,7 @@ fun BookmarkGroupManagementItem(
             ) {
                 Icon(
                     symbol = MaterialSymbols.CollectionsBookmark,
-                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    contentDescription = stringRes(Res.string.bookmark_list_icon_label),
                     modifier = Size50Modifier,
                 )
                 Spacer(StdVertSpacer)
@@ -115,11 +124,11 @@ fun BookmarkStatusInList(
     ) {
         val text =
             if (isPublicMemberBookmark) {
-                stringRes(R.string.public_bookmark_presence_indicator)
+                stringRes(Res.string.public_bookmark_presence_indicator)
             } else if (isPrivateMemberBookmark) {
-                stringRes(R.string.private_bookmark_presence_indicator)
+                stringRes(Res.string.private_bookmark_presence_indicator)
             } else {
-                stringRes(R.string.bookmark_absence_indicator)
+                stringRes(Res.string.bookmark_absence_indicator)
             }
 
         val icon =
@@ -155,20 +164,20 @@ fun BookmarkManagementOptions(
 
     if (isBookmarkAddTapped.value) {
         M3ActionDialog(
-            title = stringRes(R.string.add_bookmark_dialog_title),
+            title = stringRes(Res.string.add_bookmark_dialog_title),
             onDismiss = { isBookmarkAddTapped.value = false },
         ) {
             M3ActionSection {
                 M3ActionRow(
                     icon = MaterialSymbols.BookmarkAdd,
-                    text = stringRes(R.string.public_bookmark_add_action_label),
+                    text = stringRes(Res.string.public_bookmark_add_action_label),
                 ) {
                     onAddBookmark(false)
                     isBookmarkAddTapped.value = false
                 }
                 M3ActionRow(
                     icon = MaterialSymbols.Lock,
-                    text = stringRes(R.string.private_bookmark_add_action_label),
+                    text = stringRes(Res.string.private_bookmark_add_action_label),
                 ) {
                     onAddBookmark(true)
                     isBookmarkAddTapped.value = false
@@ -204,13 +213,13 @@ fun BookmarkManagementOptions(
             if (isBookmarkInList) {
                 Icon(
                     symbol = MaterialSymbols.BookmarkRemove,
-                    contentDescription = stringRes(R.string.bookmark_remove_action_desc),
+                    contentDescription = stringRes(Res.string.bookmark_remove_action_desc),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             } else {
                 Icon(
                     symbol = MaterialSymbols.BookmarkAdd,
-                    contentDescription = stringRes(R.string.bookmark_add_action_desc),
+                    contentDescription = stringRes(Res.string.bookmark_add_action_desc),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }

@@ -75,11 +75,31 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_allow_always
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_fewer_options
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_hide_event
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_more_options
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_show_event
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_wants_to
+import com.vitorpamplona.amethyst.commons.resources.napplet_signer_allow_24h
+import com.vitorpamplona.amethyst.commons.resources.napplet_signer_allow_30d
+import com.vitorpamplona.amethyst.commons.resources.napplet_signer_allow_all
+import com.vitorpamplona.amethyst.commons.resources.napplet_signer_allow_once
+import com.vitorpamplona.amethyst.commons.resources.napplet_signer_allow_session
+import com.vitorpamplona.amethyst.commons.resources.napplet_signer_deny_once
+import com.vitorpamplona.amethyst.commons.resources.napplet_signer_deny_op
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_allow
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_deny
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_remember
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_signing_as
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_messages_with
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
@@ -184,7 +204,7 @@ private fun SignerConsentDialog(
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        stringResource(R.string.napplet_consent_wants_to, info.operationSummary),
+                        stringRes(Res.string.napplet_consent_wants_to, info.operationSummary),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -197,7 +217,7 @@ private fun SignerConsentDialog(
                     // that person as an avatar + name, never as nothing.
                     if (info.counterpartyName != null) {
                         Text(
-                            stringResource(R.string.nip46_signer_messages_with),
+                            stringRes(Res.string.nip46_signer_messages_with),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -230,14 +250,14 @@ private fun SignerConsentDialog(
                         onClick = { onGrant(SignerOpGrant.AllowForOp(info.op)) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_consent_allow_always))
+                        Text(stringRes(Res.string.napplet_consent_allow_always))
                     }
                 } else {
                     Button(
                         onClick = { onGrant(SignerOpGrant.AllowForOp(info.op)) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_consent_allow_always))
+                        Text(stringRes(Res.string.napplet_consent_allow_always))
                     }
                 }
 
@@ -246,7 +266,7 @@ private fun SignerConsentDialog(
                     onClick = { onGrant(SignerOpGrant.AllowOnce) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 ) {
-                    Text(stringResource(R.string.napplet_signer_allow_once))
+                    Text(stringRes(Res.string.napplet_signer_allow_once))
                 }
 
                 // "More options" toggle: session and time-bound grants
@@ -261,9 +281,9 @@ private fun SignerConsentDialog(
                     ) {
                         Text(
                             if (showMoreOptions) {
-                                stringResource(R.string.napplet_consent_fewer_options)
+                                stringRes(Res.string.napplet_consent_fewer_options)
                             } else {
-                                stringResource(R.string.napplet_consent_more_options)
+                                stringRes(Res.string.napplet_consent_more_options)
                             },
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -280,25 +300,25 @@ private fun SignerConsentDialog(
                         onClick = { onGrant(SignerOpGrant.AllowForSession(info.op)) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_signer_allow_session))
+                        Text(stringRes(Res.string.napplet_signer_allow_session))
                     }
                     OutlinedButton(
                         onClick = { onGrant(SignerOpGrant.AllowUntil(info.op, TimeUtils.now() + 86_400L)) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_signer_allow_24h))
+                        Text(stringRes(Res.string.napplet_signer_allow_24h))
                     }
                     OutlinedButton(
                         onClick = { onGrant(SignerOpGrant.AllowUntil(info.op, TimeUtils.now() + 30L * 86_400L)) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_signer_allow_30d))
+                        Text(stringRes(Res.string.napplet_signer_allow_30d))
                     }
                     OutlinedButton(
                         onClick = { onGrant(SignerOpGrant.AllowAll) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_signer_allow_all))
+                        Text(stringRes(Res.string.napplet_signer_allow_all))
                     }
                 }
 
@@ -311,14 +331,14 @@ private fun SignerConsentDialog(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text(stringResource(R.string.napplet_signer_deny_once))
+                    Text(stringRes(Res.string.napplet_signer_deny_once))
                 }
                 OutlinedButton(
                     onClick = { onGrant(SignerOpGrant.DenyForOp(info.op)) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text(stringResource(R.string.napplet_signer_deny_op, info.operationSummary))
+                    Text(stringRes(Res.string.napplet_signer_deny_op, info.operationSummary))
                 }
             }
         }
@@ -390,9 +410,9 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
                 ) {
                     Text(
                         if (showRawData) {
-                            stringResource(R.string.napplet_consent_hide_event)
+                            stringRes(Res.string.napplet_consent_hide_event)
                         } else {
-                            stringResource(R.string.napplet_consent_show_event)
+                            stringRes(Res.string.napplet_consent_show_event)
                         },
                         style = MaterialTheme.typography.labelSmall,
                     )
@@ -468,7 +488,7 @@ private fun BatchedConsentDialog(
                         )
                         account.accountName?.let { name ->
                             Text(
-                                stringResource(R.string.nip46_signer_batch_signing_as, name),
+                                stringRes(Res.string.nip46_signer_batch_signing_as, name),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -553,7 +573,7 @@ private fun BatchedConsentDialog(
                 ) {
                     Switch(checked = rememberChoice, onCheckedChange = { rememberChoice = it })
                     Text(
-                        stringResource(R.string.nip46_signer_batch_remember),
+                        stringRes(Res.string.nip46_signer_batch_remember),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -575,7 +595,7 @@ private fun BatchedConsentDialog(
                     enabled = selected.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 ) {
-                    Text(stringResource(R.string.nip46_signer_batch_allow, selected.size))
+                    Text(stringRes(Res.string.nip46_signer_batch_allow, selected.size))
                 }
                 OutlinedButton(
                     onClick = { onResolve(pending.filter { it.token in selected }.map { it.token }, SignerOpGrant.DenyOnce) },
@@ -583,7 +603,7 @@ private fun BatchedConsentDialog(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text(stringResource(R.string.nip46_signer_batch_deny, selected.size))
+                    Text(stringRes(Res.string.nip46_signer_batch_deny, selected.size))
                 }
             }
         }

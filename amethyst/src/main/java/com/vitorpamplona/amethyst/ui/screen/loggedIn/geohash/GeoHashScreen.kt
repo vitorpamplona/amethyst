@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_open
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -137,7 +139,7 @@ fun GeoHashActionOptions(
     IconButton(onClick = { nav.nav(Route.GeohashChat(tag)) }) {
         SymbolIcon(
             symbol = MaterialSymbols.AutoMirrored.Chat,
-            contentDescription = stringRes(R.string.geohash_chat_open),
+            contentDescription = stringRes(Res.string.geohash_chat_open),
         )
     }
 

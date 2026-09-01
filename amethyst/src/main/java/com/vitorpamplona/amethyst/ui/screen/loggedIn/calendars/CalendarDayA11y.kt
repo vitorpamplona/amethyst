@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_no_events
 import com.vitorpamplona.amethyst.ui.stringRes
 
 // Picks calendar_day_a11y_no_events when count is 0 because ICU/CLDR maps 0 to
@@ -34,7 +36,7 @@ fun calendarDayA11yLabel(
     count: Int,
 ): String =
     if (count == 0) {
-        stringRes(R.string.calendar_day_a11y_no_events, dateLabel)
+        stringRes(Res.string.calendar_day_a11y_no_events, dateLabel)
     } else {
         pluralStringResource(R.plurals.calendar_day_a11y_events, count, dateLabel, count)
     }

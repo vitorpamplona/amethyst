@@ -77,6 +77,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.hi_there_is_this_still_available
+import com.vitorpamplona.amethyst.commons.resources.send_a_direct_message
+import com.vitorpamplona.amethyst.commons.resources.send_the_seller_a_message
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -1335,14 +1339,14 @@ private fun RenderClassifiedsReaderForThread(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_dm, 5),
-                    stringRes(R.string.send_a_direct_message),
+                    stringRes(Res.string.send_a_direct_message),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
 
                 Spacer(modifier = StdHorzSpacer)
 
-                Text(stringRes(id = R.string.send_the_seller_a_message))
+                Text(stringRes(id = Res.string.send_the_seller_a_message))
             }
 
             Row(
@@ -1368,7 +1372,7 @@ private fun RenderClassifiedsReaderForThread(
                             sellerName,
                         )
                     } else {
-                        stringRes(id = R.string.hi_there_is_this_still_available)
+                        stringRes(id = Res.string.hi_there_is_this_still_available)
                     }
 
                 var message by remember { mutableStateOf(TextFieldValue(msg)) }

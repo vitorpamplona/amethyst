@@ -27,7 +27,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.external_content_title
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState
@@ -94,7 +95,7 @@ fun UrlScreen(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = {
-                    Text(stringRes(R.string.external_content_title))
+                    Text(stringRes(Res.string.external_content_title))
                 },
                 popBack = nav::popBack,
             )

@@ -32,7 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.deleted_items_banner_dismiss
+import com.vitorpamplona.amethyst.commons.resources.deleted_items_banner_remove
+import com.vitorpamplona.amethyst.commons.resources.deleted_items_banner_title
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -54,7 +57,7 @@ fun DeletedItemsBanner(
         ) {
             Column(modifier = BigPadding) {
                 Text(
-                    text = stringRes(R.string.deleted_items_banner_title, count),
+                    text = stringRes(Res.string.deleted_items_banner_title, count),
                     style = MaterialTheme.typography.bodyMedium,
                 )
 
@@ -65,10 +68,10 @@ fun DeletedItemsBanner(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text(text = stringRes(R.string.deleted_items_banner_dismiss))
+                        Text(text = stringRes(Res.string.deleted_items_banner_dismiss))
                     }
                     Button(onClick = onRemove) {
-                        Text(text = stringRes(R.string.deleted_items_banner_remove))
+                        Text(text = stringRes(Res.string.deleted_items_banner_remove))
                     }
                 }
             }

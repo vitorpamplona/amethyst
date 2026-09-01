@@ -48,8 +48,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chats_reply_not_found
+import com.vitorpamplona.amethyst.commons.resources.chats_reply_searched
+import com.vitorpamplona.amethyst.commons.resources.chats_reply_searching_history
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryRelayDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.historySubtitle
 import com.vitorpamplona.amethyst.commons.ui.feeds.incompleteSubtitle
@@ -191,9 +194,9 @@ fun LoadingReplyNote(
                     Text(
                         text =
                             if (isExhausted) {
-                                stringRes(R.string.chats_reply_not_found)
+                                stringRes(Res.string.chats_reply_not_found)
                             } else {
-                                stringRes(R.string.chats_reply_searching_history)
+                                stringRes(Res.string.chats_reply_searching_history)
                             },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
@@ -207,7 +210,7 @@ fun LoadingReplyNote(
                         text =
                             when {
                                 stalledOut -> incompleteSubtitle(stalledCount)
-                                isExhausted -> stringRes(R.string.chats_reply_searched)
+                                isExhausted -> stringRes(Res.string.chats_reply_searched)
                                 else -> historySubtitle(protocolTag, relayCount, stalledCount, reachedBack, ::formatHistoryReachDate)
                             },
                         style = MaterialTheme.typography.bodySmall,

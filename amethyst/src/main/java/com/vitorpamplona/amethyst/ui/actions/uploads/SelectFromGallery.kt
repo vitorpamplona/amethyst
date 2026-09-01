@@ -37,9 +37,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.service.uploads.isAvif
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -150,7 +151,7 @@ private fun GallerySelectButton(
         if (!isUploading) {
             Icon(
                 symbol = MaterialSymbols.AddPhotoAlternate,
-                contentDescription = stringRes(id = R.string.upload_image),
+                contentDescription = stringRes(id = Res.string.upload_image),
                 modifier = Modifier.height(25.dp),
                 tint = tint,
             )

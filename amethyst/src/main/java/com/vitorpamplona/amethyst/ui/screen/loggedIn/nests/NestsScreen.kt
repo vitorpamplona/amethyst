@@ -35,6 +35,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_create_fab
+import com.vitorpamplona.amethyst.commons.resources.nest_no_server_body
+import com.vitorpamplona.amethyst.commons.resources.nest_no_server_cancel
+import com.vitorpamplona.amethyst.commons.resources.nest_no_server_title
+import com.vitorpamplona.amethyst.commons.resources.nest_no_server_use_default
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -107,7 +113,7 @@ fun NestsScreen(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.nest_create_fab),
+                        contentDescription = stringRes(Res.string.nest_create_fab),
                     )
                 }
             }
@@ -186,16 +192,16 @@ private fun SetUpAudioServerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.nest_no_server_title)) },
-        text = { Text(stringRes(R.string.nest_no_server_body, defaultUrl)) },
+        title = { Text(stringRes(Res.string.nest_no_server_title)) },
+        text = { Text(stringRes(Res.string.nest_no_server_body, defaultUrl)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(R.string.nest_no_server_use_default))
+                Text(stringRes(Res.string.nest_no_server_use_default))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.nest_no_server_cancel))
+                Text(stringRes(Res.string.nest_no_server_cancel))
             }
         },
     )

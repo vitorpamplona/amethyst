@@ -35,9 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.upload_file
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
@@ -83,7 +84,7 @@ private fun FileSelectButton(
         if (!isUploading) {
             Icon(
                 symbol = MaterialSymbols.AttachFile,
-                contentDescription = stringRes(id = R.string.upload_file),
+                contentDescription = stringRes(id = Res.string.upload_file),
                 modifier = Modifier.height(20.dp),
                 tint = tint,
             )

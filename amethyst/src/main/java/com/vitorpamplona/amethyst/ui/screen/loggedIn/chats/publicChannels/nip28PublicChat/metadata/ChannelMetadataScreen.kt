@@ -48,6 +48,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.about_us
+import com.vitorpamplona.amethyst.commons.resources.channel_name
+import com.vitorpamplona.amethyst.commons.resources.my_awesome_group
+import com.vitorpamplona.amethyst.commons.resources.picture_url
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -255,7 +260,7 @@ private fun Description(postViewModel: ChannelMetadataViewModel) {
         onValueChange = { postViewModel.channelDescription.value = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.about_us),
+                text = stringRes(Res.string.about_us),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -274,7 +279,7 @@ private fun Picture(
     accountViewModel: AccountViewModel,
 ) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.picture_url)) },
+        label = { Text(text = stringRes(Res.string.picture_url)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.channelPicture.value,
         onValueChange = { postViewModel.channelPicture.value = it },
@@ -300,13 +305,13 @@ private fun Picture(
 @Composable
 private fun ChannelName(postViewModel: ChannelMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.channel_name)) },
+        label = { Text(text = stringRes(Res.string.channel_name)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.channelName.value,
         onValueChange = { postViewModel.channelName.value = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.my_awesome_group),
+                text = stringRes(Res.string.my_awesome_group),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

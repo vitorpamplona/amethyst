@@ -37,7 +37,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_create_now
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_description
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -127,7 +130,7 @@ fun AddInboxRelayForDMCard(
             ) {
                 // Title
                 Text(
-                    text = stringRes(id = R.string.dm_relays_not_found),
+                    text = stringRes(id = Res.string.dm_relays_not_found),
                     style =
                         TextStyle(
                             fontSize = 20.sp,
@@ -138,7 +141,7 @@ fun AddInboxRelayForDMCard(
                 Spacer(modifier = StdVertSpacer)
 
                 Text(
-                    text = stringRes(id = R.string.dm_relays_not_found_description),
+                    text = stringRes(id = Res.string.dm_relays_not_found_description),
                 )
 
                 Spacer(modifier = StdVertSpacer)
@@ -154,7 +157,7 @@ fun AddInboxRelayForDMCard(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = stringRes(id = R.string.dm_relays_not_found_create_now))
+                    Text(text = stringRes(id = Res.string.dm_relays_not_found_create_now))
                 }
             }
         }

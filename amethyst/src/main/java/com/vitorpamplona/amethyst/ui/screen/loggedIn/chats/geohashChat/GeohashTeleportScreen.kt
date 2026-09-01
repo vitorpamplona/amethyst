@@ -26,7 +26,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_teleport_action
+import com.vitorpamplona.amethyst.commons.resources.geohash_teleport_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -51,14 +53,14 @@ fun GeohashTeleportScreen(
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
-                title = { Text(stringRes(R.string.geohash_teleport_title)) },
+                title = { Text(stringRes(Res.string.geohash_teleport_title)) },
                 popBack = nav::popBack,
             )
         },
     ) { pad ->
         GeohashLocationPickerContent(
             initialGeohash = null,
-            confirmLabel = stringRes(R.string.geohash_teleport_action),
+            confirmLabel = stringRes(Res.string.geohash_teleport_action),
             onConfirm = { cell ->
                 accountViewModel.followGeohash(cell)
                 nav.popBack()

@@ -55,6 +55,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
+import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_connect_app
+import com.vitorpamplona.amethyst.commons.resources.wallet_name
+import com.vitorpamplona.amethyst.commons.resources.wallet_name_hint
+import com.vitorpamplona.amethyst.commons.resources.wallet_paste_uri
+import com.vitorpamplona.amethyst.commons.resources.wallet_save
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -93,7 +102,7 @@ fun AddNwcWalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_add_nwc_title)) },
+                title = { Text(stringRes(Res.string.wallet_add_nwc_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -119,8 +128,8 @@ fun AddNwcWalletScreen(
             OutlinedTextField(
                 value = walletName,
                 onValueChange = { walletName = it },
-                label = { Text(stringRes(R.string.wallet_name)) },
-                placeholder = { Text(stringRes(R.string.wallet_name_hint)) },
+                label = { Text(stringRes(Res.string.wallet_name)) },
+                placeholder = { Text(stringRes(Res.string.wallet_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -158,7 +167,7 @@ fun AddNwcWalletScreen(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringRes(R.string.wallet_connect_connect_app))
+                    Text(text = stringRes(Res.string.wallet_connect_connect_app))
                 }
 
                 Spacer(DoubleHorzSpacer)
@@ -177,7 +186,7 @@ fun AddNwcWalletScreen(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.ContentPaste,
-                        contentDescription = stringRes(id = R.string.paste_from_clipboard),
+                        contentDescription = stringRes(id = Res.string.paste_from_clipboard),
                         modifier = Size24Modifier,
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -187,7 +196,7 @@ fun AddNwcWalletScreen(
                 IconButton(onClick = { qrScanning = true }) {
                     Icon(
                         painter = painterRes(R.drawable.ic_qrcode, 3),
-                        contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
+                        contentDescription = stringRes(id = Res.string.accessibility_scan_qr_code),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -212,7 +221,7 @@ fun AddNwcWalletScreen(
                     nwcUri = it
                     error = null
                 },
-                label = { Text(stringRes(R.string.wallet_paste_uri)) },
+                label = { Text(stringRes(Res.string.wallet_paste_uri)) },
                 placeholder = { Text("nostr+walletconnect://...") },
                 minLines = 3,
                 maxLines = 5,
@@ -244,7 +253,7 @@ fun AddNwcWalletScreen(
                 enabled = nwcUri.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.wallet_save))
+                Text(stringRes(Res.string.wallet_save))
             }
         }
     }

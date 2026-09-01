@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.edited
+import com.vitorpamplona.amethyst.commons.resources.original
 import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -38,7 +40,7 @@ fun DisplayEditStatus(editState: EditState) {
         if (editState.showingVersion.value == editState.lastVersionId()) {
             null
         } else if (editState.showingVersion.value == editState.originalVersionId()) {
-            stringRes(id = R.string.original)
+            stringRes(id = Res.string.original)
         } else {
             "#${editState.versionId()}"
         }
@@ -46,7 +48,7 @@ fun DisplayEditStatus(editState: EditState) {
     QuietMark(
         symbol = MaterialSymbols.Edit,
         text = label,
-        contentDescription = stringRes(id = R.string.edited),
+        contentDescription = stringRes(id = Res.string.edited),
         onClick = { editState.nextModification() },
     )
 }

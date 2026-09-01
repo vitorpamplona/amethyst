@@ -41,8 +41,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.channel_image
+import com.vitorpamplona.amethyst.commons.resources.created_at
+import com.vitorpamplona.amethyst.commons.resources.groups_no_descriptor
+import com.vitorpamplona.amethyst.commons.resources.owner
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -87,7 +91,7 @@ fun LongPublicChatChannelHeader(
             RobohashFallbackAsyncImage(
                 robot = baseChannel.idHex,
                 model = it,
-                contentDescription = stringRes(R.string.channel_image),
+                contentDescription = stringRes(Res.string.channel_image),
                 modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
@@ -126,7 +130,7 @@ fun LongPublicChatChannelHeader(
                 val background = remember { mutableStateOf(defaultBackground) }
 
                 TranslatableRichTextViewer(
-                    content = summary ?: stringRes(id = R.string.groups_no_descriptor),
+                    content = summary ?: stringRes(id = Res.string.groups_no_descriptor),
                     canPreview = false,
                     quotesLeft = 1,
                     tags = channel.infoTags,
@@ -146,7 +150,7 @@ fun LongPublicChatChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(id = R.string.owner),
+                    text = stringRes(id = Res.string.owner),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -162,7 +166,7 @@ fun LongPublicChatChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(id = R.string.created_at),
+                    text = stringRes(id = Res.string.created_at),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),

@@ -47,6 +47,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_lightning_offer
+import com.vitorpamplona.amethyst.commons.resources.clink_offer_amount_range
+import com.vitorpamplona.amethyst.commons.resources.clink_offer_amount_sats
+import com.vitorpamplona.amethyst.commons.resources.clink_offer_pay_to
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.ui.components.PaymentCard
 import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
@@ -112,7 +117,7 @@ fun ClinkOfferPreview(
     )
 
     PaymentCard(
-        title = stringRes(R.string.clink_lightning_offer),
+        title = stringRes(Res.string.clink_lightning_offer),
         icon = {
             Icon(
                 imageVector = CustomHashTagIcons.Lightning,
@@ -143,7 +148,7 @@ fun ClinkOfferPreview(
             OutlinedTextField(
                 value = amountInput,
                 onValueChange = { new -> amountInput = new.filter(Char::isDigit) },
-                label = { Text(stringRes(R.string.clink_offer_amount_sats)) },
+                label = { Text(stringRes(Res.string.clink_offer_amount_sats)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 supportingText =
@@ -151,7 +156,7 @@ fun ClinkOfferPreview(
                         val min = range.min
                         val max = range.max
                         if (min != null && max != null) {
-                            { Text(stringRes(R.string.clink_offer_amount_range, min.toString(), max.toString())) }
+                            { Text(stringRes(Res.string.clink_offer_amount_range, min.toString(), max.toString())) }
                         } else {
                             null
                         }
@@ -246,7 +251,7 @@ private fun OfferRecipientRow(
                         .padding(4.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.clink_offer_pay_to),
+                    text = stringRes(Res.string.clink_offer_pay_to),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(end = 8.dp),

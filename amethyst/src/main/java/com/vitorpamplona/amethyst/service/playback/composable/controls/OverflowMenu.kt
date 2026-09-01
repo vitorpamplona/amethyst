@@ -41,6 +41,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_settings_video_quality
+import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
+import com.vitorpamplona.amethyst.commons.resources.playback_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_fullscreen
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -157,7 +162,7 @@ fun OverflowMenuButton(
 
     if (menuExpanded.value) {
         M3ActionDialog(
-            title = stringRes(R.string.playback_actions_dialog_title),
+            title = stringRes(Res.string.playback_actions_dialog_title),
             onDismiss = { menuExpanded.value = false },
         ) {
             M3ActionSection {
@@ -167,7 +172,7 @@ fun OverflowMenuButton(
                             onFullscreenClick?.let { zoom ->
                                 M3ActionRow(
                                     icon = MaterialSymbols.ZoomOutMap,
-                                    text = stringRes(R.string.video_player_settings_action_fullscreen),
+                                    text = stringRes(Res.string.video_player_settings_action_fullscreen),
                                 ) {
                                     menuExpanded.value = false
                                     zoom()
@@ -188,7 +193,7 @@ fun OverflowMenuButton(
                         VideoPlayerAction.Quality -> {
                             M3ActionRow(
                                 icon = MaterialSymbols.Settings,
-                                text = stringRes(R.string.call_settings_video_quality),
+                                text = stringRes(Res.string.call_settings_video_quality),
                             ) {
                                 menuExpanded.value = false
                                 onQualityClick()
@@ -218,7 +223,7 @@ fun OverflowMenuButton(
                         VideoPlayerAction.PictureInPicture -> {
                             M3ActionRow(
                                 icon = MaterialSymbols.PictureInPicture,
-                                text = stringRes(R.string.picture_in_picture),
+                                text = stringRes(Res.string.picture_in_picture),
                             ) {
                                 menuExpanded.value = false
                                 onPipClick()

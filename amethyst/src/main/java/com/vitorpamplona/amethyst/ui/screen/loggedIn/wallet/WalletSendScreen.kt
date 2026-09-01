@@ -57,6 +57,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wallet_paste_invoice
+import com.vitorpamplona.amethyst.commons.resources.wallet_pay
+import com.vitorpamplona.amethyst.commons.resources.wallet_payment_sending
+import com.vitorpamplona.amethyst.commons.resources.wallet_payment_success
+import com.vitorpamplona.amethyst.commons.resources.wallet_send
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -86,7 +92,7 @@ fun WalletSendScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_send)) },
+                title = { Text(stringRes(Res.string.wallet_send)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -113,7 +119,7 @@ fun WalletSendScreen(
                     OutlinedTextField(
                         value = invoiceText,
                         onValueChange = { invoiceText = it },
-                        label = { Text(stringRes(R.string.wallet_paste_invoice)) },
+                        label = { Text(stringRes(Res.string.wallet_paste_invoice)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         minLines = 3,
@@ -150,7 +156,7 @@ fun WalletSendScreen(
                         enabled = invoiceText.isNotBlank(),
                     ) {
                         Text(
-                            stringRes(R.string.wallet_pay),
+                            stringRes(Res.string.wallet_pay),
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
@@ -161,7 +167,7 @@ fun WalletSendScreen(
                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        stringRes(R.string.wallet_payment_sending),
+                        stringRes(Res.string.wallet_payment_sending),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Spacer(modifier = Modifier.weight(1f))
@@ -177,7 +183,7 @@ fun WalletSendScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        stringRes(R.string.wallet_payment_success),
+                        stringRes(Res.string.wallet_payment_success),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )

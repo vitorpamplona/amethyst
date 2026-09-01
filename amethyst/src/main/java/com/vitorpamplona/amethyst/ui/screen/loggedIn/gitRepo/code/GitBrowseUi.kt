@@ -58,6 +58,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_repo_branches
+import com.vitorpamplona.amethyst.commons.resources.git_repo_commits
+import com.vitorpamplona.amethyst.commons.resources.git_repo_default_branch
+import com.vitorpamplona.amethyst.commons.resources.git_repo_retry
+import com.vitorpamplona.amethyst.commons.resources.git_repo_tags
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /** Centered spinner + caption while the repository or a file is loading. */
@@ -121,7 +127,7 @@ fun GitMessageBox(
                 FilledTonalButton(onClick = onRetry) {
                     Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text(
-                        text = stringRes(R.string.git_repo_retry),
+                        text = stringRes(Res.string.git_repo_retry),
                         modifier = Modifier.padding(start = 6.dp),
                     )
                 }
@@ -169,7 +175,7 @@ fun RepoInfoBar(
             IconButton(onClick = onHistory) {
                 Icon(
                     symbol = MaterialSymbols.History,
-                    contentDescription = stringRes(R.string.git_repo_commits),
+                    contentDescription = stringRes(Res.string.git_repo_commits),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -199,7 +205,7 @@ private fun BranchSelector(
         ) {
             Icon(MaterialSymbols.AltRoute, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
             Text(
-                text = current ?: stringRes(R.string.git_repo_default_branch),
+                text = current ?: stringRes(Res.string.git_repo_default_branch),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -209,7 +215,7 @@ private fun BranchSelector(
 
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             if (branches.isNotEmpty()) {
-                SectionHeader(stringRes(R.string.git_repo_branches))
+                SectionHeader(stringRes(Res.string.git_repo_branches))
                 branches.forEach { name ->
                     RefMenuItem(name, MaterialSymbols.AltRoute, selected = name == current) {
                         expanded = false
@@ -218,7 +224,7 @@ private fun BranchSelector(
                 }
             }
             if (tags.isNotEmpty()) {
-                SectionHeader(stringRes(R.string.git_repo_tags))
+                SectionHeader(stringRes(Res.string.git_repo_tags))
                 tags.forEach { name ->
                     RefMenuItem(name, MaterialSymbols.Tag, selected = name == current) {
                         expanded = false

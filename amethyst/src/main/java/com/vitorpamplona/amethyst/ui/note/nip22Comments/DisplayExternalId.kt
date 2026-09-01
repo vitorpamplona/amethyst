@@ -38,10 +38,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.external_id_scope
+import com.vitorpamplona.amethyst.commons.resources.external_url_scope
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState
@@ -100,7 +102,7 @@ fun DisplayUrlExternalId(
         @Composable {
             DisplayExternalIdChip(
                 symbol = MaterialSymbols.Link,
-                contentDescription = stringRes(id = R.string.external_url_scope),
+                contentDescription = stringRes(id = Res.string.external_url_scope),
                 label = url,
                 linkInteractionListener = { nav.nav(Route.Url(url)) },
             )
@@ -128,7 +130,7 @@ fun DisplayUrlExternalId(
 fun DisplayGenericExternalId(externalId: ExternalId) {
     DisplayExternalIdChip(
         symbol = MaterialSymbols.Public,
-        contentDescription = stringRes(id = R.string.external_id_scope),
+        contentDescription = stringRes(id = Res.string.external_id_scope),
         label = externalId.toScope(),
         linkInteractionListener = null,
     )

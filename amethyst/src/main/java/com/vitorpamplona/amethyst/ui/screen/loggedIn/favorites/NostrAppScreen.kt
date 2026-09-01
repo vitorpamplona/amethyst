@@ -56,6 +56,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_static
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_title
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
@@ -69,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * A **Nostr app** — an nSite or nApplet, reached by [coordinate] (favorited or not) — rendered as an
@@ -93,7 +99,7 @@ fun NostrAppScreen(
     } else {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                stringResource(R.string.browser_unsupported),
+                stringRes(Res.string.browser_unsupported),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -246,7 +252,7 @@ private fun UnavailableTab(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                stringResource(R.string.favorite_app_unavailable),
+                stringRes(Res.string.favorite_app_unavailable),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
@@ -264,7 +270,7 @@ private fun AccessDialog(
 ) {
     val capsBody =
         if (capLabels.isEmpty()) {
-            stringResource(R.string.favorite_app_access_static)
+            stringRes(Res.string.favorite_app_access_static)
         } else {
             capLabels.joinToString("\n") { "•  $it" }
         }
@@ -276,7 +282,7 @@ private fun AccessDialog(
         }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (title.isBlank()) stringResource(R.string.favorite_app_access_title) else title) },
+        title = { Text(if (title.isBlank()) stringRes(Res.string.favorite_app_access_title) else title) },
         text = { Text(capsBody + networkBody) },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }

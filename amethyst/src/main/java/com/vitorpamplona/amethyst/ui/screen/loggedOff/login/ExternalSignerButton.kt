@@ -48,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -57,7 +56,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.select_signer
 import com.vitorpamplona.amethyst.model.DefaultSignerPermissions
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
@@ -108,7 +110,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                     ) {
                         Text(
                             modifier = Modifier.padding(8.dp),
-                            text = stringResource(R.string.select_signer),
+                            text = stringRes(Res.string.select_signer),
                             fontWeight = FontWeight.Bold,
                             fontSize = 24.sp,
                         )

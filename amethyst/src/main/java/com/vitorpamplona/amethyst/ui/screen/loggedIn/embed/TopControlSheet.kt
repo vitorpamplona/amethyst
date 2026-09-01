@@ -57,6 +57,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.browser_reload
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_show
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_open_window
+import com.vitorpamplona.amethyst.commons.resources.napplet_manage_permissions
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
@@ -124,23 +130,23 @@ fun TopControlSheet(
                             onToggle = { chrome.onToggleTor() },
                         )
                     }
-                    SheetItem(MaterialSymbols.Refresh, stringResource(R.string.browser_reload)) {
+                    SheetItem(MaterialSymbols.Refresh, stringRes(Res.string.browser_reload)) {
                         onExpandedChange(false)
                         chrome.onReload()
                     }
                     chrome.onInfo?.let { info ->
-                        SheetItem(MaterialSymbols.Info, stringResource(R.string.favorite_app_access_show)) {
+                        SheetItem(MaterialSymbols.Info, stringRes(Res.string.favorite_app_access_show)) {
                             onExpandedChange(false)
                             info()
                         }
                     }
                     chrome.onPermissions?.let { openPermissions ->
-                        SheetItem(MaterialSymbols.Tune, stringResource(R.string.napplet_manage_permissions)) {
+                        SheetItem(MaterialSymbols.Tune, stringRes(Res.string.napplet_manage_permissions)) {
                             onExpandedChange(false)
                             openPermissions()
                         }
                     }
-                    SheetItem(MaterialSymbols.OpenInFull, stringResource(R.string.favorite_app_open_window)) {
+                    SheetItem(MaterialSymbols.OpenInFull, stringRes(Res.string.favorite_app_open_window)) {
                         onExpandedChange(false)
                         chrome.onOpenFull()
                     }

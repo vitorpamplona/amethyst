@@ -117,6 +117,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.fork
+import com.vitorpamplona.amethyst.commons.resources.nutzap
+import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
+import com.vitorpamplona.amethyst.commons.resources.quote
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_title
+import com.vitorpamplona.amethyst.commons.resources.sats_to_complete
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
@@ -511,7 +518,7 @@ fun RenderZapRaiser(
 
             Text(
                 text =
-                    stringRes(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
+                    stringRes(id = Res.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
                 modifier = NoSoTinyBorders,
                 // color = MaterialTheme.colorScheme.placeholderText,
                 fontSize = Font14SP,
@@ -1710,7 +1717,7 @@ fun BoostTypeChoicePopupContent(
                 }
 
                 BoostActionChip(
-                    label = stringRes(R.string.quote),
+                    label = stringRes(Res.string.quote),
                     onClick = onQuote,
                 ) { tint ->
                     Icon(
@@ -1723,7 +1730,7 @@ fun BoostTypeChoicePopupContent(
 
                 if (showFork) {
                     BoostActionChip(
-                        label = stringRes(R.string.fork),
+                        label = stringRes(Res.string.fork),
                         onClick = onFork,
                     ) { tint ->
                         Icon(
@@ -2295,7 +2302,7 @@ fun ZapAmountChoiceGrid(
         ) {
             Icon(
                 symbol = MaterialSymbols.Tune,
-                contentDescription = stringRes(R.string.quick_zap_amounts),
+                contentDescription = stringRes(Res.string.quick_zap_amounts),
                 modifier = Size18Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
@@ -2495,7 +2502,7 @@ internal fun ZapRailIcon(
         ZapRail.CASHU ->
             Material3Icon(
                 imageVector = CustomHashTagIcons.Cashu,
-                contentDescription = stringRes(R.string.nutzap),
+                contentDescription = stringRes(Res.string.nutzap),
                 modifier = Modifier.size(cashuSize),
                 // The cashu mark is a monochrome, tintable outline — colour it the
                 // same brand orange as the other rails when selected, else mono.
@@ -2507,7 +2514,7 @@ internal fun ZapRailIcon(
             Box(contentAlignment = Alignment.BottomEnd) {
                 Material3Icon(
                     imageVector = CustomHashTagIcons.Cashu,
-                    contentDescription = stringRes(R.string.reload_mint_title),
+                    contentDescription = stringRes(Res.string.reload_mint_title),
                     modifier = Modifier.size(cashuSize).alpha(0.5f),
                     tint = if (colored) BitcoinOrange else mono,
                 )

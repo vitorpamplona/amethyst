@@ -100,6 +100,27 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.blossom_delete_from_host
+import com.vitorpamplona.amethyst.commons.resources.blossom_file_details
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_menu
+import com.vitorpamplona.amethyst.commons.resources.blossom_mirror_to_missing
+import com.vitorpamplona.amethyst.commons.resources.blossom_more_actions
+import com.vitorpamplona.amethyst.commons.resources.blossom_open
+import com.vitorpamplona.amethyst.commons.resources.blossom_pay
+import com.vitorpamplona.amethyst.commons.resources.blossom_payment_message
+import com.vitorpamplona.amethyst.commons.resources.blossom_payment_server_says
+import com.vitorpamplona.amethyst.commons.resources.blossom_payment_title
+import com.vitorpamplona.amethyst.commons.resources.blossom_refresh
+import com.vitorpamplona.amethyst.commons.resources.blossom_report
+import com.vitorpamplona.amethyst.commons.resources.blossom_report_comment_hint
+import com.vitorpamplona.amethyst.commons.resources.blossom_report_title
+import com.vitorpamplona.amethyst.commons.resources.blossom_send
+import com.vitorpamplona.amethyst.commons.resources.blossom_stored_on
+import com.vitorpamplona.amethyst.commons.resources.blossom_sync_all
+import com.vitorpamplona.amethyst.commons.resources.blossom_sync_gaps
+import com.vitorpamplona.amethyst.commons.resources.copy
+import com.vitorpamplona.amethyst.commons.resources.manage_stored_files_empty
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -220,7 +241,7 @@ fun BlossomBlobManagerScreen(
                         StatusGlyph(MaterialSymbols.Storage, MaterialTheme.colorScheme.grayText)
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            stringRes(R.string.manage_stored_files_empty),
+                            stringRes(Res.string.manage_stored_files_empty),
                             color = MaterialTheme.colorScheme.grayText,
                         )
                     }
@@ -259,11 +280,11 @@ private fun BlobManagerOverflowMenu(
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
-            Icon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(R.string.blossom_more_actions))
+            Icon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.blossom_more_actions))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.blossom_refresh)) },
+                text = { Text(stringRes(Res.string.blossom_refresh)) },
                 leadingIcon = { OverflowMenuIcon(MaterialSymbols.Sync) },
                 onClick = {
                     open = false
@@ -271,7 +292,7 @@ private fun BlobManagerOverflowMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.blossom_import_menu)) },
+                text = { Text(stringRes(Res.string.blossom_import_menu)) },
                 leadingIcon = { OverflowMenuIcon(MaterialSymbols.CloudDownload) },
                 onClick = {
                     open = false
@@ -334,12 +355,12 @@ private fun SyncAllBanner(onSyncAll: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(stringRes(R.string.blossom_sync_gaps), style = MaterialTheme.typography.bodyMedium)
+            Text(stringRes(Res.string.blossom_sync_gaps), style = MaterialTheme.typography.bodyMedium)
         }
         FilledTonalButton(onClick = onSyncAll) {
             Icon(symbol = MaterialSymbols.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text(stringRes(R.string.blossom_sync_all))
+            Text(stringRes(Res.string.blossom_sync_all))
         }
     }
 }
@@ -540,7 +561,7 @@ private fun BlossomBlobViewer(
                         shareUrl(context, url)
                     }
                 }
-                ViewerIconButton(MaterialSymbols.Info, stringRes(R.string.blossom_file_details)) {
+                ViewerIconButton(MaterialSymbols.Info, stringRes(Res.string.blossom_file_details)) {
                     drawerOpen = true
                 }
             }
@@ -660,7 +681,7 @@ private fun BlobActionsContent(
         // Where the file lives.
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                text = stringRes(R.string.blossom_stored_on),
+                text = stringRes(Res.string.blossom_stored_on),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.grayText,
             )
@@ -680,33 +701,33 @@ private fun BlobActionsContent(
             ) {
                 Icon(symbol = MaterialSymbols.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
-                Text(stringRes(R.string.blossom_mirror_to_missing))
+                Text(stringRes(Res.string.blossom_mirror_to_missing))
             }
         }
 
         // Secondary actions.
         if (row.url != null) {
             val url = row.url
-            DetailAction(MaterialSymbols.ContentCopy, stringRes(R.string.copy)) {
+            DetailAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy)) {
                 scope.launch { clipboard.setText(url) }
             }
             DetailAction(MaterialSymbols.Share, stringRes(R.string.quick_action_share)) {
                 shareUrl(context, url)
             }
-            DetailAction(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(R.string.blossom_open)) {
+            DetailAction(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.blossom_open)) {
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
             }
         }
 
         if (row.hasPresent) {
-            DetailAction(MaterialSymbols.Report, stringRes(R.string.blossom_report)) { reportOpen = true }
+            DetailAction(MaterialSymbols.Report, stringRes(Res.string.blossom_report)) { reportOpen = true }
 
             HorizontalDivider()
 
             row.presentServers.forEach { server ->
                 DetailAction(
                     symbol = MaterialSymbols.Delete,
-                    label = stringRes(R.string.blossom_delete_from_host, vm.hostOf(server)),
+                    label = stringRes(Res.string.blossom_delete_from_host, vm.hostOf(server)),
                     tint = MaterialTheme.colorScheme.error,
                 ) { vm.delete(row.hash, server) }
             }
@@ -807,17 +828,17 @@ private fun BlossomPaymentDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, tint = MaterialTheme.colorScheme.allGoodColor) },
-        title = { Text(stringRes(R.string.blossom_payment_title)) },
+        title = { Text(stringRes(Res.string.blossom_payment_title)) },
         text = {
             Column {
-                Text(text = stringRes(R.string.blossom_payment_message, host))
+                Text(text = stringRes(Res.string.blossom_payment_message, host))
                 // X-Reason is server-controlled: it is sanitized upstream and rendered
                 // here attributed to the server, in a dimmer italic, so it can never be
                 // mistaken for Amethyst's own wording (e.g. a fake "Pay 1 sat").
                 reason?.let {
                     Spacer(Modifier.size(12.dp))
                     Text(
-                        text = stringRes(R.string.blossom_payment_server_says, host, it),
+                        text = stringRes(Res.string.blossom_payment_server_says, host, it),
                         style = MaterialTheme.typography.bodySmall,
                         fontStyle = FontStyle.Italic,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -833,7 +854,7 @@ private fun BlossomPaymentDialog(
                     if (amountSats != null) {
                         pluralStringResource(R.plurals.blossom_pay_sats, amountSats.toInt(), amountSats.toInt())
                     } else {
-                        stringRes(R.string.blossom_pay)
+                        stringRes(Res.string.blossom_pay)
                     },
                 )
             }
@@ -859,7 +880,7 @@ private fun BlossomReportDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(symbol = MaterialSymbols.Report, contentDescription = null) },
-        title = { Text(stringRes(R.string.blossom_report_title)) },
+        title = { Text(stringRes(Res.string.blossom_report_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box {
@@ -881,7 +902,7 @@ private fun BlossomReportDialog(
                 OutlinedTextField(
                     value = comment,
                     onValueChange = { comment = it },
-                    label = { Text(stringRes(R.string.blossom_report_comment_hint)) },
+                    label = { Text(stringRes(Res.string.blossom_report_comment_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -890,7 +911,7 @@ private fun BlossomReportDialog(
             FilledTonalButton(onClick = {
                 vm.report(row.hash, server, type, comment)
                 onDismiss()
-            }) { Text(stringRes(R.string.blossom_send)) }
+            }) { Text(stringRes(Res.string.blossom_send)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }

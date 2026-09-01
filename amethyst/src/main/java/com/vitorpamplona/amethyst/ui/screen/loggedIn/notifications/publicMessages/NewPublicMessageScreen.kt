@@ -55,6 +55,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_caption
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -289,7 +293,7 @@ fun PublicMessageScreenContent(
 
                 if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                     ZapRaiserRequest(
-                        stringRes(id = R.string.zapraiser),
+                        stringRes(id = Res.string.zapraiser),
                         postViewModel,
                     )
                 }
@@ -419,7 +423,7 @@ fun SendDirectMessageTo(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.messages_new_message_to),
+                text = stringRes(Res.string.messages_new_message_to),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -439,7 +443,7 @@ fun SendDirectMessageTo(
                         },
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.messages_new_message_to_caption),
+                        text = stringRes(Res.string.messages_new_message_to_caption),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },

@@ -52,7 +52,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_close_action
+import com.vitorpamplona.amethyst.commons.resources.nest_close_room_confirm_action
+import com.vitorpamplona.amethyst.commons.resources.nest_close_room_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.nest_close_room_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.nest_create_cancel
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_endpoint
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_image
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_room
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_service
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_summary
+import com.vitorpamplona.amethyst.commons.resources.nest_edit_save
+import com.vitorpamplona.amethyst.commons.resources.nest_edit_title
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -88,8 +100,8 @@ fun EditNestSheet(
     if (confirmCloseOpen) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { confirmCloseOpen = false },
-            title = { Text(stringRes(R.string.nest_close_room_confirm_title)) },
-            text = { Text(stringRes(R.string.nest_close_room_confirm_body)) },
+            title = { Text(stringRes(Res.string.nest_close_room_confirm_title)) },
+            text = { Text(stringRes(Res.string.nest_close_room_confirm_body)) },
             confirmButton = {
                 TextButton(
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
@@ -100,12 +112,12 @@ fun EditNestSheet(
                         }
                     },
                 ) {
-                    Text(stringRes(R.string.nest_close_room_confirm_action))
+                    Text(stringRes(Res.string.nest_close_room_confirm_action))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmCloseOpen = false }) {
-                    Text(stringRes(R.string.nest_create_cancel))
+                    Text(stringRes(Res.string.nest_create_cancel))
                 }
             },
         )
@@ -129,41 +141,41 @@ fun EditNestSheet(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.nest_edit_title),
+                    text = stringRes(Res.string.nest_edit_title),
                     style = MaterialTheme.typography.titleLarge,
                 )
 
                 OutlinedTextField(
                     value = state.roomName,
                     onValueChange = viewModel::setRoomName,
-                    label = { Text(stringRes(R.string.nest_create_field_room)) },
+                    label = { Text(stringRes(Res.string.nest_create_field_room)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = state.summary,
                     onValueChange = viewModel::setSummary,
-                    label = { Text(stringRes(R.string.nest_create_field_summary)) },
+                    label = { Text(stringRes(Res.string.nest_create_field_summary)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = state.serviceUrl,
                     onValueChange = viewModel::setServiceUrl,
-                    label = { Text(stringRes(R.string.nest_create_field_service)) },
+                    label = { Text(stringRes(Res.string.nest_create_field_service)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = state.endpointUrl,
                     onValueChange = viewModel::setEndpointUrl,
-                    label = { Text(stringRes(R.string.nest_create_field_endpoint)) },
+                    label = { Text(stringRes(Res.string.nest_create_field_endpoint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = state.imageUrl,
                     onValueChange = viewModel::setImageUrl,
-                    label = { Text(stringRes(R.string.nest_create_field_image)) },
+                    label = { Text(stringRes(Res.string.nest_create_field_image)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -194,11 +206,11 @@ fun EditNestSheet(
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     onClick = { confirmCloseOpen = true },
                 ) {
-                    Text(stringRes(R.string.nest_close_action))
+                    Text(stringRes(Res.string.nest_close_action))
                 }
                 Row {
                     TextButton(onClick = onDismiss, enabled = !state.isPublishing) {
-                        Text(stringRes(R.string.nest_create_cancel))
+                        Text(stringRes(Res.string.nest_create_cancel))
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(
@@ -212,7 +224,7 @@ fun EditNestSheet(
                         if (state.isPublishing) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         } else {
-                            Text(stringRes(R.string.nest_edit_save))
+                            Text(stringRes(Res.string.nest_edit_save))
                         }
                     }
                 }

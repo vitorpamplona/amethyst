@@ -38,9 +38,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_fab_new_collection
+import com.vitorpamplona.amethyst.commons.resources.calendar_fab_new_event
+import com.vitorpamplona.amethyst.commons.resources.calendar_fab_toggle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -71,7 +74,7 @@ fun NewCalendarButton(nav: INav) {
                         symbol = MaterialSymbols.CalendarMonth,
                         // Spell out the full intent for screen readers — the bare "New collection"
                         // string is ambiguous out of context.
-                        contentDescription = stringRes(R.string.calendar_fab_new_collection),
+                        contentDescription = stringRes(Res.string.calendar_fab_new_collection),
                         modifier = Size26Modifier,
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
@@ -90,7 +93,7 @@ fun NewCalendarButton(nav: INav) {
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.calendar_fab_new_event),
+                        contentDescription = stringRes(Res.string.calendar_fab_new_event),
                         modifier = Size26Modifier,
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
@@ -113,7 +116,7 @@ fun NewCalendarButton(nav: INav) {
             ) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.calendar_fab_toggle),
+                    contentDescription = stringRes(Res.string.calendar_fab_toggle),
                     modifier = Size26Modifier,
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
@@ -127,7 +130,7 @@ fun NewCalendarButton(nav: INav) {
                 Icon(
                     symbol = MaterialSymbols.Add,
                     // Top FAB toggles the sub-FABs in/out — describe that, not the sub-action.
-                    contentDescription = stringRes(R.string.calendar_fab_toggle),
+                    contentDescription = stringRes(Res.string.calendar_fab_toggle),
                     modifier = Size26Modifier,
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )

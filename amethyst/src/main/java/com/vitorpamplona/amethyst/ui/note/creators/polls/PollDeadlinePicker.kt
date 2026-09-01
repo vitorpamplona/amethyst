@@ -47,12 +47,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_select_date
+import com.vitorpamplona.amethyst.commons.resources.closing_time
+import com.vitorpamplona.amethyst.commons.resources.confirm
+import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.resources.poll_closing_date_time
+import com.vitorpamplona.amethyst.commons.resources.poll_closing_in
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -98,14 +103,14 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(MaterialSymbols.DateRange, contentDescription = stringResource(R.string.accessibility_select_date))
+            Icon(MaterialSymbols.DateRange, contentDescription = stringRes(Res.string.accessibility_select_date))
             Spacer(Modifier.width(12.dp))
 
             if (model.closedAt < TimeUtils.oneMinuteFromNow()) {
-                Text(stringRes(R.string.poll_closing_date_time) + " " + model.closedAt, style = MaterialTheme.typography.bodyLarge)
+                Text(stringRes(Res.string.poll_closing_date_time) + " " + model.closedAt, style = MaterialTheme.typography.bodyLarge)
             } else {
                 Text(
-                    text = stringRes(R.string.poll_closing_in, timeAheadNoDot(model.closedAt, context)),
+                    text = stringRes(Res.string.poll_closing_in, timeAheadNoDot(model.closedAt, context)),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
@@ -120,7 +125,7 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
                 TextButton(onClick = {
                     showDatePicker = false
                     showTimePicker = true
-                }) { Text(stringResource(R.string.next)) }
+                }) { Text(stringRes(Res.string.next)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -131,7 +136,7 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
     if (showTimePicker) {
         TimePickerDialog(
             title = {
-                Text(stringResource(R.string.closing_time))
+                Text(stringRes(Res.string.closing_time))
             },
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
@@ -151,7 +156,7 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
 
                         showTimePicker = false
                     },
-                ) { Text(stringResource(R.string.confirm)) }
+                ) { Text(stringRes(Res.string.confirm)) }
             },
         ) {
             TimePicker(state = timePickerState)

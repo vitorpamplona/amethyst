@@ -29,10 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.quick_actions_open_in_another_app
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -62,7 +63,7 @@ fun OpenChatButton(
     ) {
         Icon(
             symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-            contentDescription = stringRes(R.string.quick_actions_open_in_another_app),
+            contentDescription = stringRes(Res.string.quick_actions_open_in_another_app),
             modifier = Size20Modifier,
         )
     }

@@ -85,6 +85,65 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_action_receive
+import com.vitorpamplona.amethyst.commons.resources.cashu_action_redeem
+import com.vitorpamplona.amethyst.commons.resources.cashu_action_send_ln
+import com.vitorpamplona.amethyst.commons.resources.cashu_action_send_token
+import com.vitorpamplona.amethyst.commons.resources.cashu_amount_sats
+import com.vitorpamplona.amethyst.commons.resources.cashu_balance
+import com.vitorpamplona.amethyst.commons.resources.cashu_building_token
+import com.vitorpamplona.amethyst.commons.resources.cashu_completing_mint
+import com.vitorpamplona.amethyst.commons.resources.cashu_copy_invoice
+import com.vitorpamplona.amethyst.commons.resources.cashu_copy_token
+import com.vitorpamplona.amethyst.commons.resources.cashu_create_token
+import com.vitorpamplona.amethyst.commons.resources.cashu_discard_invoice
+import com.vitorpamplona.amethyst.commons.resources.cashu_discovering
+import com.vitorpamplona.amethyst.commons.resources.cashu_discovering_description
+import com.vitorpamplona.amethyst.commons.resources.cashu_done
+import com.vitorpamplona.amethyst.commons.resources.cashu_get_quote
+import com.vitorpamplona.amethyst.commons.resources.cashu_getting_quote
+import com.vitorpamplona.amethyst.commons.resources.cashu_history
+import com.vitorpamplona.amethyst.commons.resources.cashu_history_all_loaded
+import com.vitorpamplona.amethyst.commons.resources.cashu_history_loading_older
+import com.vitorpamplona.amethyst.commons.resources.cashu_history_some_relays_unreachable
+import com.vitorpamplona.amethyst.commons.resources.cashu_invoice_bolt11
+import com.vitorpamplona.amethyst.commons.resources.cashu_memo_optional
+import com.vitorpamplona.amethyst.commons.resources.cashu_mints
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_body
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_export_token
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_fee_hint
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_move
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_no_trusted
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_to_mint
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_withdraw_ln
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_working
+import com.vitorpamplona.amethyst.commons.resources.cashu_no_wallet
+import com.vitorpamplona.amethyst.commons.resources.cashu_no_wallet_description
+import com.vitorpamplona.amethyst.commons.resources.cashu_paid_amount
+import com.vitorpamplona.amethyst.commons.resources.cashu_pay_invoice
+import com.vitorpamplona.amethyst.commons.resources.cashu_paying_invoice
+import com.vitorpamplona.amethyst.commons.resources.cashu_pending_quotes_resume
+import com.vitorpamplona.amethyst.commons.resources.cashu_pending_quotes_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_pick_mint
+import com.vitorpamplona.amethyst.commons.resources.cashu_receive_invoice_explainer
+import com.vitorpamplona.amethyst.commons.resources.cashu_received_amount
+import com.vitorpamplona.amethyst.commons.resources.cashu_redeem_button
+import com.vitorpamplona.amethyst.commons.resources.cashu_redeemed_amount
+import com.vitorpamplona.amethyst.commons.resources.cashu_redeeming
+import com.vitorpamplona.amethyst.commons.resources.cashu_request_invoice
+import com.vitorpamplona.amethyst.commons.resources.cashu_requesting_invoice
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_token_label
+import com.vitorpamplona.amethyst.commons.resources.cashu_token_ready
+import com.vitorpamplona.amethyst.commons.resources.cashu_untrusted_mint_badge
+import com.vitorpamplona.amethyst.commons.resources.cashu_untrusted_mint_move
+import com.vitorpamplona.amethyst.commons.resources.cashu_untrusted_mint_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_wallet_title
+import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
+import com.vitorpamplona.amethyst.commons.resources.topup_mint_action
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
 import com.vitorpamplona.amethyst.ui.components.util.getText
@@ -179,7 +238,7 @@ fun CashuWalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.cashu_wallet_title)) },
+                title = { Text(stringRes(Res.string.cashu_wallet_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -192,7 +251,7 @@ fun CashuWalletScreen(
                     IconButton(onClick = { nav.nav(Route.CashuWalletSettings) }) {
                         Icon(
                             symbol = MaterialSymbols.Settings,
-                            contentDescription = stringRes(R.string.cashu_settings_title),
+                            contentDescription = stringRes(Res.string.cashu_settings_title),
                         )
                     }
                 },
@@ -326,13 +385,13 @@ private fun DiscoveringCashuWallet(modifier: Modifier) {
         CircularProgressIndicator(modifier = Modifier.size(36.dp), strokeWidth = 3.dp)
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = stringRes(R.string.cashu_discovering),
+            text = stringRes(Res.string.cashu_discovering),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringRes(R.string.cashu_discovering_description),
+            text = stringRes(Res.string.cashu_discovering_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -354,13 +413,13 @@ private fun EmptyCashuWallet(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringRes(R.string.cashu_no_wallet),
+            text = stringRes(Res.string.cashu_no_wallet),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = stringRes(R.string.cashu_no_wallet_description),
+            text = stringRes(Res.string.cashu_no_wallet_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -439,7 +498,7 @@ private fun CashuWalletContent(
         item {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = stringRes(R.string.cashu_mints),
+                text = stringRes(Res.string.cashu_mints),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -459,7 +518,7 @@ private fun CashuWalletContent(
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = stringRes(R.string.cashu_history),
+                    text = stringRes(Res.string.cashu_history),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -537,9 +596,9 @@ private fun CashuHistoryFooter(
 ) {
     val text =
         when {
-            loadingOlder -> stringRes(R.string.cashu_history_loading_older)
-            exhausted && stalledCount > 0 -> stringRes(R.string.cashu_history_some_relays_unreachable)
-            exhausted -> stringRes(R.string.cashu_history_all_loaded)
+            loadingOlder -> stringRes(Res.string.cashu_history_loading_older)
+            exhausted && stalledCount > 0 -> stringRes(Res.string.cashu_history_some_relays_unreachable)
+            exhausted -> stringRes(Res.string.cashu_history_all_loaded)
             else -> return
         }
     Text(
@@ -596,13 +655,13 @@ private fun PendingQuoteBanner(
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
-                    text = stringRes(R.string.cashu_pending_quotes_subtitle),
+                    text = stringRes(Res.string.cashu_pending_quotes_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
                 )
             }
             Text(
-                text = stringRes(R.string.cashu_pending_quotes_resume),
+                text = stringRes(Res.string.cashu_pending_quotes_resume),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -655,13 +714,13 @@ private fun UntrustedMintBanner(
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Text(
-                    text = stringRes(R.string.cashu_untrusted_mint_subtitle),
+                    text = stringRes(Res.string.cashu_untrusted_mint_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
                 )
             }
             Text(
-                text = stringRes(R.string.cashu_untrusted_mint_move),
+                text = stringRes(Res.string.cashu_untrusted_mint_move),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onErrorContainer,
@@ -701,11 +760,11 @@ private fun EvacuateMintDialog(
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        title = { Text(stringRes(R.string.cashu_move_coins_title)) },
+        title = { Text(stringRes(Res.string.cashu_move_coins_title)) },
         text = {
             Column {
                 Text(
-                    text = stringRes(R.string.cashu_move_coins_body, sourceMint, sourceBalance.toString()),
+                    text = stringRes(Res.string.cashu_move_coins_body, sourceMint, sourceBalance.toString()),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -715,7 +774,7 @@ private fun EvacuateMintDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(R.string.cashu_move_coins_working))
+                            Text(stringRes(Res.string.cashu_move_coins_working))
                         }
                     }
 
@@ -747,7 +806,7 @@ private fun EvacuateMintDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                     if (trustedTargets.isNotEmpty()) {
                         Text(
-                            text = stringRes(R.string.cashu_move_coins_to_mint),
+                            text = stringRes(Res.string.cashu_move_coins_to_mint),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -755,13 +814,13 @@ private fun EvacuateMintDialog(
                         OutlinedTextField(
                             value = amount,
                             onValueChange = { v -> amount = v.filter { it.isDigit() } },
-                            label = { Text(stringRes(R.string.cashu_amount_sats)) },
+                            label = { Text(stringRes(Res.string.cashu_amount_sats)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
-                            text = stringRes(R.string.cashu_move_coins_fee_hint),
+                            text = stringRes(Res.string.cashu_move_coins_fee_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -772,27 +831,27 @@ private fun EvacuateMintDialog(
                                 amount.toLongOrNull()?.let { viewModel.rebalanceOut(sourceMint, target, it) }
                             },
                             enabled = target.isNotBlank() && (amount.toLongOrNull() ?: 0L) > 0L,
-                        ) { Text(stringRes(R.string.cashu_move_coins_move)) }
+                        ) { Text(stringRes(Res.string.cashu_move_coins_move)) }
                     } else {
                         Text(
-                            text = stringRes(R.string.cashu_move_coins_no_trusted),
+                            text = stringRes(Res.string.cashu_move_coins_no_trusted),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     TextButton(onClick = onWithdrawLightning) {
-                        Text(stringRes(R.string.cashu_move_coins_withdraw_ln))
+                        Text(stringRes(Res.string.cashu_move_coins_withdraw_ln))
                     }
                     TextButton(onClick = onExportToken) {
-                        Text(stringRes(R.string.cashu_move_coins_export_token))
+                        Text(stringRes(Res.string.cashu_move_coins_export_token))
                     }
                 }
             }
         },
         confirmButton = {
             if (done) {
-                TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cashu_done)) }
             }
         },
         dismissButton = {
@@ -819,7 +878,7 @@ private fun BalanceCard(balanceSats: Long) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringRes(R.string.cashu_balance),
+                text = stringRes(Res.string.cashu_balance),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
@@ -831,7 +890,7 @@ private fun BalanceCard(balanceSats: Long) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
-                text = stringRes(R.string.wallet_sats),
+                text = stringRes(Res.string.wallet_sats),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
@@ -850,10 +909,10 @@ private fun ActionRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ActionTile(MaterialSymbols.Bolt, stringRes(R.string.cashu_action_receive), onReceive, Modifier.weight(1f))
-        ActionTile(MaterialSymbols.AutoMirrored.Send, stringRes(R.string.cashu_action_send_ln), onSendLn, Modifier.weight(1f))
-        ActionTile(MaterialSymbols.ContentPaste, stringRes(R.string.cashu_action_send_token), onSendToken, Modifier.weight(1f))
-        ActionTile(MaterialSymbols.Add, stringRes(R.string.cashu_action_redeem), onRedeem, Modifier.weight(1f))
+        ActionTile(MaterialSymbols.Bolt, stringRes(Res.string.cashu_action_receive), onReceive, Modifier.weight(1f))
+        ActionTile(MaterialSymbols.AutoMirrored.Send, stringRes(Res.string.cashu_action_send_ln), onSendLn, Modifier.weight(1f))
+        ActionTile(MaterialSymbols.ContentPaste, stringRes(Res.string.cashu_action_send_token), onSendToken, Modifier.weight(1f))
+        ActionTile(MaterialSymbols.Add, stringRes(Res.string.cashu_action_redeem), onRedeem, Modifier.weight(1f))
     }
 }
 
@@ -943,7 +1002,7 @@ private fun MintRow(
                 Text(text = mint, style = MaterialTheme.typography.bodyMedium)
                 if (untrusted) {
                     Text(
-                        text = stringRes(R.string.cashu_untrusted_mint_badge),
+                        text = stringRes(Res.string.cashu_untrusted_mint_badge),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -951,7 +1010,7 @@ private fun MintRow(
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "$formattedBalance ${stringRes(R.string.wallet_sats)}",
+                text = "$formattedBalance ${stringRes(Res.string.wallet_sats)}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
@@ -961,7 +1020,7 @@ private fun MintRow(
                 IconButton(onClick = onMoveCoins) {
                     Icon(
                         symbol = MaterialSymbols.AutoMirrored.Send,
-                        contentDescription = stringRes(R.string.cashu_untrusted_mint_move),
+                        contentDescription = stringRes(Res.string.cashu_untrusted_mint_move),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.error,
                     )
@@ -970,7 +1029,7 @@ private fun MintRow(
                 IconButton(onClick = onTopUp) {
                     Icon(
                         symbol = MaterialSymbols.AddCircle,
-                        contentDescription = stringRes(R.string.topup_mint_action),
+                        contentDescription = stringRes(Res.string.topup_mint_action),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -1172,13 +1231,13 @@ private fun ReceiveDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.cashu_action_receive)) },
+        title = { Text(stringRes(Res.string.cashu_action_receive)) },
         text = {
             Column {
                 when (val s = state) {
                     is CashuMintFlowState.AwaitingPayment -> {
                         Text(
-                            stringRes(R.string.cashu_receive_invoice_explainer, s.amountSats.toString()),
+                            stringRes(Res.string.cashu_receive_invoice_explainer, s.amountSats.toString()),
                             style = MaterialTheme.typography.bodySmall,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1186,7 +1245,7 @@ private fun ReceiveDialog(
                             value = s.flow.invoice,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringRes(R.string.cashu_invoice_bolt11)) },
+                            label = { Text(stringRes(Res.string.cashu_invoice_bolt11)) },
                             maxLines = 5,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -1200,7 +1259,7 @@ private fun ReceiveDialog(
                                 modifier = Modifier.size(16.dp),
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringRes(R.string.cashu_copy_invoice))
+                            Text(stringRes(Res.string.cashu_copy_invoice))
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         // The mint is polled every 3s in the background. We
@@ -1227,12 +1286,12 @@ private fun ReceiveDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(R.string.cashu_completing_mint))
+                            Text(stringRes(Res.string.cashu_completing_mint))
                         }
                     }
 
                     is CashuMintFlowState.Completed -> {
-                        Text(stringRes(R.string.cashu_received_amount, s.amountSats.toString()))
+                        Text(stringRes(Res.string.cashu_received_amount, s.amountSats.toString()))
                     }
 
                     is CashuMintFlowState.Error -> {
@@ -1255,7 +1314,7 @@ private fun ReceiveDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(R.string.cashu_requesting_invoice))
+                            Text(stringRes(Res.string.cashu_requesting_invoice))
                         }
                     }
 
@@ -1280,7 +1339,7 @@ private fun ReceiveDialog(
                             viewModel.startMintFromLightning(pickedMint, n)
                         },
                         enabled = amount.isNotBlank() && pickedMint.isNotBlank(),
-                    ) { Text(stringRes(R.string.cashu_request_invoice)) }
+                    ) { Text(stringRes(Res.string.cashu_request_invoice)) }
                 }
 
                 is CashuMintFlowState.AwaitingPayment -> {
@@ -1290,12 +1349,12 @@ private fun ReceiveDialog(
                     // the kind:7374 so the pending-invoice banner won't
                     // re-surface it on next entry.
                     TextButton(onClick = { viewModel.discardMintQuote() }) {
-                        Text(stringRes(R.string.cashu_discard_invoice))
+                        Text(stringRes(Res.string.cashu_discard_invoice))
                     }
                 }
 
                 is CashuMintFlowState.Completed -> {
-                    TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                    TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cashu_done)) }
                 }
 
                 else -> {}
@@ -1318,7 +1377,7 @@ private fun FormReceive(
     OutlinedTextField(
         value = amount,
         onValueChange = { v -> onAmountChange(v.filter { it.isDigit() }) },
-        label = { Text(stringRes(R.string.cashu_amount_sats)) },
+        label = { Text(stringRes(Res.string.cashu_amount_sats)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
@@ -1339,7 +1398,7 @@ private fun MintPicker(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text = picked.ifEmpty { stringRes(R.string.cashu_pick_mint) },
+            text = picked.ifEmpty { stringRes(Res.string.cashu_pick_mint) },
             maxLines = 1,
             modifier = Modifier.weight(1f),
         )
@@ -1385,7 +1444,7 @@ private fun SendLnDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.cashu_action_send_ln)) },
+        title = { Text(stringRes(Res.string.cashu_action_send_ln)) },
         text = {
             Column {
                 when (val s = state) {
@@ -1393,7 +1452,7 @@ private fun SendLnDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(R.string.cashu_getting_quote))
+                            Text(stringRes(Res.string.cashu_getting_quote))
                         }
                     }
 
@@ -1411,12 +1470,12 @@ private fun SendLnDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(R.string.cashu_paying_invoice))
+                            Text(stringRes(Res.string.cashu_paying_invoice))
                         }
                     }
 
                     is CashuMeltFlowState.Completed -> {
-                        Text(stringRes(R.string.cashu_paid_amount, s.paidAmount.toString(), s.fees.toString()))
+                        Text(stringRes(Res.string.cashu_paid_amount, s.paidAmount.toString(), s.fees.toString()))
                     }
 
                     is CashuMeltFlowState.Error -> {
@@ -1455,17 +1514,17 @@ private fun SendLnDialog(
                     TextButton(
                         onClick = { viewModel.startMelt(pickedMint, invoice) },
                         enabled = invoice.isNotBlank() && pickedMint.isNotBlank(),
-                    ) { Text(stringRes(R.string.cashu_get_quote)) }
+                    ) { Text(stringRes(Res.string.cashu_get_quote)) }
                 }
 
                 is CashuMeltFlowState.Quoted -> {
                     TextButton(onClick = { viewModel.confirmMelt() }) {
-                        Text(stringRes(R.string.cashu_pay_invoice))
+                        Text(stringRes(Res.string.cashu_pay_invoice))
                     }
                 }
 
                 is CashuMeltFlowState.Completed -> {
-                    TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                    TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cashu_done)) }
                 }
 
                 else -> {}
@@ -1490,14 +1549,14 @@ private fun InvoiceForm(
         OutlinedTextField(
             value = invoice,
             onValueChange = onInvoiceChange,
-            label = { Text(stringRes(R.string.cashu_invoice_bolt11)) },
+            label = { Text(stringRes(Res.string.cashu_invoice_bolt11)) },
             placeholder = { Text("lnbc…") },
             minLines = 2,
             maxLines = 4,
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onPaste) {
-            Icon(MaterialSymbols.ContentPaste, contentDescription = stringRes(R.string.paste_from_clipboard))
+            Icon(MaterialSymbols.ContentPaste, contentDescription = stringRes(Res.string.paste_from_clipboard))
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
@@ -1524,7 +1583,7 @@ private fun SendTokenDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.cashu_action_send_token)) },
+        title = { Text(stringRes(Res.string.cashu_action_send_token)) },
         text = {
             Column {
                 when (val s = state) {
@@ -1532,12 +1591,12 @@ private fun SendTokenDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(R.string.cashu_building_token))
+                            Text(stringRes(Res.string.cashu_building_token))
                         }
                     }
 
                     is CashuSendTokenFlowState.Ready -> {
-                        Text(stringRes(R.string.cashu_token_ready, s.amount.toString()))
+                        Text(stringRes(Res.string.cashu_token_ready, s.amount.toString()))
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = s.token,
@@ -1554,7 +1613,7 @@ private fun SendTokenDialog(
                                 modifier = Modifier.size(16.dp),
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringRes(R.string.cashu_copy_token))
+                            Text(stringRes(Res.string.cashu_copy_token))
                         }
                     }
 
@@ -1583,11 +1642,11 @@ private fun SendTokenDialog(
                             viewModel.sendAsToken(pickedMint, n, memo.ifBlank { null })
                         },
                         enabled = amount.isNotBlank() && pickedMint.isNotBlank(),
-                    ) { Text(stringRes(R.string.cashu_create_token)) }
+                    ) { Text(stringRes(Res.string.cashu_create_token)) }
                 }
 
                 is CashuSendTokenFlowState.Ready -> {
-                    TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                    TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cashu_done)) }
                 }
 
                 else -> {}
@@ -1612,7 +1671,7 @@ private fun SendTokenForm(
     OutlinedTextField(
         value = amount,
         onValueChange = { v -> onAmount(v.filter { it.isDigit() }) },
-        label = { Text(stringRes(R.string.cashu_amount_sats)) },
+        label = { Text(stringRes(Res.string.cashu_amount_sats)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
@@ -1621,7 +1680,7 @@ private fun SendTokenForm(
     OutlinedTextField(
         value = memo,
         onValueChange = onMemo,
-        label = { Text(stringRes(R.string.cashu_memo_optional)) },
+        label = { Text(stringRes(Res.string.cashu_memo_optional)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -1645,7 +1704,7 @@ private fun RedeemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.cashu_action_redeem)) },
+        title = { Text(stringRes(Res.string.cashu_action_redeem)) },
         text = {
             Column {
                 when (val s = state) {
@@ -1653,12 +1712,12 @@ private fun RedeemDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(R.string.cashu_redeeming))
+                            Text(stringRes(Res.string.cashu_redeeming))
                         }
                     }
 
                     is CashuRedeemFlowState.Completed -> {
-                        Text(stringRes(R.string.cashu_redeemed_amount, s.amount.toString()))
+                        Text(stringRes(Res.string.cashu_redeemed_amount, s.amount.toString()))
                     }
 
                     is CashuRedeemFlowState.Error -> {
@@ -1687,11 +1746,11 @@ private fun RedeemDialog(
                     TextButton(
                         onClick = { viewModel.redeemToken(token) },
                         enabled = token.isNotBlank(),
-                    ) { Text(stringRes(R.string.cashu_redeem_button)) }
+                    ) { Text(stringRes(Res.string.cashu_redeem_button)) }
                 }
 
                 is CashuRedeemFlowState.Completed -> {
-                    TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                    TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cashu_done)) }
                 }
 
                 else -> {}
@@ -1713,14 +1772,14 @@ private fun TokenInput(
         OutlinedTextField(
             value = token,
             onValueChange = onTokenChange,
-            label = { Text(stringRes(R.string.cashu_token_label)) },
+            label = { Text(stringRes(Res.string.cashu_token_label)) },
             placeholder = { Text("cashuB… / cashuA…") },
             minLines = 2,
             maxLines = 5,
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onPaste) {
-            Icon(MaterialSymbols.ContentPaste, contentDescription = stringRes(R.string.paste_from_clipboard))
+            Icon(MaterialSymbols.ContentPaste, contentDescription = stringRes(Res.string.paste_from_clipboard))
         }
     }
 }

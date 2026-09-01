@@ -42,6 +42,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_budget_amount_sats
+import com.vitorpamplona.amethyst.commons.resources.clink_budget_request
+import com.vitorpamplona.amethyst.commons.resources.clink_budget_title
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 
@@ -62,13 +66,13 @@ fun ClinkBudgetDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.clink_budget_title)) },
+        title = { Text(stringRes(Res.string.clink_budget_title)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { new -> amount = new.filter(Char::isDigit) },
-                    label = { Text(stringRes(R.string.clink_budget_amount_sats)) },
+                    label = { Text(stringRes(Res.string.clink_budget_amount_sats)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -88,7 +92,7 @@ fun ClinkBudgetDialog(
                 enabled = parsedAmount > 0,
                 onClick = { onConfirm(parsedAmount, cadence.toFrequency()) },
             ) {
-                Text(stringRes(R.string.clink_budget_request))
+                Text(stringRes(Res.string.clink_budget_request))
             }
         },
         dismissButton = {

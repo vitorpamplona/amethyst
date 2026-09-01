@@ -41,6 +41,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_no_recs
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_recommended_by
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuMintDirectoryEntry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -137,7 +140,7 @@ private fun RecommendersLine(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.cashu_mint_recommended_by),
+                    text = stringRes(Res.string.cashu_mint_recommended_by),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.CenterVertically),
@@ -174,7 +177,7 @@ private fun RecommendersLine(
         }
         else -> {
             Text(
-                text = stringRes(R.string.cashu_mint_no_recs),
+                text = stringRes(Res.string.cashu_mint_no_recs),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

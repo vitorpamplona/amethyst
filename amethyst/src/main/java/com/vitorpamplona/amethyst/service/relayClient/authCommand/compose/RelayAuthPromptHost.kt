@@ -69,6 +69,25 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPrompt
 import com.vitorpamplona.amethyst.commons.relayClient.auth.UserAuthChoice
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_how_we_decide
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_log_in
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_login_as
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_never_allow
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_not_now
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_relay_asks
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_remember_relay
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_someone_unloaded
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_my_inbox
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_my_own_relay
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_notify_inbox
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_other
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_post_venue
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_read_outbox
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_read_venue
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_send_dm
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_thread
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_thread_with
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -189,7 +208,7 @@ private fun RelayAuthPromptDialog(
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 RelayHeader(prompt, accountViewModel)
                 Text(
-                    text = stringRes(R.string.relay_auth_login_as, rememberDisplayName(prompt.askingAccount, accountViewModel)),
+                    text = stringRes(Res.string.relay_auth_login_as, rememberDisplayName(prompt.askingAccount, accountViewModel)),
                     style = MaterialTheme.typography.headlineSmall,
                 )
             }
@@ -227,11 +246,11 @@ private fun RelayAuthPromptDialog(
                     OutlinedButton(
                         onClick = { onChoice(UserAuthChoice.DISMISS) },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringRes(R.string.relay_auth_not_now)) }
+                    ) { Text(stringRes(Res.string.relay_auth_not_now)) }
                     Button(
                         onClick = { onChoice(if (rememberRelay) UserAuthChoice.ALWAYS_ALLOW else UserAuthChoice.ALLOW_ONCE) },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringRes(R.string.relay_auth_log_in)) }
+                    ) { Text(stringRes(Res.string.relay_auth_log_in)) }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -240,13 +259,13 @@ private fun RelayAuthPromptDialog(
                     TextButton(
                         onClick = { onChoice(UserAuthChoice.BLOCK) },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    ) { Text(stringRes(R.string.relay_auth_never_allow), style = MaterialTheme.typography.labelMedium) }
+                    ) { Text(stringRes(Res.string.relay_auth_never_allow), style = MaterialTheme.typography.labelMedium) }
                     TextButton(
                         onClick = {
                             onChoice(UserAuthChoice.DISMISS)
                             nav.nav(Route.RelayAuthSettings)
                         },
-                    ) { Text(stringRes(R.string.relay_auth_how_we_decide), style = MaterialTheme.typography.labelMedium) }
+                    ) { Text(stringRes(Res.string.relay_auth_how_we_decide), style = MaterialTheme.typography.labelMedium) }
                 }
             }
         },
@@ -282,7 +301,7 @@ private fun RelayHeader(
                 overflow = TextOverflow.MiddleEllipsis,
             )
             Text(
-                text = stringRes(R.string.relay_auth_relay_asks),
+                text = stringRes(Res.string.relay_auth_relay_asks),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -359,7 +378,7 @@ private fun RememberRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringRes(R.string.relay_auth_remember_relay),
+                text = stringRes(Res.string.relay_auth_remember_relay),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -400,29 +419,29 @@ private fun reasonFor(
     isMyOwnRelay: Boolean,
 ): String =
     when (kind) {
-        AuthPurposeKind.SEND_DM -> stringRes(R.string.relay_auth_why_send_dm, who ?: "")
-        AuthPurposeKind.NOTIFY_INBOX -> stringRes(R.string.relay_auth_why_notify_inbox, who ?: "")
-        AuthPurposeKind.READ_OUTBOX -> stringRes(R.string.relay_auth_why_read_outbox, who ?: "")
-        AuthPurposeKind.POST_VENUE -> stringRes(R.string.relay_auth_why_post_venue, who ?: "")
-        AuthPurposeKind.READ_VENUE -> stringRes(R.string.relay_auth_why_read_venue, who ?: "")
-        AuthPurposeKind.MY_INBOX -> stringRes(R.string.relay_auth_why_my_inbox)
+        AuthPurposeKind.SEND_DM -> stringRes(Res.string.relay_auth_why_send_dm, who ?: "")
+        AuthPurposeKind.NOTIFY_INBOX -> stringRes(Res.string.relay_auth_why_notify_inbox, who ?: "")
+        AuthPurposeKind.READ_OUTBOX -> stringRes(Res.string.relay_auth_why_read_outbox, who ?: "")
+        AuthPurposeKind.POST_VENUE -> stringRes(Res.string.relay_auth_why_post_venue, who ?: "")
+        AuthPurposeKind.READ_VENUE -> stringRes(Res.string.relay_auth_why_read_venue, who ?: "")
+        AuthPurposeKind.MY_INBOX -> stringRes(Res.string.relay_auth_why_my_inbox)
         // Name the conversation by who is in it — but only when that name is a real one. Splicing the
         // unloaded placeholder in gives "your conversation with someone you haven't loaded yet", which
         // is longer than the vague version and no more informative, so it falls back instead.
         AuthPurposeKind.THREAD ->
-            if (who.isNullOrBlank() || who.startsWith(stringRes(R.string.relay_auth_someone_unloaded))) {
-                stringRes(R.string.relay_auth_why_thread)
+            if (who.isNullOrBlank() || who.startsWith(stringRes(Res.string.relay_auth_someone_unloaded))) {
+                stringRes(Res.string.relay_auth_why_thread)
             } else {
-                stringRes(R.string.relay_auth_why_thread_with, who)
+                stringRes(Res.string.relay_auth_why_thread_with, who)
             }
         // No attributable purpose. If it is the user's own relay we can at least say that much,
         // which is the only way MY_OWN_RELAY is ever reachable — the deriver is account-agnostic
         // (one shared socket, many accounts) so it cannot know whose relay this is.
         else ->
             if (isMyOwnRelay) {
-                stringRes(R.string.relay_auth_why_my_own_relay)
+                stringRes(Res.string.relay_auth_why_my_own_relay)
             } else {
-                stringRes(R.string.relay_auth_why_other)
+                stringRes(Res.string.relay_auth_why_other)
             }
     }
 
@@ -472,11 +491,11 @@ private fun rememberCounterpartyName(
     if (user == null) {
         LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
     }
-    val loaded = user ?: return stringRes(R.string.relay_auth_someone_unloaded)
+    val loaded = user ?: return stringRes(Res.string.relay_auth_someone_unloaded)
     val metadata by observeUserInfo(loaded, accountViewModel)
     return metadata?.info?.bestName()
         ?: loaded.metadataOrNull()?.bestName()
-        ?: stringRes(R.string.relay_auth_someone_unloaded)
+        ?: stringRes(Res.string.relay_auth_someone_unloaded)
 }
 
 /**
@@ -572,7 +591,7 @@ private fun rememberDisplayName(
     if (user == null) {
         LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
     }
-    val loaded = user ?: return stringRes(R.string.relay_auth_someone_unloaded)
+    val loaded = user ?: return stringRes(Res.string.relay_auth_someone_unloaded)
     // Reading the observed metadata registers a snapshot read, so the name updates when it arrives.
     val metadata by observeUserInfo(loaded, accountViewModel)
     return metadata?.info?.bestName() ?: loaded.toBestDisplayName()

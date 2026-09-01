@@ -66,6 +66,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_create_about
+import com.vitorpamplona.amethyst.commons.resources.concord_create_icon_hint
+import com.vitorpamplona.amethyst.commons.resources.concord_create_name
+import com.vitorpamplona.amethyst.commons.resources.concord_edit_banner_hint
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -121,7 +126,7 @@ fun ConcordMetadataFields(
             onValueChange = { name.value = it },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            label = { Text(stringRes(R.string.concord_create_name)) },
+            label = { Text(stringRes(Res.string.concord_create_name)) },
         )
         OutlinedTextField(
             value = about.value,
@@ -129,7 +134,7 @@ fun ConcordMetadataFields(
             modifier = Modifier.fillMaxWidth(),
             minLines = 2,
             maxLines = 5,
-            label = { Text(stringRes(R.string.concord_create_about)) },
+            label = { Text(stringRes(Res.string.concord_create_about)) },
         )
     }
 }
@@ -192,7 +197,7 @@ private fun ConcordIconHero(
             if (uploading) CircularProgressIndicator(modifier = Modifier.size(36.dp))
         }
         Text(
-            text = stringRes(R.string.concord_create_icon_hint),
+            text = stringRes(Res.string.concord_create_icon_hint),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Medium,
@@ -255,7 +260,7 @@ private fun ConcordBannerHero(
         if (bannerModel != null) {
             AsyncImage(
                 model = bannerModel,
-                contentDescription = stringRes(R.string.concord_edit_banner_hint),
+                contentDescription = stringRes(Res.string.concord_edit_banner_hint),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxWidth().aspectRatio(3f),
             )
@@ -271,7 +276,7 @@ private fun ConcordBannerHero(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    text = stringRes(R.string.concord_edit_banner_hint),
+                    text = stringRes(Res.string.concord_edit_banner_hint),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,

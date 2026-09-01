@@ -72,6 +72,15 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.broadcast_results
+import com.vitorpamplona.amethyst.commons.resources.broadcasts_number
+import com.vitorpamplona.amethyst.commons.resources.collapse
+import com.vitorpamplona.amethyst.commons.resources.dismiss
+import com.vitorpamplona.amethyst.commons.resources.retry_failed_number
+import com.vitorpamplona.amethyst.commons.resources.retrying
+import com.vitorpamplona.amethyst.commons.resources.share_of
+import com.vitorpamplona.amethyst.commons.resources.timeout
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
@@ -164,7 +173,7 @@ fun MultiBroadcastDetailsSheetContent(
     ) {
         // Header
         Text(
-            text = if (broadcasts.size == 1) stringRes(R.string.broadcast_results) else stringRes(R.string.broadcasts_number, broadcasts.size),
+            text = if (broadcasts.size == 1) stringRes(Res.string.broadcast_results) else stringRes(Res.string.broadcasts_number, broadcasts.size),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -201,7 +210,7 @@ fun MultiBroadcastDetailsSheetContent(
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringRes(R.string.dismiss))
+            Text(stringRes(Res.string.dismiss))
         }
     }
 }
@@ -242,14 +251,14 @@ private fun BroadcastSection(
                 }
 
                 Text(
-                    text = stringResource(R.string.share_of, broadcast.successCount, broadcast.totalRelays),
+                    text = stringRes(Res.string.share_of, broadcast.successCount, broadcast.totalRelays),
                     style = MaterialTheme.typography.labelLarge,
                     color = statusColor(broadcast.status),
                 )
 
                 Icon(
                     symbol = if (isExpanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                    contentDescription = if (isExpanded) stringRes(R.string.collapse) else stringRes(R.string.expand),
+                    contentDescription = if (isExpanded) stringRes(Res.string.collapse) else stringRes(R.string.expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
                 )
@@ -290,7 +299,7 @@ private fun BroadcastSection(
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text(stringRes(R.string.retry_failed_number, broadcast.failedRelays.size))
+                        Text(stringRes(Res.string.retry_failed_number, broadcast.failedRelays.size))
                     }
                 }
             }
@@ -408,7 +417,7 @@ private fun RelayResultRow(
 
                 is RelayResult.Timeout -> {
                     Text(
-                        text = stringRes(R.string.timeout),
+                        text = stringRes(Res.string.timeout),
                         style = MaterialTheme.typography.bodySmall,
                         color = warningColor,
                     )
@@ -416,7 +425,7 @@ private fun RelayResultRow(
 
                 is RelayResult.Retrying -> {
                     Text(
-                        text = stringRes(R.string.retrying),
+                        text = stringRes(Res.string.retrying),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                     )

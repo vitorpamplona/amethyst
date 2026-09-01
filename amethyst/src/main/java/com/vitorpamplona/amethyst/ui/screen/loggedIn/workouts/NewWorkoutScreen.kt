@@ -60,6 +60,15 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.workout_calories
+import com.vitorpamplona.amethyst.commons.resources.workout_distance
+import com.vitorpamplona.amethyst.commons.resources.workout_duration
+import com.vitorpamplona.amethyst.commons.resources.workout_hours
+import com.vitorpamplona.amethyst.commons.resources.workout_minutes
+import com.vitorpamplona.amethyst.commons.resources.workout_notes
+import com.vitorpamplona.amethyst.commons.resources.workout_seconds
+import com.vitorpamplona.amethyst.commons.resources.workout_title
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -141,17 +150,17 @@ private fun NewWorkoutBody(
         OutlinedTextField(
             value = postViewModel.title,
             onValueChange = { postViewModel.title = it },
-            label = { Text(stringRes(R.string.workout_title)) },
+            label = { Text(stringRes(Res.string.workout_title)) },
             leadingIcon = { FieldIcon(MaterialSymbols.Edit) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
 
-        SectionLabel(MaterialSymbols.Schedule, stringRes(R.string.workout_duration))
+        SectionLabel(MaterialSymbols.Schedule, stringRes(Res.string.workout_duration))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            NumberField(postViewModel.hours, { postViewModel.hours = it }, stringRes(R.string.workout_hours), Modifier.weight(1f))
-            NumberField(postViewModel.minutes, { postViewModel.minutes = it }, stringRes(R.string.workout_minutes), Modifier.weight(1f))
-            NumberField(postViewModel.seconds, { postViewModel.seconds = it }, stringRes(R.string.workout_seconds), Modifier.weight(1f))
+            NumberField(postViewModel.hours, { postViewModel.hours = it }, stringRes(Res.string.workout_hours), Modifier.weight(1f))
+            NumberField(postViewModel.minutes, { postViewModel.minutes = it }, stringRes(Res.string.workout_minutes), Modifier.weight(1f))
+            NumberField(postViewModel.seconds, { postViewModel.seconds = it }, stringRes(Res.string.workout_seconds), Modifier.weight(1f))
         }
 
         Row(
@@ -161,7 +170,7 @@ private fun NewWorkoutBody(
             OutlinedTextField(
                 value = postViewModel.distance,
                 onValueChange = { postViewModel.distance = it },
-                label = { Text(stringRes(R.string.workout_distance)) },
+                label = { Text(stringRes(Res.string.workout_distance)) },
                 leadingIcon = { FieldIcon(MaterialSymbols.DirectionsRun) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
@@ -185,7 +194,7 @@ private fun NewWorkoutBody(
         OutlinedTextField(
             value = postViewModel.calories,
             onValueChange = { postViewModel.calories = it },
-            label = { Text(stringRes(R.string.workout_calories)) },
+            label = { Text(stringRes(Res.string.workout_calories)) },
             leadingIcon = { FieldIcon(MaterialSymbols.LocalFireDepartment) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
@@ -195,7 +204,7 @@ private fun NewWorkoutBody(
         OutlinedTextField(
             value = postViewModel.notes,
             onValueChange = { postViewModel.notes = it },
-            label = { Text(stringRes(R.string.workout_notes)) },
+            label = { Text(stringRes(Res.string.workout_notes)) },
             leadingIcon = { FieldIcon(MaterialSymbols.EditNote) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 3,

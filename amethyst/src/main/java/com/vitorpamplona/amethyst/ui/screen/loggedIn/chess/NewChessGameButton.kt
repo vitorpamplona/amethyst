@@ -24,9 +24,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
@@ -45,7 +46,7 @@ fun NewChessGameButton(onClick: () -> Unit) {
     ) {
         Icon(
             symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(R.string.new_chess_game),
+            contentDescription = stringRes(Res.string.new_chess_game),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )

@@ -27,9 +27,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_create_public_private_chat_description
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -51,7 +52,7 @@ fun ChannelFabColumn(nav: INav) {
     ) {
         Icon(
             symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(R.string.messages_create_public_private_chat_description),
+            contentDescription = stringRes(Res.string.messages_create_public_private_chat_description),
             modifier = Modifier.size(26.dp),
             tint = MaterialTheme.colorScheme.onPrimary,
         )

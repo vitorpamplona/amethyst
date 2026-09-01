@@ -48,7 +48,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_description
+import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_go
+import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_invalid_url
+import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_popular
+import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_relay_label
+import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_your_relays
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -108,7 +115,7 @@ fun RelayGroupBrowseScreen(
             TopBarExtensibleWithBackButton(
                 title = {
                     Text(
-                        text = stringRes(R.string.relay_group_browse_title),
+                        text = stringRes(Res.string.relay_group_browse_title),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -124,7 +131,7 @@ fun RelayGroupBrowseScreen(
                     .verticalScroll(rememberScrollState()),
         ) {
             Text(
-                text = stringRes(R.string.relay_group_browse_description),
+                text = stringRes(Res.string.relay_group_browse_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -141,11 +148,11 @@ fun RelayGroupBrowseScreen(
                 isError = showError,
                 supportingText =
                     if (showError) {
-                        { Text(stringRes(R.string.relay_group_browse_invalid_url)) }
+                        { Text(stringRes(Res.string.relay_group_browse_invalid_url)) }
                     } else {
                         null
                     },
-                label = { Text(stringRes(R.string.relay_group_browse_relay_label)) },
+                label = { Text(stringRes(Res.string.relay_group_browse_relay_label)) },
                 placeholder = { Text("wss://…") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { open(relayUrl) }),
@@ -175,11 +182,11 @@ fun RelayGroupBrowseScreen(
                 enabled = relayUrl.isNotBlank(),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
-                Text(stringRes(R.string.relay_group_browse_go))
+                Text(stringRes(Res.string.relay_group_browse_go))
             }
 
             if (joined.isNotEmpty()) {
-                SectionHeader(stringRes(R.string.relay_group_browse_your_relays))
+                SectionHeader(stringRes(Res.string.relay_group_browse_your_relays))
                 joined.sorted().forEach { server ->
                     RelayGroupServerRow(server, accountViewModel) { open(server) }
                     HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -191,7 +198,7 @@ fun RelayGroupBrowseScreen(
             val joinedNormalized = joined.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it)?.url }
             val suggestions = POPULAR_RELAYS.filter { RelayUrlNormalizer.normalizeOrNull(it)?.url !in joinedNormalized }
             if (suggestions.isNotEmpty()) {
-                SectionHeader(stringRes(R.string.relay_group_browse_popular))
+                SectionHeader(stringRes(Res.string.relay_group_browse_popular))
                 suggestions.forEach { server ->
                     RelayGroupServerRow(server, accountViewModel) { open(server) }
                     HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)

@@ -70,6 +70,20 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzAgentActivityState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_add_people_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_agent_working
+import com.vitorpamplona.amethyst.commons.resources.buzz_import_added
+import com.vitorpamplona.amethyst.commons.resources.relay_group_add_member
+import com.vitorpamplona.amethyst.commons.resources.relay_group_assign_role
+import com.vitorpamplona.amethyst.commons.resources.relay_group_demote_member
+import com.vitorpamplona.amethyst.commons.resources.relay_group_make_admin
+import com.vitorpamplona.amethyst.commons.resources.relay_group_make_moderator
+import com.vitorpamplona.amethyst.commons.resources.relay_group_members_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_remove_user
+import com.vitorpamplona.amethyst.commons.resources.relay_group_remove_user_confirm
+import com.vitorpamplona.amethyst.commons.resources.relay_group_role_admin
+import com.vitorpamplona.amethyst.commons.resources.relay_group_role_moderator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -177,7 +191,7 @@ private fun RelayGroupMembers(
                 title = {
                     Column {
                         Text(
-                            text = stringRes(R.string.relay_group_members_title),
+                            text = stringRes(Res.string.relay_group_members_title),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -281,14 +295,14 @@ private fun AddMemberBar(
                 trailingContent = { user ->
                     if (isAlreadyIn(user.pubkeyHex)) {
                         Text(
-                            text = stringRes(R.string.buzz_import_added),
+                            text = stringRes(Res.string.buzz_import_added),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     } else {
                         Icon(
                             symbol = MaterialSymbols.PersonAdd,
-                            contentDescription = stringRes(R.string.relay_group_add_member),
+                            contentDescription = stringRes(Res.string.relay_group_add_member),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -309,7 +323,7 @@ private fun AddMemberBar(
                     modifier = Modifier.size(20.dp),
                 )
             },
-            label = { Text(stringRes(R.string.buzz_add_people_hint)) },
+            label = { Text(stringRes(Res.string.buzz_add_people_hint)) },
         )
     }
 }
@@ -404,7 +418,7 @@ private fun RelayGroupMemberRow(
                                     DropdownMenuItem(
                                         text = {
                                             Column {
-                                                Text(stringRes(R.string.relay_group_assign_role, role.name))
+                                                Text(stringRes(Res.string.relay_group_assign_role, role.name))
                                                 role.description?.let {
                                                     Text(
                                                         text = it,
@@ -428,7 +442,7 @@ private fun RelayGroupMemberRow(
                         // No 39003 role set advertised: fall back to the built-in admin/moderator shortcuts.
                         if (viewerIsAdmin && entry.membership != RelayGroupMembership.ADMIN) {
                             DropdownMenuItem(
-                                text = { Text(stringRes(R.string.relay_group_make_admin)) },
+                                text = { Text(stringRes(Res.string.relay_group_make_admin)) },
                                 onClick = {
                                     menuOpen = false
                                     accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_ADMIN))
@@ -440,7 +454,7 @@ private fun RelayGroupMemberRow(
                         // menu item that cannot do anything.
                         if (!isBuzzRelay && entry.membership != RelayGroupMembership.MODERATOR && entry.membership != RelayGroupMembership.ADMIN) {
                             DropdownMenuItem(
-                                text = { Text(stringRes(R.string.relay_group_make_moderator)) },
+                                text = { Text(stringRes(Res.string.relay_group_make_moderator)) },
                                 onClick = {
                                     menuOpen = false
                                     accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_MODERATOR))
@@ -450,7 +464,7 @@ private fun RelayGroupMemberRow(
                     }
                     if (entry.membership == RelayGroupMembership.MODERATOR || entry.membership == RelayGroupMembership.ADMIN) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.relay_group_demote_member)) },
+                            text = { Text(stringRes(Res.string.relay_group_demote_member)) },
                             onClick = {
                                 menuOpen = false
                                 accountViewModel.putRelayGroupUser(channel, entry.pubkey, emptyList())
@@ -460,7 +474,7 @@ private fun RelayGroupMemberRow(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = stringRes(R.string.relay_group_remove_user),
+                                text = stringRes(Res.string.relay_group_remove_user),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         },
@@ -478,14 +492,14 @@ private fun RelayGroupMemberRow(
         val displayName = user?.toBestDisplayName() ?: entry.pubkey.take(8)
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
-            title = { Text(stringRes(R.string.relay_group_remove_user)) },
-            text = { Text(stringRes(R.string.relay_group_remove_user_confirm, displayName)) },
+            title = { Text(stringRes(Res.string.relay_group_remove_user)) },
+            text = { Text(stringRes(Res.string.relay_group_remove_user_confirm, displayName)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmRemove = false
                     accountViewModel.removeRelayGroupUser(channel, entry.pubkey)
                 }) {
-                    Text(stringRes(R.string.relay_group_remove_user), color = MaterialTheme.colorScheme.error)
+                    Text(stringRes(Res.string.relay_group_remove_user), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -532,7 +546,7 @@ private fun BotWorkingLabel(
     ) {
         Box(Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
         Text(
-            text = stringRes(R.string.buzz_agent_working),
+            text = stringRes(Res.string.buzz_agent_working),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -552,8 +566,8 @@ private fun MemberRoleBadge(entry: RosterEntry) {
     val label =
         when {
             entry.roles.isNotEmpty() -> entry.roles.joinToString(", ")
-            entry.membership == RelayGroupMembership.ADMIN -> stringRes(R.string.relay_group_role_admin)
-            entry.membership == RelayGroupMembership.MODERATOR -> stringRes(R.string.relay_group_role_moderator)
+            entry.membership == RelayGroupMembership.ADMIN -> stringRes(Res.string.relay_group_role_admin)
+            entry.membership == RelayGroupMembership.MODERATOR -> stringRes(Res.string.relay_group_role_moderator)
             else -> return
         }
 

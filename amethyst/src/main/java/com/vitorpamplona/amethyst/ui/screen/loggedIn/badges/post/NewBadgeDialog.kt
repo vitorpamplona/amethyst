@@ -65,6 +65,19 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.badge_description_label
+import com.vitorpamplona.amethyst.commons.resources.badge_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.badge_name_label
+import com.vitorpamplona.amethyst.commons.resources.badge_name_placeholder
+import com.vitorpamplona.amethyst.commons.resources.badge_upload_image_cta
+import com.vitorpamplona.amethyst.commons.resources.badge_upload_image_hint
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -222,14 +235,14 @@ private fun UploadPlaceholder(onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = stringRes(R.string.badge_upload_image_cta),
+                text = stringRes(Res.string.badge_upload_image_cta),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = stringRes(R.string.badge_upload_image_hint),
+                text = stringRes(Res.string.badge_upload_image_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -256,10 +269,10 @@ private fun BadgeFormFields(
     OutlinedTextField(
         value = postViewModel.name,
         onValueChange = { postViewModel.name = it },
-        label = { Text(stringRes(R.string.badge_name_label)) },
+        label = { Text(stringRes(Res.string.badge_name_label)) },
         placeholder = {
             Text(
-                text = stringRes(R.string.badge_name_placeholder),
+                text = stringRes(Res.string.badge_name_placeholder),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -276,10 +289,10 @@ private fun BadgeFormFields(
     OutlinedTextField(
         value = postViewModel.description,
         onValueChange = { postViewModel.description = it },
-        label = { Text(stringRes(R.string.badge_description_label)) },
+        label = { Text(stringRes(Res.string.badge_description_label)) },
         placeholder = {
             Text(
-                text = stringRes(R.string.badge_description_placeholder),
+                text = stringRes(Res.string.badge_description_placeholder),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -319,12 +332,12 @@ private fun BadgeFormFields(
         verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
         Text(
-            text = stringRes(R.string.media_compression_quality_label),
+            text = stringRes(Res.string.media_compression_quality_label),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = stringRes(R.string.media_compression_quality_explainer),
+            text = stringRes(Res.string.media_compression_quality_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
             maxLines = 5,
@@ -337,11 +350,11 @@ private fun BadgeFormFields(
             Text(
                 text =
                     when (postViewModel.mediaQualitySlider) {
-                        0 -> stringRes(R.string.media_compression_quality_low)
-                        1 -> stringRes(R.string.media_compression_quality_medium)
-                        2 -> stringRes(R.string.media_compression_quality_high)
-                        3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                        else -> stringRes(R.string.media_compression_quality_medium)
+                        0 -> stringRes(Res.string.media_compression_quality_low)
+                        1 -> stringRes(Res.string.media_compression_quality_medium)
+                        2 -> stringRes(Res.string.media_compression_quality_high)
+                        3 -> stringRes(Res.string.media_compression_quality_uncompressed)
+                        else -> stringRes(Res.string.media_compression_quality_medium)
                     },
                 modifier = Modifier.align(Alignment.Center),
             )

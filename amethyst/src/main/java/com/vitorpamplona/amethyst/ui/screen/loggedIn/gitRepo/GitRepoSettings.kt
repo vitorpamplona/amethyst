@@ -36,7 +36,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_new_issue_cancel
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_clone_urls
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_description
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_name
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_save
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_title
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_topics
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_web_urls
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
@@ -61,7 +69,7 @@ fun GitRepoSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.git_repo_settings_title)) },
+        title = { Text(stringRes(Res.string.git_repo_settings_title)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -70,35 +78,35 @@ fun GitRepoSettingsDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringRes(R.string.git_repo_settings_name)) },
+                    label = { Text(stringRes(Res.string.git_repo_settings_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text(stringRes(R.string.git_repo_settings_description)) },
+                    label = { Text(stringRes(Res.string.git_repo_settings_description)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = cloneUrls,
                     onValueChange = { cloneUrls = it },
-                    label = { Text(stringRes(R.string.git_repo_settings_clone_urls)) },
+                    label = { Text(stringRes(Res.string.git_repo_settings_clone_urls)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = webUrls,
                     onValueChange = { webUrls = it },
-                    label = { Text(stringRes(R.string.git_repo_settings_web_urls)) },
+                    label = { Text(stringRes(Res.string.git_repo_settings_web_urls)) },
                     minLines = 1,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = topics,
                     onValueChange = { topics = it },
-                    label = { Text(stringRes(R.string.git_repo_settings_topics)) },
+                    label = { Text(stringRes(Res.string.git_repo_settings_topics)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -112,11 +120,11 @@ fun GitRepoSettingsDialog(
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.git_repo_settings_save))
+                Text(stringRes(Res.string.git_repo_settings_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.git_new_issue_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.git_new_issue_cancel)) }
         },
     )
 }

@@ -47,6 +47,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.compose_signature_setting_description
+import com.vitorpamplona.amethyst.commons.resources.compose_signature_setting_hint
+import com.vitorpamplona.amethyst.commons.resources.compose_signature_setting_title
+import com.vitorpamplona.amethyst.commons.resources.pow_categories_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_categories_title
+import com.vitorpamplona.amethyst.commons.resources.pow_custom_difficulty_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_custom_difficulty_title
+import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_estimate
+import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_off
+import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_title
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.model.AccountPoWPreferences
@@ -148,8 +160,8 @@ private fun PowDifficultyTile(accountViewModel: AccountViewModel) {
 
     SettingsBlockTile(
         icon = MaterialSymbols.Manufacturing,
-        title = stringRes(R.string.pow_difficulty_title),
-        description = stringRes(R.string.pow_difficulty_explainer),
+        title = stringRes(Res.string.pow_difficulty_title),
+        description = stringRes(Res.string.pow_difficulty_explainer),
     ) {
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             SegmentedButton(
@@ -157,7 +169,7 @@ private fun PowDifficultyTile(accountViewModel: AccountViewModel) {
                 onClick = { accountViewModel.updatePowDifficulty(0) },
                 shape = SegmentedButtonDefaults.itemShape(index = 0, count = POW_PRESETS.size + 1),
             ) {
-                Text(stringRes(R.string.pow_difficulty_off))
+                Text(stringRes(Res.string.pow_difficulty_off))
             }
             POW_PRESETS.forEachIndexed { index, preset ->
                 SegmentedButton(
@@ -174,14 +186,14 @@ private fun PowDifficultyTile(accountViewModel: AccountViewModel) {
     }
 
     SettingsSubControlRow(
-        title = stringRes(R.string.pow_custom_difficulty_title),
-        description = stringRes(R.string.pow_custom_difficulty_explainer),
+        title = stringRes(Res.string.pow_custom_difficulty_title),
+        description = stringRes(Res.string.pow_custom_difficulty_explainer),
     ) {
         SettingsStepper(
             value = difficulty,
             min = 0,
             max = AccountPoWPreferences.MAX_POW_DIFFICULTY,
-            unsetLabel = stringRes(R.string.pow_difficulty_off),
+            unsetLabel = stringRes(Res.string.pow_difficulty_off),
             onValueChange = accountViewModel::updatePowDifficulty,
         )
     }
@@ -206,7 +218,7 @@ private fun PowTimeEstimate(difficulty: Int) {
 
     estimate?.let {
         Text(
-            text = stringRes(R.string.pow_difficulty_estimate, it),
+            text = stringRes(Res.string.pow_difficulty_estimate, it),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -226,8 +238,8 @@ private fun PowCategoryChecklist(accountViewModel: AccountViewModel) {
 
     SettingsControlRow(
         icon = MaterialSymbols.Checklist,
-        title = stringRes(R.string.pow_categories_title),
-        description = stringRes(R.string.pow_categories_explainer),
+        title = stringRes(Res.string.pow_categories_title),
+        description = stringRes(Res.string.pow_categories_explainer),
     ) {}
 
     PoWCategory.entries.forEach { category ->
@@ -282,13 +294,13 @@ private fun SignatureTile(flow: MutableStateFlow<String>) {
 
     SettingsBlockTile(
         icon = MaterialSymbols.EditNote,
-        title = stringRes(R.string.compose_signature_setting_title),
-        description = stringRes(R.string.compose_signature_setting_description),
+        title = stringRes(Res.string.compose_signature_setting_title),
+        description = stringRes(Res.string.compose_signature_setting_description),
     ) {
         OutlinedTextField(
             value = value,
             onValueChange = { flow.tryEmit(it) },
-            placeholder = { Text(stringRes(R.string.compose_signature_setting_hint)) },
+            placeholder = { Text(stringRes(Res.string.compose_signature_setting_hint)) },
             modifier = Modifier.fillMaxWidth(),
         )
     }

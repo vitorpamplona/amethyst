@@ -38,9 +38,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_author_verified
+import com.vitorpamplona.amethyst.commons.resources.podcast_role_cohost
+import com.vitorpamplona.amethyst.commons.resources.podcast_role_editor
+import com.vitorpamplona.amethyst.commons.resources.podcast_role_host
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -125,7 +129,7 @@ private fun PodcastAuthorRow(
         if (verified) {
             Icon(
                 symbol = MaterialSymbols.CheckCircle,
-                contentDescription = stringRes(R.string.podcast_author_verified),
+                contentDescription = stringRes(Res.string.podcast_author_verified),
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -136,8 +140,8 @@ private fun PodcastAuthorRow(
 @Composable
 private fun roleLabel(role: String): String =
     when (role) {
-        AuthorTag.ROLE_HOST -> stringRes(R.string.podcast_role_host)
-        AuthorTag.ROLE_COHOST -> stringRes(R.string.podcast_role_cohost)
-        AuthorTag.ROLE_EDITOR -> stringRes(R.string.podcast_role_editor)
+        AuthorTag.ROLE_HOST -> stringRes(Res.string.podcast_role_host)
+        AuthorTag.ROLE_COHOST -> stringRes(Res.string.podcast_role_cohost)
+        AuthorTag.ROLE_EDITOR -> stringRes(Res.string.podcast_role_editor)
         else -> role
     }

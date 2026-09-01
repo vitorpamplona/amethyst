@@ -37,9 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.record_a_message
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -91,7 +92,7 @@ fun RecordVoiceButton(
                 // Microphone icon
                 Icon(
                     symbol = MaterialSymbols.Mic,
-                    contentDescription = stringRes(id = R.string.record_a_message),
+                    contentDescription = stringRes(id = Res.string.record_a_message),
                     modifier = Modifier.height(22.dp),
                     tint =
                         if (recordingState) {

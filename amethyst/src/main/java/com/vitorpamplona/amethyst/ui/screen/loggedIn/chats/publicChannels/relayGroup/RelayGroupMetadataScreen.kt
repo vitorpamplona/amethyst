@@ -71,6 +71,30 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_add_photo
+import com.vitorpamplona.amethyst.commons.resources.relay_group_change_photo
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_about
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_geohash
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_geohash_hint
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_name
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_picture
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_topics
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_topics_hint
+import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_hidden
+import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_hidden_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_invite_only
+import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_invite_only_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_restricted
+import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_restricted_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_location_add
+import com.vitorpamplona.amethyst.commons.resources.relay_group_location_add_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_location_clear
+import com.vitorpamplona.amethyst.commons.resources.relay_group_location_manual
+import com.vitorpamplona.amethyst.commons.resources.relay_group_relay_no_nip29
+import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery
+import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_section_permissions
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -279,7 +303,7 @@ private fun NoNip29Warning() {
             modifier = Modifier.size(20.dp),
         )
         Text(
-            text = stringRes(R.string.relay_group_relay_no_nip29),
+            text = stringRes(Res.string.relay_group_relay_no_nip29),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
@@ -303,7 +327,7 @@ private fun GroupImagePicker(
         if (model != null) {
             AsyncImage(
                 model = model,
-                contentDescription = stringRes(R.string.relay_group_field_picture),
+                contentDescription = stringRes(Res.string.relay_group_field_picture),
                 contentScale = ContentScale.Crop,
                 modifier =
                     Modifier
@@ -335,9 +359,9 @@ private fun GroupImagePicker(
         Text(
             text =
                 if (model != null) {
-                    stringRes(R.string.relay_group_change_photo)
+                    stringRes(Res.string.relay_group_change_photo)
                 } else {
-                    stringRes(R.string.relay_group_add_photo)
+                    stringRes(Res.string.relay_group_add_photo)
                 },
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
@@ -355,7 +379,7 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
             viewModel.markTouched()
         },
         singleLine = true,
-        label = { Text(stringRes(R.string.relay_group_field_name)) },
+        label = { Text(stringRes(Res.string.relay_group_field_name)) },
         modifier = Modifier.fillMaxWidth(),
     )
 
@@ -365,7 +389,7 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
             viewModel.about.value = it
             viewModel.markTouched()
         },
-        label = { Text(stringRes(R.string.relay_group_field_about)) },
+        label = { Text(stringRes(Res.string.relay_group_field_about)) },
         minLines = 2,
         maxLines = 6,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -378,12 +402,12 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
     if (!viewModel.isBuzzRelay) {
         Spacer(Modifier.height(12.dp))
         Text(
-            text = stringRes(R.string.relay_group_section_discovery),
+            text = stringRes(Res.string.relay_group_section_discovery),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = stringRes(R.string.relay_group_section_discovery_desc),
+            text = stringRes(Res.string.relay_group_section_discovery_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 2.dp),
@@ -396,8 +420,8 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
                 viewModel.markTouched()
             },
             singleLine = true,
-            label = { Text(stringRes(R.string.relay_group_field_topics)) },
-            placeholder = { Text(stringRes(R.string.relay_group_field_topics_hint)) },
+            label = { Text(stringRes(Res.string.relay_group_field_topics)) },
+            placeholder = { Text(stringRes(Res.string.relay_group_field_topics_hint)) },
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         Spacer(Modifier.height(8.dp))
@@ -406,7 +430,7 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
 
     Spacer(Modifier.height(12.dp))
     Text(
-        text = stringRes(R.string.relay_group_section_permissions),
+        text = stringRes(Res.string.relay_group_section_permissions),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
     )
@@ -429,24 +453,24 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
     if (viewModel.isBuzzRelay) return
 
     LabeledSwitchRow(
-        label = stringRes(R.string.relay_group_flag_invite_only),
-        description = stringRes(R.string.relay_group_flag_invite_only_desc),
+        label = stringRes(Res.string.relay_group_flag_invite_only),
+        description = stringRes(Res.string.relay_group_flag_invite_only_desc),
         checked = viewModel.isClosed,
     ) {
         viewModel.isClosed = it
         viewModel.markTouched()
     }
     LabeledSwitchRow(
-        label = stringRes(R.string.relay_group_flag_restricted),
-        description = stringRes(R.string.relay_group_flag_restricted_desc),
+        label = stringRes(Res.string.relay_group_flag_restricted),
+        description = stringRes(Res.string.relay_group_flag_restricted_desc),
         checked = viewModel.isRestricted,
     ) {
         viewModel.isRestricted = it
         viewModel.markTouched()
     }
     LabeledSwitchRow(
-        label = stringRes(R.string.relay_group_flag_hidden),
-        description = stringRes(R.string.relay_group_flag_hidden_desc),
+        label = stringRes(Res.string.relay_group_flag_hidden),
+        description = stringRes(Res.string.relay_group_flag_hidden_desc),
         checked = viewModel.isHidden,
     ) {
         viewModel.isHidden = it
@@ -494,7 +518,7 @@ private fun GroupLocationField(viewModel: RelayGroupMetadataViewModel) {
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = stringRes(R.string.relay_group_location_manual),
+            text = stringRes(Res.string.relay_group_location_manual),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(start = 6.dp),
         )
@@ -507,8 +531,8 @@ private fun GroupLocationField(viewModel: RelayGroupMetadataViewModel) {
                 viewModel.markTouched()
             },
             singleLine = true,
-            label = { Text(stringRes(R.string.relay_group_field_geohash)) },
-            placeholder = { Text(stringRes(R.string.relay_group_field_geohash_hint)) },
+            label = { Text(stringRes(Res.string.relay_group_field_geohash)) },
+            placeholder = { Text(stringRes(Res.string.relay_group_field_geohash_hint)) },
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         )
     }
@@ -554,11 +578,11 @@ private fun AddLocationCard(onClick: () -> Unit) {
             }
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = stringRes(R.string.relay_group_location_add),
+                    text = stringRes(Res.string.relay_group_location_add),
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
-                    text = stringRes(R.string.relay_group_location_add_desc),
+                    text = stringRes(Res.string.relay_group_location_add_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -624,7 +648,7 @@ private fun SelectedLocationCard(
             IconButton(onClick = onClear) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.relay_group_location_clear),
+                    contentDescription = stringRes(Res.string.relay_group_location_clear),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )

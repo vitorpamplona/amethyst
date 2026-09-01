@@ -67,6 +67,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_add_mint
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_reachable
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_reachable_named
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_unreachable
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_url
+import com.vitorpamplona.amethyst.commons.resources.cashu_mints
+import com.vitorpamplona.amethyst.commons.resources.cashu_remove_mint
+import com.vitorpamplona.amethyst.commons.resources.cashu_verify
+import com.vitorpamplona.amethyst.commons.resources.cashu_wallet_autosaves
+import com.vitorpamplona.amethyst.commons.resources.cashu_wallet_saving
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuMintDirectoryEntry
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -151,7 +162,7 @@ fun CashuMintsScreen(
                     .padding(16.dp),
         ) {
             Text(
-                text = stringRes(R.string.cashu_mints),
+                text = stringRes(Res.string.cashu_mints),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -181,7 +192,7 @@ fun CashuMintsScreen(
                                     CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                                 } else {
                                     Text(
-                                        stringRes(R.string.cashu_verify),
+                                        stringRes(Res.string.cashu_verify),
                                         style = MaterialTheme.typography.labelMedium,
                                     )
                                 }
@@ -192,7 +203,7 @@ fun CashuMintsScreen(
                             }) {
                                 Icon(
                                     symbol = MaterialSymbols.Delete,
-                                    contentDescription = stringRes(R.string.cashu_remove_mint),
+                                    contentDescription = stringRes(Res.string.cashu_remove_mint),
                                     modifier = Modifier.size(18.dp),
                                     tint = MaterialTheme.colorScheme.error,
                                 )
@@ -203,9 +214,9 @@ fun CashuMintsScreen(
                                 Text(
                                     text =
                                         if (vs.name.isNullOrBlank()) {
-                                            stringRes(R.string.cashu_mint_reachable)
+                                            stringRes(Res.string.cashu_mint_reachable)
                                         } else {
-                                            stringRes(R.string.cashu_mint_reachable_named, vs.name)
+                                            stringRes(Res.string.cashu_mint_reachable_named, vs.name)
                                         },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary,
@@ -214,7 +225,7 @@ fun CashuMintsScreen(
                             }
                             is MintPingState.Failed -> {
                                 Text(
-                                    text = stringRes(R.string.cashu_mint_unreachable, vs.message),
+                                    text = stringRes(Res.string.cashu_mint_unreachable, vs.message),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.padding(bottom = 4.dp),
@@ -240,7 +251,7 @@ fun CashuMintsScreen(
                         mintInput = it
                         viewModel.resetMintPing()
                     },
-                    label = { Text(stringRes(R.string.cashu_mint_url)) },
+                    label = { Text(stringRes(Res.string.cashu_mint_url)) },
                     placeholder = {
                         Text(
                             "https://mint.example.com",
@@ -259,7 +270,7 @@ fun CashuMintsScreen(
                     if (pingState is MintPingState.Pinging) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
-                        Text(stringRes(R.string.cashu_verify))
+                        Text(stringRes(Res.string.cashu_verify))
                     }
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -277,7 +288,7 @@ fun CashuMintsScreen(
                 ) {
                     Icon(
                         MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.cashu_add_mint),
+                        contentDescription = stringRes(Res.string.cashu_add_mint),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -346,9 +357,9 @@ fun CashuMintsScreen(
                     Text(
                         text =
                             if (ps.name.isNullOrBlank()) {
-                                stringRes(R.string.cashu_mint_reachable)
+                                stringRes(Res.string.cashu_mint_reachable)
                             } else {
-                                stringRes(R.string.cashu_mint_reachable_named, ps.name)
+                                stringRes(Res.string.cashu_mint_reachable_named, ps.name)
                             },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
@@ -357,7 +368,7 @@ fun CashuMintsScreen(
                 is MintPingState.Failed -> {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = stringRes(R.string.cashu_mint_unreachable, ps.message),
+                        text = stringRes(Res.string.cashu_mint_unreachable, ps.message),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -374,7 +385,7 @@ fun CashuMintsScreen(
             // nutzap key is generated for them — the old explicit key picker is
             // gone; advanced key rotation lives in the settings Danger Zone.
             Text(
-                text = stringRes(R.string.cashu_wallet_autosaves),
+                text = stringRes(Res.string.cashu_wallet_autosaves),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -385,7 +396,7 @@ fun CashuMintsScreen(
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = stringRes(R.string.cashu_wallet_saving),
+                        text = stringRes(Res.string.cashu_wallet_saving),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -453,7 +464,7 @@ private fun MintSuggestionList(
                                 CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                             } else {
                                 Text(
-                                    stringRes(R.string.cashu_verify),
+                                    stringRes(Res.string.cashu_verify),
                                     style = MaterialTheme.typography.labelMedium,
                                 )
                             }
@@ -462,7 +473,7 @@ private fun MintSuggestionList(
                         IconButton(onClick = { onAdd(entry) }) {
                             Icon(
                                 symbol = MaterialSymbols.Add,
-                                contentDescription = stringRes(R.string.cashu_add_mint),
+                                contentDescription = stringRes(Res.string.cashu_add_mint),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
@@ -473,9 +484,9 @@ private fun MintSuggestionList(
                             Text(
                                 text =
                                     if (vs.name.isNullOrBlank()) {
-                                        stringRes(R.string.cashu_mint_reachable)
+                                        stringRes(Res.string.cashu_mint_reachable)
                                     } else {
-                                        stringRes(R.string.cashu_mint_reachable_named, vs.name)
+                                        stringRes(Res.string.cashu_mint_reachable_named, vs.name)
                                     },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
@@ -484,7 +495,7 @@ private fun MintSuggestionList(
                         }
                         is MintPingState.Failed -> {
                             Text(
-                                text = stringRes(R.string.cashu_mint_unreachable, vs.message),
+                                text = stringRes(Res.string.cashu_mint_unreachable, vs.message),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),

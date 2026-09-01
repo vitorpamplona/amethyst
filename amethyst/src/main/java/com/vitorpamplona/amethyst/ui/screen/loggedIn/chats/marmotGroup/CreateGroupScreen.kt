@@ -43,6 +43,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_create_group_footer
+import com.vitorpamplona.amethyst.commons.resources.marmot_create_group_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
+import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not_set_message
+import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not_set_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_skip_for_now
+import com.vitorpamplona.amethyst.commons.resources.marmot_use_outbox_relays
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -140,7 +149,7 @@ fun CreateGroupScreen(
                     .padding(horizontal = 16.dp),
         ) {
             Text(
-                text = stringRes(R.string.marmot_create_group_title),
+                text = stringRes(Res.string.marmot_create_group_title),
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
             )
@@ -161,7 +170,7 @@ fun CreateGroupScreen(
             OutlinedTextField(
                 value = groupName,
                 onValueChange = { groupName = it },
-                label = { Text(stringRes(R.string.marmot_group_name)) },
+                label = { Text(stringRes(Res.string.marmot_group_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isCreating,
@@ -173,7 +182,7 @@ fun CreateGroupScreen(
                 value = groupDescription,
                 onValueChange = { groupDescription = it },
                 label = { Text(stringRes(R.string.description)) },
-                placeholder = { Text(stringRes(R.string.marmot_group_description_placeholder)) },
+                placeholder = { Text(stringRes(Res.string.marmot_group_description_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
@@ -181,7 +190,7 @@ fun CreateGroupScreen(
             )
 
             Text(
-                stringRes(R.string.marmot_create_group_footer),
+                stringRes(Res.string.marmot_create_group_footer),
                 modifier = Modifier.padding(top = 12.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -217,18 +226,18 @@ private fun MissingKeyPackageRelayListDialog(
 ) {
     AlertDialog(
         onDismissRequest = onCancel,
-        title = { Text(stringRes(R.string.marmot_keypackage_relays_not_set_title)) },
+        title = { Text(stringRes(Res.string.marmot_keypackage_relays_not_set_title)) },
         text = {
-            Text(stringRes(R.string.marmot_keypackage_relays_not_set_message))
+            Text(stringRes(Res.string.marmot_keypackage_relays_not_set_message))
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(R.string.marmot_use_outbox_relays))
+                Text(stringRes(Res.string.marmot_use_outbox_relays))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.marmot_skip_for_now))
+                Text(stringRes(Res.string.marmot_skip_for_now))
             }
         },
     )

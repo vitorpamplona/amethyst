@@ -62,6 +62,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_all
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_non_zaps
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps
+import com.vitorpamplona.amethyst.commons.resources.wallet_incoming
+import com.vitorpamplona.amethyst.commons.resources.wallet_loading
+import com.vitorpamplona.amethyst.commons.resources.wallet_no_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_no_transactions_for_filter
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_no_address
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_no_backend
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_pending
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
+import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -126,7 +140,7 @@ fun OnchainTransactionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_onchain_transactions)) },
+                title = { Text(stringRes(Res.string.wallet_onchain_transactions)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -139,7 +153,7 @@ fun OnchainTransactionsScreen(
                     IconButton(onClick = { viewModel.fetchTransactions() }) {
                         Icon(
                             symbol = MaterialSymbols.Refresh,
-                            contentDescription = stringRes(R.string.wallet_refresh),
+                            contentDescription = stringRes(Res.string.wallet_refresh),
                         )
                     }
                 },
@@ -148,7 +162,7 @@ fun OnchainTransactionsScreen(
     ) { padding ->
         when {
             address == null -> {
-                EmptyMessage(padding, stringRes(R.string.wallet_onchain_no_address))
+                EmptyMessage(padding, stringRes(Res.string.wallet_onchain_no_address))
             }
             isLoading && !hasAnyTransactions -> {
                 Column(
@@ -162,7 +176,7 @@ fun OnchainTransactionsScreen(
                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        stringRes(R.string.wallet_loading),
+                        stringRes(Res.string.wallet_loading),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
@@ -170,11 +184,11 @@ fun OnchainTransactionsScreen(
             error != null && !hasAnyTransactions -> {
                 EmptyMessage(
                     padding,
-                    error ?: stringRes(R.string.wallet_onchain_no_backend),
+                    error ?: stringRes(Res.string.wallet_onchain_no_backend),
                 )
             }
             !hasAnyTransactions -> {
-                EmptyMessage(padding, stringRes(R.string.wallet_no_transactions))
+                EmptyMessage(padding, stringRes(Res.string.wallet_no_transactions))
             }
             else -> {
                 val uriHandler = LocalUriHandler.current
@@ -195,7 +209,7 @@ fun OnchainTransactionsScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Text(
-                                    stringRes(R.string.wallet_no_transactions_for_filter),
+                                    stringRes(Res.string.wallet_no_transactions_for_filter),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -268,17 +282,17 @@ private fun TransactionFilterRow(
         FilterChip(
             selected = currentFilter == TransactionFilter.ALL,
             onClick = { onFilterSelected(TransactionFilter.ALL) },
-            label = { Text(stringRes(R.string.wallet_filter_all)) },
+            label = { Text(stringRes(Res.string.wallet_filter_all)) },
         )
         FilterChip(
             selected = currentFilter == TransactionFilter.ZAPS,
             onClick = { onFilterSelected(TransactionFilter.ZAPS) },
-            label = { Text(stringRes(R.string.wallet_filter_zaps)) },
+            label = { Text(stringRes(Res.string.wallet_filter_zaps)) },
         )
         FilterChip(
             selected = currentFilter == TransactionFilter.NON_ZAPS,
             onClick = { onFilterSelected(TransactionFilter.NON_ZAPS) },
-            label = { Text(stringRes(R.string.wallet_filter_non_zaps)) },
+            label = { Text(stringRes(Res.string.wallet_filter_non_zaps)) },
         )
     }
 }
@@ -330,9 +344,9 @@ private fun OnchainTransactionItem(
                 symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
                 contentDescription =
                     if (isIncoming) {
-                        stringRes(R.string.wallet_incoming)
+                        stringRes(Res.string.wallet_incoming)
                     } else {
-                        stringRes(R.string.wallet_outgoing)
+                        stringRes(Res.string.wallet_outgoing)
                     },
                 modifier = Modifier.size(40.dp),
                 tint =
@@ -361,9 +375,9 @@ private fun OnchainTransactionItem(
                 Text(
                     text =
                         if (isIncoming) {
-                            stringRes(R.string.wallet_incoming)
+                            stringRes(Res.string.wallet_incoming)
                         } else {
-                            stringRes(R.string.wallet_outgoing)
+                            stringRes(Res.string.wallet_outgoing)
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
@@ -383,7 +397,7 @@ private fun OnchainTransactionItem(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = dateText.ifBlank { stringRes(R.string.wallet_onchain_pending) },
+                    text = dateText.ifBlank { stringRes(Res.string.wallet_onchain_pending) },
                     style = MaterialTheme.typography.bodySmall,
                     color =
                         if (view.tx.confirmations == 0) {

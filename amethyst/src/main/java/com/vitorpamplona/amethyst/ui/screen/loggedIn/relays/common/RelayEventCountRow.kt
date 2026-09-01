@@ -36,9 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_event_count
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadable
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
@@ -84,7 +85,7 @@ fun RelayEventCountRow(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Storage,
-                    contentDescription = stringRes(R.string.relay_event_count),
+                    contentDescription = stringRes(Res.string.relay_event_count),
                     modifier = Size10Modifier,
                     tint = pillColor,
                 )

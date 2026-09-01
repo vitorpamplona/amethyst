@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
@@ -77,7 +78,7 @@ fun DrawBanner(
 
         AsyncImage(
             model = banner,
-            contentDescription = stringRes(id = R.string.profile_image),
+            contentDescription = stringRes(id = Res.string.profile_image),
             contentScale = ContentScale.Crop,
             placeholder = painterRes(R.drawable.profile_banner, 1),
             error = painterRes(R.drawable.profile_banner, 1),

@@ -52,6 +52,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_no_messages_yet
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -247,7 +249,7 @@ private fun BuzzChannelPreviewLine(
             if (memberCount > 0) {
                 pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)
             } else {
-                stringRes(R.string.relay_group_no_messages_yet)
+                stringRes(Res.string.relay_group_no_messages_yet)
             }
         } else {
             // A Buzz timeline row (system line, huddle/job activity, diff) carries JSON/diff in its

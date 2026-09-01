@@ -57,6 +57,19 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_view_grouped
+import com.vitorpamplona.amethyst.commons.resources.concord_view_grouped_desc
+import com.vitorpamplona.amethyst.commons.resources.concord_view_inline
+import com.vitorpamplona.amethyst.commons.resources.concord_view_inline_desc
+import com.vitorpamplona.amethyst.commons.resources.concord_view_mode_title
+import com.vitorpamplona.amethyst.commons.resources.messages_load_types_desc
+import com.vitorpamplona.amethyst.commons.resources.messages_load_types_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_view_grouped
+import com.vitorpamplona.amethyst.commons.resources.relay_group_view_grouped_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_view_inline
+import com.vitorpamplona.amethyst.commons.resources.relay_group_view_inline_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_view_mode_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -133,8 +146,8 @@ fun MessagesSettingsScreen(
         ) {
             item {
                 SectionHeader(
-                    title = stringRes(R.string.messages_load_types_title),
-                    description = stringRes(R.string.messages_load_types_desc),
+                    title = stringRes(Res.string.messages_load_types_title),
+                    description = stringRes(Res.string.messages_load_types_desc),
                 )
             }
 
@@ -164,22 +177,22 @@ fun MessagesSettingsScreen(
 
             if (ChatFeedType.NIP29 in enabled) {
                 item {
-                    SectionHeader(title = stringRes(R.string.relay_group_view_mode_title))
+                    SectionHeader(title = stringRes(Res.string.relay_group_view_mode_title))
                 }
                 item {
                     ViewModeCards {
                         PolicyCard(
                             selected = mode == RelayGroupViewMode.INLINE,
                             symbol = MaterialSymbols.AutoMirrored.ViewList,
-                            label = stringRes(R.string.relay_group_view_inline),
-                            description = stringRes(R.string.relay_group_view_inline_desc),
+                            label = stringRes(Res.string.relay_group_view_inline),
+                            description = stringRes(Res.string.relay_group_view_inline_desc),
                             onClick = { accountViewModel.account.settings.updateRelayGroupViewMode(RelayGroupViewMode.INLINE) },
                         )
                         PolicyCard(
                             selected = mode == RelayGroupViewMode.GROUPED,
                             symbol = MaterialSymbols.Folder,
-                            label = stringRes(R.string.relay_group_view_grouped),
-                            description = stringRes(R.string.relay_group_view_grouped_desc),
+                            label = stringRes(Res.string.relay_group_view_grouped),
+                            description = stringRes(Res.string.relay_group_view_grouped_desc),
                             onClick = { accountViewModel.account.settings.updateRelayGroupViewMode(RelayGroupViewMode.GROUPED) },
                         )
                     }
@@ -188,22 +201,22 @@ fun MessagesSettingsScreen(
 
             if (ChatFeedType.CONCORD in enabled) {
                 item {
-                    SectionHeader(title = stringRes(R.string.concord_view_mode_title))
+                    SectionHeader(title = stringRes(Res.string.concord_view_mode_title))
                 }
                 item {
                     ViewModeCards {
                         PolicyCard(
                             selected = concordMode == ConcordViewMode.INLINE,
                             symbol = MaterialSymbols.AutoMirrored.ViewList,
-                            label = stringRes(R.string.concord_view_inline),
-                            description = stringRes(R.string.concord_view_inline_desc),
+                            label = stringRes(Res.string.concord_view_inline),
+                            description = stringRes(Res.string.concord_view_inline_desc),
                             onClick = { accountViewModel.account.settings.updateConcordViewMode(ConcordViewMode.INLINE) },
                         )
                         PolicyCard(
                             selected = concordMode == ConcordViewMode.GROUPED,
                             symbol = MaterialSymbols.Folder,
-                            label = stringRes(R.string.concord_view_grouped),
-                            description = stringRes(R.string.concord_view_grouped_desc),
+                            label = stringRes(Res.string.concord_view_grouped),
+                            description = stringRes(Res.string.concord_view_grouped_desc),
                             onClick = { accountViewModel.account.settings.updateConcordViewMode(ConcordViewMode.GROUPED) },
                         )
                     }

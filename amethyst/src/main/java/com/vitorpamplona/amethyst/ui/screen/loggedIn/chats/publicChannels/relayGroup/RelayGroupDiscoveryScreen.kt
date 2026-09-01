@@ -60,6 +60,14 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
+import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_live
+import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
+import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_favorite_relay
+import com.vitorpamplona.amethyst.commons.resources.relay_group_message_count_short_capped
+import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.WarmNip11
@@ -145,7 +153,7 @@ fun RelayGroupDiscoveryScreen(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Link,
-                        contentDescription = stringRes(R.string.relay_group_browse_title),
+                        contentDescription = stringRes(Res.string.relay_group_browse_title),
                     )
                 }
             }
@@ -215,7 +223,7 @@ private fun RelayGroupsDiscoveryTopBar(
 
         FeedFilterSpinner(
             placeholderCode = selectedFilter,
-            explainer = stringRes(R.string.select_list_to_filter),
+            explainer = stringRes(Res.string.select_list_to_filter),
             options = options,
             onSelect = accountViewModel.account.settings::changeDefaultRelayGroupsDiscoveryFollowList,
             accountViewModel = accountViewModel,
@@ -390,7 +398,7 @@ private fun RelayRailHeader(
         }
         Icon(
             symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
-            contentDescription = stringRes(R.string.relay_group_favorite_relay),
+            contentDescription = stringRes(Res.string.relay_group_favorite_relay),
             tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
                 Modifier
@@ -610,7 +618,7 @@ private fun RelayGroupStatusPill(channel: RelayGroupChannel) {
                 ) {
                     Box(Modifier.size(6.dp).clip(CircleShape).background(RelayGroupLiveColor))
                     Text(
-                        text = stringRes(R.string.relay_group_badge_live),
+                        text = stringRes(Res.string.relay_group_badge_live),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = RelayGroupLiveColor,
@@ -620,9 +628,9 @@ private fun RelayGroupStatusPill(channel: RelayGroupChannel) {
         // `closed` alone doesn't mean invite-only on Buzz (it stamps every channel); only badge it
         // where membership is actually required to participate.
         channel.requiresMembershipToPost() && channel.isClosed() ->
-            TonalTextPill(stringRes(R.string.relay_group_badge_invite_only))
+            TonalTextPill(stringRes(Res.string.relay_group_badge_invite_only))
         channel.isPrivate() ->
-            TonalTextPill(stringRes(R.string.relay_group_badge_private))
+            TonalTextPill(stringRes(Res.string.relay_group_badge_private))
         else -> {}
     }
 }
@@ -651,7 +659,7 @@ private fun TonalTextPill(label: String) {
 private fun MessageActivityBadge(messageCount: Int) {
     val label =
         if (messageCount >= DISCOVERY_MESSAGE_CAP) {
-            stringRes(R.string.relay_group_message_count_short_capped, DISCOVERY_MESSAGE_CAP)
+            stringRes(Res.string.relay_group_message_count_short_capped, DISCOVERY_MESSAGE_CAP)
         } else {
             messageCount.toString()
         }

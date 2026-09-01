@@ -64,6 +64,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_picked
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_url_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_url_placeholder
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_delete
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_delete_confirm
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_duration_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_more_details
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_number_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_season_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_summary_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_title_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_topics_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_topics_placeholder
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -164,8 +179,8 @@ fun NewPodcastEpisodeScreen(
             OutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
-                label = { Text(stringRes(R.string.podcast_episode_title_label)) },
-                placeholder = { Text(stringRes(R.string.podcast_episode_title_placeholder)) },
+                label = { Text(stringRes(Res.string.podcast_episode_title_label)) },
+                placeholder = { Text(stringRes(Res.string.podcast_episode_title_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -175,7 +190,7 @@ fun NewPodcastEpisodeScreen(
             OutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
-                label = { Text(stringRes(R.string.podcast_episode_summary_label)) },
+                label = { Text(stringRes(Res.string.podcast_episode_summary_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -184,7 +199,7 @@ fun NewPodcastEpisodeScreen(
             OutlinedTextField(
                 value = vm.durationSeconds.value,
                 onValueChange = { input -> vm.durationSeconds.value = input.filter { it.isDigit() } },
-                label = { Text(stringRes(R.string.podcast_episode_duration_label)) },
+                label = { Text(stringRes(Res.string.podcast_episode_duration_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -196,7 +211,7 @@ fun NewPodcastEpisodeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(R.string.podcast_episode_more_details),
+                    text = stringRes(Res.string.podcast_episode_more_details),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
@@ -213,7 +228,7 @@ fun NewPodcastEpisodeScreen(
                     OutlinedTextField(
                         value = vm.season.value,
                         onValueChange = { input -> vm.season.value = input.filter { it.isDigit() } },
-                        label = { Text(stringRes(R.string.podcast_episode_season_label)) },
+                        label = { Text(stringRes(Res.string.podcast_episode_season_label)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -221,7 +236,7 @@ fun NewPodcastEpisodeScreen(
                     OutlinedTextField(
                         value = vm.episodeNumber.value,
                         onValueChange = { input -> vm.episodeNumber.value = input.filter { it.isDigit() } },
-                        label = { Text(stringRes(R.string.podcast_episode_number_label)) },
+                        label = { Text(stringRes(Res.string.podcast_episode_number_label)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -235,8 +250,8 @@ fun NewPodcastEpisodeScreen(
                 OutlinedTextField(
                     value = vm.topics.value,
                     onValueChange = { vm.topics.value = it },
-                    label = { Text(stringRes(R.string.podcast_episode_topics_label)) },
-                    placeholder = { Text(stringRes(R.string.podcast_episode_topics_placeholder)) },
+                    label = { Text(stringRes(Res.string.podcast_episode_topics_label)) },
+                    placeholder = { Text(stringRes(Res.string.podcast_episode_topics_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -244,8 +259,8 @@ fun NewPodcastEpisodeScreen(
                 OutlinedTextField(
                     value = vm.audioUrl.value,
                     onValueChange = { vm.audioUrl.value = it },
-                    label = { Text(stringRes(R.string.podcast_episode_audio_url_label)) },
-                    placeholder = { Text(stringRes(R.string.podcast_episode_audio_url_placeholder)) },
+                    label = { Text(stringRes(Res.string.podcast_episode_audio_url_label)) },
+                    placeholder = { Text(stringRes(Res.string.podcast_episode_audio_url_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -304,7 +319,7 @@ private fun AudioFilePickerRow(
             Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(text = pickedName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = stringRes(R.string.podcast_episode_audio_picked),
+                    text = stringRes(Res.string.podcast_episode_audio_picked),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -350,20 +365,20 @@ private fun DeleteEpisodeRow(
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
-        Text(text = stringRes(R.string.podcast_episode_delete))
+        Text(text = stringRes(Res.string.podcast_episode_delete))
     }
 
     if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },
-            title = { Text(stringRes(R.string.podcast_episode_delete)) },
-            text = { Text(stringRes(R.string.podcast_episode_delete_confirm)) },
+            title = { Text(stringRes(Res.string.podcast_episode_delete)) },
+            text = { Text(stringRes(Res.string.podcast_episode_delete_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirming = false
                     accountViewModel.launchSigner { if (vm.deleteLoaded()) onDeleted() }
                 }) {
-                    Text(text = stringRes(R.string.podcast_episode_delete), color = MaterialTheme.colorScheme.error)
+                    Text(text = stringRes(Res.string.podcast_episode_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {

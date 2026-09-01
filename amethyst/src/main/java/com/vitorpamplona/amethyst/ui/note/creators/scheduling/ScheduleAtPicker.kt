@@ -61,6 +61,20 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.confirm
+import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.resources.schedule_post
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_helper
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_pick_label
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_pick_time
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_picker_time_title
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_preset_in_one_hour
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_preset_next_monday_morning
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_preset_tomorrow_morning
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_publishes_in
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_time_label
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_warning_title
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -127,13 +141,13 @@ fun ScheduleAtPicker(
         ) {
             Icon(
                 symbol = MaterialSymbols.Timer,
-                contentDescription = stringRes(R.string.schedule_post_time_label),
+                contentDescription = stringRes(Res.string.schedule_post_time_label),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
 
             Text(
-                text = stringRes(R.string.schedule_post),
+                text = stringRes(Res.string.schedule_post),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -143,7 +157,7 @@ fun ScheduleAtPicker(
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringRes(R.string.schedule_post_helper),
+            text = stringRes(Res.string.schedule_post_helper),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
@@ -162,14 +176,14 @@ fun ScheduleAtPicker(
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(MaterialSymbols.Timer, contentDescription = stringRes(R.string.schedule_post_pick_time))
+                Icon(MaterialSymbols.Timer, contentDescription = stringRes(Res.string.schedule_post_pick_time))
                 Spacer(Modifier.width(12.dp))
 
                 if (scheduledForSec < TimeUtils.oneMinuteFromNow()) {
-                    Text(stringRes(R.string.schedule_post_pick_label), style = MaterialTheme.typography.bodyLarge)
+                    Text(stringRes(Res.string.schedule_post_pick_label), style = MaterialTheme.typography.bodyLarge)
                 } else {
                     Text(
-                        text = stringRes(R.string.schedule_post_publishes_in, timeAheadNoDot(scheduledForSec, context)),
+                        text = stringRes(Res.string.schedule_post_publishes_in, timeAheadNoDot(scheduledForSec, context)),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
@@ -184,7 +198,7 @@ fun ScheduleAtPicker(
                 TextButton(onClick = {
                     showDatePicker = false
                     showTimePicker = true
-                }) { Text(stringRes(R.string.next)) }
+                }) { Text(stringRes(Res.string.next)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -193,7 +207,7 @@ fun ScheduleAtPicker(
 
     if (showTimePicker) {
         TimePickerDialog(
-            title = { Text(stringRes(R.string.schedule_post_picker_time_title)) },
+            title = { Text(stringRes(Res.string.schedule_post_picker_time_title)) },
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
                 TextButton(
@@ -211,7 +225,7 @@ fun ScheduleAtPicker(
                         onChanged(roundUpToNextQuarterHour(rawSec))
                         showTimePicker = false
                     },
-                ) { Text(stringRes(R.string.confirm)) }
+                ) { Text(stringRes(Res.string.confirm)) }
             },
         ) {
             TimePicker(state = timePickerState)
@@ -237,7 +251,7 @@ private fun ReliabilityWarning(hasMultipleAccounts: Boolean) {
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Text(
-                    text = stringRes(R.string.schedule_post_warning_title),
+                    text = stringRes(Res.string.schedule_post_warning_title),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.padding(start = 8.dp),
@@ -272,15 +286,15 @@ private fun PresetChips(onPick: (Long) -> Unit) {
     ) {
         AssistChip(
             onClick = { onPick(roundUpToNextQuarterHour(presetInOneHour())) },
-            label = { Text(stringRes(R.string.schedule_post_preset_in_one_hour)) },
+            label = { Text(stringRes(Res.string.schedule_post_preset_in_one_hour)) },
         )
         AssistChip(
             onClick = { onPick(roundUpToNextQuarterHour(presetTomorrowMorning())) },
-            label = { Text(stringRes(R.string.schedule_post_preset_tomorrow_morning)) },
+            label = { Text(stringRes(Res.string.schedule_post_preset_tomorrow_morning)) },
         )
         AssistChip(
             onClick = { onPick(roundUpToNextQuarterHour(presetNextMondayMorning())) },
-            label = { Text(stringRes(R.string.schedule_post_preset_next_monday_morning)) },
+            label = { Text(stringRes(Res.string.schedule_post_preset_next_monday_morning)) },
         )
     }
 }

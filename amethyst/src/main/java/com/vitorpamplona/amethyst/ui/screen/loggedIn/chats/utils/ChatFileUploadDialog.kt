@@ -54,6 +54,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_send
+import com.vitorpamplona.amethyst.commons.resources.content_description
+import com.vitorpamplona.amethyst.commons.resources.content_description_example
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
@@ -167,14 +177,14 @@ private fun ImageVideoPostChat(
     }
 
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.content_description)) },
+        label = { Text(text = stringRes(Res.string.content_description)) },
         modifier = Modifier.fillMaxWidth().padding(top = 3.dp).height(150.dp),
         maxLines = 10,
         value = fileUploadState.caption,
         onValueChange = { fileUploadState.caption = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.content_description_example),
+                text = stringRes(Res.string.content_description_example),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -222,12 +232,12 @@ private fun ImageVideoPostChat(
             verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
             Text(
-                text = stringRes(R.string.media_compression_quality_label),
+                text = stringRes(Res.string.media_compression_quality_label),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringRes(R.string.media_compression_quality_explainer),
+                text = stringRes(Res.string.media_compression_quality_explainer),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
                 maxLines = 5,
@@ -240,11 +250,11 @@ private fun ImageVideoPostChat(
                 Text(
                     text =
                         when (fileUploadState.mediaQualitySlider) {
-                            0 -> stringRes(R.string.media_compression_quality_low)
-                            1 -> stringRes(R.string.media_compression_quality_medium)
-                            2 -> stringRes(R.string.media_compression_quality_high)
-                            3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                            else -> stringRes(R.string.media_compression_quality_medium)
+                            0 -> stringRes(Res.string.media_compression_quality_low)
+                            1 -> stringRes(Res.string.media_compression_quality_medium)
+                            2 -> stringRes(Res.string.media_compression_quality_high)
+                            3 -> stringRes(Res.string.media_compression_quality_uncompressed)
+                            else -> stringRes(Res.string.media_compression_quality_medium)
                         },
                     modifier = Modifier.align(Alignment.Center),
                 )
@@ -279,6 +289,6 @@ fun SendButton(
         enabled = isActive,
         onClick = onPost,
     ) {
-        Text(text = stringRes(R.string.accessibility_send))
+        Text(text = stringRes(Res.string.accessibility_send))
     }
 }

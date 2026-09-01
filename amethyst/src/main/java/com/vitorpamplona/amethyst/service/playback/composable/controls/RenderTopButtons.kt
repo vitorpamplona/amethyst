@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
@@ -362,7 +364,7 @@ fun RenderTopButtons(
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
                         symbol = MaterialSymbols.PictureInPicture,
-                        contentDescription = stringRes(R.string.picture_in_picture),
+                        contentDescription = stringRes(Res.string.picture_in_picture),
                         onClick = onPictureInPictureClick,
                     )
                 }

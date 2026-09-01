@@ -30,9 +30,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_zapraiser
+import com.vitorpamplona.amethyst.commons.resources.cancel_zapraiser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 
@@ -61,7 +63,7 @@ fun AddZapraiserButton(
                 )
                 Icon(
                     symbol = MaterialSymbols.Bolt,
-                    contentDescription = stringRes(R.string.add_zapraiser),
+                    contentDescription = stringRes(Res.string.add_zapraiser),
                     modifier =
                         Modifier
                             .size(13.dp)
@@ -80,7 +82,7 @@ fun AddZapraiserButton(
                 )
                 Icon(
                     symbol = MaterialSymbols.Bolt,
-                    contentDescription = stringRes(R.string.cancel_zapraiser),
+                    contentDescription = stringRes(Res.string.cancel_zapraiser),
                     modifier =
                         Modifier
                             .size(13.dp)

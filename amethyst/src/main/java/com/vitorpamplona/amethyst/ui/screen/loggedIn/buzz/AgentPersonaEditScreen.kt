@@ -38,7 +38,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_avatar
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_display_name
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_edit_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_model
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_new_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_provider
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_publish
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_publishing
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_runtime
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug_help
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_system_prompt
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,7 +95,7 @@ fun AgentPersonaEditScreen(
     viewModel.bind(accountViewModel.account, slug)
 
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val title = if (slug == null) stringRes(R.string.buzz_persona_new_title) else stringRes(R.string.buzz_persona_edit_title)
+    val title = if (slug == null) stringRes(Res.string.buzz_persona_new_title) else stringRes(Res.string.buzz_persona_edit_title)
 
     Scaffold(
         topBar = { TopBarWithBackButton(title, nav) },
@@ -100,23 +112,23 @@ fun AgentPersonaEditScreen(
             OutlinedTextField(
                 value = state.slug,
                 onValueChange = viewModel::onSlugChange,
-                label = { Text(stringRes(R.string.buzz_persona_slug)) },
+                label = { Text(stringRes(Res.string.buzz_persona_slug)) },
                 singleLine = true,
                 enabled = !state.slugLocked,
-                supportingText = { Text(stringRes(R.string.buzz_persona_slug_help)) },
+                supportingText = { Text(stringRes(Res.string.buzz_persona_slug_help)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = state.displayName,
                 onValueChange = viewModel::onDisplayNameChange,
-                label = { Text(stringRes(R.string.buzz_persona_display_name)) },
+                label = { Text(stringRes(Res.string.buzz_persona_display_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = state.systemPrompt,
                 onValueChange = viewModel::onSystemPromptChange,
-                label = { Text(stringRes(R.string.buzz_persona_system_prompt)) },
+                label = { Text(stringRes(Res.string.buzz_persona_system_prompt)) },
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -125,25 +137,25 @@ fun AgentPersonaEditScreen(
             EditableSuggestDropdown(
                 value = state.model,
                 onValueChange = viewModel::onModelChange,
-                label = stringRes(R.string.buzz_persona_model),
+                label = stringRes(Res.string.buzz_persona_model),
                 options = MODEL_OPTIONS,
             )
             EditableSuggestDropdown(
                 value = state.provider,
                 onValueChange = viewModel::onProviderChange,
-                label = stringRes(R.string.buzz_persona_provider),
+                label = stringRes(Res.string.buzz_persona_provider),
                 options = PROVIDER_OPTIONS,
             )
             EditableSuggestDropdown(
                 value = state.runtime,
                 onValueChange = viewModel::onRuntimeChange,
-                label = stringRes(R.string.buzz_persona_runtime),
+                label = stringRes(Res.string.buzz_persona_runtime),
                 options = RUNTIME_OPTIONS,
             )
             OutlinedTextField(
                 value = state.avatarUrl,
                 onValueChange = viewModel::onAvatarUrlChange,
-                label = { Text(stringRes(R.string.buzz_persona_avatar)) },
+                label = { Text(stringRes(Res.string.buzz_persona_avatar)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -161,7 +173,7 @@ fun AgentPersonaEditScreen(
                 enabled = state.canSave,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (state.isSaving) stringRes(R.string.buzz_persona_publishing) else stringRes(R.string.buzz_persona_publish))
+                Text(if (state.isSaving) stringRes(Res.string.buzz_persona_publishing) else stringRes(Res.string.buzz_persona_publish))
             }
         }
     }

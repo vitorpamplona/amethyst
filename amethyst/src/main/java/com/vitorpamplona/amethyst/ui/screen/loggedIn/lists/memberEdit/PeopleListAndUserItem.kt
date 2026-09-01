@@ -39,9 +39,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_member_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.add_user_to_the_list
+import com.vitorpamplona.amethyst.commons.resources.follow_set_absence_indicator2
+import com.vitorpamplona.amethyst.commons.resources.follow_set_icon_description
+import com.vitorpamplona.amethyst.commons.resources.follow_set_private_member_add_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_private_presence_indicator
+import com.vitorpamplona.amethyst.commons.resources.follow_set_public_member_add_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_public_presence_indicator
+import com.vitorpamplona.amethyst.commons.resources.remove_user_from_the_list
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -120,7 +129,7 @@ fun PeopleListAndUserItem(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     symbol = MaterialSymbols.Groups,
-                    contentDescription = stringRes(R.string.follow_set_icon_description),
+                    contentDescription = stringRes(Res.string.follow_set_icon_description),
                     modifier = Size50ModifierOffset10,
                 )
                 DisplayParticipantNumberAndStatus(
@@ -150,11 +159,11 @@ private fun UserStatusInList(
     ) {
         val text =
             if (userIsPublicMember) {
-                stringRes(R.string.follow_set_public_presence_indicator, userName)
+                stringRes(Res.string.follow_set_public_presence_indicator, userName)
             } else if (userIsPrivateMember) {
-                stringRes(R.string.follow_set_private_presence_indicator, userName)
+                stringRes(Res.string.follow_set_private_presence_indicator, userName)
             } else {
-                stringRes(R.string.follow_set_absence_indicator2, userName)
+                stringRes(Res.string.follow_set_absence_indicator2, userName)
             }
 
         val icon =
@@ -190,20 +199,20 @@ private fun UserAdditionOptions(
 
     if (isUserAddTapped.value) {
         M3ActionDialog(
-            title = stringRes(R.string.add_member_dialog_title),
+            title = stringRes(Res.string.add_member_dialog_title),
             onDismiss = { isUserAddTapped.value = false },
         ) {
             M3ActionSection {
                 M3ActionRow(
                     icon = MaterialSymbols.PersonAdd,
-                    text = stringRes(R.string.follow_set_public_member_add_label),
+                    text = stringRes(Res.string.follow_set_public_member_add_label),
                 ) {
                     onAddUserToList(false)
                     isUserAddTapped.value = false
                 }
                 M3ActionRow(
                     icon = MaterialSymbols.Lock,
-                    text = stringRes(R.string.follow_set_private_member_add_label),
+                    text = stringRes(Res.string.follow_set_private_member_add_label),
                 ) {
                     onAddUserToList(true)
                     isUserAddTapped.value = false
@@ -239,13 +248,13 @@ private fun UserAdditionOptions(
             if (isUserInList) {
                 Icon(
                     symbol = MaterialSymbols.PersonRemove,
-                    contentDescription = stringRes(R.string.remove_user_from_the_list),
+                    contentDescription = stringRes(Res.string.remove_user_from_the_list),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             } else {
                 Icon(
                     symbol = MaterialSymbols.PersonAdd,
-                    contentDescription = stringRes(R.string.add_user_to_the_list),
+                    contentDescription = stringRes(Res.string.add_user_to_the_list),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }

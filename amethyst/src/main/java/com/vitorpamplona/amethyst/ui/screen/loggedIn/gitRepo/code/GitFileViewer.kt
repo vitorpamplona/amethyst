@@ -62,6 +62,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.CodeHighlighter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_repo_binary_file
+import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
+import com.vitorpamplona.amethyst.commons.resources.git_repo_copy_file
+import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
+import com.vitorpamplona.amethyst.commons.resources.git_repo_plain_text
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -105,8 +111,8 @@ fun GitFileViewer(
 
     val bytes = result
     when {
-        bytes == null -> GitLoadingBox(stringRes(R.string.git_repo_code_loading), modifier)
-        bytes.isFailure -> GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_file_load_error), modifier)
+        bytes == null -> GitLoadingBox(stringRes(Res.string.git_repo_code_loading), modifier)
+        bytes.isFailure -> GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_file_load_error), modifier)
         else -> {
             val data = bytes.getOrThrow()
             when {
@@ -117,7 +123,7 @@ fun GitFileViewer(
                 isProbablyBinary(data) ->
                     GitMessageBox(
                         symbol = MaterialSymbols.Description,
-                        text = stringRes(R.string.git_repo_binary_file, humanSize(data.size)),
+                        text = stringRes(Res.string.git_repo_binary_file, humanSize(data.size)),
                         modifier = modifier,
                     )
                 else ->
@@ -174,7 +180,7 @@ private fun HighlightedCode(
         }
 
     Column(modifier.fillMaxSize()) {
-        CodeBar(languageLabel = language?.name?.let(::prettyLanguage) ?: stringRes(R.string.git_repo_plain_text), code = code)
+        CodeBar(languageLabel = language?.name?.let(::prettyLanguage) ?: stringRes(Res.string.git_repo_plain_text), code = code)
         HorizontalDivider(thickness = 0.5.dp)
         CodeWithLineNumbers(annotated, Modifier.fillMaxSize())
     }
@@ -214,7 +220,7 @@ private fun CodeBar(
         ) {
             Icon(
                 symbol = MaterialSymbols.ContentCopy,
-                contentDescription = stringRes(R.string.git_repo_copy_file),
+                contentDescription = stringRes(Res.string.git_repo_copy_file),
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

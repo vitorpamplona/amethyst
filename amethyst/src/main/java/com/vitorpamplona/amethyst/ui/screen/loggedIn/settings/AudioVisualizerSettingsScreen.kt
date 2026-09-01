@@ -55,6 +55,15 @@ import com.vitorpamplona.amethyst.commons.audio.AudioVisualizer
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
 import com.vitorpamplona.amethyst.commons.audio.SyntheticSpectrum
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_aurora
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_bars
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_classic
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_off
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_radial
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_settings_description
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_static
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_waves
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.FakeWaveformAnimation
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -87,7 +96,7 @@ fun AudioVisualizerSettingsContent(
     LazyColumn(modifier = modifier.fillMaxWidth()) {
         item {
             Text(
-                text = stringRes(R.string.audio_visualizer_settings_description),
+                text = stringRes(Res.string.audio_visualizer_settings_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 modifier = Modifier.padding(16.dp),
@@ -151,11 +160,11 @@ private fun VisualizerStyleRow(
 @Composable
 private fun visualizerStyleName(style: VisualizerStyle): String =
     when (style) {
-        VisualizerStyle.CLASSIC -> stringRes(R.string.audio_visualizer_classic)
-        VisualizerStyle.OFF -> stringRes(R.string.audio_visualizer_off)
-        VisualizerStyle.BARS -> stringRes(R.string.audio_visualizer_bars)
-        VisualizerStyle.WAVES -> stringRes(R.string.audio_visualizer_waves)
-        VisualizerStyle.RADIAL -> stringRes(R.string.audio_visualizer_radial)
-        VisualizerStyle.AURORA -> stringRes(R.string.audio_visualizer_aurora)
-        VisualizerStyle.STATIC -> stringRes(R.string.audio_visualizer_static)
+        VisualizerStyle.CLASSIC -> stringRes(Res.string.audio_visualizer_classic)
+        VisualizerStyle.OFF -> stringRes(Res.string.audio_visualizer_off)
+        VisualizerStyle.BARS -> stringRes(Res.string.audio_visualizer_bars)
+        VisualizerStyle.WAVES -> stringRes(Res.string.audio_visualizer_waves)
+        VisualizerStyle.RADIAL -> stringRes(Res.string.audio_visualizer_radial)
+        VisualizerStyle.AURORA -> stringRes(Res.string.audio_visualizer_aurora)
+        VisualizerStyle.STATIC -> stringRes(Res.string.audio_visualizer_static)
     }

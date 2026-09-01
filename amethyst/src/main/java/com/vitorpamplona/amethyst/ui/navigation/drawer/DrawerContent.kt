@@ -96,7 +96,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.followers
+import com.vitorpamplona.amethyst.commons.resources.following
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
+import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
+import com.vitorpamplona.amethyst.commons.resources.status_update
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
@@ -272,7 +277,7 @@ fun ProfileContentTemplate(
         if (profileBanner != null) {
             AsyncImage(
                 model = profileBanner,
-                contentDescription = stringRes(id = R.string.profile_image),
+                contentDescription = stringRes(id = Res.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = bannerModifier,
             )
@@ -289,7 +294,7 @@ fun ProfileContentTemplate(
             RobohashFallbackAsyncImage(
                 robot = profilePubHex,
                 model = profilePicture,
-                contentDescription = stringRes(id = R.string.profile_image),
+                contentDescription = stringRes(id = Res.string.profile_image),
                 modifier =
                     Modifier
                         .width(100.dp)
@@ -388,7 +393,7 @@ fun FakeEditBar(
             contentAlignment = Alignment.CenterStart,
         ) {
             Text(
-                text = savedStatus?.ifEmpty { null } ?: stringRes(R.string.status_update),
+                text = savedStatus?.ifEmpty { null } ?: stringRes(Res.string.status_update),
                 style = MaterialTheme.typography.bodyLarge,
                 color =
                     if (savedStatus?.ifEmpty { null } == null) {
@@ -401,7 +406,7 @@ fun FakeEditBar(
 
         // Floating label — sits on top of the border like Material does
         Text(
-            text = stringRes(R.string.status_update),
+            text = stringRes(Res.string.status_update),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
@@ -442,11 +447,11 @@ fun StatusEditBar(
     OutlinedTextField(
         value = currentStatus.value,
         onValueChange = { currentStatus.value = it },
-        label = { Text(text = stringRes(R.string.status_update)) },
+        label = { Text(text = stringRes(Res.string.status_update)) },
         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         placeholder = {
             Text(
-                text = stringRes(R.string.status_update),
+                text = stringRes(Res.string.status_update),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -543,13 +548,13 @@ private fun FollowingAndFollowerCounts(
     ) {
         DisplayFollowingCount(baseAccountUser)
 
-        Text(stringRes(R.string.following))
+        Text(stringRes(Res.string.following))
 
         Spacer(modifier = DoubleHorzSpacer)
 
         DisplayFollowerCount(baseAccountUser, accountViewModel)
 
-        Text(stringRes(R.string.followers))
+        Text(stringRes(Res.string.followers))
     }
 }
 
@@ -1074,7 +1079,7 @@ fun BottomContent(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 2),
-                    contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
+                    contentDescription = stringRes(id = Res.string.show_npub_as_a_qr_code),
                     modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
                 )

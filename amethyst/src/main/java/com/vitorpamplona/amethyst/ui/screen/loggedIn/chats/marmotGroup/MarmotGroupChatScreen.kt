@@ -42,6 +42,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_add_member_action
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_default_name
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -107,7 +110,7 @@ fun MarmotGroupChatScreen(
                                     fontWeight = FontWeight.Normal,
                                 )
                             } else {
-                                Text(stringRes(R.string.marmot_group_default_name))
+                                Text(stringRes(Res.string.marmot_group_default_name))
                             }
                             if (memberCount > 0) {
                                 Text(
@@ -122,7 +125,7 @@ fun MarmotGroupChatScreen(
                     IconButton(onClick = { nav.nav(Route.MarmotGroupInfo(nostrGroupId)) }) {
                         Icon(
                             symbol = MaterialSymbols.GroupAdd,
-                            contentDescription = stringRes(R.string.marmot_add_member_action),
+                            contentDescription = stringRes(Res.string.marmot_add_member_action),
                         )
                     }
                 },

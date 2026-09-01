@@ -72,6 +72,21 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_community_add_people
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_new
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_section_empty
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_import_loading
+import com.vitorpamplona.amethyst.commons.resources.relay_group_channels_empty
+import com.vitorpamplona.amethyst.commons.resources.relay_group_channels_not_nip29
+import com.vitorpamplona.amethyst.commons.resources.relay_group_role_member
+import com.vitorpamplona.amethyst.commons.resources.relay_group_section_archived
+import com.vitorpamplona.amethyst.commons.resources.relay_group_section_channels
+import com.vitorpamplona.amethyst.commons.resources.relay_group_section_forums
+import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_action
+import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_body
+import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_title
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
@@ -452,7 +467,7 @@ fun RelayGroupChannelListScreen(
                 }
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = if (notNip29) stringRes(R.string.relay_group_channels_not_nip29) else stringRes(R.string.relay_group_channels_empty),
+                        text = if (notNip29) stringRes(Res.string.relay_group_channels_not_nip29) else stringRes(Res.string.relay_group_channels_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (notNip29) MaterialTheme.colorScheme.warningColor else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(32.dp),
@@ -490,7 +505,7 @@ fun RelayGroupChannelListScreen(
                     if (noChannelsYet && buzzStatus is BuzzRelayImportViewModel.Status.Loading) {
                         item(key = "buzz-loading") {
                             Text(
-                                text = stringRes(R.string.buzz_import_loading),
+                                text = stringRes(Res.string.buzz_import_loading),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -506,7 +521,7 @@ fun RelayGroupChannelListScreen(
                         val channelsCollapsed = "channels" in collapsedSections
                         item(key = "sec-channels") {
                             RelayGroupSectionHeader(
-                                title = stringRes(R.string.relay_group_section_channels),
+                                title = stringRes(Res.string.relay_group_section_channels),
                                 collapsed = channelsCollapsed,
                                 onToggle = if (buzzChatChannels.isNotEmpty()) ({ toggleSection("channels") }) else null,
                             ) {
@@ -534,7 +549,7 @@ fun RelayGroupChannelListScreen(
                         val forumsCollapsed = "forums" in collapsedSections
                         item(key = "sec-forums") {
                             RelayGroupSectionHeader(
-                                title = stringRes(R.string.relay_group_section_forums),
+                                title = stringRes(Res.string.relay_group_section_forums),
                                 collapsed = forumsCollapsed,
                                 onToggle = if (buzzForumChannels.isNotEmpty()) ({ toggleSection("forums") }) else null,
                             ) {
@@ -567,7 +582,7 @@ fun RelayGroupChannelListScreen(
                         val archivedCollapsed = "archived" in collapsedSections
                         item(key = "sec-archived") {
                             RelayGroupSectionHeader(
-                                title = stringRes(R.string.relay_group_section_archived),
+                                title = stringRes(Res.string.relay_group_section_archived),
                                 collapsed = archivedCollapsed,
                                 onToggle = { toggleSection("archived") },
                             )
@@ -595,11 +610,11 @@ fun RelayGroupChannelListScreen(
 
                     // -- DIRECT MESSAGES -- (this community's private conversations, most recent first)
                     item(key = "sec-dms") {
-                        RelayGroupSectionHeader(title = stringRes(R.string.buzz_dm_title)) {
+                        RelayGroupSectionHeader(title = stringRes(Res.string.buzz_dm_title)) {
                             IconButton(onClick = { nav.nav(Route.BuzzNewDm(relay.url)) }) {
                                 Icon(
                                     symbol = MaterialSymbols.Add,
-                                    contentDescription = stringRes(R.string.buzz_dm_new),
+                                    contentDescription = stringRes(Res.string.buzz_dm_new),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(22.dp),
                                 )
@@ -609,7 +624,7 @@ fun RelayGroupChannelListScreen(
                     if (dmRows.isEmpty()) {
                         item(key = "dm-empty") {
                             Text(
-                                text = stringRes(R.string.buzz_dm_section_empty),
+                                text = stringRes(Res.string.buzz_dm_section_empty),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -676,7 +691,7 @@ fun RelayGroupChannelListScreen(
 
     if (showAddPeople) {
         BuzzAddPeopleDialog(
-            title = stringRes(R.string.buzz_community_add_people),
+            title = stringRes(Res.string.buzz_community_add_people),
             accountViewModel = accountViewModel,
             isAlreadyIn = { BuzzCommunityMembership.isMember(relay, it) },
             onAdd = { accountViewModel.addCommunityMember(relay, it) },
@@ -714,20 +729,20 @@ private fun TorClearnetBanner(
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.relay_tor_clearnet_title),
+                text = stringRes(Res.string.relay_tor_clearnet_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(Modifier.size(6.dp))
             Text(
-                text = stringRes(R.string.relay_tor_clearnet_body, relayName),
+                text = stringRes(Res.string.relay_tor_clearnet_body, relayName),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(Modifier.size(10.dp))
             FilledTonalButton(onClick = onUseClearnet, modifier = Modifier.align(Alignment.End)) {
-                Text(stringRes(R.string.relay_tor_clearnet_action))
+                Text(stringRes(Res.string.relay_tor_clearnet_action))
             }
         }
     }
@@ -996,7 +1011,7 @@ private fun RelayGroupChannelRow(
             Box(Modifier.size(20.dp).clip(CircleShape)) {
                 Icon(
                     symbol = MaterialSymbols.Check,
-                    contentDescription = stringRes(R.string.relay_group_role_member),
+                    contentDescription = stringRes(Res.string.relay_group_role_member),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
                 )

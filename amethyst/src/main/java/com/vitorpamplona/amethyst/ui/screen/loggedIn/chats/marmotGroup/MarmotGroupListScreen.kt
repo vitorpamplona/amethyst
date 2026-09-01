@@ -64,6 +64,19 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_create_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
+import com.vitorpamplona.amethyst.commons.resources.marmot_groups_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_no_groups
+import com.vitorpamplona.amethyst.commons.resources.marmot_no_groups_desc
+import com.vitorpamplona.amethyst.commons.resources.marmot_no_invitations
+import com.vitorpamplona.amethyst.commons.resources.marmot_no_invitations_desc
+import com.vitorpamplona.amethyst.commons.resources.marmot_no_messages_yet
+import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known
+import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known_count
+import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests
+import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests_count
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -117,13 +130,13 @@ fun MarmotGroupListScreen(
                         )
                     }
                 },
-                title = { Text(stringRes(R.string.marmot_groups_title)) },
+                title = { Text(stringRes(Res.string.marmot_groups_title)) },
             )
         },
         floatingActionButton = {
             FabBottomBarPadded(nav) {
                 FloatingActionButton(onClick = { nav.nav(Route.CreateMarmotGroup) }, shape = CircleShape) {
-                    Icon(MaterialSymbols.Add, contentDescription = stringRes(R.string.marmot_create_group))
+                    Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.marmot_create_group))
                 }
             }
         },
@@ -137,9 +150,9 @@ fun MarmotGroupListScreen(
                         Text(
                             text =
                                 if (knownGroups.isEmpty()) {
-                                    stringRes(R.string.marmot_tab_known)
+                                    stringRes(Res.string.marmot_tab_known)
                                 } else {
-                                    stringRes(R.string.marmot_tab_known_count, knownGroups.size)
+                                    stringRes(Res.string.marmot_tab_known_count, knownGroups.size)
                                 },
                         )
                     },
@@ -151,9 +164,9 @@ fun MarmotGroupListScreen(
                         Text(
                             text =
                                 if (newRequestGroups.isEmpty()) {
-                                    stringRes(R.string.marmot_tab_new_requests)
+                                    stringRes(Res.string.marmot_tab_new_requests)
                                 } else {
-                                    stringRes(R.string.marmot_tab_new_requests_count, newRequestGroups.size)
+                                    stringRes(Res.string.marmot_tab_new_requests_count, newRequestGroups.size)
                                 },
                         )
                     },
@@ -172,9 +185,9 @@ fun MarmotGroupListScreen(
                         Text(
                             text =
                                 if (selectedTab == 0) {
-                                    stringRes(R.string.marmot_no_groups)
+                                    stringRes(Res.string.marmot_no_groups)
                                 } else {
-                                    stringRes(R.string.marmot_no_invitations)
+                                    stringRes(Res.string.marmot_no_invitations)
                                 },
                             style = MaterialTheme.typography.titleMedium,
                             textAlign = TextAlign.Center,
@@ -182,9 +195,9 @@ fun MarmotGroupListScreen(
                         Text(
                             text =
                                 if (selectedTab == 0) {
-                                    stringRes(R.string.marmot_no_groups_desc)
+                                    stringRes(Res.string.marmot_no_groups_desc)
                                 } else {
-                                    stringRes(R.string.marmot_no_invitations_desc)
+                                    stringRes(Res.string.marmot_no_invitations_desc)
                                 },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -284,7 +297,7 @@ fun MarmotGroupListItem(
                 )
             } else {
                 Text(
-                    text = stringRes(R.string.marmot_group_fallback_name, groupId.take(8)),
+                    text = stringRes(Res.string.marmot_group_fallback_name, groupId.take(8)),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
@@ -302,7 +315,7 @@ fun MarmotGroupListItem(
                 )
             } else {
                 Text(
-                    text = stringRes(R.string.marmot_no_messages_yet),
+                    text = stringRes(Res.string.marmot_no_messages_yet),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),

@@ -68,6 +68,17 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_invalid
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_empty_body
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_empty_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_just_you
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_more
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_new
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_title
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -114,10 +125,10 @@ fun BuzzDmListScreen(
     var showHidden by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_dm_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_dm_title), nav) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                text = { Text(stringRes(R.string.buzz_dm_new)) },
+                text = { Text(stringRes(Res.string.buzz_dm_new)) },
                 icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
                 onClick = { nav.nav(Route.BuzzNewDm(relayUrl)) },
             )
@@ -248,7 +259,7 @@ private fun DmRowCard(
             Box {
                 Icon(
                     symbol = MaterialSymbols.MoreVert,
-                    contentDescription = stringRes(R.string.buzz_dm_more),
+                    contentDescription = stringRes(Res.string.buzz_dm_more),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier =
                         Modifier
@@ -259,7 +270,7 @@ private fun DmRowCard(
                 )
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
-                        text = { Text(stringRes(R.string.buzz_dm_add_member)) },
+                        text = { Text(stringRes(Res.string.buzz_dm_add_member)) },
                         leadingIcon = {
                             Icon(
                                 symbol = MaterialSymbols.PersonAdd,
@@ -305,7 +316,7 @@ private fun DmTitle(
     // first, then join the plain strings — joinToString is NOT inline so can't call one.
     val text =
         if (others.isEmpty()) {
-            stringRes(R.string.buzz_dm_just_you)
+            stringRes(Res.string.buzz_dm_just_you)
         } else {
             val shown = others.take(2).map { UserName(it, accountViewModel) }
             val joined = shown.joinToString(", ")
@@ -386,7 +397,7 @@ private fun AddDmMemberDialog(
 ) {
     var input by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    val invalidMsg = stringRes(R.string.buzz_dm_add_member_invalid)
+    val invalidMsg = stringRes(Res.string.buzz_dm_add_member_invalid)
 
     fun submit() {
         val hex = decodePublicKeyAsHexOrNull(input.trim())?.takeIf { it.isValid() }
@@ -399,7 +410,7 @@ private fun AddDmMemberDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.buzz_dm_add_member_title)) },
+        title = { Text(stringRes(Res.string.buzz_dm_add_member_title)) },
         text = {
             OutlinedTextField(
                 value = input,
@@ -408,7 +419,7 @@ private fun AddDmMemberDialog(
                     error = null
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringRes(R.string.buzz_dm_add_hint)) },
+                label = { Text(stringRes(Res.string.buzz_dm_add_hint)) },
                 singleLine = true,
                 isError = error != null,
                 supportingText = error?.let { { Text(it) } },
@@ -416,7 +427,7 @@ private fun AddDmMemberDialog(
         },
         confirmButton = {
             TextButton(onClick = { submit() }, enabled = input.isNotBlank()) {
-                Text(stringRes(R.string.buzz_dm_add_member))
+                Text(stringRes(Res.string.buzz_dm_add_member))
             }
         },
         dismissButton = {
@@ -449,12 +460,12 @@ private fun EmptyDmInbox(modifier: Modifier = Modifier) {
                 )
             }
             Text(
-                text = stringRes(R.string.buzz_dm_empty_title),
+                text = stringRes(Res.string.buzz_dm_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = stringRes(R.string.buzz_dm_empty_body),
+                text = stringRes(Res.string.buzz_dm_empty_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -40,6 +40,9 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.interest_set_name_label
+import com.vitorpamplona.amethyst.commons.resources.interest_set_name_placeholder
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
@@ -149,13 +152,13 @@ fun InterestSetMetadataTopBar(
 @Composable
 private fun ListName(viewModel: InterestSetMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.interest_set_name_label)) },
+        label = { Text(text = stringRes(Res.string.interest_set_name_label)) },
         modifier = Modifier.fillMaxWidth(),
         value = viewModel.name.value,
         onValueChange = { viewModel.name.value = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.interest_set_name_placeholder),
+                text = stringRes(Res.string.interest_set_name_placeholder),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

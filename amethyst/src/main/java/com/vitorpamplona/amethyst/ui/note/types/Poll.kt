@@ -77,6 +77,9 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.TallyResults
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.poll_submit
+import com.vitorpamplona.amethyst.commons.resources.poll_view_results
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -357,7 +360,7 @@ fun RenderPollCard(
                         }
 
                         Text(
-                            text = stringRes(R.string.poll_view_results),
+                            text = stringRes(Res.string.poll_view_results),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier =
@@ -467,7 +470,7 @@ private fun ColumnScope.RenderMultiChoiceOptions(
         modifier = Modifier.align(Alignment.End),
         enabled = multichoice.isNotEmpty(),
     ) {
-        Text(stringRes(R.string.poll_submit))
+        Text(stringRes(Res.string.poll_submit))
     }
 }
 

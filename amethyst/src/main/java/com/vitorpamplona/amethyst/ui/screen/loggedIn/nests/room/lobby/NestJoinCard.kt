@@ -44,8 +44,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_join
+import com.vitorpamplona.amethyst.commons.resources.nest_lobby_host_label
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -208,7 +210,7 @@ private fun NestJoinCardContent(
                     )
                     Spacer(StdHorzSpacer)
                     Text(
-                        text = stringRes(R.string.nest_lobby_host_label),
+                        text = stringRes(Res.string.nest_lobby_host_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = mutedTextColor,
                     )
@@ -305,6 +307,6 @@ fun JoinNestButton(
         onClick = { nav.nav(Route.NestLobby(addressValue)) },
         colors = colors,
     ) {
-        Text(stringRes(R.string.nest_join))
+        Text(stringRes(Res.string.nest_join))
     }
 }

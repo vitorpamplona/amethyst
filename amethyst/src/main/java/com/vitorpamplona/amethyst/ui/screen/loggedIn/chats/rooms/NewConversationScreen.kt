@@ -63,6 +63,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_best_for
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cons
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_pros
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -224,7 +229,7 @@ fun NewConversationScreen(nav: INav) {
     var expandedId by rememberSaveable { mutableStateOf(0) }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.new_conversation_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.new_conversation_title), nav) },
     ) { pad ->
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -327,7 +332,7 @@ private fun ConversationRow(
                 )
 
                 Column {
-                    ColumnHeader(stringRes(R.string.new_conversation_best_for))
+                    ColumnHeader(stringRes(Res.string.new_conversation_best_for))
                     Text(
                         text = stringRes(type.bestFor),
                         style = MaterialTheme.typography.bodySmall,
@@ -338,12 +343,12 @@ private fun ConversationRow(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Column(Modifier.weight(1f)) {
-                        ColumnHeader(stringRes(R.string.new_conversation_pros))
+                        ColumnHeader(stringRes(Res.string.new_conversation_pros))
                         Spacer(Modifier.height(4.dp))
                         type.pros.forEach { ProConRow(it, accent, isPro = true) }
                     }
                     Column(Modifier.weight(1f)) {
-                        ColumnHeader(stringRes(R.string.new_conversation_cons))
+                        ColumnHeader(stringRes(Res.string.new_conversation_cons))
                         Spacer(Modifier.height(4.dp))
                         type.cons.forEach { ProConRow(it, accent, isPro = false) }
                     }

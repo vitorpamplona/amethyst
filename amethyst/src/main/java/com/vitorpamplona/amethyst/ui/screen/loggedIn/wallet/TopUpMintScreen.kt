@@ -67,6 +67,15 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_available
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_awaiting_payment
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_copy_invoice
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_retry
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_section_from
+import com.vitorpamplona.amethyst.commons.resources.topup_mint_amount_label
+import com.vitorpamplona.amethyst.commons.resources.topup_mint_confirm
+import com.vitorpamplona.amethyst.commons.resources.topup_mint_title
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -98,7 +107,7 @@ fun TopUpMintScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.topup_mint_title)) },
+                title = { Text(stringRes(Res.string.topup_mint_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -140,7 +149,7 @@ fun TopUpMintScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = stringRes(R.string.reload_mint_available, sats(ui.targetBalanceSats)),
+                            text = stringRes(Res.string.reload_mint_available, sats(ui.targetBalanceSats)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
@@ -149,7 +158,7 @@ fun TopUpMintScreen(
             }
 
             // ── Amount to add ─────────────────────────────────────────────
-            SectionHeader(stringRes(R.string.topup_mint_amount_label))
+            SectionHeader(stringRes(Res.string.topup_mint_amount_label))
             OutlinedTextField(
                 value = amountText,
                 onValueChange = { input ->
@@ -164,7 +173,7 @@ fun TopUpMintScreen(
             )
 
             // ── Funds from ────────────────────────────────────────────────
-            SectionHeader(stringRes(R.string.reload_mint_section_from))
+            SectionHeader(stringRes(Res.string.reload_mint_section_from))
             ui.sources.forEach { source ->
                 SourceRow(
                     source = source,
@@ -184,20 +193,20 @@ fun TopUpMintScreen(
                 is TopUpStatus.AwaitingInvoice -> {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         CircularProgressIndicator(modifier = Modifier.height(20.dp))
-                        Text(stringRes(R.string.reload_mint_awaiting_payment), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringRes(Res.string.reload_mint_awaiting_payment), style = MaterialTheme.typography.bodyMedium)
                     }
                     OutlinedButton(
                         onClick = { scope.launch { clipboard.setText(status.invoice) } },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringRes(R.string.reload_mint_copy_invoice))
+                        Text(stringRes(Res.string.reload_mint_copy_invoice))
                     }
                 }
 
                 is TopUpStatus.Failed -> {
                     Text(status.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
                     Button(onClick = { viewModel.confirm() }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringRes(R.string.reload_mint_retry))
+                        Text(stringRes(Res.string.reload_mint_retry))
                     }
                 }
 
@@ -215,7 +224,7 @@ fun TopUpMintScreen(
                         enabled = enabled,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringRes(R.string.topup_mint_confirm))
+                        Text(stringRes(Res.string.topup_mint_confirm))
                     }
                 }
             }

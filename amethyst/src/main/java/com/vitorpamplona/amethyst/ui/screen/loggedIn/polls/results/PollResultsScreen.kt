@@ -74,6 +74,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.poll_results_all_options
+import com.vitorpamplona.amethyst.commons.resources.poll_results_checking_completeness
+import com.vitorpamplona.amethyst.commons.resources.poll_results_closes_in
+import com.vitorpamplona.amethyst.commons.resources.poll_results_ended
+import com.vitorpamplona.amethyst.commons.resources.poll_results_loading
+import com.vitorpamplona.amethyst.commons.resources.poll_results_no_votes
+import com.vitorpamplona.amethyst.commons.resources.poll_results_open
+import com.vitorpamplona.amethyst.commons.resources.poll_results_title
+import com.vitorpamplona.amethyst.commons.resources.poll_results_your_pick
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollOptionResult
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsViewModel
@@ -127,7 +137,7 @@ fun PollResultsScreen(
             PollResultsScaffold(nav) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = stringRes(R.string.poll_results_loading),
+                        text = stringRes(Res.string.poll_results_loading),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
@@ -239,7 +249,7 @@ private fun PollResultsScaffold(
     content: @Composable () -> Unit,
 ) {
     Scaffold(
-        topBar = { TopBarWithBackButton(caption = stringRes(R.string.poll_results_title), nav = nav) },
+        topBar = { TopBarWithBackButton(caption = stringRes(Res.string.poll_results_title), nav = nav) },
     ) { padding ->
         Box(Modifier.padding(padding)) { content() }
     }
@@ -327,12 +337,12 @@ private fun PollStatusChip(endsAt: Long?) {
         Text(
             text =
                 if (endsAt == null) {
-                    stringRes(R.string.poll_results_open)
+                    stringRes(Res.string.poll_results_open)
                 } else if (hasEnded) {
-                    stringRes(R.string.poll_results_ended, timeAgoNoDot(endsAt, LocalContext.current))
+                    stringRes(Res.string.poll_results_ended, timeAgoNoDot(endsAt, LocalContext.current))
                 } else {
                     // Ahead, not ago: timeAgoNoDot on a future stamp collapses to "now".
-                    stringRes(R.string.poll_results_closes_in, timeAheadNoDot(endsAt, LocalContext.current))
+                    stringRes(Res.string.poll_results_closes_in, timeAheadNoDot(endsAt, LocalContext.current))
                 },
             style = MaterialTheme.typography.labelMedium,
             color = tint,
@@ -464,7 +474,7 @@ private fun OptionBar(
                     if (isMyPick) {
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = stringRes(R.string.poll_results_your_pick),
+                            text = stringRes(Res.string.poll_results_your_pick),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
@@ -527,7 +537,7 @@ private fun OptionFilterRow(
         // Carries the poll's total the way each option chip carries its own, so the count lives in
         // the same row as the numbers it totals instead of in a headline above them.
         FilterChip(
-            label = "${stringRes(R.string.poll_results_all_options)} · ${state.totalVoters}",
+            label = "${stringRes(Res.string.poll_results_all_options)} · ${state.totalVoters}",
             isSelected = selected == null,
             onClick = { onSelect(null) },
         )
@@ -624,7 +634,7 @@ private fun ResultsFooter(state: PollResultsUiState) {
     if (state.hasTally && state.totalVoters == 0 && !state.isCheckingCompleteness) {
         Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
-                text = stringRes(R.string.poll_results_no_votes),
+                text = stringRes(Res.string.poll_results_no_votes),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.placeholderText,
             )
@@ -663,7 +673,7 @@ private fun Completeness(state: PollResultsUiState) {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = stringRes(R.string.poll_results_checking_completeness),
+                text = stringRes(Res.string.poll_results_checking_completeness),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
             )

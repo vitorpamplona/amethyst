@@ -51,6 +51,19 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_articles_btn_label
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_clone_btn_label
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_icon_label
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_posts_btn_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_action_btn_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_indicator_description
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_name_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_desc_modify_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_empty_label2
+import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_btn_label
+import com.vitorpamplona.amethyst.commons.resources.group_actions_dialog_title
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -129,7 +142,7 @@ fun BookmarkGroupItem(
                     ) {
                         Icon(
                             symbol = MaterialSymbols.CollectionsBookmark,
-                            contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                            contentDescription = stringRes(Res.string.bookmark_list_icon_label),
                             modifier = Size40Modifier,
                         )
                         Spacer(StdVertSpacer)
@@ -173,7 +186,7 @@ private fun BookmarkGroupActions(
                 symbol = MaterialSymbols.News,
                 contentDescription = null,
             )
-            Text(stringRes(R.string.bookmark_list_posts_btn_label))
+            Text(stringRes(Res.string.bookmark_list_posts_btn_label))
         }
         FilledTonalButton(
             onClick = openArticleBookmarks,
@@ -182,7 +195,7 @@ private fun BookmarkGroupActions(
                 symbol = MaterialSymbols.AutoMirrored.Article,
                 contentDescription = null,
             )
-            Text(stringRes(R.string.bookmark_list_articles_btn_label))
+            Text(stringRes(Res.string.bookmark_list_articles_btn_label))
         }
     }
 }
@@ -200,7 +213,7 @@ fun BookmarkMembershipStatusAndNumberDisplay(
     ) {
         if (postBookmarksSize <= 0 && articleBookmarksSize <= 0) {
             Text(
-                text = stringRes(R.string.follow_set_empty_label2),
+                text = stringRes(Res.string.follow_set_empty_label2),
                 fontSize = Font10SP,
             )
         } else {
@@ -288,19 +301,19 @@ private fun GroupOptionsMenu(
 
     if (isExpanded) {
         M3ActionDialog(
-            title = stringRes(R.string.group_actions_dialog_title),
+            title = stringRes(Res.string.group_actions_dialog_title),
             onDismiss = onDismiss,
         ) {
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.follow_set_rename_btn_label)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.follow_set_rename_btn_label)) {
                     onGroupRename()
                     onDismiss()
                 }
-                M3ActionRow(icon = MaterialSymbols.Description, text = stringRes(R.string.follow_set_desc_modify_label)) {
+                M3ActionRow(icon = MaterialSymbols.Description, text = stringRes(Res.string.follow_set_desc_modify_label)) {
                     onGroupDescriptionChange()
                     onDismiss()
                 }
-                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
+                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(Res.string.follow_set_copy_action_btn_label)) {
                     isCopyDialogOpen.value = true
                     onDismiss()
                 }
@@ -350,7 +363,7 @@ private fun GroupCloneDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = stringRes(R.string.bookmark_list_clone_btn_label),
+                    text = stringRes(Res.string.bookmark_list_clone_btn_label),
                 )
             }
         },
@@ -359,7 +372,7 @@ private fun GroupCloneDialog(
                 verticalArrangement = Arrangement.spacedBy(Size5dp),
             ) {
                 Text(
-                    text = stringRes(R.string.follow_set_copy_indicator_description),
+                    text = stringRes(Res.string.follow_set_copy_indicator_description),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Light,
                     fontStyle = FontStyle.Italic,
@@ -369,7 +382,7 @@ private fun GroupCloneDialog(
                     value = optionalNewName ?: "",
                     onValueChange = onCloneNameChange,
                     label = {
-                        Text(text = stringRes(R.string.follow_set_copy_name_label))
+                        Text(text = stringRes(Res.string.follow_set_copy_name_label))
                     },
                 )
                 Spacer(modifier = DoubleVertSpacer)
@@ -378,7 +391,7 @@ private fun GroupCloneDialog(
                     value = optionalNewDesc ?: "",
                     onValueChange = onCloneDescChange,
                     label = {
-                        Text(text = stringRes(R.string.follow_set_copy_desc_label))
+                        Text(text = stringRes(Res.string.follow_set_copy_desc_label))
                     },
                 )
             }
@@ -390,7 +403,7 @@ private fun GroupCloneDialog(
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.follow_set_copy_action_btn_label))
+                Text(stringRes(Res.string.follow_set_copy_action_btn_label))
             }
         },
         dismissButton = {

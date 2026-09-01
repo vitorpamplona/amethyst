@@ -40,6 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_pick_time
+import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.text.DateFormat
 import java.time.Instant
@@ -126,7 +129,7 @@ fun CalendarDateTimePickerButton(
                     } else {
                         commit(datePickerState.selectedDateMillis, includeTime = false, hour = 0, minute = 0, onChange = onChange)
                     }
-                }) { Text(stringRes(R.string.confirm)) }
+                }) { Text(stringRes(Res.string.confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = {
@@ -141,7 +144,7 @@ fun CalendarDateTimePickerButton(
 
     if (showTime) {
         TimePickerDialog(
-            title = { Text(stringRes(R.string.calendar_event_pick_time)) },
+            title = { Text(stringRes(Res.string.calendar_event_pick_time)) },
             onDismissRequest = {
                 reset()
                 showTime = false
@@ -156,7 +159,7 @@ fun CalendarDateTimePickerButton(
                         onChange = onChange,
                     )
                     showTime = false
-                }) { Text(stringRes(R.string.confirm)) }
+                }) { Text(stringRes(Res.string.confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = {

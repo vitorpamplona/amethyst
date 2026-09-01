@@ -83,6 +83,21 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_a_tag
+import com.vitorpamplona.amethyst.commons.resources.add_header_image
+import com.vitorpamplona.amethyst.commons.resources.article_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.article_summary
+import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.markdown_edit
+import com.vitorpamplona.amethyst.commons.resources.markdown_preview
+import com.vitorpamplona.amethyst.commons.resources.start_writing_article
+import com.vitorpamplona.amethyst.commons.resources.tags_label
+import com.vitorpamplona.amethyst.commons.resources.url_slug
+import com.vitorpamplona.amethyst.commons.resources.url_slug_placeholder
+import com.vitorpamplona.amethyst.commons.resources.your_article_title
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -246,7 +261,7 @@ private fun MarkdownPostScreenBody(
                     },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.your_article_title),
+                            text = stringRes(Res.string.your_article_title),
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
@@ -273,7 +288,7 @@ private fun MarkdownPostScreenBody(
 
                 // Summary section
                 Text(
-                    text = stringRes(R.string.article_summary),
+                    text = stringRes(Res.string.article_summary),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(start = Size10dp, top = 8.dp),
                 )
@@ -286,7 +301,7 @@ private fun MarkdownPostScreenBody(
                     },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.article_description_placeholder),
+                            text = stringRes(Res.string.article_description_placeholder),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -304,7 +319,7 @@ private fun MarkdownPostScreenBody(
 
                 // URL Slug field
                 Text(
-                    text = stringRes(R.string.url_slug),
+                    text = stringRes(Res.string.url_slug),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(start = Size10dp, top = 8.dp),
                 )
@@ -317,7 +332,7 @@ private fun MarkdownPostScreenBody(
                     },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.url_slug_placeholder),
+                            text = stringRes(Res.string.url_slug_placeholder),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -331,7 +346,7 @@ private fun MarkdownPostScreenBody(
 
                 // Tags section
                 Text(
-                    text = stringRes(R.string.tags_label),
+                    text = stringRes(Res.string.tags_label),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(start = Size10dp, top = 8.dp),
                 )
@@ -353,12 +368,12 @@ private fun MarkdownPostScreenBody(
                     Tab(
                         selected = !postViewModel.showPreview,
                         onClick = { postViewModel.showPreview = false },
-                        text = { Text(stringRes(R.string.markdown_edit)) },
+                        text = { Text(stringRes(Res.string.markdown_edit)) },
                     )
                     Tab(
                         selected = postViewModel.showPreview,
                         onClick = { postViewModel.showPreview = true },
-                        text = { Text(stringRes(R.string.markdown_preview)) },
+                        text = { Text(stringRes(Res.string.markdown_preview)) },
                     )
                 }
 
@@ -396,7 +411,7 @@ private fun MarkdownPostScreenBody(
                                 .padding(horizontal = Size10dp, vertical = Size5dp),
                         placeholder = {
                             Text(
-                                text = stringRes(R.string.start_writing_article),
+                                text = stringRes(Res.string.start_writing_article),
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },
@@ -499,8 +514,8 @@ private fun MarkdownPostScreenBody(
                                 lud16,
                                 accountViewModel.account.userProfile(),
                                 accountViewModel,
-                                stringRes(id = R.string.lightning_invoice),
-                                stringRes(id = R.string.lightning_create_and_add_invoice),
+                                stringRes(id = Res.string.lightning_invoice),
+                                stringRes(id = Res.string.lightning_create_and_add_invoice),
                                 onNewInvoice = {
                                     postViewModel.insertAtCursor(it)
                                     postViewModel.wantsInvoice = false
@@ -532,7 +547,7 @@ private fun MarkdownPostScreenBody(
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ZapRaiserRequest(
-                            stringRes(id = R.string.zapraiser),
+                            stringRes(id = Res.string.zapraiser),
                             postViewModel,
                         )
                     }
@@ -598,7 +613,7 @@ private fun BannerImageArea(
         ) {
             MyAsyncImage(
                 imageUrl = coverImageUrl,
-                contentDescription = stringRes(R.string.add_header_image),
+                contentDescription = stringRes(Res.string.add_header_image),
                 contentScale = ContentScale.Crop,
                 mainImageModifier = Modifier.fillMaxSize(),
                 loadedImageModifier = Modifier.fillMaxSize(),
@@ -648,7 +663,7 @@ private fun BannerImageArea(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = stringRes(R.string.add_header_image),
+                    text = stringRes(Res.string.add_header_image),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -677,7 +692,7 @@ private fun TagInputSection(
             onValueChange = { tagInput = it },
             placeholder = {
                 Text(
-                    text = stringRes(R.string.add_a_tag),
+                    text = stringRes(Res.string.add_a_tag),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

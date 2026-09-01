@@ -37,9 +37,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_jump_to_today
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
@@ -70,7 +71,7 @@ fun CalendarNavigationHeader(
         // Title doubles as the "jump to today" affordance. Adding a TalkBack-only contentDescription
         // makes that role discoverable for screen-reader users — the bare text alone reads as a
         // label, not an action.
-        val jumpToToday = stringRes(R.string.calendar_nav_jump_to_today)
+        val jumpToToday = stringRes(Res.string.calendar_nav_jump_to_today)
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,

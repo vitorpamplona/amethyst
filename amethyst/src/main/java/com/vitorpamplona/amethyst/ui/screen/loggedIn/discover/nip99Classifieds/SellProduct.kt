@@ -49,6 +49,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_fair
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_fair_explainer
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_good
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_good_explainer
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_like_new
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_like_new_explainer
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_new
+import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_new_explainer
+import com.vitorpamplona.amethyst.commons.resources.classifieds_location
+import com.vitorpamplona.amethyst.commons.resources.classifieds_location_placeholder
+import com.vitorpamplona.amethyst.commons.resources.classifieds_price
+import com.vitorpamplona.amethyst.commons.resources.classifieds_title
+import com.vitorpamplona.amethyst.commons.resources.classifieds_title_placeholder
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
@@ -104,7 +120,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.classifieds_title),
+                text = stringRes(Res.string.classifieds_title),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -116,7 +132,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.classifieds_title_placeholder),
+                        text = stringRes(Res.string.classifieds_title_placeholder),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -139,7 +155,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.classifieds_price),
+                text = stringRes(Res.string.classifieds_price),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -174,7 +190,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.classifieds_condition),
+                text = stringRes(Res.string.classifieds_condition),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -183,23 +199,23 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                 listOf(
                     Triple(
                         ConditionTag.CONDITION.NEW,
-                        stringRes(id = R.string.classifieds_condition_new),
-                        stringRes(id = R.string.classifieds_condition_new_explainer),
+                        stringRes(id = Res.string.classifieds_condition_new),
+                        stringRes(id = Res.string.classifieds_condition_new_explainer),
                     ),
                     Triple(
                         ConditionTag.CONDITION.USED_LIKE_NEW,
-                        stringRes(id = R.string.classifieds_condition_like_new),
-                        stringRes(id = R.string.classifieds_condition_like_new_explainer),
+                        stringRes(id = Res.string.classifieds_condition_like_new),
+                        stringRes(id = Res.string.classifieds_condition_like_new_explainer),
                     ),
                     Triple(
                         ConditionTag.CONDITION.USED_GOOD,
-                        stringRes(id = R.string.classifieds_condition_good),
-                        stringRes(id = R.string.classifieds_condition_good_explainer),
+                        stringRes(id = Res.string.classifieds_condition_good),
+                        stringRes(id = Res.string.classifieds_condition_good_explainer),
                     ),
                     Triple(
                         ConditionTag.CONDITION.USED_FAIR,
-                        stringRes(id = R.string.classifieds_condition_fair),
-                        stringRes(id = R.string.classifieds_condition_fair_explainer),
+                        stringRes(id = Res.string.classifieds_condition_fair),
+                        stringRes(id = Res.string.classifieds_condition_fair_explainer),
                     ),
                 )
 
@@ -241,7 +257,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.classifieds_category),
+                text = stringRes(Res.string.classifieds_category),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -305,7 +321,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.classifieds_location),
+                text = stringRes(Res.string.classifieds_location),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -317,7 +333,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.classifieds_location_placeholder),
+                        text = stringRes(Res.string.classifieds_location_placeholder),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },

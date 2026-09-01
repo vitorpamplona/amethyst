@@ -57,6 +57,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_typing_many
+import com.vitorpamplona.amethyst.commons.resources.buzz_typing_one
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -132,14 +135,14 @@ private fun typingLabel(
     accountViewModel: AccountViewModel,
 ): String =
     when (typers.size) {
-        1 -> stringRes(R.string.buzz_typing_one, rememberTypistName(typers[0], accountViewModel))
+        1 -> stringRes(Res.string.buzz_typing_one, rememberTypistName(typers[0], accountViewModel))
         2 ->
             stringRes(
                 R.string.buzz_typing_two,
                 rememberTypistName(typers[0], accountViewModel),
                 rememberTypistName(typers[1], accountViewModel),
             )
-        else -> stringRes(R.string.buzz_typing_many)
+        else -> stringRes(Res.string.buzz_typing_many)
     }
 
 /** Three dots that bounce in a staggered wave — a lightweight, always-on micro-animation. */

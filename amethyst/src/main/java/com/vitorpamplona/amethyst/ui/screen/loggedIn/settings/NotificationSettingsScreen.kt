@@ -59,6 +59,14 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.battery_optimization_description
+import com.vitorpamplona.amethyst.commons.resources.battery_optimization_fix_now
+import com.vitorpamplona.amethyst.commons.resources.battery_optimization_title
+import com.vitorpamplona.amethyst.commons.resources.notification_channel_status_off
+import com.vitorpamplona.amethyst.commons.resources.notification_channel_status_on
+import com.vitorpamplona.amethyst.commons.resources.notification_channel_status_silent
+import com.vitorpamplona.amethyst.commons.resources.notification_settings_categories_explainer
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
@@ -299,7 +307,7 @@ private fun CategoriesSection() {
     }
 
     Text(
-        text = stringRes(R.string.notification_settings_categories_explainer),
+        text = stringRes(Res.string.notification_settings_categories_explainer),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp),
@@ -311,19 +319,19 @@ private fun ChannelStatusBadge(status: NotificationChannels.ChannelStatus) {
     when (status) {
         NotificationChannels.ChannelStatus.ON ->
             StatusChip(
-                label = stringRes(R.string.notification_channel_status_on),
+                label = stringRes(Res.string.notification_channel_status_on),
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         NotificationChannels.ChannelStatus.SILENT ->
             StatusChip(
-                label = stringRes(R.string.notification_channel_status_silent),
+                label = stringRes(Res.string.notification_channel_status_silent),
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         NotificationChannels.ChannelStatus.OFF ->
             StatusChip(
-                label = stringRes(R.string.notification_channel_status_off),
+                label = stringRes(Res.string.notification_channel_status_off),
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
             )
@@ -377,20 +385,20 @@ private fun BatteryOptimizationBanner() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = stringRes(R.string.battery_optimization_title),
+                text = stringRes(Res.string.battery_optimization_title),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Text(
-                text = stringRes(R.string.battery_optimization_description),
+                text = stringRes(Res.string.battery_optimization_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Button(
                 onClick = { BatteryOptimizationHelper.requestBatteryOptimizationExemption(context) },
             ) {
-                Text(stringRes(R.string.battery_optimization_fix_now))
+                Text(stringRes(Res.string.battery_optimization_fix_now))
             }
         }
     }

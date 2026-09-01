@@ -27,9 +27,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.edits_the_user_s_metadata
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -58,7 +59,7 @@ fun InnerEditButton(onClick: () -> Unit) {
     ) {
         Icon(
             symbol = MaterialSymbols.EditNote,
-            contentDescription = stringRes(R.string.edits_the_user_s_metadata),
+            contentDescription = stringRes(Res.string.edits_the_user_s_metadata),
         )
     }
 }
