@@ -160,7 +160,8 @@ fun RelayAuthPromptHost(accountViewModel: AccountViewModel) {
  * *both* of them: it is the answer's scope, not a modifier on "Log in". The four combinations are
  * the four [UserAuthChoice] values for this relay — log in once or always, refuse once or for good —
  * which is why there is no separate "Never allow" button any more: it was "Not now" with the switch
- * on, written twice.
+ * on, written twice. Flipping the switch relabels the buttons to the answer they now give
+ * ("Always log in" / "Never"), so the standing answer is never given under a one-off label.
  *
  * That frees the row underneath for the two answers this relay's buttons cannot give, one per
  * direction: "Always, all relays" and "Never, all relays" set the account's [RelayAuthPolicy] so
@@ -268,14 +269,25 @@ private fun RelayAuthPromptDialog(
                     // Both buttons read the switch, which is what makes it the scope of the answer
                     // rather than a modifier on one of them. Refusing *and* remembering is the DENY
                     // the red "Never allow" button used to write on its own.
+                    //
+                    // And both say so: with the switch on they relabel to the standing answer they
+                    // now give, so nothing turns a one-off refusal into a permanent one behind a
+                    // label that still reads "Not now". The refusal takes the error colour with it,
+                    // which is the weight the removed red button carried.
                     OutlinedButton(
                         onClick = { onChoice(if (rememberRelay) UserAuthChoice.BLOCK else UserAuthChoice.DISMISS) },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringRes(R.string.relay_auth_not_now)) }
+                        colors =
+                            if (rememberRelay) {
+                                ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            } else {
+                                ButtonDefaults.outlinedButtonColors()
+                            },
+                    ) { Text(stringRes(if (rememberRelay) R.string.relay_auth_never else R.string.relay_auth_not_now)) }
                     Button(
                         onClick = { onChoice(if (rememberRelay) UserAuthChoice.ALWAYS_ALLOW else UserAuthChoice.ALLOW_ONCE) },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringRes(R.string.relay_auth_log_in)) }
+                    ) { Text(stringRes(if (rememberRelay) R.string.relay_auth_always_log_in else R.string.relay_auth_log_in)) }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),

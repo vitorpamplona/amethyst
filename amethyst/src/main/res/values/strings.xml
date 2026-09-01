@@ -1185,6 +1185,9 @@
     <string name="relay_auth_remember_relay">Remember for this relay</string>
     <string name="relay_auth_log_in">Log in</string>
     <string name="relay_auth_not_now">Not now</string>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">Always log in</string>
+    <string name="relay_auth_never">Never</string>
     <string name="relay_auth_always_allow_everywhere">Always, all relays</string>
     <string name="relay_auth_never_allow_everywhere">Never, all relays</string>
     <string name="relay_auth_always_everywhere_title">Log in to every relay?</string>
