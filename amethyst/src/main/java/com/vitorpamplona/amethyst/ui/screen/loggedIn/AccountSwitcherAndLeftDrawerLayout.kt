@@ -138,8 +138,10 @@ fun AccountSwitcherAndLeftDrawerLayout(
 }
 
 /**
- * Compact and Medium windows: the drawer slides in as a modal sheet. On Medium an
- * [AppNavigationRail] sits at the left edge in place of the phone bottom bar.
+ * Every window that does not dock the drawer: the drawer slides in as a modal sheet. On the
+ * rail tier an [AppNavigationRail] sits at the left edge in place of the phone bottom bar and
+ * the shell becomes multi-pane — a wide portrait window rails and is still wide enough for
+ * the notification panel.
  */
 @Composable
 private fun ModalDrawerShell(
@@ -183,11 +185,12 @@ private fun ModalDrawerShell(
         },
         content = {
             if (showRail) {
-                Row(Modifier.fillMaxSize()) {
-                    AppNavigationRail(nav, accountViewModel)
-                    VerticalDivider(thickness = DividerThickness)
-                    CenterPane(Modifier.weight(1f), content)
-                }
+                MultiPaneShell(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    leading = { AppNavigationRail(nav, accountViewModel) },
+                    content = content,
+                )
             } else {
                 content()
             }
@@ -196,8 +199,62 @@ private fun ModalDrawerShell(
 }
 
 /**
- * Expanded windows: the drawer is permanently docked on the left, the bottom bar disappears,
- * and — when the window is wide enough — the notification feed docks on the right.
+ * The wide-window arrangement both shells render: a [leading] navigation pane, the centre
+ * content, and the notification feed when the window has room. Shared because a wide portrait
+ * window now rails rather than docks and is still wide enough for the panel — the two shells
+ * differ only in which navigation pane leads.
+ */
+@Composable
+private fun MultiPaneShell(
+    accountViewModel: AccountViewModel,
+    nav: Nav,
+    leading: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Row(Modifier.fillMaxSize()) {
+        leading()
+
+        VerticalDivider(thickness = DividerThickness)
+
+        CenterPane(Modifier.weight(1f), content)
+
+        NotificationSidePanelSlot(accountViewModel, nav)
+    }
+}
+
+/**
+ * The docked notification feed, when there is room for it. The panel duplicates the
+ * Notifications screen, so it steps aside while the user is there.
+ *
+ * The back-stack entry is collected here rather than in the shells so windows too narrow for
+ * the panel never observe it, and so navigation churn recomposes this slot instead of the
+ * whole shell. The trade is that a rail-tier window wide enough for the panel ends up with a
+ * second collector beside [ModalDrawerShell]'s own — one extra subscriber on a shared flow,
+ * against a shell restart per navigation on every window that cannot show the panel.
+ *
+ * [Route] matching goes through `remember` because `hasRoute` resolves a serializer
+ * reflectively on every call.
+ */
+@Composable
+private fun NotificationSidePanelSlot(
+    accountViewModel: AccountViewModel,
+    nav: Nav,
+) {
+    if (!LocalScreenLayout.current.hasRoomForNotificationPanel) return
+
+    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
+    val destination = navBackStackEntry?.destination
+    val onNotifications = remember(destination) { destination?.hasRoute<Route.Notification>() == true }
+
+    if (!onNotifications) {
+        VerticalDivider(thickness = DividerThickness)
+        NotificationSidePanel(accountViewModel, nav)
+    }
+}
+
+/**
+ * Wide, landscape, tall windows: the drawer is permanently docked on the left, the bottom bar
+ * disappears, and — when the window is wide enough — the notification feed docks on the right.
  */
 @Composable
 private fun PermanentDrawerShell(
@@ -206,24 +263,12 @@ private fun PermanentDrawerShell(
     openSheet: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
-    // The panel duplicates the Notifications screen, so it steps aside while the user is there.
-    val showPanel =
-        LocalScreenLayout.current.showsNotificationPanel &&
-            navBackStackEntry?.destination?.hasRoute<Route.Notification>() != true
-
-    Row(Modifier.fillMaxSize()) {
-        PermanentDrawerContent(nav, openSheet, accountViewModel)
-
-        VerticalDivider(thickness = DividerThickness)
-
-        CenterPane(Modifier.weight(1f), content)
-
-        if (showPanel) {
-            VerticalDivider(thickness = DividerThickness)
-            NotificationSidePanel(accountViewModel, nav)
-        }
-    }
+    MultiPaneShell(
+        accountViewModel = accountViewModel,
+        nav = nav,
+        leading = { PermanentDrawerContent(nav, openSheet, accountViewModel) },
+        content = content,
+    )
 }
 
 /**

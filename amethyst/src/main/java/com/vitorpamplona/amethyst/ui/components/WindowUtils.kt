@@ -45,9 +45,6 @@ private tailrec fun Context.getActivityWindow(): Window? =
         else -> null
     }
 
-@Composable
-fun getActivity(): Activity = LocalContext.current.getActivity()
-
 tailrec fun Context.getActivity(): ComponentActivity =
     when (this) {
         is ComponentActivity -> this
