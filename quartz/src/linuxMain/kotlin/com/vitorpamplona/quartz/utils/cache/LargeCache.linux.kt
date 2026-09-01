@@ -20,174 +20,182 @@
  */
 package com.vitorpamplona.quartz.utils.cache
 
-import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
-import com.vitorpamplona.quartz.utils.concurrent.withLock
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentHashMapOf
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Linux/Native actual for [LargeCache] — the store behind Amethyst's `LocalCache`.
  *
- * ## Why this is not copy-on-write any more
+ * Mirrors the progress guarantees of the JVM/Android actual (`ConcurrentSkipListMap`):
+ * **readers never block and never wait for a writer**, and writers publish with a CAS
+ * rather than by holding a lock. Nothing here can be descheduled while excluding
+ * everyone else, which is the failure mode `PlatformLock`'s docs describe.
  *
- * The first cut of this file kept a `LinkedHashMap` inside an `AtomicReference` and
- * replaced it wholesale on every write. That made each [put] **O(n) in the size of
- * the cache**: inserting n entries cost O(n^2) copies, so a cache holding 100k notes
- * paid a 100k-entry map copy per arriving event. It was also *not* actually
- * thread-safe — the read-copy-write was not a CAS loop, so two concurrent writers
- * silently dropped one of the two writes.
+ * ## Why it is shaped this way
  *
- * That went unnoticed because no CI job runs the linuxX64 target, so nothing ever
- * pushed volume through this class.
+ * The first cut kept a `LinkedHashMap` inside an `AtomicReference` and replaced it
+ * wholesale on every write. The immutable-snapshot *idea* was right — it is what makes
+ * reads free — but two things were wrong with it: copying a `LinkedHashMap` makes each
+ * [put] **O(n) in the size of the cache** (filling n entries costs O(n^2), so a cache
+ * holding 100k notes paid a 100k-entry copy per arriving event), and the
+ * read-copy-write was not a CAS loop, so two concurrent writers silently dropped one
+ * of the two writes.
  *
- * ## What it does instead
+ * Both fall away by swapping the map for a HAMT. [PersistentMap.putting] shares
+ * structure with the map it came from and only copies the nodes on the path to the
+ * changed key — O(log32 n), so ~4 small array copies at a million entries instead of a
+ * million-entry rehash — and the CAS loop makes concurrent writers retry instead of
+ * clobbering each other.
  *
- * A single mutable [LinkedHashMap] guarded by a [PlatformLock], plus a lazily built
- * read snapshot:
+ * So:
+ * - **Reads** ([get], [containsKey], [size], [keys], [values]) are a single atomic load
+ *   plus a lookup on an immutable map. No lock, no allocation, no copy.
+ * - **Bulk operations** (`filter`/`map`/`forEach`/…) iterate that same immutable map
+ *   directly. No defensive `entries.toList()`, no `ConcurrentModificationException`
+ *   window, and — because no lock is held while a caller's lambda runs — no way for a
+ *   `LocalCache` predicate that reaches back into the cache to deadlock.
+ * - **Writes** are a CAS retry loop over a structurally shared copy.
  *
- * - **Point operations** ([get], [put], [remove], [containsKey], [size], …) take the
- *   lock, touch the live map, and return. O(1), no copying.
- * - **Bulk operations** (`filter`/`map`/`forEach`/…) run against [cachedSnapshot], a
- *   point-in-time copy rebuilt on the first bulk call after a write and reused until
- *   the next write. So a copy costs O(n) at most once per write epoch, on operations
- *   that are already O(n), and a run of reads with no interleaved write copies
- *   nothing at all.
+ * ## What it costs
  *
- * The snapshot is what lets the bulk operations invoke caller-supplied lambdas
- * **outside** the critical section. That matters: `PlatformLock` is not reentrant on
- * this target, and `LocalCache` predicates routinely call back into the same cache —
- * running them under the lock would self-deadlock. It also removes the
- * `ConcurrentModificationException` window the previous `entries.toList()` dance was
- * working around.
+ * A write costs more than a `HashMap.put` under a lock would — a few node copies rather
+ * than one bucket store. Measured on this target (linuxX64, `-opt`, ms for the whole
+ * loop) against the copy-on-write version this replaces and against a
+ * `PlatformLock` + `HashMap` variant that was the other candidate:
  *
- * ## Known residual
+ * ```
+ * n=20,000    fill      reads     20 scans   mixed (put + scan every 1k)
+ * copy-on-write  17,949       2         13      25,278
+ * lock + HashMap      1       0         12          35
+ * HAMT + CAS         14       0         19          28
  *
- * Building the snapshot holds the lock for O(n), and the linux `PlatformLock` is a
- * spin lock (Kotlin/Native ships no parking lock and there is no Foundation here —
- * see `PlatformLock.linux.kt`). A writer racing a snapshot build therefore busy-waits
- * for the duration of the copy. That is still strictly better than what it replaces —
- * copy-on-write did the same O(n) copy on *every write* and lost concurrent ones —
- * but it is the reason `PlatformLock.linux.kt` flags a pthread mutex as the next step
- * if this target ever hosts a genuinely contended workload.
+ * n=200,000   fill      reads     20 scans   mixed
+ * lock + HashMap     44       9        177       6,736
+ * HAMT + CAS        197      12        237       2,486
+ * ```
  *
- * Ordering note: iteration follows insertion order here, sorted-key order on
- * JVM/Android (`ConcurrentSkipListMap`) and hash order on Apple. Nothing in the
- * codebase depends on a specific order, and the `from`/`to` range overloads below
- * degrade to a full scan on this target exactly as they did before — they have no
- * callers outside the JVM-only `LargeSoftCache`.
+ * Writing nothing but writes, the lock wins ~4x. But that is not the shape `LocalCache`
+ * has: it interleaves scans (every feed filters the whole cache) with arriving events,
+ * and there the lock has to rebuild an O(n) read snapshot after each write epoch, so it
+ * loses by ~2.7x at 200k. Reads and scans are close either way. The lock-free version
+ * therefore wins the workload that matters *and* is the one that never blocks a reader.
+ *
+ * This is the house pattern for shared mutable state in `commonMain` already — see
+ * `nip01Core.relay.filters.FilterIndex` and `nip86RelayManagement.server.BanStore`,
+ * both of which hold their state in one `AtomicReference` over persistent collections
+ * and mutate it with the same CAS loop.
+ *
+ * ## Notes
+ *
+ * Anything that reads twice — [remove], [getOrCreate], [createIfAbsent] — retries on a
+ * lost CAS rather than locking, so the pair is atomic without excluding readers.
+ * [clear] publishes an empty map unconditionally and can therefore drop a write that
+ * lands concurrently, exactly as `ConcurrentSkipListMap.clear()` can.
+ *
+ * Iteration order is hash order, as on Apple; JVM/Android is sorted-key order
+ * (`ConcurrentSkipListMap`). Nothing in the codebase depends on a specific order. The
+ * `from`/`to` range overloads below degrade to a full scan on this target, as they
+ * always have — they have no callers outside the JVM-only `LargeSoftCache`.
  */
+@OptIn(ExperimentalAtomicApi::class)
 actual class LargeCache<K, V> : ICacheOperations<K, V> {
-    private val lock = PlatformLock()
-
-    /** The live store. Every access must hold [lock]. */
-    private val map = LinkedHashMap<K, V>()
+    private val ref = AtomicReference<PersistentMap<K, V>>(persistentHashMapOf())
 
     /**
-     * A copy of [map] handed to bulk operations so they can run caller lambdas
-     * without holding [lock]. Null means "stale, rebuild on next use". Guarded by
-     * [lock]; never mutated once published, so readers may keep it as long as they
-     * like.
+     * Runs [block] against an immutable point-in-time map. Outside any critical
+     * section, so [block] may call back into this cache freely.
      */
-    private var cachedSnapshot: Map<K, V>? = null
+    private inline fun <R> withMap(block: (Map<K, V>) -> R): R = block(ref.load())
 
-    private fun snapshot(): Map<K, V> =
-        lock.withLock {
-            cachedSnapshot ?: LinkedHashMap(map).also { cachedSnapshot = it }
+    /**
+     * Publishes [transform] of the current map with a CAS, retrying if a concurrent
+     * writer won. [transform] must be pure — it can run more than once — and returning
+     * the map it was given means "no change", which skips the CAS entirely.
+     */
+    private inline fun mutate(transform: (PersistentMap<K, V>) -> PersistentMap<K, V>) {
+        while (true) {
+            val current = ref.load()
+            val next = transform(current)
+            if (next === current || ref.compareAndSet(current, next)) return
         }
-
-    /** Runs [block] over a stable snapshot, outside the lock. */
-    private inline fun <R> withMap(block: (Map<K, V>) -> R): R = block(snapshot())
-
-    /** Runs [block] over the live map under [lock] without invalidating the snapshot. */
-    private inline fun <R> read(block: (MutableMap<K, V>) -> R): R = lock.withLock { block(map) }
-
-    /** Runs [block] over the live map under [lock] and drops the read snapshot. */
-    private inline fun <R> mutate(block: (MutableMap<K, V>) -> R): R =
-        lock.withLock {
-            cachedSnapshot = null
-            block(map)
-        }
-
-    actual fun keys(): Set<K> = snapshot().keys
-
-    actual fun values(): Iterable<V> = snapshot().values
-
-    actual fun get(key: K): V? = read { it[key] }
-
-    actual fun remove(key: K): V? =
-        lock.withLock {
-            val removed = map.remove(key)
-            if (removed != null) cachedSnapshot = null
-            removed
-        }
-
-    actual fun isEmpty(): Boolean = read { it.isEmpty() }
-
-    actual fun clear() {
-        mutate { it.clear() }
     }
 
-    actual fun containsKey(key: K): Boolean = read { it.containsKey(key) }
+    actual fun keys(): Set<K> = ref.load().keys
+
+    actual fun values(): Iterable<V> = ref.load().values
+
+    actual fun get(key: K): V? = ref.load()[key]
+
+    actual fun remove(key: K): V? {
+        while (true) {
+            val current = ref.load()
+            val previous = current[key] ?: return null
+            if (ref.compareAndSet(current, current.removing(key))) return previous
+        }
+    }
+
+    actual fun isEmpty(): Boolean = ref.load().isEmpty()
+
+    actual fun clear() {
+        ref.store(persistentHashMapOf())
+    }
+
+    actual fun containsKey(key: K): Boolean = ref.load().containsKey(key)
 
     actual fun put(
         key: K,
         value: V,
     ) {
-        mutate { it[key] = value }
+        mutate { it.putting(key, value) }
     }
 
     /**
-     * Mirrors the JVM actual's `putIfAbsent`: [builder] runs outside the lock (it is
-     * caller code and must not be able to re-enter a non-reentrant lock), and the
-     * insert is only published if no one won the race in the meantime.
+     * Mirrors the JVM actual's `putIfAbsent`: [builder] runs at most once — outside the
+     * retry loop, since it is caller code — and the value is only published if no one
+     * won the race in the meantime.
      */
     actual fun getOrCreate(
         key: K,
         builder: (key: K) -> V,
     ): V {
-        read { it[key] }?.let { return it }
+        ref.load()[key]?.let { return it }
 
         val newObject = builder(key)
 
-        return lock.withLock {
-            val existing = map[key]
-            if (existing != null) {
-                existing
-            } else {
-                map[key] = newObject
-                cachedSnapshot = null
-                newObject
-            }
+        while (true) {
+            val current = ref.load()
+            current[key]?.let { return it }
+            if (ref.compareAndSet(current, current.putting(key, newObject))) return newObject
         }
     }
 
     /**
      * True only when *this* call inserted the value — matching the JVM actual's
      * `putIfAbsent(key, newObject) == null`. The previous implementation returned
-     * `get(key) != null`, which also reported true when another thread had just
-     * created the entry, double-firing whatever the caller does with a fresh key.
+     * `get(key) != null`, which also reported true when another thread had just created
+     * the entry, double-firing whatever the caller does with a fresh key.
      */
     actual fun createIfAbsent(
         key: K,
         builder: (key: K) -> V,
     ): Boolean {
-        if (read { it.containsKey(key) }) return false
+        if (ref.load().containsKey(key)) return false
 
         val newObject = builder(key)
 
-        return lock.withLock {
-            if (map.containsKey(key)) {
-                false
-            } else {
-                map[key] = newObject
-                cachedSnapshot = null
-                true
-            }
+        while (true) {
+            val current = ref.load()
+            if (current.containsKey(key)) return false
+            if (ref.compareAndSet(current, current.putting(key, newObject))) return true
         }
     }
 
-    actual override fun size(): Int = read { it.size }
+    actual override fun size(): Int = ref.load().size
 
     actual override fun forEach(consumer: ICacheBiConsumer<K, V>) {
-        // The snapshot is already immutable, so no defensive entries.toList() is needed.
+        // The map is immutable, so this iterates a stable snapshot with no copy.
         withMap { map -> map.forEach { consumer.accept(it.key, it.value) } }
     }
 

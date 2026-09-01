@@ -20,37 +20,44 @@
  */
 package com.vitorpamplona.quartz.utils.cache
 
-import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
-import com.vitorpamplona.quartz.utils.concurrent.withLock
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentHashMapOf
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Linux/Native actual for [ConcurrentHashCache].
  *
- * Was copy-on-write, mirroring the old `LargeCache.linux`: every [put] rebuilt the
- * whole map under a CAS retry loop, so writes were O(n) and a decode burst against a
- * warm cache was O(n^2). That is a bad shape for this class in particular — its only
- * caller, `CachingEventDecoder`, writes once per event arriving from a relay.
+ * Same fix, and for the same reason, as `LargeCache.linux.kt` — read its docs for the
+ * full rationale. This was copy-on-write over a plain `HashMap`, so every [put] rebuilt
+ * the entire map: O(n) per write, and a CAS retry loop that re-did the whole rebuild on
+ * every lost race. Bad anywhere; worst here, because the only caller is
+ * `CachingEventDecoder`, which writes once per event arriving from a relay.
  *
- * Now a plain [HashMap] guarded by a [PlatformLock]: O(1) writes, and no CAS retry
- * to livelock under a write burst. Same lock choice and the same residual (a spin
- * lock on this target) as `LargeCache.linux.kt` — see its docs.
+ * A HAMT keeps the wait-free single-load read and the non-blocking write while making
+ * the write O(log32 n) — [PersistentMap.putting] shares structure with the map it came
+ * from and copies only the path to the changed key.
  */
+@OptIn(ExperimentalAtomicApi::class)
 actual class ConcurrentHashCache<K : Any, V : Any> {
-    private val lock = PlatformLock()
-    private val map = HashMap<K, V>()
+    private val ref = AtomicReference<PersistentMap<K, V>>(persistentHashMapOf())
 
-    actual fun get(key: K): V? = lock.withLock { map[key] }
+    actual fun get(key: K): V? = ref.load()[key]
 
     actual fun put(
         key: K,
         value: V,
     ) {
-        lock.withLock { map[key] = value }
+        while (true) {
+            val current = ref.load()
+            val next = current.putting(key, value)
+            if (next === current || ref.compareAndSet(current, next)) return
+        }
     }
 
-    actual fun size(): Int = lock.withLock { map.size }
+    actual fun size(): Int = ref.load().size
 
     actual fun clear() {
-        lock.withLock { map.clear() }
+        ref.store(persistentHashMapOf())
     }
 }
