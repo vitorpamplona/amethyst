@@ -8,6 +8,11 @@
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-spotless.sh",
             "timeout": 180
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-orphan-strings.sh",
+            "timeout": 30
           }
         ]
       }

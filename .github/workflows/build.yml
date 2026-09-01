@@ -21,6 +21,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Orphaned translations (no locale string may outlive its default key)
+        run: .claude/hooks/orphan_strings_check.py
+
       - name: Set up JDK 21
         uses: actions/setup-java@v5.7.0
         with:
