@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
@@ -53,7 +54,7 @@ fun JustVideoDisplay(
     val videoEvent = (note.event as? VideoEvent) ?: return
     val event = (videoEvent as? Event) ?: return
 
-    val imeta = videoEvent.imetaTags().getOrNull(0) ?: return
+    val imeta = remember(videoEvent) { videoEvent.selectVideoTrack() } ?: return
     val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
     val reasons = remember(note) { collectContentWarningReasons(event) }
     // A NIP-71 event asserts its own type, so only an explicit image imeta diverts to the

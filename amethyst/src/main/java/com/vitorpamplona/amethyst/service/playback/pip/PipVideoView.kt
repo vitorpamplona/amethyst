@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.pip
 
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,8 @@ import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
+import com.vitorpamplona.amethyst.service.playback.composable.controls.PIP_PRESHRINK_MAX_SHORT_SIDE_PX
+import com.vitorpamplona.amethyst.service.playback.composable.controls.constrainVideoQualityToViewport
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.components.getActivity
@@ -69,7 +72,22 @@ fun RenderPipVideo(
             }
         }
 
-    Box(modifier, contentAlignment = Alignment.Center) {
+    // processIntentForPiP calls enterPictureInPictureMode from composition (PiPFromIntents), so the
+    // first layout pass can measure the activity at full screen before the window shrinks. Cap that
+    // measurement instead of skipping it: skipping would leave a pooled player on whatever viewport
+    // its previous view pushed if PiP is never actually entered (per-app PiP off, no
+    // FEATURE_PICTURE_IN_PICTURE). The shrink relayouts and pushes the real size.
+    val activity = LocalActivity.current
+
+    Box(
+        modifier.constrainVideoQualityToViewport(
+            player = controller.controller,
+            maxShortSidePx = {
+                if (activity?.isInPictureInPictureMode == true) 0 else PIP_PRESHRINK_MAX_SHORT_SIDE_PX
+            },
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
         ContentFrame(
             player = controller.controller,
             keepContentOnReset = true,
