@@ -170,6 +170,14 @@ class AuthCoordinator(
                                         account.relayAuthLedger.setDecision(relayUrl.url, RelayAuthDecision.DENY)
                                         false
                                     }
+                                    UserAuthChoice.NEVER_ALLOW_EVERYWHERE -> {
+                                        // Same reasoning as ALWAYS_ALLOW_EVERYWHERE above, and through the
+                                        // account rather than its settings for one more reason: this is the
+                                        // policy that session grants outrank, so the grants have to go with
+                                        // it. Account.changeDefaultRelayAuthPolicy is what pairs them.
+                                        account.changeDefaultRelayAuthPolicy(RelayAuthPolicy.NEVER)
+                                        false
+                                    }
                                     UserAuthChoice.DISMISS -> false
                                 }
                             }

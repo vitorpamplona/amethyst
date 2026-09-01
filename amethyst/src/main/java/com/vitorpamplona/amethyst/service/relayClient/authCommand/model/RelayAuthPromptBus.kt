@@ -43,13 +43,22 @@ enum class UserAuthChoice {
     /**
      * Authenticate now and switch the asking account's top-level policy to
      * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy.ALWAYS], so every relay that
-     * asks is answered without a prompt. The account-wide counterpart of [ALWAYS_ALLOW], and the
-     * one choice here that writes a global setting — the dialog confirms it before sending it.
+     * asks is answered without a prompt. The account-wide counterpart of [ALWAYS_ALLOW]; the dialog
+     * confirms it before sending it, because it is a global setting.
      */
     ALWAYS_ALLOW_EVERYWHERE,
 
     /** Do not authenticate and remember DENY for this relay. */
     BLOCK,
+
+    /**
+     * Do not authenticate, and switch the asking account's top-level policy to
+     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy.NEVER], so no relay is ever
+     * answered again. The account-wide counterpart of [BLOCK], confirmed the same way — and, like
+     * every route through [com.vitorpamplona.amethyst.model.Account.changeDefaultRelayAuthPolicy],
+     * it drops this run's session grants, which would otherwise outrank the policy it just set.
+     */
+    NEVER_ALLOW_EVERYWHERE,
 
     /** No decision (dismissed or timed out) — do not authenticate, don't remember. */
     DISMISS,

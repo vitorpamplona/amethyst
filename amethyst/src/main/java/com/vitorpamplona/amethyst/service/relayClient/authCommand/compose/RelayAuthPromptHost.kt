@@ -94,8 +94,8 @@ private const val AVATAR_SLOT = "avatar"
 /**
  * App-wide host for NIP-42 auth prompts. Collects [RelayAuthPromptBus.prompts] and shows one
  * dialog at a time explaining *why* a relay wants the user to log in (who it serves), letting the
- * user allow once, always allow (this relay or every relay), or block the relay. Dismissing answers
- * [UserAuthChoice.DISMISS],
+ * user answer for this relay (once or for good, either way) or for every relay at once. Dismissing
+ * answers [UserAuthChoice.DISMISS],
  * which the bus also falls back to on timeout, so a relay connection never blocks on the UI.
  */
 @Composable
@@ -133,12 +133,18 @@ fun RelayAuthPromptHost(accountViewModel: AccountViewModel) {
  * separate blocks: a purpose-specific title, a purpose label, an avatar row, and a red "if you don't"
  * consequence line, each of which repeated the same name.
  *
- * Two buttons and a switch replace four stacked buttons. The two links under them are the standing
- * answers, one per direction: "Never allow" writes a DENY for this relay, "Always, all relays"
- * switches the account to [RelayAuthPolicy.ALWAYS] so nothing asks again. Only the second one is
- * account-wide, and it confirms before it writes — see [AlwaysAllowEverywhereConfirmation]. The old
- * "always deliver my messages" is still gone: it flipped the policy to CUSTOM plus two account-wide
- * toggles *silently*, which is the part that was wrong, not the writing itself.
+ * Two buttons and a switch replace four stacked buttons, and the switch means what it says for
+ * *both* of them: it is the answer's scope, not a modifier on "Log in". The four combinations are
+ * the four [UserAuthChoice] values for this relay — log in once or always, refuse once or for good —
+ * which is why there is no separate "Never allow" button any more: it was "Not now" with the switch
+ * on, written twice.
+ *
+ * That frees the row underneath for the two answers this relay's buttons cannot give, one per
+ * direction: "Always, all relays" and "Never, all relays" set the account's [RelayAuthPolicy] so
+ * nothing is asked again, either way. Both are account-wide, so both confirm before they write —
+ * see [PolicyEverywhereConfirmation]. The old "always deliver my messages" is still gone: it
+ * flipped the policy to CUSTOM plus two account-wide toggles *silently*, which is the part that was
+ * wrong, not the writing itself.
  */
 @Composable
 private fun RelayAuthPromptDialog(
@@ -147,14 +153,16 @@ private fun RelayAuthPromptDialog(
     onChoice: (UserAuthChoice) -> Unit,
 ) {
     var rememberRelay by remember(prompt) { mutableStateOf(false) }
-    var confirmEverywhere by remember(prompt) { mutableStateOf(false) }
+    // The account-wide answer waiting on its confirmation, or null while the prompt itself is up.
+    var confirming by remember(prompt) { mutableStateOf<UserAuthChoice?>(null) }
     val accountName = rememberDisplayName(prompt.askingAccount, accountViewModel)
 
-    if (confirmEverywhere) {
-        AlwaysAllowEverywhereConfirmation(
+    confirming?.let { choice ->
+        PolicyEverywhereConfirmation(
+            choice = choice,
             accountName = accountName,
-            onDismiss = { confirmEverywhere = false },
-            onConfirm = { onChoice(UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE) },
+            onDismiss = { confirming = null },
+            onConfirm = { onChoice(choice) },
         )
         return
     }
@@ -234,8 +242,11 @@ private fun RelayAuthPromptDialog(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Both buttons read the switch, which is what makes it the scope of the answer
+                    // rather than a modifier on one of them. Refusing *and* remembering is the DENY
+                    // the red "Never allow" button used to write on its own.
                     OutlinedButton(
-                        onClick = { onChoice(UserAuthChoice.DISMISS) },
+                        onClick = { onChoice(if (rememberRelay) UserAuthChoice.BLOCK else UserAuthChoice.DISMISS) },
                         modifier = Modifier.weight(1f),
                     ) { Text(stringRes(R.string.relay_auth_not_now)) }
                     Button(
@@ -248,11 +259,11 @@ private fun RelayAuthPromptDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     TextButton(
-                        onClick = { onChoice(UserAuthChoice.BLOCK) },
+                        onClick = { confirming = UserAuthChoice.NEVER_ALLOW_EVERYWHERE },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    ) { Text(stringRes(R.string.relay_auth_never_allow), style = MaterialTheme.typography.labelMedium) }
+                    ) { Text(stringRes(R.string.relay_auth_never_allow_everywhere), style = MaterialTheme.typography.labelMedium) }
                     TextButton(
-                        onClick = { confirmEverywhere = true },
+                        onClick = { confirming = UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE },
                     ) { Text(stringRes(R.string.relay_auth_always_allow_everywhere), style = MaterialTheme.typography.labelMedium) }
                 }
             }
@@ -261,24 +272,49 @@ private fun RelayAuthPromptDialog(
 }
 
 /**
- * The one action in this flow that writes an account-wide setting, so it asks first.
+ * The two actions in this flow that write an account-wide setting, so they ask first.
  *
- * "Never allow" next to it is per-relay and reversible from the settings screen's exception list;
- * this one changes what happens on every relay that ever asks, and a mis-tap would reveal the npub
- * named above to all of them. The confirmation is what makes that scope visible before it is
- * chosen — the label alone can't carry it.
+ * The buttons above are about the one relay in the title, and both of their outcomes are listed and
+ * reversible on the settings screen. These two are not about this relay at all: they decide every
+ * relay that ever asks — revealing the npub named above to all of them, or cutting it off from all of
+ * them — and a link label cannot carry that. The confirmation is where the scope becomes visible,
+ * and it names the consequence each direction actually has.
  */
 @Composable
-private fun AlwaysAllowEverywhereConfirmation(
+private fun PolicyEverywhereConfirmation(
+    choice: UserAuthChoice,
     accountName: String,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
+    val always = choice == UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.relay_auth_always_everywhere_title)) },
-        text = { Text(stringRes(R.string.relay_auth_always_everywhere_body, accountName)) },
-        confirmButton = { Button(onClick = onConfirm) { Text(stringRes(R.string.relay_auth_policy_always)) } },
+        title = {
+            Text(stringRes(if (always) R.string.relay_auth_always_everywhere_title else R.string.relay_auth_never_everywhere_title))
+        },
+        text = {
+            Text(
+                stringRes(
+                    if (always) R.string.relay_auth_always_everywhere_body else R.string.relay_auth_never_everywhere_body,
+                    accountName,
+                ),
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors =
+                    if (always) {
+                        ButtonDefaults.buttonColors()
+                    } else {
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        )
+                    },
+            ) { Text(stringRes(if (always) R.string.relay_auth_policy_always else R.string.relay_auth_policy_never)) }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) } },
     )
 }

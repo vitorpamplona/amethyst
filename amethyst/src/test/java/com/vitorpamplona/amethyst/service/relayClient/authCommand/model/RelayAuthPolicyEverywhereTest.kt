@@ -33,13 +33,14 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * The prompt's "Always, all relays" link ([UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE]) does exactly one
- * thing: flip the account's policy to [RelayAuthPolicy.ALWAYS]. These tests pin what that flip has to
- * buy — the prompt never comes back for *any* relay — and what it must not quietly do: write a
- * per-relay exception that would outlive a later switch back to "decide per relay", or override the
- * two rules that rank above the policy.
+ * The prompt's two account-wide links — "Always, all relays"
+ * ([UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE]) and "Never, all relays"
+ * ([UserAuthChoice.NEVER_ALLOW_EVERYWHERE]) — each do exactly one thing: flip the account's policy.
+ * These tests pin what a flip has to buy — the prompt never comes back for *any* relay, in either
+ * direction — and what it must not quietly do: write a per-relay exception that would outlive a
+ * later switch back to "decide per relay", or override the rules that rank above the policy.
  */
-class RelayAuthAlwaysEverywhereTest {
+class RelayAuthPolicyEverywhereTest {
     private val relay = "wss://auth.example.com/"
     private val other = "wss://elsewhere.example.com/"
     private val blockedRelay = "wss://blocked.example.com/"
@@ -98,5 +99,53 @@ class RelayAuthAlwaysEverywhereTest {
             assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(blockedRelay)))
             assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(other)))
             assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun theNeverFlipSilencesThisRelayAndEveryOtherOne() =
+        runTest {
+            assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(relay)))
+
+            policy = RelayAuthPolicy.NEVER
+
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(other)))
+            assertNull(store.loadDecision(relay))
+        }
+
+    /** The "Always, set by you" exceptions the settings screen lists are standing answers, not casual ones. */
+    @Test
+    fun theNeverFlipLeavesAlwaysExceptionsAlone() =
+        runTest {
+            ledger.setDecision(other, RelayAuthDecision.ALLOW)
+            policy = RelayAuthPolicy.NEVER
+
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(other)))
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
+        }
+
+    /**
+     * Why the coordinator routes this through [com.vitorpamplona.amethyst.model.Account], which drops
+     * the session grants with the flip: a grant left behind outranks the policy, so "never log in"
+     * would keep authenticating exactly the relays the user had just answered "log in" for.
+     */
+    @Test
+    fun aSessionGrantWouldOutrankTheNeverFlipIfItSurvived() =
+        runTest {
+            val grants = RelayAuthSessionGrants()
+            val ledger =
+                RelayAuthPermissionLedger(
+                    store = InMemoryRelayAuthPermissionStore(),
+                    globalPolicy = { policy },
+                    sessionGrants = grants,
+                )
+            grants.grant(relay)
+            policy = RelayAuthPolicy.NEVER
+
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+
+            grants.clear()
+
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
         }
 }
