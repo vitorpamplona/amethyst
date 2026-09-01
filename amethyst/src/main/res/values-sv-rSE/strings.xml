@@ -1143,6 +1143,8 @@
     <string name="relay_auth_remember_relay">Kom ihåg för det här reläet</string>
     <string name="relay_auth_log_in">Logga in</string>
     <string name="relay_auth_not_now">Inte nu</string>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <string name="relay_auth_never_allow">Tillåt aldrig</string>
     <string name="relay_auth_how_we_decide">Så avgör Amethyst</string>
     <!-- Settings: three lists that each hold what their header says. -->

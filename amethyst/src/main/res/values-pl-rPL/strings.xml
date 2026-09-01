@@ -1210,6 +1210,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_auth_remember_relay">Zapamiętaj ten transmiter</string>
     <string name="relay_auth_log_in">Zaloguj się</string>
     <string name="relay_auth_not_now">Nie teraz</string>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <string name="relay_auth_never_allow">Nigdy nie zezwalaj</string>
     <string name="relay_auth_how_we_decide">Jak zadecyduje Ametyst</string>
     <!-- Settings: three lists that each hold what their header says. -->
