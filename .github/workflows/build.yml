@@ -194,6 +194,76 @@ jobs:
           name: geode Test Reports
           path: geode/build/reports
 
+  # linuxX64 is the only target whose LargeCache / ConcurrentHashCache actuals are
+  # hand-written concurrent maps rather than a delegation to a platform concurrent
+  # collection, and until this job existed nothing ran them: the target was compiled
+  # by no CI leg at all. That is how a copy-on-write LargeCache with O(n) writes and a
+  # non-atomic read-copy-write (concurrent writers silently dropped entries) sat in
+  # the tree unnoticed.
+  #
+  # Scoped to the cache/concurrency packages on purpose. The full linuxX64Test suite
+  # is 3,490 tests with 78 pre-existing failures, essentially all of them `TODO()`
+  # stubs in linux actuals that were never written — MLS crypto, the SQLite driver,
+  # NIP-44, Bolt12 — plus two URL-handling divergences. Filling those in is its own
+  # project; gating PRs on them today would just mean a permanently red job. The
+  # filter keeps the leg meaningful and green, and widening it is a one-line change
+  # once the native actuals land.
+  #
+  # This still compiles and links the whole module for linuxX64, so a commonMain or
+  # commonTest source that reaches for a JVM-only API fails here too — on a target
+  # with no Foundation to fall back on the way Apple has.
+  test-quartz-linux-native:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # The Kotlin/Native toolchain (compiler distribution + LLVM + the sysroot) lands
+      # in ~/.konan, which setup-gradle does not cache. Without this the job re-downloads
+      # well over a gigabyte on every run. Keyed on the version catalog so a Kotlin bump
+      # re-populates it.
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Test Quartz caches on Linux Native
+        run: |
+          ./gradlew :quartz:linuxX64Test \
+            --tests "com.vitorpamplona.quartz.utils.cache.*" \
+            --tests "com.vitorpamplona.quartz.utils.concurrent.*"
+
+      - name: Linux Native Test Report
+        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        if: always()
+        with:
+          report_paths: 'quartz/build/test-results/linuxX64Test/TEST-*.xml'
+          annotate_only: true
+          detailed_summary: true
+          fail_on_failure: true
+
+      - name: Upload Linux Native Test Reports
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: Quartz Linux Native Test Reports
+          path: quartz/build/reports
+
   test-quartz-ios:
     # Phase 1 of the iOS support plan
     # (amethyst/plans/2026-05-24-ios-support.md): keep :quartz green on iOS

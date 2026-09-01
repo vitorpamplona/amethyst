@@ -20,30 +20,37 @@
  */
 package com.vitorpamplona.quartz.utils.cache
 
-import kotlin.concurrent.AtomicReference
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
+import com.vitorpamplona.quartz.utils.concurrent.withLock
 
-// Copy-on-write, mirroring LargeCache.linux: correct and simple; the linux
-// target is CI-only so write cost is acceptable.
+/**
+ * Linux/Native actual for [ConcurrentHashCache].
+ *
+ * Was copy-on-write, mirroring the old `LargeCache.linux`: every [put] rebuilt the
+ * whole map under a CAS retry loop, so writes were O(n) and a decode burst against a
+ * warm cache was O(n^2). That is a bad shape for this class in particular — its only
+ * caller, `CachingEventDecoder`, writes once per event arriving from a relay.
+ *
+ * Now a plain [HashMap] guarded by a [PlatformLock]: O(1) writes, and no CAS retry
+ * to livelock under a write burst. Same lock choice and the same residual (a spin
+ * lock on this target) as `LargeCache.linux.kt` — see its docs.
+ */
 actual class ConcurrentHashCache<K : Any, V : Any> {
-    private val mapRef = AtomicReference(HashMap<K, V>())
+    private val lock = PlatformLock()
+    private val map = HashMap<K, V>()
 
-    actual fun get(key: K): V? = mapRef.value[key]
+    actual fun get(key: K): V? = lock.withLock { map[key] }
 
     actual fun put(
         key: K,
         value: V,
     ) {
-        while (true) {
-            val current = mapRef.value
-            val copy = HashMap(current)
-            copy[key] = value
-            if (mapRef.compareAndSet(current, copy)) return
-        }
+        lock.withLock { map[key] = value }
     }
 
-    actual fun size(): Int = mapRef.value.size
+    actual fun size(): Int = lock.withLock { map.size }
 
     actual fun clear() {
-        mapRef.value = HashMap()
+        lock.withLock { map.clear() }
     }
 }

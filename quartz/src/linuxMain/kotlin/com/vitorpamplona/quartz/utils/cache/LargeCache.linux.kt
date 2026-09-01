@@ -20,41 +20,112 @@
  */
 package com.vitorpamplona.quartz.utils.cache
 
-import kotlin.concurrent.AtomicReference
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
+import com.vitorpamplona.quartz.utils.concurrent.withLock
 
+/**
+ * Linux/Native actual for [LargeCache] — the store behind Amethyst's `LocalCache`.
+ *
+ * ## Why this is not copy-on-write any more
+ *
+ * The first cut of this file kept a `LinkedHashMap` inside an `AtomicReference` and
+ * replaced it wholesale on every write. That made each [put] **O(n) in the size of
+ * the cache**: inserting n entries cost O(n^2) copies, so a cache holding 100k notes
+ * paid a 100k-entry map copy per arriving event. It was also *not* actually
+ * thread-safe — the read-copy-write was not a CAS loop, so two concurrent writers
+ * silently dropped one of the two writes.
+ *
+ * That went unnoticed because no CI job runs the linuxX64 target, so nothing ever
+ * pushed volume through this class.
+ *
+ * ## What it does instead
+ *
+ * A single mutable [LinkedHashMap] guarded by a [PlatformLock], plus a lazily built
+ * read snapshot:
+ *
+ * - **Point operations** ([get], [put], [remove], [containsKey], [size], …) take the
+ *   lock, touch the live map, and return. O(1), no copying.
+ * - **Bulk operations** (`filter`/`map`/`forEach`/…) run against [cachedSnapshot], a
+ *   point-in-time copy rebuilt on the first bulk call after a write and reused until
+ *   the next write. So a copy costs O(n) at most once per write epoch, on operations
+ *   that are already O(n), and a run of reads with no interleaved write copies
+ *   nothing at all.
+ *
+ * The snapshot is what lets the bulk operations invoke caller-supplied lambdas
+ * **outside** the critical section. That matters: `PlatformLock` is not reentrant on
+ * this target, and `LocalCache` predicates routinely call back into the same cache —
+ * running them under the lock would self-deadlock. It also removes the
+ * `ConcurrentModificationException` window the previous `entries.toList()` dance was
+ * working around.
+ *
+ * ## Known residual
+ *
+ * Building the snapshot holds the lock for O(n), and the linux `PlatformLock` is a
+ * spin lock (Kotlin/Native ships no parking lock and there is no Foundation here —
+ * see `PlatformLock.linux.kt`). A writer racing a snapshot build therefore busy-waits
+ * for the duration of the copy. That is still strictly better than what it replaces —
+ * copy-on-write did the same O(n) copy on *every write* and lost concurrent ones —
+ * but it is the reason `PlatformLock.linux.kt` flags a pthread mutex as the next step
+ * if this target ever hosts a genuinely contended workload.
+ *
+ * Ordering note: iteration follows insertion order here, sorted-key order on
+ * JVM/Android (`ConcurrentSkipListMap`) and hash order on Apple. Nothing in the
+ * codebase depends on a specific order, and the `from`/`to` range overloads below
+ * degrade to a full scan on this target exactly as they did before — they have no
+ * callers outside the JVM-only `LargeSoftCache`.
+ */
 actual class LargeCache<K, V> : ICacheOperations<K, V> {
-    private val mapRef = AtomicReference(LinkedHashMap<K, V>())
+    private val lock = PlatformLock()
 
-    private inline fun <R> withMap(block: (LinkedHashMap<K, V>) -> R): R = block(mapRef.value)
+    /** The live store. Every access must hold [lock]. */
+    private val map = LinkedHashMap<K, V>()
 
-    private inline fun mutate(block: (LinkedHashMap<K, V>) -> Unit) {
-        val copy = LinkedHashMap(mapRef.value)
-        block(copy)
-        mapRef.value = copy
-    }
+    /**
+     * A copy of [map] handed to bulk operations so they can run caller lambdas
+     * without holding [lock]. Null means "stale, rebuild on next use". Guarded by
+     * [lock]; never mutated once published, so readers may keep it as long as they
+     * like.
+     */
+    private var cachedSnapshot: Map<K, V>? = null
 
-    actual fun keys(): Set<K> = withMap { LinkedHashSet(it.keys) }
-
-    actual fun values(): Iterable<V> = withMap { ArrayList(it.values) }
-
-    actual fun get(key: K): V? = withMap { it[key] }
-
-    actual fun remove(key: K): V? {
-        val current = mapRef.value
-        val value = current[key]
-        if (value != null) {
-            mutate { it.remove(key) }
+    private fun snapshot(): Map<K, V> =
+        lock.withLock {
+            cachedSnapshot ?: LinkedHashMap(map).also { cachedSnapshot = it }
         }
-        return value
-    }
 
-    actual fun isEmpty(): Boolean = withMap { it.isEmpty() }
+    /** Runs [block] over a stable snapshot, outside the lock. */
+    private inline fun <R> withMap(block: (Map<K, V>) -> R): R = block(snapshot())
+
+    /** Runs [block] over the live map under [lock] without invalidating the snapshot. */
+    private inline fun <R> read(block: (MutableMap<K, V>) -> R): R = lock.withLock { block(map) }
+
+    /** Runs [block] over the live map under [lock] and drops the read snapshot. */
+    private inline fun <R> mutate(block: (MutableMap<K, V>) -> R): R =
+        lock.withLock {
+            cachedSnapshot = null
+            block(map)
+        }
+
+    actual fun keys(): Set<K> = snapshot().keys
+
+    actual fun values(): Iterable<V> = snapshot().values
+
+    actual fun get(key: K): V? = read { it[key] }
+
+    actual fun remove(key: K): V? =
+        lock.withLock {
+            val removed = map.remove(key)
+            if (removed != null) cachedSnapshot = null
+            removed
+        }
+
+    actual fun isEmpty(): Boolean = read { it.isEmpty() }
 
     actual fun clear() {
-        mapRef.value = LinkedHashMap()
+        mutate { it.clear() }
     }
 
-    actual fun containsKey(key: K): Boolean = withMap { it.containsKey(key) }
+    actual fun containsKey(key: K): Boolean = read { it.containsKey(key) }
 
     actual fun put(
         key: K,
@@ -63,33 +134,61 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
         mutate { it[key] = value }
     }
 
+    /**
+     * Mirrors the JVM actual's `putIfAbsent`: [builder] runs outside the lock (it is
+     * caller code and must not be able to re-enter a non-reentrant lock), and the
+     * insert is only published if no one won the race in the meantime.
+     */
     actual fun getOrCreate(
         key: K,
         builder: (key: K) -> V,
     ): V {
-        val existing = get(key)
-        if (existing != null) return existing
+        read { it[key] }?.let { return it }
+
         val newObject = builder(key)
-        mutate { it[key] = newObject }
-        return get(key) ?: newObject
+
+        return lock.withLock {
+            val existing = map[key]
+            if (existing != null) {
+                existing
+            } else {
+                map[key] = newObject
+                cachedSnapshot = null
+                newObject
+            }
+        }
     }
 
+    /**
+     * True only when *this* call inserted the value — matching the JVM actual's
+     * `putIfAbsent(key, newObject) == null`. The previous implementation returned
+     * `get(key) != null`, which also reported true when another thread had just
+     * created the entry, double-firing whatever the caller does with a fresh key.
+     */
     actual fun createIfAbsent(
         key: K,
         builder: (key: K) -> V,
     ): Boolean {
-        val existing = get(key)
-        if (existing != null) return false
+        if (read { it.containsKey(key) }) return false
+
         val newObject = builder(key)
-        mutate { it[key] = newObject }
-        return get(key) != null
+
+        return lock.withLock {
+            if (map.containsKey(key)) {
+                false
+            } else {
+                map[key] = newObject
+                cachedSnapshot = null
+                true
+            }
+        }
     }
 
-    actual override fun size(): Int = withMap { it.size }
+    actual override fun size(): Int = read { it.size }
 
     actual override fun forEach(consumer: ICacheBiConsumer<K, V>) {
-        // Snapshot entries to avoid ConcurrentModificationException
-        withMap { map -> map.entries.toList() }.forEach { consumer.accept(it.key, it.value) }
+        // The snapshot is already immutable, so no defensive entries.toList() is needed.
+        withMap { map -> map.forEach { consumer.accept(it.key, it.value) } }
     }
 
     actual override fun filter(consumer: CacheCollectors.BiFilter<K, V>): List<V> = withMap { map -> map.filter { consumer.filter(it.key, it.value) }.values.toList() }
