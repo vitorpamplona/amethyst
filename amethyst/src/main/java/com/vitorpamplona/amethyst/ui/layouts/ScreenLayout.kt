@@ -28,7 +28,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
@@ -38,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.components.getActivity
 
 /** How the app shell presents its top-level navigation for the current window size. */
 enum class NavigationStyle {
@@ -46,12 +44,13 @@ enum class NavigationStyle {
     BOTTOM_BAR,
 
     /**
-     * Medium windows (portrait tablets, unfolded foldables): a left navigation rail
-     * replaces the bottom bar; the drawer stays modal behind the rail's avatar button.
+     * Every non-Compact window that does not dock — portrait tablets and unfolded foldables at
+     * any width, plus short landscape windows: a left navigation rail replaces the bottom bar
+     * and the drawer stays modal behind the rail's avatar button.
      */
     NAV_RAIL,
 
-    /** Expanded windows (landscape tablets, desktop windows): the drawer docks permanently on the left. */
+    /** Wide, landscape, tall windows (landscape tablets, desktop): the drawer docks permanently on the left. */
     PERMANENT_DRAWER,
 }
 
@@ -62,7 +61,7 @@ enum class NavigationStyle {
 @Immutable
 data class ScreenLayoutSpec(
     val navigationStyle: NavigationStyle,
-    val showsNotificationPanel: Boolean,
+    val hasRoomForNotificationPanel: Boolean,
 ) {
     /**
      * True on the rail and permanent-drawer tiers. Large screens hide the bottom bar and pin
@@ -71,16 +70,18 @@ data class ScreenLayoutSpec(
     val isLargeScreen: Boolean get() = navigationStyle != NavigationStyle.BOTTOM_BAR
 
     companion object {
-        val Phone = ScreenLayoutSpec(NavigationStyle.BOTTOM_BAR, showsNotificationPanel = false)
+        val Phone = ScreenLayoutSpec(NavigationStyle.BOTTOM_BAR, hasRoomForNotificationPanel = false)
     }
 }
 
 val LocalScreenLayout = compositionLocalOf { ScreenLayoutSpec.Phone }
 
 /**
- * Minimum window width for the docked notification panel: the permanent drawer
- * ([PermanentDrawerWidth]) + a readable center pane + the panel ([NotificationPanelWidth])
- * only coexist comfortably from a landscape-tablet-sized window up.
+ * Minimum window width for the docked notification panel: a leading navigation pane, a
+ * readable center pane and the panel ([NotificationPanelWidth]) only coexist comfortably from
+ * a landscape-tablet-sized window up. Sized against the widest leading pane, the permanent
+ * drawer ([PermanentDrawerWidth]); the rail is narrower, so a railed window that clears this
+ * gets a roomier center pane rather than a tighter one.
  */
 private const val NOTIFICATION_PANEL_MIN_WINDOW_DP = 1200
 
@@ -114,8 +115,8 @@ private const val DOCK_MIN_WINDOW_HEIGHT_DP = 600
  * tall enough for the drawer's own content to be usable; everything else that is not Compact
  * falls through to the rail, which pairs with the existing swipe-in modal drawer.
  *
- * Takes plain dp rather than a [WindowWidthSizeClass] so a caller cannot pass a size class
- * that contradicts the size, and so the whole table is unit-testable without a composition.
+ * A square window counts as landscape and docks; `Configuration.ORIENTATION_LANDSCAPE`
+ * breaks that tie the other way, so the two disagree at exactly width == height.
  */
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 internal fun decideNavigationStyle(
@@ -139,20 +140,10 @@ internal fun decideNavigationStyle(
 /**
  * Whether the window is wide enough to dock the notification feed beside the content.
  *
- * Deliberately not keyed on [NavigationStyle.PERMANENT_DRAWER]: a wide portrait window now
- * gets the rail, and gating on the dock would strip a panel it has today. Named
- * `decideNotificationPanel` rather than `showsNotificationPanel` so it does not shadow
- * [ScreenLayoutSpec.showsNotificationPanel] at the construction site.
- *
- * The [NavigationStyle.BOTTOM_BAR] term is not load-bearing — Compact is under 600dp, so a
- * bottom-bar window cannot reach 1200dp — but it makes that an invariant the code enforces.
+ * Deliberately not keyed on [NavigationStyle]: a wide portrait window now gets the rail, and
+ * gating on the dock would strip a panel it has today.
  */
-internal fun decideNotificationPanel(
-    style: NavigationStyle,
-    windowWidthDp: Int,
-): Boolean =
-    style != NavigationStyle.BOTTOM_BAR &&
-        windowWidthDp >= NOTIFICATION_PANEL_MIN_WINDOW_DP
+internal fun hasRoomForNotificationPanel(windowWidthDp: Int): Boolean = windowWidthDp >= NOTIFICATION_PANEL_MIN_WINDOW_DP
 
 /**
  * Centers a destination's content at [FeedContentMaxWidth]. The outer box paints the theme
@@ -178,23 +169,15 @@ fun CappedScreenContent(content: @Composable () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun rememberScreenLayoutSpec(): ScreenLayoutSpec {
-    val widthSizeClass = calculateWindowSizeClass(getActivity()).widthSizeClass
-    val windowWidthDp = LocalConfiguration.current.screenWidthDp
-    return remember(widthSizeClass, windowWidthDp) {
-        val style =
-            when (widthSizeClass) {
-                WindowWidthSizeClass.Expanded -> NavigationStyle.PERMANENT_DRAWER
-                WindowWidthSizeClass.Medium -> NavigationStyle.NAV_RAIL
-                else -> NavigationStyle.BOTTOM_BAR
-            }
+    val configuration = LocalConfiguration.current
+    val windowWidthDp = configuration.screenWidthDp
+    val windowHeightDp = configuration.screenHeightDp
+    return remember(windowWidthDp, windowHeightDp) {
         ScreenLayoutSpec(
-            navigationStyle = style,
-            showsNotificationPanel =
-                style == NavigationStyle.PERMANENT_DRAWER &&
-                    windowWidthDp >= NOTIFICATION_PANEL_MIN_WINDOW_DP,
+            navigationStyle = decideNavigationStyle(windowWidthDp, windowHeightDp),
+            hasRoomForNotificationPanel = hasRoomForNotificationPanel(windowWidthDp),
         )
     }
 }

@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.layouts
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -30,7 +32,7 @@ import org.junit.Test
  *
  * Sizes are window dp, width first. Every row of the spec's Behaviour table appears here.
  */
-class ScreenLayoutSpecTest {
+class ScreenLayoutTest {
     private fun assertStyle(
         expected: NavigationStyle,
         widthDp: Int,
@@ -86,19 +88,10 @@ class ScreenLayoutSpecTest {
     // ---- Notification panel ----
 
     @Test
-    fun panelHiddenJustBelowTheThreshold() = assertEquals(false, decideNotificationPanel(NavigationStyle.PERMANENT_DRAWER, 1199))
+    fun panelHiddenJustBelowTheThreshold() = assertFalse(hasRoomForNotificationPanel(1199))
 
     @Test
-    fun panelShownExactlyAtTheThreshold() = assertEquals(true, decideNotificationPanel(NavigationStyle.PERMANENT_DRAWER, 1200))
-
-    @Test
-    fun panelShownAboveTheThreshold() = assertEquals(true, decideNotificationPanel(NavigationStyle.PERMANENT_DRAWER, 1201))
-
-    @Test
-    fun panelSurvivesTheCollapseToTheRail() = assertEquals(true, decideNotificationPanel(NavigationStyle.NAV_RAIL, 1200))
-
-    @Test
-    fun panelNeverAppearsOnTheBottomBar() = assertEquals(false, decideNotificationPanel(NavigationStyle.BOTTOM_BAR, 1200))
+    fun panelShownExactlyAtTheThreshold() = assertTrue(hasRoomForNotificationPanel(1200))
 
     /**
      * A landscape-short window: wide enough for the panel, too short for the dock. Rail plus
@@ -106,8 +99,7 @@ class ScreenLayoutSpecTest {
      */
     @Test
     fun shortLandscapeYieldsRailPlusPanel() {
-        val style = decideNavigationStyle(1200, 599)
-        assertEquals(NavigationStyle.NAV_RAIL, style)
-        assertEquals(true, decideNotificationPanel(style, 1200))
+        assertStyle(NavigationStyle.NAV_RAIL, 1200, 599)
+        assertTrue(hasRoomForNotificationPanel(1200))
     }
 }
