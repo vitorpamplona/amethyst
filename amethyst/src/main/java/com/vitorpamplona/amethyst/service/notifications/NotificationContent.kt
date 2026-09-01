@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -205,7 +206,10 @@ object NotificationContent {
         when (event) {
             is PictureEvent -> event.imetaTags().firstOrNull()?.url
             is VideoEvent -> {
-                val meta = event.imetaTags().firstOrNull()
+                // selectVideoTrack fills the poster in from sibling imetas, so a ladder that
+                // declares `image` on only some of its rungs still gets a big picture instead of
+                // falling back to a playlist URL Coil cannot decode.
+                val meta = event.selectVideoTrack()
                 meta?.image?.firstOrNull() ?: meta?.url
             }
             else -> null

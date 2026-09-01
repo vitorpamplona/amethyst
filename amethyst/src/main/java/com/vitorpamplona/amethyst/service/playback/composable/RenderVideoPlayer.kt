@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,10 +48,14 @@ import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.vitorpamplona.amethyst.service.playback.composable.controls.BottomGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeControlsState
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeLevelIndicator
+import com.vitorpamplona.amethyst.service.playback.composable.controls.LogVideoQualitySelection
+import com.vitorpamplona.amethyst.service.playback.composable.controls.METERED_MAX_SHORT_SIDE_PX
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAnimatedBottomInfo
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
+import com.vitorpamplona.amethyst.service.playback.composable.controls.applyViewportConstraint
+import com.vitorpamplona.amethyst.service.playback.composable.controls.clampViewportShortSide
 import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscreenSwipeControls
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
@@ -105,6 +110,15 @@ fun RenderVideoPlayer(
     // unnecessary recomposition of the whole player tree just to update a value that is only
     // ever read inside the onDoubleTap callback below.
     val containerWidth = remember { intArrayOf(0) }
+
+    // Last measured player size, kept out of snapshot state for the same reason as containerWidth:
+    // it exists only so a connectivity flip can re-push the viewport without a layout pass.
+    val lastMeasured = remember { intArrayOf(0, 0) }
+    val isMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
+    // Fullscreen is exempt: the cap exists to hold back feeds that autoplay without being asked,
+    // and someone who tapped into fullscreen on mobile data asked. Capping there would also put a
+    // ceiling the quality menu's "Auto" could not exceed.
+    val viewportCeiling = if (isMetered && !isFullscreen) METERED_MAX_SHORT_SIDE_PX else 0
     val isLive = remember(mediaItem.src.videoUri, mediaItem.src.mimeType) { isHlsMedia(mediaItem.src.videoUri, mediaItem.src.mimeType) }
 
     val swipeState = remember { FullscreenSwipeControlsState() }
@@ -131,6 +145,14 @@ fun RenderVideoPlayer(
     }
 
     WatchPlaybackErrors(controllerState)
+    LogVideoQualitySelection(controllerState.controller)
+
+    // Moving on or off mobile data does not relayout, so the new ceiling has to be pushed by hand.
+    // Before the first measurement lastMeasured is still zero and applyViewportConstraint no-ops.
+    LaunchedEffect(viewportCeiling, controllerState.controller) {
+        val (w, h) = clampViewportShortSide(lastMeasured[0], lastMeasured[1], viewportCeiling)
+        applyViewportConstraint(controllerState.controller, w, h)
+    }
 
     // Audio files have no video dimensions, so without this the player collapses to a thin strip and
     // the controls get crammed. Size it square (capped) so the visualizer and controls get room.
@@ -148,8 +170,13 @@ fun RenderVideoPlayer(
     Box(
         modifier =
             playerModifier
-                .onSizeChanged { containerWidth[0] = it.width }
-                .pointerInput(isLive, controllerState) {
+                .onSizeChanged {
+                    containerWidth[0] = it.width
+                    lastMeasured[0] = it.width
+                    lastMeasured[1] = it.height
+                    val (w, h) = clampViewportShortSide(it.width, it.height, viewportCeiling)
+                    applyViewportConstraint(controllerState.controller, w, h)
+                }.pointerInput(isLive, controllerState) {
                     detectTapGestures(
                         onTap = { controllerVisible.value = !controllerVisible.value },
                         onDoubleTap = { offset ->

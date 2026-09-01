@@ -21,33 +21,169 @@
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
 import androidx.annotation.OptIn
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
+import kotlin.math.ceil
 
 internal fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
 
-// Finds the track with the smallest short side (min(width, height)) in the given video group.
-// Returns null if no track has a positive short side. Used to force lowest-resolution playback
-// in feeds to save bandwidth. Skips tracks the device can't decode — ExoPlayer would silently
-// reject an override pointing at an unsupported track and fall back to adaptive selection.
-@OptIn(UnstableApi::class)
-internal fun findLowestResolutionTrackIndex(group: Tracks.Group): Int? {
-    var bestIndex: Int? = null
-    var bestShortSide = Int.MAX_VALUE
-    for (i in 0 until group.length) {
-        if (!group.isTrackSupported(i)) continue
-        val format = group.getTrackFormat(i)
-        val shortSide = minOf(format.width, format.height)
-        if (shortSide > 0 && shortSide < bestShortSide) {
-            bestShortSide = shortSide
-            bestIndex = i
-        }
+/**
+ * Constrains adaptive selection to the area the player is actually drawn in.
+ *
+ * ExoPlayer already filters renditions by a viewport, but its default viewport is the **physical
+ * display** (`TrackSelectionParameters.Builder.init` sets
+ * `isViewportSizeLimitedByPhysicalDisplaySize`), so every player — a thumbnail in a note, a
+ * full-bleed short, a PiP window — is told it has the whole screen to fill and picks whatever
+ * bandwidth allows up to display resolution. Handing it the measured size instead is the whole
+ * quality policy: a full-width video gets the top of the ladder, a small one gets the rung that
+ * matches its pixels, and both still adapt to the connection underneath that ceiling.
+ *
+ * Safe by construction, which is why this uses `setViewportSize` rather than `setMaxVideoSize`:
+ * DefaultTrackSelector derives its retain threshold from an actual rendition ("the smallest to
+ * exceed the maximum size at which it can be displayed within the viewport") and leaves the group
+ * untouched when no rendition covers the viewport, so a tiny player can never filter every track
+ * away. A manual pick from the quality menu still wins — overrides are re-applied after
+ * constraint-based selection runs.
+ */
+internal fun Modifier.constrainVideoQualityToViewport(
+    player: Player,
+    maxShortSidePx: () -> Int = { 0 },
+): Modifier =
+    onSizeChanged {
+        // Evaluated at measure time, not at composition: a caller whose window is still resizing
+        // (PiP) needs the answer for *this* layout pass. Always pushes something — a caller that
+        // wants to distrust its own measurement caps it rather than skipping, so a pooled player
+        // can never keep a viewport left over from the view that had it last.
+        val (width, height) = clampViewportShortSide(it.width, it.height, maxShortSidePx())
+        applyViewportConstraint(player, width, height)
     }
-    return bestIndex
+
+/**
+ * Short side the viewport is capped to on a metered connection.
+ *
+ * Sizing the ladder to the player is the right default on wifi, but on mobile data it would hand a
+ * full-width card most of the ladder with nothing holding it back — the app's other lever is the
+ * autoplay `ConnectivityType` gate, which decides *whether* to play, not how much to pull. 480 on
+ * the short side keeps a card watchable while staying near the rung the old fixed-lowest policy
+ * would have picked.
+ */
+const val METERED_MAX_SHORT_SIDE_PX = 480
+
+/**
+ * Ceiling the PiP player uses until its window has actually shrunk.
+ *
+ * `processIntentForPiP` calls `enterPictureInPictureMode` from composition, so the first layout
+ * pass can measure the activity at full screen. Capping rather than skipping the push means the
+ * selector never sees that full-screen size, and never keeps a stale one either when PiP is never
+ * entered at all — the window is a few inches wide, so nothing above this is ever wanted here.
+ */
+const val PIP_PRESHRINK_MAX_SHORT_SIDE_PX = 480
+
+/**
+ * Scales a measured player size down until its short side fits [maxShortSidePx], preserving aspect
+ * so the viewport still describes the shape of the player and not just its area. Sizes already
+ * within the cap, and a non-positive cap, pass through untouched.
+ */
+internal fun clampViewportShortSide(
+    widthPx: Int,
+    heightPx: Int,
+    maxShortSidePx: Int,
+): Pair<Int, Int> {
+    val shortSide = minOf(widthPx, heightPx)
+    if (maxShortSidePx <= 0 || shortSide <= 0 || shortSide <= maxShortSidePx) return widthPx to heightPx
+
+    val scale = maxShortSidePx.toDouble() / shortSide
+    // Round up so the cap is never undershot into a lower rung by a rounding artifact.
+    return ceil(widthPx * scale).toInt() to ceil(heightPx * scale).toInt()
 }
+
+// Runs from onSizeChanged on the player's application looper (main thread), which is where
+// trackSelectionParameters must be written. Writing them re-runs track selection and, for a
+// pooled controller, crosses an IPC boundary, so [needsViewportUpdate] keeps a no-op layout pass
+// from churning either.
+internal fun applyViewportConstraint(
+    player: Player,
+    widthPx: Int,
+    heightPx: Int,
+) {
+    val current = player.trackSelectionParameters
+    if (!needsViewportUpdate(current.viewportWidth, current.viewportHeight, widthPx, heightPx)) return
+
+    Log.d(VIDEO_QUALITY_TAG) {
+        "viewport ${widthPx}x$heightPx mediaId=${player.currentMediaItem?.mediaId} " +
+            "(was ${current.viewportWidth}x${current.viewportHeight})"
+    }
+
+    player.trackSelectionParameters =
+        current
+            .buildUpon()
+            // orientationMayChange mirrors media3's own default: it keeps a landscape rendition in
+            // a portrait box (a letterboxed live stream) from being judged against the short edge.
+            .setViewportSize(widthPx, heightPx, true)
+            .build()
+}
+
+/**
+ * Logcat tag for the rendition trace: every viewport push, and the rung actually selected against
+ * the ladder that was on offer. Replaces the per-media-item trace the old fixed-policy selector
+ * emitted — without it, "Amethyst is eating my data" is not a debuggable report.
+ *
+ * ```
+ * adb logcat -s VideoQuality
+ * ```
+ */
+const val VIDEO_QUALITY_TAG = "VideoQuality"
+
+/**
+ * Traces which rendition adaptive selection landed on, against the full ladder the manifest
+ * offered.
+ *
+ * The listener is registered only when the trace can actually be emitted — debug builds set
+ * `Log.minLevel = DEBUG` while benchmark/release set `ERROR` (see [PLAYBACK_DIAG_TAG]) — so the
+ * release path keeps the "no listener per player" property that dropping the old selector bought.
+ */
+@Composable
+fun LogVideoQualitySelection(player: Player) {
+    if (Log.minLevel > LogLevel.DEBUG) return
+
+    DisposableEffect(player) {
+        val listener =
+            object : Player.Listener {
+                override fun onTracksChanged(tracks: Tracks) {
+                    val group = getVideoTrackGroup(tracks) ?: return
+                    val ladder =
+                        (0 until group.length).joinToString(", ") { i ->
+                            val f = group.getTrackFormat(i)
+                            "${f.width}x${f.height}${if (group.isTrackSelected(i)) "*" else ""}"
+                        }
+                    Log.d(VIDEO_QUALITY_TAG) {
+                        "selected(*) mediaId=${player.currentMediaItem?.mediaId} of $ladder"
+                    }
+                }
+            }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+}
+
+// A zero dimension means the player has not been laid out yet — leaving the previous constraint
+// in place is better than declaring a viewport nothing can fill.
+internal fun needsViewportUpdate(
+    currentWidth: Int,
+    currentHeight: Int,
+    newWidth: Int,
+    newHeight: Int,
+): Boolean = newWidth > 0 && newHeight > 0 && (currentWidth != newWidth || currentHeight != newHeight)
 
 @OptIn(UnstableApi::class)
 internal fun hasVideoOverride(player: Player): Boolean = player.trackSelectionParameters.overrides.any { (key, _) -> key.type == C.TRACK_TYPE_VIDEO }
