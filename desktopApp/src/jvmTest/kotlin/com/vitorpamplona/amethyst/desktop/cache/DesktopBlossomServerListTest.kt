@@ -25,8 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -79,24 +84,36 @@ class DesktopBlossomServerListTest {
 
     @Test
     fun `BlossomServerListState surfaces the servers from the cached event`() =
-        runTest {
+        // Deliberately runBlocking, not runTest: BlossomServerListState.flow hops through
+        // real Dispatchers.IO (flowOn) into a stateIn collector. Under runTest the awaiting
+        // coroutine and the stateIn scope sit on the virtual-time scheduler, and the IO
+        // handoff can park while that scheduler is idle — runTest then aborts with
+        // UncompletedCoroutinesError (seen on CI). Real dispatchers end-to-end make the
+        // await deterministic; withTimeout keeps a hang from stalling the suite.
+        runBlocking {
             val cache = DesktopLocalCache()
             val signer = NostrSignerInternal(KeyPair())
             val servers = listOf("https://blossom.example.com")
             val event = signedServerList(servers, signer)
             cache.consume(event, relayUrl)
 
-            val state =
-                BlossomServerListState(
-                    signer = signer,
-                    cache = cache,
-                    scope = backgroundScope,
-                )
+            val scope = CoroutineScope(SupervisorJob())
+            try {
+                val state =
+                    BlossomServerListState(
+                        signer = signer,
+                        cache = cache,
+                        scope = scope,
+                    )
 
-            // Await the IO-backed stateIn subscription first: the flow settling proves the
-            // state finished wiring, after which the synchronous getter must agree. Asserting
-            // the getter before the flow raced the Dispatchers.IO hop on fast CI runners.
-            assertEquals(servers, state.flow.first { it.isNotEmpty() })
-            assertEquals(servers, state.getBlossomServersList()?.servers())
+                // Await the IO-backed stateIn subscription first: the flow settling proves the
+                // state finished wiring, after which the synchronous getter must agree.
+                withTimeout(30_000) {
+                    assertEquals(servers, state.flow.first { it.isNotEmpty() })
+                }
+                assertEquals(servers, state.getBlossomServersList()?.servers())
+            } finally {
+                scope.cancel()
+            }
         }
 }
