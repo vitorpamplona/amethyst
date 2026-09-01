@@ -335,9 +335,9 @@ fun AppNavigation(
     val nav = rememberNav()
 
     // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.
-    // Hosted here rather than in LoggedInPage because the dialog links out to the relay-login
-    // settings screen, which needs the nav created just above.
-    RelayAuthPromptHost(accountViewModel, nav)
+    // Hosted here rather than in LoggedInPage so one dialog serves the whole shell: challenges
+    // arrive off the shared relay socket, not from whatever screen happens to be on top.
+    RelayAuthPromptHost(accountViewModel)
 
     // One layout decision per window size for the whole shell: bottom bar vs rail vs
     // permanent drawer, plus the docked notification panel. Every screen, bar and panel

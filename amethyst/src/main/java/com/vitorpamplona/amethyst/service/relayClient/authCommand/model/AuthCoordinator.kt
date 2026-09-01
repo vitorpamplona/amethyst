@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
@@ -153,6 +154,16 @@ class AuthCoordinator(
                                     }
                                     UserAuthChoice.ALWAYS_ALLOW -> {
                                         account.relayAuthLedger.setDecision(relayUrl.url, RelayAuthDecision.ALLOW)
+                                        true
+                                    }
+                                    UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE -> {
+                                        // Written here rather than in the dialog because the policy belongs to
+                                        // the account the prompt named — one socket serves every logged-in
+                                        // account, so the screen's account is not necessarily this one.
+                                        // No per-relay decision is stored: the policy already answers this
+                                        // relay, and an exception on top of it would survive a later switch
+                                        // back to "decide per relay".
+                                        account.changeDefaultRelayAuthPolicy(RelayAuthPolicy.ALWAYS)
                                         true
                                     }
                                     UserAuthChoice.BLOCK -> {

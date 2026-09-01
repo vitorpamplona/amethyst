@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPrompt
@@ -74,8 +75,6 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.UserAuth
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -95,14 +94,12 @@ private const val AVATAR_SLOT = "avatar"
 /**
  * App-wide host for NIP-42 auth prompts. Collects [RelayAuthPromptBus.prompts] and shows one
  * dialog at a time explaining *why* a relay wants the user to log in (who it serves), letting the
- * user allow once, always allow, or block the relay. Dismissing answers [UserAuthChoice.DISMISS],
+ * user allow once, always allow (this relay or every relay), or block the relay. Dismissing answers
+ * [UserAuthChoice.DISMISS],
  * which the bus also falls back to on timeout, so a relay connection never blocks on the UI.
  */
 @Composable
-fun RelayAuthPromptHost(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
+fun RelayAuthPromptHost(accountViewModel: AccountViewModel) {
     val bus = remember { Amethyst.instance.authCoordinator.promptBus }
     val queue = remember { mutableStateListOf<RelayAuthPrompt>() }
 
@@ -119,7 +116,7 @@ fun RelayAuthPromptHost(
     // its answer window starts from the moment it is visible rather than from the challenge.
     queue.firstOrNull { !it.isResolved }?.let { prompt ->
         LaunchedEffect(prompt) { prompt.markShown() }
-        RelayAuthPromptDialog(prompt, accountViewModel, nav) { choice ->
+        RelayAuthPromptDialog(prompt, accountViewModel) { choice ->
             prompt.respond(choice)
             queue.remove(prompt)
         }
@@ -136,18 +133,31 @@ fun RelayAuthPromptHost(
  * separate blocks: a purpose-specific title, a purpose label, an avatar row, and a red "if you don't"
  * consequence line, each of which repeated the same name.
  *
- * Two buttons and a switch replace four stacked buttons. Nothing here writes a global setting: the
- * old "always deliver my messages" silently flipped the policy to CUSTOM plus two account-wide
- * toggles, so it is now a link to the screen where those toggles are visible.
+ * Two buttons and a switch replace four stacked buttons. The two links under them are the standing
+ * answers, one per direction: "Never allow" writes a DENY for this relay, "Always, all relays"
+ * switches the account to [RelayAuthPolicy.ALWAYS] so nothing asks again. Only the second one is
+ * account-wide, and it confirms before it writes — see [AlwaysAllowEverywhereConfirmation]. The old
+ * "always deliver my messages" is still gone: it flipped the policy to CUSTOM plus two account-wide
+ * toggles *silently*, which is the part that was wrong, not the writing itself.
  */
 @Composable
 private fun RelayAuthPromptDialog(
     prompt: RelayAuthPrompt,
     accountViewModel: AccountViewModel,
-    nav: INav,
     onChoice: (UserAuthChoice) -> Unit,
 ) {
     var rememberRelay by remember(prompt) { mutableStateOf(false) }
+    var confirmEverywhere by remember(prompt) { mutableStateOf(false) }
+    val accountName = rememberDisplayName(prompt.askingAccount, accountViewModel)
+
+    if (confirmEverywhere) {
+        AlwaysAllowEverywhereConfirmation(
+            accountName = accountName,
+            onDismiss = { confirmEverywhere = false },
+            onConfirm = { onChoice(UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE) },
+        )
+        return
+    }
 
     // The purpose the user is most likely to recognize as "what I was just doing".
     val primary = remember(prompt) { prompt.purposes.primary() }
@@ -189,7 +199,7 @@ private fun RelayAuthPromptDialog(
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 RelayHeader(prompt, accountViewModel)
                 Text(
-                    text = stringRes(R.string.relay_auth_login_as, rememberDisplayName(prompt.askingAccount, accountViewModel)),
+                    text = stringRes(R.string.relay_auth_login_as, accountName),
                     style = MaterialTheme.typography.headlineSmall,
                 )
             }
@@ -242,14 +252,34 @@ private fun RelayAuthPromptDialog(
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     ) { Text(stringRes(R.string.relay_auth_never_allow), style = MaterialTheme.typography.labelMedium) }
                     TextButton(
-                        onClick = {
-                            onChoice(UserAuthChoice.DISMISS)
-                            nav.nav(Route.RelayAuthSettings)
-                        },
-                    ) { Text(stringRes(R.string.relay_auth_how_we_decide), style = MaterialTheme.typography.labelMedium) }
+                        onClick = { confirmEverywhere = true },
+                    ) { Text(stringRes(R.string.relay_auth_always_allow_everywhere), style = MaterialTheme.typography.labelMedium) }
                 }
             }
         },
+    )
+}
+
+/**
+ * The one action in this flow that writes an account-wide setting, so it asks first.
+ *
+ * "Never allow" next to it is per-relay and reversible from the settings screen's exception list;
+ * this one changes what happens on every relay that ever asks, and a mis-tap would reveal the npub
+ * named above to all of them. The confirmation is what makes that scope visible before it is
+ * chosen — the label alone can't carry it.
+ */
+@Composable
+private fun AlwaysAllowEverywhereConfirmation(
+    accountName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.relay_auth_always_everywhere_title)) },
+        text = { Text(stringRes(R.string.relay_auth_always_everywhere_body, accountName)) },
+        confirmButton = { Button(onClick = onConfirm) { Text(stringRes(R.string.relay_auth_policy_always)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) } },
     )
 }
 

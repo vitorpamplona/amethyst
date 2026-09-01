@@ -40,6 +40,14 @@ enum class UserAuthChoice {
     /** Authenticate now and remember ALLOW for this relay. */
     ALWAYS_ALLOW,
 
+    /**
+     * Authenticate now and switch the asking account's top-level policy to
+     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy.ALWAYS], so every relay that
+     * asks is answered without a prompt. The account-wide counterpart of [ALWAYS_ALLOW], and the
+     * one choice here that writes a global setting — the dialog confirms it before sending it.
+     */
+    ALWAYS_ALLOW_EVERYWHERE,
+
     /** Do not authenticate and remember DENY for this relay. */
     BLOCK,
 

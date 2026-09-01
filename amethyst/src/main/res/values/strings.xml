@@ -1186,6 +1186,10 @@
     <string name="relay_auth_log_in">Log in</string>
     <string name="relay_auth_not_now">Not now</string>
     <string name="relay_auth_never_allow">Never allow</string>
+    <string name="relay_auth_always_allow_everywhere">Always, all relays</string>
+    <string name="relay_auth_always_everywhere_title">Log in to every relay?</string>
+    <string name="relay_auth_always_everywhere_body">Amethyst will log in as %1$s to every relay that asks, and stop asking. Relays you blocked, and the ones you set to never log in, stay that way. You can change this under Relay login.</string>
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <string name="relay_auth_how_we_decide">How Amethyst decides</string>
 
     <!-- Settings: three lists that each hold what their header says. -->
