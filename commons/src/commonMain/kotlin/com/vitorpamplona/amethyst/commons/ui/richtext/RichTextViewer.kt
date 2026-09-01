@@ -46,9 +46,11 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
@@ -246,6 +248,33 @@ private fun HashTagText(
     )
 }
 
+/**
+ * Inputs that fully determine the width of a space. Every note in a feed shares the same ones.
+ */
+private data class SpaceWidthKey(
+    val fontFamilyResolver: FontFamily.Resolver,
+    val density: Float,
+    val fontScale: Float,
+    val layoutDirection: LayoutDirection,
+    val textStyle: TextStyle,
+)
+
+/**
+ * Single-entry memo across composables.
+ *
+ * `remember` alone caches per call site, and every note card is its own call site — so a feed
+ * scroll built a [TextMeasurer] and shaped a space glyph once per card to arrive at the same
+ * number every time. Font resolution plus `Paragraph` construction is not free on a slow device,
+ * and it lands squarely in the layout path.
+ *
+ * A one-entry memo is enough because a feed renders every note in the same style at the same
+ * density; the key changes only on a theme, font-scale or locale-direction change, when
+ * recomputing once is exactly right. The read/write race is benign: two threads racing produce
+ * the same value, and the worst case is a redundant measure.
+ */
+private var spaceWidthKey: SpaceWidthKey? = null
+private var spaceWidthValue: Dp = 0.dp
+
 /** Width of a single space in [textStyle], used to space FlowRow words. */
 @Composable
 fun measureSpaceWidth(textStyle: TextStyle): Dp {
@@ -253,11 +282,26 @@ fun measureSpaceWidth(textStyle: TextStyle): Dp {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     return remember(fontFamilyResolver, density, layoutDirection, textStyle) {
-        val widthPx =
-            TextMeasurer(fontFamilyResolver, density, layoutDirection, 1)
-                .measure(" ", textStyle)
-                .size
-                .width
-        with(density) { widthPx.toDp() }
+        val key =
+            SpaceWidthKey(
+                fontFamilyResolver,
+                density.density,
+                density.fontScale,
+                layoutDirection,
+                textStyle,
+            )
+        if (key == spaceWidthKey) {
+            spaceWidthValue
+        } else {
+            val widthPx =
+                TextMeasurer(fontFamilyResolver, density, layoutDirection, 1)
+                    .measure(" ", textStyle)
+                    .size
+                    .width
+            val width = with(density) { widthPx.toDp() }
+            spaceWidthValue = width
+            spaceWidthKey = key
+            width
+        }
     }
 }

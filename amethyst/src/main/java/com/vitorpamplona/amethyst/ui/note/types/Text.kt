@@ -45,9 +45,12 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
+import com.vitorpamplona.amethyst.ui.note.NoteTrace
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
+import com.vitorpamplona.amethyst.ui.note.TracedComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayCommentScope
+import com.vitorpamplona.amethyst.ui.note.tracedDraw
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
@@ -104,48 +107,50 @@ fun RenderTextEvent(
     val noteEvent = note.event ?: return
 
     if (unPackReply != ReplyRenderType.NONE) {
-        // Eagerly pull the rest of this reply's thread while it's on screen, so opening
-        // the conversation finds it already loaded. No-op when the note is a root itself.
-        PreloadThreadForReply(note, accountViewModel)
+        TracedComposition(NoteTrace.TXT_REPLY) {
+            // Eagerly pull the rest of this reply's thread while it's on screen, so opening
+            // the conversation finds it already loaded. No-op when the note is a root itself.
+            PreloadThreadForReply(note, accountViewModel)
 
-        val canShowReply by
-            remember(note) {
-                derivedStateOf {
-                    noteEvent is BaseThreadedEvent && !makeItShort && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
-                }
-            }
-
-        val parentNote = remember(note) { replyingDirectlyTo(note, LocalCache) }
-
-        if (parentNote != null && canShowReply) {
-            when (unPackReply) {
-                ReplyRenderType.FULL -> {
-                    ReplyNoteComposition(parentNote, backgroundColor, accountViewModel, nav)
-                    Spacer(modifier = StdVertSpacer)
-                }
-
-                ReplyRenderType.LINE -> {
-                    // Zap receipts are signed by the recipient's lightning provider;
-                    // label the reply with the zap sender instead of the service key.
-                    val zapSender =
-                        if (parentNote.event is LnZapEvent) {
-                            observeZapSender(parentNote, accountViewModel).value
-                        } else {
-                            null
-                        }
-                    val parentAuthor = zapSender ?: parentNote.author
-                    if (parentAuthor != null) {
-                        ReplyToLabel(
-                            parentAuthorDisplay = parentAuthor.toBestDisplayName(),
-                            onClick = { nav.nav(routeFor(parentAuthor)) },
-                        )
-                        Spacer(modifier = HalfVertSpacer)
+            val canShowReply by
+                remember(note) {
+                    derivedStateOf {
+                        noteEvent is BaseThreadedEvent && !makeItShort && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
                     }
                 }
+
+            val parentNote = remember(note) { replyingDirectlyTo(note, LocalCache) }
+
+            if (parentNote != null && canShowReply) {
+                when (unPackReply) {
+                    ReplyRenderType.FULL -> {
+                        ReplyNoteComposition(parentNote, backgroundColor, accountViewModel, nav)
+                        Spacer(modifier = StdVertSpacer)
+                    }
+
+                    ReplyRenderType.LINE -> {
+                        // Zap receipts are signed by the recipient's lightning provider;
+                        // label the reply with the zap sender instead of the service key.
+                        val zapSender =
+                            if (parentNote.event is LnZapEvent) {
+                                observeZapSender(parentNote, accountViewModel).value
+                            } else {
+                                null
+                            }
+                        val parentAuthor = zapSender ?: parentNote.author
+                        if (parentAuthor != null) {
+                            ReplyToLabel(
+                                parentAuthorDisplay = parentAuthor.toBestDisplayName(),
+                                onClick = { nav.nav(routeFor(parentAuthor)) },
+                            )
+                            Spacer(modifier = HalfVertSpacer)
+                        }
+                    }
+                }
+            } else if (!makeItShort && noteEvent is CommentEvent) {
+                // No in-cache parent note: this comment answers a scope rather than a note.
+                DisplayCommentScope(noteEvent, accountViewModel, nav)
             }
-        } else if (!makeItShort && noteEvent is CommentEvent) {
-            // No in-cache parent note: this comment answers a scope rather than a note.
-            DisplayCommentScope(noteEvent, accountViewModel, nav)
         }
     }
 
@@ -194,29 +199,33 @@ fun RenderTextEvent(
                 val tags =
                     remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
-                TranslatableRichTextViewer(
-                    content = eventContent,
-                    canPreview = canPreview && !makeItShort,
-                    quotesLeft = quotesLeft,
-                    modifier = Modifier.fillMaxWidth(),
-                    tags = tags,
-                    backgroundColor = backgroundColor,
-                    id =
-                        if (editState.value is GenericLoadable.Loaded) {
-                            (editState.value as GenericLoadable.Loaded<EditState>)
-                                .loaded.modificationToShow.value
-                                ?.idHex ?: note.idHex
-                        } else {
-                            note.idHex
-                        },
-                    callbackUri = callbackUri,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+                TracedComposition(NoteTrace.TXT_RICHTEXT) {
+                    TranslatableRichTextViewer(
+                        content = eventContent,
+                        canPreview = canPreview && !makeItShort,
+                        quotesLeft = quotesLeft,
+                        modifier = Modifier.fillMaxWidth().tracedDraw(NoteTrace.DRAW_RICHTEXT),
+                        tags = tags,
+                        backgroundColor = backgroundColor,
+                        id =
+                            if (editState.value is GenericLoadable.Loaded) {
+                                (editState.value as GenericLoadable.Loaded<EditState>)
+                                    .loaded.modificationToShow.value
+                                    ?.idHex ?: note.idHex
+                            } else {
+                                note.idHex
+                            },
+                        callbackUri = callbackUri,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
 
             if (noteEvent.hasHashtags()) {
-                DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
+                TracedComposition(NoteTrace.TXT_HASHTAGS) {
+                    DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
+                }
             }
         }
     }

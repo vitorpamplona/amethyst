@@ -88,6 +88,108 @@ android {
         buildConfigField("String", "RELEASE_NOTES_ID", "\"00d306e01792e48b93638b73b57a7eb8b89622a338b1b4f529622150d46cd710\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Measurement probe: see service/relayClient/reqCommand/ProbedCollect.kt. Off unless
+        // -PprobeNoFlowState=true is passed, so normal builds constant-fold it away.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_FLOW_STATE",
+            (project.findProperty("probeNoFlowState")?.toString() ?: "false"),
+        )
+
+        // Measurement probe: forces the reaction row's Crossfade / AnimatedContent wrappers
+        // onto their existing non-animated branch, so the cost of building the transition
+        // machinery per card can be measured. Off unless -PprobeNoRxAnimations=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_RX_ANIMATIONS",
+            (project.findProperty("probeNoRxAnimations")?.toString() ?: "false"),
+        )
+
+        // Measurement probe: strips the reaction row's ClickableBox down to a plain Box, so the
+        // cost of `clickable` + its eagerly-created MutableInteractionSource and ripple node can
+        // be bounded. Off unless -PprobeNoRxClickable=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_RX_CLICKABLE",
+            (project.findProperty("probeNoRxClickable")?.toString() ?: "false"),
+        )
+
+        // Candidate fix under measurement: keeps the reaction row's click, ripple and semantics
+        // but lets Compose build the interaction source and ripple node lazily on first touch.
+        // Off unless -PprobeLazyRxRipple=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_LAZY_RX_RIPPLE",
+            (project.findProperty("probeLazyRxRipple")?.toString() ?: "false"),
+        )
+
+        // Candidate fix under measurement: defers building Crossfade/AnimatedContent transitions
+        // until a value actually changes, so scrolling a card in costs nothing for animations
+        // that never play. Keeps the animations. -PfixLazyAnim=true.
+        buildConfigField(
+            "boolean",
+            "FIX_LAZY_ANIM",
+            (project.findProperty("fixLazyAnim")?.toString() ?: "false"),
+        )
+
+        // Measurement probe: replaces the reaction row's counter Text with a same-width Spacer,
+        // isolating the cost of text shaping from the rest of the button. Off unless
+        // -PprobeNoRxCounters=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_RX_COUNTERS",
+            (project.findProperty("probeNoRxCounters")?.toString() ?: "false"),
+        )
+
+        // Measurement probe: replaces the reaction row's produceState calls with a plain snapshot
+        // state holding the same initial value, so the coroutine each one launches per card is
+        // never started. Off unless -PprobeNoRxProduceState=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_RX_PRODUCE_STATE",
+            (project.findProperty("probeNoRxProduceState")?.toString() ?: "false"),
+        )
+
+        // Measurement probe: replaces the reaction row's icons with same-size Spacers, isolating
+        // vector-path and glyph rasterisation from the rest of the row's draw cost.
+        // Off unless -PprobeNoRxIcons=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_RX_ICONS",
+            (project.findProperty("probeNoRxIcons")?.toString() ?: "false"),
+        )
+
+        // Candidate fix under measurement: shares one VectorPainter per reaction icon across every
+        // card in the feed instead of one per card. -PfixSharedIcons=true.
+        buildConfigField(
+            "boolean",
+            "FIX_SHARED_ICONS",
+            (project.findProperty("fixSharedIcons")?.toString() ?: "false"),
+        )
+
+        // Splits the icon ablation: which half of the reaction row's icon draw cost is vector-path
+        // rasterisation (Like/Reply/Reposted) and which is MaterialSymbols font glyphs (Bolt,
+        // Share, ExpandLess/More, Mic). -PprobeNoRxVectorIcons / -PprobeNoRxGlyphIcons.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_RX_VECTOR_ICONS",
+            (project.findProperty("probeNoRxVectorIcons")?.toString() ?: "false"),
+        )
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_RX_GLYPH_ICONS",
+            (project.findProperty("probeNoRxGlyphIcons")?.toString() ?: "false"),
+        )
+
+        // Measurement probe: drops the circular clip from feed avatars, so the RenderThread cost of
+        // the per-avatar graphics layer + outline clip can be separated from decoding and drawing
+        // the image itself. Probe builds show square avatars. -PprobeNoAvatarClip=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_AVATAR_CLIP",
+            (project.findProperty("probeNoAvatarClip")?.toString() ?: "false"),
+        )
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -210,11 +312,15 @@ android {
         getByName("release") {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             isMinifyEnabled = !skipMapping
+            // See TRACE_NOTE_RENDER on the benchmark type below. Constant-false here, so
+            // R8 deletes every feed trace marker from the shipped build.
+            buildConfigField("boolean", "TRACE_NOTE_RENDER", "false")
         }
         getByName("debug") {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-DEBUG"
             resValue("string", "app_name", "@string/app_name_debug")
+            buildConfigField("boolean", "TRACE_NOTE_RENDER", "false")
         }
         create("benchmark") {
             initWith(getByName("release"))
@@ -223,6 +329,10 @@ android {
             resValue("string", "app_name", "@string/app_name_benchmark")
             isProfileable = true
             signingConfig = signingConfigs.getByName("debug")
+            // Emits atrace sections around each part of the feed's note card, so
+            // :macrobenchmark's TraceSectionMetric can attribute composition time
+            // per sub-component. Benchmark-only: see ui/note/NoteRenderTrace.kt.
+            buildConfigField("boolean", "TRACE_NOTE_RENDER", "true")
         }
     }
 
@@ -395,6 +505,10 @@ dependencies {
     // Usage: runtime-enable, then capture a Perfetto trace with the `track_event` data source:
     //   adb shell am broadcast -a androidx.tracing.perfetto.action.ENABLE_TRACING \
     //     -n com.vitorpamplona.amethyst.debug/androidx.tracing.perfetto.TracingReceiver
+    // atrace sections for the feed's note card (ui/note/NoteRenderTrace.kt). Compiled in
+    // everywhere, but constant-folded out of debug/release by BuildConfig.TRACE_NOTE_RENDER.
+    implementation(libs.androidx.tracing)
+
     debugImplementation("androidx.compose.runtime:runtime-tracing")
     debugImplementation("androidx.tracing:tracing-perfetto:1.0.1")
     debugImplementation("androidx.tracing:tracing-perfetto-binary:1.0.1")

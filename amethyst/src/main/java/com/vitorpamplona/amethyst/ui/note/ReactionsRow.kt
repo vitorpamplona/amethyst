@@ -31,6 +31,7 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -48,6 +49,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -106,8 +108,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -126,6 +128,7 @@ import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
 import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.collectAsStateProbed
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
@@ -143,6 +146,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.FloatingRecordingIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.components.ClickableBoxLazyRipple
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -227,7 +231,9 @@ fun ReactionsRow(
 
     InnerReactionRow(baseNote, showReactionDetail, addPadding, wantsToSeeReactions, editState, accountViewModel, nav)
 
-    LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel)
+    TracedComposition(NoteTrace.RX_ZAPRAISER) {
+        LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel)
+    }
 
     if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
@@ -246,15 +252,17 @@ private fun InnerReactionRow(
     nav: INav,
 ) {
     val voiceRecordingState = remember(baseNote.idHex) { mutableStateOf(false) }
-    val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
+    val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateProbed()
 
     GenericInnerReactionRow(
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
         weightTwo = if (voiceRecordingState.value) 2f else 1f,
         one = {
-            WatchReactionsZapsBoostsAndDisplayIfExists(baseNote, accountViewModel) {
-                RenderShowIndividualReactionsButton(wantsToSeeReactions, accountViewModel)
+            TracedComposition(NoteTrace.RX_INDICATORS) {
+                WatchReactionsZapsBoostsAndDisplayIfExists(baseNote, accountViewModel) {
+                    RenderShowIndividualReactionsButton(wantsToSeeReactions, accountViewModel)
+                }
             }
         },
         reactions = reactionRowItems,
@@ -270,71 +278,73 @@ private fun InnerReactionRow(
             // shared: the reference points at a membership-gated group event that non-members can't fetch,
             // and a DM shouldn't be rebroadcast at all. Reply/like/zap stay (reply routes into the group).
             val isRelayGroupMessage = baseNote.inGatherers?.any { it is RelayGroupChannel } == true
-            when (item.action) {
-                ReactionRowAction.Reply -> {
-                    ReplyReactionWithDialog(
-                        baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel,
-                        nav,
-                        showCounter = item.showCounter,
-                        voiceRecordingState = voiceRecordingState,
-                    )
-                }
-
-                ReactionRowAction.Boost -> {
-                    val isDM = baseNote.event is ChatroomKeyable
-                    if (!isDM && !isPrivateRumor && !isRelayGroupMessage) {
-                        BoostWithDialog(
+            TracedComposition(NoteTrace.forAction(item.action)) {
+                when (item.action) {
+                    ReactionRowAction.Reply -> {
+                        ReplyReactionWithDialog(
                             baseNote,
-                            editState,
+                            MaterialTheme.colorScheme.placeholderText,
+                            accountViewModel,
+                            nav,
+                            showCounter = item.showCounter,
+                            voiceRecordingState = voiceRecordingState,
+                        )
+                    }
+
+                    ReactionRowAction.Boost -> {
+                        val isDM = baseNote.event is ChatroomKeyable
+                        if (!isDM && !isPrivateRumor && !isRelayGroupMessage) {
+                            BoostWithDialog(
+                                baseNote,
+                                editState,
+                                MaterialTheme.colorScheme.placeholderText,
+                                accountViewModel,
+                                nav,
+                                showCounter = item.showCounter,
+                            )
+                        }
+                    }
+
+                    ReactionRowAction.Like -> {
+                        LikeReaction(
+                            baseNote,
                             MaterialTheme.colorScheme.placeholderText,
                             accountViewModel,
                             nav,
                             showCounter = item.showCounter,
                         )
                     }
-                }
 
-                ReactionRowAction.Like -> {
-                    LikeReaction(
-                        baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel,
-                        nav,
-                        showCounter = item.showCounter,
-                    )
-                }
-
-                ReactionRowAction.Zap -> {
-                    // Zaps stay enabled on private rumors: AccountViewModel.zap
-                    // forces the PRIVATE zap type, and the public nutzap/onchain
-                    // rails are suppressed for them.
-                    ZapReaction(
-                        baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel,
-                        nav = nav,
-                        showCounter = item.showCounter,
-                    )
-                }
-
-                ReactionRowAction.Share -> {
-                    if (!isPrivateRumor && !isRelayGroupMessage) {
-                        ShareReaction(
-                            note = baseNote,
+                    ReactionRowAction.Zap -> {
+                        // Zaps stay enabled on private rumors: AccountViewModel.zap
+                        // forces the PRIVATE zap type, and the public nutzap/onchain
+                        // rails are suppressed for them.
+                        ZapReaction(
+                            baseNote,
+                            MaterialTheme.colorScheme.placeholderText,
+                            accountViewModel,
                             nav = nav,
-                            grayTint = MaterialTheme.colorScheme.placeholderText,
+                            showCounter = item.showCounter,
                         )
                     }
-                }
 
-                ReactionRowAction.Pay -> {
-                    PayReaction(
-                        baseNote = baseNote,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel = accountViewModel,
-                    )
+                    ReactionRowAction.Share -> {
+                        if (!isPrivateRumor && !isRelayGroupMessage) {
+                            ShareReaction(
+                                note = baseNote,
+                                nav = nav,
+                                grayTint = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        }
+                    }
+
+                    ReactionRowAction.Pay -> {
+                        PayReaction(
+                            baseNote = baseNote,
+                            grayTint = MaterialTheme.colorScheme.placeholderText,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 }
             }
         },
@@ -350,11 +360,11 @@ fun ShareReaction(
 ) {
     var showShareSheet by remember { mutableStateOf(false) }
 
-    ClickableBox(
+    RxClickableBox(
         modifier = barChartModifier,
         onClick = { showShareSheet = true },
     ) {
-        ShareIcon(barChartModifier, grayTint)
+        RxIcon(barChartModifier, RxIconKind.GLYPH) { ShareIcon(barChartModifier, grayTint) }
     }
 
     if (showShareSheet) {
@@ -379,7 +389,7 @@ fun PayReaction(
     LoadAddressableNote(address, accountViewModel) { note ->
         var expanded by remember { mutableStateOf(false) }
 
-        ClickableBox(
+        RxClickableBox(
             modifier = iconSizeModifier,
             onClick = { expanded = true },
         ) {
@@ -416,7 +426,7 @@ private fun GenericInnerReactionRow(
     Row(
         verticalAlignment = CenterVertically,
         horizontalArrangement = RowColSpacing,
-        modifier = if (addPadding) ReactionRowHeightWithPadding else ReactionRowHeight,
+        modifier = (if (addPadding) ReactionRowHeightWithPadding else ReactionRowHeight).tracedDraw(NoteTrace.DRAW_REACTIONS),
     ) {
         if (showReactionDetail) {
             Row(
@@ -544,19 +554,19 @@ private fun RenderShowIndividualReactionsButton(
     wantsToSeeReactions: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
 ) {
-    ClickableBox(
+    RxClickableBox(
         onClick = { wantsToSeeReactions.value = !wantsToSeeReactions.value },
         modifier = Size20Modifier,
     ) {
-        CrossfadeIfEnabled(
+        RxCrossfade(
             targetState = wantsToSeeReactions.value,
             label = "RenderShowIndividualReactionsButton",
             accountViewModel = accountViewModel,
         ) {
             if (it) {
-                ExpandLessIcon(modifier = Size22Modifier, R.string.close_all_reactions_to_this_post)
+                RxIcon(Size22Modifier, RxIconKind.GLYPH) { ExpandLessIcon(modifier = Size22Modifier, R.string.close_all_reactions_to_this_post) }
             } else {
-                ExpandMoreIcon(modifier = Size22Modifier, R.string.open_all_reactions_to_this_post)
+                RxIcon(Size22Modifier, RxIconKind.GLYPH) { ExpandMoreIcon(modifier = Size22Modifier, R.string.open_all_reactions_to_this_post) }
             }
         }
     }
@@ -791,7 +801,7 @@ fun ReplyViaVoiceReaction(
                 onClick = onStop,
             )
         } else {
-            VoiceReplyIcon(iconSizeModifier, grayTint)
+            RxIcon(iconSizeModifier, RxIconKind.GLYPH) { VoiceReplyIcon(iconSizeModifier, grayTint) }
         }
     }
 
@@ -809,7 +819,7 @@ fun ReplyReaction(
     iconSizeModifier: Modifier = Size19Modifier,
     onPress: () -> Unit,
 ) {
-    ClickableBox(
+    RxClickableBox(
         modifier = iconSizeModifier,
         onClick = {
             if (baseNote.isDraft()) {
@@ -829,7 +839,7 @@ fun ReplyReaction(
             }
         },
     ) {
-        CommentIcon(iconSizeModifier, grayTint)
+        RxIcon(iconSizeModifier, RxIconKind.VECTOR) { FeedCommentIcon(iconSizeModifier, grayTint) }
     }
 
     if (showCounter) {
@@ -848,14 +858,240 @@ fun ReplyCounter(
     SlidingAnimationCount(repliesState, textColor, accountViewModel)
 }
 
+/** Latches the first time an animated counter's value moves off the one it was composed with. */
+private class CountChangeLatch {
+    var changed = false
+}
+
+/**
+ * An [AnimatedContent] that does not build its transition until the value actually changes.
+ *
+ * Same reasoning as `DeferredCrossfade`: `AnimatedContent` builds a `Transition` plus its content
+ * map and size animation on first composition, but first composition has nothing to animate. A
+ * reaction counter only slides when the count moves, which practically never happens in the second
+ * a card spends on screen during a scroll — so the whole apparatus is built and thrown away, once
+ * per counter per card.
+ *
+ * Rendering the bare content until the first change, then seeding a [MutableTransitionState] at the
+ * original value, keeps that first change animated exactly as before.
+ */
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+internal fun <T> DeferredAnimatedContent(
+    targetState: T,
+    label: String,
+    content: @Composable (T) -> Unit,
+) {
+    val initial = remember { targetState }
+    val latch = remember { CountChangeLatch() }
+    if (targetState != initial) latch.changed = true
+
+    if (!latch.changed) {
+        content(targetState)
+    } else {
+        val transitionState = remember { MutableTransitionState(initial) }
+        transitionState.targetState = targetState
+        val transition = rememberTransition(transitionState, label)
+        transition.AnimatedContent(
+            transitionSpec = { transitionSpec() },
+        ) { value ->
+            content(value)
+        }
+    }
+}
+
+/**
+ * Reaction-row icons that prefer the feed's shared [VectorPainter] when one is available.
+ *
+ * Falls back to the ordinary `Icon(imageVector = …)` path whenever no feed provided painters — a
+ * preview, a dialog, or any screen outside the feed — so behaviour and appearance are unchanged
+ * everywhere. See [FeedReactionPainters] for why the sharing is scoped rather than global.
+ */
+@Composable
+private fun FeedCommentIcon(
+    iconSizeModifier: Modifier,
+    tint: Color,
+) {
+    val shared = LocalFeedReactionPainters.current
+    if (BuildConfig.FIX_SHARED_ICONS && shared != null) {
+        TracedComposition(NoteTrace.SHARED_PAINTER) {
+            Material3Icon(
+                painter = shared.reply,
+                contentDescription = stringRes(id = R.string.reply_description),
+                modifier = iconSizeModifier,
+                tint = tint,
+            )
+        }
+    } else {
+        CommentIcon(iconSizeModifier, tint)
+    }
+}
+
+@Composable
+private fun FeedRepostedIcon(
+    iconSizeModifier: Modifier,
+    tint: Color,
+) {
+    val shared = LocalFeedReactionPainters.current
+    if (BuildConfig.FIX_SHARED_ICONS && shared != null) {
+        TracedComposition(NoteTrace.SHARED_PAINTER) {
+            Material3Icon(
+                painter = shared.reposted,
+                contentDescription = stringRes(id = R.string.boost_or_quote_description),
+                modifier = iconSizeModifier,
+                tint = tint,
+            )
+        }
+    } else {
+        RepostedIcon(iconSizeModifier, tint)
+    }
+}
+
+@Composable
+private fun FeedLikeIcon(
+    iconSizeModifier: Modifier,
+    tint: Color,
+) {
+    val shared = LocalFeedReactionPainters.current
+    if (BuildConfig.FIX_SHARED_ICONS && shared != null) {
+        TracedComposition(NoteTrace.SHARED_PAINTER) {
+            Material3Icon(
+                painter = shared.like,
+                contentDescription = stringRes(id = R.string.like_description),
+                modifier = iconSizeModifier,
+                tint = tint,
+            )
+        }
+    } else {
+        LikeIcon(iconSizeModifier, tint)
+    }
+}
+
+/** Which rasterisation path an icon takes, so the two can be ablated independently. */
+private enum class RxIconKind {
+    /** `Icon(imageVector = …)` — a VectorPainter rasterising paths into a cached layer. */
+    VECTOR,
+
+    /** `Icon(symbol = …)` — a glyph from the bundled MaterialSymbols subset font. */
+    GLYPH,
+}
+
+/**
+ * **Measurement probe helper — not a feature.**
+ *
+ * Draws nothing where a reaction icon would go, keeping a node of the same size so the row lays out
+ * unchanged. [kind] lets the vector-path icons and the MaterialSymbols glyph icons be ablated
+ * separately, since a combined ablation says only how much the icons cost in total, not which
+ * rasterisation path is responsible.
+ *
+ * Probe builds show a row of blank gaps; it exists to be measured, not shipped.
+ */
+@Composable
+private inline fun RxIcon(
+    modifier: Modifier,
+    kind: RxIconKind,
+    icon: @Composable () -> Unit,
+) {
+    val hide =
+        BuildConfig.PROBE_NO_RX_ICONS ||
+            when (kind) {
+                RxIconKind.VECTOR -> BuildConfig.PROBE_NO_RX_VECTOR_ICONS
+                RxIconKind.GLYPH -> BuildConfig.PROBE_NO_RX_GLYPH_ICONS
+            }
+    if (hide) {
+        Spacer(modifier)
+    } else {
+        icon()
+    }
+}
+
+/**
+ * **Measurement probe helper — not a feature.**
+ *
+ * When `PROBE_NO_RX_CLICKABLE` is on, renders the reaction button's content in a bare [Box] with
+ * no `clickable` modifier at all — no `MutableInteractionSource` allocated, no ripple
+ * [androidx.compose.foundation.IndicationNodeFactory] attached, no `Role.Button` semantics.
+ *
+ * This is an upper bound, not a candidate fix: a probe build's reaction buttons do not respond to
+ * taps. It exists to answer whether the ~6 eagerly-built clickable/ripple nodes per row are worth
+ * optimising before any behaviour-preserving version (a lazy interaction source) is attempted.
+ */
+@Composable
+private fun RxClickableBox(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    if (BuildConfig.PROBE_NO_RX_CLICKABLE) {
+        Box(modifier, contentAlignment = Alignment.Center, content = content)
+    } else if (BuildConfig.PROBE_LAZY_RX_RIPPLE) {
+        ClickableBoxLazyRipple(modifier = modifier, onClick = onClick, content = content)
+    } else {
+        ClickableBox(modifier = modifier, onClick = onClick, content = content)
+    }
+}
+
+@Composable
+private fun RxClickableBox(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    if (BuildConfig.PROBE_NO_RX_CLICKABLE) {
+        Box(modifier, contentAlignment = Alignment.Center) { content() }
+    } else if (BuildConfig.PROBE_LAZY_RX_RIPPLE) {
+        ClickableBoxLazyRipple(modifier = modifier, onClick = onClick, onLongClick = onLongClick, content = content)
+    } else {
+        ClickableBox(modifier = modifier, onClick = onClick, onLongClick = onLongClick, content = content)
+    }
+}
+
+/**
+ * **Measurement probe helper — not a feature.**
+ *
+ * Same contract as [CrossfadeIfEnabled], but when `PROBE_NO_RX_ANIMATIONS` is on it takes the
+ * non-animated branch that `CrossfadeIfEnabled` already has for performance mode: the identical
+ * `Box` + content, with no `updateTransition` built. Scoped to the reaction row on purpose, so
+ * the rest of the card keeps animating and acts as a control.
+ */
+@Composable
+private fun <T> RxCrossfade(
+    targetState: T,
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.TopStart,
+    label: String = "Crossfade",
+    accountViewModel: AccountViewModel,
+    content: @Composable (T) -> Unit,
+) {
+    if (BuildConfig.PROBE_NO_RX_ANIMATIONS) {
+        Box(modifier, contentAlignment) {
+            content(targetState)
+        }
+    } else {
+        CrossfadeIfEnabled(
+            targetState = targetState,
+            modifier = modifier,
+            contentAlignment = contentAlignment,
+            label = label,
+            accountViewModel = accountViewModel,
+            content = content,
+        )
+    }
+}
+
 @Composable
 private fun SlidingAnimationCount(
     baseCount: Int,
     textColor: Color,
     accountViewModel: AccountViewModel,
 ) {
-    if (accountViewModel.settings.isPerformanceMode()) {
+    if (BuildConfig.PROBE_NO_RX_ANIMATIONS || accountViewModel.settings.isPerformanceMode()) {
         TextCount(baseCount, textColor)
+    } else if (BuildConfig.FIX_LAZY_ANIM) {
+        DeferredAnimatedContent(baseCount, "SlidingAnimationCount") { count ->
+            TextCount(count, textColor)
+        }
     } else {
         AnimatedContent(
             targetState = baseCount,
@@ -889,6 +1125,13 @@ fun TextCount(
     count: Int,
     textColor: Color,
 ) {
+    if (BuildConfig.PROBE_NO_RX_COUNTERS) {
+        // Probe: keep a layout node of roughly the same width so the row still lays out the same
+        // way, but do no text shaping. The delta against a normal build is the counter's
+        // Paragraph construction + glyph shaping.
+        Spacer(ProbeCounterWidth)
+        return
+    }
     Text(
         text = showCount(count),
         fontSize = Font14SP,
@@ -897,13 +1140,20 @@ fun TextCount(
     )
 }
 
+/** Stand-in width for a 2-3 digit counter, probe builds only. */
+private val ProbeCounterWidth = Modifier.width(20.dp)
+
 @Composable
 fun SlidingAnimationAmount(
     amount: String,
     textColor: Color,
     accountViewModel: AccountViewModel,
 ) {
-    if (accountViewModel.settings.isPerformanceMode()) {
+    if (BuildConfig.PROBE_NO_RX_COUNTERS) {
+        Spacer(ProbeCounterWidth)
+        return
+    }
+    if (BuildConfig.PROBE_NO_RX_ANIMATIONS || accountViewModel.settings.isPerformanceMode()) {
         Text(
             text = amount,
             fontSize = Font14SP,
@@ -911,17 +1161,28 @@ fun SlidingAnimationAmount(
             maxLines = 1,
         )
     } else {
-        AnimatedContent(
-            targetState = amount,
-            transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec,
-            label = "SlidingAnimationAmount",
-        ) { count ->
-            Text(
-                text = count,
-                fontSize = Font14SP,
-                color = textColor,
-                maxLines = 1,
-            )
+        if (BuildConfig.FIX_LAZY_ANIM) {
+            DeferredAnimatedContent(amount, "SlidingAnimationAmount") { count ->
+                Text(
+                    text = count,
+                    fontSize = Font14SP,
+                    color = textColor,
+                    maxLines = 1,
+                )
+            }
+        } else {
+            AnimatedContent(
+                targetState = amount,
+                transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec,
+                label = "SlidingAnimationAmount",
+            ) { count ->
+                Text(
+                    text = count,
+                    fontSize = Font14SP,
+                    color = textColor,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }
@@ -939,14 +1200,14 @@ fun BoostReaction(
 ) {
     var wantsToBoost by remember { mutableStateOf(false) }
 
-    ClickableBox(
+    RxClickableBox(
         modifier = iconSizeModifier,
         onClick = {
             accountViewModel.tryBoost(baseNote) { wantsToBoost = true }
         },
     ) {
         ObserveBoostIcon(baseNote, accountViewModel) { hasBoosted ->
-            RepostedIcon(iconSizeModifier, if (hasBoosted) Color.Unspecified else grayTint)
+            RxIcon(iconSizeModifier, RxIconKind.VECTOR) { FeedRepostedIcon(iconSizeModifier, if (hasBoosted) Color.Unspecified else grayTint) }
         }
 
         if (wantsToBoost) {
@@ -1010,7 +1271,7 @@ fun LikeReaction(
 ) {
     var wantsToReact by remember { mutableStateOf(false) }
 
-    ClickableBox(
+    RxClickableBox(
         onClick = {
             likeClick(
                 accountViewModel,
@@ -1022,11 +1283,11 @@ fun LikeReaction(
         onLongClick = { nav.nav(Route.UpdateReactionType) },
     ) {
         ObserveLikeIcon(baseNote, accountViewModel) { reactionType ->
-            CrossfadeIfEnabled(targetState = reactionType, contentAlignment = Center, label = "LikeIcon", accountViewModel = accountViewModel) {
+            RxCrossfade(targetState = reactionType, contentAlignment = Center, label = "LikeIcon", accountViewModel = accountViewModel) {
                 if (reactionType != null) {
                     RenderReactionType(reactionType, heartSizeModifier, iconFontSize)
                 } else {
-                    LikeIcon(heartSizeModifier, grayTint)
+                    RxIcon(heartSizeModifier, RxIconKind.VECTOR) { FeedLikeIcon(heartSizeModifier, grayTint) }
                 }
             }
         }
@@ -1060,10 +1321,16 @@ fun ObserveLikeIcon(
 
     @Suppress("ProduceStateDoesNotAssignValue")
     val reactionType by
-        produceState(initialValue = null as String?, key1 = reactionsState) {
-            val newReactionType = accountViewModel.loadReactionTo(reactionsState?.note)
-            if (value != newReactionType) {
-                value = newReactionType
+        if (BuildConfig.PROBE_NO_RX_PRODUCE_STATE) {
+            // Probe: same initial value produceState would show on first composition, but the
+            // coroutine that resolves the user's own reaction is never launched.
+            remember { mutableStateOf(null as String?) }
+        } else {
+            produceState(initialValue = null as String?, key1 = reactionsState) {
+                val newReactionType = accountViewModel.loadReactionTo(reactionsState?.note)
+                if (value != newReactionType) {
+                    value = newReactionType
+                }
             }
         }
 
@@ -1355,9 +1622,9 @@ fun ZapReaction(
                 accountViewModel,
                 zapStartingTime,
             ) { zapIconState ->
-                CrossfadeIfEnabled(targetState = zapIconState, label = "ZapIcon", accountViewModel = accountViewModel) {
+                RxCrossfade(targetState = zapIconState, label = "ZapIcon", accountViewModel = accountViewModel) {
                     if (it.wasZappedByLoggedInUser) {
-                        ZappedIcon(iconSizeModifier)
+                        RxIcon(iconSizeModifier, RxIconKind.GLYPH) { ZappedIcon(iconSizeModifier) }
                     } else {
                         TwoStageZapProgressIcon(animatedProgress, animationModifier, grayTint)
                     }
@@ -1368,11 +1635,11 @@ fun ZapReaction(
                 baseNote,
                 accountViewModel,
             ) { zapIconState ->
-                CrossfadeIfEnabled(targetState = zapIconState, label = "ZapIcon", accountViewModel = accountViewModel) {
+                RxCrossfade(targetState = zapIconState, label = "ZapIcon", accountViewModel = accountViewModel) {
                     if (it.wasZappedByLoggedInUser) {
-                        ZappedIcon(iconSizeModifier)
+                        RxIcon(iconSizeModifier, RxIconKind.GLYPH) { ZappedIcon(iconSizeModifier) }
                     } else if (it.hasPendingPaymentRequest) {
-                        ZapIcon(iconSizeModifier, MaterialTheme.colorScheme.primary)
+                        RxIcon(iconSizeModifier, RxIconKind.GLYPH) { ZapIcon(iconSizeModifier, MaterialTheme.colorScheme.primary) }
                     } else {
                         OutlinedZapIcon(iconSizeModifier, grayTint)
                     }
@@ -1590,11 +1857,17 @@ fun ObserveZapAmountText(
 
         @Suppress("ProduceStateDoesNotAssignValue")
         val zapAmountTxt by
-            produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
-                zapsState?.note?.let {
-                    val newZapAmount = accountViewModel.calculateZapAmount(it)
-                    if (value != newZapAmount) {
-                        value = newZapAmount
+            if (BuildConfig.PROBE_NO_RX_PRODUCE_STATE) {
+                // Probe: produceState's own initial value, so the rendered amount is identical on
+                // first composition; only the recalculation coroutine is skipped.
+                remember { mutableStateOf(showAmount(baseNote.zapsAmount)) }
+            } else {
+                produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
+                    zapsState?.note?.let {
+                        val newZapAmount = accountViewModel.calculateZapAmount(it)
+                        if (value != newZapAmount) {
+                            value = newZapAmount
+                        }
                     }
                 }
             }
@@ -1851,7 +2124,7 @@ fun ReactionChoicePopup(
 ) {
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
-    val reactions by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
+    val reactions by accountViewModel.reactionChoicesFlow().collectAsStateProbed()
     val toRemove = remember { baseNote.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet() }
 
     Popup(
@@ -1909,7 +2182,7 @@ fun ReactionChoicePopupContent(
                     )
                 }
 
-                ClickableBox(modifier = reactionBox, onClick = onChangeAmount) {
+                RxClickableBox(modifier = reactionBox, onClick = onChangeAmount) {
                     ChangeReactionIcon(modifier = Size28Modifier, MaterialTheme.colorScheme.placeholderText)
                 }
             }
@@ -1960,7 +2233,7 @@ private fun ActionableReactionButton(
     onChangeAmount: () -> Unit,
     toRemove: ImmutableSet<String>,
 ) {
-    ClickableBox(
+    RxClickableBox(
         modifier = if (reactionType in toRemove) MaterialTheme.colorScheme.selectedReactionBoxModifier else reactionBox,
         onClick = onClick,
         onLongClick = onChangeAmount,
@@ -2034,7 +2307,7 @@ fun ZapAmountChoicePopup(
 ) {
     val zapAmountChoices by
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
-            .collectAsStateWithLifecycle()
+            .collectAsStateProbed()
 
     ZapAmountChoicePopup(
         baseNote = baseNote,
@@ -2073,15 +2346,15 @@ fun observeZapRailCapability(
     // open), and each value is a remember() key so railCapability recomputes when
     // it arrives. RailCapabilityResolver.peek re-reads everything itself; these
     // just say *when* to re-run it.
-    val cashuMints by cashuState.mints.collectAsStateWithLifecycle()
-    val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
+    val cashuMints by cashuState.mints.collectAsStateProbed()
+    val cashuEntries by cashuState.tokenEntries.collectAsStateProbed()
     val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }
     val nutzapInfo = author?.let { observeNoteEvent<NutzapInfoEvent>(it.nutzapInfoNote, accountViewModel).value }
     // Honors the user's "show on-chain wallet" preference: off hides the on-chain
     // rail from the zap chips too, matching the wallet screen, profile chips, and
     // Send Payment screen.
     val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
-        .collectAsStateWithLifecycle()
+        .collectAsStateProbed()
 
     return remember(baseNote, onchainSupported, showOnchainWallet, cashuMints, cashuEntries, recipientInfo, nutzapInfo) {
         val rc = RailCapabilityResolver.peek(baseNote, cashuState)
@@ -2285,7 +2558,7 @@ fun ZapAmountChoiceGrid(
                 onChangeAmount = onChangeAmount,
             )
         }
-        ClickableBox(
+        RxClickableBox(
             modifier =
                 Modifier
                     .padding(horizontal = 4.dp, vertical = 6.dp)

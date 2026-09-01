@@ -388,37 +388,39 @@ fun NoteCompose(
     onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
-    WatchNoteEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav,
-        modifier,
-    ) {
-        CheckHiddenFeedWatchBlockAndReport(
-            note = baseNote,
-            modifier = modifier,
-            ignoreAllBlocksAndReports = isHiddenFeed,
-            showHiddenWarning = isQuotedNote || isBoostedNote,
+    TracedComposition(NoteTrace.CARD) {
+        WatchNoteEvent(
+            baseNote = baseNote,
             accountViewModel = accountViewModel,
-            nav = nav,
-        ) { canPreview ->
-            AcceptableNote(
-                baseNote = baseNote,
+            nav,
+            modifier,
+        ) {
+            CheckHiddenFeedWatchBlockAndReport(
+                note = baseNote,
                 modifier = modifier,
-                routeForLastRead = routeForLastRead,
-                isBoostedNote = isBoostedNote,
-                isQuotedNote = isQuotedNote,
-                unPackReply = unPackReply,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                isPinned = isPinned,
-                quotesLeft = quotesLeft,
-                parentBackgroundColor = parentBackgroundColor,
+                ignoreAllBlocksAndReports = isHiddenFeed,
+                showHiddenWarning = isQuotedNote || isBoostedNote,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onClick = onClick,
-                moreOptions = moreOptions,
-            )
+            ) { canPreview ->
+                AcceptableNote(
+                    baseNote = baseNote,
+                    modifier = modifier,
+                    routeForLastRead = routeForLastRead,
+                    isBoostedNote = isBoostedNote,
+                    isQuotedNote = isQuotedNote,
+                    unPackReply = unPackReply,
+                    makeItShort = makeItShort,
+                    canPreview = canPreview,
+                    isPinned = isPinned,
+                    quotesLeft = quotesLeft,
+                    parentBackgroundColor = parentBackgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onClick = onClick,
+                    moreOptions = moreOptions,
+                )
+            }
         }
     }
 }
@@ -749,44 +751,52 @@ fun InnerNoteWithReactions(
         showContentSpacer = isNotRepost,
         authorPicture = {
             if (notBoostedNorQuote) {
-                Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
-                    RenderAuthorImages(baseNote, nav, accountViewModel)
+                TracedComposition(NoteTrace.AUTHOR_IMAGES) {
+                    Box(modifier = Size55Modifier.tracedDraw(NoteTrace.DRAW_AUTHOR), contentAlignment = Alignment.BottomEnd) {
+                        RenderAuthorImages(baseNote, nav, accountViewModel)
+                    }
                 }
             }
         },
         firstRow = {
-            FirstUserInfoRow(
-                baseNote = baseNote,
-                showAuthorPicture = isQuotedNote,
-                isPinned = isPinned,
-                editState = editState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                moreOptions = moreOptions,
-            )
-        },
-        secondRow = {
-            if (showSecondRow) {
-                SecondUserInfoRow(
-                    baseNote,
-                    accountViewModel,
-                    nav,
+            TracedComposition(NoteTrace.FIRST_ROW) {
+                FirstUserInfoRow(
+                    baseNote = baseNote,
+                    showAuthorPicture = isQuotedNote,
+                    isPinned = isPinned,
+                    editState = editState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    moreOptions = moreOptions,
                 )
             }
         },
+        secondRow = {
+            if (showSecondRow) {
+                TracedComposition(NoteTrace.SECOND_ROW) {
+                    SecondUserInfoRow(
+                        baseNote,
+                        accountViewModel,
+                        nav,
+                    )
+                }
+            }
+        },
         noteContent = {
-            RenderNoteRow(
-                baseNote = baseNote,
-                backgroundColor = backgroundColor,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                editState = editState,
-                quotesLeft = quotesLeft,
-                unPackReply = unPackReply,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                isBoostedNote = isBoostedNote,
-            )
+            TracedComposition(NoteTrace.CONTENT) {
+                RenderNoteRow(
+                    baseNote = baseNote,
+                    backgroundColor = backgroundColor,
+                    makeItShort = makeItShort,
+                    canPreview = canPreview,
+                    editState = editState,
+                    quotesLeft = quotesLeft,
+                    unPackReply = unPackReply,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    isBoostedNote = isBoostedNote,
+                )
+            }
 
             if (!makeItShort) {
                 val noteEvent = baseNote.event
@@ -804,14 +814,16 @@ fun InnerNoteWithReactions(
                 if (makeItShort) {
                     Spacer(modifier = DoubleVertSpacer)
                 } else {
-                    ReactionsRow(
-                        baseNote = baseNote,
-                        showReactionDetail = notBoostedNorQuote,
-                        addPadding = !isBoostedNote,
-                        editState = editState,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                    TracedComposition(NoteTrace.REACTIONS) {
+                        ReactionsRow(
+                            baseNote = baseNote,
+                            showReactionDetail = notBoostedNorQuote,
+                            addPadding = !isBoostedNote,
+                            editState = editState,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             } else if (baseNote.event is DraftWrapEvent) {
                 Spacer(modifier = DoubleVertSpacer)
@@ -1867,7 +1879,7 @@ fun FirstUserInfoRow(
     Row(
         verticalAlignment = CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Size5dp),
-        modifier = UserNameRowHeight,
+        modifier = UserNameRowHeight.tracedDraw(NoteTrace.DRAW_FIRST_ROW),
     ) {
         val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
         val isDraft = baseNote.isDraft()

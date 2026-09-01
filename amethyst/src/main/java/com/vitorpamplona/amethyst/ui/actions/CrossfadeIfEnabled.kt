@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.collection.mutableScatterMapOf
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.layout.Box
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.util.fastForEach
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -53,8 +56,55 @@ fun <T> CrossfadeIfEnabled(
         Box(modifier, contentAlignment) {
             content(targetState)
         }
+    } else if (BuildConfig.FIX_LAZY_ANIM) {
+        DeferredCrossfade(targetState, modifier, contentAlignment, animationSpec, label, content)
     } else {
         MyCrossfade(targetState, modifier, contentAlignment, animationSpec, label, content)
+    }
+}
+
+/** Latches the first time a crossfade's target moves off the value it was composed with. */
+private class ChangeLatch {
+    var changed = false
+}
+
+/**
+ * A [MyCrossfade] that does not build its [Transition] until there is something to animate.
+ *
+ * `updateTransition` allocates a `Transition`, its animation list and its seeking state on *first
+ * composition*, even though first composition has nothing to cross-fade — target and initial state
+ * are the same value. In a feed that is pure waste: every card scrolled in builds a transition per
+ * animated element, and during a scroll essentially none of them ever run, because the underlying
+ * counts and icons do not change in the second the card is on screen.
+ *
+ * So the plain content is rendered until the target actually moves. At that point the transition is
+ * built seeded at the *original* value via [MutableTransitionState], and immediately re-targeted at
+ * the new one — so the first real change still animates, exactly as before. Every later change
+ * animates through the now-live transition normally.
+ */
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+internal fun <T> DeferredCrossfade(
+    targetState: T,
+    modifier: Modifier,
+    contentAlignment: Alignment,
+    animationSpec: FiniteAnimationSpec<Float>,
+    label: String,
+    content: @Composable (T) -> Unit,
+) {
+    val initial = remember { targetState }
+    val latch = remember { ChangeLatch() }
+    if (targetState != initial) latch.changed = true
+
+    if (!latch.changed) {
+        Box(modifier, contentAlignment) {
+            content(targetState)
+        }
+    } else {
+        val transitionState = remember { MutableTransitionState(initial) }
+        transitionState.targetState = targetState
+        val transition = rememberTransition(transitionState, label)
+        transition.MyCrossfade(modifier, contentAlignment, animationSpec, content = content)
     }
 }
 

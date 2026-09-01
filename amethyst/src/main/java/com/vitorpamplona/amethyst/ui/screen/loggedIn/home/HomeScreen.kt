@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +42,7 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -81,7 +81,9 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.LocalFeedReactionPainters
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.rememberFeedReactionPainters
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton
@@ -423,24 +425,29 @@ fun FeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    LazyColumn(
-        contentPadding = rememberFeedContentPadding(FeedPadding),
-        state = listState,
-    ) {
-        if (liveSection != null) {
-            item {
-                DisplayLiveBubbles(liveSection, accountViewModel, nav)
+    // One VectorPainter per reaction icon for the whole list rather than one per card. Provided
+    // around the feed only, because a painter caches its raster by draw size and these icons appear
+    // at other sizes on other screens. See FeedReactionPainters.
+    val reactionPainters = rememberFeedReactionPainters()
+
+    CompositionLocalProvider(LocalFeedReactionPainters provides reactionPainters) {
+        LazyColumn(
+            contentPadding = rememberFeedContentPadding(FeedPadding),
+            state = listState,
+        ) {
+            if (liveSection != null) {
+                item {
+                    DisplayLiveBubbles(liveSection, accountViewModel, nav)
+                }
             }
-        }
-        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { _, item ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .animateItem(),
-            ) {
+            itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { _, item ->
+                // No wrapper Row: it held a single child that already fills the width, above a
+                // custom single-pass Layout built to avoid extra nodes. NoteCompose puts this
+                // modifier straight onto NoteComposeLayout (or onto BlankNote while the event
+                // loads, which needs the fillMaxWidth to keep its width).
                 NoteCompose(
                     item,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().animateItem(),
                     routeForLastRead = routeForLastRead,
                     isBoostedNote = false,
                     isHiddenFeed = items.showHidden,
@@ -448,11 +455,11 @@ fun FeedLoaded(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            }
 
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+            }
         }
     }
 }

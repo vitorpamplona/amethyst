@@ -22,6 +22,7 @@ coil = "3.5.0"
 composeBom = "2026.08.00"
 composeRuntimeAnnotation = "1.12.0"
 coreKtx = "1.19.0"
+tracing = "1.3.0"
 datastore = "1.2.1"
 devWhyolegCryptography = "0.6.0"
 espressoCore = "3.7.0"
@@ -129,6 +130,7 @@ androidx-compose-runtime-annotation = { group = "androidx.compose.runtime", name
 androidx-collection = { group = "androidx.collection", name = "collection", version.ref = "androidxCollection" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "androidxExifinterface" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-tracing = { group = "androidx.tracing", name = "tracing", version.ref = "tracing" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidxProfileinstaller" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

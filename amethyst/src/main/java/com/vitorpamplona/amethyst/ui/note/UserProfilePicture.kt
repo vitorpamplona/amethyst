@@ -44,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -103,7 +104,11 @@ fun DisplayBlankAuthor(
 ) {
     val nullModifier =
         remember {
-            modifier.size(size).clip(shape = CircleShape)
+            if (BuildConfig.PROBE_NO_AVATAR_CLIP) {
+                modifier.size(size)
+            } else {
+                modifier.size(size).clip(shape = CircleShape)
+            }
         }
 
     RobohashAsyncImage(
@@ -621,7 +626,11 @@ fun InnerUserPicture(
 ) {
     val myImageModifier =
         remember {
-            modifier.size(size).clip(shape = CircleShape)
+            if (BuildConfig.PROBE_NO_AVATAR_CLIP) {
+                modifier.size(size)
+            } else {
+                modifier.size(size).clip(shape = CircleShape)
+            }
         }
 
     RobohashFallbackAsyncImage(

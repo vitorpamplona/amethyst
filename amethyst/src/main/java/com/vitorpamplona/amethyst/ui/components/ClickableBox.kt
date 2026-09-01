@@ -115,3 +115,54 @@ fun ToggleableBox(
         content(isActive)
     }
 }
+
+/**
+ * Same as [ClickableBox], but lets Compose create the [MutableInteractionSource] and the ripple
+ * node lazily, on the first touch, instead of eagerly at composition.
+ *
+ * `Modifier.clickable` only takes its lazy path when `interactionSource` is null and `indication`
+ * is an `IndicationNodeFactory` (which `ripple()` is). Passing a remembered interaction source —
+ * as [ClickableBox] does — forces both to be built up front, for every button, on every card the
+ * feed scrolls in, even though the overwhelming majority are never touched.
+ *
+ * Behaviour is unchanged: same click, same ripple, same `Role.Button` semantics.
+ */
+@Composable
+fun ClickableBoxLazyRipple(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(
+        modifier.clickable(
+            role = Role.Button,
+            interactionSource = null,
+            indication = ripple24dp,
+            onClick = onClick,
+        ),
+        contentAlignment = Alignment.Center,
+        content = content,
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ClickableBoxLazyRipple(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier.combinedClickable(
+            role = Role.Button,
+            interactionSource = null,
+            indication = ripple24dp,
+            onClick = onClick,
+            onLongClick = onLongClick,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+    }
+}

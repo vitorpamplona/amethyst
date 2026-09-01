@@ -21,20 +21,22 @@
 package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.LocalFeedReactionPainters
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.rememberFeedReactionPainters
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -51,25 +53,34 @@ fun FeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    LazyColumn(
-        contentPadding = rememberFeedContentPadding(FeedPadding),
-        state = listState,
-    ) {
-        if (header != null) {
-            item {
-                header()
-            }
-        }
+    // One VectorPainter per reaction icon for the whole list rather than one per card. Provided
+    // here, around the feed only, because a painter caches its raster by draw size and these icons
+    // appear at other sizes on other screens. See FeedReactionPainters.
+    val reactionPainters = rememberFeedReactionPainters()
 
-        itemsIndexed(
-            items.list,
-            key = { _, item -> item.idHex },
-            contentType = { _, item -> item.event?.kind ?: -1 },
-        ) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
+    CompositionLocalProvider(LocalFeedReactionPainters provides reactionPainters) {
+        LazyColumn(
+            contentPadding = rememberFeedContentPadding(FeedPadding),
+            state = listState,
+        ) {
+            if (header != null) {
+                item {
+                    header()
+                }
+            }
+
+            itemsIndexed(
+                items.list,
+                key = { _, item -> item.idHex },
+                contentType = { _, item -> item.event?.kind ?: -1 },
+            ) { _, item ->
+                // No wrapper Row: it held nothing but a single child that already fills the width,
+                // and NoteCompose puts this modifier straight onto NoteComposeLayout (or onto
+                // BlankNote while the event loads, which needs the fillMaxWidth to keep its width).
+                // The wrapper cost one layout node plus one fill constraint pass per feed item.
                 NoteCompose(
                     item,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().animateItem(),
                     routeForLastRead = routeForLastRead,
                     isBoostedNote = false,
                     isHiddenFeed = items.showHidden,
@@ -77,11 +88,11 @@ fun FeedLoaded(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            }
 
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+            }
         }
     }
 }

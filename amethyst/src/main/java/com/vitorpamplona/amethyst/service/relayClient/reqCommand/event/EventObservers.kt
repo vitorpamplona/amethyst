@@ -24,11 +24,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.textNoteModifications
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.collectAsStateProbed
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -56,7 +56,7 @@ fun observeNote(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow = remember(note) { note.flow().metadata.stateFlow }
-    return flow.collectAsStateWithLifecycle()
+    return flow.collectAsStateProbed()
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -78,7 +78,7 @@ fun <T : Event> observeNoteEvent(
                 .mapLatest { it.note.event as? T? }
         }
 
-    return flow.collectAsStateWithLifecycle(note.event as? T?)
+    return flow.collectAsStateProbed(note.event as? T?)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -102,7 +102,7 @@ fun <T> observeNoteAndMap(
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(map(note))
+    return flow.collectAsStateProbed(map(note))
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -128,7 +128,7 @@ fun <T, U> observeNoteEventAndMapNotNull(
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle((note.event as? T)?.let { map(it) })
+    return flow.collectAsStateProbed((note.event as? T)?.let { map(it) })
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -154,7 +154,7 @@ fun <T, U> observeNoteEventAndMap(
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(map(note.event as? T))
+    return flow.collectAsStateProbed(map(note.event as? T))
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -176,7 +176,7 @@ fun observeNoteHasEvent(
                 .distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(note.event != null)
+    return flow.collectAsStateProbed(note.event != null)
 }
 
 @Composable
@@ -189,7 +189,7 @@ fun observeNoteReplies(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow = remember(note) { note.flow().replies.stateFlow }
-    return flow.collectAsStateWithLifecycle()
+    return flow.collectAsStateProbed()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -212,7 +212,7 @@ fun observeNoteReplyCount(
                 .distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(note.replies.size)
+    return flow.collectAsStateProbed(note.replies.size)
 }
 
 /**
@@ -244,7 +244,7 @@ fun observeNoteMinichatReplyCount(
                 .distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(note.replies.count { isMinichatReply(it.event) })
+    return flow.collectAsStateProbed(note.replies.count { isMinichatReply(it.event) })
 }
 
 @Composable
@@ -257,7 +257,7 @@ fun observeNoteReactions(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow = remember(note) { note.flow().reactions.stateFlow }
-    return flow.collectAsStateWithLifecycle()
+    return flow.collectAsStateProbed()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -282,7 +282,7 @@ fun observeNoteReactionCount(
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(note.countReactions())
+    return flow.collectAsStateProbed(note.countReactions())
 }
 
 @Composable
@@ -295,7 +295,7 @@ fun observeNoteZaps(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow = remember(note) { note.flow().zaps.stateFlow }
-    return flow.collectAsStateWithLifecycle()
+    return flow.collectAsStateProbed()
 }
 
 @Composable
@@ -308,7 +308,7 @@ fun observeNoteReposts(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow = remember(note) { note.flow().boosts.stateFlow }
-    return flow.collectAsStateWithLifecycle()
+    return flow.collectAsStateProbed()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -332,7 +332,7 @@ fun observeNoteRepostsBy(
                 .flowOn(Dispatchers.IO)
         }
 
-    return flow.collectAsStateWithLifecycle(note.isBoostedBy(user))
+    return flow.collectAsStateProbed(note.isBoostedBy(user))
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -355,7 +355,7 @@ fun observeNoteRepostCount(
                 .distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(note.boosts.size)
+    return flow.collectAsStateProbed(note.boosts.size)
 }
 
 @Composable
@@ -381,7 +381,7 @@ fun observeNoteReferences(
             }.distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(note.hasZapsBoostsOrReactions())
+    return flow.collectAsStateProbed(note.hasZapsBoostsOrReactions())
 }
 
 @Composable
@@ -394,7 +394,7 @@ fun observeNoteOts(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow = remember(note) { note.flow().ots.stateFlow }
-    return flow.collectAsStateWithLifecycle()
+    return flow.collectAsStateProbed()
 }
 
 // Resolves the actual modification list off the main thread and filters identical results,
@@ -468,5 +468,5 @@ fun observeCommunityApprovalNeedStatus(
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(false)
+    return flow.collectAsStateProbed(false)
 }
