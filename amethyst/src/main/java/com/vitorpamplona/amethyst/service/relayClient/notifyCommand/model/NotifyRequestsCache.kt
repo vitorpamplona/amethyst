@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 
 @Stable
@@ -38,12 +39,12 @@ class NotifyRequestsCache {
     }
 
     fun addPaymentRequestIfNew(paymentRequest: NotifyRequest) {
-        if (
-            !this.transientPaymentRequests.value.contains(paymentRequest) &&
-            !this.transientPaymentRequestDismissals.value.contains(paymentRequest)
-        ) {
-            this.transientPaymentRequests.value += paymentRequest
-        }
+        if (this.transientPaymentRequestDismissals.value.contains(paymentRequest)) return
+
+        // `update` rather than `value +=`: NOTIFYs are filed from the relay's socket coroutine
+        // while dismissals run from the UI, and a plain read-modify-write silently drops one of
+        // two concurrent edits — either losing a prompt or resurrecting a dismissed one.
+        this.transientPaymentRequests.update { if (paymentRequest in it) it else it + paymentRequest }
     }
 
     fun dismissPaymentRequest(request: NotifyRequest) {
@@ -61,10 +62,14 @@ class NotifyRequestsCache {
      * relay the user just told us never to talk to again.
      */
     fun dismissAllFrom(relayUrl: NormalizedRelayUrl) {
-        val fromRelay = this.transientPaymentRequests.value.filterTo(mutableSetOf()) { it.relayUrl == relayUrl }
-        if (fromRelay.isEmpty()) return
+        // getAndUpdate so the drain and the snapshot of what was drained are one atomic step: a
+        // NOTIFY filed by the socket coroutine between a separate read and write would otherwise
+        // be dropped from the pending set without ever being recorded as dismissed.
+        val before = this.transientPaymentRequests.getAndUpdate { pending -> pending.filterNotTo(mutableSetOf()) { it.relayUrl == relayUrl } }
 
-        this.transientPaymentRequests.update { it - fromRelay }
-        this.transientPaymentRequestDismissals.update { it + fromRelay }
+        val dismissed = before.filterTo(mutableSetOf()) { it.relayUrl == relayUrl }
+        if (dismissed.isEmpty()) return
+
+        this.transientPaymentRequestDismissals.update { it + dismissed }
     }
 }

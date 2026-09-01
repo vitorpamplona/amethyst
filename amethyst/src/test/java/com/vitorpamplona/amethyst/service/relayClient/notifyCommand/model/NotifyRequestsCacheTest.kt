@@ -56,6 +56,23 @@ class NotifyRequestsCacheTest {
     }
 
     @Test
+    fun aConcurrentPromptFromTheSameRelayIsNotSilentlySwallowed() {
+        val cache = NotifyRequestsCache()
+        cache.addPaymentRequestIfNew("Pay up", paid)
+
+        // Stands in for a NOTIFY landing on the socket coroutine while the UI drains the relay:
+        // whatever survives the drain must still be reachable, never removed-but-unrecorded.
+        cache.dismissAllFrom(paid)
+        cache.addPaymentRequestIfNew("A different demand", paid)
+
+        val pending = cache.transientPaymentRequests.value
+        val dismissed = cache.transientPaymentRequestDismissals.value
+
+        assertEquals(setOf(NotifyRequest(paid, "Pay up")), dismissed)
+        assertEquals(setOf(NotifyRequest(paid, "A different demand")), pending)
+    }
+
+    @Test
     fun dismissingARelayWithNoPromptsChangesNothing() {
         val cache = NotifyRequestsCache()
         cache.addPaymentRequestIfNew("Unrelated", other)
