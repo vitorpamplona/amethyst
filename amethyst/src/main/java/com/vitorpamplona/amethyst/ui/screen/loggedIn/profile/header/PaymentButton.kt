@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
@@ -232,19 +232,11 @@ private fun PaymentTargetRow(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = target.type.replaceFirstChar(Char::titlecase),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = target.authority,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+        // Same pill the profile page renders for this target: type icon,
+        // tinted type label and the shortened authority, instead of the
+        // raw wallet id spelled out over two lines.
+        Box(modifier = Modifier.weight(1f)) {
+            PaymentTargetPill(target = target, onClick = onPay)
         }
         Spacer(modifier = Modifier.width(8.dp))
         IconButton(onClick = onShowQr) {
