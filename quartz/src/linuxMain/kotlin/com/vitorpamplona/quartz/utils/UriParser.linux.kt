@@ -122,9 +122,13 @@ actual class UriParser actual constructor(
     actual fun path(): String? = parsedPath
 
     /**
-     * Parsed once and reused, mirroring the JVM actual's lazy map. The previous version
-     * re-split the entire query string on every [getQueryParameter] call, so a URI read
-     * for four parameters was parsed four times.
+     * Parsed once and reused, mirroring the JVM actual's lazy map — the previous version
+     * re-split the entire query string on every [getQueryParameter] call.
+     *
+     * Decoded with [UrlEncoder.decode], which matches `URLDecoder.decode(.., "UTF-8")` —
+     * what the JVM actual calls. Skipping this is why NIP-47 failed on this target:
+     * `relay=wss%3A%2F%2Frelay.damus.io` reached `RelayUrlNormalizer` still encoded and
+     * came back "Invalid relay Url".
      */
     private val queryParameters: Map<String, List<String>> by lazy {
         parsedQuery?.ifBlank { null }?.let { query ->
@@ -138,7 +142,7 @@ actual class UriParser actual constructor(
                     }
 
                 if (parts.size == 2) {
-                    currentValue.add(percentDecode(parts[1]))
+                    currentValue.add(UrlEncoder.decode(parts[1]))
                 } else {
                     currentValue.add("")
                 }
@@ -153,7 +157,7 @@ actual class UriParser actual constructor(
             keyValuePair.split('&').associate { paramValue ->
                 val parts = paramValue.split("=", limit = 2)
                 if (parts.size == 2) {
-                    parts[0] to percentDecode(parts[1])
+                    parts[0] to UrlEncoder.decode(parts[1])
                 } else {
                     parts[0] to "" // Handle parameters without a value
                 }
@@ -168,82 +172,3 @@ actual class UriParser actual constructor(
 
     actual fun fragments(): Map<String, String> = parsedFragments
 }
-
-/**
- * `java.net.URLDecoder.decode(value, "UTF-8")` — which is literally what the JVM actual
- * calls — for a target with no `java.net`.
- *
- * This is the whole reason NIP-47 failed on linuxX64: the parser returned query values
- * exactly as they appeared in the URI, so `relay=wss%3A%2F%2Frelay.damus.io` reached
- * `RelayUrlNormalizer` still percent-encoded and came back "Invalid relay Url". Decoding
- * belongs here rather than in each caller, because the JVM and Apple actuals both hand
- * back decoded values and common code is written against that.
- *
- * Matches `URLDecoder` in the details that are observable: `+` becomes a space, a run of
- * consecutive `%XX` is decoded as one UTF-8 sequence (so multi-byte characters survive),
- * every other character passes through, and a malformed escape throws
- * [IllegalArgumentException] rather than being silently kept — the same failure the JVM
- * gives for the same input.
- */
-private fun percentDecode(value: String): String {
-    // The short-circuit URLDecoder also makes: with nothing to change, return the
-    // original instance rather than rebuilding it. Most query values hit this.
-    if (value.indexOf('%') < 0 && value.indexOf('+') < 0) return value
-
-    val result = StringBuilder(value.length)
-    var index = 0
-    // Sized on first use for the longest run that could still follow, then reused —
-    // one allocation for the whole string, as in URLDecoder.
-    var escaped: ByteArray? = null
-
-    while (index < value.length) {
-        when (val char = value[index]) {
-            '+' -> {
-                result.append(' ')
-                index++
-            }
-
-            '%' -> {
-                val buffer = escaped ?: ByteArray((value.length - index) / 3).also { escaped = it }
-                var count = 0
-                while (index + 2 < value.length && value[index] == '%') {
-                    buffer[count++] = decodeEscape(value, index)
-                    index += 3
-                }
-                if (index < value.length && value[index] == '%') {
-                    throw IllegalArgumentException("URLDecoder: Incomplete trailing escape (%) pattern")
-                }
-                result.append(buffer.decodeToString(0, count))
-            }
-
-            else -> {
-                result.append(char)
-                index++
-            }
-        }
-    }
-
-    return result.toString()
-}
-
-private fun decodeEscape(
-    value: String,
-    index: Int,
-): Byte {
-    val high = hexDigit(value[index + 1])
-    val low = hexDigit(value[index + 2])
-    if (high < 0 || low < 0) {
-        throw IllegalArgumentException(
-            "URLDecoder: Illegal hex characters in escape (%) pattern - ${value.substring(index, index + 3)}",
-        )
-    }
-    return ((high shl 4) or low).toByte()
-}
-
-private fun hexDigit(char: Char): Int =
-    when (char) {
-        in '0'..'9' -> char - '0'
-        in 'a'..'f' -> char - 'a' + 10
-        in 'A'..'F' -> char - 'A' + 10
-        else -> -1
-    }
