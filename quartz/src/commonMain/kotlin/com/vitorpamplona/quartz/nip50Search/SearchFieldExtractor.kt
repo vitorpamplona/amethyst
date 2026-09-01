@@ -27,25 +27,42 @@ import com.vitorpamplona.quartz.buzz.teams.TeamEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
+import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
+import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
@@ -66,6 +83,7 @@ import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEven
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -78,6 +96,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableVideoEvent
 import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -85,6 +104,7 @@ import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -92,6 +112,8 @@ import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
 /**
  * Decomposes every [SearchableEvent] into [IndexableFields] by priority tier:
@@ -148,8 +170,35 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.summary(), event.content)
             }
 
+            // NIP-15 kinds 30017/30018/30019/30020 -- the marketplace family
+            // keeps its name and description inside a JSON `content` blob, so
+            // the fallback dropped a stall/product/auction NAME into the body
+            // tier, where a title can never reach the title band. Decoding
+            // failures still reach the funnel, as they do for the buzz kinds.
+            is StallEvent -> {
+                event.stallData()?.let { tiers(event, it.name, it.description, null) } ?: tiers(event, null, null, null)
+            }
+
+            // ProductEvent.categories() is `t` under another name, so the
+            // funnel already carries it in the hashtag role -- passing it
+            // again would index the same words twice.
+            is ProductEvent -> {
+                event.productData()?.let { tiers(event, it.name, it.description, null) } ?: tiers(event, null, null, null)
+            }
+
+            is MarketplaceEvent -> {
+                event.marketplaceData()?.let { tiers(event, it.name, it.about, null) } ?: tiers(event, null, null, null)
+            }
+
+            is AuctionEvent -> {
+                event.auctionData()?.let { tiers(event, it.name, it.description, null) } ?: tiers(event, null, null, null)
+            }
+
+            // The clone URL is as much a repository's public address as its
+            // homepage is -- `github.com/owner/repo.git` is how most people
+            // would search for it -- so both fill the affiliation role.
             is GitRepositoryEvent -> {
-                tiers(event, listOf(event.name()), listOf(event.description()), event.content, websites = event.webs())
+                tiers(event, listOf(event.name()), listOf(event.description()), event.content, websites = (event.webs() + event.clones()).distinct())
             }
 
             is GitIssueEvent -> {
@@ -238,8 +287,10 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.summary(), event.content)
             }
 
+            // endpoint() is the `streaming` tag -- the same role
+            // LiveActivitiesEvent.streaming() fills above.
             is MeetingSpaceEvent -> {
-                tiers(event, event.room(), event.summary(), event.content)
+                tiers(event, event.room(), event.summary(), event.content, website = event.endpoint())
             }
 
             is MeetingRoomEvent -> {
@@ -282,7 +333,26 @@ object SearchFieldExtractor {
                 tiers(event, listOf(event.title()), listOf(event.description()), null, websites = event.websites())
             }
 
+            // kinds 30054/30055 -- the Podcasting 2.0 pair carries the same
+            // title/description shape kind 54 does and was falling through:
+            // an episode title indexed as body text. topics() is hashtags()
+            // under another name, so the funnel carries it once.
+            is Podcasting20EpisodeEvent -> {
+                tiers(event, event.title(), event.description(), event.content)
+            }
+
+            is Podcasting20TrailerEvent -> {
+                tiers(event, event.title(), null, event.content)
+            }
+
             is GroupMetadataEvent -> {
+                tiers(event, event.name(), event.about(), null)
+            }
+
+            // kind 9002 edits the very metadata kind 39000 publishes, so it
+            // splits the same way -- it was the only half of the pair falling
+            // through. Its hashtags() is `t`, carried once by the funnel.
+            is EditMetadataEvent -> {
                 tiers(event, event.name(), event.about(), null)
             }
 
@@ -328,12 +398,14 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.description(), null, website = event.url())
             }
 
+            // A site's `source` tag is the URL its files were published
+            // from -- the same affiliation role a repo's homepage fills.
             is NamedSiteEvent -> {
-                tiers(event, event.title(), event.description(), null)
+                tiers(event, event.title(), event.description(), null, website = event.source())
             }
 
             is RootSiteEvent -> {
-                tiers(event, event.title(), event.description(), null)
+                tiers(event, event.title(), event.description(), null, website = event.source())
             }
 
             is RootNappletEvent -> {
@@ -412,6 +484,53 @@ object SearchFieldExtractor {
                 tiers(event, null, event.summary(), event.content)
             }
 
+            // kinds 1065/1163 -- summary-only kinds. Their whole searchable
+            // text IS a summary, so it belongs in the summary tier, next to
+            // kind 1063's, rather than in the body tier the fallback gave it.
+            is FileStorageHeaderEvent -> {
+                tiers(event, null, event.summary(), null)
+            }
+
+            is ProfileGalleryEntryEvent -> {
+                tiers(event, null, event.summary(), null)
+            }
+
+            // kind 2473 -- a sighting IS its species, under both names: the
+            // scientific one from the `n` tag and the vernacular one
+            // commonName() parses out of the `alt`. The `alt` itself still
+            // goes to the summary tier whole. It is usually just Birdstar's
+            // boilerplate wrapper around those two names ("Bird detection:
+            // <Common> (<Scientific>)"), so this repeats them in a second
+            // role -- but only commonName()'s PREFIX match decides that the
+            // alt is boilerplate, and a publisher can write anything after
+            // the parenthetical. Dropping the alt on a prefix match lost that
+            // tail from every role, which is precisely the drift against
+            // indexableContent() this file exists to prevent: the repeat
+            // costs a duplicate in the weakest role, the drop cost recall.
+            is BirdDetectionEvent -> {
+                tiers(event, listOf(event.speciesName(), event.commonName()), listOf(event.summary()), null)
+            }
+
+            // kind 12473 is a life LIST, not a sighting: its species names are
+            // an unbounded collection, so they sit in the secondary tier with
+            // a torrent's file names rather than claiming the title band once
+            // per bird.
+            is BirdexEvent -> {
+                tiers(event, emptyList(), listOf(event.summary()) + event.speciesNames(), null)
+            }
+
+            // kind 38192 -- the save's title is a title; region and filename
+            // are the keywords beside it, like a torrent's file names.
+            is Ps1SaveEvent -> {
+                tiers(event, listOf(event.saveTitle()), listOf(event.summary(), event.region(), event.filename()), null)
+            }
+
+            // kind 38383 -- an order is looked up by who is offering it;
+            // currency and payment methods are the keywords that qualify it.
+            is P2POrderEvent -> {
+                tiers(event, listOf(event.makerName()), listOf(event.currency()) + event.paymentMethods().orEmpty(), null)
+            }
+
             is AudioTrackEvent -> {
                 tiers(event, event.subject(), null, null)
             }
@@ -458,6 +577,46 @@ object SearchFieldExtractor {
                 }
             }
 
+            // kind 1010 -- `content` is the proposed replacement text and
+            // `summary` describes the edit, so they split the way kind 1063's
+            // summary and body do (indexableContent concatenates them in the
+            // other order; the roles, not the order, are what a weighted
+            // backend reads).
+            is TextNoteModificationEvent -> {
+                tiers(event, null, event.summary(), event.content)
+            }
+
+            // kinds 1068/6969 -- the question is the body, the option labels
+            // are short answer-like values a searcher matches whole, so they
+            // sit in the secondary tier UNJOINED instead of being appended to
+            // the body the way indexableContent() has to.
+            is PollEvent -> {
+                tiers(event, emptyList(), event.options().map { it.label }, event.content)
+            }
+
+            is ZapPollEvent -> {
+                tiers(event, emptyList(), event.pollOptionsArray().map { it.descriptor }, event.content)
+            }
+
+            // kind 1985 -- the label values are the keywords of the event;
+            // the reasoning, if any, is the body.
+            is LabelEvent -> {
+                tiers(event, emptyList(), event.labels().map { it.label }, event.content)
+            }
+
+            // kinds 1111/1311 -- body-only kinds whose indexableContent()
+            // concatenates the `t` tags INTO the body. The funnel already
+            // carries them in the hashtag role, so passing the body alone
+            // stops the same words being indexed twice (the ContactCard
+            // reasoning above, applied to the two chat/comment kinds).
+            is CommentEvent -> {
+                tiers(event, null, null, event.content)
+            }
+
+            is LiveActivitiesChatMessageEvent -> {
+                tiers(event, null, null, event.content)
+            }
+
             // kind 1 LAST among the explicit branches, defensively: a future
             // kind extending the text-note base must hit its own branch first.
             is TextNoteEvent -> {
@@ -475,46 +634,94 @@ object SearchFieldExtractor {
             }
         }
 
-    /** Single-value convenience over the list funnel — most kinds carry one title, one summary, one body. */
+    /**
+     * Single-value convenience over the list funnel — most kinds carry one
+     * title, one summary, one body. Cleans each value straight into its role
+     * rather than wrapping it in a list first: extraction runs once per stored
+     * event, and the wrappers were three throwaway lists on every one of them.
+     */
     private fun tiers(
         event: Event,
         primary: String?,
         secondary: String?,
         text: String?,
         website: String? = null,
-    ) = tiers(event, listOf(primary), listOf(secondary), text, listOf(website))
+    ) = build(event, cleanOne(primary), cleanOne(secondary), text, cleanOne(website))
 
-    /**
-     * The one funnel every content branch uses — [IndexableFields.Tiered.hashtags]
-     * and [IndexableFields.Tiered.locations] are filled here, so no branch can
-     * forget them. Values stay UNJOINED: separator choices belong to the backend.
-     */
     private fun tiers(
         event: Event,
         primary: List<String?>,
         secondary: List<String?>,
         text: String?,
         websites: List<String?> = emptyList(),
+    ) = build(event, cleanAll(primary), cleanAll(secondary), text, cleanAll(websites))
+
+    /**
+     * The one funnel BOTH [tiers] overloads end in — [IndexableFields.Tiered.hashtags]
+     * and [IndexableFields.Tiered.locations] are filled here, so no branch can
+     * forget them. Values stay UNJOINED: separator choices belong to the backend.
+     */
+    private fun build(
+        event: Event,
+        primary: List<String>,
+        secondary: List<String>,
+        text: String?,
+        websites: List<String>,
     ) = IndexableFields.Tiered(
-        primary = cleanAll(primary),
-        secondary = cleanAll(secondary),
+        primary = primary,
+        secondary = secondary,
         text = clean(text),
-        hashtags = cleanAll(event.tags.hashtags()),
+        hashtags = hashtagValues(event),
         locations = locationValues(event),
-        websites = cleanAll(websites),
+        websites = websites,
     )
 
     /** Trim and drop empties at the single funnel every derived string passes through. */
     private fun clean(s: String?): String? = s?.trim()?.ifEmpty { null }
 
-    private fun cleanAll(parts: List<String?>): List<String> = parts.mapNotNull { clean(it) }
+    private fun cleanOne(s: String?): List<String> = clean(s)?.let { listOf(it) } ?: emptyList()
+
+    /**
+     * Collects lazily: a role whose values are all absent — the common case on
+     * most kinds — costs no list at all.
+     */
+    private fun cleanAll(parts: List<String?>): List<String> {
+        var values: MutableList<String>? = null
+        for (i in parts.indices) {
+            val value = clean(parts[i]) ?: continue
+            (values ?: ArrayList<String>(parts.size).also { values = it }).add(value)
+        }
+        return values ?: emptyList()
+    }
+
+    /**
+     * The hashtag role. [hashtags] allocates unconditionally, so the scan for
+     * a `t` tag comes first — most events carry none. The guard is exactly
+     * [HashtagTag.parse]'s own acceptance test, so it can never skip a tag the
+     * accessor would have returned.
+     */
+    private fun hashtagValues(event: Event): List<String> = if (!event.tags.fastAny(HashtagTag::isTagged)) emptyList() else cleanAll(event.tags.hashtags())
 
     /**
      * Every `location` tag value, on ANY kind. Deliberately a raw scan, not a
      * typed accessor: Quartz's LocationTag classes are per-NIP (calendar,
      * picture, classifieds) and only those kinds expose locations(), while
      * this funnel must also catch location tags on kinds whose class doesn't
-     * model them.
+     * model them. Collects lazily, like [cleanAll]: an event with no location
+     * tag — nearly all of them — allocates nothing here.
      */
-    private fun locationValues(event: Event): List<String> = event.tags.mapNotNull { tag -> if (tag.getOrNull(0) != "location") null else clean(tag.getOrNull(1)) }
+    private fun locationValues(event: Event): List<String> {
+        var values: MutableList<String>? = null
+        event.tags.fastForEach { tag ->
+            if (tag.size > 1 && tag[0] == LOCATION_TAG) {
+                val value = clean(tag[1])
+                if (value != null) {
+                    (values ?: ArrayList<String>(2).also { values = it }).add(value)
+                }
+            }
+        }
+        return values ?: emptyList()
+    }
+
+    private const val LOCATION_TAG = "location"
 }

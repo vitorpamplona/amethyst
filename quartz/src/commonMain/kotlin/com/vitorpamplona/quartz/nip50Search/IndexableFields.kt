@@ -40,6 +40,25 @@ package com.vitorpamplona.quartz.nip50Search
  * once values are pre-joined a backend can't unmix them. Values produced by
  * [SearchFieldExtractor] are trimmed and non-empty; the types themselves do
  * not enforce it.
+ *
+ * ## PROFILE XOR TIERED — a contract, not an implementation detail
+ *
+ * A kind fills the profile roles or the content roles, NEVER both. The sealed
+ * type enforces it today, and weighted backends are entitled to depend on it:
+ * a ranker that scores the two role groups independently and SUMS them stays
+ * correct only while no document can answer from a naming column in each
+ * group. A shape that filled, say, [Profile.name] and [Tiered.primary] at
+ * once would claim the top band twice — in the store this extractor was
+ * built for, ~260 000 against the ~130 000 a whole-field title match earns,
+ * i.e. a document matching one word per column outranking one that IS the
+ * query.
+ *
+ * So a new kind that looks like both is a deliberate decision with a known
+ * downstream cost, not an accident of the extractor. Pick the shape the kind
+ * really has and route the rest through it — the way kind 31990 (an app
+ * handler, whose metadata is a kind-0 clone) returns [Profile] wholesale
+ * rather than a profile plus a tier. If a future shape genuinely must fill
+ * both, the backends that sum these groups have to be told.
  */
 sealed interface IndexableFields {
     fun isEmpty(): Boolean
