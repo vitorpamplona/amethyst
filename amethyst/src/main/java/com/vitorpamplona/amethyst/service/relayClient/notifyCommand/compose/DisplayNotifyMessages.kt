@@ -60,17 +60,17 @@ fun DisplayNotifyMessages(
             onBlockRelay =
                 if (accountViewModel.isWriteable()) {
                     {
-                        accountViewModel.blockRelay(request.relayUrl) {
-                            // Only after the block is signed and published, never before: a refused
-                            // or timed-out signature is swallowed without a toast, so dismissing up
-                            // front would close the dialog on a relay that is still unblocked and
-                            // leave the user no sign that anything failed. Leaving the prompt up is
-                            // the feedback.
+                        accountViewModel.launchSigner {
+                            accountViewModel.account.blockRelay(request.relayUrl)
+
+                            // Reached only once the block is signed and published, because
+                            // reportSignerErrors swallows a refused or timed-out signature without
+                            // a toast: dismissing up front would close the dialog on a relay that
+                            // is still unblocked and leave the user no sign anything failed. The
+                            // prompt staying up is the feedback.
                             //
-                            // Every queued prompt from this relay goes at once, not just the one on
-                            // screen: a paid relay files one NOTIFY per rejected AUTH, so dismissing
-                            // only [request] would immediately re-open the dialog for a relay the
-                            // user just asked us to stop talking to.
+                            // Every queued prompt from the relay goes at once, not just the one on
+                            // screen — a paid relay files one NOTIFY per rejected AUTH.
                             requests.dismissAllFrom(request.relayUrl)
                         }
                     }

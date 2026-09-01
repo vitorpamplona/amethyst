@@ -1919,23 +1919,6 @@ class AccountViewModel(
 
     fun unfollowRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.unfollowRelayFeed(url) }
 
-    /**
-     * Blocks [url], running [onBlocked] only once the kind-10006 has actually been signed and
-     * published.
-     *
-     * The ordering matters: [reportSignerErrors] swallows a refused or timed-out signature
-     * (ManuallyUnauthorizedException, TimedOutException, CouldNotPerformException) with nothing but
-     * a log line, so a caller that cleaned up before the block landed would leave the user with an
-     * unblocked relay, no feedback, and whatever UI state it tore down already gone.
-     */
-    fun blockRelay(
-        url: NormalizedRelayUrl,
-        onBlocked: () -> Unit = {},
-    ) = launchSigner {
-        account.blockRelay(url)
-        onBlocked()
-    }
-
     fun showWord(word: String) = launchSigner { account.showWord(word) }
 
     fun hideWord(word: String) = launchSigner { account.hideWord(word) }
