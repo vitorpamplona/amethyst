@@ -73,17 +73,14 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_chip
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_body
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_confirm
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_title
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainBalanceStatus
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
-import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 
 /**
@@ -101,35 +98,17 @@ fun OnchainSection(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val pubKey = accountViewModel.account.signer.pubKey
+    // Shared with the zap picker's on-chain gating, so opening this screen also
+    // warms the balance those chips read (and vice versa). Landing here is an
+    // explicit "show me my balance", so it always forces a fresh fetch.
+    val onchainWallet = accountViewModel.account.onchainWalletState
+    val address = onchainWallet.address
 
-    val address =
-        remember(pubKey) {
-            runCatching { TaprootAddress.fromPubKey(pubKey) }.getOrNull()
-        }
+    LaunchedEffect(onchainWallet) { onchainWallet.refresh(force = true) }
 
-    var balanceSats by remember(pubKey) { mutableStateOf<Long?>(null) }
-    var balanceState by remember(pubKey) { mutableStateOf(BalanceState.LOADING) }
-
-    LaunchedEffect(address) {
-        if (address == null) {
-            balanceState = BalanceState.UNAVAILABLE
-            return@LaunchedEffect
-        }
-        val backend = LocalCache.onchainBackend
-        if (backend == null) {
-            balanceState = BalanceState.UNAVAILABLE
-            return@LaunchedEffect
-        }
-        balanceState = BalanceState.LOADING
-        try {
-            val utxos = withContext(Dispatchers.IO) { backend.getUtxosForAddress(address) }
-            balanceSats = utxos.sumOf { it.valueSats }
-            balanceState = BalanceState.READY
-        } catch (t: Throwable) {
-            balanceState = BalanceState.ERROR
-        }
-    }
+    val funds by onchainWallet.funds.collectAsStateWithLifecycle()
+    val balanceState by onchainWallet.status.collectAsStateWithLifecycle()
+    val balanceSats = funds?.totalSats
 
     val orange = MaterialTheme.colorScheme.bitcoinColor
 
@@ -167,12 +146,10 @@ fun OnchainSection(
     }
 }
 
-private enum class BalanceState { LOADING, READY, ERROR, UNAVAILABLE }
-
 @Composable
 private fun HeaderRow(
     orange: Color,
-    balanceState: BalanceState,
+    balanceState: OnchainBalanceStatus,
     balanceSats: Long?,
 ) {
     Row(
@@ -282,11 +259,11 @@ private fun BitcoinChip(orange: Color) {
 
 @Composable
 private fun BalanceBlock(
-    state: BalanceState,
+    state: OnchainBalanceStatus,
     sats: Long?,
     orange: Color,
 ) {
-    if (state == BalanceState.LOADING && sats == null) {
+    if (state == OnchainBalanceStatus.LOADING && sats == null) {
         CircularProgressIndicator(
             modifier = Modifier.size(24.dp),
             color = orange,
@@ -296,7 +273,7 @@ private fun BalanceBlock(
 
     Column(horizontalAlignment = Alignment.End) {
         when (state) {
-            BalanceState.READY -> {
+            OnchainBalanceStatus.READY -> {
                 val formatted =
                     remember(sats) {
                         NumberFormat.getIntegerInstance().format(sats ?: 0L)
@@ -314,7 +291,7 @@ private fun BalanceBlock(
                 )
             }
 
-            BalanceState.ERROR -> {
+            OnchainBalanceStatus.ERROR -> {
                 Text(
                     text = "—",
                     fontSize = 24.sp,
@@ -328,7 +305,7 @@ private fun BalanceBlock(
                 )
             }
 
-            BalanceState.UNAVAILABLE -> {
+            OnchainBalanceStatus.UNAVAILABLE -> {
                 Text(
                     text = "—",
                     fontSize = 24.sp,
@@ -342,7 +319,7 @@ private fun BalanceBlock(
                 )
             }
 
-            BalanceState.LOADING -> Unit
+            OnchainBalanceStatus.LOADING -> Unit
         }
     }
 }

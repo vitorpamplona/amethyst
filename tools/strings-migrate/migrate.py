@@ -22,7 +22,7 @@ import os
 import re
 import sys
 
-from fix_escapes import STRING_EL, fix_text
+from fix_escapes import STRING_EL, fix_text, strip_android_only_attrs
 
 APP_RES = "amethyst/src/main/res"
 COMMONS_RES = "commons/src/commonMain/composeResources"
@@ -63,7 +63,8 @@ def convert_escaping(element: str) -> str:
     therefore shipped `Don\\'t have a Nostr account?` to the login screen. See
     fix_escapes.py, which repairs files already migrated.
     """
-    return STRING_EL.sub(lambda m: m.group(1) + fix_text(m.group(2)) + m.group(3), element)
+    element = STRING_EL.sub(lambda m: m.group(1) + fix_text(m.group(2)) + m.group(3), element)
+    return strip_android_only_attrs(element)[0]
 
 
 def append(path: str, elements: list):

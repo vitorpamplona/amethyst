@@ -10,8 +10,15 @@
     <!-- Accessibility -->
     <!-- Relay history paging (shared feed markers + status card) -->
     <!-- Notes & Replies -->
+    <string name="replying_to">ответ на </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">Разрешения:</string>
+    <string name="nsite_root_site">Корневой сайт</string>
+    <string name="nsite_source">Источник:</string>
+    <string name="nsite_servers">Серверы:</string>
+    <string name="nsite_open">Открыть</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Использовать прямой URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Открыт</string>
     <string name="git_status_merged">Объединён</string>
@@ -109,7 +116,6 @@
     <string name="original">оригинал</string>
     <string name="quote">Цитата</string>
     <string name="new_amount_in_sats">Новая сумма в sats</string>
-    <string name="replying_to">ответ на </string>
     <string name="and"> и </string>
     <string name="following"> Подписки</string>
     <string name="followers"> Подписчики</string>
@@ -266,13 +272,13 @@
     <string name="mark_all_known_as_read">Отметить все известные как прочитанные</string>
     <string name="mark_all_new_as_read">Отметить все новые как прочитанные</string>
     <string name="mark_all_as_read">Отметить все как прочитанные</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Советы по резервному копированию и безопасности ключей
+    <string name="account_backup_tips2_md">        ## Советы по резервному копированию и безопасности ключей
         \n\nВаш аккаунт защищён секретным ключом. Ключ — это длинная последовательность символов, начинающаяся с **nsec1**. Любой, кто получит доступ к этому секретному ключу, сможет публиковать записи и менять вашу личность.
         \n\n- **Не** вводите свой секретный ключ на сайтах или в приложениях, которым не доверяете.
         \n- Разработчики Amethyst **никогда** не будут запрашивать ваш секретный ключ.
         \n- **Обязательно** сохраните надёжную резервную копию секретного ключа для восстановления аккаунта. Рекомендуем использовать менеджер паролей.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Для дополнительной безопасности вы можете зашифровать ваш ключ паролем. Этот ключ начинается с **ncryptsec1** и не может быть использован без вашего пароля.
+    <string name="account_backup_tips3_md">        Для дополнительной безопасности вы можете зашифровать ваш ключ паролем. Этот ключ начинается с **ncryptsec1** и не может быть использован без вашего пароля.
         \n\nЕсли вы потеряете пароль, вы не сможете восстановить ключ.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Зашифровать и скопировать мой секретный ключ</string>
@@ -796,7 +802,7 @@
     <string name="software">Программы</string>
     <string name="contact">Контакт</string>
     <string name="supports">Поддерживаемые NIP</string>
-    <string name="supported_grasps">Поддерживаемые Grasp'ы</string>
+    <string name="supported_grasps">Поддерживаемые Grasp\'ы</string>
     <string name="admission">Вступление</string>
     <string name="subscription">Подписка</string>
     <string name="publication">Публикация</string>
@@ -1049,47 +1055,47 @@
     <string name="cashu_request_invoice">Запросить инвойс</string>
     <string name="cashu_discard_invoice">Отменить инвойс</string>
     <string name="cashu_settings_title">Настройки кошелька Cashu</string>
-    <string name="cashu_settings_edit_wallet">Мои mint'ы</string>
-    <string name="cashu_settings_edit_wallet_subtitle">Добавляйте или удаляйте mint'ы, используемые вашим кошельком.</string>
-    <string name="cashu_settings_my_recommendations">Мои рекомендации mint'ов</string>
-    <string name="cashu_settings_recommendations_subtitle">Публично поддерживайте доверенные вами mint'ы и отзывайте рекомендации.</string>
-    <string name="cashu_settings_no_recommendations">Вы ещё не рекомендовали ни одного mint'а. Нажмите на «палец вверх» рядом с mint'ом, чтобы публично поддержать его.</string>
+    <string name="cashu_settings_edit_wallet">Мои mint\'ы</string>
+    <string name="cashu_settings_edit_wallet_subtitle">Добавляйте или удаляйте mint\'ы, используемые вашим кошельком.</string>
+    <string name="cashu_settings_my_recommendations">Мои рекомендации mint\'ов</string>
+    <string name="cashu_settings_recommendations_subtitle">Публично поддерживайте доверенные вами mint\'ы и отзывайте рекомендации.</string>
+    <string name="cashu_settings_no_recommendations">Вы ещё не рекомендовали ни одного mint\'а. Нажмите на «палец вверх» рядом с mint\'ом, чтобы публично поддержать его.</string>
     <string name="cashu_settings_delete_recommendation">Удалить рекомендацию</string>
     <string name="cashu_settings_delete_confirm_title">Отозвать рекомендацию?</string>
     <string name="cashu_settings_add_recommendation">Рекомендовать mint</string>
     <string name="cashu_settings_restore_title">Восстановить из seed-фразы</string>
-    <string name="cashu_settings_restore_subtitle">Повторно вычислить все прошлые секреты и запросить у каждого mint'а возврат слепых подписей, ещё хранящихся в файле. Полезно после потери устройства или ошибочного удаления токен-событий relay'ем.</string>
-    <string name="cashu_settings_restore_running">Сканирование mint'ов…</string>
+    <string name="cashu_settings_restore_subtitle">Повторно вычислить все прошлые секреты и запросить у каждого mint\'а возврат слепых подписей, ещё хранящихся в файле. Полезно после потери устройства или ошибочного удаления токен-событий relay\'ем.</string>
+    <string name="cashu_settings_restore_running">Сканирование mint\'ов…</string>
     <string name="cashu_settings_restore_nothing_found">Восстанавливаемых доказательств не найдено.</string>
-    <string name="cashu_settings_stop_nutzaps">Прекратить получение nutzap'ов</string>
-    <string name="cashu_settings_stop_nutzaps_subtitle">Отзовите ваш kind:10019, чтобы другие больше не могли отправлять вам nutzap'ы. Ваш кошелёк и баланс останутся на месте.</string>
-    <string name="cashu_settings_stop_nutzaps_confirm_title">Прекратить получение nutzap'ов?</string>
-    <string name="cashu_settings_stop_nutzaps_confirm_body">Ваше событие с информацией о nutzap будет заменено пустым, и запрошено его удаление. Люди больше не смогут отправлять вам nutzap'ы. Вы можете снова включить это в настройках кошелька. Ваш баланс не затрагивается.</string>
+    <string name="cashu_settings_stop_nutzaps">Прекратить получение nutzap\'ов</string>
+    <string name="cashu_settings_stop_nutzaps_subtitle">Отзовите ваш kind:10019, чтобы другие больше не могли отправлять вам nutzap\'ы. Ваш кошелёк и баланс останутся на месте.</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_title">Прекратить получение nutzap\'ов?</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_body">Ваше событие с информацией о nutzap будет заменено пустым, и запрошено его удаление. Люди больше не смогут отправлять вам nutzap\'ы. Вы можете снова включить это в настройках кошелька. Ваш баланс не затрагивается.</string>
     <string name="cashu_settings_recreate_key">Пересоздать ключ nutzap</string>
-    <string name="cashu_settings_recreate_key_subtitle">Создать совершенно новый ключ для получения nutzap'ов. Требуется редко — как правило, только если ваш текущий ключ был скомпрометирован. Nutzap'ы, уже отправленные на ваш старый ключ, но ещё не погашенные, будут потеряны.</string>
+    <string name="cashu_settings_recreate_key_subtitle">Создать совершенно новый ключ для получения nutzap\'ов. Требуется редко — как правило, только если ваш текущий ключ был скомпрометирован. Nutzap\'ы, уже отправленные на ваш старый ключ, но ещё не погашенные, будут потеряны.</string>
     <string name="cashu_settings_recreate_key_confirm_title">Пересоздать ключ nutzap?</string>
-    <string name="cashu_settings_recreate_key_confirm_body">Будет создан новый P2PK ключ и опубликован в ваших kind:10019 и kind:17375 с сохранением текущих mint'ов. Отправители начнут блокировать nutzap'ы на новый ключ. Все nutzap'ы, уже отправленные на ваш старый ключ и ещё не погашенные, станут невосстановимыми. Это требуется крайне редко.</string>
+    <string name="cashu_settings_recreate_key_confirm_body">Будет создан новый P2PK ключ и опубликован в ваших kind:10019 и kind:17375 с сохранением текущих mint\'ов. Отправители начнут блокировать nutzap\'ы на новый ключ. Все nutzap\'ы, уже отправленные на ваш старый ключ и ещё не погашенные, станут невосстановимыми. Это требуется крайне редко.</string>
     <string name="cashu_settings_recreate_key_action">Пересоздать ключ</string>
     <string name="cashu_settings_import_key">Импортировать ключ nutzap</string>
-    <string name="cashu_settings_import_key_subtitle">Заменить ключ nutzap на вставленный вами — например, для восстановления кошелька из резервной копии. Требуется редко. Nutzap'ы, привязанные к старому ключу, больше не будут погашаемы.</string>
+    <string name="cashu_settings_import_key_subtitle">Заменить ключ nutzap на вставленный вами — например, для восстановления кошелька из резервной копии. Требуется редко. Nutzap\'ы, привязанные к старому ключу, больше не будут погашаемы.</string>
     <string name="cashu_settings_import_key_confirm_title">Импортировать ключ nutzap?</string>
-    <string name="cashu_settings_import_key_confirm_body">Вставьте приватный ключ P2PK (hex) для получения nutzap'ов. Ваши kind:10019 и kind:17375 будут переопубликованы с ним, с сохранением текущих mint'ов. Nutzap'ы, привязанные к текущему ключу, больше не будут погашаемы, если этот ключ не совпадает. Это требуется крайне редко.</string>
+    <string name="cashu_settings_import_key_confirm_body">Вставьте приватный ключ P2PK (hex) для получения nutzap\'ов. Ваши kind:10019 и kind:17375 будут переопубликованы с ним, с сохранением текущих mint\'ов. Nutzap\'ы, привязанные к текущему ключу, больше не будут погашаемы, если этот ключ не совпадает. Это требуется крайне редко.</string>
     <string name="cashu_settings_import_key_field">Приватный ключ P2PK (hex)</string>
     <string name="cashu_settings_import_key_action">Импортировать ключ</string>
     <string name="cashu_settings_delete_wallet">Удалить кошелёк</string>
-    <string name="cashu_settings_delete_wallet_subtitle">Удалить кошелёк и прекратить получение nutzap'ов. Оставшийся баланс может стать невосстановимым.</string>
+    <string name="cashu_settings_delete_wallet_subtitle">Удалить кошелёк и прекратить получение nutzap\'ов. Оставшийся баланс может стать невосстановимым.</string>
     <string name="cashu_settings_delete_wallet_confirm_title">Удалить этот кошелёк?</string>
-    <string name="cashu_settings_delete_wallet_confirm_body">Это запросит удаление вашего кошелька kind:17375 и вашей nutzap-информации kind:10019. Ваши ecash доказательства не удаляются из mint'ов, но после потери ключа кошелька оставшийся баланс и непогашенные nutzap'ы могут стать невосстановимыми. Убедитесь, что вы сначала потратили или перевели средства. Это действие необратимо.</string>
+    <string name="cashu_settings_delete_wallet_confirm_body">Это запросит удаление вашего кошелька kind:17375 и вашей nutzap-информации kind:10019. Ваши ecash доказательства не удаляются из mint\'ов, но после потери ключа кошелька оставшийся баланс и непогашенные nutzap\'ы могут стать невосстановимыми. Убедитесь, что вы сначала потратили или перевели средства. Это действие необратимо.</string>
     <string name="cashu_pay_invoice">Оплатить инвойс</string>
     <string name="cashu_get_quote">Получить котировку</string>
-    <string name="cashu_getting_quote">Запрос котировки у mint'а…</string>
+    <string name="cashu_getting_quote">Запрос котировки у mint\'а…</string>
     <string name="cashu_verify">Проверить</string>
     <string name="cashu_mint_reachable">✓ Mint доступен</string>
-    <string name="cashu_mint_unreachable">Не удалось подключиться к mint'у: %1$s</string>
+    <string name="cashu_mint_unreachable">Не удалось подключиться к mint\'у: %1$s</string>
     <string name="cashu_create_token">Создать токен</string>
     <string name="cashu_redeem_button">Обменять</string>
     <string name="cashu_done">Готово</string>
-    <string name="cashu_requesting_invoice">Запрос инвойса у mint'а…</string>
+    <string name="cashu_requesting_invoice">Запрос инвойса у mint\'а…</string>
     <string name="cashu_completing_mint">Выпуск доказательств…</string>
     <string name="cashu_paying_invoice">Оплата через mint…</string>
     <string name="cashu_building_token">Обмен доказательств…</string>
@@ -1182,7 +1188,7 @@
     <string name="calendar_untitled">(без названия)</string>
     <string name="calendar_all_day">Весь день</string>
     <string name="calendar_rsvp_going_prefixed">✓ Пойду</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Возможно</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Возможно</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Не смогу</string>
     <string name="calendar_collection_title">Название</string>
     <string name="calendar_collection_description">Описание</string>
@@ -1718,8 +1724,8 @@
     <string name="emoji_add_dialog_title">Добавить пользовательский эмодзи</string>
     <string name="emoji_remove_dialog_title">Удалить :%1$s:?</string>
     <string name="emoji_long_press_hint">Удерживайте эмодзи, чтобы удалить его</string>
-    <string name="emoji_pack_is_in_list">"%1$s" есть в вашем списке эмодзи</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" отсутствует в вашем списке эмодзи</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" есть в вашем списке эмодзи</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" отсутствует в вашем списке эмодзи</string>
     <string name="emoji_pack_actions_dialog_title">Действия с набором эмодзи</string>
     <string name="emoji_private_toggle">Приватный</string>
     <string name="emoji_private_badge">Приватный эмодзи</string>
@@ -1755,7 +1761,7 @@
     <string name="marmot_edit_group_info">Изменить информацию о группе</string>
     <string name="marmot_leave_group">Покинуть группу</string>
     <string name="marmot_this_group">эту группу</string>
-    <string name="marmot_leave_group_confirm">Вы уверены, что хотите покинуть "%1$s"? Вы больше не будете получать сообщения из этой группы.</string>
+    <string name="marmot_leave_group_confirm">Вы уверены, что хотите покинуть \"%1$s\"? Вы больше не будете получать сообщения из этой группы.</string>
     <string name="marmot_keypackage_required">Пользователь должен опубликовать KeyPackage (kind:30443), чтобы его можно было добавить.</string>
     <string name="marmot_add_to_group">Добавить в группу</string>
     <string name="marmot_add_member">Добавить участника</string>
@@ -1764,15 +1770,15 @@
     <string name="marmot_member_suffix_you"> (вы)</string>
     <string name="marmot_member_suffix_admin"> — администратор</string>
     <string name="marmot_remove_member">Удалить участника</string>
-    <string name="marmot_remove_member_confirm">Вы уверены, что хотите удалить "%1$s" из этой группы?</string>
+    <string name="marmot_remove_member_confirm">Вы уверены, что хотите удалить \"%1$s\" из этой группы?</string>
     <string name="marmot_grant">Выдать</string>
     <string name="marmot_grant_admin_privileges">Выдать права администратора</string>
     <string name="marmot_grant_admin_title">Выдача прав администратора</string>
-    <string name="marmot_grant_admin_confirm">Сделать "%1$s" администратором этой группы? Администраторы могут добавлять и удалять участников, изменять информацию о группе и выдавать права администратора другим участникам.</string>
+    <string name="marmot_grant_admin_confirm">Сделать \"%1$s\" администратором этой группы? Администраторы могут добавлять и удалять участников, изменять информацию о группе и выдавать права администратора другим участникам.</string>
     <string name="marmot_revoke">Отозвать</string>
     <string name="marmot_revoke_admin_privileges">Отозвать права администратора</string>
     <string name="marmot_revoke_admin_title">Отзыв прав администратора</string>
-    <string name="marmot_revoke_admin_confirm">Отозвать права администратора у "%1$s"? Пользователь останется участником группы.</string>
+    <string name="marmot_revoke_admin_confirm">Отозвать права администратора у \"%1$s\"? Пользователь останется участником группы.</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">событий пока нет</string>
     <string name="marmot_relay_last_event">последнее событие%1$s</string>
@@ -1781,10 +1787,4 @@
     <string name="ots_explorer_api_label">Базовый URL API обозревателя</string>
     <string name="dvm_pay_invoice_from_dvm">Оплатить счёт от DVM</string>
     <string name="dvm_pay_amount_to_dvm">Оплатить %1$s sats DVM</string>
-    <string name="use_direct_url">Использовать прямой URL</string>
-    <string name="napplet_card_permissions">Разрешения:</string>
-    <string name="nsite_root_site">Корневой сайт</string>
-    <string name="nsite_source">Источник:</string>
-    <string name="nsite_servers">Серверы:</string>
-    <string name="nsite_open">Открыть</string>
 </resources>

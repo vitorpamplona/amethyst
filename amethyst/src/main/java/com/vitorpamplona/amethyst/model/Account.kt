@@ -159,6 +159,7 @@ import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip89AppHandlers.AppRecommendationsState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
+import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.model.serverList.AssumedRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
@@ -789,6 +790,18 @@ class Account(
     // so paging progress survives leaving and re-entering the wallet screen; the history loader
     // ([CashuWalletHistoryEoseManager]) binds its orchestrator to these.
     val cashuHistory = RelayLoadingCursors()
+
+    /**
+     * NIP-BC on-chain wallet balance for this account's Taproot address. Cached
+     * (one Esplora round trip per minute at most) so the zap picker can ask
+     * synchronously whether an amount is payable on-chain before offering it.
+     */
+    val onchainWalletState =
+        OnchainWalletState(
+            pubKey = signer.pubKey,
+            scope = scope,
+            backend = { cache.onchainBackend },
+        )
 
     val cashuWalletState =
         com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState(

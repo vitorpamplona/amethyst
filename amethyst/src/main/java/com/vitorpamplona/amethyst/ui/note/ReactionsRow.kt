@@ -2158,10 +2158,21 @@ fun observeZapRailCapability(
         }
     }
 
+    // Our own on-chain balance, so an amount we can't fund isn't offered at all.
+    // Cached account-wide and refreshed at most once a minute, so opening the
+    // picker again is instant; while it is still unknown (first open, explorer
+    // down) the rail stays offered — see [RailCapability.canPayOnchain].
+    val onchainWallet = accountViewModel.account.onchainWalletState
+    val onchainEnabled = onchainSupported && showOnchainWallet
+    LaunchedEffect(onchainEnabled) {
+        if (onchainEnabled) onchainWallet.refresh()
+    }
+    val onchainFunds by onchainWallet.funds.collectAsStateWithLifecycle()
+
     return remember(
         baseNote,
-        onchainSupported,
-        showOnchainWallet,
+        onchainEnabled,
+        onchainFunds,
         cashuMints,
         cashuEntries,
         recipientInfo,
@@ -2172,7 +2183,11 @@ fun observeZapRailCapability(
         payToApps,
     ) {
         val rc = RailCapabilityResolver.peek(baseNote, cashuState, myPayToTargets, showPayToChip)
-        if (onchainSupported && showOnchainWallet) rc else rc.copy(hasOnchain = false)
+        if (onchainEnabled) {
+            rc.copy(onchainMaxSpendableSats = onchainFunds?.maxSpendableSats)
+        } else {
+            rc.copy(hasOnchain = false)
+        }
     }
 }
 
@@ -2528,8 +2543,10 @@ private fun PayToHandoffChip(
  *    screen. Cashu is the one rail whose balance is free to read.
  *  - **Lightning** optimistically whenever the recipient can receive — an
  *    external wallet can pay any invoice, so we don't gate on a sender balance.
- *  - **On-chain** when a backend is configured and the amount clears
- *    [MIN_ONCHAIN_ZAP_SATS]; UTXO sufficiency stays a send-time check.
+ *  - **On-chain** when a backend is configured, the amount clears
+ *    [MIN_ONCHAIN_ZAP_SATS], and our own Taproot balance covers it plus the
+ *    miner fee. That last check uses the cached balance, so it is skipped
+ *    while the balance is still unknown; the send path re-validates for real.
  *
  * Tapping the amount fires the amount-tiered default rail: under
  * [CASHU_PREFERRED_BELOW_SATS] cashu, over [ONCHAIN_PREFERRED_ABOVE_SATS]
@@ -2554,7 +2571,7 @@ private fun UnifiedZapAmountChip(
     val cashuReady = cashuStatus == CashuRailStatus.FUNDED
     val cashuReloadable = cashuStatus == CashuRailStatus.NEEDS_RELOAD
     val lightningReady = railCapability.hasLightning
-    val onchainReady = railCapability.hasOnchain && amountInSats >= MIN_ONCHAIN_ZAP_SATS
+    val onchainReady = railCapability.canPayOnchain(amountInSats)
 
     if (!cashuReady && !cashuReloadable && !lightningReady && !onchainReady) return
 

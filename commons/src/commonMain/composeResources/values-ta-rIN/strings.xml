@@ -10,8 +10,15 @@
     <!-- Accessibility -->
     <!-- Relay history paging (shared feed markers + status card) -->
     <!-- Notes & Replies -->
+    <string name="replying_to">பதில்  பெறுநர் </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">அனுமதிகள்:</string>
+    <string name="nsite_root_site">வேர் தளம்</string>
+    <string name="nsite_source">மூலம்:</string>
+    <string name="nsite_servers">சேவையகங்கள்:</string>
+    <string name="nsite_open">திறக்கவும்</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">நேரடி URL பயன்படுத்து</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">திறந்த</string>
     <string name="git_status_merged">இணைக்கப்பட்ட</string>
@@ -102,7 +109,6 @@
     <string name="original">அசல்</string>
     <string name="quote">மேற்கோள் காட்டு</string>
     <string name="new_amount_in_sats">புதிய தொகை (ஸாட்களில்)</string>
-    <string name="replying_to">பதில்  பெறுநர் </string>
     <string name="and">மற்றும்</string>
     <string name="following"> பின்பற்றப்படுவோர்</string>
     <string name="followers"> பின்பற்றுவோர்</string>
@@ -269,18 +275,18 @@
     <string name="mark_all_known_as_read">தெரிந்தவற்றைப் படித்ததாகக் குறி</string>
     <string name="mark_all_new_as_read">புதியனவற்றைப் படித்ததாகக் குறி</string>
     <string name="mark_all_as_read">அனைத்தையும் படித்ததாகக் குறி</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## திறவுகோல் காப்புப்பிரதி மற்றும் பாதுகாப்பு குறிப்புகள்
+    <string name="account_backup_tips2_md">        ## திறவுகோல் காப்புப்பிரதி மற்றும் பாதுகாப்பு குறிப்புகள்
         \n\nஉங்கள் கணக்கு ஒரு இரகசிய திறவுகோலால் பாதுகாக்கப்படுகிறது. இந்த திறவுகோல் **nsec1** என்று தொடங்கும் நீண்ட எழுத்துத் தொடராகும். இந்த இரகசிய திறவுகோலை யாராவது பெற்றால் அவர்கள் உங்கள் அடையாளத்தை பயன்படுத்தி இடுகையிடலாம் மற்றும் மாற்றலாம்.
         \n\n- உங்கள் இரகசிய திறவுகோலை நீங்கள் நம்பாத எந்த வலைத்தளத்திலும் அல்லது மென்பொருளிலும் வைக்க **வேண்டாம்**.
         \n- Amethyst டெவலப்பர்கள் உங்கள் இரகசிய திறவுகோலை **ஒருபோதும்** கேட்கமாட்டார்கள்.
         \n- கணக்கு மீட்டெடுப்புக்காக உங்கள் இரகசிய திறவுகோலை பாதுகாப்பாக காப்புப்பிரதி எடுங்கள். கடவுச்சொல் மேலாளரை பயன்படுத்த பரிந்துரைக்கிறோம்.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        கூடுதல் பாதுகாப்புக்காக, உங்கள் திறவுகோலை கடவுச்சொல்லால் குறியாக்கலாம். இந்த திறவுகோல் **ncryptsec1** என்று தொடங்கும் மற்றும் உங்கள் கடவுச்சொல்லின்றி பயன்படுத்த முடியாது.
+    <string name="account_backup_tips3_md">        கூடுதல் பாதுகாப்புக்காக, உங்கள் திறவுகோலை கடவுச்சொல்லால் குறியாக்கலாம். இந்த திறவுகோல் **ncryptsec1** என்று தொடங்கும் மற்றும் உங்கள் கடவுச்சொல்லின்றி பயன்படுத்த முடியாது.
         \n\nகடவுச்சொல்லை மறந்தால், உங்கள் திறவுகோலை மீட்டெடுக்க முடியாது.
     </string>
     <string name="encrypt_and_copy_my_secret_key">என் இரகசிய விசையை மறைகுறியாக்கி நகல் எடுக்கவும்</string>
     <string name="badge_award_image_for"> %1$s க்கான பேட்ஜ் விருது படம்</string>
-    <string name="badge_award_image">"பேட்ஜ் விருது படம்</string>
+    <string name="badge_award_image">\"பேட்ஜ் விருது படம்</string>
     <string name="new_badge_award_notif">நீங்கள் ஒரு புதிய பேட்ஜ் விருதைப் பெற்றீர்கள்</string>
     <string name="award_granted_to">பேட்ஜ் விருது வழங்கப்பட்டது. பெறுநர்:</string>
     <string name="account_switch_add_account_dialog_title">புதிய கணக்கைச் சேர்க்கவும்</string>
@@ -495,7 +501,7 @@
     <string name="nest_state_speaking">இப்போது பேசுகிறார்</string>
     <string name="nest_state_mic_open">மைக்ரோஃபோன் திறந்துள்ளது</string>
     <string name="nest_leave_host_title">இந்த nest ஐ முடிக்க வேண்டுமா?</string>
-    <string name="nest_leave_host_body">நீங்கள் வழங்குனர். அறையை மூடுவது அனைவரையும் துண்டிக்கும். பிறகு திரும்ப விரும்பினால் "வெறும் வெளியேறு" தேர்வு செய்யவும் — 8 மணி நேர செயலற்ற நிலைக்குப் பிறகு அறை தானாக மூடும்.</string>
+    <string name="nest_leave_host_body">நீங்கள் வழங்குனர். அறையை மூடுவது அனைவரையும் துண்டிக்கும். பிறகு திரும்ப விரும்பினால் \"வெறும் வெளியேறு\" தேர்வு செய்யவும் — 8 மணி நேர செயலற்ற நிலைக்குப் பிறகு அறை தானாக மூடும்.</string>
     <string name="nest_leave_host_close">அறையை மூடு</string>
     <string name="nest_leave_host_just_leave">வெறும் வெளியேறு</string>
     <string name="nest_live_chip">நேரலை</string>
@@ -697,7 +703,7 @@
     <string name="local_blossom_cache_not_detected">போர்ட் 24242 இல் உள்ளூர் தற்காலிக சேமிப்பு கண்டறியப்படவில்லை.</string>
     <string name="local_blossom_cache_profile_pics_only">சுயவிவர படங்களை மட்டும் தற்காலிகமாக சேமி</string>
     <string name="local_blossom_cache_profile_pics_only_caption">உள்ளூர் தற்காலிக சேமிப்பை சுயவிவர படங்களுக்கு மட்டும் கட்டுப்படுத்தவும். ஊட்ட படங்களும் வீடியோக்களும் நேரடியாக அசல் சேவையகங்களிலிருந்து பெறப்படும்.</string>
-    <string name="no_blossom_server_message">உங்களிடம் Blossom சேவையகங்கள் அமைக்கப்படவில்லை. Amethyst'ன் பட்டியலை பயன்படுத்தலாம் அல்லது கீழே ஒன்றை சேர்க்கலாம் ↓</string>
+    <string name="no_blossom_server_message">உங்களிடம் Blossom சேவையகங்கள் அமைக்கப்படவில்லை. Amethyst\'ன் பட்டியலை பயன்படுத்தலாம் அல்லது கீழே ஒன்றை சேர்க்கலாம் ↓</string>
     <string name="use_default_servers">இயல்புநிலை பட்டியல் பயன்படுத்து</string>
     <string name="add_media_server">மீடியா சேவையகம் சேர்</string>
     <string name="delete_media_server">மீடியா சேவையகம் நீக்கு</string>
@@ -869,7 +875,7 @@
     <string name="community_no_descriptor">இந்த சமூகத்தின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும்</string>
     <string name="user_preferences">பயனர் விருப்பங்கள்</string>
     <string name="settings_search_placeholder">அமைப்புகளை தேடு</string>
-    <string name="settings_search_no_results">"%1$s" க்கான அமைப்புகள் எதுவும் கிடைக்கவில்லை</string>
+    <string name="settings_search_no_results">\"%1$s\" க்கான அமைப்புகள் எதுவும் கிடைக்கவில்லை</string>
     <string name="reset_marmot_confirm_title">Marmot நிலையை மீட்டமைக்கவா?</string>
     <string name="reset_marmot_confirm_body">இது தற்போதைய கணக்கிற்கான இந்த சாதனத்தில் உள்ள ஒவ்வொரு Marmot குழு அரட்டை, செய்தி வரலாறு மற்றும் MLS சாவியை நிரந்தரமாக நீக்கும். சக பயனர்களுக்கு அறிவிக்கப்படமாட்டார்கள், அவர்கள் அடுத்த commit வரை உங்களை குழுக்களில் பார்க்கலாம். இதை செயல்தவிர்க்க முடியாது. செயலி அடுத்தமுறை ஒத்திசைக்கும்போது புதிய KeyPackage வெளியிடப்படும்.</string>
     <string name="reset_marmot_confirm_action">மீட்டமை</string>
@@ -902,7 +908,7 @@
     <string name="music_playlist_collaborative_hint">மற்றவர்கள் இந்த இசை பட்டியலில் பாடல்களை சேர்க்க அனுமதிக்கவும்.</string>
     <string name="music_playlist_delete">இந்த இசை பட்டியலை நீக்கு</string>
     <string name="music_playlist_delete_confirm">இந்த இசை பட்டியலுக்கு NIP-09 நீக்கத்தை வெளியிடவா?</string>
-    <string name="music_playlist_no_tracks_hint">இன்னும் பாடல்கள் இல்லை. ஒரு பாடலின் மெனுவிலிருந்து "இசை பட்டியலில் சேர்" பயன்படுத்தி பாடல்களை சேர்க்கவும்.</string>
+    <string name="music_playlist_no_tracks_hint">இன்னும் பாடல்கள் இல்லை. ஒரு பாடலின் மெனுவிலிருந்து \"இசை பட்டியலில் சேர்\" பயன்படுத்தி பாடல்களை சேர்க்கவும்.</string>
     <string name="music_playlist_move_track_up">பாடலை மேலே நகர்த்து</string>
     <string name="music_playlist_move_track_down">பாடலை கீழே நகர்த்து</string>
     <string name="music_playlist_remove_track">இசை பட்டியலிலிருந்து பாடலை அகற்று</string>
@@ -1183,7 +1189,7 @@
     <string name="calendar_untitled">(தலைப்பிடப்படாதது)</string>
     <string name="calendar_all_day">நாள் முழுவதும்</string>
     <string name="calendar_rsvp_going_prefixed">✓ செல்கிறேன்</string>
-    <string name="calendar_rsvp_maybe_prefixed">? ஒருவேளை</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? ஒருவேளை</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ செல்ல முடியாது</string>
     <string name="calendar_collection_title">தலைப்பு</string>
     <string name="calendar_collection_description">விளக்கம்</string>
@@ -1360,7 +1366,7 @@
     <string name="remove_dvm_from_favorites">விருப்பங்களிலிருந்து அகற்று</string>
     <string name="favorite_dvms_explainer">நீங்கள் நட்சத்திரம் கொடுக்கும் ஊட்ட அல்காரிதங்கள் இங்கே மற்றும் முகப்பு ஊட்டத்தில் வடிகட்டல் சிப்களாக தோன்றும்.</string>
     <string name="favorite_dvms_empty_headline">உங்கள் விருப்பமான அல்காரிதங்களை பின் செய்யுங்கள்</string>
-    <string name="favorite_dvms_empty_step1">அல்காரிதங்களை உலாவ கீழே "%1$s" தட்டவும்.</string>
+    <string name="favorite_dvms_empty_step1">அல்காரிதங்களை உலாவ கீழே \"%1$s\" தட்டவும்.</string>
     <string name="favorite_dvms_empty_step2">ஊட்டத்தை இங்கே வைத்திருக்க அதன் அருகில் %1$s தட்டவும்.</string>
     <string name="favorite_dvms_empty_cta">சில ஊட்டங்கள் சேர்க்கவும்</string>
     <string name="favorite_dvms_add_more">மேலும் சேர்க்கவும்…</string>
@@ -1553,7 +1559,7 @@
     <string name="hls_renditions_label">வடிவங்கள்</string>
     <string name="hls_renditions_source_format">மூல தெளிவுத்திறன்: %1$d×%2$d</string>
     <string name="hls_publish_button">HD வீடியோவை வெளியிடவும்</string>
-    <string name="hls_publishing_header_format">"%1$s" வெளியிடுகிறது…</string>
+    <string name="hls_publishing_header_format">\"%1$s\" வெளியிடுகிறது…</string>
     <string name="hls_state_transcoding_format">%1$s மாற்றுகிறது</string>
     <string name="hls_state_uploading_idle">பதிவேற்றம்</string>
     <string name="hls_state_uploading_format">%2$d-ல் %1$d பதிவேற்றுகிறது</string>
@@ -1714,8 +1720,8 @@
     <string name="emoji_add_dialog_title">தனிப்பயன் emoji சேர்</string>
     <string name="emoji_remove_dialog_title">:%1$s: நீக்கவா?</string>
     <string name="emoji_long_press_hint">ஒரு emoji-ஐ நீக்க நீண்டுகு அழுத்தவும்</string>
-    <string name="emoji_pack_is_in_list">"%1$s" உங்கள் emoji பட்டியலில் உள்ளது</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" உங்கள் emoji பட்டியலில் இல்லை</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" உங்கள் emoji பட்டியலில் உள்ளது</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" உங்கள் emoji பட்டியலில் இல்லை</string>
     <string name="emoji_pack_actions_dialog_title">Emoji தொகுப்பு செயல்கள்</string>
     <string name="emoji_private_toggle">தனிப்பட்ட</string>
     <string name="emoji_private_badge">தனிப்பட்ட emoji</string>
@@ -1751,7 +1757,7 @@
     <string name="marmot_edit_group_info">குழு தகவலை திருத்து</string>
     <string name="marmot_leave_group">குழுவை விட்டு வெளியேறு</string>
     <string name="marmot_this_group">இந்த குழு</string>
-    <string name="marmot_leave_group_confirm">"%1$s" விட்டு வெளியேற விரும்புகிறீர்களா? இந்த குழுவிலிருந்து இனி செய்திகள் கிடைக்காது.</string>
+    <string name="marmot_leave_group_confirm">\"%1$s\" விட்டு வெளியேற விரும்புகிறீர்களா? இந்த குழுவிலிருந்து இனி செய்திகள் கிடைக்காது.</string>
     <string name="marmot_keypackage_required">அவர்கள் சேர்க்கப்பட KeyPackage (kind:30443) வெளியிட்டிருக்க வேண்டும்.</string>
     <string name="marmot_add_to_group">குழுவில் சேர்</string>
     <string name="marmot_add_member">உறுப்பினரை சேர்</string>
@@ -1760,15 +1766,15 @@
     <string name="marmot_member_suffix_you"> (நீங்கள்)</string>
     <string name="marmot_member_suffix_admin"> - நிர்வாகி</string>
     <string name="marmot_remove_member">உறுப்பினரை நீக்கு</string>
-    <string name="marmot_remove_member_confirm">"%1$s"-ஐ இந்த குழுவிலிருந்து நீக்க விரும்புகிறீர்களா?</string>
+    <string name="marmot_remove_member_confirm">\"%1$s\"-ஐ இந்த குழுவிலிருந்து நீக்க விரும்புகிறீர்களா?</string>
     <string name="marmot_grant">வழங்கு</string>
     <string name="marmot_grant_admin_privileges">நிர்வாக உரிமைகள் வழங்கு</string>
     <string name="marmot_grant_admin_title">நிர்வாக உரிமைகள் வழங்கு</string>
-    <string name="marmot_grant_admin_confirm">"%1$s"-ஐ இந்த குழுவின் நிர்வாகியாக்கவா? நிர்வாகிகள் உறுப்பினர்களை சேர்க்கவோ நீக்கவோ, குழு தகவலை மாற்றவோ, மற்றும் மற்ற உறுப்பினர்களுக்கு நிர்வாக உரிமைகள் வழங்கவோ முடியும்.</string>
+    <string name="marmot_grant_admin_confirm">\"%1$s\"-ஐ இந்த குழுவின் நிர்வாகியாக்கவா? நிர்வாகிகள் உறுப்பினர்களை சேர்க்கவோ நீக்கவோ, குழு தகவலை மாற்றவோ, மற்றும் மற்ற உறுப்பினர்களுக்கு நிர்வாக உரிமைகள் வழங்கவோ முடியும்.</string>
     <string name="marmot_revoke">திரும்பப்பெறு</string>
     <string name="marmot_revoke_admin_privileges">நிர்வாக உரிமைகளை திரும்பப்பெறு</string>
     <string name="marmot_revoke_admin_title">நிர்வாக உரிமைகளை திரும்பப்பெறு</string>
-    <string name="marmot_revoke_admin_confirm">"%1$s"-இடமிருந்து நிர்வாக உரிமைகளை திரும்பப்பெறவா? அவர் குழுவின் உறுப்பினராகவே இருப்பார்.</string>
+    <string name="marmot_revoke_admin_confirm">\"%1$s\"-இடமிருந்து நிர்வாக உரிமைகளை திரும்பப்பெறவா? அவர் குழுவின் உறுப்பினராகவே இருப்பார்.</string>
     <string name="marmot_relay_no_events">இன்னும் நிகழ்வுகள் இல்லை</string>
     <string name="marmot_relay_last_event">கடைசி நிகழ்வு%1$s</string>
     <string name="copy">நகலெடு</string>
@@ -1776,10 +1782,4 @@
     <string name="ots_explorer_api_label">Explorer API அடிப்படை URL</string>
     <string name="dvm_pay_invoice_from_dvm">DVM-இலிருந்து Invoice செலுத்து</string>
     <string name="dvm_pay_amount_to_dvm">DVM-க்கு %1$s sats செலுத்து</string>
-    <string name="use_direct_url">நேரடி URL பயன்படுத்து</string>
-    <string name="napplet_card_permissions">அனுமதிகள்:</string>
-    <string name="nsite_root_site">வேர் தளம்</string>
-    <string name="nsite_source">மூலம்:</string>
-    <string name="nsite_servers">சேவையகங்கள்:</string>
-    <string name="nsite_open">திறக்கவும்</string>
 </resources>
