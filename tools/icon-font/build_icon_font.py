@@ -45,6 +45,22 @@ CALL_RE = re.compile(r"\b(" + "|".join(CMDS) + r")\(([^()]*)\)")
 NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 
 
+STROKE_W_RE = re.compile(r"strokeLineWidth\s*=\s*([\d.]+)f?")
+
+
+def is_stroked(src: str) -> bool:
+    """True if the icon paints a stroke, not just a fill.
+
+    A glyph outline is filled: there is no pen width in a TrueType glyph. Converting a
+    stroked icon would emit only its fill and silently change the artwork -- Zap is drawn
+    as a thin outline (strokeLineWidth 1.2) and came out as a solid bolt. Such icons must
+    keep their ImageVector.
+    """
+    if any(float(w) > 0 for w in STROKE_W_RE.findall(src)):
+        return True
+    return "stroke = SolidColor" in src
+
+
 def kotlin_to_svg_path(src: str):
     """Extract viewport and an SVG 'd' string from one ImageVector .kt file."""
     vw = re.search(r"viewportWidth\s*=\s*([\d.]+)f?", src)
@@ -100,6 +116,9 @@ def main(icons_dir, out_ttf, out_kt):
     for fn in files:
         name = fn[:-3]
         src = open(os.path.join(icons_dir, fn), encoding="utf-8").read()
+        if is_stroked(src):
+            skipped.append((name, "draws a stroke; a glyph can only be filled"))
+            continue
         viewport, d = kotlin_to_svg_path(src)
         if not d:
             skipped.append((name, "no path data"))

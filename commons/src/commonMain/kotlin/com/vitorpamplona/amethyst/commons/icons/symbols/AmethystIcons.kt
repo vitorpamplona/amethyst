@@ -23,14 +23,11 @@ package com.vitorpamplona.amethyst.commons.icons.symbols
 /** Amethyst's own icons as font glyphs. See the build script for why. */
 object AmethystIcons {
     val Bookmark = MaterialSymbol("\uE900")
-    val Following = MaterialSymbol("\uE901")
-    val Like = MaterialSymbol("\uE902")
-    val Liked = MaterialSymbol("\uE903")
-    val Reply = MaterialSymbol("\uE904")
-    val Repost = MaterialSymbol("\uE905")
-    val Reposted = MaterialSymbol("\uE906")
-    val Search = MaterialSymbol("\uE907")
-    val Share = MaterialSymbol("\uE908")
-    val Zap = MaterialSymbol("\uE909")
-    val ZapSplit = MaterialSymbol("\uE90A")
+    val Like = MaterialSymbol("\uE901")
+    val Liked = MaterialSymbol("\uE902")
+    val Reply = MaterialSymbol("\uE903")
+    val Repost = MaterialSymbol("\uE904")
+    val Reposted = MaterialSymbol("\uE905")
+    val Search = MaterialSymbol("\uE906")
+    val Share = MaterialSymbol("\uE907")
 }
