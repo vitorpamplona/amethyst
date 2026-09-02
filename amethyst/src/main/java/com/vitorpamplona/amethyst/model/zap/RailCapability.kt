@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.zap
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
@@ -50,6 +51,12 @@ data class RailCapability(
     val cashuBestSingleMintSats: Long = 0L,
     /** Total cashu balance across all our mints (reachable via reload/rebalance). */
     val cashuTotalWalletSats: Long = 0L,
+    /**
+     * Largest on-chain amount our own wallet can still pay, miner fee included
+     * (see `OnchainFunds.maxSpendableSats`). `null` means *unknown* — the
+     * balance hasn't loaded yet or the explorer is unreachable — not *empty*.
+     */
+    val onchainMaxSpendableSats: Long? = null,
 ) {
     /**
      * Classify a cashu nutzap of [amountSats] for the unified amount chip.
@@ -64,6 +71,24 @@ data class RailCapability(
             amountSats <= cashuTotalWalletSats -> CashuRailStatus.NEEDS_RELOAD
             else -> CashuRailStatus.IMPOSSIBLE
         }
+
+    /**
+     * Whether an on-chain zap of [amountSats] should be offered at all. Three
+     * gates, in order:
+     *  - the recipient can be paid on-chain ([hasOnchain]),
+     *  - the amount clears the on-chain minimum ([MIN_ONCHAIN_ZAP_SATS]) — below
+     *    it the fee eats the payment,
+     *  - and our own wallet can actually cover amount + fee.
+     *
+     * The last gate is skipped while [onchainMaxSpendableSats] is unknown: a
+     * flaky explorer should not silently remove a payment option the send path
+     * might well honour. Once the balance *is* known, an amount over it is not
+     * offered — tapping it could only end in an insufficient-funds failure.
+     */
+    fun canPayOnchain(amountSats: Long): Boolean =
+        hasOnchain &&
+            amountSats >= MIN_ONCHAIN_ZAP_SATS &&
+            (onchainMaxSpendableSats == null || amountSats <= onchainMaxSpendableSats)
 
     companion object {
         val NONE = RailCapability(hasCashu = false, hasLightning = false, hasOnchain = false)
@@ -98,9 +123,10 @@ object RailCapabilityResolver {
      *  - **On-chain**: at least one pubkey-based recipient exists. NIP-BC
      *    derives the Taproot address from the recipient pubkey, so any nostr
      *    pubkey is payable; lnAddress-only recipients are not (they have no
-     *    pubkey to tweak). The sender's onchain wallet availability is a
-     *    *sender* concern — handled elsewhere by the chip gating on-chain by
-     *    `MIN_ONCHAIN_ZAP_SATS` and the dialog on `LocalCache.onchainBackend`.
+     *    pubkey to tweak). Whether *we* can fund the payment is a separate,
+     *    sender-side question this peek can't answer synchronously — the caller
+     *    fills [RailCapability.onchainMaxSpendableSats] in from
+     *    `OnchainWalletState` and the chips gate on [RailCapability.canPayOnchain].
      */
     fun peek(
         baseNote: Note,
