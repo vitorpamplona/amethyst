@@ -23,8 +23,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_system_created_channel
+import com.vitorpamplona.amethyst.commons.resources.chat_system_created_channel_unnamed
+import com.vitorpamplona.amethyst.commons.resources.chat_system_updated_channel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -54,9 +57,9 @@ fun RenderChannelAdminSystemMessage(
             ChatSystemMessage(
                 text =
                     if (channelName.isNullOrBlank()) {
-                        stringRes(R.string.chat_system_created_channel_unnamed, authorName)
+                        stringRes(Res.string.chat_system_created_channel_unnamed, authorName)
                     } else {
-                        stringRes(R.string.chat_system_created_channel, authorName, channelName)
+                        stringRes(Res.string.chat_system_created_channel, authorName, channelName)
                     },
                 onClick = { nav.nav(Route.PublicChatChannel(note.idHex)) },
             )
@@ -67,7 +70,7 @@ fun RenderChannelAdminSystemMessage(
             val channelId = remember(noteEvent) { noteEvent.channelId() }
 
             ChatSystemMessage(
-                text = stringRes(R.string.chat_system_updated_channel, authorName),
+                text = stringRes(Res.string.chat_system_updated_channel, authorName),
                 onClick = channelId?.let { { nav.nav(Route.PublicChatChannel(it)) } },
             )
         }

@@ -65,7 +65,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_add_more
+import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_cta
+import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_headline
+import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_step1
+import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_step2
+import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_explainer
+import com.vitorpamplona.amethyst.commons.resources.remove_dvm_from_favorites
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -128,7 +136,7 @@ fun FavoriteAlgoFeedsListScreen(
         ) {
             if (favorites.isEmpty()) {
                 Text(
-                    text = stringRes(R.string.favorite_dvms_explainer),
+                    text = stringRes(Res.string.favorite_dvms_explainer),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 12.dp),
                     style = MaterialTheme.typography.bodyMedium,
@@ -160,19 +168,19 @@ private fun FavoriteAlgoFeedsEmptyState(nav: INav) {
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringRes(R.string.favorite_dvms_empty_headline),
+                text = stringRes(Res.string.favorite_dvms_empty_headline),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             FavoriteAlgoFeedsEmptySteps(
-                ctaLabel = stringRes(R.string.favorite_dvms_empty_cta),
+                ctaLabel = stringRes(Res.string.favorite_dvms_empty_cta),
                 modifier = Modifier.widthIn(max = 320.dp),
             )
         }
         Spacer(modifier = Modifier.weight(1f))
         BrowseAlgosButton(
-            label = stringRes(R.string.favorite_dvms_empty_cta),
+            label = stringRes(Res.string.favorite_dvms_empty_cta),
             nav = nav,
         )
     }
@@ -204,7 +212,7 @@ private fun ColumnScope.FavoriteAlgoFeedList(
         }
     }
     BrowseAlgosButton(
-        label = stringRes(R.string.favorite_dvms_add_more),
+        label = stringRes(Res.string.favorite_dvms_add_more),
         nav = nav,
         modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 32.dp),
     )
@@ -296,7 +304,7 @@ private fun FavoriteAlgoFeedRow(
         IconButton(onClick = onRemove) {
             Icon(
                 symbol = MaterialSymbols.Delete,
-                contentDescription = stringRes(R.string.remove_dvm_from_favorites),
+                contentDescription = stringRes(Res.string.remove_dvm_from_favorites),
             )
         }
     }
@@ -307,7 +315,7 @@ private fun FavoriteAlgoFeedsEmptySteps(
     ctaLabel: String,
     modifier: Modifier = Modifier,
 ) {
-    val step2Template = stringRes(R.string.favorite_dvms_empty_step2)
+    val step2Template = stringRes(Res.string.favorite_dvms_empty_step2)
     val primaryColor = MaterialTheme.colorScheme.primary
 
     val step2Text =
@@ -346,7 +354,7 @@ private fun FavoriteAlgoFeedsEmptySteps(
     ) {
         NumberedStep(number = "1.") {
             Text(
-                text = stringRes(R.string.favorite_dvms_empty_step1, ctaLabel),
+                text = stringRes(Res.string.favorite_dvms_empty_step1, ctaLabel),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.grayText,
             )

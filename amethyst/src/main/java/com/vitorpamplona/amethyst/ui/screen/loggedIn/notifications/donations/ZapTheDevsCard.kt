@@ -55,9 +55,15 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.brought_to_you_by
+import com.vitorpamplona.amethyst.commons.resources.this_version_brought_to_you_by
+import com.vitorpamplona.amethyst.commons.resources.version_name
+import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_description
+import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_title
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.ReusableZapButton
@@ -174,7 +180,7 @@ fun ZapTheDevsCard(
                         Spacer(modifier = Modifier.width(14.dp))
 
                         Text(
-                            text = stringRes(id = R.string.zap_the_devs_title),
+                            text = stringRes(id = Res.string.zap_the_devs_title),
                             color = Color.White,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
@@ -199,7 +205,7 @@ fun ZapTheDevsCard(
                 ) {
                     Text(
                         buildAnnotatedString {
-                            append(stringRes(id = R.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
+                            append(stringRes(id = Res.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
                             append(" ")
                             appendLink("#value4value", MaterialTheme.colorScheme.primary) { nav.nav(Route.Hashtag("value4value")) }
                         },
@@ -221,13 +227,13 @@ fun ZapTheDevsCard(
                                         withLink(
                                             LinkAnnotation.Clickable("clickable") { nav.nav(route) },
                                         ) {
-                                            append(stringRes(id = R.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
+                                            append(stringRes(id = Res.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
                                         }
-                                        append(" " + stringRes(id = R.string.brought_to_you_by))
+                                        append(" " + stringRes(id = Res.string.brought_to_you_by))
                                     },
                             )
                         } else {
-                            Text(stringRes(id = R.string.this_version_brought_to_you_by))
+                            Text(stringRes(id = Res.string.this_version_brought_to_you_by))
                         }
 
                         Spacer(modifier = StdVertSpacer)

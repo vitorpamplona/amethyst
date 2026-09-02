@@ -35,15 +35,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_none_found
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
@@ -52,7 +53,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
  * Lists the napplet manifests currently in the local cache (NIP-5D kinds 15129/35129). These are
  * replaceable/addressable events, so the screen observes the **AddressableNote** store ([observeNotes],
  * which scans `LocalCache.addressables`): exactly one note per address — the latest version — keyed by
- * the stable address ([com.vitorpamplona.amethyst.model.Note.idHex]) and auto-updating in place as
+ * the stable address ([com.vitorpamplona.amethyst.commons.model.Note.idHex]) and auto-updating in place as
  * newer versions arrive. The top bar carries a follow-list filter (like the Pictures/Articles feeds)
  * and each row is rendered through the shared [NoteCompose] — the same path the main feed uses for
  * these events — so it gets the author header, the
@@ -93,7 +94,7 @@ fun NappletsScreen(
         if (visible.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    stringResource(R.string.napplet_none_found),
+                    stringRes(Res.string.napplet_none_found),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

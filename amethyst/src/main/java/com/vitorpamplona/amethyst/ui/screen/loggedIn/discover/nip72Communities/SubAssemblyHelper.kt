@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies.filterCommunitiesByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies.filterCommunitiesByAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies.filterCommunitiesByCommunity

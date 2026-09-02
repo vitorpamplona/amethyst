@@ -55,17 +55,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_allow_always
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_allow_once
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_deny_always
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_hide_event
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_not_now
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_show_event
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 /**
@@ -240,9 +246,9 @@ private fun NappletConsentDialog(
                                 TextButton(onClick = { showRawData = !showRawData }) {
                                     Text(
                                         if (showRawData) {
-                                            stringResource(R.string.napplet_consent_hide_event)
+                                            stringRes(Res.string.napplet_consent_hide_event)
                                         } else {
-                                            stringResource(R.string.napplet_consent_show_event)
+                                            stringRes(Res.string.napplet_consent_show_event)
                                         },
                                         style = MaterialTheme.typography.labelSmall,
                                     )
@@ -261,20 +267,20 @@ private fun NappletConsentDialog(
                         onClick = { onDecision(GrantState.ALLOW_ALWAYS) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_consent_allow_always))
+                        Text(stringRes(Res.string.napplet_consent_allow_always))
                     }
                     OutlinedButton(
                         onClick = { onDecision(GrantState.ALLOW_ONCE) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_consent_allow_once))
+                        Text(stringRes(Res.string.napplet_consent_allow_once))
                     }
                 } else {
                     Button(
                         onClick = { onDecision(GrantState.ALLOW_ONCE) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     ) {
-                        Text(stringResource(R.string.napplet_consent_allow_once))
+                        Text(stringRes(Res.string.napplet_consent_allow_once))
                     }
                 }
 
@@ -287,7 +293,7 @@ private fun NappletConsentDialog(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 ) {
                     Text(
-                        stringResource(R.string.napplet_consent_not_now),
+                        stringRes(Res.string.napplet_consent_not_now),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -297,7 +303,7 @@ private fun NappletConsentDialog(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(
-                        stringResource(R.string.napplet_consent_deny_always),
+                        stringRes(Res.string.napplet_consent_deny_always),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

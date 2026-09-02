@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
+import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.unreadPrivateChatRoute
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent

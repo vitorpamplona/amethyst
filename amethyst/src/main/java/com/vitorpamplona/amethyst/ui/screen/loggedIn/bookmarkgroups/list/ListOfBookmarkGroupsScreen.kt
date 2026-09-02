@@ -32,13 +32,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
-import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
-import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmark_lists
+import com.vitorpamplona.amethyst.commons.resources.follow_set_create_btn_label
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
@@ -126,7 +128,7 @@ fun ListOfBookmarkGroupsFeed(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.bookmark_lists), nav)
+            TopBarWithBackButton(caption = stringRes(Res.string.bookmark_lists), nav)
         },
         bottomBar = {
             AppBottomBar(Route.BookmarkGroups, nav, accountViewModel) { route ->
@@ -180,7 +182,7 @@ fun BookmarkGroupFab(
 ) {
     ExtendedFloatingActionButton(
         text = {
-            Text(text = stringRes(R.string.follow_set_create_btn_label))
+            Text(text = stringRes(Res.string.follow_set_create_btn_label))
         },
         icon = {
             Icon(

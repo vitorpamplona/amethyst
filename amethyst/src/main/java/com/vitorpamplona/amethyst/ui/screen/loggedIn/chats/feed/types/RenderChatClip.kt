@@ -34,9 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.StreamSystemCard
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_clip_created_a_clip
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
@@ -82,7 +83,7 @@ fun RenderChatClip(
                 }
                 Spacer(StdHorzSpacer)
                 Text(
-                    text = stringRes(R.string.chat_clip_created_a_clip),
+                    text = stringRes(Res.string.chat_clip_created_a_clip),
                     color = accent,
                     fontWeight = FontWeight.Bold,
                 )

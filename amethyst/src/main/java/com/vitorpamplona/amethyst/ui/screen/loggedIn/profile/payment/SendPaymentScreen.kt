@@ -45,13 +45,46 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_offer_amount_range
+import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message
+import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_nonzap
+import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_private
+import com.vitorpamplona.amethyst.commons.resources.note_to_receiver
+import com.vitorpamplona.amethyst.commons.resources.send_payment_building_tx
+import com.vitorpamplona.amethyst.commons.resources.send_payment_cashu_insufficient
+import com.vitorpamplona.amethyst.commons.resources.send_payment_min_onchain
+import com.vitorpamplona.amethyst.commons.resources.send_payment_onchain_fee
+import com.vitorpamplona.amethyst.commons.resources.send_payment_pay_button
+import com.vitorpamplona.amethyst.commons.resources.send_payment_pay_button_empty
+import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_cashu
+import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_clink
+import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_onchain
+import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_onchain_address
+import com.vitorpamplona.amethyst.commons.resources.send_payment_requesting_invoice
+import com.vitorpamplona.amethyst.commons.resources.send_payment_requesting_invoice_nostr
+import com.vitorpamplona.amethyst.commons.resources.send_payment_sending_nutzap
+import com.vitorpamplona.amethyst.commons.resources.send_payment_sent_to_wallet
+import com.vitorpamplona.amethyst.commons.resources.send_payment_source_cashu_wallet
+import com.vitorpamplona.amethyst.commons.resources.send_payment_source_external
+import com.vitorpamplona.amethyst.commons.resources.send_payment_source_onchain_wallet
+import com.vitorpamplona.amethyst.commons.resources.send_payment_success
+import com.vitorpamplona.amethyst.commons.resources.send_payment_title
+import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous
+import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap
+import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_private
+import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_public
+import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -109,7 +142,7 @@ fun SendPaymentScreen(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.send_payment_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.send_payment_title), nav) },
     ) { pad ->
         LoadUser(baseUserHex = userHex, accountViewModel) { user ->
             if (user != null) {
@@ -183,7 +216,7 @@ private fun SendPaymentLoaded(
         .collectAsStateWithLifecycle()
     val clinkDebitWallets by accountViewModel.account.settings.clinkDebitWallets
         .collectAsStateWithLifecycle()
-    val externalWalletLabel = stringRes(R.string.send_payment_source_external)
+    val externalWalletLabel = stringRes(Res.string.send_payment_source_external)
     val bolt11Sources =
         remember(nwcWallets, clinkDebitWallets, externalWalletLabel) {
             (
@@ -322,15 +355,15 @@ private fun SendPaymentLoaded(
 
     val amountSupportText =
         when {
-            belowOnchainMin -> stringRes(R.string.send_payment_min_onchain, MIN_ONCHAIN_ZAP_SATS.toString())
-            cashuInsufficient -> stringRes(R.string.send_payment_cashu_insufficient)
+            belowOnchainMin -> stringRes(Res.string.send_payment_min_onchain, MIN_ONCHAIN_ZAP_SATS.toString())
+            cashuInsufficient -> stringRes(Res.string.send_payment_cashu_insufficient)
             selectedMethod == ProfilePaymentMethod.CASHU ->
                 stringRes(
                     R.string.send_payment_cashu_balance,
                     showAmount((cashuFunding?.bestSingleMintSats ?: 0L).toBigDecimal()),
                 )
             selectedMethod == ProfilePaymentMethod.CLINK && clinkRange?.min != null && clinkRange?.max != null ->
-                stringRes(R.string.clink_offer_amount_range, clinkRange?.min.toString(), clinkRange?.max.toString())
+                stringRes(Res.string.clink_offer_amount_range, clinkRange?.min.toString(), clinkRange?.max.toString())
             else -> null
         }
 
@@ -346,12 +379,12 @@ private fun SendPaymentLoaded(
 
     // Labels captured up front so payment callbacks (arbitrary dispatchers)
     // never need a composable context.
-    val requestingInvoiceLabel = stringRes(R.string.send_payment_requesting_invoice)
-    val requestingInvoiceNostrLabel = stringRes(R.string.send_payment_requesting_invoice_nostr)
-    val sendingNutzapLabel = stringRes(R.string.send_payment_sending_nutzap)
-    val buildingTxLabel = stringRes(R.string.send_payment_building_tx)
-    val successTitle = stringRes(R.string.send_payment_success)
-    val sentToWalletLabel = stringRes(R.string.send_payment_sent_to_wallet)
+    val requestingInvoiceLabel = stringRes(Res.string.send_payment_requesting_invoice)
+    val requestingInvoiceNostrLabel = stringRes(Res.string.send_payment_requesting_invoice_nostr)
+    val sendingNutzapLabel = stringRes(Res.string.send_payment_sending_nutzap)
+    val buildingTxLabel = stringRes(Res.string.send_payment_building_tx)
+    val successTitle = stringRes(Res.string.send_payment_success)
+    val sentToWalletLabel = stringRes(Res.string.send_payment_sent_to_wallet)
     val clinkNoResponseLabel = stringRes(R.string.clink_debit_no_response)
     val invoiceErrorLabel = stringRes(R.string.error_dialog_pay_invoice_error)
 
@@ -542,8 +575,8 @@ private fun SendPaymentLoaded(
             null
         }
 
-    val onchainWalletLabel = stringRes(R.string.send_payment_source_onchain_wallet)
-    val cashuWalletLabel = stringRes(R.string.send_payment_source_cashu_wallet)
+    val onchainWalletLabel = stringRes(Res.string.send_payment_source_onchain_wallet)
+    val cashuWalletLabel = stringRes(Res.string.send_payment_source_cashu_wallet)
     val fromSources =
         when (selectedMethod) {
             ProfilePaymentMethod.LIGHTNING, ProfilePaymentMethod.CLINK -> bolt11Sources
@@ -563,22 +596,22 @@ private fun SendPaymentLoaded(
 
     val receiptNote =
         when {
-            selectedMethod == ProfilePaymentMethod.CLINK -> stringRes(R.string.send_payment_receipt_clink)
+            selectedMethod == ProfilePaymentMethod.CLINK -> stringRes(Res.string.send_payment_receipt_clink)
             selectedMethod == ProfilePaymentMethod.ONCHAIN && onchainAddressTarget != null ->
-                stringRes(R.string.send_payment_receipt_onchain_address, onchainAddressTarget.shortenMiddle())
-            selectedMethod == ProfilePaymentMethod.ONCHAIN -> stringRes(R.string.send_payment_receipt_onchain)
-            selectedMethod == ProfilePaymentMethod.CASHU -> stringRes(R.string.send_payment_receipt_cashu)
+                stringRes(Res.string.send_payment_receipt_onchain_address, onchainAddressTarget.shortenMiddle())
+            selectedMethod == ProfilePaymentMethod.ONCHAIN -> stringRes(Res.string.send_payment_receipt_onchain)
+            selectedMethod == ProfilePaymentMethod.CASHU -> stringRes(Res.string.send_payment_receipt_cashu)
             else -> null
         }
 
     val messageLabel =
         when {
-            selectedMethod == ProfilePaymentMethod.ONCHAIN -> stringRes(R.string.note_to_receiver)
+            selectedMethod == ProfilePaymentMethod.ONCHAIN -> stringRes(Res.string.note_to_receiver)
             selectedMethod == ProfilePaymentMethod.LIGHTNING && zapType == LnZapEvent.ZapType.PRIVATE ->
-                stringRes(R.string.custom_zaps_add_a_message_private)
+                stringRes(Res.string.custom_zaps_add_a_message_private)
             selectedMethod == ProfilePaymentMethod.LIGHTNING && zapType == LnZapEvent.ZapType.NONZAP ->
-                stringRes(R.string.custom_zaps_add_a_message_nonzap)
-            else -> stringRes(R.string.custom_zaps_add_a_message)
+                stringRes(Res.string.custom_zaps_add_a_message_nonzap)
+            else -> stringRes(Res.string.custom_zaps_add_a_message)
         }
 
     SendPaymentContent(
@@ -618,9 +651,9 @@ private fun SendPaymentLoaded(
         canSend = canSend,
         sendLabel =
             if (amountSats != null && amountSats > 0) {
-                stringRes(R.string.send_payment_pay_button, showAmount(amountSats.toBigDecimal()))
+                stringRes(Res.string.send_payment_pay_button, showAmount(amountSats.toBigDecimal()))
             } else {
-                stringRes(R.string.send_payment_pay_button_empty)
+                stringRes(Res.string.send_payment_pay_button_empty)
             },
         onSend = {
             val amount = amountSats ?: return@SendPaymentContent
@@ -678,14 +711,14 @@ private const val CASHU_WALLET_SOURCE_ID = "cashu-wallet"
  */
 @Composable
 private fun rememberLightningZapTypeOptions(): ImmutableList<ZapTypeOption> {
-    val publicLabel = stringRes(R.string.zap_type_public)
-    val publicExplainer = stringRes(R.string.zap_type_public_explainer)
-    val privateLabel = stringRes(R.string.zap_type_private)
-    val privateExplainer = stringRes(R.string.zap_type_private_explainer)
-    val anonymousLabel = stringRes(R.string.zap_type_anonymous)
-    val anonymousExplainer = stringRes(R.string.zap_type_anonymous_explainer)
-    val nonzapLabel = stringRes(R.string.zap_type_nonzap)
-    val nonzapExplainer = stringRes(R.string.zap_type_nonzap_explainer)
+    val publicLabel = stringRes(Res.string.zap_type_public)
+    val publicExplainer = stringRes(Res.string.zap_type_public_explainer)
+    val privateLabel = stringRes(Res.string.zap_type_private)
+    val privateExplainer = stringRes(Res.string.zap_type_private_explainer)
+    val anonymousLabel = stringRes(Res.string.zap_type_anonymous)
+    val anonymousExplainer = stringRes(Res.string.zap_type_anonymous_explainer)
+    val nonzapLabel = stringRes(Res.string.zap_type_nonzap)
+    val nonzapExplainer = stringRes(Res.string.zap_type_nonzap_explainer)
 
     return remember {
         persistentListOf(
@@ -735,7 +768,7 @@ private fun OnchainFeeSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            text = stringRes(R.string.send_payment_onchain_fee),
+            text = stringRes(Res.string.send_payment_onchain_fee),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

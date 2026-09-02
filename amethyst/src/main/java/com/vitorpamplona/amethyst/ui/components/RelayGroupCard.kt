@@ -49,6 +49,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
+import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
+import com.vitorpamplona.amethyst.commons.resources.relay_group_open
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -110,8 +114,8 @@ private fun RelayGroupCardContent(
     // private, so it wins when both are set. Null for a plain open group.
     val statusBadge =
         when {
-            channel.isClosed() -> stringRes(R.string.relay_group_badge_invite_only)
-            channel.isPrivate() -> stringRes(R.string.relay_group_badge_private)
+            channel.isClosed() -> stringRes(Res.string.relay_group_badge_invite_only)
+            channel.isPrivate() -> stringRes(Res.string.relay_group_badge_private)
             else -> null
         }
 
@@ -200,7 +204,7 @@ private fun RelayGroupCardContent(
 
                 Icon(
                     symbol = MaterialSymbols.ChevronRight,
-                    contentDescription = stringRes(R.string.relay_group_open),
+                    contentDescription = stringRes(Res.string.relay_group_open),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp),
                 )

@@ -86,6 +86,36 @@ actual class ConcurrentMap<K : Any, V : Any> {
         }
     }
 
+    actual fun putIfAbsent(
+        key: K,
+        value: V,
+    ): V? {
+        while (true) {
+            val cur = ref.load()
+            cur[key]?.let { return it }
+            val copy = HashMap(cur)
+            copy[key] = value
+            if (ref.compareAndSet(cur, copy)) return null
+        }
+    }
+
+    actual fun remove(
+        key: K,
+        value: V,
+    ): Boolean {
+        while (true) {
+            val cur = ref.load()
+            if (cur[key] != value) return false
+            val copy = HashMap(cur)
+            copy.remove(key)
+            if (ref.compareAndSet(cur, copy)) return true
+        }
+    }
+
+    actual fun clear() {
+        ref.store(HashMap())
+    }
+
     actual fun size(): Int = ref.load().size
 
     actual fun snapshot(): Map<K, V> = HashMap(ref.load())

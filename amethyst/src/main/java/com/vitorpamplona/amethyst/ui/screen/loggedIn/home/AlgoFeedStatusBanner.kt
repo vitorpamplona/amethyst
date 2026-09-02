@@ -40,9 +40,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dvm_home_retry
+import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_error
+import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_payment_required
+import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_processing
+import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_requesting
+import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_requesting_all
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsSnapshot
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -93,7 +99,7 @@ private fun SingleAlgoFeedBanner(
                     ?.appMetaData()
                     ?.name
                     ?.takeIf { it.isNotBlank() }
-                    ?: (note as? com.vitorpamplona.amethyst.model.AddressableNote)?.dTag()
+                    ?: (note as? com.vitorpamplona.amethyst.commons.model.AddressableNote)?.dTag()
                     ?: ""
             }
 
@@ -103,7 +109,7 @@ private fun SingleAlgoFeedBanner(
             when {
                 snapshot.errorMessage != null -> {
                     BannerMessageRow(
-                        message = stringRes(R.string.dvm_home_status_error),
+                        message = stringRes(Res.string.dvm_home_status_error),
                         showSpinner = false,
                     )
                     Spacer(modifier = StdVertSpacer)
@@ -114,7 +120,7 @@ private fun SingleAlgoFeedBanner(
                     BannerMessageRow(
                         message =
                             status.description.ifBlank {
-                                stringRes(R.string.dvm_home_status_payment_required)
+                                stringRes(Res.string.dvm_home_status_payment_required)
                             },
                         showSpinner = false,
                     )
@@ -139,7 +145,7 @@ private fun SingleAlgoFeedBanner(
                     BannerMessageRow(
                         message =
                             status.description.ifBlank {
-                                stringRes(R.string.dvm_home_status_error)
+                                stringRes(Res.string.dvm_home_status_error)
                             },
                         showSpinner = false,
                     )
@@ -151,7 +157,7 @@ private fun SingleAlgoFeedBanner(
                     BannerMessageRow(
                         message =
                             status.description.ifBlank {
-                                stringRes(R.string.dvm_home_status_processing)
+                                stringRes(Res.string.dvm_home_status_processing)
                             },
                         showSpinner = true,
                     )
@@ -159,7 +165,7 @@ private fun SingleAlgoFeedBanner(
 
                 else -> {
                     BannerMessageRow(
-                        message = stringRes(R.string.dvm_home_status_requesting, resolvedName),
+                        message = stringRes(Res.string.dvm_home_status_requesting, resolvedName),
                         showSpinner = true,
                     )
                 }
@@ -197,7 +203,7 @@ private fun AllFavoriteAlgoFeedsBanner(
     BannerCard(modifier) {
         if (allErrored) {
             BannerMessageRow(
-                message = stringRes(R.string.dvm_home_status_error),
+                message = stringRes(Res.string.dvm_home_status_error),
                 showSpinner = false,
             )
             Spacer(modifier = StdVertSpacer)
@@ -206,7 +212,7 @@ private fun AllFavoriteAlgoFeedsBanner(
             }
         } else {
             BannerMessageRow(
-                message = stringRes(R.string.dvm_home_status_requesting_all),
+                message = stringRes(Res.string.dvm_home_status_requesting_all),
                 showSpinner = true,
             )
         }
@@ -259,6 +265,6 @@ private fun BannerMessageRow(
 @Composable
 private fun RetryButton(onClick: () -> Unit) {
     OutlinedButton(onClick = onClick) {
-        Text(stringRes(R.string.dvm_home_retry))
+        Text(stringRes(Res.string.dvm_home_retry))
     }
 }

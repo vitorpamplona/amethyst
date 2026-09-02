@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
+import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes

@@ -58,12 +58,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.live_stream_ended_tag
+import com.vitorpamplona.amethyst.commons.resources.nests_ended_ago
+import com.vitorpamplona.amethyst.commons.resources.nests_section_live_now
+import com.vitorpamplona.amethyst.commons.resources.nests_section_recently_ended
+import com.vitorpamplona.amethyst.commons.resources.nests_section_scheduled
+import com.vitorpamplona.amethyst.commons.resources.wallet_loading
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -153,9 +159,9 @@ fun NestsFeedLoaded(
     // Hoist string lookups out of the LazyListScope builder lambda
     // (which is not @Composable) so they can be passed in as plain
     // strings.
-    val liveLabel = stringRes(R.string.nests_section_live_now)
-    val scheduledLabel = stringRes(R.string.nests_section_scheduled)
-    val endedLabel = stringRes(R.string.nests_section_recently_ended)
+    val liveLabel = stringRes(Res.string.nests_section_live_now)
+    val scheduledLabel = stringRes(Res.string.nests_section_scheduled)
+    val endedLabel = stringRes(Res.string.nests_section_recently_ended)
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -403,9 +409,9 @@ private fun NestEndedCompactCard(
                 Text(
                     text =
                         if (endedAgo.isNotEmpty()) {
-                            stringRes(R.string.nests_ended_ago, endedAgo)
+                            stringRes(Res.string.nests_ended_ago, endedAgo)
                         } else {
-                            stringRes(R.string.live_stream_ended_tag)
+                            stringRes(Res.string.live_stream_ended_tag)
                         },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
@@ -675,7 +681,7 @@ fun SpaceHostAndReactions(
         val creator = baseNote.author
         if (creator == null) {
             Text(
-                text = stringRes(R.string.wallet_loading),
+                text = stringRes(Res.string.wallet_loading),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

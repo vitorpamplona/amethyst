@@ -55,16 +55,24 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_branch
+import com.vitorpamplona.amethyst.commons.resources.git_clone_address
+import com.vitorpamplona.amethyst.commons.resources.git_commit
+import com.vitorpamplona.amethyst.commons.resources.git_merge_base
+import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
+import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
+import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -450,7 +458,7 @@ private fun RenderGitPatchEvent(
             Spacer(modifier = StdVertSpacer)
             GitMetaRow(
                 symbol = MaterialSymbols.Commit,
-                contentDescription = stringRes(id = R.string.git_commit),
+                contentDescription = stringRes(id = Res.string.git_commit),
                 value = commit.shortCommit(),
             )
         }
@@ -620,7 +628,7 @@ private fun RenderGitPullRequestEvent(
 
             if (update != null) {
                 TypeChip(
-                    text = stringRes(id = R.string.git_pr_revised),
+                    text = stringRes(id = Res.string.git_pr_revised),
                     background = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     symbol = MaterialSymbols.Sync,
@@ -651,13 +659,13 @@ private fun RenderGitPullRequestEvent(
             Spacer(modifier = StdVertSpacer)
             Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
                 branch?.let {
-                    GitMetaRow(MaterialSymbols.AltRoute, stringRes(id = R.string.git_branch), it)
+                    GitMetaRow(MaterialSymbols.AltRoute, stringRes(id = Res.string.git_branch), it)
                 }
                 currentCommit?.let {
-                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = R.string.git_commit), it.shortCommit())
+                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = Res.string.git_commit), it.shortCommit())
                 }
                 mergeBase?.let {
-                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = R.string.git_merge_base), it.shortCommit())
+                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = Res.string.git_merge_base), it.shortCommit())
                 }
             }
         }
@@ -668,7 +676,7 @@ private fun RenderGitPullRequestEvent(
                 cloneUrls.forEach { url ->
                     LinkRow(
                         symbol = MaterialSymbols.CloudDownload,
-                        contentDescription = stringRes(id = R.string.git_clone_address),
+                        contentDescription = stringRes(id = Res.string.git_clone_address),
                         url = url,
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
                     )
@@ -747,7 +755,7 @@ private fun RenderGitPullRequestUpdateEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
         Text(
-            text = stringRes(id = R.string.git_pr_update_description),
+            text = stringRes(id = Res.string.git_pr_update_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.grayText,
         )
@@ -760,10 +768,10 @@ private fun RenderGitPullRequestUpdateEvent(
             Spacer(modifier = StdVertSpacer)
             Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
                 currentCommit?.let {
-                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = R.string.git_commit), it.shortCommit())
+                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = Res.string.git_commit), it.shortCommit())
                 }
                 mergeBase?.let {
-                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = R.string.git_merge_base), it.shortCommit())
+                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = Res.string.git_merge_base), it.shortCommit())
                 }
             }
         }
@@ -774,7 +782,7 @@ private fun RenderGitPullRequestUpdateEvent(
                 cloneUrls.forEach { url ->
                     LinkRow(
                         symbol = MaterialSymbols.CloudDownload,
-                        contentDescription = stringRes(id = R.string.git_clone_address),
+                        contentDescription = stringRes(id = Res.string.git_clone_address),
                         url = url,
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
                     )
@@ -838,7 +846,7 @@ private fun RenderGitRepositoryEvent(
 
             if (isPersonalFork) {
                 TypeChip(
-                    text = stringRes(id = R.string.git_repo_personal_fork),
+                    text = stringRes(id = Res.string.git_repo_personal_fork),
                     background = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     symbol = MaterialSymbols.AltRoute,

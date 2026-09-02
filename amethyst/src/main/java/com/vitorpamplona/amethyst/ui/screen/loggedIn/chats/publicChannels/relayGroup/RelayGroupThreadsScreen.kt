@@ -63,6 +63,14 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_thread_new
+import com.vitorpamplona.amethyst.commons.resources.relay_group_thread_untitled
+import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_all_caught_up
+import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_empty
+import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_empty_read_only
+import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_loading_older
+import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_title
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -159,7 +167,7 @@ private fun RelayGroupThreads(
                 title = {
                     Column {
                         Text(
-                            text = stringRes(R.string.relay_group_threads_title),
+                            text = stringRes(Res.string.relay_group_threads_title),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -228,7 +236,7 @@ private fun RelayGroupThreads(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.relay_group_thread_new),
+                        contentDescription = stringRes(Res.string.relay_group_thread_new),
                         modifier = Modifier.size(24.dp),
                     )
                 }
@@ -240,9 +248,9 @@ private fun RelayGroupThreads(
                 Text(
                     text =
                         if (canPost) {
-                            stringRes(R.string.relay_group_threads_empty)
+                            stringRes(Res.string.relay_group_threads_empty)
                         } else {
-                            stringRes(R.string.relay_group_threads_empty_read_only)
+                            stringRes(Res.string.relay_group_threads_empty_read_only)
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -320,8 +328,8 @@ private fun RelayGroupThreadsHistoryFooter(
 ) {
     val text =
         when {
-            loadingOlder -> stringRes(R.string.relay_group_threads_loading_older)
-            exhausted -> stringRes(R.string.relay_group_threads_all_caught_up)
+            loadingOlder -> stringRes(Res.string.relay_group_threads_loading_older)
+            exhausted -> stringRes(Res.string.relay_group_threads_all_caught_up)
             else -> return
         }
     Text(
@@ -343,7 +351,7 @@ private fun ThreadRow(
     // Observe the reply count so a comment arriving on an already-listed thread bumps it live
     // (channel.threads only re-emits on add/remove of a thread).
     val replyCount by observeNoteReplyCount(thread, accountViewModel)
-    val untitled = stringRes(R.string.relay_group_thread_untitled)
+    val untitled = stringRes(Res.string.relay_group_thread_untitled)
     // Two thread shapes share this list: NIP-29 kind-11 threads (title + body) and Buzz forum
     // roots (kind 45001, body only — no title). For a forum post, surface the first line as the
     // heading and the rest as the preview so it reads like a titled thread.

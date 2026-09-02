@@ -54,9 +54,18 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.attestation_invalid
+import com.vitorpamplona.amethyst.commons.resources.attestation_requests_attestation_to
+import com.vitorpamplona.amethyst.commons.resources.attestation_status_revoked
+import com.vitorpamplona.amethyst.commons.resources.attestation_status_verifying
+import com.vitorpamplona.amethyst.commons.resources.attestation_valid
+import com.vitorpamplona.amethyst.commons.resources.attestation_valid_from
+import com.vitorpamplona.amethyst.commons.resources.attestation_valid_to
+import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation_for_kinds
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -192,14 +201,14 @@ fun RenderAttestation(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 validFrom?.let {
                     Text(
-                        text = stringRes(R.string.attestation_valid_from, formatMediumDate(it, context)),
+                        text = stringRes(Res.string.attestation_valid_from, formatMediumDate(it, context)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 validTo?.let {
                     Text(
-                        text = stringRes(R.string.attestation_valid_to, formatMediumDate(it, context)),
+                        text = stringRes(Res.string.attestation_valid_to, formatMediumDate(it, context)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -337,7 +346,7 @@ fun RenderAttestationRequest(
                     if (it != null) {
                         Spacer(modifier = DoubleVertSpacer)
                         Text(
-                            text = stringRes(R.string.attestation_requests_attestation_to),
+                            text = stringRes(Res.string.attestation_requests_attestation_to),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -361,7 +370,7 @@ fun RenderAttestationRequest(
                     if (it != null) {
                         Spacer(modifier = DoubleVertSpacer)
                         Text(
-                            text = stringRes(R.string.attestation_requests_attestation_to),
+                            text = stringRes(Res.string.attestation_requests_attestation_to),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -385,7 +394,7 @@ fun RenderAttestationRequest(
                     if (it != null) {
                         Spacer(modifier = DoubleVertSpacer)
                         Text(
-                            text = stringRes(R.string.attestation_requests_attestation_to),
+                            text = stringRes(Res.string.attestation_requests_attestation_to),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -460,7 +469,7 @@ fun RenderAttestorRecommendation(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.attestor_recommendation_for_kinds),
+                    text = stringRes(Res.string.attestor_recommendation_for_kinds),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -595,9 +604,9 @@ private fun attestationIcon(status: AttestationStatus?): MaterialSymbol =
 @Composable
 private fun attestationStatusLabel(status: AttestationStatus?): String =
     when {
-        status == AttestationStatus.INVALID -> stringRes(R.string.attestation_invalid)
-        status == AttestationStatus.VALID -> stringRes(R.string.attestation_valid)
-        status == AttestationStatus.REVOKED -> stringRes(R.string.attestation_status_revoked)
-        status == AttestationStatus.VERIFYING -> stringRes(R.string.attestation_status_verifying)
+        status == AttestationStatus.INVALID -> stringRes(Res.string.attestation_invalid)
+        status == AttestationStatus.VALID -> stringRes(Res.string.attestation_valid)
+        status == AttestationStatus.REVOKED -> stringRes(Res.string.attestation_status_revoked)
+        status == AttestationStatus.VERIFYING -> stringRes(Res.string.attestation_status_verifying)
         else -> stringRes(R.string.attestation)
     }

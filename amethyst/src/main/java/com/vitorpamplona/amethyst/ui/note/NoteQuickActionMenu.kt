@@ -67,10 +67,28 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.textNoteModifications
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.textNoteModifications
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.broadcast
+import com.vitorpamplona.amethyst.commons.resources.concord_ban_user
+import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_body
+import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_title
+import com.vitorpamplona.amethyst.commons.resources.edit_draft
+import com.vitorpamplona.amethyst.commons.resources.quick_action_block
+import com.vitorpamplona.amethyst.commons.resources.quick_action_block_dialog_btn
+import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_text
+import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_user_id
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
+import com.vitorpamplona.amethyst.commons.resources.quick_action_dont_show_again_button
+import com.vitorpamplona.amethyst.commons.resources.quick_action_follow
+import com.vitorpamplona.amethyst.commons.resources.quick_action_report
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_unfollow
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
@@ -283,10 +301,10 @@ fun CardBody(
 
     if (showConcordBanDialog.value) {
         QuickActionAlertDialogOneButton(
-            title = stringRes(R.string.concord_ban_user_title),
-            textContent = stringRes(R.string.concord_ban_user_body),
+            title = stringRes(Res.string.concord_ban_user_title),
+            textContent = stringRes(Res.string.concord_ban_user_body),
             buttonIcon = MaterialSymbols.Gavel,
-            buttonText = stringRes(R.string.concord_ban_user),
+            buttonText = stringRes(Res.string.concord_ban_user),
             buttonColors =
                 ButtonDefaults.buttonColors(
                     containerColor = LightRedColor,
@@ -323,14 +341,14 @@ fun CardBody(
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             NoteQuickActionItem(
                 icon = MaterialSymbols.ContentCopy,
-                label = stringRes(R.string.quick_action_copy_text),
+                label = stringRes(Res.string.quick_action_copy_text),
             ) {
                 copyNoteText(note, noteVersionToCopy)
             }
             VerticalDivider(color = primaryLight)
             NoteQuickActionItem(
                 MaterialSymbols.AlternateEmail,
-                stringRes(R.string.quick_action_copy_user_id),
+                stringRes(Res.string.quick_action_copy_user_id),
             ) {
                 note.author?.let {
                     scope.launch {
@@ -357,7 +375,7 @@ fun CardBody(
 
                 NoteQuickActionItem(
                     MaterialSymbols.Block,
-                    stringRes(R.string.quick_action_block),
+                    stringRes(Res.string.quick_action_block),
                 ) {
                     if (accountViewModel.account.settings.hideBlockAlertDialog) {
                         note.author?.let { accountViewModel.hide(it) }
@@ -415,7 +433,7 @@ fun CardBody(
             } else if (isFollowingUser) {
                 NoteQuickActionItem(
                     MaterialSymbols.PersonRemove,
-                    stringRes(R.string.quick_action_unfollow),
+                    stringRes(Res.string.quick_action_unfollow),
                 ) {
                     accountViewModel.unfollow(note.author!!)
                     onDismiss()
@@ -423,7 +441,7 @@ fun CardBody(
             } else {
                 NoteQuickActionItem(
                     MaterialSymbols.PersonAdd,
-                    stringRes(R.string.quick_action_follow),
+                    stringRes(Res.string.quick_action_follow),
                 ) {
                     accountViewModel.follow(note.author!!)
                     onDismiss()
@@ -437,7 +455,7 @@ fun CardBody(
                 VerticalDivider(color = primaryLight)
                 NoteQuickActionItem(
                     icon = MaterialSymbols.Dns,
-                    label = stringRes(R.string.broadcast),
+                    label = stringRes(Res.string.broadcast),
                 ) {
                     accountViewModel.broadcast(note)
                     // showSelectTextDialog = true
@@ -448,7 +466,7 @@ fun CardBody(
             if (isOwnNote && note.isDraft()) {
                 NoteQuickActionItem(
                     MaterialSymbols.Edit,
-                    stringRes(R.string.edit_draft),
+                    stringRes(Res.string.edit_draft),
                 ) {
                     onWantsToEditDraft()
                 }
@@ -489,7 +507,7 @@ fun CardBody(
 
                 NoteQuickActionItem(
                     MaterialSymbols.Report,
-                    stringRes(R.string.quick_action_report),
+                    stringRes(Res.string.quick_action_report),
                 ) {
                     showReportDialog.value = true
                 }
@@ -513,7 +531,7 @@ fun CardBody(
 
                 NoteQuickActionItem(
                     MaterialSymbols.Gavel,
-                    stringRes(R.string.concord_ban_user),
+                    stringRes(Res.string.concord_ban_user),
                 ) {
                     showConcordBanDialog.value = true
                 }
@@ -556,10 +574,10 @@ fun DeleteAlertDialog(
     onDismiss: () -> Unit,
 ) {
     QuickActionAlertDialog(
-        title = stringRes(R.string.quick_action_request_deletion_alert_title),
-        textContent = stringRes(R.string.quick_action_request_deletion_alert_body),
+        title = stringRes(Res.string.quick_action_request_deletion_alert_title),
+        textContent = stringRes(Res.string.quick_action_request_deletion_alert_body),
         buttonIcon = MaterialSymbols.Delete,
-        buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
+        buttonText = stringRes(Res.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
             accountViewModel.delete(note)
             onDismiss()
@@ -580,9 +598,9 @@ private fun BlockAlertDialog(
     onDismiss: () -> Unit,
 ) = QuickActionAlertDialog(
     title = stringRes(R.string.report_dialog_block_hide_user_btn),
-    textContent = stringRes(R.string.report_dialog_blocking_a_user),
+    textContent = stringRes(Res.string.report_dialog_blocking_a_user),
     buttonIcon = MaterialSymbols.Block,
-    buttonText = stringRes(R.string.quick_action_block_dialog_btn),
+    buttonText = stringRes(Res.string.quick_action_block_dialog_btn),
     buttonColors =
         ButtonDefaults.buttonColors(
             containerColor = LightRedColor,
@@ -681,7 +699,7 @@ fun QuickActionAlertDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 TextButton(onClick = onClickDontShowAgain) {
-                    Text(stringRes(R.string.quick_action_dont_show_again_button))
+                    Text(stringRes(Res.string.quick_action_dont_show_again_button))
                 }
                 Button(
                     onClick = onClickDoOnce,

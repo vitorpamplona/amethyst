@@ -39,9 +39,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_only_to_post
+import com.vitorpamplona.amethyst.commons.resources.relay_group_join_to_post
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -49,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -340,9 +342,9 @@ private fun relayShortName(relay: NormalizedRelayUrl): String =
 private fun JoinToPostNotice(channel: RelayGroupChannel) {
     val message =
         if (channel.isClosed()) {
-            stringRes(R.string.relay_group_invite_only_to_post)
+            stringRes(Res.string.relay_group_invite_only_to_post)
         } else {
-            stringRes(R.string.relay_group_join_to_post)
+            stringRes(Res.string.relay_group_join_to_post)
         }
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,

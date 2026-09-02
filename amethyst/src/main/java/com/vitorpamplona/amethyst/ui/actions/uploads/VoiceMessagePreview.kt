@@ -51,6 +51,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.re_record
+import com.vitorpamplona.amethyst.commons.resources.record_a_message
+import com.vitorpamplona.amethyst.commons.resources.recording_indicator_description
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
@@ -195,11 +199,11 @@ private fun ReRecordButton(
         ) {
             Icon(
                 symbol = MaterialSymbols.Mic,
-                contentDescription = stringRes(id = R.string.record_a_message),
+                contentDescription = stringRes(id = Res.string.record_a_message),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = stringRes(id = R.string.re_record),
+                text = stringRes(id = Res.string.re_record),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -227,13 +231,13 @@ private fun ReRecordButton(
             if (isRecording) {
                 formatSecondsToTime(elapsedSeconds)
             } else {
-                stringRes(id = R.string.re_record)
+                stringRes(id = Res.string.re_record)
             }
         val iconDescription =
             if (isRecording) {
-                stringRes(id = R.string.recording_indicator_description)
+                stringRes(id = Res.string.recording_indicator_description)
             } else {
-                stringRes(id = R.string.record_a_message)
+                stringRes(id = Res.string.record_a_message)
             }
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),

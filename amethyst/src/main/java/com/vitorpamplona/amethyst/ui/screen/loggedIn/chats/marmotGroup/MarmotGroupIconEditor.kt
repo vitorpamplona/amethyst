@@ -40,6 +40,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_icon
+import com.vitorpamplona.amethyst.commons.resources.marmot_remove_photo
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -89,7 +92,7 @@ fun MarmotGroupIconEditor(
         RobohashFallbackAsyncImage(
             robot = groupId,
             model = model,
-            contentDescription = stringRes(R.string.marmot_group_icon),
+            contentDescription = stringRes(Res.string.marmot_group_icon),
             modifier =
                 Modifier
                     .size(96.dp)
@@ -115,7 +118,7 @@ fun MarmotGroupIconEditor(
                     enabled = enabled,
                     onClick = onRemove,
                 ) {
-                    Text(stringRes(R.string.marmot_remove_photo))
+                    Text(stringRes(Res.string.marmot_remove_photo))
                 }
             }
         }

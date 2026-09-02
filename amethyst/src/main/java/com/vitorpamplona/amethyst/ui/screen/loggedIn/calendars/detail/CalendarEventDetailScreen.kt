@@ -61,12 +61,29 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.IcsExport
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_add_to_calendar_action
+import com.vitorpamplona.amethyst.commons.resources.calendar_add_to_phone_calendar
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_count
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_empty_members
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_in_calendars
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_in_no_calendars
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_loading
+import com.vitorpamplona.amethyst.commons.resources.calendar_export_event
+import com.vitorpamplona.amethyst.commons.resources.calendar_participants_section
+import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_going_prefixed
+import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_maybe_prefixed
+import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_none
+import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_not_going_prefixed
+import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_section
+import com.vitorpamplona.amethyst.commons.resources.calendar_share_nostr
+import com.vitorpamplona.amethyst.commons.resources.calendar_share_nostr_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
+import com.vitorpamplona.amethyst.commons.resources.route_calendar_event_detail
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -137,7 +154,7 @@ fun CalendarEventDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = stringRes(R.string.route_calendar_event_detail),
+                        text = stringRes(Res.string.route_calendar_event_detail),
                     )
                 },
                 navigationIcon = {
@@ -171,7 +188,7 @@ fun CalendarEventDetailScreen(
                         }) {
                             Icon(
                                 symbol = MaterialSymbols.EventAvailable,
-                                contentDescription = stringRes(R.string.calendar_add_to_phone_calendar),
+                                contentDescription = stringRes(Res.string.calendar_add_to_phone_calendar),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
@@ -183,12 +200,12 @@ fun CalendarEventDetailScreen(
                         }) {
                             Icon(
                                 symbol = MaterialSymbols.Share,
-                                contentDescription = stringRes(R.string.calendar_export_event),
+                                contentDescription = stringRes(Res.string.calendar_export_event),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
-                        val shareTitle = stringRes(R.string.calendar_share_nostr_title)
+                        val shareTitle = stringRes(Res.string.calendar_share_nostr_title)
                         IconButton(onClick = {
                             val naddr =
                                 NAddress.create(
@@ -209,7 +226,7 @@ fun CalendarEventDetailScreen(
                         }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.Send,
-                                contentDescription = stringRes(R.string.calendar_share_nostr),
+                                contentDescription = stringRes(Res.string.calendar_share_nostr),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
@@ -282,7 +299,7 @@ private fun LoadingPlaceholder() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringRes(R.string.calendar_event_loading),
+            text = stringRes(Res.string.calendar_event_loading),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -466,7 +483,7 @@ private fun CollectionMembersSection(
         SectionTitle(pluralStringResource(Res.plurals.calendar_collection_count, memberAddresses.size, memberAddresses.size))
         if (memberAddresses.isEmpty()) {
             Text(
-                text = stringRes(R.string.calendar_collection_empty_members),
+                text = stringRes(Res.string.calendar_collection_empty_members),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -525,7 +542,7 @@ private fun CollectionMemberRow(
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title ?: stringRes(R.string.calendar_untitled),
+                text = title ?: stringRes(Res.string.calendar_untitled),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
@@ -627,7 +644,7 @@ private fun ParticipantsSection(
     nav: INav,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(stringRes(R.string.calendar_participants_section, participants.size))
+        SectionTitle(stringRes(Res.string.calendar_participants_section, participants.size))
         participants.forEach { p ->
             UserRow(p.pubKey, accountViewModel, nav, trailing = null)
         }
@@ -645,10 +662,10 @@ private fun RsvpsSection(
     val rsvps by rememberRsvpsFor(targetAddress)
 
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(stringRes(R.string.calendar_rsvp_section, rsvps.size))
+        SectionTitle(stringRes(Res.string.calendar_rsvp_section, rsvps.size))
         if (rsvps.isEmpty()) {
             Text(
-                text = stringRes(R.string.calendar_rsvp_none),
+                text = stringRes(Res.string.calendar_rsvp_none),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -676,7 +693,7 @@ private fun InCalendarsSection(
 
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            SectionTitle(stringRes(R.string.calendar_event_in_calendars, calendars.size))
+            SectionTitle(stringRes(Res.string.calendar_event_in_calendars, calendars.size))
             Spacer(modifier = Modifier.weight(1f))
             // Affordance for adding/removing this event from the user's own calendars. Hidden
             // when the user has no own calendars — the sheet would show an empty-state in that
@@ -684,7 +701,7 @@ private fun InCalendarsSection(
             IconButton(onClick = { showAddSheet = true }) {
                 Icon(
                     symbol = MaterialSymbols.Add,
-                    contentDescription = stringRes(R.string.calendar_add_to_calendar_action),
+                    contentDescription = stringRes(Res.string.calendar_add_to_calendar_action),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -699,7 +716,7 @@ private fun InCalendarsSection(
         }
         if (calendars.isEmpty()) {
             Text(
-                text = stringRes(R.string.calendar_event_in_no_calendars),
+                text = stringRes(Res.string.calendar_event_in_no_calendars),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -728,7 +745,7 @@ private fun InCalendarsSection(
                     accountViewModel = accountViewModel,
                 )
                 Text(
-                    text = calendar.title() ?: stringRes(R.string.calendar_untitled),
+                    text = calendar.title() ?: stringRes(Res.string.calendar_untitled),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 2,
@@ -791,11 +808,11 @@ private fun RsvpStatusBadge(status: RSVPStatusTag.STATUS?) {
     val (label, color) =
         when (status) {
             RSVPStatusTag.STATUS.ACCEPTED ->
-                stringRes(R.string.calendar_rsvp_going_prefixed) to MaterialTheme.colorScheme.primary
+                stringRes(Res.string.calendar_rsvp_going_prefixed) to MaterialTheme.colorScheme.primary
             RSVPStatusTag.STATUS.TENTATIVE ->
-                stringRes(R.string.calendar_rsvp_maybe_prefixed) to MaterialTheme.colorScheme.tertiary
+                stringRes(Res.string.calendar_rsvp_maybe_prefixed) to MaterialTheme.colorScheme.tertiary
             RSVPStatusTag.STATUS.DECLINED ->
-                stringRes(R.string.calendar_rsvp_not_going_prefixed) to MaterialTheme.colorScheme.error
+                stringRes(Res.string.calendar_rsvp_not_going_prefixed) to MaterialTheme.colorScheme.error
             null -> "—" to MaterialTheme.colorScheme.onSurfaceVariant
         }
     Text(

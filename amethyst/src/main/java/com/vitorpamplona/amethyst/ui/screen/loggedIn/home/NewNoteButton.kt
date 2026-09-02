@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_post
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -63,7 +65,7 @@ fun NewNoteButton(nav: INav) {
     ) {
         Icon(
             painter = painterRes(R.drawable.ic_compose, 4),
-            contentDescription = stringRes(R.string.new_post),
+            contentDescription = stringRes(Res.string.new_post),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )

@@ -59,6 +59,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_home_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_show_all_channels
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -150,7 +153,7 @@ fun ConcordHomeScreen(
         if (communities.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    stringRes(R.string.concord_home_empty),
+                    stringRes(Res.string.concord_home_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 32.dp),
@@ -462,7 +465,7 @@ private fun ShowAllChannelsRow(onClick: () -> Unit) {
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            stringRes(R.string.concord_show_all_channels),
+            stringRes(Res.string.concord_show_all_channels),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
         )

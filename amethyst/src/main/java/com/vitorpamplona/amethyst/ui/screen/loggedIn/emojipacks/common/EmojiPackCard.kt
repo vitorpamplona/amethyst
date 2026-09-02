@@ -46,7 +46,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_count
+import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_by_author
 import com.vitorpamplona.amethyst.ui.stringRes
 
 private const val PREVIEW_SLOTS = 6
@@ -85,7 +87,7 @@ fun EmojiPackCard(
                 if (!author.isNullOrBlank()) {
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = stringRes(R.string.my_emoji_list_by_author, author),
+                        text = stringRes(Res.string.my_emoji_list_by_author, author),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -94,7 +96,7 @@ fun EmojiPackCard(
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = stringRes(R.string.emoji_pack_count, emojiCount),
+                    text = stringRes(Res.string.emoji_pack_count, emojiCount),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

@@ -49,6 +49,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_audio_dropped
+import com.vitorpamplona.amethyst.commons.resources.nest_reconnecting
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
@@ -163,14 +166,14 @@ internal fun NestPipScreen(
         // uses the error palette; Reconnecting reads as transient.
         if (showReconnecting) {
             Text(
-                text = stringRes(R.string.nest_reconnecting),
+                text = stringRes(Res.string.nest_reconnecting),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.align(Alignment.Center),
             )
         } else if (showFailed) {
             Text(
-                text = stringRes(R.string.nest_audio_dropped),
+                text = stringRes(Res.string.nest_audio_dropped),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.align(Alignment.Center),

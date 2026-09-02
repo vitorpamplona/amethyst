@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
+import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthVenues
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId

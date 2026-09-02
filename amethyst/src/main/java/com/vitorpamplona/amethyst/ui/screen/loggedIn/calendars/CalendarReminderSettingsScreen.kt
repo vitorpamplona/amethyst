@@ -44,6 +44,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_lead_subtitle
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_lead_title
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -100,8 +103,8 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                 SettingsDivider()
                 SettingsBlockTile(
                     icon = MaterialSymbols.Schedule,
-                    title = stringRes(R.string.calendar_reminder_settings_lead_title),
-                    description = stringRes(R.string.calendar_reminder_settings_lead_subtitle),
+                    title = stringRes(Res.string.calendar_reminder_settings_lead_title),
+                    description = stringRes(Res.string.calendar_reminder_settings_lead_subtitle),
                 ) {
                     val choices = CalendarReminderPrefs.LEAD_TIME_CHOICES
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {

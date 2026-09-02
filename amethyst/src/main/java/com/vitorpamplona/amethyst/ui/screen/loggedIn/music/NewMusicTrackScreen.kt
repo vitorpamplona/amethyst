@@ -66,6 +66,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.music_track_album_label
+import com.vitorpamplona.amethyst.commons.resources.music_track_artist_label
+import com.vitorpamplona.amethyst.commons.resources.music_track_artist_placeholder
+import com.vitorpamplona.amethyst.commons.resources.music_track_audio_picked
+import com.vitorpamplona.amethyst.commons.resources.music_track_delete
+import com.vitorpamplona.amethyst.commons.resources.music_track_delete_confirm
+import com.vitorpamplona.amethyst.commons.resources.music_track_description_label
+import com.vitorpamplona.amethyst.commons.resources.music_track_duration_label
+import com.vitorpamplona.amethyst.commons.resources.music_track_title_label
+import com.vitorpamplona.amethyst.commons.resources.music_track_title_placeholder
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -187,8 +198,8 @@ fun NewMusicTrackScreen(
             OutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
-                label = { Text(stringRes(R.string.music_track_title_label)) },
-                placeholder = { Text(stringRes(R.string.music_track_title_placeholder)) },
+                label = { Text(stringRes(Res.string.music_track_title_label)) },
+                placeholder = { Text(stringRes(Res.string.music_track_title_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -198,8 +209,8 @@ fun NewMusicTrackScreen(
             OutlinedTextField(
                 value = vm.artist.value,
                 onValueChange = { vm.artist.value = it },
-                label = { Text(stringRes(R.string.music_track_artist_label)) },
-                placeholder = { Text(stringRes(R.string.music_track_artist_placeholder)) },
+                label = { Text(stringRes(Res.string.music_track_artist_label)) },
+                placeholder = { Text(stringRes(Res.string.music_track_artist_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
@@ -215,7 +226,7 @@ fun NewMusicTrackScreen(
             OutlinedTextField(
                 value = vm.album.value,
                 onValueChange = { vm.album.value = it },
-                label = { Text(stringRes(R.string.music_track_album_label)) },
+                label = { Text(stringRes(Res.string.music_track_album_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
@@ -224,7 +235,7 @@ fun NewMusicTrackScreen(
             OutlinedTextField(
                 value = vm.durationSeconds.value,
                 onValueChange = { input -> vm.durationSeconds.value = input.filter { it.isDigit() } },
-                label = { Text(stringRes(R.string.music_track_duration_label)) },
+                label = { Text(stringRes(Res.string.music_track_duration_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -233,7 +244,7 @@ fun NewMusicTrackScreen(
             OutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
-                label = { Text(stringRes(R.string.music_track_description_label)) },
+                label = { Text(stringRes(Res.string.music_track_description_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -284,7 +295,7 @@ private fun AudioFilePicker(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = stringRes(R.string.music_track_audio_picked),
+                    text = stringRes(Res.string.music_track_audio_picked),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -338,14 +349,14 @@ private fun DeleteMusicTrackRow(
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
-        Text(text = stringRes(R.string.music_track_delete))
+        Text(text = stringRes(Res.string.music_track_delete))
     }
 
     if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },
-            title = { Text(stringRes(R.string.music_track_delete)) },
-            text = { Text(stringRes(R.string.music_track_delete_confirm)) },
+            title = { Text(stringRes(Res.string.music_track_delete)) },
+            text = { Text(stringRes(Res.string.music_track_delete_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirming = false
@@ -354,7 +365,7 @@ private fun DeleteMusicTrackRow(
                     }
                 }) {
                     Text(
-                        text = stringRes(R.string.music_track_delete),
+                        text = stringRes(Res.string.music_track_delete),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }

@@ -42,7 +42,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_body_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_new_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_post_action
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -74,7 +77,7 @@ fun BuzzForumPostScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_forum_new_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_forum_new_title), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -91,7 +94,7 @@ fun BuzzForumPostScreen(
                     body = it
                     error = null
                 },
-                label = { Text(stringRes(R.string.buzz_forum_body_label)) },
+                label = { Text(stringRes(Res.string.buzz_forum_body_label)) },
                 minLines = 5,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isPosting,
@@ -150,7 +153,7 @@ fun BuzzForumPostScreen(
                 if (isPosting) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(stringRes(R.string.buzz_forum_post_action))
+                    Text(stringRes(Res.string.buzz_forum_post_action))
                 }
             }
         }

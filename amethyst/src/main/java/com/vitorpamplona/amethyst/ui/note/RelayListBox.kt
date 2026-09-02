@@ -45,10 +45,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.expand_relay_list
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -237,7 +238,7 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
         ) {
             Icon(
                 symbol = MaterialSymbols.ExpandMore,
-                contentDescription = stringRes(id = R.string.expand_relay_list),
+                contentDescription = stringRes(id = Res.string.expand_relay_list),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }

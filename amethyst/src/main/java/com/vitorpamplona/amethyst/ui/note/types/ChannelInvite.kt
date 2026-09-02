@@ -54,9 +54,16 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_added_you
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_ignore
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_leave
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_unknown_actor
+import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
+import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -135,14 +142,14 @@ fun RenderChannelInvite(
                 UsernameDisplay(actorUser, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel)
             } else {
                 Text(
-                    text = stringRes(R.string.channel_invite_unknown_actor),
+                    text = stringRes(Res.string.channel_invite_unknown_actor),
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             Text(
-                text = stringRes(R.string.channel_invite_added_you),
+                text = stringRes(Res.string.channel_invite_added_you),
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -164,10 +171,10 @@ fun RenderChannelInvite(
             // in the roster, Leave is the kind-9022 that actually removes you from the channel. It is
             // also the destructive one, so it stays the lightest of the three.
             TextButton(onClick = { accountViewModel.leaveChannelInvite(channel) }) {
-                Text(stringRes(R.string.channel_invite_leave), color = MaterialTheme.colorScheme.error)
+                Text(stringRes(Res.string.channel_invite_leave), color = MaterialTheme.colorScheme.error)
             }
             TextButton(onClick = { accountViewModel.dismissChannelInvite(notice.channelId) }) {
-                Text(stringRes(R.string.channel_invite_ignore))
+                Text(stringRes(Res.string.channel_invite_ignore))
             }
             // Accepting *is* `addRelayGroupToMessages`, the same call behind the channel top bar's
             // "Add to Messages", so it carries that label rather than a second word for one action.
@@ -211,8 +218,8 @@ private fun ChannelBanner(
         when {
             // Closed (invite-only) is the more actionable signal to somebody deciding whether to stay
             // than private is, so it wins when both are set.
-            channel.isClosed() -> stringRes(R.string.relay_group_badge_invite_only)
-            channel.isPrivate() -> stringRes(R.string.relay_group_badge_private)
+            channel.isClosed() -> stringRes(Res.string.relay_group_badge_invite_only)
+            channel.isPrivate() -> stringRes(Res.string.relay_group_badge_private)
             else -> null
         }
 

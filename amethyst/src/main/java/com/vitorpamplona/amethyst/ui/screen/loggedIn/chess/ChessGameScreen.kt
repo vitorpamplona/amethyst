@@ -65,6 +65,12 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.LiveChessGameScreen
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_game_id
+import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found
+import com.vitorpamplona.amethyst.commons.resources.chess_game_waiting
+import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
+import com.vitorpamplona.amethyst.commons.resources.go_back
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -240,7 +246,7 @@ fun ChessGameScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(stringRes(R.string.chess_loading_game))
+                        Text(stringRes(Res.string.chess_loading_game))
                     }
                 }
             }
@@ -257,7 +263,7 @@ fun ChessGameScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = stringRes(R.string.chess_game_not_found),
+                        text = stringRes(Res.string.chess_game_not_found),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -266,7 +272,7 @@ fun ChessGameScreen(
 
                     // Show specific error if available
                     Text(
-                        text = error ?: stringRes(R.string.chess_game_waiting),
+                        text = error ?: stringRes(Res.string.chess_game_waiting),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -274,7 +280,7 @@ fun ChessGameScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = stringRes(R.string.chess_game_id, gameId.take(16)),
+                        text = stringRes(Res.string.chess_game_id, gameId.take(16)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -290,7 +296,7 @@ fun ChessGameScreen(
                             contentDescription = stringRes(R.string.back),
                             modifier = Modifier.padding(end = 8.dp),
                         )
-                        Text(stringRes(R.string.go_back))
+                        Text(stringRes(Res.string.go_back))
                     }
                 }
             }

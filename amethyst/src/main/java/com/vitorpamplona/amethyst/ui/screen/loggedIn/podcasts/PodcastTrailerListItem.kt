@@ -37,8 +37,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_season
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
@@ -87,14 +89,14 @@ fun PodcastTrailerListItem(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = stringRes(R.string.podcast_trailer),
+                text = stringRes(Res.string.podcast_trailer),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
             )
             season?.let {
                 Text(
-                    text = stringRes(R.string.podcast_trailer_season, it),
+                    text = stringRes(Res.string.podcast_trailer_season, it),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.grayText,
                 )

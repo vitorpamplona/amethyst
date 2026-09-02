@@ -60,6 +60,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_emoji_fab
+import com.vitorpamplona.amethyst.commons.resources.emoji_long_press_hint
+import com.vitorpamplona.amethyst.commons.resources.emoji_private_badge
+import com.vitorpamplona.amethyst.commons.resources.emoji_remove_dialog_title
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -135,7 +140,7 @@ private fun EmojiPackScreenView(
         floatingActionButton = {
             FabBottomBarPadded(nav) {
                 ExtendedFloatingActionButton(
-                    text = { Text(text = stringRes(R.string.add_emoji_fab)) },
+                    text = { Text(text = stringRes(Res.string.add_emoji_fab)) },
                     icon = {
                         Icon(
                             symbol = MaterialSymbols.Add,
@@ -161,7 +166,7 @@ private fun EmojiPackScreenView(
             pack?.let { currentPack ->
                 if (currentPack.publicEmojis.isNotEmpty() || currentPack.privateEmojis.isNotEmpty()) {
                     Text(
-                        text = stringRes(R.string.emoji_long_press_hint),
+                        text = stringRes(Res.string.emoji_long_press_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -191,7 +196,7 @@ private fun EmojiPackScreenView(
 
     pendingDelete?.let { target ->
         M3ActionDialog(
-            title = stringRes(R.string.emoji_remove_dialog_title, target.emoji.code),
+            title = stringRes(Res.string.emoji_remove_dialog_title, target.emoji.code),
             onDismiss = { pendingDelete = null },
         ) {
             M3ActionSection {
@@ -264,7 +269,7 @@ private fun EmojiCell(
     isPrivate: Boolean,
     onLongClick: () -> Unit,
 ) {
-    val privateLabel = stringRes(R.string.emoji_private_badge)
+    val privateLabel = stringRes(Res.string.emoji_private_badge)
     Box(
         modifier =
             Modifier

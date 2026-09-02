@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.scheduledposts
 
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope

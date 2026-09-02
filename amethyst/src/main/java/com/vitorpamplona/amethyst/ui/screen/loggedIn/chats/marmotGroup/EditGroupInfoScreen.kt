@@ -42,6 +42,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_edit_info_footer
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholder
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -154,8 +159,8 @@ fun EditGroupInfoScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringRes(R.string.marmot_group_name)) },
-                placeholder = { Text(stringRes(R.string.marmot_group_name_placeholder)) },
+                label = { Text(stringRes(Res.string.marmot_group_name)) },
+                placeholder = { Text(stringRes(Res.string.marmot_group_name_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSaving,
@@ -167,7 +172,7 @@ fun EditGroupInfoScreen(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text(stringRes(R.string.description)) },
-                placeholder = { Text(stringRes(R.string.marmot_group_description_placeholder)) },
+                placeholder = { Text(stringRes(Res.string.marmot_group_description_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
@@ -177,7 +182,7 @@ fun EditGroupInfoScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = stringRes(R.string.marmot_edit_info_footer),
+                text = stringRes(Res.string.marmot_edit_info_footer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

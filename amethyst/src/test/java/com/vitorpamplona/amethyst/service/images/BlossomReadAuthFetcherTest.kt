@@ -24,7 +24,8 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.network.HttpException
 import coil3.network.NetworkResponse
-import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
+import com.vitorpamplona.amethyst.commons.service.image.BlossomReadAuthFetcher
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CoroutineScope

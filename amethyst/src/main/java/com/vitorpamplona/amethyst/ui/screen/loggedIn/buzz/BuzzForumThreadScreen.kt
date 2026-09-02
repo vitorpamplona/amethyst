@@ -48,6 +48,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_no_replies
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_thread_title
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -126,7 +129,7 @@ fun BuzzForumThreadScreen(
     // the bottom of the Column (like the chat), not a Scaffold bottomBar.
     DisappearingScaffold(
         isInvertedLayout = false,
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_forum_thread_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_forum_thread_title), nav) },
         accountViewModel = accountViewModel,
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -199,7 +202,7 @@ private fun RepliesCountHeader(count: Int) {
 @Composable
 private fun NoRepliesYet() {
     Text(
-        text = stringRes(R.string.buzz_forum_no_replies),
+        text = stringRes(Res.string.buzz_forum_no_replies),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),

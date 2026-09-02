@@ -42,9 +42,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow_list_item_label
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -149,7 +151,7 @@ fun RenderFollowSetThumbEmbed(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = stringRes(R.string.follow_list_item_label),
+                text = stringRes(Res.string.follow_list_item_label),
                 color = MaterialTheme.colorScheme.background,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,

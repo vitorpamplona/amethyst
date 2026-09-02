@@ -48,9 +48,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.scan_qr
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -208,7 +210,7 @@ fun PresentQR(
             shape = RoundedCornerShape(Size35dp),
             modifier = Modifier.fillMaxWidth().height(50.dp),
         ) {
-            Text(text = stringRes(R.string.scan_qr))
+            Text(text = stringRes(Res.string.scan_qr))
         }
     }
 }
@@ -228,7 +230,7 @@ fun RenderName(
             RobohashFallbackAsyncImage(
                 robot = user.pubkeyHex,
                 model = userInfo?.info?.profilePicture(),
-                contentDescription = stringRes(R.string.profile_image),
+                contentDescription = stringRes(Res.string.profile_image),
                 modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),

@@ -46,6 +46,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_a_relay
+import com.vitorpamplona.amethyst.commons.resources.relay_url_not_valid
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -191,7 +194,7 @@ fun RelayUrlEditField(
 
     Column(modifier) {
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.add_a_relay)) },
+            label = { Text(text = stringRes(Res.string.add_a_relay)) },
             modifier = Modifier.fillMaxWidth(),
             value = url,
             onValueChange = {
@@ -206,7 +209,7 @@ fun RelayUrlEditField(
                 if (isInvalid) {
                     {
                         Text(
-                            text = stringRes(R.string.relay_url_not_valid),
+                            text = stringRes(Res.string.relay_url_not_valid),
                             color = MaterialTheme.colorScheme.error,
                         )
                     }

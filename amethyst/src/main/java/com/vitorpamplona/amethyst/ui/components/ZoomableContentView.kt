@@ -79,6 +79,13 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_media_to_gallery
+import com.vitorpamplona.amethyst.commons.resources.copy_the_note_id_to_the_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_url_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.media_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.share_image
+import com.vitorpamplona.amethyst.commons.resources.share_video
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -89,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
+import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
@@ -901,8 +909,7 @@ fun DisplayBlurHash(
     thumbhash: String? = null,
 ) {
     val model =
-        com.vitorpamplona.amethyst.service.images
-            .placeholderModel(thumbhash, blurhash) ?: return
+        placeholderModel(thumbhash, blurhash) ?: return
 
     AsyncImage(
         model = model,
@@ -967,7 +974,7 @@ fun ShareMediaAction(
 
     if (popupExpanded.value) {
         M3ActionDialog(
-            title = stringRes(R.string.media_actions_dialog_title),
+            title = stringRes(Res.string.media_actions_dialog_title),
             onDismiss = { if (!isDownloadingVideo.value) onDismiss() },
         ) {
             val clipboardManager = LocalClipboard.current
@@ -977,7 +984,7 @@ fun ShareMediaAction(
             if ((videoUri != null && !videoUri.startsWith("file")) || postNostrUri != null) {
                 M3ActionSection {
                     if (videoUri != null && !videoUri.startsWith("file")) {
-                        M3ActionRow(icon = MaterialSymbols.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
+                        M3ActionRow(icon = MaterialSymbols.Link, text = stringRes(Res.string.copy_url_to_clipboard)) {
                             scope.launch {
                                 clipboardManager.setText(videoUri)
                             }
@@ -1000,13 +1007,13 @@ fun ShareMediaAction(
                         }
                     }
                     postNostrUri?.let {
-                        M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
+                        M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(Res.string.copy_the_note_id_to_the_clipboard)) {
                             scope.launch {
                                 clipboardManager.setText(it)
                             }
                             onDismiss()
                         }
-                        M3ActionRow(icon = MaterialSymbols.Collections, text = stringRes(R.string.add_media_to_gallery)) {
+                        M3ActionRow(icon = MaterialSymbols.Collections, text = stringRes(Res.string.add_media_to_gallery)) {
                             if (videoUri != null) {
                                 val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                                 if (n19 != null) {
@@ -1036,7 +1043,7 @@ fun ShareMediaAction(
                         is MediaUrlImage -> {
                             videoUri?.let {
                                 if (videoUri.isNotEmpty()) {
-                                    M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.share_image)) {
+                                    M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.share_image)) {
                                         accountViewModel.viewModelScope.launch { shareImageFile(context, videoUri, mimeType) }
                                         onDismiss()
                                     }
@@ -1049,7 +1056,7 @@ fun ShareMediaAction(
                                 if (videoUri.isNotEmpty()) {
                                     M3ActionRow(
                                         icon = MaterialSymbols.Share,
-                                        text = stringRes(R.string.share_video),
+                                        text = stringRes(Res.string.share_video),
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
@@ -1078,7 +1085,7 @@ fun ShareMediaAction(
 
                         is MediaLocalVideo -> {
                             content.localFile?.let { localFile ->
-                                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.share_video)) {
+                                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.share_video)) {
                                     accountViewModel.viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()
                                 }

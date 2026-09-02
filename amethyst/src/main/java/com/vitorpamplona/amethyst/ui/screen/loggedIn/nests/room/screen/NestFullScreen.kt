@@ -61,6 +61,18 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_edit_title
+import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_body
+import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_close
+import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_just_leave
+import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_title
+import com.vitorpamplona.amethyst.commons.resources.nest_minimize_description
+import com.vitorpamplona.amethyst.commons.resources.nest_overflow_menu
+import com.vitorpamplona.amethyst.commons.resources.nest_share_action
+import com.vitorpamplona.amethyst.commons.resources.nest_tab_audience
+import com.vitorpamplona.amethyst.commons.resources.nest_tab_chat
+import com.vitorpamplona.amethyst.commons.resources.nest_tab_hands
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
@@ -107,7 +119,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun NestFullScreen(
     event: MeetingSpaceEvent,
-    roomNote: com.vitorpamplona.amethyst.model.AddressableNote,
+    roomNote: com.vitorpamplona.amethyst.commons.model.AddressableNote,
     participantGrid: ParticipantGrid,
     viewModel: NestViewModel,
     ui: NestUiState,
@@ -363,8 +375,8 @@ internal fun NestFullScreen(
     if (showHostLeaveConfirm) {
         AlertDialog(
             onDismissRequest = { showHostLeaveConfirm = false },
-            title = { Text(stringRes(R.string.nest_leave_host_title)) },
-            text = { Text(stringRes(R.string.nest_leave_host_body)) },
+            title = { Text(stringRes(Res.string.nest_leave_host_title)) },
+            text = { Text(stringRes(Res.string.nest_leave_host_body)) },
             confirmButton = {
                 TextButton(
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
@@ -393,7 +405,7 @@ internal fun NestFullScreen(
                         }
                     },
                 ) {
-                    Text(stringRes(R.string.nest_leave_host_close))
+                    Text(stringRes(Res.string.nest_leave_host_close))
                 }
             },
             dismissButton = {
@@ -412,7 +424,7 @@ internal fun NestFullScreen(
                         onLeave()
                     },
                 ) {
-                    Text(stringRes(R.string.nest_leave_host_just_leave))
+                    Text(stringRes(Res.string.nest_leave_host_just_leave))
                 }
             },
         )
@@ -471,9 +483,9 @@ private fun NestTabRow(
         tabs.forEach { tab ->
             val (label, count) =
                 when (tab) {
-                    NestTab.Chat -> stringRes(R.string.nest_tab_chat) to 0
-                    NestTab.Audience -> stringRes(R.string.nest_tab_audience) to audienceCount
-                    NestTab.Hands -> stringRes(R.string.nest_tab_hands) to handsCount
+                    NestTab.Chat -> stringRes(Res.string.nest_tab_chat) to 0
+                    NestTab.Audience -> stringRes(Res.string.nest_tab_audience) to audienceCount
+                    NestTab.Hands -> stringRes(Res.string.nest_tab_hands) to handsCount
                 }
             Tab(
                 selected = tab == selectedTab,
@@ -548,7 +560,7 @@ private fun NestTopAppBar(
                 IconButton(onClick = onMinimize) {
                     Icon(
                         symbol = MaterialSymbols.PictureInPicture,
-                        contentDescription = stringRes(R.string.nest_minimize_description),
+                        contentDescription = stringRes(Res.string.nest_minimize_description),
                     )
                 }
             }
@@ -556,7 +568,7 @@ private fun NestTopAppBar(
                 IconButton(onClick = onMenuOpen) {
                     Icon(
                         symbol = MaterialSymbols.MoreVert,
-                        contentDescription = stringRes(R.string.nest_overflow_menu),
+                        contentDescription = stringRes(Res.string.nest_overflow_menu),
                     )
                 }
                 DropdownMenu(
@@ -564,12 +576,12 @@ private fun NestTopAppBar(
                     onDismissRequest = onMenuDismiss,
                 ) {
                     DropdownMenuItem(
-                        text = { Text(stringRes(R.string.nest_share_action)) },
+                        text = { Text(stringRes(Res.string.nest_share_action)) },
                         onClick = onShare,
                     )
                     if (isHost) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.nest_edit_title)) },
+                            text = { Text(stringRes(Res.string.nest_edit_title)) },
                             onClick = onEdit,
                         )
                     }

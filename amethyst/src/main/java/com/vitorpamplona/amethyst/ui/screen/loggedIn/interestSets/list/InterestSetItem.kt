@@ -37,6 +37,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.interest_set_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.interest_set_clone
+import com.vitorpamplona.amethyst.commons.resources.interest_set_hashtag_count
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -85,7 +89,7 @@ fun InterestSetItem(
                 },
                 supportingContent = {
                     Text(
-                        text = stringRes(R.string.interest_set_hashtag_count, interestSet.allHashtags.size),
+                        text = stringRes(Res.string.interest_set_hashtag_count, interestSet.allHashtags.size),
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                     )
@@ -118,7 +122,7 @@ private fun InterestSetOptionsButton(
 
     if (isMenuOpen.value) {
         M3ActionDialog(
-            title = stringRes(R.string.interest_set_actions_dialog_title),
+            title = stringRes(Res.string.interest_set_actions_dialog_title),
             onDismiss = { isMenuOpen.value = false },
         ) {
             M3ActionSection {
@@ -126,7 +130,7 @@ private fun InterestSetOptionsButton(
                     onRename()
                     isMenuOpen.value = false
                 }
-                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.interest_set_clone)) {
+                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(Res.string.interest_set_clone)) {
                     onClone()
                     isMenuOpen.value = false
                 }

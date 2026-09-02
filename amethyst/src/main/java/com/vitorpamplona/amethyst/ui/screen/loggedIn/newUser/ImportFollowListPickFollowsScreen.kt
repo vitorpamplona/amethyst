@@ -49,14 +49,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accounts_found
+import com.vitorpamplona.amethyst.commons.resources.fetching_follow_list
+import com.vitorpamplona.amethyst.commons.resources.follow_accounts
+import com.vitorpamplona.amethyst.commons.resources.no_follows_found
+import com.vitorpamplona.amethyst.commons.resources.num_selected
+import com.vitorpamplona.amethyst.commons.resources.select_all
+import com.vitorpamplona.amethyst.commons.resources.select_users_to_follow
+import com.vitorpamplona.amethyst.commons.resources.skip_for_now
+import com.vitorpamplona.amethyst.commons.resources.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -136,9 +144,9 @@ fun DisplayFollowList(
     val contacts = contactsState
 
     if (contacts == null) {
-        LoadingIndicator(stringRes(R.string.fetching_follow_list), modifier, nav)
+        LoadingIndicator(stringRes(Res.string.fetching_follow_list), modifier, nav)
     } else if (contacts.isEmpty()) {
-        ErrorMessage(stringRes(R.string.no_follows_found), modifier, nav)
+        ErrorMessage(stringRes(Res.string.no_follows_found), modifier, nav)
     } else {
         PreviewList(
             contacts,
@@ -167,12 +175,12 @@ private fun PreviewList(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringRes(R.string.accounts_found, contacts.size),
+                stringRes(Res.string.accounts_found, contacts.size),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                stringRes(R.string.num_selected, selected.size),
+                stringRes(Res.string.num_selected, selected.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -192,7 +200,7 @@ private fun PreviewList(
                 },
             )
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.select_all), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(stringRes(Res.string.select_all), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
         }
 
         HorizontalDivider()
@@ -218,7 +226,7 @@ private fun PreviewList(
                     nav.popUpTo(Route.Home, Route.Home::class)
                 },
             ) {
-                Text(stringRes(R.string.follow_accounts, selected.size))
+                Text(stringRes(Res.string.follow_accounts, selected.size))
             }
         }
     }
@@ -246,7 +254,7 @@ private fun LoadingIndicator(
         Spacer(Modifier.height(16.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringRes(R.string.skip_for_now)) }
+            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringRes(Res.string.skip_for_now)) }
         }
     }
 }
@@ -270,7 +278,7 @@ private fun ErrorMessage(
         Spacer(Modifier.height(16.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringRes(R.string.skip_for_now)) }
+            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringRes(Res.string.skip_for_now)) }
         }
     }
 }
@@ -287,14 +295,14 @@ private fun ImportHeader() {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                stringRes(R.string.select_users_to_follow),
+                stringRes(Res.string.select_users_to_follow),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            stringRes(R.string.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust),
+            stringRes(Res.string.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

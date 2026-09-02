@@ -30,8 +30,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -98,7 +100,7 @@ fun MultiUserErrorMessageDialog(
                     contentDescription = null,
                 )
                 Spacer(StdHorzSpacer)
-                Text(stringRes(R.string.error_dialog_button_ok))
+                Text(stringRes(Res.string.error_dialog_button_ok))
             }
         },
     )

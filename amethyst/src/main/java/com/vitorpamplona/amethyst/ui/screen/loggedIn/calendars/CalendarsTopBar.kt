@@ -35,8 +35,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
@@ -94,7 +95,7 @@ private fun CalendarsTopNavFilterBar(
 
     FeedFilterSpinner(
         placeholderCode = listName,
-        explainer = stringRes(R.string.select_list_to_filter),
+        explainer = stringRes(Res.string.select_list_to_filter),
         options = allLists,
         onSelect = onChange,
         accountViewModel = accountViewModel,

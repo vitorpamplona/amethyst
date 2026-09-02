@@ -43,6 +43,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.mute_hashtag
+import com.vitorpamplona.amethyst.commons.resources.unmute_hashtag
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsMutingHashtag
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -207,7 +210,7 @@ fun HashtagMuteMenu(
     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
         if (isMuted) {
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.unmute_hashtag)) },
+                text = { Text(stringRes(Res.string.unmute_hashtag)) },
                 onClick = {
                     menuOpen = false
                     if (!accountViewModel.isWriteable()) {
@@ -222,7 +225,7 @@ fun HashtagMuteMenu(
             )
         } else {
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.mute_hashtag)) },
+                text = { Text(stringRes(Res.string.mute_hashtag)) },
                 onClick = {
                     menuOpen = false
                     if (!accountViewModel.isWriteable()) {

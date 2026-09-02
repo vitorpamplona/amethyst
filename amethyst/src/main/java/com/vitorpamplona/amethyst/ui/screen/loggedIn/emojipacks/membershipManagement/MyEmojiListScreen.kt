@@ -48,10 +48,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_empty
+import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_title
+import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -97,7 +100,7 @@ private fun MyEmojiListView(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.my_emoji_list_title), nav)
+            TopBarWithBackButton(caption = stringRes(Res.string.my_emoji_list_title), nav)
         },
     ) { contentPadding ->
         val packAddresses by observeNoteEventAndMap<EmojiPackSelectionEvent, List<Address>>(
@@ -138,7 +141,7 @@ private fun MyEmojiListFeed(
 ) {
     if (packAddresses.isEmpty()) {
         Text(
-            text = stringRes(R.string.my_emoji_list_empty),
+            text = stringRes(Res.string.my_emoji_list_empty),
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             textAlign = TextAlign.Center,
         )
@@ -230,7 +233,7 @@ private fun SelectedEmojiPackCard(
         ) {
             Icon(
                 symbol = MaterialSymbols.Delete,
-                contentDescription = stringRes(R.string.remove_from_emoji_list),
+                contentDescription = stringRes(Res.string.remove_from_emoji_list),
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(18.dp),
             )

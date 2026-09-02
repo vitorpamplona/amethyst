@@ -64,6 +64,12 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_description_label
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_image_label
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_name_label
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_cta
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_hint
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -231,7 +237,7 @@ private fun HeroImagePreview(
 ) {
     AsyncImage(
         model = model,
-        contentDescription = stringRes(R.string.emoji_pack_image_label),
+        contentDescription = stringRes(Res.string.emoji_pack_image_label),
         contentScale = ContentScale.Crop,
         modifier =
             Modifier
@@ -266,14 +272,14 @@ private fun UploadPlaceholder(onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = stringRes(R.string.emoji_pack_upload_image_cta),
+                text = stringRes(Res.string.emoji_pack_upload_image_cta),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = stringRes(R.string.emoji_pack_upload_image_hint),
+                text = stringRes(Res.string.emoji_pack_upload_image_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -287,10 +293,10 @@ private fun PackFormFields(viewModel: EmojiPackMetadataViewModel) {
     OutlinedTextField(
         value = viewModel.name.value,
         onValueChange = { viewModel.name.value = it },
-        label = { Text(text = stringRes(R.string.emoji_pack_name_label)) },
+        label = { Text(text = stringRes(Res.string.emoji_pack_name_label)) },
         placeholder = {
             Text(
-                text = stringRes(R.string.emoji_pack_name_label),
+                text = stringRes(Res.string.emoji_pack_name_label),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -308,7 +314,7 @@ private fun PackFormFields(viewModel: EmojiPackMetadataViewModel) {
     OutlinedTextField(
         value = viewModel.description.value,
         onValueChange = { viewModel.description.value = it },
-        label = { Text(text = stringRes(R.string.emoji_pack_description_label)) },
+        label = { Text(text = stringRes(Res.string.emoji_pack_description_label)) },
         modifier =
             Modifier
                 .fillMaxWidth()

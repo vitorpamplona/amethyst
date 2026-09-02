@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.ai
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 
 object WritingAssistantFactory {
     /** Whether this flavor ships a real assistant. Drives the Settings tile. */

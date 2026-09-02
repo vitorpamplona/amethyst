@@ -43,7 +43,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
-import com.vitorpamplona.amethyst.model.ConcordInviteResult
+import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_join
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_subtitle
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_relays
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_unknown_name
+import com.vitorpamplona.amethyst.commons.resources.concord_redeeming_invite
 import com.vitorpamplona.amethyst.ui.components.ConcordInvitePreviewRow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -161,7 +168,7 @@ fun ConcordInviteScreen(
             is RedeemState.Working -> {
                 CircularProgressIndicator()
                 Text(
-                    stringRes(R.string.concord_redeeming_invite),
+                    stringRes(Res.string.concord_redeeming_invite),
                     modifier = Modifier.padding(top = 16.dp),
                     // Explicit: this Column sits on the bare window background with no Surface
                     // above it, so LocalContentColor is still the M3 default black — which renders
@@ -214,15 +221,15 @@ private fun ConcordInviteConsent(
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         ConcordInvitePreviewRow(
             robotSeed = parsed.linkSignerPubKey,
-            title = stringRes(R.string.concord_invite_card_subtitle),
-            subtitle = stringRes(R.string.concord_invite_preview_unknown_name),
+            title = stringRes(Res.string.concord_invite_card_subtitle),
+            subtitle = stringRes(Res.string.concord_invite_preview_unknown_name),
             accountViewModel = accountViewModel,
             autoPlayGif = autoPlayGif,
         )
     }
 
     Text(
-        stringRes(R.string.concord_invite_preview_explainer),
+        stringRes(Res.string.concord_invite_preview_explainer),
         style = MaterialTheme.typography.bodyMedium,
         textAlign = TextAlign.Center,
         modifier = Modifier.padding(top = 20.dp),
@@ -230,7 +237,7 @@ private fun ConcordInviteConsent(
 
     if (relayList.isNotEmpty()) {
         Text(
-            stringRes(R.string.concord_invite_preview_relays, relayList),
+            stringRes(Res.string.concord_invite_preview_relays, relayList),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -242,6 +249,6 @@ private fun ConcordInviteConsent(
         onClick = onJoin,
         modifier = Modifier.padding(top = 24.dp),
     ) {
-        Text(stringRes(R.string.concord_invite_card_join))
+        Text(stringRes(Res.string.concord_invite_card_join))
     }
 }

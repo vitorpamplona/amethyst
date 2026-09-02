@@ -49,6 +49,9 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.record_a_video
+import com.vitorpamplona.amethyst.commons.resources.take_a_picture
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -136,7 +139,7 @@ fun PictureButton(onClick: () -> Unit) {
     ) {
         Icon(
             symbol = MaterialSymbols.CameraAlt,
-            contentDescription = stringRes(id = R.string.take_a_picture),
+            contentDescription = stringRes(id = Res.string.take_a_picture),
             modifier = Modifier.height(22.dp),
             tint = MaterialTheme.colorScheme.onBackground,
         )
@@ -249,7 +252,7 @@ fun VideoButton(onClick: () -> Unit) {
     ) {
         Icon(
             symbol = MaterialSymbols.Videocam,
-            contentDescription = stringRes(id = R.string.record_a_video),
+            contentDescription = stringRes(id = Res.string.record_a_video),
             modifier = Modifier.height(22.dp),
             tint = MaterialTheme.colorScheme.onBackground,
         )

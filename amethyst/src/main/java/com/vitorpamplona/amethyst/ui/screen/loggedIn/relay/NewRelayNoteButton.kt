@@ -26,6 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_community_note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -49,7 +51,7 @@ fun NewRelayNoteButton(
     ) {
         Icon(
             painter = painterRes(R.drawable.ic_compose, 3),
-            contentDescription = stringRes(id = R.string.new_community_note),
+            contentDescription = stringRes(id = Res.string.new_community_note),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )

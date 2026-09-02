@@ -57,11 +57,19 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_repo_code_error
+import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
+import com.vitorpamplona.amethyst.commons.resources.git_repo_empty_folder
+import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
+import com.vitorpamplona.amethyst.commons.resources.git_repo_no_clone_url
+import com.vitorpamplona.amethyst.commons.resources.git_repo_no_search_results
+import com.vitorpamplona.amethyst.commons.resources.git_repo_root
+import com.vitorpamplona.amethyst.commons.resources.git_repo_search_files
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -81,13 +89,13 @@ fun GitCodeTab(
     val scaffoldPadding = LocalDisappearingScaffoldPadding.current
     when (state) {
         is GitBrowseState.Loading ->
-            GitLoadingBox(stringRes(R.string.git_repo_code_loading), Modifier.padding(scaffoldPadding))
+            GitLoadingBox(stringRes(Res.string.git_repo_code_loading), Modifier.padding(scaffoldPadding))
 
         is GitBrowseState.Error -> {
             val noClone = state.message == GitRepositoryBrowserViewModel.NO_CLONE_URL
             GitMessageBox(
                 symbol = if (noClone) MaterialSymbols.Code else MaterialSymbols.ErrorOutline,
-                text = if (noClone) stringRes(R.string.git_repo_no_clone_url) else stringRes(R.string.git_repo_code_error),
+                text = if (noClone) stringRes(Res.string.git_repo_no_clone_url) else stringRes(Res.string.git_repo_code_error),
                 modifier = Modifier.padding(scaffoldPadding),
                 onRetry = if (noClone) null else viewModel::reload,
             )
@@ -135,7 +143,7 @@ private fun CodeBrowser(
             FileHeader(name = openPath.lastOrNull() ?: "", onBack = { openFilePath = null })
             HorizontalDivider(thickness = 0.5.dp)
             if (entry == null) {
-                GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_file_load_error))
+                GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_file_load_error))
             } else {
                 GitFileViewer(
                     snapshot = snapshot,
@@ -184,7 +192,7 @@ private fun CodeBrowser(
         if (searching) {
             if (results.isEmpty()) {
                 item(key = "no-results") {
-                    GitMessageBox(MaterialSymbols.Search, stringRes(R.string.git_repo_no_search_results), Modifier.fillParentMaxWidth())
+                    GitMessageBox(MaterialSymbols.Search, stringRes(Res.string.git_repo_no_search_results), Modifier.fillParentMaxWidth())
                 }
             } else {
                 items(results, key = { "result/" + it.joinToString("/") }) { result ->
@@ -206,7 +214,7 @@ private fun CodeBrowser(
             }
             if (entries.isEmpty()) {
                 item(key = "empty-folder") {
-                    GitMessageBox(MaterialSymbols.Folder, stringRes(R.string.git_repo_empty_folder), Modifier.fillParentMaxWidth())
+                    GitMessageBox(MaterialSymbols.Folder, stringRes(Res.string.git_repo_empty_folder), Modifier.fillParentMaxWidth())
                 }
             } else {
                 items(entries, key = { "entry/" + it.name }) { entry ->
@@ -237,7 +245,7 @@ private fun FileSearchField(
         value = query,
         onValueChange = onQueryChange,
         singleLine = true,
-        placeholder = { Text(stringRes(R.string.git_repo_search_files)) },
+        placeholder = { Text(stringRes(Res.string.git_repo_search_files)) },
         leadingIcon = { Icon(MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
         trailingIcon = {
             if (query.isNotEmpty()) {
@@ -316,7 +324,7 @@ private fun Breadcrumb(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Crumb(label = stringRes(R.string.git_repo_root), current = path.isEmpty()) { onNavigate(0) }
+        Crumb(label = stringRes(Res.string.git_repo_root), current = path.isEmpty()) { onNavigate(0) }
         path.forEachIndexed { index, segment ->
             Icon(
                 symbol = MaterialSymbols.ChevronRight,

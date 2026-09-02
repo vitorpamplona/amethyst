@@ -35,11 +35,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip04
+import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip17
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -48,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
-import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DmReportWarningCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.PrivateMessageEditFieldRow
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
@@ -245,8 +247,8 @@ fun ChatroomViewUI(
                 }
             }
         }
-    val nip17Name = stringResource(R.string.chats_history_proto_nip17)
-    val nip04Name = stringResource(R.string.chats_history_proto_nip04)
+    val nip17Name = stringRes(Res.string.chats_history_proto_nip17)
+    val nip04Name = stringRes(Res.string.chats_history_proto_nip04)
 
     // The relays behind a tapped in-stream "Relay sync" marker; non-null shows the detail popup.
     var syncDetail by remember { mutableStateOf<List<RelayReachCursor>?>(null) }

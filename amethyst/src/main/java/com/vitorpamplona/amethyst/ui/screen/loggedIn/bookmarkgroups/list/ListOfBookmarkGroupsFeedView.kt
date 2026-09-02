@@ -39,13 +39,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
-import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
-import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_icon_label
+import com.vitorpamplona.amethyst.commons.resources.bookmarks_explainer
+import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
+import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_explainer
+import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_title
+import com.vitorpamplona.amethyst.commons.resources.pinned_notes
+import com.vitorpamplona.amethyst.commons.resources.pinned_notes_explainer
+import com.vitorpamplona.amethyst.commons.resources.podcast_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.podcast_bookmarks_explainer
+import com.vitorpamplona.amethyst.commons.resources.repository_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.repository_bookmarks_explainer
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -134,14 +145,14 @@ fun DefaultBookmarkList(
     ListItem(
         modifier = Modifier.clickable(onClick = openDefaultBookmarks),
         headlineContent = {
-            Text(stringRes(R.string.bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringRes(Res.string.bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    stringRes(R.string.bookmarks_explainer),
+                    stringRes(Res.string.bookmarks_explainer),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
@@ -154,7 +165,7 @@ fun DefaultBookmarkList(
             ) {
                 Icon(
                     symbol = MaterialSymbols.BookmarkBorder,
-                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    contentDescription = stringRes(Res.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)
@@ -178,14 +189,14 @@ fun PinnedNotesList(
     ListItem(
         modifier = Modifier.clickable(onClick = openPinnedNotes),
         headlineContent = {
-            Text(stringRes(R.string.pinned_notes), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringRes(Res.string.pinned_notes), maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    stringRes(R.string.pinned_notes_explainer),
+                    stringRes(Res.string.pinned_notes_explainer),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
@@ -198,7 +209,7 @@ fun PinnedNotesList(
             ) {
                 Icon(
                     symbol = MaterialSymbols.PushPin,
-                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    contentDescription = stringRes(Res.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)
@@ -222,14 +233,14 @@ fun RepositoriesBookmarkList(
     ListItem(
         modifier = Modifier.clickable(onClick = openRepositories),
         headlineContent = {
-            Text(stringRes(R.string.repository_bookmarks), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringRes(Res.string.repository_bookmarks), maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    stringRes(R.string.repository_bookmarks_explainer),
+                    stringRes(Res.string.repository_bookmarks_explainer),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
@@ -242,7 +253,7 @@ fun RepositoriesBookmarkList(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Code,
-                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    contentDescription = stringRes(Res.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)
@@ -270,14 +281,14 @@ fun PodcastsBookmarkList(
     ListItem(
         modifier = Modifier.clickable(onClick = openPodcasts),
         headlineContent = {
-            Text(stringRes(R.string.podcast_bookmarks), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringRes(Res.string.podcast_bookmarks), maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    stringRes(R.string.podcast_bookmarks_explainer),
+                    stringRes(Res.string.podcast_bookmarks_explainer),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
@@ -290,7 +301,7 @@ fun PodcastsBookmarkList(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Podcasts,
-                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    contentDescription = stringRes(Res.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)
@@ -314,14 +325,14 @@ fun OldBookmarkList(
     ListItem(
         modifier = Modifier.clickable(onClick = openOldBookmarks),
         headlineContent = {
-            Text(stringRes(R.string.old_bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringRes(Res.string.old_bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    stringRes(R.string.old_bookmarks_explainer),
+                    stringRes(Res.string.old_bookmarks_explainer),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
@@ -334,7 +345,7 @@ fun OldBookmarkList(
             ) {
                 Icon(
                     symbol = MaterialSymbols.BookmarkBorder,
-                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    contentDescription = stringRes(Res.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)

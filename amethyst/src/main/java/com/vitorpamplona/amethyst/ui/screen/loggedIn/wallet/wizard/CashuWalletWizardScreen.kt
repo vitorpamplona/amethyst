@@ -71,6 +71,33 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_wallet_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_adopting
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_analyzing
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_create
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_invalid
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_main_label
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_mints_label
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_multiple_description
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_multiple_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_no_funds
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_none_description
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_none_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_old_label
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_recover_funds
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_recoverable
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_recovered
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_retry
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_searching
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_searching_description
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_searching_progress
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_set_main
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_set_main_first
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_single_description
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_single_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_use_wallet
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -119,7 +146,7 @@ fun CashuWalletWizardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.cashu_wizard_title)) },
+                title = { Text(stringRes(Res.string.cashu_wizard_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -157,13 +184,13 @@ fun CashuWalletWizardScreen(
             ) {
                 when (state) {
                     is WizardState.Idle ->
-                        BusyState(stringRes(R.string.cashu_wizard_searching), null)
+                        BusyState(stringRes(Res.string.cashu_wizard_searching), null)
 
                     is WizardState.Crawling ->
                         CrawlingState(state)
 
                     is WizardState.Analyzing ->
-                        BusyState(stringRes(R.string.cashu_wizard_analyzing), null)
+                        BusyState(stringRes(Res.string.cashu_wizard_analyzing), null)
 
                     is WizardState.NoWallet ->
                         NoWalletContent(onCreate = { nav.nav(Route.CashuWalletCreated) })
@@ -274,14 +301,14 @@ private fun CrawlingState(state: WizardState.Crawling) {
     )
     Spacer(Modifier.height(20.dp))
     Text(
-        text = stringRes(R.string.cashu_wizard_searching),
+        text = stringRes(Res.string.cashu_wizard_searching),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         textAlign = TextAlign.Center,
     )
     Spacer(Modifier.height(6.dp))
     Text(
-        text = stringRes(R.string.cashu_wizard_searching_description),
+        text = stringRes(Res.string.cashu_wizard_searching_description),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
@@ -293,7 +320,7 @@ private fun CrawlingState(state: WizardState.Crawling) {
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        text = stringRes(R.string.cashu_wizard_searching_progress, animatedCount, state.totalRelays),
+        text = stringRes(Res.string.cashu_wizard_searching_progress, animatedCount, state.totalRelays),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -310,21 +337,21 @@ private fun NoWalletContent(onCreate: () -> Unit) {
     )
     Spacer(Modifier.height(16.dp))
     Text(
-        text = stringRes(R.string.cashu_wizard_none_title),
+        text = stringRes(Res.string.cashu_wizard_none_title),
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
     )
     Spacer(Modifier.height(12.dp))
     Text(
-        text = stringRes(R.string.cashu_wizard_none_description),
+        text = stringRes(Res.string.cashu_wizard_none_description),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
     )
     Spacer(Modifier.height(24.dp))
     Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
-        Text(stringRes(R.string.cashu_wizard_create))
+        Text(stringRes(Res.string.cashu_wizard_create))
     }
 }
 
@@ -341,14 +368,14 @@ private fun SingleContent(
     }
 
     Text(
-        text = stringRes(R.string.cashu_wizard_single_title),
+        text = stringRes(Res.string.cashu_wizard_single_title),
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
     )
     Spacer(Modifier.height(12.dp))
     Text(
-        text = stringRes(R.string.cashu_wizard_single_description),
+        text = stringRes(Res.string.cashu_wizard_single_description),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
@@ -362,14 +389,14 @@ private fun SingleContent(
             val recoveredCount = countUpSats(adoptState.recoveredSats)
             SuccessLine(
                 if (adoptState.recoveredSats > 0) {
-                    stringRes(R.string.cashu_wizard_recovered, recoveredCount)
+                    stringRes(Res.string.cashu_wizard_recovered, recoveredCount)
                 } else {
-                    stringRes(R.string.cashu_wizard_single_title)
+                    stringRes(Res.string.cashu_wizard_single_title)
                 },
             )
             Spacer(Modifier.height(16.dp))
             Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
-                Text(stringRes(R.string.cashu_wallet_title))
+                Text(stringRes(Res.string.cashu_wallet_title))
             }
         }
 
@@ -377,20 +404,20 @@ private fun SingleContent(
             Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
-                Text(stringRes(R.string.cashu_wizard_adopting))
+                Text(stringRes(Res.string.cashu_wizard_adopting))
             }
 
         is AdoptState.Error -> {
             ErrorLine(adoptState.message)
             Spacer(Modifier.height(12.dp))
             Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) {
-                Text(stringRes(R.string.cashu_wizard_use_wallet))
+                Text(stringRes(Res.string.cashu_wizard_use_wallet))
             }
         }
 
         is AdoptState.Idle ->
             Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) {
-                Text(stringRes(R.string.cashu_wizard_use_wallet))
+                Text(stringRes(Res.string.cashu_wizard_use_wallet))
             }
     }
 }
@@ -413,14 +440,14 @@ private fun MultipleContent(
     }
 
     Text(
-        text = stringRes(R.string.cashu_wizard_multiple_title),
+        text = stringRes(Res.string.cashu_wizard_multiple_title),
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
     )
     Spacer(Modifier.height(12.dp))
     Text(
-        text = stringRes(R.string.cashu_wizard_multiple_description),
+        text = stringRes(Res.string.cashu_wizard_multiple_description),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
@@ -429,7 +456,7 @@ private fun MultipleContent(
 
     // Main (newest) wallet
     Text(
-        text = stringRes(R.string.cashu_wizard_main_label),
+        text = stringRes(Res.string.cashu_wizard_main_label),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.fillMaxWidth(),
@@ -442,16 +469,16 @@ private fun MultipleContent(
             Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
-                Text(stringRes(R.string.cashu_wizard_adopting))
+                Text(stringRes(Res.string.cashu_wizard_adopting))
             }
 
         is AdoptState.Done -> {
             val recoveredCount = countUpSats(adoptState.recoveredSats)
             SuccessLine(
                 if (adoptState.recoveredSats > 0) {
-                    stringRes(R.string.cashu_wizard_recovered, recoveredCount)
+                    stringRes(Res.string.cashu_wizard_recovered, recoveredCount)
                 } else {
-                    stringRes(R.string.cashu_wizard_main_label)
+                    stringRes(Res.string.cashu_wizard_main_label)
                 },
             )
         }
@@ -460,20 +487,20 @@ private fun MultipleContent(
             ErrorLine(adoptState.message)
             Spacer(Modifier.height(8.dp))
             Button(onClick = onSetMain, modifier = Modifier.fillMaxWidth()) {
-                Text(stringRes(R.string.cashu_wizard_set_main))
+                Text(stringRes(Res.string.cashu_wizard_set_main))
             }
         }
 
         is AdoptState.Idle ->
             Button(onClick = onSetMain, modifier = Modifier.fillMaxWidth()) {
-                Text(stringRes(R.string.cashu_wizard_set_main))
+                Text(stringRes(Res.string.cashu_wizard_set_main))
             }
     }
 
     if (others.isNotEmpty()) {
         Spacer(Modifier.height(24.dp))
         Text(
-            text = stringRes(R.string.cashu_wizard_old_label),
+            text = stringRes(Res.string.cashu_wizard_old_label),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
@@ -481,7 +508,7 @@ private fun MultipleContent(
         if (!mainAdopted) {
             Spacer(Modifier.height(4.dp))
             Text(
-                text = stringRes(R.string.cashu_wizard_set_main_first),
+                text = stringRes(Res.string.cashu_wizard_set_main_first),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
@@ -501,7 +528,7 @@ private fun MultipleContent(
 
     Spacer(Modifier.height(24.dp))
     Button(onClick = onDone, enabled = mainAdopted, modifier = Modifier.fillMaxWidth()) {
-        Text(stringRes(R.string.cashu_wallet_title))
+        Text(stringRes(Res.string.cashu_wallet_title))
     }
 }
 
@@ -515,14 +542,14 @@ private fun WalletCard(wallet: FoundWallet) {
         Column(Modifier.padding(16.dp)) {
             if (!wallet.valid) {
                 Text(
-                    text = stringRes(R.string.cashu_wizard_invalid),
+                    text = stringRes(Res.string.cashu_wizard_invalid),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
                 return@Column
             }
             Text(
-                text = stringRes(R.string.cashu_wizard_mints_label, wallet.mints.joinToString(", ")),
+                text = stringRes(Res.string.cashu_wizard_mints_label, wallet.mints.joinToString(", ")),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(6.dp))
@@ -534,9 +561,9 @@ private fun WalletCard(wallet: FoundWallet) {
             Text(
                 text =
                     if (hasFunds) {
-                        stringRes(R.string.cashu_wizard_recoverable, countedSats)
+                        stringRes(Res.string.cashu_wizard_recoverable, countedSats)
                     } else {
-                        stringRes(R.string.cashu_wizard_no_funds)
+                        stringRes(Res.string.cashu_wizard_no_funds)
                     },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = if (hasFunds) FontWeight.Bold else FontWeight.Normal,
@@ -569,7 +596,7 @@ private fun OldWalletCard(
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.cashu_wizard_mints_label, wallet.mints.joinToString(", ")),
+                text = stringRes(Res.string.cashu_wizard_mints_label, wallet.mints.joinToString(", ")),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(6.dp))
@@ -579,13 +606,13 @@ private fun OldWalletCard(
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = stringRes(R.string.cashu_wizard_recover_funds),
+                            text = stringRes(Res.string.cashu_wizard_recover_funds),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
 
                 is RecoveryState.Done ->
-                    SuccessLine(stringRes(R.string.cashu_wizard_recovered, countUpSats(recoveryState.recoveredSats)))
+                    SuccessLine(stringRes(Res.string.cashu_wizard_recovered, countUpSats(recoveryState.recoveredSats)))
 
                 is RecoveryState.Error ->
                     ErrorLine(recoveryState.message)
@@ -595,9 +622,9 @@ private fun OldWalletCard(
                     Text(
                         text =
                             if (hasFunds) {
-                                stringRes(R.string.cashu_wizard_recoverable, formatSats(wallet.totalRecoverableSats))
+                                stringRes(Res.string.cashu_wizard_recoverable, formatSats(wallet.totalRecoverableSats))
                             } else {
-                                stringRes(R.string.cashu_wizard_no_funds)
+                                stringRes(Res.string.cashu_wizard_no_funds)
                             },
                         style = MaterialTheme.typography.bodySmall,
                         color =
@@ -610,7 +637,7 @@ private fun OldWalletCard(
                             enabled = enabled,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(stringRes(R.string.cashu_wizard_recover_funds))
+                            Text(stringRes(Res.string.cashu_wizard_recover_funds))
                         }
                     }
                 }
@@ -656,6 +683,6 @@ private fun ErrorContent(
     )
     Spacer(Modifier.height(16.dp))
     Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
-        Text(stringRes(R.string.cashu_wizard_retry))
+        Text(stringRes(Res.string.cashu_wizard_retry))
     }
 }

@@ -57,6 +57,15 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_emoji_list
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_count
+import com.vitorpamplona.amethyst.commons.resources.emoji_packs_title
+import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_explainer
+import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_title
+import com.vitorpamplona.amethyst.commons.resources.no_emoji_packs
+import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -120,7 +129,7 @@ fun ListOfEmojiPacksFeed(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.emoji_packs_title), nav)
+            TopBarWithBackButton(caption = stringRes(Res.string.emoji_packs_title), nav)
         },
         bottomBar = {
             AppBottomBar(Route.EmojiPacks, nav, accountViewModel) { route ->
@@ -182,7 +191,7 @@ fun ListOfEmojiPacksFeedView(
 
         if (feedState.isEmpty()) {
             Text(
-                text = stringRes(R.string.no_emoji_packs),
+                text = stringRes(Res.string.no_emoji_packs),
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 textAlign = TextAlign.Center,
             )
@@ -267,7 +276,7 @@ private fun EmojiPackOptionsButton(
 
     if (isMenuOpen.value) {
         M3ActionDialog(
-            title = stringRes(R.string.emoji_pack_actions_dialog_title),
+            title = stringRes(Res.string.emoji_pack_actions_dialog_title),
             onDismiss = { isMenuOpen.value = false },
         ) {
             M3ActionSection {
@@ -316,9 +325,9 @@ private fun EmojiListToggleRow(
                         icon = MaterialSymbols.EmojiEmotions,
                         text =
                             if (isAdded) {
-                                stringRes(R.string.remove_from_emoji_list)
+                                stringRes(Res.string.remove_from_emoji_list)
                             } else {
-                                stringRes(R.string.add_to_emoji_list)
+                                stringRes(Res.string.add_to_emoji_list)
                             },
                     ) {
                         if (isAdded) {
@@ -343,14 +352,14 @@ private fun MyEmojiListRow(
         modifier = Modifier.clickable(onClick = onClick),
         headlineContent = {
             Text(
-                text = stringRes(R.string.my_emoji_list_title),
+                text = stringRes(Res.string.my_emoji_list_title),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         },
         supportingContent = {
             Text(
-                text = stringRes(R.string.my_emoji_list_explainer),
+                text = stringRes(Res.string.my_emoji_list_explainer),
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 2,
             )
@@ -366,7 +375,7 @@ private fun MyEmojiListRow(
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)
-                Text(text = stringRes(R.string.emoji_pack_count, selectedPackCount))
+                Text(text = stringRes(Res.string.emoji_pack_count, selectedPackCount))
             }
         },
     )

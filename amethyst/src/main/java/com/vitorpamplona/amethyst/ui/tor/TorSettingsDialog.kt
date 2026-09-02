@@ -49,6 +49,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.invalid_port_number
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -133,7 +135,7 @@ fun TorDialogContents(
 ) {
     Scaffold(
         topBar = {
-            val toastMessage = stringRes(R.string.invalid_port_number)
+            val toastMessage = stringRes(Res.string.invalid_port_number)
             SavingTopBar(
                 titleRes = R.string.privacy_options,
                 onCancel = onClose,

@@ -53,7 +53,9 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.members
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
@@ -291,7 +293,7 @@ private fun FollowPackFeedTopBar(
             )
             Tab(
                 selected = pagerState.currentPage == 2,
-                text = { Text(text = stringRes(R.string.members)) },
+                text = { Text(text = stringRes(Res.string.members)) },
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
             )
         }

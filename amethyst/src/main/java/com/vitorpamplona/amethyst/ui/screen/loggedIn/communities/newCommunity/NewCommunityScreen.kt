@@ -70,9 +70,24 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_community_add_moderator
+import com.vitorpamplona.amethyst.commons.resources.new_community_add_moderator_placeholder
+import com.vitorpamplona.amethyst.commons.resources.new_community_description
+import com.vitorpamplona.amethyst.commons.resources.new_community_moderators_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_name
+import com.vitorpamplona.amethyst.commons.resources.new_community_owner
+import com.vitorpamplona.amethyst.commons.resources.new_community_pick_cover
+import com.vitorpamplona.amethyst.commons.resources.new_community_pick_cover_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_relay_marker_approvals
+import com.vitorpamplona.amethyst.commons.resources.new_community_relay_marker_author
+import com.vitorpamplona.amethyst.commons.resources.new_community_relay_marker_none
+import com.vitorpamplona.amethyst.commons.resources.new_community_relay_marker_requests
+import com.vitorpamplona.amethyst.commons.resources.new_community_relays_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
@@ -212,7 +227,7 @@ private fun CommunityFormScreen(
                 OutlinedTextField(
                     value = model.name,
                     onValueChange = { model.name = it },
-                    label = { Text(stringRes(R.string.new_community_name)) },
+                    label = { Text(stringRes(Res.string.new_community_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions =
@@ -224,7 +239,7 @@ private fun CommunityFormScreen(
                 OutlinedTextField(
                     value = model.description,
                     onValueChange = { model.description = it },
-                    label = { Text(stringRes(R.string.new_community_description)) },
+                    label = { Text(stringRes(Res.string.new_community_description)) },
                     minLines = 3,
                     maxLines = 8,
                     modifier = Modifier.fillMaxWidth(),
@@ -237,7 +252,7 @@ private fun CommunityFormScreen(
                 OutlinedTextField(
                     value = model.rules,
                     onValueChange = { model.rules = it },
-                    label = { Text(stringRes(R.string.new_community_rules)) },
+                    label = { Text(stringRes(Res.string.new_community_rules)) },
                     minLines = 2,
                     maxLines = 8,
                     modifier = Modifier.fillMaxWidth(),
@@ -383,14 +398,14 @@ private fun CommunityImagePlaceholder(onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = stringRes(R.string.new_community_pick_cover),
+                text = stringRes(Res.string.new_community_pick_cover),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = stringRes(R.string.new_community_pick_cover_hint),
+                text = stringRes(Res.string.new_community_pick_cover_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -420,7 +435,7 @@ private fun ModeratorsSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringRes(R.string.new_community_moderators_hint),
+            text = stringRes(Res.string.new_community_moderators_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -454,8 +469,8 @@ private fun ModeratorsSection(
                     userSuggestions.reset()
                 }
             },
-            label = { Text(stringRes(R.string.new_community_add_moderator)) },
-            placeholder = { Text(stringRes(R.string.new_community_add_moderator_placeholder)) },
+            label = { Text(stringRes(Res.string.new_community_add_moderator)) },
+            placeholder = { Text(stringRes(Res.string.new_community_add_moderator_placeholder)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -511,7 +526,7 @@ private fun SelectedModeratorRow(
         if (isOwner) {
             AssistChip(
                 onClick = {},
-                label = { Text(stringRes(R.string.new_community_owner)) },
+                label = { Text(stringRes(Res.string.new_community_owner)) },
                 enabled = false,
                 colors =
                     AssistChipDefaults.assistChipColors(
@@ -540,7 +555,7 @@ private fun RelaysSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringRes(R.string.new_community_relays_hint),
+            text = stringRes(Res.string.new_community_relays_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -586,22 +601,22 @@ private fun RelayMarkerChips(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         RelayMarkerOption(
-            label = stringRes(R.string.new_community_relay_marker_none),
+            label = stringRes(Res.string.new_community_relay_marker_none),
             selected = current == null,
             onClick = { onSelect(null) },
         )
         RelayMarkerOption(
-            label = stringRes(R.string.new_community_relay_marker_author),
+            label = stringRes(Res.string.new_community_relay_marker_author),
             selected = current == RelayTag.MARKER_AUTHOR,
             onClick = { onSelect(RelayTag.MARKER_AUTHOR) },
         )
         RelayMarkerOption(
-            label = stringRes(R.string.new_community_relay_marker_requests),
+            label = stringRes(Res.string.new_community_relay_marker_requests),
             selected = current == RelayTag.MARKER_REQUESTS,
             onClick = { onSelect(RelayTag.MARKER_REQUESTS) },
         )
         RelayMarkerOption(
-            label = stringRes(R.string.new_community_relay_marker_approvals),
+            label = stringRes(Res.string.new_community_relay_marker_approvals),
             selected = current == RelayTag.MARKER_APPROVALS,
             onClick = { onSelect(RelayTag.MARKER_APPROVALS) },
         )

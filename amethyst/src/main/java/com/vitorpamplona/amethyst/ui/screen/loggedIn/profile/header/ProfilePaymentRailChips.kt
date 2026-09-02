@@ -53,9 +53,14 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_lightning_offer
+import com.vitorpamplona.amethyst.commons.resources.send_payment_method_cashu
+import com.vitorpamplona.amethyst.commons.resources.send_payment_method_lightning
+import com.vitorpamplona.amethyst.commons.resources.send_payment_method_onchain
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -164,7 +169,7 @@ private fun RailAndTargetChips(
         if (!lud16.isNullOrEmpty()) {
             ProfilePaymentChip(
                 color = BitcoinOrange,
-                label = stringRes(R.string.send_payment_method_lightning),
+                label = stringRes(Res.string.send_payment_method_lightning),
                 detail = lud16,
                 copyValue = lud16,
                 onClick = { openSendPayment(ProfilePaymentMethod.LIGHTNING) },
@@ -181,7 +186,7 @@ private fun RailAndTargetChips(
         if (clinkOffer != null) {
             ProfilePaymentChip(
                 color = BitcoinOrange,
-                label = stringRes(R.string.clink_lightning_offer),
+                label = stringRes(Res.string.clink_lightning_offer),
                 copyValue = remember(clinkOffer) { clinkOffer.encode() },
                 onClick = { openSendPayment(ProfilePaymentMethod.CLINK) },
             ) {
@@ -197,7 +202,7 @@ private fun RailAndTargetChips(
         if (onchainAvailable) {
             ProfilePaymentChip(
                 color = BitcoinOrange,
-                label = stringRes(R.string.send_payment_method_onchain),
+                label = stringRes(Res.string.send_payment_method_onchain),
                 // The NIP-BC destination derived from the profile's pubkey.
                 copyValue = remember(baseUser.pubkeyHex) { TaprootAddress.fromPubKey(baseUser.pubkeyHex) },
                 onClick = { openSendPayment(ProfilePaymentMethod.ONCHAIN) },
@@ -214,7 +219,7 @@ private fun RailAndTargetChips(
         if (cashuMintUrl != null) {
             ProfilePaymentChip(
                 color = CashuPurple,
-                label = stringRes(R.string.send_payment_method_cashu),
+                label = stringRes(Res.string.send_payment_method_cashu),
                 copyValue = cashuMintUrl,
                 onClick = { openSendPayment(ProfilePaymentMethod.CASHU) },
             ) {

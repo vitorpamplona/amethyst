@@ -29,8 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
@@ -143,7 +145,7 @@ fun DefaultProfileBanner(
 ) {
     Image(
         painter = painterRes(R.drawable.profile_banner, sizeReference),
-        contentDescription = stringRes(R.string.profile_banner),
+        contentDescription = stringRes(Res.string.profile_banner),
         contentScale = ContentScale.Crop,
         modifier = modifier,
     )

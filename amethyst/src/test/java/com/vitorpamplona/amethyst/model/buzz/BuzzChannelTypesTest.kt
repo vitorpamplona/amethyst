@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model.buzz
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import org.junit.Assert.assertEquals

@@ -45,6 +45,11 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_add_people_empty
+import com.vitorpamplona.amethyst.commons.resources.buzz_add_people_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_import_added
+import com.vitorpamplona.amethyst.commons.resources.relay_group_add_member
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -103,7 +108,7 @@ fun BuzzAddPeopleDialog(
                             modifier = Modifier.size(20.dp),
                         )
                     },
-                    label = { Text(stringRes(R.string.buzz_add_people_hint)) },
+                    label = { Text(stringRes(Res.string.buzz_add_people_hint)) },
                 )
 
                 // The typeahead needs a couple of characters before a relay search is worth firing;
@@ -127,7 +132,7 @@ fun BuzzAddPeopleDialog(
                         contentPadding = PaddingValues(0.dp),
                         onEmpty = {
                             Text(
-                                text = stringRes(R.string.buzz_add_people_empty),
+                                text = stringRes(Res.string.buzz_add_people_empty),
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -136,14 +141,14 @@ fun BuzzAddPeopleDialog(
                         trailingContent = { user ->
                             if (isAlreadyIn(user.pubkeyHex)) {
                                 Text(
-                                    text = stringRes(R.string.buzz_import_added),
+                                    text = stringRes(Res.string.buzz_import_added),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             } else {
                                 Icon(
                                     symbol = MaterialSymbols.PersonAdd,
-                                    contentDescription = stringRes(R.string.relay_group_add_member),
+                                    contentDescription = stringRes(Res.string.relay_group_add_member),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }

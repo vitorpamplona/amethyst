@@ -79,7 +79,10 @@ import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.share_as_image_generating
+import com.vitorpamplona.amethyst.commons.resources.share_as_image_watermark
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
@@ -395,7 +398,7 @@ private fun GeneratingPreview() {
     ) {
         CircularProgressIndicator()
         Text(
-            text = stringRes(R.string.share_as_image_generating),
+            text = stringRes(Res.string.share_as_image_generating),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -496,7 +499,7 @@ private fun CaptureSource(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = stringRes(R.string.share_as_image_watermark),
+                text = stringRes(Res.string.share_as_image_watermark),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

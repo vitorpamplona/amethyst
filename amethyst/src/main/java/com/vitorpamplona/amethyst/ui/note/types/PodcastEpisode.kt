@@ -45,13 +45,19 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_chapters
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_number
+import com.vitorpamplona.amethyst.commons.resources.podcast_season
+import com.vitorpamplona.amethyst.commons.resources.podcast_season_episode
+import com.vitorpamplona.amethyst.commons.resources.podcast_transcript
+import com.vitorpamplona.amethyst.commons.resources.podcast_video
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastBadge
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastLinkChip
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastValueSplits
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -148,9 +154,9 @@ fun RenderPodcastEpisode(
                 val uriHandler = LocalUriHandler.current
                 val seasonEpisodeLabel =
                     when {
-                        season != null && episodeNumber != null -> stringRes(R.string.podcast_season_episode, season, episodeNumber)
-                        episodeNumber != null -> stringRes(R.string.podcast_episode_number, episodeNumber)
-                        season != null -> stringRes(R.string.podcast_season, season)
+                        season != null && episodeNumber != null -> stringRes(Res.string.podcast_season_episode, season, episodeNumber)
+                        episodeNumber != null -> stringRes(Res.string.podcast_episode_number, episodeNumber)
+                        season != null -> stringRes(Res.string.podcast_season, season)
                         else -> null
                     }
                 FlowRow(
@@ -167,19 +173,19 @@ fun RenderPodcastEpisode(
                     }
                     if (hasVideo) {
                         PodcastBadge(
-                            label = stringRes(R.string.podcast_video),
+                            label = stringRes(Res.string.podcast_video),
                             symbol = MaterialSymbols.Videocam,
                             container = MaterialTheme.colorScheme.tertiaryContainer,
                             content = MaterialTheme.colorScheme.onTertiaryContainer,
                         )
                     }
                     transcriptUrl?.let { url ->
-                        PodcastLinkChip(stringRes(R.string.podcast_transcript), MaterialSymbols.Description) {
+                        PodcastLinkChip(stringRes(Res.string.podcast_transcript), MaterialSymbols.Description) {
                             runCatching { uriHandler.openUri(url) }
                         }
                     }
                     chaptersUrl?.let {
-                        PodcastLinkChip(stringRes(R.string.podcast_chapters), MaterialSymbols.Checklist) {
+                        PodcastLinkChip(stringRes(Res.string.podcast_chapters), MaterialSymbols.Checklist) {
                             chaptersExpanded = !chaptersExpanded
                         }
                     }

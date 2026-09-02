@@ -22,17 +22,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.commons.ui.feeds.ChatroomFeedFilter
+import com.vitorpamplona.amethyst.commons.viewmodels.ListChangeFeedViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
-// Re-export from commons for backwards compatibility
-typealias ListChangeFeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.ListChangeFeedViewModel
-
 class ChatroomFeedViewModel(
     val user: ChatroomKey,
     val account: Account,
-) : com.vitorpamplona.amethyst.commons.viewmodels.ListChangeFeedViewModel(
+) : ListChangeFeedViewModel(
         ChatroomFeedFilter(user, account),
         LocalCache,
     ) {

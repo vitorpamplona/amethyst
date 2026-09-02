@@ -34,11 +34,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NutzapEntry
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nutzap
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -93,7 +94,7 @@ private fun RenderNutzapGalleryRow(
         Box(modifier = WidthAuthorPictureModifier) {
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
-                contentDescription = stringRes(R.string.nutzap),
+                contentDescription = stringRes(Res.string.nutzap),
                 modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
                 // Tint the monochrome cashu outline brand orange so it reads as
                 // a value transfer, matching the lightning ZappedIcon in the

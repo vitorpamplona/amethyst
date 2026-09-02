@@ -38,11 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.nip85TrustedAssertions.ui.EditNicknameDialog
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nickname_private
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
@@ -112,7 +113,7 @@ fun UserNicknameCard(
 
             Icon(
                 symbol = MaterialSymbols.Lock,
-                contentDescription = stringRes(R.string.nickname_private),
+                contentDescription = stringRes(Res.string.nickname_private),
                 tint = MaterialTheme.colorScheme.placeholderText,
                 modifier =
                     Modifier

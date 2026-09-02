@@ -58,9 +58,16 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_switch_active_account
+import com.vitorpamplona.amethyst.commons.resources.account_switch_add_account_btn
+import com.vitorpamplona.amethyst.commons.resources.account_switch_select_account
+import com.vitorpamplona.amethyst.commons.resources.are_you_sure_you_want_to_log_out
+import com.vitorpamplona.amethyst.commons.resources.log_out
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -95,7 +102,7 @@ fun AccountSwitchBottomSheet(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringRes(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
+            Text(stringRes(Res.string.account_switch_select_account), fontWeight = FontWeight.Bold)
         }
         DisplayAllAccounts(accountViewModel, accountSessionManager)
         Row(
@@ -107,7 +114,7 @@ fun AccountSwitchBottomSheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(onClick = { popupExpanded = true }) {
-                Text(stringRes(R.string.account_switch_add_account_btn))
+                Text(stringRes(Res.string.account_switch_add_account_btn))
             }
         }
     }
@@ -209,7 +216,7 @@ private fun ActiveMarker(
     if (isCurrentUser) {
         Icon(
             symbol = MaterialSymbols.RadioButtonChecked,
-            contentDescription = stringRes(R.string.account_switch_active_account),
+            contentDescription = stringRes(Res.string.account_switch_active_account),
             tint = MaterialTheme.colorScheme.secondary,
         )
     }
@@ -225,7 +232,7 @@ private fun AccountPicture(
     RobohashFallbackAsyncImage(
         robot = user.pubkeyHex,
         model = userInfo?.info?.profilePicture(),
-        contentDescription = stringRes(R.string.profile_image),
+        contentDescription = stringRes(Res.string.profile_image),
         modifier = AccountPictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
@@ -288,7 +295,7 @@ private fun LogoutButton(
             }
         }
         AlertDialog(
-            title = { Text(text = stringRes(R.string.log_out)) },
+            title = { Text(text = stringRes(Res.string.log_out)) },
             text = {
                 if (unpublishedCount > 0) {
                     Text(
@@ -300,7 +307,7 @@ private fun LogoutButton(
                             ),
                     )
                 } else {
-                    Text(text = stringRes(R.string.are_you_sure_you_want_to_log_out))
+                    Text(text = stringRes(Res.string.are_you_sure_you_want_to_log_out))
                 }
             },
             onDismissRequest = { logoutDialog = false },
@@ -332,7 +339,7 @@ private fun LogoutButton(
                             .show()
                     },
                 ) {
-                    Text(text = stringRes(R.string.log_out))
+                    Text(text = stringRes(Res.string.log_out))
                 }
             },
             dismissButton = {
@@ -350,7 +357,7 @@ private fun LogoutButton(
     ) {
         Icon(
             symbol = MaterialSymbols.AutoMirrored.Logout,
-            contentDescription = stringRes(R.string.log_out),
+            contentDescription = stringRes(Res.string.log_out),
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }

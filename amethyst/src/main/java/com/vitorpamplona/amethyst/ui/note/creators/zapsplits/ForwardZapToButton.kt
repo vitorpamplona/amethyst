@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.ZapSplit
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.zap_split_title
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -65,7 +67,7 @@ fun ZapSplitIcon(
 ) {
     Icon(
         imageVector = ZapSplit,
-        contentDescription = stringRes(id = R.string.zap_split_title),
+        contentDescription = stringRes(id = Res.string.zap_split_title),
         modifier = modifier,
         tint = tint,
     )

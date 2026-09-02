@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.AddressableAuthorRelayLoaderSubAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import io.mockk.every
 import io.mockk.mockk

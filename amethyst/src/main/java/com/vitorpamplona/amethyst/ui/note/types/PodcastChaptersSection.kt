@@ -42,7 +42,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_chapters
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -118,7 +119,7 @@ fun PodcastChaptersSection(
                             modifier = Modifier.widthIn(min = 44.dp),
                         )
                         Text(
-                            text = chapter.title ?: stringRes(R.string.podcast_chapters),
+                            text = chapter.title ?: stringRes(Res.string.podcast_chapters),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.grayText,
                             maxLines = 2,

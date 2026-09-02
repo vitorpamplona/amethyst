@@ -46,13 +46,23 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_body
+import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_title
+import com.vitorpamplona.amethyst.commons.resources.git_repo_open_in_browser
+import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
+import com.vitorpamplona.amethyst.commons.resources.git_repo_recent_activity
+import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_branches
+import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_files
+import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_tags
+import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_updated
+import com.vitorpamplona.amethyst.commons.resources.git_untitled
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -124,7 +134,7 @@ fun RepoHero(event: GitRepositoryEvent) {
     if (topics.isEmpty() && !isFork) return
 
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (isFork) PillChip(stringRes(R.string.git_repo_personal_fork))
+        if (isFork) PillChip(stringRes(Res.string.git_repo_personal_fork))
         topics.forEach { PillChip("#$it") }
     }
 }
@@ -181,10 +191,10 @@ fun RepoStatTiles(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        StatTile(MaterialSymbols.Commit, branches.toString(), stringRes(R.string.git_repo_stat_branches), Modifier.weight(1f))
-        StatTile(MaterialSymbols.Tag, tags.toString(), stringRes(R.string.git_repo_stat_tags), Modifier.weight(1f))
-        StatTile(MaterialSymbols.Description, compactCount(files), stringRes(R.string.git_repo_stat_files), Modifier.weight(1f))
-        StatTile(MaterialSymbols.Schedule, updatedEpochSec?.let { relativeShort(it) } ?: "—", stringRes(R.string.git_repo_stat_updated), Modifier.weight(1f))
+        StatTile(MaterialSymbols.Commit, branches.toString(), stringRes(Res.string.git_repo_stat_branches), Modifier.weight(1f))
+        StatTile(MaterialSymbols.Tag, tags.toString(), stringRes(Res.string.git_repo_stat_tags), Modifier.weight(1f))
+        StatTile(MaterialSymbols.Description, compactCount(files), stringRes(Res.string.git_repo_stat_files), Modifier.weight(1f))
+        StatTile(MaterialSymbols.Schedule, updatedEpochSec?.let { relativeShort(it) } ?: "—", stringRes(Res.string.git_repo_stat_updated), Modifier.weight(1f))
     }
 }
 
@@ -360,18 +370,18 @@ fun RepoExternalNotice(event: GitRepositoryEvent) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(MaterialSymbols.Public, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
             Text(
-                text = stringRes(R.string.git_repo_external_host_title),
+                text = stringRes(Res.string.git_repo_external_host_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
         }
         Text(
-            text = stringRes(R.string.git_repo_external_host_body),
+            text = stringRes(Res.string.git_repo_external_host_body),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.grayText,
         )
         if (web != null) {
-            ClickableUrl(url = web, urlText = stringRes(R.string.git_repo_open_in_browser))
+            ClickableUrl(url = web, urlText = stringRes(Res.string.git_repo_open_in_browser))
         }
     }
 }
@@ -442,7 +452,7 @@ fun RepoActivityPulse(
                 .padding(vertical = 6.dp),
     ) {
         Text(
-            text = stringRes(R.string.git_repo_recent_activity),
+            text = stringRes(Res.string.git_repo_recent_activity),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.grayText,
             fontWeight = FontWeight.SemiBold,
@@ -475,7 +485,7 @@ private fun ActivityRow(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = gitSubjectOf(event) ?: stringRes(R.string.git_untitled),
+            text = gitSubjectOf(event) ?: stringRes(Res.string.git_untitled),
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
