@@ -105,7 +105,7 @@
         <item quantity="other">%1$d Relays</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">"Antworten auf "</string>
+    <string name="replying_to">Antworten auf </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statische Website: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
@@ -235,11 +235,11 @@
     <string name="quote">Zitat</string>
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Neuer Betrag in Sats</string>
-    <string name="and">" und "</string>
-    <string name="following">" Gefolgt"</string>
-    <string name="followers">" Follower"</string>
-    <string name="number_following">"%1$s Gefolgt"</string>
-    <string name="number_followers">"%1$s Follower"</string>
+    <string name="and"> und </string>
+    <string name="following"> Gefolgt</string>
+    <string name="followers"> Follower</string>
+    <string name="number_following">%1$s Gefolgt</string>
+    <string name="number_followers">%1$s Follower</string>
     <string name="log_out">Ausloggen</string>
     <string name="show_more">Mehr anzeigen</string>
     <string name="lightning_invoice">Lightning-Rechnung</string>
@@ -309,7 +309,7 @@
     <string name="my_awesome_group">Meine tolle Gruppe</string>
     <string name="picture_url">Bild-URL</string>
     <string name="optional_picture_url">Bild-URL (optional)</string>
-    <string name="about_us">"Über uns…"</string>
+    <string name="about_us">Über uns…</string>
     <string name="search_and_add_a_user">Benutzer suchen und hinzufügen</string>
     <string name="add_a_relay">Relay hinzufügen</string>
     <string name="relay_url_not_valid">Keine gültige Relay-Adresse. Verwende einen Hostnamen oder eine IP-Adresse in Klammern (zum Beispiel [201:d0e:9ba5:8bbc::1]:8080).</string>
@@ -346,9 +346,9 @@
     <string name="replies">Antworten</string>
     <string name="mutual">Von mir</string>
     <string name="gallery">Galerie</string>
-    <string name="reports">"Meldungen"</string>
-    <string name="number_reports">"%1$s Meldungen"</string>
-    <string name="relays">" Relays"</string>
+    <string name="reports">Meldungen</string>
+    <string name="number_reports">%1$s Meldungen</string>
+    <string name="relays"> Relays</string>
     <string name="website">Website</string>
     <string name="lightning_address">Lightning-Adresse</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopiert die Nsec-ID (Ihr Passwort) zur Sicherung in die Zwischenablage</string>
@@ -358,13 +358,13 @@
     <string name="copy_user_id">Benutzer-ID kopieren</string>
     <string name="unblock_user">Benutzer freigeben</string>
     <string name="user_is_blocked_hidden">Dieser Nutzer ist blockiert/stummgeschaltet. Seine Beiträge sind ausgeblendet.</string>
-    <string name="npub_hex_username">"npub, Benutzername, Text "</string>
+    <string name="npub_hex_username">npub, Benutzername, Text </string>
     <string name="clear">Löschen</string>
     <string name="app_logo">App-Logo</string>
     <string name="nsec_npub_hex_private_key">nsec.. oder npub..</string>
     <string name="ncryptsec_password">Passwort zum Öffnen des Schlüssels</string>
     <string name="show_password">Passwort anzeigen</string>
-    <string name="i_accept_the">"Ich akzeptiere die "</string>
+    <string name="i_accept_the">Ich akzeptiere die </string>
     <string name="terms_of_use">Nutzungsbedingungen</string>
     <string name="acceptance_of_terms_is_required">Die Akzeptanz der Bedingungen ist erforderlich</string>
     <string name="login">Anmelden</string>
@@ -433,14 +433,14 @@
     <string name="dm_sender_reported_subtitle">Jemand, dem du folgst, hat dieses Konto gemeldet</string>
     <string name="dm_sender_reported_icon">Gemeldet</string>
     <string name="dm_sender_reported_more_count">+%1$d</string>
-    <string name="error_loading_replies">"Fehler beim Laden der Antworten: "</string>
+    <string name="error_loading_replies">Fehler beim Laden der Antworten: </string>
     <string name="try_again">Erneut versuchen</string>
     <string name="notification_feed_is_empty">Noch keine Benachrichtigungen.</string>
     <string name="open_poll">Offene Umfrage</string>
     <string name="feed_is_empty">Feed ist leer.</string>
     <string name="refresh">Aktualisieren</string>
     <string name="channel_created">Kanal erstellt</string>
-    <string name="channel_information_changed_to">"Kanalinformationen geändert in"</string>
+    <string name="channel_information_changed_to">Kanalinformationen geändert in</string>
     <string name="new_public_chat">Neuen öffentlichen Chat erstellen</string>
     <string name="marmot_group_no_messages_yet">Noch keine Nachrichten</string>
     <string name="paid_relay">Bezahltes Relay</string>
@@ -473,7 +473,7 @@
     <string name="backup_keys_nudge_already_saved">Habe ich gespeichert</string>
     <string name="backup_keys_nudge_dismiss">Schließen</string>
     <string name="encrypt_and_copy_my_secret_key">Meinen privaten Schlüssel verschlüsseln und kopieren</string>
-    <string name="badge_award_image_for">"Auszeichnungsbild für %1$s"</string>
+    <string name="badge_award_image_for">Auszeichnungsbild für %1$s</string>
     <string name="badge_award_image">Auszeichnungsbild</string>
     <string name="new_badge_award_notif">Du hast eine neue Auszeichnung erhalten</string>
     <string name="award_granted_to">Auszeichnung verliehen an</string>
@@ -512,7 +512,7 @@
     <string name="report_dialog_impersonation">Bösartige Nachahmung</string>
     <string name="report_dialog_nudity">Nacktheit oder explizite Inhalte</string>
     <string name="report_dialog_illegal">Illegales Verhalten</string>
-    <string name="report_dialog_blocking_a_user">Durch das Blockieren eines Nutzers werden dessen Inhalte in deiner App ausgeblendet. Deine Beiträge sind weiterhin öffentlich sichtbar, auch für Personen, die du blockiert hast. Blockierte Nutzer werden auf dem Bildschirm \"Sicherheitsfilter\" aufgelistet.</string>
+    <string name="report_dialog_blocking_a_user">Durch das Blockieren eines Nutzers werden dessen Inhalte in deiner App ausgeblendet. Deine Beiträge sind weiterhin öffentlich sichtbar, auch für Personen, die du blockiert hast. Blockierte Nutzer werden auf dem Bildschirm "Sicherheitsfilter" aufgelistet.</string>
     <string name="report_dialog_report_btn">Missbrauch melden</string>
     <string name="report_dialog_reminder_public">Alle gemeldeten Beiträge werden öffentlich sichtbar sein.</string>
     <string name="report_dialog_additional_reason_placeholder">Optional weitere Informationen zu deiner Meldung angeben…</string>
@@ -824,7 +824,7 @@
     <string name="nest_state_speaking">Spricht gerade</string>
     <string name="nest_state_mic_open">Mikrofon offen</string>
     <string name="nest_leave_host_title">Dieses Nest beenden?</string>
-    <string name="nest_leave_host_body">Du bist der Gastgeber. Wenn du den Raum schließt, werden alle getrennt. Wähle \"Nur verlassen\", wenn du später zurückkehren möchtest — der Raum wird nach 8 Stunden Inaktivität automatisch geschlossen.</string>
+    <string name="nest_leave_host_body">Du bist der Gastgeber. Wenn du den Raum schließt, werden alle getrennt. Wähle "Nur verlassen", wenn du später zurückkehren möchtest — der Raum wird nach 8 Stunden Inaktivität automatisch geschlossen.</string>
     <string name="nest_leave_host_close">Raum schließen</string>
     <string name="nest_leave_host_just_leave">Nur verlassen</string>
     <string name="nest_live_chip">LIVE</string>
@@ -1079,7 +1079,7 @@
     <string name="poll_consensus_threshold">Konsens</string>
     <string name="poll_closing_date_time">Schließdatum und -zeit</string>
     <string name="poll_closing_in">Umfrage endet in %1$s</string>
-    <string name="looking_for_event">"Veranstaltung suchen %1$s"</string>
+    <string name="looking_for_event">Veranstaltung suchen %1$s</string>
     <string name="send_zap">Zap senden</string>
     <string name="custom_zaps_add_a_message">Füge eine öffentliche Nachricht hinzu</string>
     <string name="custom_zaps_add_a_message_private">Füge eine private Nachricht hinzu</string>
@@ -1386,7 +1386,7 @@
     <string name="music_playlist_collaborative_hint">Anderen erlauben, Titel zu dieser Playlist hinzuzufügen.</string>
     <string name="music_playlist_delete">Diese Playlist löschen</string>
     <string name="music_playlist_delete_confirm">Eine NIP-09-Löschung für diese Playlist veröffentlichen?</string>
-    <string name="music_playlist_no_tracks_hint">Noch keine Titel. Füge Titel über das Menü eines Songs mit „Zur Playlist hinzufügen\" hinzu.</string>
+    <string name="music_playlist_no_tracks_hint">Noch keine Titel. Füge Titel über das Menü eines Songs mit „Zur Playlist hinzufügen" hinzu.</string>
     <string name="music_playlist_move_track_up">Titel nach oben verschieben</string>
     <string name="music_playlist_move_track_down">Titel nach unten verschieben</string>
     <string name="music_playlist_remove_track">Titel aus Playlist entfernen</string>
@@ -1508,7 +1508,7 @@
     <string name="relay_group_invite_only_to_post">Diese Gruppe ist nur mit Einladung — du brauchst eine Einladung, um zu posten.</string>
     <string name="messages_new_message_to">An</string>
     <string name="messages_new_message_subject_caption">Gesprächsthema</string>
-    <string name="messages_new_message_to_caption">"\@Benutzer1, @Benutzer2, @Benutzer3"</string>
+    <string name="messages_new_message_to_caption">@Benutzer1, @Benutzer2, @Benutzer3</string>
     <string name="messages_group_descriptor">Mitglieder dieser Gruppe</string>
     <string name="messages_new_subject_message">Erklärung an Mitglieder</string>
     <string name="messages_new_subject_message_placeholder">Ändern des Namens für die neuen Ziele.</string>
@@ -1550,7 +1550,7 @@
     <string name="tor_connection_failed_body">Amethyst konnte den Tor-Start nicht abschließen. Eine reguläre (Nicht-Tor-)Verbindung verwenden, damit der Feed laden kann? Wir merken uns diese Auswahl für die nächste Stunde und versuchen Tor danach erneut.</string>
     <string name="tor_continue_without_for_session">Verbindung ohne Tor verwenden</string>
     <string name="tor_keep_waiting">Weiter warten</string>
-    <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören\" findest du dort.</string>
+    <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören" findest du dort.</string>
     <string name="notification_channel_status_on">An</string>
     <string name="notification_channel_status_silent">Lautlos</string>
     <string name="notification_channel_status_off">Aus</string>
@@ -1585,7 +1585,7 @@
     <string name="retry_without_encryption">Ohne Verschlüsselung wiederholen</string>
     <string name="upload_without_encryption_warning">Warnung: Ohne Verschlüsselung kann jeder mit dem Dateilink den Inhalt sehen.</string>
     <string name="media_compression_quality_label">Medienqualität</string>
-    <string name="media_compression_quality_explainer">Wähle \"Niedrige Qualität\", um deine Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, \"Hohe Qualität\" für eine größere Datei mit besserer Qualität, oder \"Unkomprimiert\", um die Medien ohne Komprimierung hochzuladen.</string>
+    <string name="media_compression_quality_explainer">Wähle "Niedrige Qualität", um deine Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, "Hohe Qualität" für eine größere Datei mit besserer Qualität, oder "Unkomprimiert", um die Medien ohne Komprimierung hochzuladen.</string>
     <string name="media_compression_quality_low">Niedrig</string>
     <string name="media_compression_quality_medium">Mittel</string>
     <string name="media_compression_quality_high">Hoch</string>
@@ -1828,7 +1828,7 @@
     <string name="calendar_untitled">(ohne Titel)</string>
     <string name="calendar_all_day">Ganztägig</string>
     <string name="calendar_rsvp_going_prefixed">✓ Komme</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Vielleicht</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Vielleicht</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Komme nicht</string>
     <string name="calendar_collection_title">Titel</string>
     <string name="calendar_collection_description">Beschreibung</string>
@@ -2182,7 +2182,7 @@
     <string name="remove_dvm_from_favorites">Aus Favoriten entfernen</string>
     <string name="favorite_dvms_explainer">Feed-Algorithmen, die du mit einem Stern markierst, erscheinen als Filter-Chips im Home-Feed. Öffne Entdecken, um weitere hinzuzufügen.</string>
     <string name="favorite_dvms_empty_headline">Lieblingsalgorithmen anheften</string>
-    <string name="favorite_dvms_empty_step1">Tippe unten auf \"%1$s\", um Algorithmen zu durchsuchen.</string>
+    <string name="favorite_dvms_empty_step1">Tippe unten auf "%1$s", um Algorithmen zu durchsuchen.</string>
     <string name="favorite_dvms_empty_step2">Tippe auf den %1$s neben einem Feed, um ihn hier zu behalten.</string>
     <string name="favorite_dvms_empty_cta">Feeds hinzufügen</string>
     <string name="favorite_dvms_add_more">Weitere hinzufügen…</string>
@@ -2322,7 +2322,7 @@
     <string name="skip_for_now">Vorerst überspringen</string>
     <string name="fetching_follow_list">Folgeliste wird abgerufen…</string>
     <string name="no_follows_found">Keine Follows gefunden</string>
-    <string name="import_follows_tips">"Gib das Profil eines Freundes oder Community-Leaders ein. Du kannst deren npub, NIP-05-Adresse oder einen Namecoin-Namen wie alice@example.bit oder id/alice für blockchain-verifizierte Identitäten verwenden."</string>
+    <string name="import_follows_tips">Gib das Profil eines Freundes oder Community-Leaders ein. Du kannst deren npub, NIP-05-Adresse oder einen Namecoin-Namen wie alice@example.bit oder id/alice für blockchain-verifizierte Identitäten verwenden.</string>
     <string name="select_all">Alle auswählen</string>
     <string name="namecoin_test_connection">Verbindung testen</string>
     <string name="namecoin_testing">Teste Server…</string>
@@ -2592,8 +2592,8 @@
     <string name="emoji_add_dialog_title">Eigenes Emoji hinzufügen</string>
     <string name="emoji_remove_dialog_title">:%1$s: entfernen?</string>
     <string name="emoji_long_press_hint">Lange auf ein Emoji drücken, um es zu entfernen</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" ist in deiner Emoji-Liste</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" ist nicht in deiner Emoji-Liste</string>
+    <string name="emoji_pack_is_in_list">"%1$s" ist in deiner Emoji-Liste</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" ist nicht in deiner Emoji-Liste</string>
     <string name="emoji_pack_actions_dialog_title">Aktionen für Emoji-Paket</string>
     <string name="emoji_private_toggle">Privat</string>
     <string name="emoji_private_badge">Privates Emoji</string>
@@ -2633,7 +2633,7 @@
     <string name="marmot_edit_group_info">Gruppeninfo bearbeiten</string>
     <string name="marmot_leave_group">Gruppe verlassen</string>
     <string name="marmot_this_group">diese Gruppe</string>
-    <string name="marmot_leave_group_confirm">Möchten Sie \"%1$s\" wirklich verlassen? Sie erhalten keine Nachrichten mehr von dieser Gruppe.</string>
+    <string name="marmot_leave_group_confirm">Möchten Sie "%1$s" wirklich verlassen? Sie erhalten keine Nachrichten mehr von dieser Gruppe.</string>
     <string name="marmot_keypackage_required">Diese Person muss ein KeyPackage (kind:30443) veröffentlicht haben, um hinzugefügt werden zu können.</string>
     <string name="marmot_add_to_group">Zur Gruppe hinzufügen</string>
     <string name="marmot_add_member">Mitglied hinzufügen</string>
@@ -2642,15 +2642,15 @@
     <string name="marmot_member_suffix_you"> (du)</string>
     <string name="marmot_member_suffix_admin"> - Administrator</string>
     <string name="marmot_remove_member">Mitglied entfernen</string>
-    <string name="marmot_remove_member_confirm">Möchten Sie \"%1$s\" wirklich aus dieser Gruppe entfernen?</string>
+    <string name="marmot_remove_member_confirm">Möchten Sie "%1$s" wirklich aus dieser Gruppe entfernen?</string>
     <string name="marmot_grant">Erteilen</string>
     <string name="marmot_grant_admin_privileges">Administratorrechte erteilen</string>
     <string name="marmot_grant_admin_title">Administratorrechte erteilen</string>
-    <string name="marmot_grant_admin_confirm">\"%1$s\" zum Administrator dieser Gruppe machen? Administratoren können Mitglieder hinzufügen oder entfernen, Gruppeninfo ändern und anderen Mitgliedern Administratorrechte erteilen.</string>
+    <string name="marmot_grant_admin_confirm">"%1$s" zum Administrator dieser Gruppe machen? Administratoren können Mitglieder hinzufügen oder entfernen, Gruppeninfo ändern und anderen Mitgliedern Administratorrechte erteilen.</string>
     <string name="marmot_revoke">Widerrufen</string>
     <string name="marmot_revoke_admin_privileges">Administratorrechte widerrufen</string>
     <string name="marmot_revoke_admin_title">Administratorrechte widerrufen</string>
-    <string name="marmot_revoke_admin_confirm">Administratorrechte von \"%1$s\" widerrufen? Diese Person bleibt Mitglied der Gruppe.</string>
+    <string name="marmot_revoke_admin_confirm">Administratorrechte von "%1$s" widerrufen? Diese Person bleibt Mitglied der Gruppe.</string>
     <string name="marmot_relays_header">Relays</string>
     <string name="marmot_relay_no_events">noch keine Ereignisse</string>
     <string name="marmot_relay_last_event">letztes Ereignis%1$s</string>
@@ -2739,7 +2739,7 @@
     <string name="buzz_persona_new_title">Neue Persona</string>
     <string name="buzz_persona_edit_title">Persona bearbeiten</string>
     <string name="buzz_persona_slug">Slug (Persona-ID)</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' oder \'_\'. Nach dem Erstellen nicht mehr änderbar.</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, '-' oder '_'. Nach dem Erstellen nicht mehr änderbar.</string>
     <string name="buzz_persona_display_name">Anzeigename</string>
     <string name="buzz_persona_system_prompt">System-Prompt</string>
     <string name="buzz_persona_model">Modell (optional)</string>

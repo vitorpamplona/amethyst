@@ -107,7 +107,7 @@
         <item quantity="other">%1$d transmitery</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">"odpowiadając do "</string>
+    <string name="replying_to">odpowiadając do </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statyczna Witryna: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
@@ -245,11 +245,11 @@
     <string name="quote">Zacytuj</string>
     <string name="fork">Sklonuj</string>
     <string name="new_amount_in_sats">Nowa kwota w satoszach</string>
-    <string name="and">" i "</string>
-    <string name="following">" Obserwowane"</string>
-    <string name="followers">" Obserwujące"</string>
-    <string name="number_following">"%1$s Obserwowanych"</string>
-    <string name="number_followers">"%1$s Obserwujących"</string>
+    <string name="and"> i </string>
+    <string name="following"> Obserwowane</string>
+    <string name="followers"> Obserwujące</string>
+    <string name="number_following">%1$s Obserwowanych</string>
+    <string name="number_followers">%1$s Obserwujących</string>
     <string name="log_out">Wyloguj się</string>
     <string name="show_more">Pokaż Więcej</string>
     <string name="lightning_invoice">Faktura LN</string>
@@ -319,7 +319,7 @@
     <string name="my_awesome_group">Nazwa Grupy</string>
     <string name="picture_url">Adres Url obrazka</string>
     <string name="optional_picture_url">Adres URL zdjęcia (opcjonalnie)</string>
-    <string name="about_us">"Informacja o grupie…"</string>
+    <string name="about_us">Informacja o grupie…</string>
     <string name="search_and_add_a_user">Szukaj i dodaj użytkownika</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
     <string name="relay_url_not_valid">Nieprawidłowy adres transmitera. Użyj nazwy hosta lub adresu IP w nawiasach (na przykład
@@ -357,9 +357,9 @@
     <string name="replies">Odpowiedzi</string>
     <string name="mutual">Twoje</string>
     <string name="gallery">Galeria</string>
-    <string name="reports">"Zgłoszenia"</string>
-    <string name="number_reports">"%1$s Zgłoszeń"</string>
-    <string name="relays">" Transmitery"</string>
+    <string name="reports">Zgłoszenia</string>
+    <string name="number_reports">%1$s Zgłoszeń</string>
+    <string name="relays"> Transmitery</string>
     <string name="website">Strona www</string>
     <string name="lightning_address">Lightning Adres</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopiuje Nsec ID (hasło) do schowka w celu wykonania kopii zapasowej</string>
@@ -369,13 +369,13 @@
     <string name="copy_user_id">Kopiuj ID użytkownika</string>
     <string name="unblock_user">Odblokuj użytkownika</string>
     <string name="user_is_blocked_hidden">Ten użytkownik jest zablokowany/uciszony. Ich posty są ukryte.</string>
-    <string name="npub_hex_username">"npub, nazwa użytkownika, tekst"</string>
+    <string name="npub_hex_username">npub, nazwa użytkownika, tekst</string>
     <string name="clear">Wyczyść</string>
     <string name="app_logo">Logo aplikacji</string>
     <string name="nsec_npub_hex_private_key">nsec. lub npub.</string>
     <string name="ncryptsec_password">hasło, aby otworzyć klucz</string>
     <string name="show_password">Pokaż hasło</string>
-    <string name="i_accept_the">"Akceptuję "</string>
+    <string name="i_accept_the">Akceptuję </string>
     <string name="terms_of_use">warunki użytkowania</string>
     <string name="acceptance_of_terms_is_required">Wymagane jest zaakceptowanie warunków użytkowania</string>
     <string name="login">Zaloguj się</string>
@@ -444,14 +444,14 @@
     <string name="dm_sender_reported_subtitle">Ktoś, kogo obserwujesz, zgłosił to konto</string>
     <string name="dm_sender_reported_icon">Zgłoszono</string>
     <string name="dm_sender_reported_more_count">+%1$d</string>
-    <string name="error_loading_replies">"Błąd wczytywania odpowiedzi: "</string>
+    <string name="error_loading_replies">Błąd wczytywania odpowiedzi: </string>
     <string name="try_again">Spróbuj ponownie</string>
     <string name="notification_feed_is_empty">Brak powiadomień.</string>
     <string name="open_poll">Ankieta Otwarta</string>
     <string name="feed_is_empty">Brak zawartości.</string>
     <string name="refresh">Odśwież</string>
     <string name="channel_created">Kanał utworzony</string>
-    <string name="channel_information_changed_to">"Informacje o kanale zmienione na"</string>
+    <string name="channel_information_changed_to">Informacje o kanale zmienione na</string>
     <string name="new_public_chat">Utwórz nowy czat publiczny</string>
     <string name="marmot_group_no_messages_yet">Brak wiadomości</string>
     <string name="paid_relay">Płatny transmiter</string>
@@ -486,7 +486,7 @@
     <string name="backup_keys_nudge_already_saved">Zapisałem(am)</string>
     <string name="backup_keys_nudge_dismiss">Ignoruj</string>
     <string name="encrypt_and_copy_my_secret_key">Zaszyfruj i skopiuj mój tajny klucz</string>
-    <string name="badge_award_image_for">"Wizerunek odznaki dla %1$s"</string>
+    <string name="badge_award_image_for">Wizerunek odznaki dla %1$s</string>
     <string name="badge_award_image">Wizerunek odznaki</string>
     <string name="new_badge_award_notif">Otrzymałeś nową odznakę</string>
     <string name="award_granted_to">Nagroda przyznana dla</string>
@@ -1092,7 +1092,7 @@
     <string name="poll_consensus_threshold">Konsensus</string>
     <string name="poll_closing_date_time">Data &amp; godzina zakończenia ankiety</string>
     <string name="poll_closing_in">Ankieta zostanie zamknięta za %1$s</string>
-    <string name="looking_for_event">"Szukam wydarzenia %1$s"</string>
+    <string name="looking_for_event">Szukam wydarzenia %1$s</string>
     <string name="send_zap">Wyślij Zapa</string>
     <string name="custom_zaps_add_a_message">Dodaj wiadomość publiczną</string>
     <string name="custom_zaps_add_a_message_private">Dodaj prywatną wiadomość</string>
@@ -1360,7 +1360,7 @@
     <string name="community_no_descriptor">Ta społeczność nie ma opisu. Zwróć się do właściciela, aby go dodać</string>
     <string name="user_preferences">Preferencje użytkownika</string>
     <string name="settings_search_placeholder">Ustawienia wyszukiwania</string>
-    <string name="settings_search_no_results">Nie znaleziono ustawień dla \"%1$s\"</string>
+    <string name="settings_search_no_results">Nie znaleziono ustawień dla "%1$s"</string>
     <string name="reset_marmot_confirm_title">Zresetować stan Marmota?</string>
     <string name="reset_marmot_confirm_body">Spowoduje to trwałe usunięcie każdego czatu grupowego Marmot, historii wiadomości i klucza MLS na tym urządzeniu dla bieżącego konta. Uczestnicy nie będą powiadamiani i mogą widzieć Cię w grupach do czasu następnej aktualizacji. Tej operacji nie można cofnąć. Nowy pakiet kluczowy zostanie opublikowany przy następnej synchronizacji aplikacji.</string>
     <string name="reset_marmot_confirm_action">Zresetuj</string>
@@ -1521,7 +1521,7 @@
     <string name="relay_group_invite_only_to_post">Ta grupa jest dostępna wyłącznie dla zaproszonych osób — aby móc publikować posty, potrzebujesz zaproszenia.</string>
     <string name="messages_new_message_to">Do</string>
     <string name="messages_new_message_subject_caption">Temat dyskusji</string>
-    <string name="messages_new_message_to_caption">"\@Użytkownik1, @Użytkownik2"</string>
+    <string name="messages_new_message_to_caption">@Użytkownik1, @Użytkownik2</string>
     <string name="messages_group_descriptor">Członkowie tej grupy</string>
     <string name="messages_new_subject_message">Wyjaśnienie dla członków</string>
     <string name="messages_new_subject_message_placeholder">Zmiana nazwy dla nowych celów.</string>
@@ -1841,7 +1841,7 @@
     <string name="calendar_untitled">(bez tytułu)</string>
     <string name="calendar_all_day">Cały dzień</string>
     <string name="calendar_rsvp_going_prefixed">✓ Będę</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Może</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Może</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Nie mogę iść</string>
     <string name="calendar_collection_title">Tytuł</string>
     <string name="calendar_collection_description">Opis</string>
@@ -1971,9 +1971,9 @@
     <string name="buzz_system_member_added">%1$s został(a) dodany(a) przez %2$s</string>
     <string name="buzz_system_member_left">%1$s zostało</string>
     <string name="buzz_system_member_removed">%1$s został usunięty przez %2$s</string>
-    <string name="buzz_system_topic_changed">%1$s ustawił(a) temat na \"%2$s\"</string>
+    <string name="buzz_system_topic_changed">%1$s ustawił(a) temat na "%2$s"</string>
     <string name="buzz_system_topic_cleared">%1$s wyczyszczono temat</string>
-    <string name="buzz_system_purpose_changed">%1$s ustawił cel na \"%2$s\"</string>
+    <string name="buzz_system_purpose_changed">%1$s ustawił cel na "%2$s"</string>
     <string name="buzz_system_purpose_cleared">%1$s doprecyzował cel</string>
     <string name="buzz_system_visibility_open">%1$s otworzył ten kanał — każdy może go znaleźć i dołączyć do niego</string>
     <string name="buzz_system_visibility_private">%1$s ustawił ten kanał jako prywatny — dostępny tylko dla zaproszonych osób</string>
@@ -2083,7 +2083,7 @@
     <string name="outbox_relays_not_found_examples">Dobre opcje to:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="inbox_relays_not_found">Skonfiguruj swoje publiczne transmitery skrzynki odbiorczej, aby otrzymywać powiadomienia</string>
     <string name="inbox_relays_not_found_description">Stworzenie listy transmiterów specjalnie zaprojektowanej do odbierania powiadomień ma kluczowe znaczenie dla korzystania z protokołu Nostr. </string>
-    <string name="inbox_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą odbierać powiadomienia. Upewnij się, że nie wymagają one płatności ani statusu \"web of trust\" od nadawcy, w przeciwnym razie będziesz otrzymywać powiadomienia tylko od płatników lub stałych użytkowników</string>
+    <string name="inbox_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą odbierać powiadomienia. Upewnij się, że nie wymagają one płatności ani statusu "web of trust" od nadawcy, w przeciwnym razie będziesz otrzymywać powiadomienia tylko od płatników lub stałych użytkowników</string>
     <string name="inbox_relays_not_found_examples">Dobre opcje to:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="relay_reorder">Zmień kolejność transmiterów</string>
     <string name="trusted_relays_title">Zaufane Transmitery</string>
@@ -2195,7 +2195,7 @@
     <string name="remove_dvm_from_favorites">Usuń z ulubionych</string>
     <string name="favorite_dvms_explainer">Algorytmy kanałów, które tutaj oznaczyłeś gwiazdką, pojawiają się jako ikony filtrów na stronie głównej. Otwórz sekcję Odkryj, aby dodać kolejne.</string>
     <string name="favorite_dvms_empty_headline">Przypnij swoje ulubione algorytmy</string>
-    <string name="favorite_dvms_empty_step1">Kliknij \"%1$s\" poniżej, aby przeglądać algorytmy.</string>
+    <string name="favorite_dvms_empty_step1">Kliknij "%1$s" poniżej, aby przeglądać algorytmy.</string>
     <string name="favorite_dvms_empty_step2">Kliknij %1$s obok kanału, aby go tu zachować.</string>
     <string name="favorite_dvms_empty_cta">Dodaj kilka kanałów</string>
     <string name="favorite_dvms_add_more">Dodaj więcej…</string>
@@ -2296,7 +2296,7 @@
     <string name="closing_time">Czas zakończenia głosowania</string>
     <string name="confirm">Potwierdź</string>
     <string name="next">Dalej</string>
-    <string name="add_poll_option_button">Przycisk \"Dodaj opcję ankiety\"</string>
+    <string name="add_poll_option_button">Przycisk "Dodaj opcję ankiety"</string>
     <string name="go_back">Wstecz</string>
     <string name="approve">Zatwierdź</string>
     <string name="connected">Połączony</string>
@@ -2335,7 +2335,7 @@
     <string name="skip_for_now">Na razie pomiń</string>
     <string name="fetching_follow_list">Pobieranie listy obserwowanych…</string>
     <string name="no_follows_found">Nie znaleziono obserwowanych</string>
-    <string name="import_follows_tips">"Wprowadź profil znajomego lub lidera społeczności. Możesz użyć ich npub-u, adresu NIP-05 lub nazwy jak alicja@domena.pl lub id/alicja dla zweryfikowanych przez blockchain tożsamości."</string>
+    <string name="import_follows_tips">Wprowadź profil znajomego lub lidera społeczności. Możesz użyć ich npub-u, adresu NIP-05 lub nazwy jak alicja@domena.pl lub id/alicja dla zweryfikowanych przez blockchain tożsamości.</string>
     <string name="select_all">Wybierz Wszystkie</string>
     <string name="namecoin_test_connection">Test połączenia</string>
     <string name="namecoin_testing">Testowanie serwerów…</string>
@@ -2498,7 +2498,7 @@
     <string name="vanish_events_empty">Nie znaleziono wniosków o usunięcie</string>
     <string name="vanish_events_empty_hint">Nie wysłano jeszcze żadnych żądań do usunięcia wydarzeń.</string>
     <string name="vanish_target_relays_label">Transmitery docelowe</string>
-    <string name="vanish_all_relays_compliance_hint">To żądanie dotyczy wszystkich transmiterów. Aby sprawdzić zgodność poszczególnych transmiterów, skorzystaj z opcji \"Prośba o usunięcie\".</string>
+    <string name="vanish_all_relays_compliance_hint">To żądanie dotyczy wszystkich transmiterów. Aby sprawdzić zgodność poszczególnych transmiterów, skorzystaj z opcji "Prośba o usunięcie".</string>
     <string name="vanish_test_button">Test</string>
     <string name="vanish_compliant">Zgodny</string>
     <string name="vanish_non_compliant">Niezgodny</string>
@@ -2606,8 +2606,8 @@
     <string name="emoji_add_dialog_title">Dodaj własne emotikony</string>
     <string name="emoji_remove_dialog_title">Usunąć: %1$s:?</string>
     <string name="emoji_long_press_hint">Naciśnij i przytrzymaj emotikonę, aby usunąć</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" jest na liście emotikon</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" nie jest na liście emotikon</string>
+    <string name="emoji_pack_is_in_list">"%1$s" jest na liście emotikon</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" nie jest na liście emotikon</string>
     <string name="emoji_pack_actions_dialog_title">Opcje pakietu emotikon</string>
     <string name="emoji_private_toggle">Prywatna</string>
     <string name="emoji_private_badge">Prywatna emotikona</string>
@@ -2656,11 +2656,11 @@
     <string name="marmot_member_suffix_you"> (Ty)</string>
     <string name="marmot_member_suffix_admin"> - administrator</string>
     <string name="marmot_remove_member">Usuń Członka</string>
-    <string name="marmot_remove_member_confirm">Czy na pewno chcesz usunąć \"%1$s\" z tej grupy?</string>
+    <string name="marmot_remove_member_confirm">Czy na pewno chcesz usunąć "%1$s" z tej grupy?</string>
     <string name="marmot_grant">Przyznaj</string>
     <string name="marmot_grant_admin_privileges">Przyznaj uprawnienia admina</string>
     <string name="marmot_grant_admin_title">Przyznaj uprawnienia administratora</string>
-    <string name="marmot_grant_admin_confirm">Zrób \"%1$s\" administratorem tej grupy? Administratorzy mogą dodawać lub usuwać członków, zmieniać informacje o grupie i przyznawać uprawnienia administratora innym członkom.</string>
+    <string name="marmot_grant_admin_confirm">Zrób "%1$s" administratorem tej grupy? Administratorzy mogą dodawać lub usuwać członków, zmieniać informacje o grupie i przyznawać uprawnienia administratora innym członkom.</string>
     <string name="marmot_revoke">Wycofaj</string>
     <string name="marmot_revoke_admin_privileges">Cofnij uprawnienia administratora</string>
     <string name="marmot_revoke_admin_title">Cofnij uprawnienia administratora</string>
@@ -2694,7 +2694,7 @@
     <string name="buzz_workflow_approve_title">Zatwierdzić to działanie?</string>
     <string name="buzz_workflow_deny_title">Zabronić to działanie?</string>
     <string name="buzz_workflow_approve_body">Runner wypchnie swoją gałąź i otworzy pull request dla „%1$s”. Zatwierdzanie nigdy nie łączy się ani nie wdraża-to nadal dzieje się na GitHubie.</string>
-    <string name="buzz_workflow_deny_body">Praca agenta dla \"%1$s\" zostanie odrzucona. Tej operacji nie można cofnąć.</string>
+    <string name="buzz_workflow_deny_body">Praca agenta dla "%1$s" zostanie odrzucona. Tej operacji nie można cofnąć.</string>
     <string name="buzz_workflow_this_run">ten bieg</string>
     <string name="buzz_workflow_cancel">Anuluj</string>
     <string name="buzz_workflow_waiting_for_approval">Oczekiwanie na zatwierdzenie</string>
@@ -2753,7 +2753,7 @@
     <string name="buzz_persona_new_title">Nowa persona</string>
     <string name="buzz_persona_edit_title">Edytuj persona</string>
     <string name="buzz_persona_slug">Slug (persona id)</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' lub \'_\'. Nie można zmienić po utworzeniu.</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, '-' lub '_'. Nie można zmienić po utworzeniu.</string>
     <string name="buzz_persona_display_name">Nazwa wyświetlana</string>
     <string name="buzz_persona_system_prompt">Komunikat systemowy</string>
     <string name="buzz_persona_model">Model (opcjonalnie)</string>

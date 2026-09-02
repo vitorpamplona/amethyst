@@ -101,12 +101,12 @@
     <string name="quote">引用</string>
     <string name="fork">复刻</string>
     <string name="new_amount_in_sats">新的聪金额</string>
-    <string name="replying_to">"回复 "</string>
-    <string name="and">" 和 "</string>
-    <string name="following">" 关注"</string>
-    <string name="followers">" 粉丝"</string>
-    <string name="number_following">"%1$s 正在关注"</string>
-    <string name="number_followers">"%1$s 关注者"</string>
+    <string name="replying_to">回复 </string>
+    <string name="and"> 和 </string>
+    <string name="following"> 关注</string>
+    <string name="followers"> 粉丝</string>
+    <string name="number_following">%1$s 正在关注</string>
+    <string name="number_followers">%1$s 关注者</string>
     <string name="log_out">退出</string>
     <string name="show_more">显示更多</string>
     <string name="lightning_invoice">闪电发票</string>
@@ -174,7 +174,7 @@
     <string name="my_awesome_group">我的精彩群聊</string>
     <string name="picture_url">图片链接</string>
     <string name="optional_picture_url">图片Url(可选)</string>
-    <string name="about_us">"关于我们.. "</string>
+    <string name="about_us">关于我们.. </string>
     <string name="search_and_add_a_user">搜索并添加用户</string>
     <string name="add_a_relay">添加中继器</string>
     <string name="my_name">我的 @ 名称</string>
@@ -210,9 +210,9 @@
     <string name="replies">回复</string>
     <string name="mutual">互动</string>
     <string name="gallery">相册</string>
-    <string name="reports">"举报"</string>
-    <string name="number_reports">"%1$s 举报"</string>
-    <string name="relays">"中继"</string>
+    <string name="reports">举报</string>
+    <string name="number_reports">%1$s 举报</string>
+    <string name="relays">中继</string>
     <string name="website">网站</string>
     <string name="lightning_address">闪电地址</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">复制 Nsec ID（您的私人密钥）到剪贴板以备备份</string>
@@ -222,13 +222,13 @@
     <string name="copy_user_id">复制用户ID</string>
     <string name="unblock_user">隐藏该用户</string>
     <string name="user_is_blocked_hidden">此用户被屏蔽/静音。他们的帖子被隐藏。</string>
-    <string name="npub_hex_username">"npub，hex，用户名"</string>
+    <string name="npub_hex_username">npub，hex，用户名</string>
     <string name="clear">清除</string>
     <string name="app_logo">应用图标</string>
     <string name="nsec_npub_hex_private_key">nsec/ npub/ hex 私钥</string>
     <string name="ncryptsec_password">打开密钥的密码</string>
     <string name="show_password">显示密码</string>
-    <string name="i_accept_the">"我接受"</string>
+    <string name="i_accept_the">我接受</string>
     <string name="terms_of_use">使用条款</string>
     <string name="acceptance_of_terms_is_required">需要接受条款</string>
     <string name="login">登录</string>
@@ -244,14 +244,14 @@
     <string name="chats_reply_searching_history">正在寻找原始消息…</string>
     <string name="chats_reply_not_found">找不到这条消息</string>
     <string name="chats_reply_searched">搜索了每个中继 · 点击查看</string>
-    <string name="error_loading_replies">"加载回复出错："</string>
+    <string name="error_loading_replies">加载回复出错：</string>
     <string name="try_again">重试</string>
     <string name="notification_feed_is_empty">暂无通知</string>
     <string name="open_poll">开放投票</string>
     <string name="feed_is_empty">信息流为空。</string>
     <string name="refresh">刷新</string>
     <string name="channel_created">频道已创建</string>
-    <string name="channel_information_changed_to">"频道信息已更改为"</string>
+    <string name="channel_information_changed_to">频道信息已更改为</string>
     <string name="marmot_group_no_messages_yet">尚无消息</string>
     <string name="paid_relay">付费中继</string>
     <string name="tor_relay">强制使用 Tor 进行连接</string>
@@ -280,8 +280,8 @@
         \n\n如果你丢失密码， 你将无法恢复你的密钥。
     </string>
     <string name="encrypt_and_copy_my_secret_key">加密并复制我的密钥。</string>
-    <string name="badge_award_image_for">"颁发给 %1$s 的徽章图片"</string>
-    <string name="badge_award_image">\"徽章图片</string>
+    <string name="badge_award_image_for">颁发给 %1$s 的徽章图片</string>
+    <string name="badge_award_image">"徽章图片</string>
     <string name="new_badge_award_notif">你收到了新的徽章奖励</string>
     <string name="award_granted_to">徽章奖励授予</string>
     <string name="account_switch_add_account_dialog_title">添加新账户</string>
@@ -291,7 +291,7 @@
     <string name="quick_action_select">选择</string>
     <string name="share_as_image_generating">正在生成预览…</string>
     <string name="share_as_image_watermark">通过 Amethyst 共享</string>
-    <string name="quick_action_copy_user_id">\@提及</string>
+    <string name="quick_action_copy_user_id">@提及</string>
     <string name="quick_action_copy_text">复制</string>
     <string name="quick_action_unfollow">取关</string>
     <string name="quick_action_follow">关注</string>
@@ -497,7 +497,7 @@
     <string name="nest_state_speaking">正在发言</string>
     <string name="nest_state_mic_open">麦克风已打开</string>
     <string name="nest_leave_host_title">结束这个语音聊天室？</string>
-    <string name="nest_leave_host_body">您是主持人。关闭聊天室会断开所有人的连接。 如果您想稍后再回来，请选择\"仅离开\" — 该聊天室将在8小时不活动后自动关闭。</string>
+    <string name="nest_leave_host_body">您是主持人。关闭聊天室会断开所有人的连接。 如果您想稍后再回来，请选择"仅离开" — 该聊天室将在8小时不活动后自动关闭。</string>
     <string name="nest_leave_host_close">关闭聊天室</string>
     <string name="nest_leave_host_just_leave">仅离开</string>
     <string name="nest_live_chip">直播</string>
@@ -672,7 +672,7 @@
     <string name="poll_consensus_threshold">共识</string>
     <string name="poll_closing_date_time">投票结束日期 &amp; 时间</string>
     <string name="poll_closing_in">投票结束于 %1$s</string>
-    <string name="looking_for_event">"正在查找事件 %1$s"</string>
+    <string name="looking_for_event">正在查找事件 %1$s</string>
     <string name="send_zap">发送打闪</string>
     <string name="custom_zaps_add_a_message">添加公开消息</string>
     <string name="custom_zaps_add_a_message_private">添加私信</string>
@@ -876,7 +876,7 @@
     <string name="community_no_descriptor">此社区没有描述或规则。联系群主来添加</string>
     <string name="user_preferences">用户首选项</string>
     <string name="settings_search_placeholder">搜索设置</string>
-    <string name="settings_search_no_results">找不到 \"%1$s \" 的设置</string>
+    <string name="settings_search_no_results">找不到 "%1$s " 的设置</string>
     <string name="reset_marmot_confirm_title">重置 Marmot 状态吗？</string>
     <string name="reset_marmot_confirm_body">这将永久删除此设备上每个Marmot群聊、消息历史和当前账户此设备上的 MLS 密钥。 在下次提交之前，对端用户不会收到通知，也可能仍然会在群里看到你。 此操作无法撤销。下次应用同步时将发布一个新的密钥包。</string>
     <string name="reset_marmot_confirm_action">重置</string>
@@ -920,7 +920,7 @@
     <string name="messages_create_public_private_chat_description">新建公开或私人群组</string>
     <string name="messages_new_message_to">至</string>
     <string name="messages_new_message_subject_caption">对话主题</string>
-    <string name="messages_new_message_to_caption">"\@User1、@User2、@User3"</string>
+    <string name="messages_new_message_to_caption">@User1、@User2、@User3</string>
     <string name="messages_group_descriptor">此群组成员</string>
     <string name="messages_new_subject_message">对成员的解释</string>
     <string name="messages_new_subject_message_placeholder">为新目标更改名称。</string>
@@ -1195,7 +1195,7 @@
     <string name="calendar_untitled">(无标题)</string>
     <string name="calendar_all_day">全天</string>
     <string name="calendar_rsvp_going_prefixed">✓ 参加</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? 可能</string>
+    <string name="calendar_rsvp_maybe_prefixed">? 可能</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ 去不了</string>
     <string name="calendar_collection_title">标题</string>
     <string name="calendar_collection_description">描述</string>
@@ -1492,7 +1492,7 @@
     <string name="skip_for_now">暂时跳过</string>
     <string name="fetching_follow_list">正在获取关注列表…</string>
     <string name="no_follows_found">未找到关注项</string>
-    <string name="import_follows_tips">"输入好友或社区领袖的配置文件。您可以使用他们的 npub、NIP-05地址或Namecoin 名称，例如alice@example.bit 或区块链验证的地址 id/alice。"</string>
+    <string name="import_follows_tips">输入好友或社区领袖的配置文件。您可以使用他们的 npub、NIP-05地址或Namecoin 名称，例如alice@example.bit 或区块链验证的地址 id/alice。</string>
     <string name="select_all">全选</string>
     <string name="namecoin_test_connection">测试连接</string>
     <string name="namecoin_testing">正在测试服务器…</string>
@@ -1572,7 +1572,7 @@
     <string name="hls_codec_fallback_notice">H.265在此设备上不可用——回退到H.264。</string>
     <string name="hls_renditions_source_format">源分辨率: %1$d×%2$d</string>
     <string name="hls_publish_button">发布HD视频</string>
-    <string name="hls_publishing_header_format">正在发布\"%1$s\"…</string>
+    <string name="hls_publishing_header_format">正在发布"%1$s"…</string>
     <string name="hls_state_transcoding_format">正在转码 %1$s</string>
     <string name="hls_state_uploading_idle">上传</string>
     <string name="hls_state_uploading_format">正在上传 %2$d 中的 %1$d</string>
@@ -1734,8 +1734,8 @@
     <string name="emoji_add_dialog_title">添加自定义表情</string>
     <string name="emoji_remove_dialog_title">移除 %1$s：？</string>
     <string name="emoji_long_press_hint">长按表情以移除它</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" 在您的表情列表中</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" 不在您的表情列表中</string>
+    <string name="emoji_pack_is_in_list">"%1$s" 在您的表情列表中</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" 不在您的表情列表中</string>
     <string name="emoji_pack_actions_dialog_title">表情包操作</string>
     <string name="emoji_private_toggle">私密</string>
     <string name="emoji_private_badge">私密表情</string>
@@ -1780,7 +1780,7 @@
     <string name="marmot_member_suffix_you"> (您)</string>
     <string name="marmot_member_suffix_admin"> - 管理员</string>
     <string name="marmot_remove_member">移除成员</string>
-    <string name="marmot_remove_member_confirm">您确定要从此群组中移除\"%1$s\"吗？</string>
+    <string name="marmot_remove_member_confirm">您确定要从此群组中移除"%1$s"吗？</string>
     <string name="marmot_grant">授权</string>
     <string name="marmot_grant_admin_privileges">授予管理员权限</string>
     <string name="marmot_grant_admin_title">授予管理员权限</string>
@@ -1788,7 +1788,7 @@
     <string name="marmot_revoke">撤销</string>
     <string name="marmot_revoke_admin_privileges">撤销管理员权限</string>
     <string name="marmot_revoke_admin_title">授予管理员权限</string>
-    <string name="marmot_revoke_admin_confirm">撤销\"%1$s\"的管理员权限？他们将仍是群成员。</string>
+    <string name="marmot_revoke_admin_confirm">撤销"%1$s"的管理员权限？他们将仍是群成员。</string>
     <string name="marmot_relays_header">中继</string>
     <string name="marmot_relay_no_events">暂无事件</string>
     <string name="marmot_relay_last_event">上次事件%1$s</string>

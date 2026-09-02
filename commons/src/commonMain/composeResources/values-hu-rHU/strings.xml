@@ -105,7 +105,7 @@
         <item quantity="other">%1$d relé</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">"válasz erre: "</string>
+    <string name="replying_to">válasz erre: </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">nOldal: %1$s</string>
     <string name="napplet_card_title">nKisalkalmazás: %1$s</string>
@@ -235,11 +235,11 @@
     <string name="quote">Idézés</string>
     <string name="fork">Elágaztatás</string>
     <string name="new_amount_in_sats">Új összeg satoshiban</string>
-    <string name="and">" és "</string>
-    <string name="following">" Követett"</string>
-    <string name="followers">" Követő"</string>
-    <string name="number_following">"%1$s követett"</string>
-    <string name="number_followers">"%1$s követő"</string>
+    <string name="and"> és </string>
+    <string name="following"> Követett</string>
+    <string name="followers"> Követő</string>
+    <string name="number_following">%1$s követett</string>
+    <string name="number_followers">%1$s követő</string>
     <string name="log_out">Kijelentkezés</string>
     <string name="show_more">Továbbiak megjelenítése</string>
     <string name="lightning_invoice">Lightning-számla</string>
@@ -310,7 +310,7 @@
     <string name="my_awesome_group">A nagyszerű csoportom</string>
     <string name="picture_url">Kép webcíme</string>
     <string name="optional_picture_url">Kép webcíme (nem kötelező)</string>
-    <string name="about_us">"Névjegy… "</string>
+    <string name="about_us">Névjegy… </string>
     <string name="search_and_add_a_user">Felhasználó keresése és hozzáadása</string>
     <string name="add_a_relay">Egy átjátszó hozzáadása</string>
     <string name="relay_url_not_valid">Az átjátszó címe érvénytelen. Használjon gazdagépnevet vagy zárójelben megadott IP-címet (például: [201:d0e:9ba5:8bbc::1]:8080).</string>
@@ -347,9 +347,9 @@
     <string name="replies">Válaszok</string>
     <string name="mutual">Saját</string>
     <string name="gallery">Galéria</string>
-    <string name="reports">"Bejelentés"</string>
-    <string name="number_reports">"%1$s jelentés"</string>
-    <string name="relays">" Átjátszó"</string>
+    <string name="reports">Bejelentés</string>
+    <string name="number_reports">%1$s jelentés</string>
+    <string name="relays"> Átjátszó</string>
     <string name="website">Weboldal</string>
     <string name="lightning_address">Lightning-cím</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Az Nsec azonosítót (az Ön „jelszavát”) a vágólapra másolja biztonsági mentés céljából</string>
@@ -359,13 +359,13 @@
     <string name="copy_user_id">Felhasználói azonosító másolása</string>
     <string name="unblock_user">Felhasználó letiltásának megszüntetése</string>
     <string name="user_is_blocked_hidden">Ez a felhasználó le van tiltva/némítva. A bejegyzései el vannak rejtve.</string>
-    <string name="npub_hex_username">"npub, felhasználónév, szöveg"</string>
+    <string name="npub_hex_username">npub, felhasználónév, szöveg</string>
     <string name="clear">Kiürítés</string>
     <string name="app_logo">Alkalmazáslogó</string>
     <string name="nsec_npub_hex_private_key">nsec… vagy npub…</string>
     <string name="ncryptsec_password">Jelszó a kulcs kinyitásához</string>
     <string name="show_password">Jelszó megjelenítése</string>
-    <string name="i_accept_the">"Elfogadom a "</string>
+    <string name="i_accept_the">Elfogadom a </string>
     <string name="terms_of_use">használati feltételeket</string>
     <string name="acceptance_of_terms_is_required">A feltételek elfogadása szükséges</string>
     <string name="login">Bejelentkezés</string>
@@ -434,14 +434,14 @@
     <string name="dm_sender_reported_subtitle">Valaki, akit Ön követ, megjelölte ezt a fiókot</string>
     <string name="dm_sender_reported_icon">Jelentve</string>
     <string name="dm_sender_reported_more_count">+%1$d</string>
-    <string name="error_loading_replies">"Hiba a válaszok betöltésekor: "</string>
+    <string name="error_loading_replies">Hiba a válaszok betöltésekor: </string>
     <string name="try_again">Próbálja újra</string>
     <string name="notification_feed_is_empty">Még nincsenek értesítések.</string>
     <string name="open_poll">Szavazás megnyitása</string>
     <string name="feed_is_empty">A hírfolyam üres.</string>
     <string name="refresh">Frissítés</string>
     <string name="channel_created">Csatorna létrehozva</string>
-    <string name="channel_information_changed_to">"A csatornainformáció a következőre módosult:"</string>
+    <string name="channel_information_changed_to">A csatornainformáció a következőre módosult:</string>
     <string name="new_public_chat">Új nyilvános csevegés létrehozása</string>
     <string name="marmot_group_no_messages_yet">Még nincs üzenet</string>
     <string name="paid_relay">Fizetős átjátszó</string>
@@ -476,7 +476,7 @@
     <string name="backup_keys_nudge_already_saved">Elmentettem a kulcsokat</string>
     <string name="backup_keys_nudge_dismiss">Eltüntetés</string>
     <string name="encrypt_and_copy_my_secret_key">Saját titkos kulcs titkosítása és másolása</string>
-    <string name="badge_award_image_for">"Kitűző %1$s számára"</string>
+    <string name="badge_award_image_for">Kitűző %1$s számára</string>
     <string name="badge_award_image">Kitűző képe</string>
     <string name="new_badge_award_notif">Ön egy új kitűzőt kapott</string>
     <string name="award_granted_to">Kitűzőben részesült</string>
@@ -827,7 +827,7 @@
     <string name="nest_state_speaking">Most beszéljen</string>
     <string name="nest_state_mic_open">Mikrofon megnyitva</string>
     <string name="nest_leave_host_title">Befejezi ezt a hangszobát?</string>
-    <string name="nest_leave_host_body">Ön a házigazda. A szoba bezárása mindenkit le fog választani. Válassza a \"Csak elhagyás\" lehetőséget, ha később vissza szeretne térni — a szoba 8 óra inaktivitás után automatikusan bezár.</string>
+    <string name="nest_leave_host_body">Ön a házigazda. A szoba bezárása mindenkit le fog választani. Válassza a "Csak elhagyás" lehetőséget, ha később vissza szeretne térni — a szoba 8 óra inaktivitás után automatikusan bezár.</string>
     <string name="nest_leave_host_close">Szoba bezárása</string>
     <string name="nest_leave_host_just_leave">Csak elhagyás</string>
     <string name="nest_live_chip">ÉLŐ</string>
@@ -1082,7 +1082,7 @@
     <string name="poll_consensus_threshold">Együttműködés</string>
     <string name="poll_closing_date_time">Szavazás lezárásának dátuma és ideje</string>
     <string name="poll_closing_in">A szavazás lezárul %1$s múlva</string>
-    <string name="looking_for_event">"%1$s esemény keresése"</string>
+    <string name="looking_for_event">%1$s esemény keresése</string>
     <string name="send_zap">Zap küldése</string>
     <string name="custom_zaps_add_a_message">Nyilvános üzenet hozzáadása</string>
     <string name="custom_zaps_add_a_message_private">Privát üzenet hozzáadása</string>
@@ -1511,7 +1511,7 @@
     <string name="relay_group_invite_only_to_post">Ez a csoport csak meghívóval érhető el. Meghívóra van szüksége a közzétételhez.</string>
     <string name="messages_new_message_to">Neki:</string>
     <string name="messages_new_message_subject_caption">A beszélgetés tárgya</string>
-    <string name="messages_new_message_to_caption">"\@Felhasználó1, @Felhasználó2, @Felhasználó3"</string>
+    <string name="messages_new_message_to_caption">@Felhasználó1, @Felhasználó2, @Felhasználó3</string>
     <string name="messages_group_descriptor">A csoport tagjai</string>
     <string name="messages_new_subject_message">Kifejtés a csoport tagjai számára</string>
     <string name="messages_new_subject_message_placeholder">Név megváltoztatása az új célok érdekében.</string>
@@ -1831,7 +1831,7 @@
     <string name="calendar_untitled">(cím nélküli)</string>
     <string name="calendar_all_day">Egész nap</string>
     <string name="calendar_rsvp_going_prefixed">✓ Ott leszek</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Talán</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Talán</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Nem leszek ott</string>
     <string name="calendar_collection_title">Cím</string>
     <string name="calendar_collection_description">Leírás</string>
@@ -2325,7 +2325,7 @@
     <string name="skip_for_now">Kihagyás csak most</string>
     <string name="fetching_follow_list">Követési lista lekérdezése…</string>
     <string name="no_follows_found">Nem találhatók követések</string>
-    <string name="import_follows_tips">"Írja be egy barátja vagy közösségi vezető profilját. Használhatja az npub, NIP-05 címüket, vagy egy Namecoin nevet, például aliz@pelda.bit vagy id/aliz a blokklánc által ellenőrzött azonosítókhoz."</string>
+    <string name="import_follows_tips">Írja be egy barátja vagy közösségi vezető profilját. Használhatja az npub, NIP-05 címüket, vagy egy Namecoin nevet, például aliz@pelda.bit vagy id/aliz a blokklánc által ellenőrzött azonosítókhoz.</string>
     <string name="select_all">Összes kijelölése</string>
     <string name="namecoin_test_connection">Kapcsolat tesztelése</string>
     <string name="namecoin_testing">Kiszolgálók tesztelése…</string>

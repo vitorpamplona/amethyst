@@ -102,12 +102,12 @@
     <string name="quote">引用</string>
     <string name="fork">分叉</string>
     <string name="new_amount_in_sats">新的聰金額</string>
-    <string name="replying_to">"回覆 "</string>
-    <string name="and">" 和 "</string>
-    <string name="following">" 關注"</string>
-    <string name="followers">" 粉絲"</string>
-    <string name="number_following">"%1$s 位追蹤中"</string>
-    <string name="number_followers">"%1$s 位追蹤者"</string>
+    <string name="replying_to">回覆 </string>
+    <string name="and"> 和 </string>
+    <string name="following"> 關注</string>
+    <string name="followers"> 粉絲</string>
+    <string name="number_following">%1$s 位追蹤中</string>
+    <string name="number_followers">%1$s 位追蹤者</string>
     <string name="log_out">登出</string>
     <string name="show_more">顯示更多</string>
     <string name="lightning_invoice">閃電發票</string>
@@ -171,7 +171,7 @@
     <string name="my_awesome_group">我的精彩羣聊</string>
     <string name="picture_url">圖片鏈接</string>
     <string name="optional_picture_url">圖片網址（選填）</string>
-    <string name="about_us">"關於我們.. "</string>
+    <string name="about_us">關於我們.. </string>
     <string name="search_and_add_a_user">搜尋並新增使用者</string>
     <string name="add_a_relay">添加中繼器</string>
     <string name="my_name">我的 @tag 名稱</string>
@@ -206,9 +206,9 @@
     <string name="replies">回覆</string>
     <string name="mutual">您的</string>
     <string name="gallery">相冊</string>
-    <string name="reports">"舉報"</string>
-    <string name="number_reports">"%1$s 則舉報"</string>
-    <string name="relays">"中繼"</string>
+    <string name="reports">舉報</string>
+    <string name="number_reports">%1$s 則舉報</string>
+    <string name="relays">中繼</string>
     <string name="website">網站</string>
     <string name="lightning_address">閃電地址</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">複製 NSec （私人密鑰）到剪貼板以備備份</string>
@@ -218,13 +218,13 @@
     <string name="copy_user_id">複製用户ID</string>
     <string name="unblock_user">隱藏該用户</string>
     <string name="user_is_blocked_hidden">此使用者已被封鎖／靜音。其貼文已隱藏。</string>
-    <string name="npub_hex_username">"npub，hex，用户名 "</string>
+    <string name="npub_hex_username">npub，hex，用户名 </string>
     <string name="clear">清除</string>
     <string name="app_logo">應用標誌</string>
     <string name="nsec_npub_hex_private_key">nsec/ npub/ hex 私鑰</string>
     <string name="ncryptsec_password">打開密鑰的密碼</string>
     <string name="show_password">顯示密碼</string>
-    <string name="i_accept_the">"我接受"</string>
+    <string name="i_accept_the">我接受</string>
     <string name="terms_of_use">使用條款</string>
     <string name="acceptance_of_terms_is_required">需要接受條款</string>
     <string name="login">登錄</string>
@@ -240,14 +240,14 @@
     <string name="chats_reply_searching_history">正在尋找原始訊息…</string>
     <string name="chats_reply_not_found">找不到此訊息</string>
     <string name="chats_reply_searched">已搜尋所有 relay · 點擊查看</string>
-    <string name="error_loading_replies">"加載回覆出錯："</string>
+    <string name="error_loading_replies">加載回覆出錯：</string>
     <string name="try_again">重試</string>
     <string name="notification_feed_is_empty">尚無通知。</string>
     <string name="open_poll">開啟投票</string>
     <string name="feed_is_empty">信息流為空。</string>
     <string name="refresh">刷新</string>
     <string name="channel_created">頻道已創建</string>
-    <string name="channel_information_changed_to">"頻道信息已更改為"</string>
+    <string name="channel_information_changed_to">頻道信息已更改為</string>
     <string name="marmot_group_no_messages_yet">尚無訊息</string>
     <string name="paid_relay">付費 relay</string>
     <string name="tor_relay">連線時強制使用 Tor</string>
@@ -276,8 +276,8 @@
         \n\n如果你丟失密碼，你將無法恢復你的密鑰。
     </string>
     <string name="encrypt_and_copy_my_secret_key">加密並複製我的密鑰</string>
-    <string name="badge_award_image_for">"頒發給 %1$s 的徽章圖片"</string>
-    <string name="badge_award_image">\"徽章獎勵圖片</string>
+    <string name="badge_award_image_for">頒發給 %1$s 的徽章圖片</string>
+    <string name="badge_award_image">"徽章獎勵圖片</string>
     <string name="new_badge_award_notif">您收到了新的徽章獎勵</string>
     <string name="award_granted_to">徽章獎勵授予</string>
     <string name="account_switch_add_account_dialog_title">添加新帳戶</string>
@@ -665,7 +665,7 @@
     <string name="poll_consensus_threshold">共識</string>
     <string name="poll_closing_date_time">投票截止日期和時間</string>
     <string name="poll_closing_in">投票將在 %1$s 後截止</string>
-    <string name="looking_for_event">"正在查找事件 %1$s"</string>
+    <string name="looking_for_event">正在查找事件 %1$s</string>
     <string name="send_zap">傳送 Zap</string>
     <string name="custom_zaps_add_a_message">添加公開消息</string>
     <string name="custom_zaps_add_a_message_private">添加私人消息</string>
@@ -914,7 +914,7 @@
     <string name="messages_create_public_private_chat_description">新建公開或私人群組</string>
     <string name="messages_new_message_to">至</string>
     <string name="messages_new_message_subject_caption">對話主題</string>
-    <string name="messages_new_message_to_caption">"\@User1、@User2、@User3"</string>
+    <string name="messages_new_message_to_caption">@User1、@User2、@User3</string>
     <string name="messages_group_descriptor">此群組成員</string>
     <string name="messages_new_subject_message">對成員的解釋</string>
     <string name="messages_new_subject_message_placeholder">為新目標更改名稱。</string>
@@ -1186,7 +1186,7 @@
     <string name="calendar_untitled">（無標題）</string>
     <string name="calendar_all_day">全天</string>
     <string name="calendar_rsvp_going_prefixed">✓ 出席</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? 也許</string>
+    <string name="calendar_rsvp_maybe_prefixed">? 也許</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ 無法出席</string>
     <string name="calendar_collection_title">標題</string>
     <string name="calendar_collection_description">描述</string>
@@ -1481,7 +1481,7 @@
     <string name="skip_for_now">暫時跳過</string>
     <string name="fetching_follow_list">正在取得追蹤清單…</string>
     <string name="no_follows_found">未找到任何追蹤對象</string>
-    <string name="import_follows_tips">"「輸入朋友或社群領袖的個人資料。您可以使用他們的 npub、NIP-05 地址，或 Namecoin 名稱，例如 alice@example.bit 或 id/alice 用於區塊鏈驗證身份。」"</string>
+    <string name="import_follows_tips">「輸入朋友或社群領袖的個人資料。您可以使用他們的 npub、NIP-05 地址，或 Namecoin 名稱，例如 alice@example.bit 或 id/alice 用於區塊鏈驗證身份。」</string>
     <string name="select_all">全選</string>
     <string name="namecoin_test_connection">測試連線</string>
     <string name="namecoin_testing">正在測試伺服器…</string>

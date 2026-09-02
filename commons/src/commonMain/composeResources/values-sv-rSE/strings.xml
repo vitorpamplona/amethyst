@@ -105,7 +105,7 @@
         <item quantity="other">%1$d reläer</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">"Svarar till "</string>
+    <string name="replying_to">Svarar till </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statisk webbplats: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
@@ -235,11 +235,11 @@
     <string name="quote">Citera</string>
     <string name="fork">Förgrening</string>
     <string name="new_amount_in_sats">Nytt belopp i Sats</string>
-    <string name="and">" och "</string>
-    <string name="following">" Följer"</string>
-    <string name="followers">" Följare"</string>
-    <string name="number_following">"%1$s Följande"</string>
-    <string name="number_followers">"%1$s Följare"</string>
+    <string name="and"> och </string>
+    <string name="following"> Följer</string>
+    <string name="followers"> Följare</string>
+    <string name="number_following">%1$s Följande</string>
+    <string name="number_followers">%1$s Följare</string>
     <string name="log_out">Logga ut</string>
     <string name="show_more">Visa mer</string>
     <string name="lightning_invoice">Lightning Faktura</string>
@@ -309,7 +309,7 @@
     <string name="my_awesome_group">Min fantastiska grupp</string>
     <string name="picture_url">Bild Url</string>
     <string name="optional_picture_url">Bild-URL (valfritt)</string>
-    <string name="about_us">"Om oss.. "</string>
+    <string name="about_us">Om oss.. </string>
     <string name="search_and_add_a_user">Sök och lägg till användare</string>
     <string name="add_a_relay">Lägg till Relä</string>
     <string name="relay_url_not_valid">Inte en giltig reläadress. Använd ett värdnamn eller en IP-adress inom hakparenteser (till exempel [201:d0e:9ba5:8bbc::1]:8080).</string>
@@ -346,9 +346,9 @@
     <string name="replies">Svar</string>
     <string name="mutual">Dina</string>
     <string name="gallery">Galleri</string>
-    <string name="reports">"Rapporter"</string>
-    <string name="number_reports">"%1$s Rapporter"</string>
-    <string name="relays">" Reläer"</string>
+    <string name="reports">Rapporter</string>
+    <string name="number_reports">%1$s Rapporter</string>
+    <string name="relays"> Reläer</string>
     <string name="website">Websida</string>
     <string name="lightning_address">Lightning Adress</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopierar Nsec ID (ditt lösenord) till urklipp för säkerhetskopiering</string>
@@ -358,13 +358,13 @@
     <string name="copy_user_id">Kopiera Användarens ID</string>
     <string name="unblock_user">Sluta blockera Användare</string>
     <string name="user_is_blocked_hidden">Den här användaren är blockerad/tystad. Deras inlägg är dolda.</string>
-    <string name="npub_hex_username">"npub, hex, användarnamn "</string>
+    <string name="npub_hex_username">npub, hex, användarnamn </string>
     <string name="clear">Rensa</string>
     <string name="app_logo">Appens logo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex privat nyckel</string>
     <string name="ncryptsec_password">lösenord för att öppna nyckeln</string>
     <string name="show_password">Visa lösenord</string>
-    <string name="i_accept_the">"Jag accepterar  "</string>
+    <string name="i_accept_the">Jag accepterar  </string>
     <string name="terms_of_use">villkor</string>
     <string name="acceptance_of_terms_is_required">Godkännande av villkor krävs</string>
     <string name="login">Inloggning</string>
@@ -433,14 +433,14 @@
     <string name="dm_sender_reported_subtitle">Någon du följer har flaggat detta konto</string>
     <string name="dm_sender_reported_icon">Anmäld</string>
     <string name="dm_sender_reported_more_count">+%1$d</string>
-    <string name="error_loading_replies">"Det gick inte att läsa in svar: "</string>
+    <string name="error_loading_replies">Det gick inte att läsa in svar: </string>
     <string name="try_again">Försök igen</string>
     <string name="notification_feed_is_empty">Inga aviseringar ännu.</string>
     <string name="open_poll">Öppen omröstning</string>
     <string name="feed_is_empty">Flöde är tomt.</string>
     <string name="refresh">Uppdatera</string>
     <string name="channel_created">Kanal skapad</string>
-    <string name="channel_information_changed_to">"Kanalinformation ändrad till"</string>
+    <string name="channel_information_changed_to">Kanalinformation ändrad till</string>
     <string name="new_public_chat">Skapa en ny offentlig chatt</string>
     <string name="marmot_group_no_messages_yet">Inga meddelanden ännu</string>
     <string name="paid_relay">Betald relä</string>
@@ -473,7 +473,7 @@
     <string name="backup_keys_nudge_already_saved">Jag har sparat dem</string>
     <string name="backup_keys_nudge_dismiss">Avfärda</string>
     <string name="encrypt_and_copy_my_secret_key">Kryptera och kopiera min hemliga nyckel</string>
-    <string name="badge_award_image_for">"Tilldelad Badge för %1$s"</string>
+    <string name="badge_award_image_for">Tilldelad Badge för %1$s</string>
     <string name="badge_award_image">Bild på utmärkelse</string>
     <string name="new_badge_award_notif">Du har blivit tilldelad en ny Badge </string>
     <string name="award_granted_to">Badge utmärkelse tilldelas</string>
@@ -824,7 +824,7 @@
     <string name="nest_state_speaking">Talar nu</string>
     <string name="nest_state_mic_open">Mikrofon på</string>
     <string name="nest_leave_host_title">Avsluta det här nestet?</string>
-    <string name="nest_leave_host_body">Du är värden. Att stänga rummet kopplar bort alla. Välj \"Bara lämna\" om du vill komma tillbaka senare — rummet stängs automatiskt efter 8 timmars inaktivitet.</string>
+    <string name="nest_leave_host_body">Du är värden. Att stänga rummet kopplar bort alla. Välj "Bara lämna" om du vill komma tillbaka senare — rummet stängs automatiskt efter 8 timmars inaktivitet.</string>
     <string name="nest_leave_host_close">Stäng rum</string>
     <string name="nest_leave_host_just_leave">Bara lämna</string>
     <string name="nest_live_chip">LIVE</string>
@@ -1079,7 +1079,7 @@
     <string name="poll_consensus_threshold">Konsensus</string>
     <string name="poll_closing_date_time">Stängningsdatum och tid</string>
     <string name="poll_closing_in">Omröstningen stänger om %1$s</string>
-    <string name="looking_for_event">"Letar efter Event %1$s"</string>
+    <string name="looking_for_event">Letar efter Event %1$s</string>
     <string name="send_zap">Skicka Zap</string>
     <string name="custom_zaps_add_a_message">Lägg till ett offentligt meddelande</string>
     <string name="custom_zaps_add_a_message_private">Lägg till ett privat meddelande</string>
@@ -1110,7 +1110,7 @@
     <string name="local_blossom_cache_not_detected">Ingen lokal cache hittad på port 24242.</string>
     <string name="local_blossom_cache_profile_pics_only">Cacha endast profilbilder</string>
     <string name="local_blossom_cache_profile_pics_only_caption">Begränsa den lokala cachen till profilbilder. Bilder och videor i flödet hämtas direkt från originalservrarna.</string>
-    <string name="no_blossom_server_message">Du har inga Blossom servrar satta. Du kan använda Amethyst\'s lista, eller lägga till en nedan ↓</string>
+    <string name="no_blossom_server_message">Du har inga Blossom servrar satta. Du kan använda Amethyst's lista, eller lägga till en nedan ↓</string>
     <string name="media_servers_upload_section">Uppladdningsbeteende</string>
     <string name="blossom_mirror_uploads">Spegla uppladdningar</string>
     <string name="blossom_mirror_uploads_caption">Efter uppladdning kopieras filen till dina andra Blossom-servrar så att den förblir tillgänglig om en går offline.</string>
@@ -1386,7 +1386,7 @@
     <string name="music_playlist_collaborative_hint">Låt andra lägga till spår i den här spellistan.</string>
     <string name="music_playlist_delete">Ta bort den här spellistan</string>
     <string name="music_playlist_delete_confirm">Publicera en NIP-09-borttagning för den här spellistan?</string>
-    <string name="music_playlist_no_tracks_hint">Inga spår ännu. Lägg till spår från en låts meny med \"Lägg till i spellista\".</string>
+    <string name="music_playlist_no_tracks_hint">Inga spår ännu. Lägg till spår från en låts meny med "Lägg till i spellista".</string>
     <string name="music_playlist_move_track_up">Flytta spår uppåt</string>
     <string name="music_playlist_move_track_down">Flytta spår nedåt</string>
     <string name="music_playlist_remove_track">Ta bort spår från spellista</string>
@@ -1508,7 +1508,7 @@
     <string name="relay_group_invite_only_to_post">Den här gruppen är endast för inbjudna — du behöver en inbjudan för att publicera.</string>
     <string name="messages_new_message_to">Till</string>
     <string name="messages_new_message_subject_caption">Samtalsämne</string>
-    <string name="messages_new_message_to_caption">"\@Användare1, @Användare2, @Användare3"</string>
+    <string name="messages_new_message_to_caption">@Användare1, @Användare2, @Användare3</string>
     <string name="messages_group_descriptor">Medlemmar i denna grupp</string>
     <string name="messages_new_subject_message">Förklaring till medlemmar</string>
     <string name="messages_new_subject_message_placeholder">Ändra namnet för de nya målen.</string>
@@ -1828,7 +1828,7 @@
     <string name="calendar_untitled">(utan titel)</string>
     <string name="calendar_all_day">Heldag</string>
     <string name="calendar_rsvp_going_prefixed">✓ Kommer</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Kanske</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Kanske</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Kommer inte</string>
     <string name="calendar_collection_title">Titel</string>
     <string name="calendar_collection_description">Beskrivning</string>
@@ -2182,7 +2182,7 @@
     <string name="remove_dvm_from_favorites">Ta bort från favoriter</string>
     <string name="favorite_dvms_explainer">Flödesalgoritmer du stjärnmarkerar visas som filterchips på Hem-flödet. Öppna Upptäck för att lägga till fler.</string>
     <string name="favorite_dvms_empty_headline">Fäst dina favoritalgoritmer</string>
-    <string name="favorite_dvms_empty_step1">Tryck på \"%1$s\" nedan för att bläddra bland algoritmer.</string>
+    <string name="favorite_dvms_empty_step1">Tryck på "%1$s" nedan för att bläddra bland algoritmer.</string>
     <string name="favorite_dvms_empty_step2">Tryck på %1$s bredvid ett flöde för att behålla det här.</string>
     <string name="favorite_dvms_empty_cta">Lägg till några flöden</string>
     <string name="favorite_dvms_add_more">Lägg till fler…</string>
@@ -2322,7 +2322,7 @@
     <string name="skip_for_now">Hoppa över för nu</string>
     <string name="fetching_follow_list">Hämtar följarlista…</string>
     <string name="no_follows_found">Inga följare hittades</string>
-    <string name="import_follows_tips">"Ange profilen för en vän eller gemenskapsledare. Du kan använda deras npub, NIP-05-adress eller ett Namecoin-namn som alice@example.bit eller id/alice för blockchain-verifierade identiteter."</string>
+    <string name="import_follows_tips">Ange profilen för en vän eller gemenskapsledare. Du kan använda deras npub, NIP-05-adress eller ett Namecoin-namn som alice@example.bit eller id/alice för blockchain-verifierade identiteter.</string>
     <string name="select_all">Välj alla</string>
     <string name="namecoin_test_connection">Testa anslutning</string>
     <string name="namecoin_testing">Testar servrar…</string>
@@ -2592,8 +2592,8 @@
     <string name="emoji_add_dialog_title">Lägg till anpassad emoji</string>
     <string name="emoji_remove_dialog_title">Ta bort :%1$s:?</string>
     <string name="emoji_long_press_hint">Tryck och håll på en emoji för att ta bort den</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" finns i din emoji-lista</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" finns inte i din emoji-lista</string>
+    <string name="emoji_pack_is_in_list">"%1$s" finns i din emoji-lista</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" finns inte i din emoji-lista</string>
     <string name="emoji_pack_actions_dialog_title">Åtgärder för emoji-paket</string>
     <string name="emoji_private_toggle">Privat</string>
     <string name="emoji_private_badge">Privat emoji</string>
@@ -2633,7 +2633,7 @@
     <string name="marmot_edit_group_info">Redigera gruppinfo</string>
     <string name="marmot_leave_group">Lämna grupp</string>
     <string name="marmot_this_group">den här gruppen</string>
-    <string name="marmot_leave_group_confirm">Är du säker på att du vill lämna \"%1$s\"? Du kommer inte längre att ta emot meddelanden från den här gruppen.</string>
+    <string name="marmot_leave_group_confirm">Är du säker på att du vill lämna "%1$s"? Du kommer inte längre att ta emot meddelanden från den här gruppen.</string>
     <string name="marmot_keypackage_required">De måste ha publicerat ett KeyPackage (kind:30443) för att kunna läggas till.</string>
     <string name="marmot_add_to_group">Lägg till i grupp</string>
     <string name="marmot_add_member">Lägg till medlem</string>
@@ -2642,15 +2642,15 @@
     <string name="marmot_member_suffix_you"> (du)</string>
     <string name="marmot_member_suffix_admin"> - administratör</string>
     <string name="marmot_remove_member">Ta bort medlem</string>
-    <string name="marmot_remove_member_confirm">Är du säker på att du vill ta bort \"%1$s\" från den här gruppen?</string>
+    <string name="marmot_remove_member_confirm">Är du säker på att du vill ta bort "%1$s" från den här gruppen?</string>
     <string name="marmot_grant">Bevilja</string>
     <string name="marmot_grant_admin_privileges">Bevilja administratörsbehörighet</string>
     <string name="marmot_grant_admin_title">Bevilja administratörsbehörighet</string>
-    <string name="marmot_grant_admin_confirm">Gör \"%1$s\" till administratör i den här gruppen? Administratörer kan lägga till eller ta bort medlemmar, ändra gruppinfo och bevilja administratörsbehörighet till andra medlemmar.</string>
+    <string name="marmot_grant_admin_confirm">Gör "%1$s" till administratör i den här gruppen? Administratörer kan lägga till eller ta bort medlemmar, ändra gruppinfo och bevilja administratörsbehörighet till andra medlemmar.</string>
     <string name="marmot_revoke">Återkalla</string>
     <string name="marmot_revoke_admin_privileges">Återkalla administratörsbehörighet</string>
     <string name="marmot_revoke_admin_title">Återkalla administratörsbehörighet</string>
-    <string name="marmot_revoke_admin_confirm">Återkalla administratörsbehörighet från \"%1$s\"? De förblir medlem i gruppen.</string>
+    <string name="marmot_revoke_admin_confirm">Återkalla administratörsbehörighet från "%1$s"? De förblir medlem i gruppen.</string>
     <string name="marmot_relays_header">Reläer</string>
     <string name="marmot_relay_no_events">inga händelser ännu</string>
     <string name="marmot_relay_last_event">senaste händelse%1$s</string>
@@ -2739,7 +2739,7 @@
     <string name="buzz_persona_new_title">Ny persona</string>
     <string name="buzz_persona_edit_title">Redigera persona</string>
     <string name="buzz_persona_slug">Slug (persona-id)</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' eller \'_\'. Kan inte ändras efter skapandet.</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, '-' eller '_'. Kan inte ändras efter skapandet.</string>
     <string name="buzz_persona_display_name">Visningsnamn</string>
     <string name="buzz_persona_system_prompt">Systemprompt</string>
     <string name="buzz_persona_model">Modell (valfritt)</string>

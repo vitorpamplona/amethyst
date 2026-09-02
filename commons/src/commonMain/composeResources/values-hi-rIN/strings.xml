@@ -105,7 +105,7 @@
         <item quantity="other">%1$d पुनःप्रसारक</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">"उत्तर इनको "</string>
+    <string name="replying_to">उत्तर इनको </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">नोस्टरस्थान : %1$s</string>
     <string name="napplet_card_title">नोस्टर संलग्नक्रमक : %1$s</string>
@@ -235,11 +235,11 @@
     <string name="quote">इसपर टीका लिखें</string>
     <string name="fork">पथभेद</string>
     <string name="new_amount_in_sats">साट्स में नयी मात्रा</string>
-    <string name="and">" तथा "</string>
-    <string name="following">" का अनुचरण"</string>
-    <string name="followers">" अनुचर"</string>
-    <string name="number_following">"%1$s का अनुचरण"</string>
-    <string name="number_followers">"%1$s अनुचर"</string>
+    <string name="and"> तथा </string>
+    <string name="following"> का अनुचरण</string>
+    <string name="followers"> अनुचर</string>
+    <string name="number_following">%1$s का अनुचरण</string>
+    <string name="number_followers">%1$s अनुचर</string>
     <string name="log_out">निर्गमनांकन</string>
     <string name="show_more">अधिक दिखाएँ</string>
     <string name="lightning_invoice">लैटनिंग चालान</string>
@@ -309,7 +309,7 @@
     <string name="my_awesome_group">मेरा बढिया झुण्ड</string>
     <string name="picture_url">चित्र जालपता</string>
     <string name="optional_picture_url">चित्र जालपता (आवश्यक नहीं)</string>
-    <string name="about_us">"हमारा परिचय…"</string>
+    <string name="about_us">हमारा परिचय…</string>
     <string name="search_and_add_a_user">ढूँढें तथा प्रयेक्ता जोडें</string>
     <string name="add_a_relay">पुनःप्रसारक जोडें</string>
     <string name="relay_url_not_valid">मान्य पुनःप्रसारक पता नहीं। एक जालावास नाम का उपयोग करें। अथवा कोष्ठकों में एक अंकीय जालपता उदाहरण [201:d0e:9ba5:8bbc::1]:8080 के जैसे।</string>
@@ -346,9 +346,9 @@
     <string name="replies">प्रतिवचन</string>
     <string name="mutual">आपका</string>
     <string name="gallery">चित्रालय</string>
-    <string name="reports">"वृत्तान्त"</string>
-    <string name="number_reports">"%1$s वृत्तान्त"</string>
-    <string name="relays">" पुनःप्रसारक"</string>
+    <string name="reports">वृत्तान्त</string>
+    <string name="number_reports">%1$s वृत्तान्त</string>
+    <string name="relays"> पुनःप्रसारक</string>
     <string name="website">जालस्थान</string>
     <string name="lightning_address">लैटनिंग पता</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">एनसेक॰ सूचक (आपका गुप्त पारणशब्द) की अनुकृति करता है टाँकाफलक में सुरक्षित रखने के लिए</string>
@@ -358,13 +358,13 @@
     <string name="copy_user_id">प्रयोक्ता सूचक की अनुकृति</string>
     <string name="unblock_user">उपयोगकर्ता बाधा हटाएँ</string>
     <string name="user_is_blocked_hidden">प्रयोक्ता बाधित अथवा मौनकृत। उनके पत्र छिपाए गए।</string>
-    <string name="npub_hex_username">"एनपुब॰, उपयोगकर्ता नाम, लेख"</string>
+    <string name="npub_hex_username">एनपुब॰, उपयोगकर्ता नाम, लेख</string>
     <string name="clear">रिक्त करें</string>
     <string name="app_logo">क्रमक चिह्न</string>
     <string name="nsec_npub_hex_private_key">एनसेक॰.. अथवा एनपुब॰..</string>
     <string name="ncryptsec_password">कुंचिका को खोलने के लिए पारणशब्द</string>
     <string name="show_password">पारणशब्द दिखाएँ</string>
-    <string name="i_accept_the">"मैं स्वीकार करता हूँ "</string>
+    <string name="i_accept_the">मैं स्वीकार करता हूँ </string>
     <string name="terms_of_use">प्रयोग के नियम</string>
     <string name="acceptance_of_terms_is_required">नियमों को स्वीकृत करना अनिवार्य</string>
     <string name="login">प्रवेशांकन</string>
@@ -433,14 +433,14 @@
     <string name="dm_sender_reported_subtitle">आपके द्वारा अनुचरित किसी ने इस लेखा पर संशयचिह्न लगाया</string>
     <string name="dm_sender_reported_icon">वृत्तान्त भेज दिया</string>
     <string name="dm_sender_reported_more_count">%1$dसं॰</string>
-    <string name="error_loading_replies">"प्रतिवचनों को प्राप्त करने में अपक्रम : "</string>
+    <string name="error_loading_replies">प्रतिवचनों को प्राप्त करने में अपक्रम : </string>
     <string name="try_again">पुनः प्रयास करें</string>
     <string name="notification_feed_is_empty">अभी तक कोई सूचनाएँ नहीं।</string>
     <string name="open_poll">खुला मतदान</string>
     <string name="feed_is_empty">सूचनावली रिक्त है।</string>
     <string name="refresh">नवीकरण</string>
     <string name="channel_created">प्रणाली बनायी गयी</string>
-    <string name="channel_information_changed_to">"प्रणाली जानकारी परिवर्तित की गयी"</string>
+    <string name="channel_information_changed_to">प्रणाली जानकारी परिवर्तित की गयी</string>
     <string name="new_public_chat">नयी सार्वजनिक चर्चा बनाएँ</string>
     <string name="marmot_group_no_messages_yet">अभी तक कोई सन्देश नहीं</string>
     <string name="paid_relay">सशुल्क पुनःप्रसारक</string>
@@ -475,8 +475,8 @@
     <string name="backup_keys_nudge_already_saved">उनको मैंने सुरक्षित कर लिया</string>
     <string name="backup_keys_nudge_dismiss">हटाएँ</string>
     <string name="encrypt_and_copy_my_secret_key">मेरी गुप्त कुंचिका का रहस्यीकरण तथा अनुकृति करें</string>
-    <string name="badge_award_image_for">"पदक पुरस्कार चित्र %1$s के लिए"</string>
-    <string name="badge_award_image">\"पदक पुरस्कार चित्र</string>
+    <string name="badge_award_image_for">पदक पुरस्कार चित्र %1$s के लिए</string>
+    <string name="badge_award_image">"पदक पुरस्कार चित्र</string>
     <string name="new_badge_award_notif">आपको नया पदक पुरस्कार प्राप्त हुआ</string>
     <string name="award_granted_to">पदक पुरस्कार इनको दिया गया</string>
     <string name="account_switch_add_account_dialog_title">नयी लेखा जोडें</string>
@@ -826,7 +826,7 @@
     <string name="nest_state_speaking">वक्ता अभी</string>
     <string name="nest_state_mic_open">ध्वनिग्राहक चालू</string>
     <string name="nest_leave_host_title">कया इस निलय को अवरुद्ध करें।</string>
-    <string name="nest_leave_host_body">आप निमन्त्रक हैं। शाला आवृत करने से सभी वियोजित हो जाएँगे। \"केवल निर्गमन\" का चयन करें यदि आप लौटना चाहते हें कुछ समय पश्चात। शाला स्वतः आवृत होगी ८ घण्टों की निष्क्रियता पश्चात।</string>
+    <string name="nest_leave_host_body">आप निमन्त्रक हैं। शाला आवृत करने से सभी वियोजित हो जाएँगे। "केवल निर्गमन" का चयन करें यदि आप लौटना चाहते हें कुछ समय पश्चात। शाला स्वतः आवृत होगी ८ घण्टों की निष्क्रियता पश्चात।</string>
     <string name="nest_leave_host_close">शाला आवृत करें</string>
     <string name="nest_leave_host_just_leave">केवल निर्गमन</string>
     <string name="nest_live_chip">वर्तमान</string>
@@ -1081,7 +1081,7 @@
     <string name="poll_consensus_threshold">सर्वसम्मति</string>
     <string name="poll_closing_date_time">मतदान समापन दिनांक तथा समय</string>
     <string name="poll_closing_in">मतदान %1$s में समाप्त होगा</string>
-    <string name="looking_for_event">"घटना %1$s के लिए खोज चल रहा है"</string>
+    <string name="looking_for_event">घटना %1$s के लिए खोज चल रहा है</string>
     <string name="send_zap">ज्साप भेजें</string>
     <string name="custom_zaps_add_a_message">सार्वजनिक संदेश जोडें</string>
     <string name="custom_zaps_add_a_message_private">निजी संदेश जोडें</string>
@@ -1349,7 +1349,7 @@
     <string name="community_no_descriptor">इस समुदाय का कोई विवरण नहीं। इसके स्वत्वधारी से बात करें इसे जोडने के लिए</string>
     <string name="user_preferences">उपयोगकर्ता आद्यताएँ</string>
     <string name="settings_search_placeholder">खोज स्थापना विकल्प</string>
-    <string name="settings_search_no_results">\"%1$s\" के लिए कोई स्थापना विकल्प प्राप्त नहीं</string>
+    <string name="settings_search_no_results">"%1$s" के लिए कोई स्थापना विकल्प प्राप्त नहीं</string>
     <string name="reset_marmot_confirm_title">क्या मार्मोट॰ स्थिति पुनःस्थापित करें।</string>
     <string name="reset_marmot_confirm_body">यह स्थायी रूप से सभी मार्मोट॰ समूह चर्चा तथा सन्देश इतिहास तथा एमएलएस॰ कुंचिका मिटा देगा इस यन्त्र पर वर्तमान लेखा के लिए। समकक्षजन को सूचित नहीं किया जाएगा तथा सम्भाव्यतः आपको समूहों मे देखते रहेंगे उनके अगले स्थायी अभिलेखन तक। इसे पूर्ववत नहीं किया जा सकता। एक नयी कुंचिकापोटली प्रकाशित की जाएगी अगली बार जब क्रमक समचरणीकरण किया जाएगा।</string>
     <string name="reset_marmot_confirm_action">पुनःस्थापन</string>
@@ -1388,7 +1388,7 @@
     <string name="music_playlist_collaborative_hint">अन्यों को इस संगीतसूची में अभिलेखों को जोडने की अनुमति दें।</string>
     <string name="music_playlist_delete">इस संगीतसूची को मिटाएँ</string>
     <string name="music_playlist_delete_confirm">क्या इस संगीतसूची के लिए एक निप॰०९ विलोपन प्रकाशित करें।</string>
-    <string name="music_playlist_no_tracks_hint">कोई अभिलेख नहीं अब तक। अभिलेखों को जोडें गाने के विकल्पसूची में \"संगीतसूची में जोडें\' का उपयोग करके।</string>
+    <string name="music_playlist_no_tracks_hint">कोई अभिलेख नहीं अब तक। अभिलेखों को जोडें गाने के विकल्पसूची में "संगीतसूची में जोडें' का उपयोग करके।</string>
     <string name="music_playlist_move_track_up">अभिलेख को ऊपर करें</string>
     <string name="music_playlist_move_track_down">अभिलेख को नीचे करें</string>
     <string name="music_playlist_remove_track">संगीतसूची से अभिलेख हटाएँ</string>
@@ -1510,7 +1510,7 @@
     <string name="relay_group_invite_only_to_post">यह समूह आमन्त्रण सीमित है। आपके पास एक आमन्त्रण होना चाहिए पत्र प्रकाशन के लिए।</string>
     <string name="messages_new_message_to">के लिए</string>
     <string name="messages_new_message_subject_caption">संवाद का विषय</string>
-    <string name="messages_new_message_to_caption">"\@उपयोगकर्ता१, @उपयोगकर्ता२, @उपयोगकर्ता३"</string>
+    <string name="messages_new_message_to_caption">@उपयोगकर्ता१, @उपयोगकर्ता२, @उपयोगकर्ता३</string>
     <string name="messages_group_descriptor">इस झुण्ड के सदस्य</string>
     <string name="messages_new_subject_message">सदस्यों के लिए व्याख्यान</string>
     <string name="messages_new_subject_message_placeholder">नाम का परिवर्तन नये लक्ष्य के लिए।</string>
@@ -2184,7 +2184,7 @@
     <string name="remove_dvm_from_favorites">इष्टसूची में से हटाएँ</string>
     <string name="favorite_dvms_explainer">सूचनावली कलनविधियाँ जिन्हें आप ताराचिह्नित किए यहाँ दिखेंगे तथा मुख्य सूचनावली पर छलनी खण्डों के रूप में दिखेंगे।</string>
     <string name="favorite_dvms_empty_headline">आपके इष्ट कलनविधियाँ अटकाएँ</string>
-    <string name="favorite_dvms_empty_step1">नीचे \"%1$s\" दबाएँ कलनविधियों का वीक्षण करने के लिए।</string>
+    <string name="favorite_dvms_empty_step1">नीचे "%1$s" दबाएँ कलनविधियों का वीक्षण करने के लिए।</string>
     <string name="favorite_dvms_empty_step2">सूचनावली का पास %1$s दबाएँ यहाँ रखने के लिए।</string>
     <string name="favorite_dvms_empty_cta">सूचनावलियाँ जोडें</string>
     <string name="favorite_dvms_add_more">अधिक जोडें…</string>
@@ -2324,7 +2324,7 @@
     <string name="skip_for_now">अभी के लिए छोडें</string>
     <string name="fetching_follow_list">अनुचरण सूची प्राप्त की जा रही है…</string>
     <string name="no_follows_found">कोई अनुचरित नहीं</string>
-    <string name="import_follows_tips">"किसी मित्र अथवा समूह नेता का परिचय प्रविष्ट करें। उनके एनपुब॰ अथवा निप॰०५ पता अथवा नामरूप्य नाम जैसे कि alice@example.com अथवा id/alice का उपयोग आप कर सकते हैं खण्डश्रृंखला सत्यापित परिचयसूचकों के लिए।"</string>
+    <string name="import_follows_tips">किसी मित्र अथवा समूह नेता का परिचय प्रविष्ट करें। उनके एनपुब॰ अथवा निप॰०५ पता अथवा नामरूप्य नाम जैसे कि alice@example.com अथवा id/alice का उपयोग आप कर सकते हैं खण्डश्रृंखला सत्यापित परिचयसूचकों के लिए।</string>
     <string name="select_all">सभी चुनें</string>
     <string name="namecoin_test_connection">संयोजन परीक्षण</string>
     <string name="namecoin_testing">सेवासंगणकों का परीक्षण…</string>
@@ -2409,7 +2409,7 @@
     <string name="hls_renditions_label">अभिव्यक्तियाँ</string>
     <string name="hls_renditions_source_format">स्रोत सुलझाव : %1$dघ्न%2$d</string>
     <string name="hls_publish_button">उच्छनिरूपण दृश्याभिलेख प्रकाशित करें</string>
-    <string name="hls_publishing_header_format">प्रकाशन चालू \"%1$s\"…</string>
+    <string name="hls_publishing_header_format">प्रकाशन चालू "%1$s"…</string>
     <string name="hls_state_transcoding_format">संकुचनान्तरण चालू %1$s</string>
     <string name="hls_state_uploading_idle">आरोहण</string>
     <string name="hls_state_uploading_format">आरोहण चालू %2$d में से %1$d</string>
@@ -2595,8 +2595,8 @@
     <string name="emoji_add_dialog_title">विशिष्ट भावचिह्न जोडें</string>
     <string name="emoji_remove_dialog_title">क्या इसे हटाएँ :%1$s:।</string>
     <string name="emoji_long_press_hint">भावचिह्न हटाने के लिए उसे दीर्घतः दबाएँ</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" आपकी भावचिह्न सूची में है</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" आपकी भावचिह्न सूची में नहीं है</string>
+    <string name="emoji_pack_is_in_list">"%1$s" आपकी भावचिह्न सूची में है</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" आपकी भावचिह्न सूची में नहीं है</string>
     <string name="emoji_pack_actions_dialog_title">भावचिह्न पोटली क्रियाएँ</string>
     <string name="emoji_private_toggle">निजी</string>
     <string name="emoji_private_badge">निजी भावचिह्न</string>
@@ -2742,7 +2742,7 @@
     <string name="buzz_persona_new_title">नयी व्यक्तिशैली</string>
     <string name="buzz_persona_edit_title">व्यक्तिशैली सम्पादन</string>
     <string name="buzz_persona_slug">सूचकाम्श (व्यक्तिशैली सूचक)</string>
-    <string name="buzz_persona_slug_help">a-z तथा 0-9 तथा \'-\' तथा \'_\'। परिवर्तनीय नहीं बनाने के पश्चात।</string>
+    <string name="buzz_persona_slug_help">a-z तथा 0-9 तथा '-' तथा '_'। परिवर्तनीय नहीं बनाने के पश्चात।</string>
     <string name="buzz_persona_display_name">प्रदर्शन नाम</string>
     <string name="buzz_persona_system_prompt">यन्त्र प्रेरण</string>
     <string name="buzz_persona_model">प्रतिरूप (विकल्पात्मक)</string>

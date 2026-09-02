@@ -103,12 +103,12 @@
     <string name="original">asili</string>
     <string name="quote">Nukuu</string>
     <string name="new_amount_in_sats">Kiasi Kipya kwa Sats</string>
-    <string name="replying_to">"kujibu "</string>
-    <string name="and">" na "</string>
-    <string name="following">" Kufuatia"</string>
-    <string name="followers">" Wafuasi"</string>
-    <string name="number_following">"%1$s Wanaofuatwa"</string>
-    <string name="number_followers">"%1$s Wafuasi"</string>
+    <string name="replying_to">kujibu </string>
+    <string name="and"> na </string>
+    <string name="following"> Kufuatia</string>
+    <string name="followers"> Wafuasi</string>
+    <string name="number_following">%1$s Wanaofuatwa</string>
+    <string name="number_followers">%1$s Wafuasi</string>
     <string name="log_out">Ondoka</string>
     <string name="show_more">Onyesha Zaidi</string>
     <string name="lightning_invoice">Ankara ya umeme</string>
@@ -174,7 +174,7 @@
     <string name="my_awesome_group">Kundi Langu la Ajabu</string>
     <string name="picture_url">Url ya picha</string>
     <string name="optional_picture_url">URL ya Picha (Hiari)</string>
-    <string name="about_us">"Kuhusu sisi.. "</string>
+    <string name="about_us">Kuhusu sisi.. </string>
     <string name="search_and_add_a_user">Tafuta na ongeza mtumiaji</string>
     <string name="add_a_relay">Ongeza Relay</string>
     <string name="my_name">Jina langu la @tag</string>
@@ -208,8 +208,8 @@
     <string name="notes">Vidokezo</string>
     <string name="replies">Majibu</string>
     <string name="mutual">Yako</string>
-    <string name="reports">"Ripoti"</string>
-    <string name="number_reports">"%1$s Ripoti"</string>
+    <string name="reports">Ripoti</string>
+    <string name="number_reports">%1$s Ripoti</string>
     <string name="website">Tovuti</string>
     <string name="lightning_address">Anwani ya Umeme</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Hunakili Kitambulisho cha Nsec (nywila yako) kwenye ubao wa kunakili kwa ajili ya nakala rudufu</string>
@@ -219,13 +219,13 @@
     <string name="copy_user_id">Nakili ID ya Mtumiaji</string>
     <string name="unblock_user">Fungua Mtumiaji</string>
     <string name="user_is_blocked_hidden">Mtumiaji huyu amezuiwa/kunyamazishwa. Machapisho yao yamefichwa.</string>
-    <string name="npub_hex_username">"npub, jina la mtumiaji, maandishi"</string>
+    <string name="npub_hex_username">npub, jina la mtumiaji, maandishi</string>
     <string name="clear">Ondoa</string>
     <string name="app_logo">Nembo ya Programu</string>
     <string name="nsec_npub_hex_private_key">nsec.. au npub..</string>
     <string name="ncryptsec_password">nenosiri la kufungua ufunguo</string>
     <string name="show_password">Onyesha Nywila</string>
-    <string name="i_accept_the">"Nakubali "</string>
+    <string name="i_accept_the">Nakubali </string>
     <string name="terms_of_use">masharti ya matumizi</string>
     <string name="acceptance_of_terms_is_required">Kukubaliana na masharti ni lazima</string>
     <string name="login">Ingia</string>
@@ -241,14 +241,14 @@
     <string name="chats_reply_searching_history">Inatafuta ujumbe wa awali…</string>
     <string name="chats_reply_not_found">Haiwezi kupata ujumbe huu</string>
     <string name="chats_reply_searched">Imetafuta kila relay · gusa kuona</string>
-    <string name="error_loading_replies">"Kosa katika kupakia majibu: "</string>
+    <string name="error_loading_replies">Kosa katika kupakia majibu: </string>
     <string name="try_again">Jaribu tena</string>
     <string name="notification_feed_is_empty">Hakuna arifa bado.</string>
     <string name="open_poll">Fungua Kura</string>
     <string name="feed_is_empty">Malisho ni tupu.</string>
     <string name="refresh">Sasisha</string>
     <string name="channel_created">Kituo kimeundwa</string>
-    <string name="channel_information_changed_to">"Maelezo ya Kituo yamebadilika hadi"</string>
+    <string name="channel_information_changed_to">Maelezo ya Kituo yamebadilika hadi</string>
     <string name="marmot_group_no_messages_yet">Hakuna ujumbe bado</string>
     <string name="paid_relay">Relay ya kulipwa</string>
     <string name="tor_relay">Inalazimisha Tor wakati wa kuunganika</string>
@@ -277,8 +277,8 @@
         \n\nUkipoteza nenosiri lako, hutaweza kurejesha ufunguo wako.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Simba na nakili ufunguo wangu wa siri</string>
-    <string name="badge_award_image_for">"Picha ya tuzo ya alama kwa %1$s"</string>
-    <string name="badge_award_image">\"Picha ya tuzo ya beji</string>
+    <string name="badge_award_image_for">Picha ya tuzo ya alama kwa %1$s</string>
+    <string name="badge_award_image">"Picha ya tuzo ya beji</string>
     <string name="new_badge_award_notif">Umepokea Tuzo Mpya ya Alama</string>
     <string name="award_granted_to">Tuzo ya alama imetolewa kwa</string>
     <string name="account_switch_add_account_dialog_title">Ongeza Akaunti Mpya</string>
@@ -492,7 +492,7 @@
     <string name="nest_state_speaking">Anazungumza sasa</string>
     <string name="nest_state_mic_open">Maikrofoni imefunguliwa</string>
     <string name="nest_leave_host_title">Maliza nest hii?</string>
-    <string name="nest_leave_host_body">Wewe ni mwenyeji. Kufunga chumba kutawakata kila mtu. Chagua \"Ondoka tu\" kama unataka kurudi baadaye — chumba kitafungwa kiotomatiki baada ya masaa 8 ya kutotumika.</string>
+    <string name="nest_leave_host_body">Wewe ni mwenyeji. Kufunga chumba kutawakata kila mtu. Chagua "Ondoka tu" kama unataka kurudi baadaye — chumba kitafungwa kiotomatiki baada ya masaa 8 ya kutotumika.</string>
     <string name="nest_leave_host_close">Funga chumba</string>
     <string name="nest_leave_host_just_leave">Ondoka tu</string>
     <string name="nest_live_chip">MOJA KWA MOJA</string>
@@ -663,7 +663,7 @@
     <string name="poll_consensus_threshold">Uamuzi</string>
     <string name="poll_closing_date_time">Tarehe &amp; Wakati wa Kufunga Kura</string>
     <string name="poll_closing_in">Kura inafungwa ndani ya %1$s</string>
-    <string name="looking_for_event">"Inatafuta Tukio %1$s"</string>
+    <string name="looking_for_event">Inatafuta Tukio %1$s</string>
     <string name="send_zap">Tuma Zap</string>
     <string name="custom_zaps_add_a_message">Ongeza ujumbe wa umma</string>
     <string name="custom_zaps_add_a_message_private">Ongeza ujumbe wa faragha</string>
@@ -867,7 +867,7 @@
     <string name="community_no_descriptor">Jumuiya hii haitumii maelezo. Ongea na mmiliki ili aongeze.</string>
     <string name="user_preferences">Mapendeleo ya Mtumiaji</string>
     <string name="settings_search_placeholder">Tafuta mipangilio</string>
-    <string name="settings_search_no_results">Hakuna mipangilio iliyopatikana kwa \"%1$s\"</string>
+    <string name="settings_search_no_results">Hakuna mipangilio iliyopatikana kwa "%1$s"</string>
     <string name="reset_marmot_confirm_title">Weka upya Hali ya Marmot?</string>
     <string name="reset_marmot_confirm_body">Hii itafuta kwa kudumu kila mazungumzo ya kikundi cha Marmot, historia ya ujumbe, na ufunguo wa MLS kwenye kifaa hiki kwa akaunti ya sasa. Marafiki hawataarifiwa na bado wanaweza kukuona katika vikundi hadi wajitolee ijayo. Hii haiwezi kutendwa kinyume. KeyPackage mpya itachapishwa mara ijayo programu inapasanishwa.</string>
     <string name="reset_marmot_confirm_action">Weka upya</string>
@@ -900,7 +900,7 @@
     <string name="music_playlist_collaborative_hint">Ruhusu wengine kuongeza nyimbo kwenye orodha hii.</string>
     <string name="music_playlist_delete">Futa orodha hii ya nyimbo</string>
     <string name="music_playlist_delete_confirm">Chapisha ufutaji wa NIP-09 kwa orodha hii ya nyimbo?</string>
-    <string name="music_playlist_no_tracks_hint">Hakuna nyimbo bado. Ongeza nyimbo kutoka kwenye menyu ya wimbo ukitumia \"Ongeza kwenye orodha\".</string>
+    <string name="music_playlist_no_tracks_hint">Hakuna nyimbo bado. Ongeza nyimbo kutoka kwenye menyu ya wimbo ukitumia "Ongeza kwenye orodha".</string>
     <string name="music_playlist_move_track_up">Hamisha wimbo juu</string>
     <string name="music_playlist_move_track_down">Hamisha wimbo chini</string>
     <string name="music_playlist_remove_track">Ondoa wimbo kutoka kwenye orodha</string>
@@ -911,7 +911,7 @@
     <string name="messages_create_public_private_chat_description">Kikundi Kipya cha Umma au Binafsi</string>
     <string name="messages_new_message_to">Kwa</string>
     <string name="messages_new_message_subject_caption">Mada ya mazungumzo</string>
-    <string name="messages_new_message_to_caption">"\@User1, @User2, @User3"</string>
+    <string name="messages_new_message_to_caption">@User1, @User2, @User3</string>
     <string name="messages_group_descriptor">Wanachama wa kikundi hiki</string>
     <string name="messages_new_subject_message">Maelezo kwa wanachama</string>
     <string name="messages_new_subject_message_placeholder">Kubadilisha jina kwa malengo mapya.</string>
@@ -1183,7 +1183,7 @@
     <string name="calendar_untitled">(bila kichwa)</string>
     <string name="calendar_all_day">Siku nzima</string>
     <string name="calendar_rsvp_going_prefixed">✓ Naenda</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Labda</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Labda</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Siwezi kwenda</string>
     <string name="calendar_collection_title">Kichwa</string>
     <string name="calendar_collection_description">Maelezo</string>
@@ -1359,7 +1359,7 @@
     <string name="remove_dvm_from_favorites">Ondoa kutoka vipendwa</string>
     <string name="favorite_dvms_explainer">Algoriti za mlisho unazopiga nyota zinaonekana hapa na kama vichujio kwenye mlisho wa Nyumbani.</string>
     <string name="favorite_dvms_empty_headline">Pini algoriti zako zinazopendelewa</string>
-    <string name="favorite_dvms_empty_step1">Gonga \"%1$s\" hapa chini ili kupitia algoriti.</string>
+    <string name="favorite_dvms_empty_step1">Gonga "%1$s" hapa chini ili kupitia algoriti.</string>
     <string name="favorite_dvms_empty_step2">Gonga %1$s karibu na mlisho kuuhifadhi hapa.</string>
     <string name="favorite_dvms_empty_cta">Ongeza milisho fulani</string>
     <string name="favorite_dvms_add_more">Ongeza zaidi…</string>
@@ -1474,7 +1474,7 @@
     <string name="skip_for_now">Ruka kwa sasa</string>
     <string name="fetching_follow_list">Inachukua orodha ya wanaofuatwa…</string>
     <string name="no_follows_found">Hakuna wanaofuatwa waliopatikana</string>
-    <string name="import_follows_tips">"Ingiza wasifu wa rafiki au kiongozi wa jumuiya. Unaweza kutumia npub yao, anwani ya NIP-05, au jina la Namecoin kama alice@example.bit au id/alice kwa utambulisho uliohakikishwa na blockchain."</string>
+    <string name="import_follows_tips">Ingiza wasifu wa rafiki au kiongozi wa jumuiya. Unaweza kutumia npub yao, anwani ya NIP-05, au jina la Namecoin kama alice@example.bit au id/alice kwa utambulisho uliohakikishwa na blockchain.</string>
     <string name="select_all">Chagua Zote</string>
     <string name="namecoin_test_connection">Jaribu Muunganiko</string>
     <string name="namecoin_testing">Inajaribu seva…</string>
@@ -1552,7 +1552,7 @@
     <string name="hls_renditions_label">Azimio</string>
     <string name="hls_renditions_source_format">Azimio la chanzo: %1$d×%2$d</string>
     <string name="hls_publish_button">Chapisha video ya HD</string>
-    <string name="hls_publishing_header_format">Inachapisha \"%1$s\"…</string>
+    <string name="hls_publishing_header_format">Inachapisha "%1$s"…</string>
     <string name="hls_state_transcoding_format">Inabadilisha %1$s</string>
     <string name="hls_state_uploading_idle">Pakia</string>
     <string name="hls_state_uploading_format">Inapakia %1$d kati ya %2$d</string>
@@ -1715,8 +1715,8 @@
     <string name="emoji_add_dialog_title">Ongeza emoji maalum</string>
     <string name="emoji_remove_dialog_title">Ondoa :%1$s:?</string>
     <string name="emoji_long_press_hint">Bonyeza kwa muda mrefu emoji kuiondoa</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" ipo kwenye orodha yako ya emoji</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" haipo kwenye orodha yako ya emoji</string>
+    <string name="emoji_pack_is_in_list">"%1$s" ipo kwenye orodha yako ya emoji</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" haipo kwenye orodha yako ya emoji</string>
     <string name="emoji_pack_actions_dialog_title">Vitendo vya pakiti ya emoji</string>
     <string name="emoji_private_toggle">Binafsi</string>
     <string name="emoji_private_badge">Emoji ya siri</string>
@@ -1752,7 +1752,7 @@
     <string name="marmot_edit_group_info">Hariri Maelezo ya Kikundi</string>
     <string name="marmot_leave_group">Acha Kikundi</string>
     <string name="marmot_this_group">kikundi hiki</string>
-    <string name="marmot_leave_group_confirm">Una uhakika unataka kuacha \"%1$s\"? Hutapokea tena ujumbe kutoka kikundi hiki.</string>
+    <string name="marmot_leave_group_confirm">Una uhakika unataka kuacha "%1$s"? Hutapokea tena ujumbe kutoka kikundi hiki.</string>
     <string name="marmot_keypackage_required">Lazima wawe wamechapisha KeyPackage (kind:30443) ili waongezwe.</string>
     <string name="marmot_add_to_group">Ongeza kwenye kikundi</string>
     <string name="marmot_add_member">Ongeza mwanachama</string>
@@ -1761,15 +1761,15 @@
     <string name="marmot_member_suffix_you"> (wewe)</string>
     <string name="marmot_member_suffix_admin"> - msimamizi</string>
     <string name="marmot_remove_member">Ondoa Mwanachama</string>
-    <string name="marmot_remove_member_confirm">Una uhakika unataka kuondoa \"%1$s\" kutoka kwa kikundi hiki?</string>
+    <string name="marmot_remove_member_confirm">Una uhakika unataka kuondoa "%1$s" kutoka kwa kikundi hiki?</string>
     <string name="marmot_grant">Toa</string>
     <string name="marmot_grant_admin_privileges">Toa mamlaka za msimamizi</string>
     <string name="marmot_grant_admin_title">Toa Mamlaka za Msimamizi</string>
-    <string name="marmot_grant_admin_confirm">Fanya \"%1$s\" msimamizi wa kikundi hiki? Wasimamizi wanaweza kuongeza au kuondoa wanachama, kubadilisha maelezo ya kikundi, na kutoa mamlaka za usimamizi kwa wanachama wengine.</string>
+    <string name="marmot_grant_admin_confirm">Fanya "%1$s" msimamizi wa kikundi hiki? Wasimamizi wanaweza kuongeza au kuondoa wanachama, kubadilisha maelezo ya kikundi, na kutoa mamlaka za usimamizi kwa wanachama wengine.</string>
     <string name="marmot_revoke">Futa</string>
     <string name="marmot_revoke_admin_privileges">Futa mamlaka za msimamizi</string>
     <string name="marmot_revoke_admin_title">Futa Mamlaka za Msimamizi</string>
-    <string name="marmot_revoke_admin_confirm">Futa mamlaka za msimamizi kutoka kwa \"%1$s\"? Watabaki kuwa mwanachama wa kikundi.</string>
+    <string name="marmot_revoke_admin_confirm">Futa mamlaka za msimamizi kutoka kwa "%1$s"? Watabaki kuwa mwanachama wa kikundi.</string>
     <string name="marmot_relay_no_events">hakuna matukio bado</string>
     <string name="marmot_relay_last_event">tukio la mwisho%1$s</string>
     <string name="copy">Nakili</string>

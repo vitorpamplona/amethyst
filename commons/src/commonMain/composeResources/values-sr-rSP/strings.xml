@@ -104,12 +104,12 @@
     <string name="edited">izmenjeno</string>
     <string name="quote">Citat</string>
     <string name="new_amount_in_sats">Novi iznos u Sats</string>
-    <string name="replying_to">"odgovara na "</string>
-    <string name="and">" i "</string>
-    <string name="following">" Praćeni"</string>
-    <string name="followers">" Pratioci"</string>
-    <string name="number_following">"%1$s praćenih"</string>
-    <string name="number_followers">"%1$s pratilaca"</string>
+    <string name="replying_to">odgovara na </string>
+    <string name="and"> i </string>
+    <string name="following"> Praćeni</string>
+    <string name="followers"> Pratioci</string>
+    <string name="number_following">%1$s praćenih</string>
+    <string name="number_followers">%1$s pratilaca</string>
     <string name="log_out">Odjava</string>
     <string name="show_more">Prikaži više</string>
     <string name="lightning_invoice">Lightning faktura</string>
@@ -175,7 +175,7 @@
     <string name="my_awesome_group">Moja sjajna grupa</string>
     <string name="picture_url">URL slike</string>
     <string name="optional_picture_url">URL slike (opciono)</string>
-    <string name="about_us">"O nama… "</string>
+    <string name="about_us">O nama… </string>
     <string name="search_and_add_a_user">Pronađi i dodaj korisnika</string>
     <string name="add_a_relay">Dodaj relay</string>
     <string name="my_name">Moje @tag ime</string>
@@ -209,9 +209,9 @@
     <string name="replies">Odgovori</string>
     <string name="mutual">Vaše</string>
     <string name="gallery">Galerija</string>
-    <string name="reports">"Prijave"</string>
-    <string name="number_reports">"%1$s prijava"</string>
-    <string name="relays">" Relay-ovi"</string>
+    <string name="reports">Prijave</string>
+    <string name="number_reports">%1$s prijava</string>
+    <string name="relays"> Relay-ovi</string>
     <string name="website">Veb stranica</string>
     <string name="lightning_address">Lightning adresa</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopira Nsec ID (vaša lozinka) u međuspremnik radi rezervne kopije</string>
@@ -221,13 +221,13 @@
     <string name="copy_user_id">Kopiraj ID korisnika</string>
     <string name="unblock_user">Odblokiraj korisnika</string>
     <string name="user_is_blocked_hidden">Ovaj korisnik je blokiran/utišan. Njihove objave su skrivene.</string>
-    <string name="npub_hex_username">"npub, korisničko ime, tekst"</string>
+    <string name="npub_hex_username">npub, korisničko ime, tekst</string>
     <string name="clear">Obriši</string>
     <string name="app_logo">Logo aplikacije</string>
     <string name="nsec_npub_hex_private_key">nsec.. ili npub..</string>
     <string name="ncryptsec_password">lozinka za otvaranje ključa</string>
     <string name="show_password">Prikaži lozinku</string>
-    <string name="i_accept_the">"Prihvatam "</string>
+    <string name="i_accept_the">Prihvatam </string>
     <string name="terms_of_use">uslove korišćenja</string>
     <string name="acceptance_of_terms_is_required">Prihvatanje uslova je obavezno</string>
     <string name="login">Prijava</string>
@@ -243,14 +243,14 @@
     <string name="chats_reply_searching_history">Traženje originalne poruke…</string>
     <string name="chats_reply_not_found">Poruka nije pronađena</string>
     <string name="chats_reply_searched">Pretraženi svi relay-i · dodirnite za prikaz</string>
-    <string name="error_loading_replies">"Greška pri učitavanju odgovora: "</string>
+    <string name="error_loading_replies">Greška pri učitavanju odgovora: </string>
     <string name="try_again">Pokušaj ponovo</string>
     <string name="notification_feed_is_empty">Još nema obaveštenja.</string>
     <string name="open_poll">Otvori anketu</string>
     <string name="feed_is_empty">Objava je prazna.</string>
     <string name="refresh">Osveži</string>
     <string name="channel_created">Kanal kreiran</string>
-    <string name="channel_information_changed_to">"Informacije o kanalu promenjene na"</string>
+    <string name="channel_information_changed_to">Informacije o kanalu promenjene na</string>
     <string name="marmot_group_no_messages_yet">Još nema poruka</string>
     <string name="paid_relay">Plaćeni relay</string>
     <string name="tor_relay">Primorava Tor pri povezivanju</string>
@@ -279,8 +279,8 @@
         \n\nAko izgubite lozinku, nećete moći da obnovite ključ.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Šifruj i kopiraj moj tajni ključ</string>
-    <string name="badge_award_image_for">"Slika značke za %1$s"</string>
-    <string name="badge_award_image">\"Slika značke</string>
+    <string name="badge_award_image_for">Slika značke za %1$s</string>
+    <string name="badge_award_image">"Slika značke</string>
     <string name="new_badge_award_notif">Dobili ste novu značku</string>
     <string name="award_granted_to">Značka dodeljena</string>
     <string name="account_switch_add_account_dialog_title">Dodaj novi nalog</string>
@@ -492,7 +492,7 @@
     <string name="nest_state_speaking">Govori sada</string>
     <string name="nest_state_mic_open">Mikrofon je otvoren</string>
     <string name="nest_leave_host_title">Završiti ovaj nest?</string>
-    <string name="nest_leave_host_body">Vi ste domaćin. Zatvaranje sobe će isključiti sve. Izaberite \"Samo napusti\" ako se želite vratiti kasnije — soba će se automatski zatvoriti nakon 8 sati neaktivnosti.</string>
+    <string name="nest_leave_host_body">Vi ste domaćin. Zatvaranje sobe će isključiti sve. Izaberite "Samo napusti" ako se želite vratiti kasnije — soba će se automatski zatvoriti nakon 8 sati neaktivnosti.</string>
     <string name="nest_leave_host_close">Zatvori sobu</string>
     <string name="nest_leave_host_just_leave">Samo napusti</string>
     <string name="nest_live_chip">UŽIVO</string>
@@ -661,7 +661,7 @@
     <string name="poll_consensus_threshold">Konsenzus</string>
     <string name="poll_closing_date_time">Datum &amp; vreme zatvaranja ankete</string>
     <string name="poll_closing_in">Anketa se zatvara za %1$s</string>
-    <string name="looking_for_event">"Traženje događaja %1$s"</string>
+    <string name="looking_for_event">Traženje događaja %1$s</string>
     <string name="send_zap">Pošalji Zap</string>
     <string name="custom_zaps_add_a_message">Dodaj javnu poruku</string>
     <string name="custom_zaps_add_a_message_private">Dodaj privatnu poruku</string>
@@ -863,7 +863,7 @@
     <string name="community_no_descriptor">Ova zajednica nema opis. Obratite se vlasniku da ga doda</string>
     <string name="user_preferences">Korisnička podešavanja</string>
     <string name="settings_search_placeholder">Pretraži podešavanja</string>
-    <string name="settings_search_no_results">Nisu pronađena podešavanja za \"%1$s\"</string>
+    <string name="settings_search_no_results">Nisu pronađena podešavanja za "%1$s"</string>
     <string name="reset_marmot_confirm_title">Resetovati Marmot stanje?</string>
     <string name="reset_marmot_confirm_body">Ovo će trajno obrisati sve Marmot grupne razgovore, istoriju poruka i MLS ključeve na ovom uređaju za trenutni nalog. Korisnici neće biti obavešteni i mogu vas i dalje videti u grupama do sledećeg commit-a. Ovo se ne može poništiti. Novi KeyPackage će biti objavljen sledeći put kada se aplikacija sinhronizuje.</string>
     <string name="reset_marmot_confirm_action">Resetuj</string>
@@ -896,7 +896,7 @@
     <string name="music_playlist_collaborative_hint">Dozvoli drugima da dodaju numere u ovu plejlistu.</string>
     <string name="music_playlist_delete">Obriši ovu plejlistu</string>
     <string name="music_playlist_delete_confirm">Objaviti NIP-09 brisanje za ovu plejlistu?</string>
-    <string name="music_playlist_no_tracks_hint">Još nema numera. Dodajte numere iz menija pesme koristeći \"Dodaj u plejlistu\".</string>
+    <string name="music_playlist_no_tracks_hint">Još nema numera. Dodajte numere iz menija pesme koristeći "Dodaj u plejlistu".</string>
     <string name="music_playlist_move_track_up">Pomeri numeru gore</string>
     <string name="music_playlist_move_track_down">Pomeri numeru dole</string>
     <string name="music_playlist_remove_track">Ukloni numeru iz plejliste</string>
@@ -907,7 +907,7 @@
     <string name="messages_create_public_private_chat_description">Nova javna ili privatna grupa</string>
     <string name="messages_new_message_to">Za</string>
     <string name="messages_new_message_subject_caption">Tema razgovora</string>
-    <string name="messages_new_message_to_caption">"\@Korisnik1, @Korisnik2, @Korisnik3"</string>
+    <string name="messages_new_message_to_caption">@Korisnik1, @Korisnik2, @Korisnik3</string>
     <string name="messages_group_descriptor">Članovi ove grupe</string>
     <string name="messages_new_subject_message">Objašnjenje članovima</string>
     <string name="messages_new_subject_message_placeholder">Menjam naziv zbog novih ciljeva.</string>
@@ -1179,7 +1179,7 @@
     <string name="calendar_untitled">(bez naslova)</string>
     <string name="calendar_all_day">Ceo dan</string>
     <string name="calendar_rsvp_going_prefixed">✓ Idem</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Možda</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Možda</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Ne mogu ići</string>
     <string name="calendar_collection_title">Naslov</string>
     <string name="calendar_collection_description">Opis</string>
@@ -1358,7 +1358,7 @@
     <string name="remove_dvm_from_favorites">Ukloni iz omiljenih</string>
     <string name="favorite_dvms_explainer">Algoritmi feeda koje označite zvezdicom se prikazuju ovde i kao filter čipovi na početnom feedu.</string>
     <string name="favorite_dvms_empty_headline">Zakačite vaše omiljene algoritme</string>
-    <string name="favorite_dvms_empty_step1">Dodirnite \"%1$s\" ispod da pregledate algoritme.</string>
+    <string name="favorite_dvms_empty_step1">Dodirnite "%1$s" ispod da pregledate algoritme.</string>
     <string name="favorite_dvms_empty_step2">Dodirnite %1$s pored feeda da ga zadržite ovde.</string>
     <string name="favorite_dvms_empty_cta">Dodaj neke feedove</string>
     <string name="favorite_dvms_add_more">Dodaj još…</string>
@@ -1472,7 +1472,7 @@
     <string name="skip_for_now">Preskoči za sada</string>
     <string name="fetching_follow_list">Preuzimanje liste praćenja…</string>
     <string name="no_follows_found">Nisu pronađena praćenja</string>
-    <string name="import_follows_tips">"Unesite profil prijatelja ili vođe zajednice. Možete koristiti njihov npub, NIP-05 adresu ili Namecoin ime poput alice@example.bit ili id/alice za identitete verifikovane na blockchainu."</string>
+    <string name="import_follows_tips">Unesite profil prijatelja ili vođe zajednice. Možete koristiti njihov npub, NIP-05 adresu ili Namecoin ime poput alice@example.bit ili id/alice za identitete verifikovane na blockchainu.</string>
     <string name="select_all">Izaberi sve</string>
     <string name="namecoin_test_connection">Testiraj vezu</string>
     <string name="namecoin_testing">Testiranje servera…</string>
@@ -1553,7 +1553,7 @@
     <string name="hls_renditions_label">Renderi</string>
     <string name="hls_renditions_source_format">Izvorna rezolucija: %1$d×%2$d</string>
     <string name="hls_publish_button">Objavi HD video</string>
-    <string name="hls_publishing_header_format">Objavljivanje „%1$s\"…</string>
+    <string name="hls_publishing_header_format">Objavljivanje „%1$s"…</string>
     <string name="hls_state_transcoding_format">Transkodovanje %1$s</string>
     <string name="hls_state_uploading_idle">Otpremi</string>
     <string name="hls_state_uploading_format">Otpremanje %1$d od %2$d</string>
@@ -1715,8 +1715,8 @@
     <string name="emoji_add_dialog_title">Dodaj prilagođeni emoji</string>
     <string name="emoji_remove_dialog_title">Ukloniti :%1$s:?</string>
     <string name="emoji_long_press_hint">Dugo pritisnite emoji da biste ga uklonili</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" je na vašoj emoji listi</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" nije na vašoj emoji listi</string>
+    <string name="emoji_pack_is_in_list">"%1$s" je na vašoj emoji listi</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" nije na vašoj emoji listi</string>
     <string name="emoji_pack_actions_dialog_title">Radnje sa emoji paketom</string>
     <string name="emoji_private_toggle">Privatno</string>
     <string name="emoji_private_badge">Privatni emoji</string>
@@ -1752,7 +1752,7 @@
     <string name="marmot_edit_group_info">Uredi informacije o grupi</string>
     <string name="marmot_leave_group">Napusti grupu</string>
     <string name="marmot_this_group">ovu grupu</string>
-    <string name="marmot_leave_group_confirm">Da li ste sigurni da želite da napustite \"%1$s\"? Više nećete primati poruke iz ove grupe.</string>
+    <string name="marmot_leave_group_confirm">Da li ste sigurni da želite da napustite "%1$s"? Više nećete primati poruke iz ove grupe.</string>
     <string name="marmot_keypackage_required">Moraju imati objavljeni KeyPackage (kind:30443) da bi bili dodati.</string>
     <string name="marmot_add_to_group">Dodaj u grupu</string>
     <string name="marmot_add_member">Dodaj člana</string>
@@ -1760,15 +1760,15 @@
     <string name="marmot_add_member_placeholder">Ime, npub ili NIP-05</string>
     <string name="marmot_member_suffix_you"> (vi)</string>
     <string name="marmot_remove_member">Ukloni člana</string>
-    <string name="marmot_remove_member_confirm">Da li ste sigurni da želite da uklonite \"%1$s\" iz ove grupe?</string>
+    <string name="marmot_remove_member_confirm">Da li ste sigurni da želite da uklonite "%1$s" iz ove grupe?</string>
     <string name="marmot_grant">Dodeli</string>
     <string name="marmot_grant_admin_privileges">Dodeli administratorske privilegije</string>
     <string name="marmot_grant_admin_title">Dodeli administratorske privilegije</string>
-    <string name="marmot_grant_admin_confirm">Napraviti \"%1$s\" administratorom ove grupe? Administratori mogu dodavati ili uklanjati članove, menjati informacije o grupi i dodeljivati administratorske privilegije drugim članovima.</string>
+    <string name="marmot_grant_admin_confirm">Napraviti "%1$s" administratorom ove grupe? Administratori mogu dodavati ili uklanjati članove, menjati informacije o grupi i dodeljivati administratorske privilegije drugim članovima.</string>
     <string name="marmot_revoke">Opozovi</string>
     <string name="marmot_revoke_admin_privileges">Opozovi administratorske privilegije</string>
     <string name="marmot_revoke_admin_title">Opozovi administratorske privilegije</string>
-    <string name="marmot_revoke_admin_confirm">Opozvati administratorske privilegije od \"%1$s\"? Ostaće član grupe.</string>
+    <string name="marmot_revoke_admin_confirm">Opozvati administratorske privilegije od "%1$s"? Ostaće član grupe.</string>
     <string name="marmot_relays_header">Relay-i</string>
     <string name="marmot_relay_no_events">još nema događaja</string>
     <string name="marmot_relay_last_event">poslednji događaj%1$s</string>

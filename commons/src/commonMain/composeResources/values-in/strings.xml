@@ -89,12 +89,12 @@
     <string name="quote">Kutipan</string>
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Jumlah Baru dalam Sats</string>
-    <string name="replying_to">"membalas kepada "</string>
-    <string name="and">" dan "</string>
-    <string name="following">" Mengikuti"</string>
-    <string name="followers">" Pengikut"</string>
-    <string name="number_following">"%1$s Mengikuti"</string>
-    <string name="number_followers">"%1$s Pengikut"</string>
+    <string name="replying_to">membalas kepada </string>
+    <string name="and"> dan </string>
+    <string name="following"> Mengikuti</string>
+    <string name="followers"> Pengikut</string>
+    <string name="number_following">%1$s Mengikuti</string>
+    <string name="number_followers">%1$s Pengikut</string>
     <string name="log_out">Keluar</string>
     <string name="show_more">Tampilkan lagi</string>
     <string name="lightning_invoice">Faktur Tagihan Lightning</string>
@@ -164,7 +164,7 @@
     <string name="my_awesome_group">Grupku yang Hebat</string>
     <string name="picture_url">Alamat Url Gambar</string>
     <string name="optional_picture_url">URL Gambar (Opsional)</string>
-    <string name="about_us">"Tentang kami…"</string>
+    <string name="about_us">Tentang kami…</string>
     <string name="search_and_add_a_user">Cari dan tambahkan pengguna</string>
     <string name="add_a_relay">Tambah Relai</string>
     <string name="my_name">Nama @tag saya</string>
@@ -175,7 +175,7 @@
     <string name="username">Nama pengguna</string>
     <string name="about_me">Tentang saya</string>
     <string name="avatar_url">URL Avatar</string>
-    <string name="banner_url">"URL Spanduk/Banner "</string>
+    <string name="banner_url">URL Spanduk/Banner </string>
     <string name="website_url">URL Situs Web</string>
     <string name="pronouns">Kata ganti</string>
     <string name="stale_relay_hint_label">relay sumber mungkin sudah usang</string>
@@ -201,8 +201,8 @@
     <string name="mutual">Milik Anda</string>
     <string name="gallery">Galeri</string>
     <string name="reports">Laporan</string>
-    <string name="number_reports">"%1$s Laporan"</string>
-    <string name="relays">" Relai"</string>
+    <string name="number_reports">%1$s Laporan</string>
+    <string name="relays"> Relai</string>
     <string name="website">Situs Web</string>
     <string name="lightning_address">Alamat Lightning</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Salin Nsec ID (kata sandi anda) ke papan klip sebagai cadangan</string>
@@ -234,7 +234,7 @@
     <string name="chats_reply_searching_history">Mencari pesan asli…</string>
     <string name="chats_reply_not_found">Pesan tidak ditemukan</string>
     <string name="chats_reply_searched">Telah dicari di semua relay · ketuk untuk melihat</string>
-    <string name="error_loading_replies">"Gagal memuat balasan: "</string>
+    <string name="error_loading_replies">Gagal memuat balasan: </string>
     <string name="try_again">Coba lagi</string>
     <string name="notification_feed_is_empty">Belum ada notifikasi.</string>
     <string name="open_poll">Buka Polling</string>
@@ -491,7 +491,7 @@
     <string name="nest_state_speaking">Sedang berbicara</string>
     <string name="nest_state_mic_open">Mikrofon terbuka</string>
     <string name="nest_leave_host_title">Akhiri nest ini?</string>
-    <string name="nest_leave_host_body">Anda adalah host. Menutup ruang akan memutuskan semua orang. Pilih \"Tinggalkan saja\" jika ingin kembali nanti — ruang akan ditutup otomatis setelah 8 jam tidak aktif.</string>
+    <string name="nest_leave_host_body">Anda adalah host. Menutup ruang akan memutuskan semua orang. Pilih "Tinggalkan saja" jika ingin kembali nanti — ruang akan ditutup otomatis setelah 8 jam tidak aktif.</string>
     <string name="nest_leave_host_close">Tutup ruang</string>
     <string name="nest_leave_host_just_leave">Tinggalkan saja</string>
     <string name="nest_live_chip">LIVE</string>
@@ -874,7 +874,7 @@
     <string name="community_no_descriptor">Komunitas ini tidak memiliki deskripsi. Bicaralah dengan pemiliknya untuk menambahkannya</string>
     <string name="user_preferences">Preferensi Pengguna</string>
     <string name="settings_search_placeholder">Cari pengaturan</string>
-    <string name="settings_search_no_results">Tidak ada pengaturan ditemukan untuk \"%1$s\"</string>
+    <string name="settings_search_no_results">Tidak ada pengaturan ditemukan untuk "%1$s"</string>
     <string name="reset_marmot_confirm_title">Setel Ulang Status Marmot?</string>
     <string name="reset_marmot_confirm_body">Ini akan menghapus secara permanen semua obrolan grup Marmot, riwayat pesan, dan kunci MLS di perangkat ini untuk akun saat ini. Rekan tidak akan diberi tahu dan mungkin masih melihat Anda dalam grup hingga commit berikutnya. Tindakan ini tidak dapat dibatalkan. KeyPackage baru akan diterbitkan saat berikutnya aplikasi melakukan sinkronisasi.</string>
     <string name="reset_marmot_confirm_action">Setel Ulang</string>
@@ -907,7 +907,7 @@
     <string name="music_playlist_collaborative_hint">Biarkan orang lain menambahkan lagu ke playlist ini.</string>
     <string name="music_playlist_delete">Hapus playlist ini</string>
     <string name="music_playlist_delete_confirm">Terbitkan penghapusan NIP-09 untuk playlist ini?</string>
-    <string name="music_playlist_no_tracks_hint">Belum ada lagu. Tambahkan lagu dari menu lagu menggunakan \"Tambahkan ke playlist\".</string>
+    <string name="music_playlist_no_tracks_hint">Belum ada lagu. Tambahkan lagu dari menu lagu menggunakan "Tambahkan ke playlist".</string>
     <string name="music_playlist_move_track_up">Pindahkan lagu ke atas</string>
     <string name="music_playlist_move_track_down">Pindahkan lagu ke bawah</string>
     <string name="music_playlist_remove_track">Hapus lagu dari playlist</string>
@@ -918,7 +918,7 @@
     <string name="messages_create_public_private_chat_description">Grup Publik atau Privat Baru</string>
     <string name="messages_new_message_to">Ke</string>
     <string name="messages_new_message_subject_caption">Topik percakapan</string>
-    <string name="messages_new_message_to_caption">\@Pengguna1, @Pengguna2, @Pengguna3</string>
+    <string name="messages_new_message_to_caption">@Pengguna1, @Pengguna2, @Pengguna3</string>
     <string name="messages_group_descriptor">Anggota grup ini</string>
     <string name="messages_new_subject_message">Penjelasan kepada anggota</string>
     <string name="messages_new_subject_message_placeholder">Mengubah nama untuk tujuan baru.</string>
@@ -1200,7 +1200,7 @@
     <string name="calendar_untitled">(tanpa judul)</string>
     <string name="calendar_all_day">Sepanjang hari</string>
     <string name="calendar_rsvp_going_prefixed">✓ Hadir</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Mungkin</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Mungkin</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Tidak bisa hadir</string>
     <string name="calendar_collection_title">Judul</string>
     <string name="calendar_collection_description">Deskripsi</string>
@@ -1382,7 +1382,7 @@
     <string name="remove_dvm_from_favorites">Hapus dari favorit</string>
     <string name="favorite_dvms_explainer">Algoritma feed yang Anda bintangi muncul di sini dan sebagai chip filter di feed Beranda.</string>
     <string name="favorite_dvms_empty_headline">Sematkan algoritma favorit Anda</string>
-    <string name="favorite_dvms_empty_step1">Ketuk \"%1$s\" di bawah untuk menjelajahi algoritma.</string>
+    <string name="favorite_dvms_empty_step1">Ketuk "%1$s" di bawah untuk menjelajahi algoritma.</string>
     <string name="favorite_dvms_empty_step2">Ketuk %1$s di sebelah feed untuk menyimpannya di sini.</string>
     <string name="favorite_dvms_empty_cta">Tambahkan beberapa feed</string>
     <string name="favorite_dvms_add_more">Tambah lagi…</string>
@@ -1500,7 +1500,7 @@
     <string name="skip_for_now">Lewati untuk sekarang</string>
     <string name="fetching_follow_list">Mengambil daftar ikut…</string>
     <string name="no_follows_found">Tidak ada ikutan yang ditemukan</string>
-    <string name="import_follows_tips">"Masukkan profil teman atau pemimpin komunitas. Anda dapat menggunakan npub, alamat NIP-05, atau nama Namecoin seperti alice@example.bit atau id/alice untuk identitas yang diverifikasi blockchain."</string>
+    <string name="import_follows_tips">Masukkan profil teman atau pemimpin komunitas. Anda dapat menggunakan npub, alamat NIP-05, atau nama Namecoin seperti alice@example.bit atau id/alice untuk identitas yang diverifikasi blockchain.</string>
     <string name="select_all">Pilih Semua</string>
     <string name="namecoin_test_connection">Uji Koneksi</string>
     <string name="namecoin_testing">Menguji server…</string>
@@ -1583,7 +1583,7 @@
     <string name="hls_renditions_label">Rendisi</string>
     <string name="hls_renditions_source_format">Resolusi sumber: %1$d×%2$d</string>
     <string name="hls_publish_button">Terbitkan video HD</string>
-    <string name="hls_publishing_header_format">Menerbitkan \"%1$s\"…</string>
+    <string name="hls_publishing_header_format">Menerbitkan "%1$s"…</string>
     <string name="hls_state_transcoding_format">Mengkodekan ulang %1$s</string>
     <string name="hls_state_uploading_idle">Unggah</string>
     <string name="hls_state_uploading_format">Mengunggah %1$d dari %2$d</string>
@@ -1752,8 +1752,8 @@
     <string name="emoji_add_dialog_title">Tambah emoji kustom</string>
     <string name="emoji_remove_dialog_title">Hapus :%1$s:?</string>
     <string name="emoji_long_press_hint">Tekan lama emoji untuk menghapusnya</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" ada di daftar emoji Anda</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" tidak ada di daftar emoji Anda</string>
+    <string name="emoji_pack_is_in_list">"%1$s" ada di daftar emoji Anda</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" tidak ada di daftar emoji Anda</string>
     <string name="emoji_pack_actions_dialog_title">Tindakan paket emoji</string>
     <string name="emoji_private_toggle">Privat</string>
     <string name="emoji_private_badge">Emoji privat</string>
@@ -1769,7 +1769,7 @@
     <string name="marmot_create_group_footer">Grup MLS baru akan dibuat. Anda dapat menambahkan anggota setelahnya.</string>
     <string name="marmot_group_default_name">Grup Marmot</string>
     <string name="marmot_group_fallback_name">Grup %1$s…</string>
-    <string name="marmot_user_fallback_name">\'%1$s…\'</string>
+    <string name="marmot_user_fallback_name">'%1$s…'</string>
     <string name="marmot_tab_known">Dikenal</string>
     <string name="marmot_tab_known_count">Dikenal (%1$d)</string>
     <string name="marmot_tab_new_requests">Permintaan Baru</string>
@@ -1791,7 +1791,7 @@
     <string name="marmot_edit_group_info">Edit Info Grup</string>
     <string name="marmot_leave_group">Keluar dari Grup</string>
     <string name="marmot_this_group">grup ini</string>
-    <string name="marmot_leave_group_confirm">Apakah Anda yakin ingin keluar dari \"%1$s\"? Anda tidak akan lagi menerima pesan dari grup ini.</string>
+    <string name="marmot_leave_group_confirm">Apakah Anda yakin ingin keluar dari "%1$s"? Anda tidak akan lagi menerima pesan dari grup ini.</string>
     <string name="marmot_keypackage_required">Mereka harus telah menerbitkan KeyPackage (kind:30443) untuk dapat ditambahkan.</string>
     <string name="marmot_add_to_group">Tambahkan ke grup</string>
     <string name="marmot_add_member">Tambahkan anggota</string>
@@ -1800,15 +1800,15 @@
     <string name="marmot_member_suffix_you"> (Anda)</string>
     <string name="marmot_member_suffix_admin"> - admin</string>
     <string name="marmot_remove_member">Hapus Anggota</string>
-    <string name="marmot_remove_member_confirm">Apakah Anda yakin ingin menghapus \"%1$s\" dari grup ini?</string>
+    <string name="marmot_remove_member_confirm">Apakah Anda yakin ingin menghapus "%1$s" dari grup ini?</string>
     <string name="marmot_grant">Berikan</string>
     <string name="marmot_grant_admin_privileges">Berikan hak admin</string>
     <string name="marmot_grant_admin_title">Berikan Hak Admin</string>
-    <string name="marmot_grant_admin_confirm">Jadikan \"%1$s\" sebagai admin grup ini? Admin dapat menambah atau menghapus anggota, mengubah info grup, dan memberikan hak admin kepada anggota lain.</string>
+    <string name="marmot_grant_admin_confirm">Jadikan "%1$s" sebagai admin grup ini? Admin dapat menambah atau menghapus anggota, mengubah info grup, dan memberikan hak admin kepada anggota lain.</string>
     <string name="marmot_revoke">Cabut</string>
     <string name="marmot_revoke_admin_privileges">Cabut hak admin</string>
     <string name="marmot_revoke_admin_title">Cabut Hak Admin</string>
-    <string name="marmot_revoke_admin_confirm">Cabut hak admin dari \"%1$s\"? Mereka akan tetap menjadi anggota grup.</string>
+    <string name="marmot_revoke_admin_confirm">Cabut hak admin dari "%1$s"? Mereka akan tetap menjadi anggota grup.</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">belum ada acara</string>
     <string name="marmot_relay_last_event">acara terakhir%1$s</string>

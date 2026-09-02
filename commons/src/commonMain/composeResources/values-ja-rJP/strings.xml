@@ -100,12 +100,12 @@
     <string name="quote">引用</string>
     <string name="fork">フォーク</string>
     <string name="new_amount_in_sats">新しいザップ額 (sats)</string>
-    <string name="replying_to">"リプライ先: "</string>
-    <string name="and">" と "</string>
-    <string name="following">" フォロー"</string>
-    <string name="followers">" フォロワー"</string>
-    <string name="number_following">"%1$s フォロー中"</string>
-    <string name="number_followers">"%1$s フォロワー"</string>
+    <string name="replying_to">リプライ先: </string>
+    <string name="and"> と </string>
+    <string name="following"> フォロー</string>
+    <string name="followers"> フォロワー</string>
+    <string name="number_following">%1$s フォロー中</string>
+    <string name="number_followers">%1$s フォロワー</string>
     <string name="log_out">ログアウト</string>
     <string name="show_more">続きを表示</string>
     <string name="lightning_invoice">Lightningインボイス</string>
@@ -172,7 +172,7 @@
     <string name="my_awesome_group">私の素晴らしいグループ</string>
     <string name="picture_url">画像URL</string>
     <string name="optional_picture_url">画像 URL（任意）</string>
-    <string name="about_us">"私たちについて… "</string>
+    <string name="about_us">私たちについて… </string>
     <string name="search_and_add_a_user">ユーザーを検索して追加</string>
     <string name="add_a_relay">リレーを追加</string>
     <string name="my_name">自分の @タグ名</string>
@@ -207,9 +207,9 @@
     <string name="replies">リプライ</string>
     <string name="mutual">自分のもの</string>
     <string name="gallery">ギャラリー</string>
-    <string name="reports">"通報"</string>
-    <string name="number_reports">"%1$s 件の報告"</string>
-    <string name="relays">" リレー"</string>
+    <string name="reports">通報</string>
+    <string name="number_reports">%1$s 件の報告</string>
+    <string name="relays"> リレー</string>
     <string name="website">ウェブサイト</string>
     <string name="lightning_address">Lightningアドレス</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">バックアップ用に nsec ID (パスワード) をクリップボードにコピー</string>
@@ -219,13 +219,13 @@
     <string name="copy_user_id">ユーザIDをコピー</string>
     <string name="unblock_user">ユーザのブロックを解除</string>
     <string name="user_is_blocked_hidden">このユーザーはブロック/ミュートされています。投稿は非表示になっています。</string>
-    <string name="npub_hex_username">"npub、ユーザ名、テキスト"</string>
+    <string name="npub_hex_username">npub、ユーザ名、テキスト</string>
     <string name="clear">消去</string>
     <string name="app_logo">アプリのロゴ</string>
     <string name="nsec_npub_hex_private_key">nsec… または npub…</string>
     <string name="ncryptsec_password">鍵を開くためのパスワード</string>
     <string name="show_password">パスワードを表示</string>
-    <string name="i_accept_the">"同意する: "</string>
+    <string name="i_accept_the">同意する: </string>
     <string name="terms_of_use">利用規約</string>
     <string name="acceptance_of_terms_is_required">利用規約の同意が必要です</string>
     <string name="login">ログイン</string>
@@ -241,14 +241,14 @@
     <string name="chats_reply_searching_history">元のメッセージを検索中…</string>
     <string name="chats_reply_not_found">このメッセージが見つかりませんでした</string>
     <string name="chats_reply_searched">すべての relay を検索済み · タップして表示</string>
-    <string name="error_loading_replies">"リプライ読み込みエラー: "</string>
+    <string name="error_loading_replies">リプライ読み込みエラー: </string>
     <string name="try_again">後ほどお試しください</string>
     <string name="notification_feed_is_empty">通知はまだありません。</string>
     <string name="open_poll">投票を開く</string>
     <string name="feed_is_empty">フィードが空です</string>
     <string name="refresh">更新</string>
     <string name="channel_created">チャンネルが作成されました</string>
-    <string name="channel_information_changed_to">"チャンネル情報が次のように変更されました:"</string>
+    <string name="channel_information_changed_to">チャンネル情報が次のように変更されました:</string>
     <string name="marmot_group_no_messages_yet">まだメッセージがありません</string>
     <string name="paid_relay">有料 relay</string>
     <string name="tor_relay">接続時に Tor を強制使用</string>
@@ -277,7 +277,7 @@
         \n\nパスワードを忘れると、鍵を復元できなくなります。
     </string>
     <string name="encrypt_and_copy_my_secret_key">秘密鍵を暗号化してコピー</string>
-    <string name="badge_award_image_for">"%1$sのバッジ授与画像"</string>
+    <string name="badge_award_image_for">%1$sのバッジ授与画像</string>
     <string name="badge_award_image">バッジ授与の画像</string>
     <string name="new_badge_award_notif">新しいバッジが授与されました</string>
     <string name="award_granted_to">バッジ授与が承認されました:</string>
@@ -665,7 +665,7 @@
     <string name="poll_consensus_threshold">コンセンサス</string>
     <string name="poll_closing_date_time">投票終了日時</string>
     <string name="poll_closing_in">投票は%1$s後に終了</string>
-    <string name="looking_for_event">"イベント %1$s を探しています"</string>
+    <string name="looking_for_event">イベント %1$s を探しています</string>
     <string name="send_zap">Zapを送信</string>
     <string name="custom_zaps_add_a_message">公開メッセージを追加</string>
     <string name="custom_zaps_add_a_message_private">プライベートメッセージを追加</string>
@@ -868,7 +868,7 @@
     <string name="community_no_descriptor">このコミュニティには説明がありません。追加するには管理者に相談してください</string>
     <string name="user_preferences">ユーザー設定</string>
     <string name="settings_search_placeholder">設定を検索</string>
-    <string name="settings_search_no_results">\"%1$s\" に一致する設定は見つかりませんでした</string>
+    <string name="settings_search_no_results">"%1$s" に一致する設定は見つかりませんでした</string>
     <string name="reset_marmot_confirm_title">Marmot 状態をリセットしますか？</string>
     <string name="reset_marmot_confirm_body">これにより、現在のアカウントのこのデバイス上のすべての Marmot グループチャット、メッセージ履歴、および MLS キーが完全に削除されます。ピアには通知されず、次のコミットまであなたをグループ内で確認できる場合があります。この操作は元に戻せません。アプリが次回同期するときに新しい KeyPackage が公開されます。</string>
     <string name="reset_marmot_confirm_action">リセット</string>
@@ -912,7 +912,7 @@
     <string name="messages_create_public_private_chat_description">新しい公開またはプライベートグループ</string>
     <string name="messages_new_message_to">宛先</string>
     <string name="messages_new_message_subject_caption">会話のトピック</string>
-    <string name="messages_new_message_to_caption">"「@ユーザー1, @ユーザー2, @ユーザー3」"</string>
+    <string name="messages_new_message_to_caption">「@ユーザー1, @ユーザー2, @ユーザー3」</string>
     <string name="messages_group_descriptor">このグループのメンバー</string>
     <string name="messages_new_subject_message">メンバーへの説明</string>
     <string name="messages_new_subject_message_placeholder">新しい目標のための名前変更について。</string>
@@ -1182,7 +1182,7 @@
     <string name="calendar_untitled">（タイトルなし）</string>
     <string name="calendar_all_day">終日</string>
     <string name="calendar_rsvp_going_prefixed">✓ 参加する</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? 未定</string>
+    <string name="calendar_rsvp_maybe_prefixed">? 未定</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ 参加できない</string>
     <string name="calendar_collection_title">タイトル</string>
     <string name="calendar_collection_description">説明</string>
@@ -1474,7 +1474,7 @@
     <string name="skip_for_now">今はスキップ</string>
     <string name="fetching_follow_list">フォローリストを取得中…</string>
     <string name="no_follows_found">フォローが見つかりません</string>
-    <string name="import_follows_tips">"「友人またはコミュニティリーダーのプロフィールを入力してください。npub、NIP-05アドレス、またはalice@example.bitやid/aliceのようなNamecoin名を使用して、ブロックチェーン認証済みIDを利用できます。」"</string>
+    <string name="import_follows_tips">「友人またはコミュニティリーダーのプロフィールを入力してください。npub、NIP-05アドレス、またはalice@example.bitやid/aliceのようなNamecoin名を使用して、ブロックチェーン認証済みIDを利用できます。」</string>
     <string name="select_all">すべて選択</string>
     <string name="namecoin_test_connection">接続テスト</string>
     <string name="namecoin_testing">サーバーをテスト中…</string>
@@ -1718,8 +1718,8 @@
     <string name="emoji_add_dialog_title">カスタム絵文字を追加する</string>
     <string name="emoji_remove_dialog_title">:%1$s: を削除しますか？</string>
     <string name="emoji_long_press_hint">絵文字を長押しすると削除できます</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" はあなたの絵文字リストに含まれています</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" はあなたの絵文字リストに含まれていません</string>
+    <string name="emoji_pack_is_in_list">"%1$s" はあなたの絵文字リストに含まれています</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" はあなたの絵文字リストに含まれていません</string>
     <string name="emoji_pack_actions_dialog_title">絵文字パックの操作</string>
     <string name="emoji_private_toggle">プライベート</string>
     <string name="emoji_private_badge">プライベート絵文字</string>
@@ -1755,7 +1755,7 @@
     <string name="marmot_edit_group_info">グループ情報を編集する</string>
     <string name="marmot_leave_group">グループを退出する</string>
     <string name="marmot_this_group">このグループ</string>
-    <string name="marmot_leave_group_confirm">\"%1$s\" を退出してもよろしいですか？このグループからのメッセージは届かなくなります。</string>
+    <string name="marmot_leave_group_confirm">"%1$s" を退出してもよろしいですか？このグループからのメッセージは届かなくなります。</string>
     <string name="marmot_keypackage_required">追加するには、KeyPackage（kind:30443）を公開している必要があります。</string>
     <string name="marmot_add_to_group">グループに追加する</string>
     <string name="marmot_add_member">メンバーを追加する</string>
@@ -1764,15 +1764,15 @@
     <string name="marmot_member_suffix_you">（あなた）</string>
     <string name="marmot_member_suffix_admin"> - 管理者</string>
     <string name="marmot_remove_member">メンバーを削除する</string>
-    <string name="marmot_remove_member_confirm">\"%1$s\" をこのグループから削除してもよろしいですか？</string>
+    <string name="marmot_remove_member_confirm">"%1$s" をこのグループから削除してもよろしいですか？</string>
     <string name="marmot_grant">付与する</string>
     <string name="marmot_grant_admin_privileges">管理者権限を付与する</string>
     <string name="marmot_grant_admin_title">管理者権限を付与する</string>
-    <string name="marmot_grant_admin_confirm">\"%1$s\" をこのグループの管理者にしますか？管理者はメンバーの追加・削除、グループ情報の変更、他のメンバーへの管理者権限の付与が可能です。</string>
+    <string name="marmot_grant_admin_confirm">"%1$s" をこのグループの管理者にしますか？管理者はメンバーの追加・削除、グループ情報の変更、他のメンバーへの管理者権限の付与が可能です。</string>
     <string name="marmot_revoke">取り消す</string>
     <string name="marmot_revoke_admin_privileges">管理者権限を取り消す</string>
     <string name="marmot_revoke_admin_title">管理者権限を取り消す</string>
-    <string name="marmot_revoke_admin_confirm">\"%1$s\" の管理者権限を取り消しますか？グループのメンバーとしては残ります。</string>
+    <string name="marmot_revoke_admin_confirm">"%1$s" の管理者権限を取り消しますか？グループのメンバーとしては残ります。</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">イベントはまだありません</string>
     <string name="marmot_relay_last_event">最後のイベント%1$s</string>

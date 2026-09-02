@@ -102,12 +102,12 @@
     <string name="quote">Citi</string>
     <string name="fork">Forko</string>
     <string name="new_amount_in_sats">Nova Kvanto da Satoj</string>
-    <string name="replying_to">"respondante al "</string>
-    <string name="and">" kaj "</string>
-    <string name="following">" Sekvanti"</string>
-    <string name="followers">" Sekvantoj"</string>
-    <string name="number_following">"%1$s Sekvata(j)"</string>
-    <string name="number_followers">"%1$s Sekvanto(j)"</string>
+    <string name="replying_to">respondante al </string>
+    <string name="and"> kaj </string>
+    <string name="following"> Sekvanti</string>
+    <string name="followers"> Sekvantoj</string>
+    <string name="number_following">%1$s Sekvata(j)</string>
+    <string name="number_followers">%1$s Sekvanto(j)</string>
     <string name="log_out">Elsaluti</string>
     <string name="show_more">Montri Plu</string>
     <string name="lightning_invoice">Lightning-Fakturo</string>
@@ -174,7 +174,7 @@
     <string name="my_awesome_group">Mia Mojosa Grupo</string>
     <string name="picture_url">Bilda URL</string>
     <string name="optional_picture_url">Bilda URL (Nedeviga)</string>
-    <string name="about_us">"Pri ni…"</string>
+    <string name="about_us">Pri ni…</string>
     <string name="search_and_add_a_user">Serĉi kaj aldoni uzanton</string>
     <string name="add_a_relay">Aldoni Plusendilon</string>
     <string name="my_name">Mia @etiked-nomo</string>
@@ -210,9 +210,9 @@
     <string name="replies">Respondoj</string>
     <string name="mutual">Via</string>
     <string name="gallery">Galerio</string>
-    <string name="reports">"Raportoj"</string>
-    <string name="number_reports">"%1$s Raportoj"</string>
-    <string name="relays">" Plusendiloj"</string>
+    <string name="reports">Raportoj</string>
+    <string name="number_reports">%1$s Raportoj</string>
+    <string name="relays"> Plusendiloj</string>
     <string name="website">Retejo</string>
     <string name="lightning_address">Lightning-Adreso</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopii la Nsec ID (vian pasvorton) al la tondujo por sekurkopio</string>
@@ -222,13 +222,13 @@
     <string name="copy_user_id">Kopii ID de uzanto</string>
     <string name="unblock_user">Malbloki Uzanton</string>
     <string name="user_is_blocked_hidden">Tiu ĉi uzanto estas blokita/silentita. Iliaj afiŝoj estas kaŝitaj.</string>
-    <string name="npub_hex_username">"npub, hekso, uzantnomo "</string>
+    <string name="npub_hex_username">npub, hekso, uzantnomo </string>
     <string name="clear">Klarigi</string>
     <string name="app_logo">Logo de Apo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / heksa privata ŝlosilo</string>
     <string name="ncryptsec_password">pasvorto por malfermi la ŝlosilon</string>
     <string name="show_password">Montri Pasvorton</string>
-    <string name="i_accept_the">"Mi akceptas la "</string>
+    <string name="i_accept_the">Mi akceptas la </string>
     <string name="terms_of_use">kondiĉojn de uzado</string>
     <string name="acceptance_of_terms_is_required">Konsento al kondiĉoj estas nepra</string>
     <string name="login">Ensaluti</string>
@@ -244,14 +244,14 @@
     <string name="chats_reply_searching_history">Serĉante la originalan mesaĝon…</string>
     <string name="chats_reply_not_found">Ne povis trovi tiun ĉi mesaĝon</string>
     <string name="chats_reply_searched">Serĉis ĉiun relay · tuŝetu por vidi</string>
-    <string name="error_loading_replies">"Eraro ŝargante respondojn: "</string>
+    <string name="error_loading_replies">Eraro ŝargante respondojn: </string>
     <string name="try_again">Provi denove</string>
     <string name="notification_feed_is_empty">Ankoraŭ neniuj sciigoj.</string>
     <string name="open_poll">Malfermi Balotadon</string>
     <string name="feed_is_empty">Fluo estas malplena.</string>
     <string name="refresh">Renovigi</string>
     <string name="channel_created">Kanalo kreita</string>
-    <string name="channel_information_changed_to">"Kanala Informo ŝanĝigita al"</string>
+    <string name="channel_information_changed_to">Kanala Informo ŝanĝigita al</string>
     <string name="marmot_group_no_messages_yet">Ankoraŭ neniuj mesaĝoj</string>
     <string name="paid_relay">Pagata relay</string>
     <string name="tor_relay">Devigas Tor dum konektado</string>
@@ -280,8 +280,8 @@
         \n\nSe vi perdas vian pasvorton, vi ne povos reakiri vian ŝlosilon.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Ĉifri kaj kopii mian seketan ŝlosilon</string>
-    <string name="badge_award_image_for">"Ŝildeto-premia bildo por %1$s"</string>
-    <string name="badge_award_image">\"Insigna premibildeto</string>
+    <string name="badge_award_image_for">Ŝildeto-premia bildo por %1$s</string>
+    <string name="badge_award_image">"Insigna premibildeto</string>
     <string name="new_badge_award_notif">Vi ricevis novan ŝildeto-premion</string>
     <string name="award_granted_to">Ŝildeto-premio doniĝita al</string>
     <string name="account_switch_add_account_dialog_title">Aldoni Novan Konton</string>
@@ -495,7 +495,7 @@
     <string name="nest_state_speaking">Parolas nun</string>
     <string name="nest_state_mic_open">Mikrofono malfermita</string>
     <string name="nest_leave_host_title">Fini ĉi tiun neston?</string>
-    <string name="nest_leave_host_body">Vi estas la gastiganto. Fermi la ĉambron malkonektos ĉiujn. Elektu \"Nur forlasi\" se vi volas reveni poste — la ĉambro aŭtomate fermiĝos post 8 horoj da neaktiveco.</string>
+    <string name="nest_leave_host_body">Vi estas la gastiganto. Fermi la ĉambron malkonektos ĉiujn. Elektu "Nur forlasi" se vi volas reveni poste — la ĉambro aŭtomate fermiĝos post 8 horoj da neaktiveco.</string>
     <string name="nest_leave_host_close">Fermi ĉambron</string>
     <string name="nest_leave_host_just_leave">Nur forlasi</string>
     <string name="nest_live_chip">VIVA</string>
@@ -668,7 +668,7 @@
     <string name="poll_consensus_threshold">Interkonsento</string>
     <string name="poll_closing_date_time">Dato &amp; Horo de fermo de balotenketo</string>
     <string name="poll_closing_in">Balotenketo fermiĝas en %1$s</string>
-    <string name="looking_for_event">"Serĉanta Eventon %1$s"</string>
+    <string name="looking_for_event">Serĉanta Eventon %1$s</string>
     <string name="send_zap">Sendi Zap</string>
     <string name="custom_zaps_add_a_message">Aldoni publikan mesaĝon</string>
     <string name="custom_zaps_add_a_message_private">Aldoni privatan mesaĝon</string>
@@ -874,7 +874,7 @@
     <string name="community_no_descriptor">Ĉi tiu komunumo ne havas priskribon. Parolu kun la posedanto por aldoni</string>
     <string name="user_preferences">Uzantaj Preferoj</string>
     <string name="settings_search_placeholder">Serĉi agordojn</string>
-    <string name="settings_search_no_results">Neniuj agordoj trovitaj por \"%1$s\"</string>
+    <string name="settings_search_no_results">Neniuj agordoj trovitaj por "%1$s"</string>
     <string name="reset_marmot_confirm_title">Restarigi Marmot-Staton?</string>
     <string name="reset_marmot_confirm_body">Tio ĉi permanente forigos ĉiun Marmot-grupbabiladon, mesaĝhistorion kaj MLS-ŝlosilon sur ĉi tiu aparato por la nuna konto. Partneroj ne estos sciigitaj kaj eble ankoraŭ vidos vin en grupoj ĝis ilia sekva enmeto. Tion ĉi ne eblas malfari. Nova KeyPackage estos publikigita la sekvan fojon kiam la aplikaĵo sinkronigas.</string>
     <string name="reset_marmot_confirm_action">Restarigi</string>
@@ -907,7 +907,7 @@
     <string name="music_playlist_collaborative_hint">Lasi aliajn aldoni pecojn al ĉi tiu ludomo.</string>
     <string name="music_playlist_delete">Forigi ĉi tiun ludumon</string>
     <string name="music_playlist_delete_confirm">Publikigi NIP-09 forigon por ĉi tiu ludomo?</string>
-    <string name="music_playlist_no_tracks_hint">Ankoraŭ neniuj pecoj. Aldonu pecojn el la menuo de kanto uzante \"Aldoni al ludomo\".</string>
+    <string name="music_playlist_no_tracks_hint">Ankoraŭ neniuj pecoj. Aldonu pecojn el la menuo de kanto uzante "Aldoni al ludomo".</string>
     <string name="music_playlist_move_track_up">Movi pecon supren</string>
     <string name="music_playlist_move_track_down">Movi pecon malsupren</string>
     <string name="music_playlist_remove_track">Forigi pecon el ludomo</string>
@@ -918,7 +918,7 @@
     <string name="messages_create_public_private_chat_description">Nova Publika aŭ Privata Grupo</string>
     <string name="messages_new_message_to">Al</string>
     <string name="messages_new_message_subject_caption">Temo de la konversacio</string>
-    <string name="messages_new_message_to_caption">"\@Uzanto1, @Uzanto2, @Uzanto3"</string>
+    <string name="messages_new_message_to_caption">@Uzanto1, @Uzanto2, @Uzanto3</string>
     <string name="messages_group_descriptor">Anoj de ĉi tiu grupo</string>
     <string name="messages_new_subject_message">Klarigo al anoj</string>
     <string name="messages_new_subject_message_placeholder">Ŝanĝante la nomon por la novaj celoj.</string>
@@ -1118,7 +1118,7 @@
     <string name="wallet_onchain_pending">Atendanta</string>
     <string name="wallet_onchain_public_chip">Publika</string>
     <string name="wallet_onchain_public_dialog_title">Ĉi tiu monujo estas publika</string>
-    <string name="wallet_onchain_public_dialog_body">Via Taproot-adreso estas derivita de via Nostr-publika ŝlosilo, do ĉiu kiu konas vian npub povas vidi ĉi tiu monujo\' saldon kaj transakcian historion sur la blokĉeno.\n\nPor konservi vian privatecon, financi kaj malŝarĝi ĉi tiun monujon de kaj al ne-privataj kontoj, kiel interŝanĝejoj. Neniam miksu ĉi tiujn financojn kun viaj malvarmaj monujoj, kaj traktu ilin kiel monon kiun vi povas perdi, ĉar ĉiu kontrolanta vian nsec povas elspezi ĝin.</string>
+    <string name="wallet_onchain_public_dialog_body">Via Taproot-adreso estas derivita de via Nostr-publika ŝlosilo, do ĉiu kiu konas vian npub povas vidi ĉi tiu monujo' saldon kaj transakcian historion sur la blokĉeno.\n\nPor konservi vian privatecon, financi kaj malŝarĝi ĉi tiun monujon de kaj al ne-privataj kontoj, kiel interŝanĝejoj. Neniam miksu ĉi tiujn financojn kun viaj malvarmaj monujoj, kaj traktu ilin kiel monon kiun vi povas perdi, ĉar ĉiu kontrolanta vian nsec povas elspezi ĝin.</string>
     <string name="wallet_onchain_public_dialog_confirm">Komprenis</string>
     <string name="wallet_onchain_copy_dialog_confirm">Kopii adreson</string>
     <string name="onchain_send_title">Sendi onchain Zap</string>
@@ -1191,7 +1191,7 @@
     <string name="calendar_untitled">(sen titolo)</string>
     <string name="calendar_all_day">Tuta tago</string>
     <string name="calendar_rsvp_going_prefixed">✓ Iras</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Eble</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Eble</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Ne povas iri</string>
     <string name="calendar_collection_title">Titolo</string>
     <string name="calendar_collection_description">Priskribo</string>
@@ -1370,7 +1370,7 @@
     <string name="remove_dvm_from_favorites">Forigi el favoratoj</string>
     <string name="favorite_dvms_explainer">Fluo-algoritmoj, kiujn vi steligas, aperas ĉi tie kaj kiel filtraj eroj en la Hejma fluo.</string>
     <string name="favorite_dvms_empty_headline">Alpingli viajn favoratajn algoritmojn</string>
-    <string name="favorite_dvms_empty_step1">Frapu \"%1$s\" sube por foliumi algoritmojn.</string>
+    <string name="favorite_dvms_empty_step1">Frapu "%1$s" sube por foliumi algoritmojn.</string>
     <string name="favorite_dvms_empty_step2">Frapu la %1$s apud fluo por konservi ĝin ĉi tie.</string>
     <string name="favorite_dvms_empty_cta">Aldoni kelkajn fluojn</string>
     <string name="favorite_dvms_add_more">Aldoni pliajn…</string>
@@ -1486,7 +1486,7 @@
     <string name="skip_for_now">Preteriri nuntempe</string>
     <string name="fetching_follow_list">Alŝutanta sekvan liston…</string>
     <string name="no_follows_found">Neniuj sekvoj trovitaj</string>
-    <string name="import_follows_tips">"Enigu la profilon de amiko aŭ komunuma gvidanto. Vi povas uzi ilian npub, NIP-05 adreson, aŭ Namecoin-nomon kiel alice@example.bit aŭ id/alice por blokĉene kontrolitaj identecoj."</string>
+    <string name="import_follows_tips">Enigu la profilon de amiko aŭ komunuma gvidanto. Vi povas uzi ilian npub, NIP-05 adreson, aŭ Namecoin-nomon kiel alice@example.bit aŭ id/alice por blokĉene kontrolitaj identecoj.</string>
     <string name="select_all">Elekti Ĉiujn</string>
     <string name="namecoin_test_connection">Testi Konekton</string>
     <string name="namecoin_testing">Testante servilojn…</string>
@@ -1566,7 +1566,7 @@
     <string name="hls_renditions_label">Rendiciadoj</string>
     <string name="hls_renditions_source_format">Fonta rezolucio: %1$d×%2$d</string>
     <string name="hls_publish_button">Publikigi HD-videon</string>
-    <string name="hls_publishing_header_format">Publikigado de „%1$s\"…</string>
+    <string name="hls_publishing_header_format">Publikigado de „%1$s"…</string>
     <string name="hls_state_transcoding_format">Transkodado de %1$s</string>
     <string name="hls_state_uploading_idle">Alŝuto</string>
     <string name="hls_state_uploading_format">Alŝutado de %1$d el %2$d</string>
@@ -1730,8 +1730,8 @@
     <string name="emoji_add_dialog_title">Aldoni propran emodžion</string>
     <string name="emoji_remove_dialog_title">Forigi :%1$s:?</string>
     <string name="emoji_long_press_hint">Longe premu emodžion por forigi ĝin</string>
-    <string name="emoji_pack_is_in_list">„%1$s\" estas en via emodžio-listo</string>
-    <string name="emoji_pack_is_not_in_list">„%1$s\" ne estas en via emodžio-listo</string>
+    <string name="emoji_pack_is_in_list">„%1$s" estas en via emodžio-listo</string>
+    <string name="emoji_pack_is_not_in_list">„%1$s" ne estas en via emodžio-listo</string>
     <string name="emoji_pack_actions_dialog_title">Agoj de emodžio-pako</string>
     <string name="emoji_private_toggle">Privata</string>
     <string name="emoji_private_badge">Privata emodžio</string>
@@ -1767,7 +1767,7 @@
     <string name="marmot_edit_group_info">Redakti Informojn de Grupo</string>
     <string name="marmot_leave_group">Forlasi Grupon</string>
     <string name="marmot_this_group">ĉi tiun grupon</string>
-    <string name="marmot_leave_group_confirm">Ĉu vi certas, ke vi volas forlasi „%1$s\"? Vi ne plu ricevos mesaĝojn el ĉi tiu grupo.</string>
+    <string name="marmot_leave_group_confirm">Ĉu vi certas, ke vi volas forlasi „%1$s"? Vi ne plu ricevos mesaĝojn el ĉi tiu grupo.</string>
     <string name="marmot_keypackage_required">Ili devas esti publikigintaj KeyPackage (kind:30443) por esti aldonitaj.</string>
     <string name="marmot_add_to_group">Aldoni al grupo</string>
     <string name="marmot_add_member">Aldoni membron</string>
@@ -1776,15 +1776,15 @@
     <string name="marmot_member_suffix_you"> (vi)</string>
     <string name="marmot_member_suffix_admin"> - administranto</string>
     <string name="marmot_remove_member">Forigi Membron</string>
-    <string name="marmot_remove_member_confirm">Ĉu vi certas, ke vi volas forigi „%1$s\" el ĉi tiu grupo?</string>
+    <string name="marmot_remove_member_confirm">Ĉu vi certas, ke vi volas forigi „%1$s" el ĉi tiu grupo?</string>
     <string name="marmot_grant">Doni</string>
     <string name="marmot_grant_admin_privileges">Doni administrantajn privilegiojn</string>
     <string name="marmot_grant_admin_title">Doni Administrantajn Privilegiojn</string>
-    <string name="marmot_grant_admin_confirm">Fari „%1$s\" administranton de ĉi tiu grupo? Administrantoj povas aldoni aŭ forigi membrojn, ŝanĝi informojn de grupo, kaj doni administrantajn privilegiojn al aliaj membroj.</string>
+    <string name="marmot_grant_admin_confirm">Fari „%1$s" administranton de ĉi tiu grupo? Administrantoj povas aldoni aŭ forigi membrojn, ŝanĝi informojn de grupo, kaj doni administrantajn privilegiojn al aliaj membroj.</string>
     <string name="marmot_revoke">Revoki</string>
     <string name="marmot_revoke_admin_privileges">Revoki administrantajn privilegiojn</string>
     <string name="marmot_revoke_admin_title">Revoki Administrantajn Privilegiojn</string>
-    <string name="marmot_revoke_admin_confirm">Revoki administrantajn privilegiojn de „%1$s\"? Ili restos membro de la grupo.</string>
+    <string name="marmot_revoke_admin_confirm">Revoki administrantajn privilegiojn de „%1$s"? Ili restos membro de la grupo.</string>
     <string name="marmot_relay_no_events">ankoraŭ neniuj eventoj</string>
     <string name="marmot_relay_last_event">lasta evento%1$s</string>
     <string name="copy">Kopii</string>

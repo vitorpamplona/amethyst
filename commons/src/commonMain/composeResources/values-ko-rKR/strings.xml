@@ -100,12 +100,12 @@
     <string name="quote">인용</string>
     <string name="fork">포크</string>
     <string name="new_amount_in_sats">새 금액 (sats)</string>
-    <string name="replying_to">"답글 대상: "</string>
-    <string name="and">" 및 "</string>
-    <string name="following">" 팔로잉"</string>
-    <string name="followers">" 팔로워"</string>
-    <string name="number_following">"%1$s 팔로잉"</string>
-    <string name="number_followers">"%1$s 팔로워"</string>
+    <string name="replying_to">답글 대상: </string>
+    <string name="and"> 및 </string>
+    <string name="following"> 팔로잉</string>
+    <string name="followers"> 팔로워</string>
+    <string name="number_following">%1$s 팔로잉</string>
+    <string name="number_followers">%1$s 팔로워</string>
     <string name="log_out">로그아웃</string>
     <string name="show_more">더 보기</string>
     <string name="invoice_expired">만료됨</string>
@@ -167,7 +167,7 @@
     <string name="my_awesome_group">나의 멋진 그룹</string>
     <string name="picture_url">사진 URL</string>
     <string name="optional_picture_url">사진 URL (선택)</string>
-    <string name="about_us">"소개… "</string>
+    <string name="about_us">소개… </string>
     <string name="search_and_add_a_user">사용자 검색 및 추가</string>
     <string name="add_a_relay">relay 추가</string>
     <string name="my_name">내 @태그 이름</string>
@@ -202,9 +202,9 @@
     <string name="replies">답글</string>
     <string name="mutual">내 것</string>
     <string name="gallery">갤러리</string>
-    <string name="reports">"신고"</string>
-    <string name="number_reports">"%1$s 신고"</string>
-    <string name="relays">" relay"</string>
+    <string name="reports">신고</string>
+    <string name="number_reports">%1$s 신고</string>
+    <string name="relays"> relay</string>
     <string name="website">웹사이트</string>
     <string name="lightning_address">Lightning 주소</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Nsec ID(비밀번호)를 백업을 위해 클립보드에 복사합니다</string>
@@ -214,13 +214,13 @@
     <string name="copy_user_id">사용자 ID 복사</string>
     <string name="unblock_user">사용자 차단 해제</string>
     <string name="user_is_blocked_hidden">이 사용자는 차단/뮤트되었습니다. 게시물이 숨겨져 있습니다.</string>
-    <string name="npub_hex_username">"npub, 사용자 이름, 텍스트"</string>
+    <string name="npub_hex_username">npub, 사용자 이름, 텍스트</string>
     <string name="clear">지우기</string>
     <string name="app_logo">앱 로고</string>
     <string name="nsec_npub_hex_private_key">nsec.. 또는 npub..</string>
     <string name="ncryptsec_password">키를 열기 위한 비밀번호</string>
     <string name="show_password">비밀번호 표시</string>
-    <string name="i_accept_the">"동의합니다 "</string>
+    <string name="i_accept_the">동의합니다 </string>
     <string name="terms_of_use">이용 약관</string>
     <string name="acceptance_of_terms_is_required">이용 약관 동의가 필요합니다</string>
     <string name="login">로그인</string>
@@ -236,14 +236,14 @@
     <string name="chats_reply_searching_history">원본 메시지를 찾는 중…</string>
     <string name="chats_reply_not_found">이 메시지를 찾을 수 없습니다</string>
     <string name="chats_reply_searched">모든 relay 검색 완료 · 탭하여 보기</string>
-    <string name="error_loading_replies">"답글 불러오기 오류: "</string>
+    <string name="error_loading_replies">답글 불러오기 오류: </string>
     <string name="try_again">다시 시도</string>
     <string name="notification_feed_is_empty">아직 알림이 없습니다.</string>
     <string name="open_poll">투표 열기</string>
     <string name="feed_is_empty">피드가 비어 있습니다.</string>
     <string name="refresh">새로고침</string>
     <string name="channel_created">채널 생성됨</string>
-    <string name="channel_information_changed_to">"채널 정보가 변경되었습니다"</string>
+    <string name="channel_information_changed_to">채널 정보가 변경되었습니다</string>
     <string name="marmot_group_no_messages_yet">아직 메시지가 없습니다</string>
     <string name="paid_relay">유료 relay</string>
     <string name="tor_relay">연결 시 Tor 강제 사용</string>
@@ -272,8 +272,8 @@
         \n\n비밀번호를 분실하면 키를 복구할 수 없습니다.
     </string>
     <string name="encrypt_and_copy_my_secret_key">내 비밀 키 암호화 및 복사</string>
-    <string name="badge_award_image_for">"%1$s의 배지 수상 이미지"</string>
-    <string name="badge_award_image">\"배지 수상 이미지</string>
+    <string name="badge_award_image_for">%1$s의 배지 수상 이미지</string>
+    <string name="badge_award_image">"배지 수상 이미지</string>
     <string name="new_badge_award_notif">새 배지를 수여받았습니다</string>
     <string name="award_granted_to">배지 수여 대상</string>
     <string name="account_switch_add_account_dialog_title">새 계정 추가</string>
@@ -486,7 +486,7 @@
     <string name="nest_state_speaking">현재 발언 중</string>
     <string name="nest_state_mic_open">마이크 열림</string>
     <string name="nest_leave_host_title">이 Nest를 종료하시겠습니까?</string>
-    <string name="nest_leave_host_body">귀하는 호스트입니다. 방을 닫으면 모든 참가자의 연결이 끊깁니다. 나중에 돌아오고 싶다면 \"그냥 나가기\"를 선택하세요 — 비활성 상태가 8시간 지속되면 방이 자동으로 닫힙니다.</string>
+    <string name="nest_leave_host_body">귀하는 호스트입니다. 방을 닫으면 모든 참가자의 연결이 끊깁니다. 나중에 돌아오고 싶다면 "그냥 나가기"를 선택하세요 — 비활성 상태가 8시간 지속되면 방이 자동으로 닫힙니다.</string>
     <string name="nest_leave_host_close">방 닫기</string>
     <string name="nest_leave_host_just_leave">그냥 나가기</string>
     <string name="nest_live_chip">라이브</string>
@@ -659,7 +659,7 @@
     <string name="poll_consensus_threshold">합의</string>
     <string name="poll_closing_date_time">투표 종료 날짜 &amp; 시간</string>
     <string name="poll_closing_in">투표가 %1$s 후 종료됩니다</string>
-    <string name="looking_for_event">"이벤트 %1$s 검색 중"</string>
+    <string name="looking_for_event">이벤트 %1$s 검색 중</string>
     <string name="send_zap">Zap 전송</string>
     <string name="custom_zaps_add_a_message">공개 메시지 추가</string>
     <string name="custom_zaps_add_a_message_private">비공개 메시지 추가</string>
@@ -861,7 +861,7 @@
     <string name="community_no_descriptor">이 커뮤니티에는 설명이 없습니다. 추가하려면 소유자에게 문의하세요</string>
     <string name="user_preferences">사용자 설정</string>
     <string name="settings_search_placeholder">설정 검색</string>
-    <string name="settings_search_no_results">\"%1$s\"에 대한 설정을 찾을 수 없습니다</string>
+    <string name="settings_search_no_results">"%1$s"에 대한 설정을 찾을 수 없습니다</string>
     <string name="reset_marmot_confirm_title">Marmot 상태를 초기화하시겠습니까?</string>
     <string name="reset_marmot_confirm_body">현재 계정의 모든 Marmot 그룹 채팅, 메시지 기록 및 이 기기의 MLS 키가 영구적으로 삭제됩니다. 피어에게는 알림이 전송되지 않으며, 다음 커밋 전까지 그룹에서 계속 표시될 수 있습니다. 이 작업은 되돌릴 수 없습니다. 앱이 다음에 동기화될 때 새 KeyPackage가 게시됩니다.</string>
     <string name="reset_marmot_confirm_action">초기화</string>
@@ -894,7 +894,7 @@
     <string name="music_playlist_collaborative_hint">다른 사람이 이 플레이리스트에 트랙을 추가할 수 있습니다.</string>
     <string name="music_playlist_delete">이 플레이리스트 삭제</string>
     <string name="music_playlist_delete_confirm">이 플레이리스트에 대한 NIP-09 삭제를 게시하시겠습니까?</string>
-    <string name="music_playlist_no_tracks_hint">아직 트랙이 없습니다. 노래 메뉴에서 \"플레이리스트에 추가\"를 사용하여 트랙을 추가하세요.</string>
+    <string name="music_playlist_no_tracks_hint">아직 트랙이 없습니다. 노래 메뉴에서 "플레이리스트에 추가"를 사용하여 트랙을 추가하세요.</string>
     <string name="music_playlist_move_track_up">트랙 위로 이동</string>
     <string name="music_playlist_move_track_down">트랙 아래로 이동</string>
     <string name="music_playlist_remove_track">플레이리스트에서 트랙 제거</string>
@@ -905,7 +905,7 @@
     <string name="messages_create_public_private_chat_description">새 공개 또는 비공개 그룹</string>
     <string name="messages_new_message_to">받는 사람</string>
     <string name="messages_new_message_subject_caption">대화 주제</string>
-    <string name="messages_new_message_to_caption">"\"@User1, @User2, @User3\""</string>
+    <string name="messages_new_message_to_caption">"@User1, @User2, @User3"</string>
     <string name="messages_group_descriptor">이 그룹의 멤버</string>
     <string name="messages_new_subject_message">멤버에 대한 설명</string>
     <string name="messages_new_subject_message_placeholder">새 목표의 이름 변경.</string>
@@ -1175,7 +1175,7 @@
     <string name="calendar_untitled">(제목 없음)</string>
     <string name="calendar_all_day">종일</string>
     <string name="calendar_rsvp_going_prefixed">✓ 참석</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? 미정</string>
+    <string name="calendar_rsvp_maybe_prefixed">? 미정</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ 불참</string>
     <string name="calendar_collection_title">제목</string>
     <string name="calendar_collection_description">설명</string>
@@ -1351,7 +1351,7 @@
     <string name="remove_dvm_from_favorites">즐겨찾기에서 제거</string>
     <string name="favorite_dvms_explainer">별표 표시한 피드 알고리즘이 여기에 표시되며 홈 피드의 필터 칩으로도 나타납니다.</string>
     <string name="favorite_dvms_empty_headline">좋아하는 알고리즘 고정하기</string>
-    <string name="favorite_dvms_empty_step1">아래 \"%1$s\"를 탭하여 알고리즘을 탐색하세요.</string>
+    <string name="favorite_dvms_empty_step1">아래 "%1$s"를 탭하여 알고리즘을 탐색하세요.</string>
     <string name="favorite_dvms_empty_step2">피드 옆의 %1$s를 탭하여 여기에 저장하세요.</string>
     <string name="favorite_dvms_empty_cta">피드 추가하기</string>
     <string name="favorite_dvms_add_more">더 추가…</string>
@@ -1465,7 +1465,7 @@
     <string name="skip_for_now">지금은 건너뛰기</string>
     <string name="fetching_follow_list">팔로우 목록 가져오는 중…</string>
     <string name="no_follows_found">팔로우를 찾을 수 없습니다</string>
-    <string name="import_follows_tips">"친구나 커뮤니티 리더의 프로필을 입력하세요. npub, NIP-05 주소, 또는 alice@example.bit이나 id/alice와 같은 Namecoin 이름으로 블록체인 인증 신원을 사용할 수 있습니다."</string>
+    <string name="import_follows_tips">친구나 커뮤니티 리더의 프로필을 입력하세요. npub, NIP-05 주소, 또는 alice@example.bit이나 id/alice와 같은 Namecoin 이름으로 블록체인 인증 신원을 사용할 수 있습니다.</string>
     <string name="select_all">모두 선택</string>
     <string name="namecoin_test_connection">연결 테스트</string>
     <string name="namecoin_testing">서버 테스트 중…</string>
@@ -1546,7 +1546,7 @@
     <string name="hls_renditions_label">렌디션</string>
     <string name="hls_renditions_source_format">원본 해상도: %1$d×%2$d</string>
     <string name="hls_publish_button">HD 동영상 게시</string>
-    <string name="hls_publishing_header_format">\"%1$s\" 게시 중…</string>
+    <string name="hls_publishing_header_format">"%1$s" 게시 중…</string>
     <string name="hls_state_transcoding_format">%1$s 트랜스코딩 중</string>
     <string name="hls_state_uploading_idle">업로드</string>
     <string name="hls_state_uploading_format">%2$d 중 %1$d 업로드 중</string>
@@ -1708,8 +1708,8 @@
     <string name="emoji_add_dialog_title">커스텀 emoji 추가</string>
     <string name="emoji_remove_dialog_title">:%1$s:을(를) 제거할까요?</string>
     <string name="emoji_long_press_hint">Emoji를 길게 눌러 제거하세요</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\"이(가) emoji 목록에 있습니다</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\"이(가) emoji 목록에 없습니다</string>
+    <string name="emoji_pack_is_in_list">"%1$s"이(가) emoji 목록에 있습니다</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s"이(가) emoji 목록에 없습니다</string>
     <string name="emoji_pack_actions_dialog_title">Emoji 팩 작업</string>
     <string name="emoji_private_toggle">비공개</string>
     <string name="emoji_private_badge">비공개 emoji</string>
@@ -1745,7 +1745,7 @@
     <string name="marmot_edit_group_info">그룹 정보 편집</string>
     <string name="marmot_leave_group">그룹 나가기</string>
     <string name="marmot_this_group">이 그룹</string>
-    <string name="marmot_leave_group_confirm">\"%1$s\"을(를) 나가시겠습니까? 이 그룹에서 더 이상 메시지를 받을 수 없습니다.</string>
+    <string name="marmot_leave_group_confirm">"%1$s"을(를) 나가시겠습니까? 이 그룹에서 더 이상 메시지를 받을 수 없습니다.</string>
     <string name="marmot_keypackage_required">추가하려면 KeyPackage (kind:30443)를 게시했어야 합니다.</string>
     <string name="marmot_add_to_group">그룹에 추가</string>
     <string name="marmot_add_member">멤버 추가</string>
@@ -1754,15 +1754,15 @@
     <string name="marmot_member_suffix_you"> (나)</string>
     <string name="marmot_member_suffix_admin"> - 관리자</string>
     <string name="marmot_remove_member">멤버 제거</string>
-    <string name="marmot_remove_member_confirm">이 그룹에서 \"%1$s\"을(를) 제거하시겠습니까?</string>
+    <string name="marmot_remove_member_confirm">이 그룹에서 "%1$s"을(를) 제거하시겠습니까?</string>
     <string name="marmot_grant">부여</string>
     <string name="marmot_grant_admin_privileges">관리자 권한 부여</string>
     <string name="marmot_grant_admin_title">관리자 권한 부여</string>
-    <string name="marmot_grant_admin_confirm">\"%1$s\"을(를) 이 그룹의 관리자로 만드시겠습니까? 관리자는 멤버를 추가하거나 제거하고, 그룹 정보를 변경하고, 다른 멤버에게 관리자 권한을 부여할 수 있습니다.</string>
+    <string name="marmot_grant_admin_confirm">"%1$s"을(를) 이 그룹의 관리자로 만드시겠습니까? 관리자는 멤버를 추가하거나 제거하고, 그룹 정보를 변경하고, 다른 멤버에게 관리자 권한을 부여할 수 있습니다.</string>
     <string name="marmot_revoke">취소</string>
     <string name="marmot_revoke_admin_privileges">관리자 권한 취소</string>
     <string name="marmot_revoke_admin_title">관리자 권한 취소</string>
-    <string name="marmot_revoke_admin_confirm">\"%1$s\"의 관리자 권한을 취소하시겠습니까? 해당 사용자는 그룹 멤버로 남게 됩니다.</string>
+    <string name="marmot_revoke_admin_confirm">"%1$s"의 관리자 권한을 취소하시겠습니까? 해당 사용자는 그룹 멤버로 남게 됩니다.</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">아직 이벤트 없음</string>
     <string name="marmot_relay_last_event">마지막 이벤트%1$s</string>

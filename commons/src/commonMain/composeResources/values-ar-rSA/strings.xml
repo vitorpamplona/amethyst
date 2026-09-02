@@ -116,12 +116,12 @@
     <string name="quote">إقتباس</string>
     <string name="fork">أشتقاق</string>
     <string name="new_amount_in_sats">مبلغ جديد في Sats</string>
-    <string name="replying_to">"الرد على"</string>
-    <string name="and">" و "</string>
-    <string name="following">"المتابعون"</string>
-    <string name="followers">"متابِعاً"</string>
-    <string name="number_following">"%1$s متابَع"</string>
-    <string name="number_followers">"%1$s متابِع"</string>
+    <string name="replying_to">الرد على</string>
+    <string name="and"> و </string>
+    <string name="following">المتابعون</string>
+    <string name="followers">متابِعاً</string>
+    <string name="number_following">%1$s متابَع</string>
+    <string name="number_followers">%1$s متابِع</string>
     <string name="log_out">تسجيل الخروج</string>
     <string name="show_more">إظهار المزيد</string>
     <string name="lightning_invoice">Lightning فاتورة</string>
@@ -187,7 +187,7 @@
     <string name="my_awesome_group">مجموعتي الرائعة</string>
     <string name="picture_url">رابط الصورة</string>
     <string name="optional_picture_url">رابط الصورة (اختياري)</string>
-    <string name="about_us">"معلومات عن القناة…"</string>
+    <string name="about_us">معلومات عن القناة…</string>
     <string name="search_and_add_a_user">البحث عن مستخدم وإضافته</string>
     <string name="add_a_relay">أضف Relay</string>
     <string name="my_name">اسم الـ @tag الخاص بي</string>
@@ -223,9 +223,9 @@
     <string name="replies">الردود</string>
     <string name="mutual">الخاص بك</string>
     <string name="gallery">الألبوم</string>
-    <string name="reports">"التقارير"</string>
-    <string name="number_reports">"%1$s تقارير"</string>
-    <string name="relays">"Relays"</string>
+    <string name="reports">التقارير</string>
+    <string name="number_reports">%1$s تقارير</string>
+    <string name="relays">Relays</string>
     <string name="website">الموقع</string>
     <string name="lightning_address">Lightning عنوان</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">نسخ معرف Nsec (كلمة المرور الخاصة بك) إلى الحافظة للنسخ الاحتياطي</string>
@@ -235,13 +235,13 @@
     <string name="copy_user_id">نسخ معرف المستخدم</string>
     <string name="unblock_user">إلغاء حظر عن مستخدم</string>
     <string name="user_is_blocked_hidden">هذا المستخدم محظور/مكتوم. منشوراته مخفية.</string>
-    <string name="npub_hex_username">"npub, hex, username "</string>
+    <string name="npub_hex_username">npub, hex, username </string>
     <string name="clear">نظف</string>
     <string name="app_logo">شعار التطبيق</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex private key</string>
     <string name="ncryptsec_password">كلمة المرور لفك تشفير المفتاح الخاص</string>
     <string name="show_password">إظهار كلمة السر</string>
-    <string name="i_accept_the">"اقبل شروط الاستخدام "</string>
+    <string name="i_accept_the">اقبل شروط الاستخدام </string>
     <string name="terms_of_use">شروط الاستخدام</string>
     <string name="acceptance_of_terms_is_required">يجب قبول شروط الإستخدام</string>
     <string name="login">تسجيل دخول</string>
@@ -257,14 +257,14 @@
     <string name="chats_reply_searching_history">جارٍ البحث عن الرسالة الأصلية…</string>
     <string name="chats_reply_not_found">تعذّر العثور على هذه الرسالة</string>
     <string name="chats_reply_searched">تم البحث في كل relay · اضغط للعرض</string>
-    <string name="error_loading_replies">"خطأ في تحميل الردود:"</string>
+    <string name="error_loading_replies">خطأ في تحميل الردود:</string>
     <string name="try_again">المحاولة مرة اخرى</string>
     <string name="notification_feed_is_empty">لا توجد إشعارات حتى الآن.</string>
     <string name="open_poll">فتح استطلاع</string>
     <string name="feed_is_empty">لا توجد ملاحظات.</string>
     <string name="refresh">تحديث</string>
     <string name="channel_created">تم انشاء القناة</string>
-    <string name="channel_information_changed_to">"تم تغيير معلومات القناة إلى"</string>
+    <string name="channel_information_changed_to">تم تغيير معلومات القناة إلى</string>
     <string name="marmot_group_no_messages_yet">لا توجد رسائل بعد</string>
     <string name="paid_relay">relay مدفوع</string>
     <string name="tor_relay">يجبر استخدام Tor عند الاتصال</string>
@@ -293,8 +293,8 @@
         \n\nإذا فقدت كلمة المرور، لن تتمكن من استرداد مفتاحك الخاص.
     </string>
     <string name="encrypt_and_copy_my_secret_key">تشفير و نسخ المفتاح الخاص</string>
-    <string name="badge_award_image_for">"صورة شارة مكافئة ل %1$s"</string>
-    <string name="badge_award_image">\"صورة منح الشارة</string>
+    <string name="badge_award_image_for">صورة شارة مكافئة ل %1$s</string>
+    <string name="badge_award_image">"صورة منح الشارة</string>
     <string name="new_badge_award_notif">لقد حصلت على شارة جائزة جديدة</string>
     <string name="award_granted_to">شارة الجائزة منحت إلى</string>
     <string name="account_switch_add_account_dialog_title">إضافة حساب جديد</string>
@@ -508,7 +508,7 @@
     <string name="nest_state_speaking">يتحدث الآن</string>
     <string name="nest_state_mic_open">الميكروفون مفتوح</string>
     <string name="nest_leave_host_title">إنهاء هذا nest؟</string>
-    <string name="nest_leave_host_body">أنت المضيف. سيؤدي إغلاق الغرفة إلى قطع اتصال الجميع. اختر \"مغادرة فقط\" إذا أردت العودة لاحقًا — ستُغلق الغرفة تلقائيًا بعد 8 ساعات من عدم النشاط.</string>
+    <string name="nest_leave_host_body">أنت المضيف. سيؤدي إغلاق الغرفة إلى قطع اتصال الجميع. اختر "مغادرة فقط" إذا أردت العودة لاحقًا — ستُغلق الغرفة تلقائيًا بعد 8 ساعات من عدم النشاط.</string>
     <string name="nest_leave_host_close">إغلاق الغرفة</string>
     <string name="nest_leave_host_just_leave">مغادرة فقط</string>
     <string name="nest_live_chip">مباشر</string>
@@ -683,7 +683,7 @@
     <string name="poll_consensus_threshold">توافق الآراء</string>
     <string name="poll_closing_date_time">تاريخ ووقت إغلاق الاستطلاع</string>
     <string name="poll_closing_in">يُغلَق الاستطلاع في %1$s</string>
-    <string name="looking_for_event">"البحث عن الحدث %1$s"</string>
+    <string name="looking_for_event">البحث عن الحدث %1$s</string>
     <string name="send_zap">إرسال Zap</string>
     <string name="custom_zaps_add_a_message">أضف رسالة عامة</string>
     <string name="custom_zaps_add_a_message_private">أضف رسالة خاصة</string>
@@ -890,7 +890,7 @@
  تحدث إلى المالك لإضافة مستخدم جديد</string>
     <string name="user_preferences">تفضيلات المستخدم</string>
     <string name="settings_search_placeholder">البحث في الإعدادات</string>
-    <string name="settings_search_no_results">لا توجد إعدادات لـ \"%1$s\"</string>
+    <string name="settings_search_no_results">لا توجد إعدادات لـ "%1$s"</string>
     <string name="reset_marmot_confirm_title">إعادة تعيين حالة Marmot؟</string>
     <string name="reset_marmot_confirm_body">سيؤدي هذا إلى حذف كل محادثات مجموعة Marmot وسجل الرسائل ومفاتيح MLS على هذا الجهاز للحساب الحالي نهائيًا. لن يتم إشعار الأطراف الأخرى وقد يظلون يرونك في المجموعات حتى تتم عملية الالتزام التالية. لا يمكن التراجع عن هذا الإجراء. سيتم نشر KeyPackage جديد في المرة القادمة التي تتزامن فيها التطبيق.</string>
     <string name="reset_marmot_confirm_action">إعادة تعيين</string>
@@ -923,7 +923,7 @@
     <string name="music_playlist_collaborative_hint">السماح للآخرين بإضافة مقاطع إلى قائمة التشغيل هذه.</string>
     <string name="music_playlist_delete">حذف قائمة التشغيل هذه</string>
     <string name="music_playlist_delete_confirm">نشر طلب حذف NIP-09 لهذه القائمة الموسيقية؟</string>
-    <string name="music_playlist_no_tracks_hint">لا توجد مقاطع بعد. أضف مقاطع من قائمة أغنية باستخدام \"إضافة إلى قائمة التشغيل\".</string>
+    <string name="music_playlist_no_tracks_hint">لا توجد مقاطع بعد. أضف مقاطع من قائمة أغنية باستخدام "إضافة إلى قائمة التشغيل".</string>
     <string name="music_playlist_move_track_up">تحريك المقطع للأعلى</string>
     <string name="music_playlist_move_track_down">تحريك المقطع للأسفل</string>
     <string name="music_playlist_remove_track">إزالة المقطع من قائمة التشغيل</string>
@@ -934,7 +934,7 @@
     <string name="messages_create_public_private_chat_description">مجموعة عامة أو خاصة جديدة</string>
     <string name="messages_new_message_to">إلى</string>
     <string name="messages_new_message_subject_caption">موضوع المحادثة</string>
-    <string name="messages_new_message_to_caption">"\@User1, @User2, @User3"</string>
+    <string name="messages_new_message_to_caption">@User1, @User2, @User3</string>
     <string name="messages_group_descriptor">أعضاء هذه المجموعة</string>
     <string name="messages_new_subject_message">التوضيح للأعضاء</string>
     <string name="messages_new_subject_message_placeholder">تغيير اسم الأهداف الجديدة.</string>
@@ -1495,7 +1495,7 @@
     <string name="skip_for_now">تخطي في الوقت الحالي</string>
     <string name="fetching_follow_list">جارٍ جلب قائمة المتابَعين…</string>
     <string name="no_follows_found">لم يُعثر على متابَعين</string>
-    <string name="import_follows_tips">"\"أدخل الملف الشخصي لصديق أو قائد مجتمع. يمكنك استخدام npub الخاص به أو عنوان NIP-05 أو اسم Namecoin مثل alice@example.bit أو id/alice للهويات الموثقة على البلوكشين.\""</string>
+    <string name="import_follows_tips">"أدخل الملف الشخصي لصديق أو قائد مجتمع. يمكنك استخدام npub الخاص به أو عنوان NIP-05 أو اسم Namecoin مثل alice@example.bit أو id/alice للهويات الموثقة على البلوكشين."</string>
     <string name="select_all">تحديد الكل</string>
     <string name="namecoin_test_connection">اختبار الاتصال</string>
     <string name="namecoin_testing">جارٍ اختبار الخوادم…</string>
@@ -1575,7 +1575,7 @@
     <string name="hls_renditions_label">الدقات</string>
     <string name="hls_renditions_source_format">دقة المصدر: %1$d×%2$d</string>
     <string name="hls_publish_button">نشر فيديو بدقة عالية</string>
-    <string name="hls_publishing_header_format">جارٍ نشر \"%1$s\"…</string>
+    <string name="hls_publishing_header_format">جارٍ نشر "%1$s"…</string>
     <string name="hls_state_transcoding_format">جارٍ الترميز %1$s</string>
     <string name="hls_state_uploading_idle">رفع</string>
     <string name="hls_state_uploading_format">جارٍ رفع %1$d من %2$d</string>
@@ -1738,8 +1738,8 @@
     <string name="emoji_add_dialog_title">إضافة إيموجي مخصص</string>
     <string name="emoji_remove_dialog_title">إزالة :%1$s:؟</string>
     <string name="emoji_long_press_hint">اضغط مطولاً على الإيموجي لإزالته</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" موجود في قائمة الإيموجي الخاصة بك</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" غير موجود في قائمة الإيموجي الخاصة بك</string>
+    <string name="emoji_pack_is_in_list">"%1$s" موجود في قائمة الإيموجي الخاصة بك</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" غير موجود في قائمة الإيموجي الخاصة بك</string>
     <string name="emoji_pack_actions_dialog_title">إجراءات حزمة الإيموجي</string>
     <string name="emoji_private_toggle">خاص</string>
     <string name="emoji_private_badge">إيموجي خاص</string>
@@ -1775,7 +1775,7 @@
     <string name="marmot_edit_group_info">تعديل معلومات المجموعة</string>
     <string name="marmot_leave_group">مغادرة المجموعة</string>
     <string name="marmot_this_group">هذه المجموعة</string>
-    <string name="marmot_leave_group_confirm">هل أنت متأكد أنك تريد مغادرة \"%1$s\"؟ لن تتلقى رسائل من هذه المجموعة بعد الآن.</string>
+    <string name="marmot_leave_group_confirm">هل أنت متأكد أنك تريد مغادرة "%1$s"؟ لن تتلقى رسائل من هذه المجموعة بعد الآن.</string>
     <string name="marmot_keypackage_required">يجب أن يكون قد نشر KeyPackage (kind:30443) لإمكانية الإضافة.</string>
     <string name="marmot_add_to_group">إضافة إلى المجموعة</string>
     <string name="marmot_add_member">إضافة عضو</string>
@@ -1784,15 +1784,15 @@
     <string name="marmot_member_suffix_you"> (أنت)</string>
     <string name="marmot_member_suffix_admin"> - مسؤول</string>
     <string name="marmot_remove_member">إزالة عضو</string>
-    <string name="marmot_remove_member_confirm">هل أنت متأكد أنك تريد إزالة \"%1$s\" من هذه المجموعة؟</string>
+    <string name="marmot_remove_member_confirm">هل أنت متأكد أنك تريد إزالة "%1$s" من هذه المجموعة؟</string>
     <string name="marmot_grant">منح</string>
     <string name="marmot_grant_admin_privileges">منح صلاحيات المسؤول</string>
     <string name="marmot_grant_admin_title">منح صلاحيات المسؤول</string>
-    <string name="marmot_grant_admin_confirm">هل تريد جعل \"%1$s\" مسؤولاً في هذه المجموعة؟ يمكن للمسؤولين إضافة الأعضاء أو إزالتهم، وتغيير معلومات المجموعة، ومنح صلاحيات المسؤول لأعضاء آخرين.</string>
+    <string name="marmot_grant_admin_confirm">هل تريد جعل "%1$s" مسؤولاً في هذه المجموعة؟ يمكن للمسؤولين إضافة الأعضاء أو إزالتهم، وتغيير معلومات المجموعة، ومنح صلاحيات المسؤول لأعضاء آخرين.</string>
     <string name="marmot_revoke">سحب</string>
     <string name="marmot_revoke_admin_privileges">سحب صلاحيات المسؤول</string>
     <string name="marmot_revoke_admin_title">سحب صلاحيات المسؤول</string>
-    <string name="marmot_revoke_admin_confirm">هل تريد سحب صلاحيات المسؤول من \"%1$s\"؟ سيبقى عضواً في المجموعة.</string>
+    <string name="marmot_revoke_admin_confirm">هل تريد سحب صلاحيات المسؤول من "%1$s"؟ سيبقى عضواً في المجموعة.</string>
     <string name="marmot_relay_no_events">لا توجد أحداث بعد</string>
     <string name="marmot_relay_last_event">آخر حدث%1$s</string>
     <string name="copy">نسخ</string>

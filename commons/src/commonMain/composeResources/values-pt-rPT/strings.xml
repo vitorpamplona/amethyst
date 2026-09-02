@@ -101,12 +101,12 @@
     <string name="quote">Citar</string>
     <string name="fork">Garfo</string>
     <string name="new_amount_in_sats">Novo Valor em Sats</string>
-    <string name="replying_to">"respondendo para "</string>
-    <string name="and">" e "</string>
-    <string name="following">" Seguindo"</string>
-    <string name="followers">" Seguidores"</string>
-    <string name="number_following">"%1$s Seguindo"</string>
-    <string name="number_followers">"%1$s Seguidores"</string>
+    <string name="replying_to">respondendo para </string>
+    <string name="and"> e </string>
+    <string name="following"> Seguindo</string>
+    <string name="followers"> Seguidores</string>
+    <string name="number_following">%1$s Seguindo</string>
+    <string name="number_followers">%1$s Seguidores</string>
     <string name="log_out">Sair</string>
     <string name="show_more">Mostrar mais</string>
     <string name="lightning_invoice">Fatura Lightning</string>
@@ -172,7 +172,7 @@
     <string name="my_awesome_group">Meu grupo</string>
     <string name="picture_url">URL da foto</string>
     <string name="optional_picture_url">URL da imagem (opcional)</string>
-    <string name="about_us">"Sobre nós.. "</string>
+    <string name="about_us">Sobre nós.. </string>
     <string name="search_and_add_a_user">Pesquisar e adicionar usuário</string>
     <string name="add_a_relay">Adicionar um Relay</string>
     <string name="my_name">Meu nome de @tag</string>
@@ -207,9 +207,9 @@
     <string name="replies">Respostas</string>
     <string name="mutual">Suas</string>
     <string name="gallery">Galeria</string>
-    <string name="reports">"Denúncias"</string>
-    <string name="number_reports">"%1$s Relatórios"</string>
-    <string name="relays">" Relés"</string>
+    <string name="reports">Denúncias</string>
+    <string name="number_reports">%1$s Relatórios</string>
+    <string name="relays"> Relés</string>
     <string name="website">Site</string>
     <string name="lightning_address">Endereço Lightning</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copiar a chave Nsec (sua senha) para backup</string>
@@ -219,13 +219,13 @@
     <string name="copy_user_id">Copiar ID do usuário</string>
     <string name="unblock_user">Desbloquear Usuário</string>
     <string name="user_is_blocked_hidden">Este usuário está bloqueado/silenciado. Suas publicações estão ocultas.</string>
-    <string name="npub_hex_username">"npub, hex, usuário "</string>
+    <string name="npub_hex_username">npub, hex, usuário </string>
     <string name="clear">Limpar</string>
     <string name="app_logo">Logo do aplicativo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex chave privada</string>
     <string name="ncryptsec_password">senha para abrir a chave</string>
     <string name="show_password">Mostrar senha</string>
-    <string name="i_accept_the">"Eu aceito os "</string>
+    <string name="i_accept_the">Eu aceito os </string>
     <string name="terms_of_use">termos de uso</string>
     <string name="acceptance_of_terms_is_required">É necessário aceitar os termos de uso</string>
     <string name="login">Entrar</string>
@@ -241,14 +241,14 @@
     <string name="chats_reply_searching_history">Procurando a mensagem original…</string>
     <string name="chats_reply_not_found">Não foi possível encontrar esta mensagem</string>
     <string name="chats_reply_searched">Pesquisado em todos os relays · toque para ver</string>
-    <string name="error_loading_replies">"Erro ao carregar respostas"</string>
+    <string name="error_loading_replies">Erro ao carregar respostas</string>
     <string name="try_again">Tente novamente</string>
     <string name="notification_feed_is_empty">Ainda não há notificações.</string>
     <string name="open_poll">Enquete aberta</string>
     <string name="feed_is_empty">Feed está vazio</string>
     <string name="refresh">Atualizar</string>
     <string name="channel_created">Canal criado</string>
-    <string name="channel_information_changed_to">"Informação do canal mudou para"</string>
+    <string name="channel_information_changed_to">Informação do canal mudou para</string>
     <string name="marmot_group_no_messages_yet">Nenhuma mensagem ainda</string>
     <string name="paid_relay">Retransmissor pago</string>
     <string name="tor_relay">Forçar uso do Tor ao conectar</string>
@@ -275,7 +275,7 @@
     <string name="account_backup_tips3_md" tools:ignore="Typos">    Para segurança adicional, você pode criptografar sua chave com uma senha. Esta chave começa com **ncryptsec1** e não pode ser usada sem sua senha.
     \n\nSe você perder sua senha, não será possível recuperar sua chave.</string>
     <string name="encrypt_and_copy_my_secret_key">Criptografar e copiar minha chave secreta</string>
-    <string name="badge_award_image_for">"Imagem da medalha para %1$s"</string>
+    <string name="badge_award_image_for">Imagem da medalha para %1$s</string>
     <string name="badge_award_image">Imagem do prêmio</string>
     <string name="new_badge_award_notif">Você recebeu uma nova medalha</string>
     <string name="award_granted_to">Medalha concedida para</string>
@@ -486,7 +486,7 @@
     <string name="nest_state_speaking">Falando agora</string>
     <string name="nest_state_mic_open">Microfone aberto</string>
     <string name="nest_leave_host_title">Encerrar este nest?</string>
-    <string name="nest_leave_host_body">Você é o anfitrião. Fechar a sala desconectará todos. Escolha \"Apenas sair\" se quiser voltar mais tarde — a sala será fechada automaticamente após 8 horas de inatividade.</string>
+    <string name="nest_leave_host_body">Você é o anfitrião. Fechar a sala desconectará todos. Escolha "Apenas sair" se quiser voltar mais tarde — a sala será fechada automaticamente após 8 horas de inatividade.</string>
     <string name="nest_leave_host_close">Fechar sala</string>
     <string name="nest_leave_host_just_leave">Apenas sair</string>
     <string name="nest_live_chip">AO VIVO</string>
@@ -659,7 +659,7 @@
     <string name="poll_consensus_threshold">Consenso</string>
     <string name="poll_closing_date_time">Data e hora de encerramento da enquete</string>
     <string name="poll_closing_in">Enquete encerra em %1$s</string>
-    <string name="looking_for_event">"Procurando o evento %1$s"</string>
+    <string name="looking_for_event">Procurando o evento %1$s</string>
     <string name="send_zap">Enviar Zap</string>
     <string name="custom_zaps_add_a_message">Adicionar uma mensagem pública</string>
     <string name="custom_zaps_add_a_message_private">Adicionar uma mensagem privada</string>
@@ -862,7 +862,7 @@
     <string name="community_no_descriptor">Esta comunidade não tem uma descrição. Fale com o proprietário para adicionar</string>
     <string name="user_preferences">Preferências do Usuário</string>
     <string name="settings_search_placeholder">Pesquisar configurações</string>
-    <string name="settings_search_no_results">Nenhuma configuração encontrada para \"%1$s\"</string>
+    <string name="settings_search_no_results">Nenhuma configuração encontrada para "%1$s"</string>
     <string name="reset_marmot_confirm_title">Redefinir estado do Marmot?</string>
     <string name="reset_marmot_confirm_body">Isto excluirá permanentemente todos os chats em grupo Marmot, histórico de mensagens e chaves MLS deste dispositivo para a conta atual. Os participantes não serão notificados e ainda poderão ver você nos grupos até a próxima confirmação deles. Esta ação não pode ser desfeita. Um novo KeyPackage será publicado na próxima sincronização do aplicativo.</string>
     <string name="reset_marmot_confirm_action">Redefinir</string>
@@ -894,7 +894,7 @@
     <string name="music_playlist_collaborative_hint">Permitir que outros adicionem faixas a esta playlist.</string>
     <string name="music_playlist_delete">Excluir esta playlist</string>
     <string name="music_playlist_delete_confirm">Publicar uma exclusão NIP-09 para esta playlist?</string>
-    <string name="music_playlist_no_tracks_hint">Nenhuma faixa ainda. Adicione faixas pelo menu de uma música usando \"Adicionar à playlist\".</string>
+    <string name="music_playlist_no_tracks_hint">Nenhuma faixa ainda. Adicione faixas pelo menu de uma música usando "Adicionar à playlist".</string>
     <string name="music_playlist_move_track_up">Mover faixa para cima</string>
     <string name="music_playlist_move_track_down">Mover faixa para baixo</string>
     <string name="music_playlist_remove_track">Remover faixa da playlist</string>
@@ -905,7 +905,7 @@
     <string name="messages_create_public_private_chat_description">Novo Grupo Público ou Privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject_caption">Tema da conversa</string>
-    <string name="messages_new_message_to_caption">"\@Usuário1, @Usuário2, @Usuário3"</string>
+    <string name="messages_new_message_to_caption">@Usuário1, @Usuário2, @Usuário3</string>
     <string name="messages_group_descriptor">Membros deste grupo</string>
     <string name="messages_new_subject_message">Explicação aos membros</string>
     <string name="messages_new_subject_message_placeholder">Mudando o nome dos novos objetivos.</string>
@@ -974,7 +974,7 @@
     <string name="retry_without_encryption">Tentar novamente sem criptografia</string>
     <string name="upload_without_encryption_warning">Aviso: Sem criptografia, qualquer pessoa com o link do arquivo pode ver o conteúdo.</string>
     <string name="media_compression_quality_label">Qualidade de Mídia</string>
-    <string name="media_compression_quality_explainer">Selecione Baixa qualidade para comprimir sua mídia para um arquivo menor com menor qualidade, Alta qualidade para comprimir para um arquivo maior com maior qualidade ou \"Sem compressão\" para carregar a mídia sem compressão.</string>
+    <string name="media_compression_quality_explainer">Selecione Baixa qualidade para comprimir sua mídia para um arquivo menor com menor qualidade, Alta qualidade para comprimir para um arquivo maior com maior qualidade ou "Sem compressão" para carregar a mídia sem compressão.</string>
     <string name="media_compression_quality_low">Baixa</string>
     <string name="media_compression_quality_medium">Média</string>
     <string name="media_compression_quality_high">Alta</string>
@@ -1176,7 +1176,7 @@
     <string name="calendar_untitled">(sem título)</string>
     <string name="calendar_all_day">Dia inteiro</string>
     <string name="calendar_rsvp_going_prefixed">✓ Vou</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Talvez</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Talvez</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Não vou</string>
     <string name="calendar_collection_title">Título</string>
     <string name="calendar_collection_description">Descrição</string>
@@ -1351,7 +1351,7 @@
     <string name="remove_dvm_from_favorites">Remover dos favoritos</string>
     <string name="favorite_dvms_explainer">Os algoritmos de feed marcados com estrela aparecem como chips de filtro no feed Início. Abra Descobrir para adicionar mais.</string>
     <string name="favorite_dvms_empty_headline">Fixe seus algoritmos favoritos</string>
-    <string name="favorite_dvms_empty_step1">Toque em \"%1$s\" abaixo para navegar pelos algoritmos.</string>
+    <string name="favorite_dvms_empty_step1">Toque em "%1$s" abaixo para navegar pelos algoritmos.</string>
     <string name="favorite_dvms_empty_step2">Toque na %1$s ao lado de um feed para mantê-lo aqui.</string>
     <string name="favorite_dvms_empty_cta">Adicionar alguns feeds</string>
     <string name="favorite_dvms_add_more">Adicionar mais…</string>
@@ -1466,7 +1466,7 @@
     <string name="skip_for_now">Pular por agora</string>
     <string name="fetching_follow_list">Buscando lista de seguidos…</string>
     <string name="no_follows_found">Nenhum seguido encontrado</string>
-    <string name="import_follows_tips">"Digite o perfil de um amigo ou líder de comunidade. Você pode usar o npub, endereço NIP-05 ou um nome Namecoin como alice@example.bit ou id/alice para identidades verificadas por blockchain."</string>
+    <string name="import_follows_tips">Digite o perfil de um amigo ou líder de comunidade. Você pode usar o npub, endereço NIP-05 ou um nome Namecoin como alice@example.bit ou id/alice para identidades verificadas por blockchain.</string>
     <string name="select_all">Selecionar tudo</string>
     <string name="namecoin_test_connection">Testar Conexão</string>
     <string name="namecoin_testing">Testando servidores…</string>
@@ -1708,8 +1708,8 @@
     <string name="emoji_add_dialog_title">Adicionar emoji personalizado</string>
     <string name="emoji_remove_dialog_title">Remover :%1$s:?</string>
     <string name="emoji_long_press_hint">Pressione e segure um emoji para removê-lo</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" está na sua lista de emojis</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" não está na sua lista de emojis</string>
+    <string name="emoji_pack_is_in_list">"%1$s" está na sua lista de emojis</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" não está na sua lista de emojis</string>
     <string name="emoji_pack_actions_dialog_title">Ações do pacote de emoji</string>
     <string name="emoji_private_toggle">Privado</string>
     <string name="emoji_private_badge">Emoji privado</string>
@@ -1745,7 +1745,7 @@
     <string name="marmot_edit_group_info">Editar informações do grupo</string>
     <string name="marmot_leave_group">Sair do grupo</string>
     <string name="marmot_this_group">este grupo</string>
-    <string name="marmot_leave_group_confirm">Tem certeza de que deseja sair de \"%1$s\"? Você não receberá mais mensagens deste grupo.</string>
+    <string name="marmot_leave_group_confirm">Tem certeza de que deseja sair de "%1$s"? Você não receberá mais mensagens deste grupo.</string>
     <string name="marmot_keypackage_required">A pessoa deve ter publicado um KeyPackage (kind:30443) para ser adicionada.</string>
     <string name="marmot_add_to_group">Adicionar ao grupo</string>
     <string name="marmot_add_member">Adicionar membro</string>
@@ -1753,15 +1753,15 @@
     <string name="marmot_add_member_placeholder">Nome, npub ou NIP-05</string>
     <string name="marmot_member_suffix_you"> (você)</string>
     <string name="marmot_remove_member">Remover membro</string>
-    <string name="marmot_remove_member_confirm">Tem certeza de que deseja remover \"%1$s\" deste grupo?</string>
+    <string name="marmot_remove_member_confirm">Tem certeza de que deseja remover "%1$s" deste grupo?</string>
     <string name="marmot_grant">Conceder</string>
     <string name="marmot_grant_admin_privileges">Conceder privilégios de administrador</string>
     <string name="marmot_grant_admin_title">Conceder privilégios de administrador</string>
-    <string name="marmot_grant_admin_confirm">Tornar \"%1$s\" administrador deste grupo? Administradores podem adicionar ou remover membros, alterar informações do grupo e conceder privilégios de administrador a outros membros.</string>
+    <string name="marmot_grant_admin_confirm">Tornar "%1$s" administrador deste grupo? Administradores podem adicionar ou remover membros, alterar informações do grupo e conceder privilégios de administrador a outros membros.</string>
     <string name="marmot_revoke">Revogar</string>
     <string name="marmot_revoke_admin_privileges">Revogar privilégios de administrador</string>
     <string name="marmot_revoke_admin_title">Revogar privilégios de administrador</string>
-    <string name="marmot_revoke_admin_confirm">Revogar privilégios de administrador de \"%1$s\"? A pessoa continuará sendo membro do grupo.</string>
+    <string name="marmot_revoke_admin_confirm">Revogar privilégios de administrador de "%1$s"? A pessoa continuará sendo membro do grupo.</string>
     <string name="marmot_relay_no_events">nenhum evento ainda</string>
     <string name="marmot_relay_last_event">último evento%1$s</string>
     <string name="copy">Copiar</string>

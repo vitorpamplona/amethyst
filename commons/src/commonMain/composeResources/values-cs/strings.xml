@@ -107,7 +107,7 @@
         <item quantity="other">%1$d relayů</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">"odpovídá na "</string>
+    <string name="replying_to">odpovídá na </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statický web: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
@@ -245,11 +245,11 @@
     <string name="quote">Citovat</string>
     <string name="fork">Rozštěpení</string>
     <string name="new_amount_in_sats">Nová částka v sats</string>
-    <string name="and">" a "</string>
-    <string name="following">" Sleduje"</string>
-    <string name="followers">" Sledující"</string>
-    <string name="number_following">"%1$s následuje"</string>
-    <string name="number_followers">"%1$s Sledujících"</string>
+    <string name="and"> a </string>
+    <string name="following"> Sleduje</string>
+    <string name="followers"> Sledující</string>
+    <string name="number_following">%1$s následuje</string>
+    <string name="number_followers">%1$s Sledujících</string>
     <string name="log_out">Odhlásit</string>
     <string name="show_more">Zobrazit více</string>
     <string name="lightning_invoice">Blesková faktura</string>
@@ -319,7 +319,7 @@
     <string name="my_awesome_group">Má skvělá skupina</string>
     <string name="picture_url">URL obrázku</string>
     <string name="optional_picture_url">Adresa URL obrázku (volitelné)</string>
-    <string name="about_us">"O nás…"</string>
+    <string name="about_us">O nás…</string>
     <string name="search_and_add_a_user">Vyhledat a přidat uživatele</string>
     <string name="add_a_relay">Přidat přeposílání</string>
     <string name="relay_url_not_valid">Neplatná adresa relaye. Použijte název hostitele nebo IP adresu v hranatých závorkách (například [201:d0e:9ba5:8bbc::1]:8080).</string>
@@ -356,9 +356,9 @@
     <string name="replies">Odpovědi</string>
     <string name="mutual">Vaše</string>
     <string name="gallery">Galerie</string>
-    <string name="reports">"Zprávy"</string>
-    <string name="number_reports">"%1$s Reportů"</string>
-    <string name="relays">" Přeposílání"</string>
+    <string name="reports">Zprávy</string>
+    <string name="number_reports">%1$s Reportů</string>
+    <string name="relays"> Přeposílání</string>
     <string name="website">Webová stránka</string>
     <string name="lightning_address">Lightning adresa</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Zkopíruje Nsec ID (vaše heslo) do schránky pro zálohování</string>
@@ -368,13 +368,13 @@
     <string name="copy_user_id">Zkopírovat ID uživatele</string>
     <string name="unblock_user">Odblokovat uživatele</string>
     <string name="user_is_blocked_hidden">Tento uživatel je zablokován/ztišen. Jeho příspěvky jsou skryty.</string>
-    <string name="npub_hex_username">"npub, hex, uživatelské jméno"</string>
+    <string name="npub_hex_username">npub, hex, uživatelské jméno</string>
     <string name="clear">Vymazat</string>
     <string name="app_logo">Logo aplikace</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex privátní klíč</string>
     <string name="ncryptsec_password">heslo pro otevření klíče</string>
     <string name="show_password">Zobrazit heslo</string>
-    <string name="i_accept_the">"Souhlasím s "</string>
+    <string name="i_accept_the">Souhlasím s </string>
     <string name="terms_of_use">podmínkami použití</string>
     <string name="acceptance_of_terms_is_required">Je vyžadováno přijetí podmínek</string>
     <string name="login">Přihlásit se</string>
@@ -443,14 +443,14 @@
     <string name="dm_sender_reported_subtitle">Někdo, koho sledujete, nahlásil tento účet</string>
     <string name="dm_sender_reported_icon">Nahlášeno</string>
     <string name="dm_sender_reported_more_count">+%1$d</string>
-    <string name="error_loading_replies">"Chyba při načítání odpovědí: "</string>
+    <string name="error_loading_replies">Chyba při načítání odpovědí: </string>
     <string name="try_again">Zkusit znovu</string>
     <string name="notification_feed_is_empty">Zatím žádná oznámení.</string>
     <string name="open_poll">Otevřená anketa</string>
     <string name="feed_is_empty">Zdroj je prázdný.</string>
     <string name="refresh">Obnovit</string>
     <string name="channel_created">Kanál vytvořen</string>
-    <string name="channel_information_changed_to">"Informace kanálu změněna na"</string>
+    <string name="channel_information_changed_to">Informace kanálu změněna na</string>
     <string name="new_public_chat">Vytvořit nový veřejný chat</string>
     <string name="marmot_group_no_messages_yet">Zatím žádné zprávy</string>
     <string name="paid_relay">Placený Relé</string>
@@ -483,7 +483,7 @@
     <string name="backup_keys_nudge_already_saved">Uložil jsem si je</string>
     <string name="backup_keys_nudge_dismiss">Zavřít</string>
     <string name="encrypt_and_copy_my_secret_key">Zašifrovat a zkopírovat můj tajný klíč</string>
-    <string name="badge_award_image_for">"Obrázek ocenění od %1$s"</string>
+    <string name="badge_award_image_for">Obrázek ocenění od %1$s</string>
     <string name="badge_award_image">Obrázek ocenění</string>
     <string name="new_badge_award_notif">Obdrželi jste nové ocenění</string>
     <string name="award_granted_to">Ocenění uděleno uživateli</string>
@@ -1089,7 +1089,7 @@
     <string name="poll_consensus_threshold">Konsensus</string>
     <string name="poll_closing_date_time">Datum a čas ukončení ankety</string>
     <string name="poll_closing_in">Anketa končí za %1$s</string>
-    <string name="looking_for_event">"Hledá se událost %1$s"</string>
+    <string name="looking_for_event">Hledá se událost %1$s</string>
     <string name="send_zap">Odeslat Zap</string>
     <string name="custom_zaps_add_a_message">Přidat veřejnou zprávu</string>
     <string name="custom_zaps_add_a_message_private">Přidat soukromou zprávu</string>
@@ -1396,7 +1396,7 @@
     <string name="music_playlist_collaborative_hint">Umožněte ostatním přidávat skladby do tohoto playlistu.</string>
     <string name="music_playlist_delete">Smazat tento playlist</string>
     <string name="music_playlist_delete_confirm">Zveřejnit NIP-09 smazání pro tento playlist?</string>
-    <string name="music_playlist_no_tracks_hint">Zatím žádné skladby. Přidejte skladby z nabídky písně pomocí \"Přidat do playlistu\".</string>
+    <string name="music_playlist_no_tracks_hint">Zatím žádné skladby. Přidejte skladby z nabídky písně pomocí "Přidat do playlistu".</string>
     <string name="music_playlist_move_track_up">Přesunout skladbu nahoru</string>
     <string name="music_playlist_move_track_down">Přesunout skladbu dolů</string>
     <string name="music_playlist_remove_track">Odebrat skladbu z playlistu</string>
@@ -1518,7 +1518,7 @@
     <string name="relay_group_invite_only_to_post">Tato skupina je pouze na pozvání — k přispívání potřebujete pozvánku.</string>
     <string name="messages_new_message_to">Pro</string>
     <string name="messages_new_message_subject_caption">Téma konverzace</string>
-    <string name="messages_new_message_to_caption">"\@Uživatel1, @Uživatel2, @Uživatel3"</string>
+    <string name="messages_new_message_to_caption">@Uživatel1, @Uživatel2, @Uživatel3</string>
     <string name="messages_group_descriptor">Členové této skupiny</string>
     <string name="messages_new_subject_message">Vysvětlení členům</string>
     <string name="messages_new_subject_message_placeholder">Změna názvu pro nové cíle.</string>
@@ -1595,7 +1595,7 @@
     <string name="retry_without_encryption">Zkusit znovu bez šifrování</string>
     <string name="upload_without_encryption_warning">Upozornění: Bez šifrování může kdokoli s odkazem na soubor vidět jeho obsah.</string>
     <string name="media_compression_quality_label">Kvalita médií</string>
-    <string name="media_compression_quality_explainer">Vyberte Nízkou kvalitu pro kompresi médií na menší soubor s nižší kvalitou, Vysokou kvalitu pro kompresi na větší soubor s vyšší kvalitou, nebo \"Bez komprese\" pro nahrání médií bez komprese.</string>
+    <string name="media_compression_quality_explainer">Vyberte Nízkou kvalitu pro kompresi médií na menší soubor s nižší kvalitou, Vysokou kvalitu pro kompresi na větší soubor s vyšší kvalitou, nebo "Bez komprese" pro nahrání médií bez komprese.</string>
     <string name="media_compression_quality_low">Nízká</string>
     <string name="media_compression_quality_medium">Střední</string>
     <string name="media_compression_quality_high">Vysoká</string>
@@ -1838,7 +1838,7 @@
     <string name="calendar_untitled">(bez názvu)</string>
     <string name="calendar_all_day">Celodenní</string>
     <string name="calendar_rsvp_going_prefixed">✓ Účastním se</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Možná</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Možná</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Nemůžu</string>
     <string name="calendar_collection_title">Název</string>
     <string name="calendar_collection_description">Popis</string>
@@ -2192,7 +2192,7 @@
     <string name="remove_dvm_from_favorites">Odebrat z oblíbených</string>
     <string name="favorite_dvms_explainer">Algoritmy zdrojů, které zde označíte hvězdičkou, se zobrazí jako filtry na hlavním zdroji. Otevřete Objevovat pro přidání dalších.</string>
     <string name="favorite_dvms_empty_headline">Připněte si oblíbené algoritmy</string>
-    <string name="favorite_dvms_empty_step1">Klepněte na \"%1$s\" níže pro procházení algoritmů.</string>
+    <string name="favorite_dvms_empty_step1">Klepněte na "%1$s" níže pro procházení algoritmů.</string>
     <string name="favorite_dvms_empty_step2">Klepněte na %1$s vedle kanálu, abyste si jej zde uložili.</string>
     <string name="favorite_dvms_empty_cta">Přidat nějaké kanály</string>
     <string name="favorite_dvms_add_more">Přidat další…</string>
@@ -2332,7 +2332,7 @@
     <string name="skip_for_now">Prozatím přeskočit</string>
     <string name="fetching_follow_list">Načítám seznam sledovaných…</string>
     <string name="no_follows_found">Žádní sledovaní nenalezeni</string>
-    <string name="import_follows_tips">"Zadejte profil přítele nebo lídra komunity. Můžete použít jejich npub, NIP-05 adresu nebo Namecoin jméno jako alice@example.bit nebo id/alice pro identity ověřené blockchainem."</string>
+    <string name="import_follows_tips">Zadejte profil přítele nebo lídra komunity. Můžete použít jejich npub, NIP-05 adresu nebo Namecoin jméno jako alice@example.bit nebo id/alice pro identity ověřené blockchainem.</string>
     <string name="select_all">Vybrat vše</string>
     <string name="namecoin_test_connection">Otestovat připojení</string>
     <string name="namecoin_testing">Testování serverů…</string>
@@ -2602,8 +2602,8 @@
     <string name="emoji_add_dialog_title">Přidat vlastní emoji</string>
     <string name="emoji_remove_dialog_title">Odstranit :%1$s:?</string>
     <string name="emoji_long_press_hint">Dlouze stiskněte emoji pro odstranění</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" je ve vašem seznamu emoji</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" není ve vašem seznamu emoji</string>
+    <string name="emoji_pack_is_in_list">"%1$s" je ve vašem seznamu emoji</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" není ve vašem seznamu emoji</string>
     <string name="emoji_pack_actions_dialog_title">Akce emoji balíčku</string>
     <string name="emoji_private_toggle">Soukromé</string>
     <string name="emoji_private_badge">Soukromé emoji</string>
@@ -2643,7 +2643,7 @@
     <string name="marmot_edit_group_info">Upravit informace o skupině</string>
     <string name="marmot_leave_group">Opustit skupinu</string>
     <string name="marmot_this_group">tato skupina</string>
-    <string name="marmot_leave_group_confirm">Opravdu chcete opustit \"%1$s\"? Nebudete již dostávat zprávy z této skupiny.</string>
+    <string name="marmot_leave_group_confirm">Opravdu chcete opustit "%1$s"? Nebudete již dostávat zprávy z této skupiny.</string>
     <string name="marmot_keypackage_required">Musí mít zveřejněný KeyPackage (kind:30443), aby mohl být přidán.</string>
     <string name="marmot_add_to_group">Přidat do skupiny</string>
     <string name="marmot_add_member">Přidat člena</string>
@@ -2652,15 +2652,15 @@
     <string name="marmot_member_suffix_you"> (vy)</string>
     <string name="marmot_member_suffix_admin"> – admin</string>
     <string name="marmot_remove_member">Odebrat člena</string>
-    <string name="marmot_remove_member_confirm">Opravdu chcete odebrat \"%1$s\" z této skupiny?</string>
+    <string name="marmot_remove_member_confirm">Opravdu chcete odebrat "%1$s" z této skupiny?</string>
     <string name="marmot_grant">Udělit</string>
     <string name="marmot_grant_admin_privileges">Udělit administrátorská práva</string>
     <string name="marmot_grant_admin_title">Udělit administrátorská práva</string>
-    <string name="marmot_grant_admin_confirm">Udělat z \"%1$s\" administrátora této skupiny? Administrátoři mohou přidávat nebo odebírat členy, měnit informace o skupině a udělovat administrátorská práva ostatním členům.</string>
+    <string name="marmot_grant_admin_confirm">Udělat z "%1$s" administrátora této skupiny? Administrátoři mohou přidávat nebo odebírat členy, měnit informace o skupině a udělovat administrátorská práva ostatním členům.</string>
     <string name="marmot_revoke">Odebrat</string>
     <string name="marmot_revoke_admin_privileges">Odebrat administrátorská práva</string>
     <string name="marmot_revoke_admin_title">Odebrat administrátorská práva</string>
-    <string name="marmot_revoke_admin_confirm">Odebrat administrátorská práva \"%1$s\"? Zůstane členem skupiny.</string>
+    <string name="marmot_revoke_admin_confirm">Odebrat administrátorská práva "%1$s"? Zůstane členem skupiny.</string>
     <string name="marmot_relays_header">Relaye</string>
     <string name="marmot_relay_no_events">zatím žádné eventy</string>
     <string name="marmot_relay_last_event">poslední event%1$s</string>
@@ -2749,7 +2749,7 @@
     <string name="buzz_persona_new_title">Nová persona</string>
     <string name="buzz_persona_edit_title">Upravit personu</string>
     <string name="buzz_persona_slug">Slug (id persony)</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' nebo \'_\'. Po vytvoření nelze změnit.</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, '-' nebo '_'. Po vytvoření nelze změnit.</string>
     <string name="buzz_persona_display_name">Zobrazované jméno</string>
     <string name="buzz_persona_system_prompt">Systémový prompt</string>
     <string name="buzz_persona_model">Model (volitelné)</string>

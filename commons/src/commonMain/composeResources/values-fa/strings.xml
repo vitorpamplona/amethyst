@@ -92,12 +92,12 @@
     <string name="quote">نقل قول</string>
     <string name="fork">فورک</string>
     <string name="new_amount_in_sats">مبلغ جدید به ساتوشی</string>
-    <string name="replying_to">" پاسخ به"</string>
-    <string name="and">" و "</string>
-    <string name="following">"دنبال شونده"</string>
-    <string name="followers">"دنبال کننده"</string>
-    <string name="number_following">"%1$s دنبال‌شده"</string>
-    <string name="number_followers">"%1$s دنبال‌کننده"</string>
+    <string name="replying_to"> پاسخ به</string>
+    <string name="and"> و </string>
+    <string name="following">دنبال شونده</string>
+    <string name="followers">دنبال کننده</string>
+    <string name="number_following">%1$s دنبال‌شده</string>
+    <string name="number_followers">%1$s دنبال‌کننده</string>
     <string name="log_out">خروج</string>
     <string name="show_more">ادامه</string>
     <string name="lightning_invoice">صورتحساب لایتنینگ</string>
@@ -167,7 +167,7 @@
     <string name="my_awesome_group">گروه باحال من</string>
     <string name="picture_url">آدرس تصویر</string>
     <string name="optional_picture_url">آدرس تصویر (اختیاری)</string>
-    <string name="about_us">"درباره ما…"</string>
+    <string name="about_us">درباره ما…</string>
     <string name="search_and_add_a_user">جستجو و افزودن کاربر</string>
     <string name="add_a_relay">افزودن رله</string>
     <string name="my_name">نام @tag من</string>
@@ -203,9 +203,9 @@
     <string name="replies">پاسخ ها</string>
     <string name="mutual">مال شما</string>
     <string name="gallery">گالری</string>
-    <string name="reports">"گزارش ها"</string>
-    <string name="number_reports">"%1$s گزارش"</string>
-    <string name="relays">"رله ها"</string>
+    <string name="reports">گزارش ها</string>
+    <string name="number_reports">%1$s گزارش</string>
+    <string name="relays">رله ها</string>
     <string name="website">وبسایت</string>
     <string name="lightning_address">آدرس لایتنینگ</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">شناسه کلید خصوصی (پسوردتان) را در کلیپبورد کپی می کند(</string>
@@ -215,13 +215,13 @@
     <string name="copy_user_id">کپی شناسه کاربر</string>
     <string name="unblock_user">از بلاک درآوردن کاربر</string>
     <string name="user_is_blocked_hidden">این کاربر مسدود/بی‌صدا شده است. پست‌های آن‌ها مخفی است.</string>
-    <string name="npub_hex_username">"npub, hex, نام کاربری "</string>
+    <string name="npub_hex_username">npub, hex, نام کاربری </string>
     <string name="clear">پاک کردن</string>
     <string name="app_logo">لوگوی اپ</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex کلید خصوصی</string>
     <string name="ncryptsec_password">پسورد باز کردن کلید</string>
     <string name="show_password">نشان دادن گذرواژه</string>
-    <string name="i_accept_the">"می پذیرم "</string>
+    <string name="i_accept_the">می پذیرم </string>
     <string name="terms_of_use">شرایط استفاده</string>
     <string name="acceptance_of_terms_is_required">پذیرش شرایط الازمیست</string>
     <string name="login">ورود</string>
@@ -237,14 +237,14 @@
     <string name="chats_reply_searching_history">در حال جستجوی پیام اصلی…</string>
     <string name="chats_reply_not_found">این پیام پیدا نشد</string>
     <string name="chats_reply_searched">همه relay ها جستجو شد · برای مشاهده ضربه بزنید</string>
-    <string name="error_loading_replies">" :خطا در بارگیری پاسخ ها"</string>
+    <string name="error_loading_replies"> :خطا در بارگیری پاسخ ها</string>
     <string name="try_again">دوباره تلاش کنید</string>
     <string name="notification_feed_is_empty">هنوز هیچ اعلانی نیست.</string>
     <string name="open_poll">نظرسنجی باز</string>
     <string name="feed_is_empty">خبرنامه خالیست</string>
     <string name="refresh">تازه‌سازی</string>
     <string name="channel_created">کانال ساخته شد</string>
-    <string name="channel_information_changed_to">"اطلاعات کانال تغییر کرد به"</string>
+    <string name="channel_information_changed_to">اطلاعات کانال تغییر کرد به</string>
     <string name="marmot_group_no_messages_yet">هنوز پیامی وجود ندارد</string>
     <string name="paid_relay">relay پولی</string>
     <string name="tor_relay">هنگام اتصال Tor را اجبار می‌کند</string>
@@ -272,7 +272,7 @@
     <string name="account_backup_tips3_md" tools:ignore="Typos">برای ایمنی بیشتر، می توانید کلید خود را با یک رمزعبور رمزنگاری کنید. این نوع کلید با **ncryptsec1** آغاز می شود و نمی تواند بدون رمز عبور شما استفاده شود.
 اگر پسوردتان را گم کنید، نخواهید توانست کلیدتان را بازیابی کنید.</string>
     <string name="encrypt_and_copy_my_secret_key">رمزنگاری و کپی کلید من</string>
-    <string name="badge_award_image_for">"تصویر مدال پاداش برای %1$s"</string>
+    <string name="badge_award_image_for">تصویر مدال پاداش برای %1$s</string>
     <string name="badge_award_image">تصویر جایزه نشان</string>
     <string name="new_badge_award_notif">یک مدال پاداش دریافت کردید</string>
     <string name="award_granted_to">مدال پاداش داده شد به</string>
@@ -667,7 +667,7 @@
     <string name="poll_consensus_threshold">توافق نظر</string>
     <string name="poll_closing_date_time">تاریخ و زمان پایان نظرسنجی</string>
     <string name="poll_closing_in">نظرسنجی در %1$s بسته می‌شود</string>
-    <string name="looking_for_event">"جستجوی رویداد %1$s"</string>
+    <string name="looking_for_event">جستجوی رویداد %1$s</string>
     <string name="send_zap">ارسال Zap</string>
     <string name="custom_zaps_add_a_message">افزودن پیام عمومی</string>
     <string name="custom_zaps_add_a_message_private">افزودن پیام خصوصی</string>
@@ -874,7 +874,7 @@
     <string name="community_no_descriptor">این انجمن هیچ توضیح و قوانینی ندارد. با مالک گروه برای افزودن آن صحبت کنید.</string>
     <string name="user_preferences">تنظیمات کاربر</string>
     <string name="settings_search_placeholder">جستجو در تنظیمات</string>
-    <string name="settings_search_no_results">تنظیماتی برای \"%1$s\" یافت نشد</string>
+    <string name="settings_search_no_results">تنظیماتی برای "%1$s" یافت نشد</string>
     <string name="reset_marmot_confirm_title">بازنشانی وضعیت Marmot؟</string>
     <string name="reset_marmot_confirm_body">این عمل به طور دائمی تمام گفتگوهای گروهی Marmot، تاریخچه پیام‌ها، و کلیدهای MLS روی این دستگاه برای حساب فعلی را حذف خواهد کرد. همتایان اطلاع‌رسانی نخواهند شد و ممکن است شما را تا تأیید بعدی در گروه‌ها ببینند. این عمل قابل بازگشت نیست. یک KeyPackage جدید دفعه بعدی که برنامه همگام‌سازی می‌کند منتشر خواهد شد.</string>
     <string name="reset_marmot_confirm_action">بازنشانی</string>
@@ -918,7 +918,7 @@
     <string name="messages_create_public_private_chat_description">گروه خصوصی یا عمومی جدید</string>
     <string name="messages_new_message_to">به</string>
     <string name="messages_new_message_subject_caption">موضوع گفتگو</string>
-    <string name="messages_new_message_to_caption">"\@کاربر1, @کاربر2, @کاربر3"</string>
+    <string name="messages_new_message_to_caption">@کاربر1, @کاربر2, @کاربر3</string>
     <string name="messages_group_descriptor">اعضای گروه</string>
     <string name="messages_new_subject_message">توضیحات برای اعضا</string>
     <string name="messages_new_subject_message_placeholder">تعویض نام به خاطر اهداف جدید.</string>
@@ -1199,7 +1199,7 @@
     <string name="calendar_untitled">(بدون عنوان)</string>
     <string name="calendar_all_day">تمام روز</string>
     <string name="calendar_rsvp_going_prefixed">✓ می‌آیم</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? شاید</string>
+    <string name="calendar_rsvp_maybe_prefixed">? شاید</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ نمی‌توانم بیایم</string>
     <string name="calendar_collection_title">عنوان</string>
     <string name="calendar_collection_description">توضیحات</string>
@@ -1754,8 +1754,8 @@
     <string name="emoji_add_dialog_title">افزودن ایموجی سفارشی</string>
     <string name="emoji_remove_dialog_title">حذف :%1$s:؟</string>
     <string name="emoji_long_press_hint">برای حذف ایموجی، روی آن ضربه بلند بزنید</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" در فهرست ایموجی شما است</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" در فهرست ایموجی شما نیست</string>
+    <string name="emoji_pack_is_in_list">"%1$s" در فهرست ایموجی شما است</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" در فهرست ایموجی شما نیست</string>
     <string name="emoji_pack_actions_dialog_title">اقدامات بسته ایموجی</string>
     <string name="emoji_private_toggle">خصوصی</string>
     <string name="emoji_private_badge">ایموجی خصوصی</string>
@@ -1793,7 +1793,7 @@
     <string name="marmot_edit_group_info">ویرایش اطلاعات گروه</string>
     <string name="marmot_leave_group">خروج از گروه</string>
     <string name="marmot_this_group">این گروه</string>
-    <string name="marmot_leave_group_confirm">آیا مطمئن هستید که می‌خواهید از \"%1$s\" خارج شوید؟ دیگر پیامی از این گروه دریافت نخواهید کرد.</string>
+    <string name="marmot_leave_group_confirm">آیا مطمئن هستید که می‌خواهید از "%1$s" خارج شوید؟ دیگر پیامی از این گروه دریافت نخواهید کرد.</string>
     <string name="marmot_keypackage_required">برای افزودن، باید یک KeyPackage (kind:30443) منتشر کرده باشند.</string>
     <string name="marmot_add_to_group">افزودن به گروه</string>
     <string name="marmot_add_member">افزودن عضو</string>
@@ -1802,15 +1802,15 @@
     <string name="marmot_member_suffix_you"> (شما)</string>
     <string name="marmot_member_suffix_admin"> - مدیر</string>
     <string name="marmot_remove_member">حذف عضو</string>
-    <string name="marmot_remove_member_confirm">آیا مطمئن هستید که می‌خواهید \"%1$s\" را از این گروه حذف کنید؟</string>
+    <string name="marmot_remove_member_confirm">آیا مطمئن هستید که می‌خواهید "%1$s" را از این گروه حذف کنید؟</string>
     <string name="marmot_grant">اعطا</string>
     <string name="marmot_grant_admin_privileges">اعطای دسترسی مدیریت</string>
     <string name="marmot_grant_admin_title">اعطای دسترسی مدیریت</string>
-    <string name="marmot_grant_admin_confirm">آیا \"%1$s\" را مدیر این گروه کنید؟ مدیران می‌توانند اعضا را اضافه یا حذف کنند، اطلاعات گروه را تغییر دهند و دسترسی مدیریت را به اعضای دیگر اعطا کنند.</string>
+    <string name="marmot_grant_admin_confirm">آیا "%1$s" را مدیر این گروه کنید؟ مدیران می‌توانند اعضا را اضافه یا حذف کنند، اطلاعات گروه را تغییر دهند و دسترسی مدیریت را به اعضای دیگر اعطا کنند.</string>
     <string name="marmot_revoke">لغو</string>
     <string name="marmot_revoke_admin_privileges">لغو دسترسی مدیریت</string>
     <string name="marmot_revoke_admin_title">لغو دسترسی مدیریت</string>
-    <string name="marmot_revoke_admin_confirm">دسترسی مدیریت \"%1$s\" لغو شود؟ آن‌ها همچنان عضو گروه باقی خواهند ماند.</string>
+    <string name="marmot_revoke_admin_confirm">دسترسی مدیریت "%1$s" لغو شود؟ آن‌ها همچنان عضو گروه باقی خواهند ماند.</string>
     <string name="marmot_relays_header">relay‌ها</string>
     <string name="marmot_relay_no_events">هنوز رویدادی وجود ندارد</string>
     <string name="marmot_relay_last_event">آخرین رویداد%1$s</string>

@@ -22,6 +22,8 @@ import os
 import re
 import sys
 
+from fix_escapes import STRING_EL, fix_text
+
 APP_RES = "amethyst/src/main/res"
 COMMONS_RES = "commons/src/commonMain/composeResources"
 
@@ -53,6 +55,17 @@ def extract(path: str, key: str):
     return m.group(0).strip("\n")
 
 
+def convert_escaping(element: str) -> str:
+    """Rewrite Android-only escaping that Compose resources do not understand.
+
+    Compose resolves \\uXXXX, \\n and \\t itself but leaves \\', \\", \\? and \\@
+    alone, and renders Android's quote-wrapping literally. Moving an element verbatim
+    therefore shipped `Don\\'t have a Nostr account?` to the login screen. See
+    fix_escapes.py, which repairs files already migrated.
+    """
+    return STRING_EL.sub(lambda m: m.group(1) + fix_text(m.group(2)) + m.group(3), element)
+
+
 def append(path: str, elements: list):
     if os.path.exists(path):
         src = open(path, encoding="utf-8").read()
@@ -60,7 +73,7 @@ def append(path: str, elements: list):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         src = NEW_FILE_TEMPLATE
     close = src.rindex("</resources>")
-    block = "".join("    " + el.strip() + "\n" for el in elements)
+    block = "".join("    " + convert_escaping(el.strip()) + "\n" for el in elements)
     open(path, "w", encoding="utf-8").write(src[:close] + block + src[close:])
 
 
