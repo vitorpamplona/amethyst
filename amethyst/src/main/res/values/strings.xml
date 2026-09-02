@@ -2484,7 +2484,7 @@
     <string name="ui_preferences_search_keywords" translatable="false">dark mode, light mode, theme, font size, language, appearance</string>
     <string name="notification_settings_search_keywords" translatable="false">push, alerts, sounds, vibration</string>
     <string name="security_filters_search_keywords" translatable="false">spam, block, mute, filter, warnings</string>
-    <string name="zaps_search_keywords" translatable="false">lightning, sats, tips, wallet, amount</string>
+    <string name="zaps_search_keywords" translatable="false">lightning, sats, tips, wallet, amount, payto, pay-to, venmo, paypal, cash app, monero, iban, hand-off</string>
     <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage</string>
     <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
     <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>

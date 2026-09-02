@@ -2777,6 +2777,24 @@ fun ZapAmountChoicePopupPreview() {
                 RailCapability(hasCashu = true, hasLightning = true, hasOnchain = true, cashuBestSingleMintSats = 10L, cashuTotalWalletSats = 1_000_000L),
                 amounts,
             )
+            // The pay-to hand-off sits beside the amount pills, not inside them, so
+            // it renders once however many presets there are. No app is installed in
+            // a preview, so this also shows the brand-coloured glyph fallback the
+            // chip uses when no single app owns the URI.
+            ZapChipPreviewRow(
+                "Lightning + two pay-to hand-offs",
+                RailCapability(
+                    hasCashu = false,
+                    hasLightning = true,
+                    hasOnchain = false,
+                    payToTargets =
+                        listOf(
+                            PaymentTarget("venmo", "vitorpamplona"),
+                            PaymentTarget("monero", "4AdUndXHHZ6cfufTMvppY6JwXNouMBzSkbLYfpAV5Usx3skxNgYeYTRJ5AmD9"),
+                        ),
+                ),
+                amounts,
+            )
         }
     }
 }
