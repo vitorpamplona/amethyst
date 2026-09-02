@@ -31,6 +31,7 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -864,11 +865,7 @@ private fun SlidingAnimationCount(
     if (accountViewModel.settings.isPerformanceMode()) {
         TextCount(baseCount, textColor)
     } else {
-        AnimatedContent(
-            targetState = baseCount,
-            transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec,
-            label = "SlidingAnimationCount",
-        ) { count ->
+        DeferredAnimatedContent(baseCount, "SlidingAnimationCount") { count ->
             TextCount(count, textColor)
         }
     }
@@ -890,6 +887,48 @@ val slideAnimation: ContentTransform =
                 animationSpec = tween(durationMillis = 100),
             ),
     )
+
+/** Latches the first time an animated counter's value moves off the one it was composed with. */
+private class CountChangeLatch {
+    var changed = false
+}
+
+/**
+ * An [AnimatedContent] that does not build its transition until the value actually changes.
+ *
+ * Same reasoning as `DeferredCrossfade`: `AnimatedContent` builds a transition plus its content map
+ * and size animation on first composition, but first composition has nothing to animate. A reaction
+ * counter only slides when the count moves, which practically never happens in the second a card
+ * spends on screen during a scroll — so the apparatus was built and thrown away, once per counter
+ * per card.
+ *
+ * Rendering the bare content until the first change, then seeding a [MutableTransitionState] at the
+ * original value, keeps that first change animated exactly as before.
+ */
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun <T> DeferredAnimatedContent(
+    targetState: T,
+    label: String,
+    content: @Composable (T) -> Unit,
+) {
+    val initial = remember { targetState }
+    val latch = remember { CountChangeLatch() }
+    if (targetState != initial) latch.changed = true
+
+    if (!latch.changed) {
+        content(targetState)
+    } else {
+        val transitionState = remember { MutableTransitionState(initial) }
+        transitionState.targetState = targetState
+        val transition = rememberTransition(transitionState, label)
+        transition.AnimatedContent(
+            transitionSpec = { transitionSpec() },
+        ) { value ->
+            content(value)
+        }
+    }
+}
 
 @Composable
 fun TextCount(
@@ -918,11 +957,7 @@ fun SlidingAnimationAmount(
             maxLines = 1,
         )
     } else {
-        AnimatedContent(
-            targetState = amount,
-            transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec,
-            label = "SlidingAnimationAmount",
-        ) { count ->
+        DeferredAnimatedContent(amount, "SlidingAnimationAmount") { count ->
             Text(
                 text = count,
                 fontSize = Font14SP,

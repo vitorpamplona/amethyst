@@ -23,10 +23,12 @@ package com.vitorpamplona.quartz.utils.concurrent
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
-// Copy-on-write, mirroring ConcurrentHashCache.linux: correct and simple. The
-// native targets never run the crawl this backs (it is JVM/Android-only work);
-// they only compile it, so the O(n)-per-write cost is irrelevant. A CAS retry
-// loop gives getOrPut/merge the same atomicity the JVM actual gets for free.
+// Copy-on-write: correct and simple. Unlike LargeCache/ConcurrentHashCache — which
+// back LocalCache and the event decoder and were moved off copy-on-write for exactly
+// this reason — the native targets never run the crawl this backs (it is
+// JVM/Android-only work); they only compile it, so the O(n)-per-write cost is
+// irrelevant. A CAS retry loop gives getOrPut/merge the same atomicity the JVM actual
+// gets for free.
 @OptIn(ExperimentalAtomicApi::class)
 actual class ConcurrentMap<K : Any, V : Any> {
     private val ref = AtomicReference(HashMap<K, V>())

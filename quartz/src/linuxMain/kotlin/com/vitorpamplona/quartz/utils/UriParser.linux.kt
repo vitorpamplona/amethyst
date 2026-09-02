@@ -121,41 +121,54 @@ actual class UriParser actual constructor(
 
     actual fun path(): String? = parsedPath
 
-    actual fun queryParameterNames(): Set<String> {
-        val query = parsedQuery ?: return emptySet()
-        return query
-            .split('&')
-            .map { param ->
-                val eqIndex = param.indexOf('=')
-                if (eqIndex >= 0) param.substring(0, eqIndex) else param
-            }.toSet()
-    }
+    /**
+     * Parsed once and reused, mirroring the JVM actual's lazy map — the previous version
+     * re-split the entire query string on every [getQueryParameter] call.
+     *
+     * Decoded with [UrlEncoder.decode], which matches `URLDecoder.decode(.., "UTF-8")` —
+     * what the JVM actual calls. Skipping this is why NIP-47 failed on this target:
+     * `relay=wss%3A%2F%2Frelay.damus.io` reached `RelayUrlNormalizer` still encoded and
+     * came back "Invalid relay Url".
+     */
+    private val queryParameters: Map<String, List<String>> by lazy {
+        parsedQuery?.ifBlank { null }?.let { query ->
+            val params = mutableMapOf<String, MutableList<String>>()
 
-    actual fun getQueryParameter(param: String): List<String>? {
-        val query = parsedQuery ?: return null
-        return query
-            .split('&')
-            .filter { part ->
-                val eqIndex = part.indexOf('=')
-                if (eqIndex >= 0) part.substring(0, eqIndex) == param else part == param
-            }.map { part ->
-                val eqIndex = part.indexOf('=')
-                if (eqIndex >= 0) part.substring(eqIndex + 1) else ""
+            query.split('&').forEach { paramValue ->
+                val parts = paramValue.split("=", limit = 2)
+                val currentValue =
+                    params.getOrPut(parts[0]) {
+                        mutableListOf()
+                    }
+
+                if (parts.size == 2) {
+                    currentValue.add(UrlEncoder.decode(parts[1]))
+                } else {
+                    currentValue.add("")
+                }
             }
+
+            params
+        } ?: emptyMap()
     }
 
-    val fragments: Map<String, String> by lazy {
+    private val parsedFragments: Map<String, String> by lazy {
         parsedFragment?.ifBlank { null }?.let { keyValuePair ->
             keyValuePair.split('&').associate { paramValue ->
                 val parts = paramValue.split("=", limit = 2)
                 if (parts.size == 2) {
-                    parts[0] to parts[1]
+                    parts[0] to UrlEncoder.decode(parts[1])
                 } else {
-                    parts[0] to ""
+                    parts[0] to "" // Handle parameters without a value
                 }
             }
         } ?: emptyMap()
     }
 
-    actual fun fragments(): Map<String, String> = fragments
+    actual fun queryParameterNames(): Set<String> = queryParameters.keys
+
+    /** Null — not an empty list — when the parameter is absent, as on the JVM. */
+    actual fun getQueryParameter(param: String): List<String>? = queryParameters[param]
+
+    actual fun fragments(): Map<String, String> = parsedFragments
 }

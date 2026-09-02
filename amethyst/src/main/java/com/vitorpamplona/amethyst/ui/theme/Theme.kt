@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.theme
 
 import android.app.Activity
-import android.app.UiModeManager
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -49,7 +47,6 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.SpanStyle
@@ -712,24 +709,15 @@ fun AmethystTheme(
     fontSize: FontSizeType = FontSizeType.NORMAL,
     content: @Composable () -> Unit,
 ) {
-    val context = LocalContext.current
+    // Deliberately no UiModeManager.nightMode write: changing the device night mode needs
+    // MODIFY_DAY_NIGHT_MODE, which this app does not declare, so the call silently no-ops — and it
+    // ran on every recomposition of the theme, writing device state from inside composition. The
+    // in-app choice is applied through the colour scheme below, which is what actually took effect.
     val darkTheme =
         when (prefTheme) {
-            ThemeType.DARK -> {
-                val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
-                uiManager.nightMode = UiModeManager.MODE_NIGHT_YES
-                true
-            }
-
-            ThemeType.LIGHT -> {
-                val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
-                uiManager.nightMode = UiModeManager.MODE_NIGHT_NO
-                false
-            }
-
-            else -> {
-                isSystemInDarkTheme()
-            }
+            ThemeType.DARK -> true
+            ThemeType.LIGHT -> false
+            else -> isSystemInDarkTheme()
         }
     val colors =
         remember(darkTheme, accentColor) {

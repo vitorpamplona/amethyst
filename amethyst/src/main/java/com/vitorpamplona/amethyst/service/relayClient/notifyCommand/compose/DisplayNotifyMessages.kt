@@ -57,6 +57,26 @@ fun DisplayNotifyMessages(
             accountViewModel = accountViewModel,
             nav = nav,
             onDismiss = { requests.dismissPaymentRequest(request) },
+            onBlockRelay =
+                if (accountViewModel.isWriteable()) {
+                    {
+                        accountViewModel.launchSigner {
+                            accountViewModel.account.blockRelay(request.relayUrl)
+
+                            // Reached only once the block is signed and published, because
+                            // reportSignerErrors swallows a refused or timed-out signature without
+                            // a toast: dismissing up front would close the dialog on a relay that
+                            // is still unblocked and leave the user no sign anything failed. The
+                            // prompt staying up is the feedback.
+                            //
+                            // Every queued prompt from the relay goes at once, not just the one on
+                            // screen — a paid relay files one NOTIFY per rejected AUTH.
+                            requests.dismissAllFrom(request.relayUrl)
+                        }
+                    }
+                } else {
+                    null
+                },
         )
     }
 }

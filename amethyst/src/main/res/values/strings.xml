@@ -1732,6 +1732,7 @@
 
 
     <string name="payment_required_title">Message from %1$s</string>
+    <string name="notify_block_relay">Block Relay</string>
     <string name="hi_seller_is_this_still_available">Hi %1$s, is this still available?</string>
 
 
