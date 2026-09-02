@@ -65,7 +65,7 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
 import com.vitorpamplona.amethyst.model.AccentColorType
 import com.vitorpamplona.amethyst.model.FontFamilyType
 import com.vitorpamplona.amethyst.model.FontSizeType
@@ -738,7 +738,7 @@ fun AmethystTheme(
         typography = typography,
         shapes = Shapes,
         content = {
-            ProvideMaterialSymbols {
+            ProvideAppIcons {
                 CompositionLocalProvider(
                     LocalDensity provides scaledDensity,
                     LocalTextStyle provides LocalTextStyle.current.merge(TextStyle(fontFamily = resolvedFontFamily)),

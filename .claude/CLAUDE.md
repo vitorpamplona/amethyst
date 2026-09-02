@@ -263,7 +263,33 @@ Commit the regenerated `material_symbols_outlined.ttf` alongside your
 at runtime because the glyph is not in the bundled font.
 
 Reusing a codepoint already present in `MaterialSymbols.kt` does NOT require
-regenerating. See `tools/material-symbols-subset/README.md` for details and
+regenerating.
+
+### Amethyst's own icons are also a font
+
+The icons in `commons/.../commons/icons/*.kt` (Like, Reply, Reposted, Zap, …) are
+**also** compiled into a font, `composeResources/font/amethyst_icons.ttf`, and drawn
+as glyphs via `AmethystIconGlyph`. Drawing an `ImageVector` rasterises its paths into
+a per-instance cached layer, so a feed re-rasterised the same glyph once per card;
+a glyph is a blit from the shared text atlas. Measured: frame P90 **-10.7%**,
+overrun P90 **-17.4%** on the feed scroll benchmark.
+
+**MANDATORY:** whenever you add or change an icon under `commons/.../commons/icons/`,
+regenerate the font *and* its codepoint table together:
+
+```bash
+python3 tools/icon-font/build_icon_font.py \
+  commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons \
+  commons/src/commonMain/composeResources/font/amethyst_icons.ttf \
+  commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/AmethystIcons.kt
+```
+
+Both outputs must be committed together: codepoints are assigned in filename order,
+so adding an icon renumbers the ones after it, and a stale `AmethystIcons.kt` then
+points at the wrong glyph. Needs `fonttools` (`pip install fonttools`). The script
+prints any icon it could not convert — an icon that is skipped must keep using its
+`ImageVector`.
+ See `tools/material-symbols-subset/README.md` for details and
 prerequisites (`pip install fonttools brotli`).
 
 ## Code Formatting

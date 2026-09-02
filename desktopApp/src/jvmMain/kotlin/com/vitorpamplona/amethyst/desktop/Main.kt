@@ -82,7 +82,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
 import com.vitorpamplona.amethyst.commons.moderation.LocalHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
@@ -1254,7 +1254,7 @@ private fun AppInner(
         .rememberSystemDark(LocalAwtWindow.current)
 
     com.vitorpamplona.amethyst.desktop.platform.PlatformMaterialTheme(isDark = isDark) {
-        ProvideMaterialSymbols(
+        ProvideAppIcons(
             weight = com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight.current,
         ) {
             Surface(
