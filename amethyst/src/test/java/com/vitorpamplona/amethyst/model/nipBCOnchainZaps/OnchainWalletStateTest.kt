@@ -228,4 +228,82 @@ class OnchainWalletStateTest {
 
             assertNull(state.funds.value)
         }
+
+    @Test
+    fun statusWalksLoadingToReady() =
+        runTest(StandardTestDispatcher()) {
+            val backend = FakeBackend(utxos = listOf(utxo(100_000L, 1)))
+            val state = stateFor(backend)
+
+            assertEquals(OnchainBalanceStatus.LOADING, state.status.value)
+
+            state.refresh()
+            advanceUntilIdle()
+
+            assertEquals(OnchainBalanceStatus.READY, state.status.value)
+            // The wallet card shows everything on the address, settled or not.
+            assertEquals(100_000L, state.funds.value!!.totalSats)
+        }
+
+    @Test
+    fun statusIsErrorOnlyWhenThereIsNothingToShow() =
+        runTest(StandardTestDispatcher()) {
+            val backend = FakeBackend(utxos = listOf(utxo(100_000L, 1)))
+            backend.failUtxos = true
+            val state = stateFor(backend)
+
+            state.refresh()
+            advanceUntilIdle()
+            assertEquals(OnchainBalanceStatus.ERROR, state.status.value)
+
+            // Once a balance is known, a later failure keeps the last good number
+            // on screen rather than blanking it to an error.
+            backend.failUtxos = false
+            state.refresh(force = true)
+            advanceUntilIdle()
+            assertEquals(OnchainBalanceStatus.READY, state.status.value)
+
+            backend.failUtxos = true
+            state.refresh(force = true)
+            advanceUntilIdle()
+            assertEquals(OnchainBalanceStatus.READY, state.status.value)
+            assertEquals(100_000L, state.funds.value!!.totalSats)
+        }
+
+    @Test
+    fun statusIsUnavailableWithoutABackend() =
+        runTest(StandardTestDispatcher()) {
+            var backend: OnchainBackend? = null
+            val state =
+                OnchainWalletState(
+                    pubKey = pubKey,
+                    scope = this,
+                    backend = { backend },
+                    ioDispatcher = StandardTestDispatcher(testScheduler),
+                )
+
+            state.refresh()
+            advanceUntilIdle()
+            assertEquals(OnchainBalanceStatus.UNAVAILABLE, state.status.value)
+
+            // AppModules wires the backend up after the account is built, so a
+            // later refresh has to climb back out of UNAVAILABLE.
+            backend = FakeBackend(utxos = listOf(utxo(100_000L, 1)))
+            state.refresh()
+            advanceUntilIdle()
+            assertEquals(OnchainBalanceStatus.READY, state.status.value)
+        }
+
+    @Test
+    fun statusIsUnavailableWithoutADerivableAddress() {
+        val state =
+            OnchainWalletState(
+                pubKey = "not a pubkey",
+                scope = TestScope(),
+                backend = { null },
+            )
+
+        assertNull(state.address)
+        assertEquals(OnchainBalanceStatus.UNAVAILABLE, state.status.value)
+    }
 }

@@ -59,9 +59,28 @@ data class OnchainFunds(
     val maxSpendableSats: Long,
     val feeRateSatPerVByte: Double,
 ) {
+    /**
+     * Everything sitting on the address, settled or not — the figure the wallet
+     * card displays. Not what a zap can spend: see [maxSpendableSats].
+     */
+    val totalSats: Long get() = confirmedSats + unconfirmedSats
+
     /** Whether an on-chain zap of [amountSats] fits in the wallet, fee included. */
     fun canAfford(amountSats: Long) = amountSats <= maxSpendableSats
 }
+
+/**
+ * Load state of [OnchainWalletState.funds], for surfaces that display the
+ * balance itself rather than just gating on it.
+ *
+ *  - [UNAVAILABLE]: nothing to load — the pubkey yields no Taproot address, or
+ *    no chain backend is configured.
+ *  - [LOADING]: no snapshot yet; a fetch is pending or in flight.
+ *  - [READY]: a snapshot is available. It may be slightly stale — a failed
+ *    refresh keeps the last good balance rather than blanking the display.
+ *  - [ERROR]: no snapshot, and the last fetch failed.
+ */
+enum class OnchainBalanceStatus { UNAVAILABLE, LOADING, READY, ERROR }
 
 /**
  * Account-scoped cache of the sender's on-chain (NIP-BC) balance.
@@ -115,6 +134,14 @@ class OnchainWalletState(
     /** Latest snapshot, or null while unknown. See the class doc on `null`. */
     val funds: StateFlow<OnchainFunds?> = _funds.asStateFlow()
 
+    private val _status =
+        MutableStateFlow(
+            if (address == null) OnchainBalanceStatus.UNAVAILABLE else OnchainBalanceStatus.LOADING,
+        )
+
+    /** Why [funds] is what it is — for the wallet card, which shows the number. */
+    val status: StateFlow<OnchainBalanceStatus> = _status.asStateFlow()
+
     /** Serializes fetches so N callers asking at once produce one round trip. */
     private val loading = Mutex()
 
@@ -135,7 +162,14 @@ class OnchainWalletState(
      * calls inside the window are a no-op.
      */
     fun refresh(force: Boolean = false) {
-        if (address == null || backend() == null) return
+        if (address == null) return
+        if (backend() == null) {
+            _status.value = OnchainBalanceStatus.UNAVAILABLE
+            return
+        }
+        // The backend may have been wired up since the last attempt; move off
+        // UNAVAILABLE/ERROR so the card shows a spinner rather than a stale "—".
+        if (_funds.value == null) _status.value = OnchainBalanceStatus.LOADING
         if (!force && !isStale()) return
         scope.launch(ioDispatcher) { load(force) }
     }
@@ -166,8 +200,10 @@ class OnchainWalletState(
                 } catch (t: Throwable) {
                     // Keep the previous snapshot rather than dropping to null: a
                     // slightly stale balance is a better gate than no gate, and
-                    // null would re-open every amount as "unknown".
+                    // null would re-open every amount as "unknown". Which is also
+                    // why this only reports ERROR when there is nothing to show.
                     Log.w("OnchainWalletState", "Could not load the on-chain balance", t)
+                    if (_funds.value == null) _status.value = OnchainBalanceStatus.ERROR
                     return
                 }
 
@@ -184,6 +220,7 @@ class OnchainWalletState(
                     maxSpendableSats = OnchainZapBuilder.maxSpendableSats(utxos, feeRate),
                     feeRateSatPerVByte = feeRate,
                 )
+            _status.value = OnchainBalanceStatus.READY
         }
     }
 
