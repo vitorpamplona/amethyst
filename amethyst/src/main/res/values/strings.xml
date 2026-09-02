@@ -1867,8 +1867,9 @@
     <string name="no_payment_app_found">No app found to handle this payment. Please install a compatible wallet.</string>
     <string name="no_payment_app_found_for_type">No app installed to handle %1$s payments. Please install a compatible wallet.</string>
     <string name="payto_amount_set_in_app">Pay in %1$s — you choose the amount there</string>
-    <string name="profile_ui_setting_payto_zap_chip">Pay-to shortcut in the zap picker</string>
-    <string name="profile_ui_setting_payto_zap_chip_description">When you and the author both publish the same payment method, offer it in the zap picker. Opens the other app, which asks for the amount — no zap receipt is created.</string>
+    <string name="zap_payto_section">Pay-to hand-off</string>
+    <string name="zap_payto_section_explainer">When you and the author both publish the same payment method (Venmo, Monero, an IBAN…), the zap picker can offer it. Tapping opens that app, which asks for the amount — nothing is published to relays, so the note\'s zap count does not change.</string>
+    <string name="zap_payto_toggle">Offer shared payment methods</string>
     <string name="error_dialog_payment_error">Unable to open payment</string>
 
     <string name="bolt12_offers">BOLT12 Offers</string>

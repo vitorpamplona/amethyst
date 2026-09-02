@@ -80,7 +80,6 @@ fun ProfileUiSettingsContent(
     val showZapReceived by ui.showProfileZapReceivedFeed.collectAsStateWithLifecycle()
     val showFollowers by ui.showProfileFollowersFeed.collectAsStateWithLifecycle()
     val showOnchainWallet by ui.showOnchainWallet.collectAsStateWithLifecycle()
-    val showPayToZapChip by ui.showPayToZapChip.collectAsStateWithLifecycle()
     val gallery by ui.gallerySet.collectAsStateWithLifecycle()
 
     Column(
@@ -125,14 +124,6 @@ fun ProfileUiSettingsContent(
                 title = R.string.profile_ui_setting_onchain_wallet,
                 checked = showOnchainWallet,
                 onCheckedChange = { ui.showOnchainWallet.tryEmit(it) },
-            )
-            SettingsDivider()
-            SettingsSwitchTile(
-                icon = MaterialSymbols.AutoMirrored.OpenInNew,
-                title = R.string.profile_ui_setting_payto_zap_chip,
-                description = R.string.profile_ui_setting_payto_zap_chip_description,
-                checked = showPayToZapChip,
-                onCheckedChange = { ui.showPayToZapChip.tryEmit(it) },
             )
         }
 

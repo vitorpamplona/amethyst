@@ -46,6 +46,11 @@ class UpdateZapAmountViewModel : ViewModel() {
     var walletConnectSecret by mutableStateOf(TextFieldValue(""))
     var selectedZapType by mutableStateOf(LnZapEvent.ZapType.PRIVATE)
 
+    // A local UI preference rather than synced account state, but it is edited on
+    // this screen, so it follows this screen's Save/Cancel contract instead of
+    // applying instantly — a toggle that ignored Cancel would read as a bug.
+    var showPayToChip by mutableStateOf(false)
+
     fun copyFromClipboard(text: String) {
         if (text.isBlank()) {
             return
@@ -60,6 +65,8 @@ class UpdateZapAmountViewModel : ViewModel() {
     fun load() {
         this.amountSet = accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices.value
         this.selectedZapType = accountViewModel.account.settings.syncedSettings.zaps.defaultZapType.value
+
+        this.showPayToChip = uiSettings().showPayToZapChip.value
 
         val nip47 = accountViewModel.account.settings.defaultZapPaymentRequest()
 
@@ -132,13 +139,17 @@ class UpdateZapAmountViewModel : ViewModel() {
             }
 
         accountViewModel.account.updateZapAmounts(amountSet, selectedZapType, nip47Update)
+        uiSettings().showPayToZapChip.tryEmit(showPayToChip)
 
         nextAmount = TextFieldValue("")
     }
 
     fun cancel() {
         nextAmount = TextFieldValue("")
+        showPayToChip = uiSettings().showPayToZapChip.value
     }
+
+    private fun uiSettings() = accountViewModel.settings.uiSettingsFlow
 
     fun hasChanged(): Boolean {
         val defaultUri = accountViewModel.account.settings.defaultZapPaymentRequest()
@@ -147,7 +158,8 @@ class UpdateZapAmountViewModel : ViewModel() {
                 amountSet != accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices.value ||
                 walletConnectPubkey.text != (defaultUri?.pubKeyHex ?: "") ||
                 walletConnectRelay.text != (defaultUri?.relayUri?.url ?: "") ||
-                walletConnectSecret.text != (defaultUri?.secret ?: "")
+                walletConnectSecret.text != (defaultUri?.secret ?: "") ||
+                showPayToChip != uiSettings().showPayToZapChip.value
         )
     }
 
