@@ -1367,7 +1367,7 @@
     <string name="music_playlist_collaborative_hint">Umožněte ostatním přidávat skladby do tohoto playlistu.</string>
     <string name="music_playlist_delete">Smazat tento playlist</string>
     <string name="music_playlist_delete_confirm">Zveřejnit NIP-09 smazání pro tento playlist?</string>
-    <string name="music_playlist_no_tracks_hint">Zatím žádné skladby. Přidejte skladby z nabídky písně pomocí "Přidat do playlistu".</string>
+    <string name="music_playlist_no_tracks_hint">Zatím žádné skladby. Přidejte skladby z nabídky písně pomocí \"Přidat do playlistu\".</string>
     <string name="music_playlist_move_track_up">Přesunout skladbu nahoru</string>
     <string name="music_playlist_move_track_down">Přesunout skladbu dolů</string>
     <string name="music_playlist_remove_track">Odebrat skladbu z playlistu</string>
@@ -1488,7 +1488,7 @@
     <string name="relay_group_invite_only_to_post">Tato skupina je pouze na pozvání — k přispívání potřebujete pozvánku.</string>
     <string name="messages_new_message_to">Pro</string>
     <string name="messages_new_message_subject_caption">Téma konverzace</string>
-    <string name="messages_new_message_to_caption">@Uživatel1, @Uživatel2, @Uživatel3</string>
+    <string name="messages_new_message_to_caption">\@Uživatel1, @Uživatel2, @Uživatel3</string>
     <string name="messages_group_descriptor">Členové této skupiny</string>
     <string name="messages_new_subject_message">Vysvětlení členům</string>
     <string name="messages_new_subject_message_placeholder">Změna názvu pro nové cíle.</string>
@@ -1563,7 +1563,7 @@
     <string name="retry_without_encryption">Zkusit znovu bez šifrování</string>
     <string name="upload_without_encryption_warning">Upozornění: Bez šifrování může kdokoli s odkazem na soubor vidět jeho obsah.</string>
     <string name="media_compression_quality_label">Kvalita médií</string>
-    <string name="media_compression_quality_explainer">Vyberte Nízkou kvalitu pro kompresi médií na menší soubor s nižší kvalitou, Vysokou kvalitu pro kompresi na větší soubor s vyšší kvalitou, nebo "Bez komprese" pro nahrání médií bez komprese.</string>
+    <string name="media_compression_quality_explainer">Vyberte Nízkou kvalitu pro kompresi médií na menší soubor s nižší kvalitou, Vysokou kvalitu pro kompresi na větší soubor s vyšší kvalitou, nebo \"Bez komprese\" pro nahrání médií bez komprese.</string>
     <string name="media_compression_quality_low">Nízká</string>
     <string name="media_compression_quality_medium">Střední</string>
     <string name="media_compression_quality_high">Vysoká</string>
@@ -1800,7 +1800,7 @@
     <string name="calendar_untitled">(bez názvu)</string>
     <string name="calendar_all_day">Celodenní</string>
     <string name="calendar_rsvp_going_prefixed">✓ Účastním se</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Možná</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Možná</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Nemůžu</string>
     <string name="calendar_collection_title">Název</string>
     <string name="calendar_collection_description">Popis</string>
@@ -2144,7 +2144,7 @@
     <string name="remove_dvm_from_favorites">Odebrat z oblíbených</string>
     <string name="favorite_dvms_explainer">Algoritmy zdrojů, které zde označíte hvězdičkou, se zobrazí jako filtry na hlavním zdroji. Otevřete Objevovat pro přidání dalších.</string>
     <string name="favorite_dvms_empty_headline">Připněte si oblíbené algoritmy</string>
-    <string name="favorite_dvms_empty_step1">Klepněte na "%1$s" níže pro procházení algoritmů.</string>
+    <string name="favorite_dvms_empty_step1">Klepněte na \"%1$s\" níže pro procházení algoritmů.</string>
     <string name="favorite_dvms_empty_step2">Klepněte na %1$s vedle kanálu, abyste si jej zde uložili.</string>
     <string name="favorite_dvms_empty_cta">Přidat nějaké kanály</string>
     <string name="favorite_dvms_add_more">Přidat další…</string>
@@ -2542,8 +2542,8 @@
     <string name="emoji_add_dialog_title">Přidat vlastní emoji</string>
     <string name="emoji_remove_dialog_title">Odstranit :%1$s:?</string>
     <string name="emoji_long_press_hint">Dlouze stiskněte emoji pro odstranění</string>
-    <string name="emoji_pack_is_in_list">"%1$s" je ve vašem seznamu emoji</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" není ve vašem seznamu emoji</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" je ve vašem seznamu emoji</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" není ve vašem seznamu emoji</string>
     <string name="emoji_pack_actions_dialog_title">Akce emoji balíčku</string>
     <string name="emoji_private_toggle">Soukromé</string>
     <string name="emoji_private_badge">Soukromé emoji</string>
@@ -2581,7 +2581,7 @@
     <string name="marmot_edit_group_info">Upravit informace o skupině</string>
     <string name="marmot_leave_group">Opustit skupinu</string>
     <string name="marmot_this_group">tato skupina</string>
-    <string name="marmot_leave_group_confirm">Opravdu chcete opustit "%1$s"? Nebudete již dostávat zprávy z této skupiny.</string>
+    <string name="marmot_leave_group_confirm">Opravdu chcete opustit \"%1$s\"? Nebudete již dostávat zprávy z této skupiny.</string>
     <string name="marmot_keypackage_required">Musí mít zveřejněný KeyPackage (kind:30443), aby mohl být přidán.</string>
     <string name="marmot_add_to_group">Přidat do skupiny</string>
     <string name="marmot_add_member">Přidat člena</string>
@@ -2590,15 +2590,15 @@
     <string name="marmot_member_suffix_you"> (vy)</string>
     <string name="marmot_member_suffix_admin"> – admin</string>
     <string name="marmot_remove_member">Odebrat člena</string>
-    <string name="marmot_remove_member_confirm">Opravdu chcete odebrat "%1$s" z této skupiny?</string>
+    <string name="marmot_remove_member_confirm">Opravdu chcete odebrat \"%1$s\" z této skupiny?</string>
     <string name="marmot_grant">Udělit</string>
     <string name="marmot_grant_admin_privileges">Udělit administrátorská práva</string>
     <string name="marmot_grant_admin_title">Udělit administrátorská práva</string>
-    <string name="marmot_grant_admin_confirm">Udělat z "%1$s" administrátora této skupiny? Administrátoři mohou přidávat nebo odebírat členy, měnit informace o skupině a udělovat administrátorská práva ostatním členům.</string>
+    <string name="marmot_grant_admin_confirm">Udělat z \"%1$s\" administrátora této skupiny? Administrátoři mohou přidávat nebo odebírat členy, měnit informace o skupině a udělovat administrátorská práva ostatním členům.</string>
     <string name="marmot_revoke">Odebrat</string>
     <string name="marmot_revoke_admin_privileges">Odebrat administrátorská práva</string>
     <string name="marmot_revoke_admin_title">Odebrat administrátorská práva</string>
-    <string name="marmot_revoke_admin_confirm">Odebrat administrátorská práva "%1$s"? Zůstane členem skupiny.</string>
+    <string name="marmot_revoke_admin_confirm">Odebrat administrátorská práva \"%1$s\"? Zůstane členem skupiny.</string>
     <string name="marmot_relays_header">Relaye</string>
     <string name="marmot_relay_no_events">zatím žádné eventy</string>
     <string name="marmot_relay_last_event">poslední event%1$s</string>
@@ -2685,7 +2685,7 @@
     <string name="buzz_persona_new_title">Nová persona</string>
     <string name="buzz_persona_edit_title">Upravit personu</string>
     <string name="buzz_persona_slug">Slug (id persony)</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, '-' nebo '_'. Po vytvoření nelze změnit.</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' nebo \'_\'. Po vytvoření nelze změnit.</string>
     <string name="buzz_persona_display_name">Zobrazované jméno</string>
     <string name="buzz_persona_system_prompt">Systémový prompt</string>
     <string name="buzz_persona_model">Model (volitelné)</string>
