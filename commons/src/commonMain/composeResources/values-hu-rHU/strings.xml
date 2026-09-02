@@ -461,13 +461,13 @@
     <string name="mark_all_known_as_read">Az összes ismert megjelölése olvasottként</string>
     <string name="mark_all_new_as_read">Az összes új üzenet megjelölése olvasottként</string>
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Kulcs- és biztonsági mentési tippek
+    <string name="account_backup_tips2_md">        ## Kulcs- és biztonsági mentési tippek
         \n\nFiókját egy titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-vel kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet.
         \n\n- **Ne** helyezze el a titkos kulcsát olyan webhelyen vagy szoftverben, amelyben nem bízik.
         \n- Az Amethyst fejlesztői az Ön titkos kulcsát **soha** nem fogják Öntől elkérni.
         \n- A fiók-helyreállításának érdekében, a titkos kulcsáról **mindig** készítsen biztonsági másolatot. Javasoljuk egy jelszókezelő használatát.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        A nagyobb biztonság érdekében titkosítsa egy jelszóval. A jelszóval védett kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható.
+    <string name="account_backup_tips3_md">        A nagyobb biztonság érdekében titkosítsa egy jelszóval. A jelszóval védett kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható.
          \n\nHa elveszíti a jelszavát, nem tudja visszaállítani a kulcsát.
     </string>
     <string name="backup_keys_nudge_title">Biztonsági mentés készítése a kulcsokról</string>

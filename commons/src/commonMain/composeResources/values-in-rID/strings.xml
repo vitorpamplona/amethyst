@@ -262,13 +262,13 @@
     <string name="mark_all_known_as_read">Tandai semua yang dikenal sebagai telah dibaca</string>
     <string name="mark_all_new_as_read">Tandai semua yang baru sebagai telah dibaca</string>
     <string name="mark_all_as_read">Tandai semua sebagai telah dibaca</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Tips Cadangan Kunci dan Keamanan
+    <string name="account_backup_tips2_md">        ## Tips Cadangan Kunci dan Keamanan
         \n\nAkun Anda diamankan dengan kunci rahasia. Kunci ini adalah rangkaian karakter panjang yang diawali dengan **nsec1**. Siapa pun yang memiliki akses ke kunci rahasia ini dapat memposting dan mengubah identitas Anda.
         \n\n- **Jangan** memasukkan kunci rahasia Anda ke situs web atau perangkat lunak yang tidak Anda percaya.
         \n- Pengembang Amethyst **tidak akan pernah** meminta kunci rahasia Anda.
         \n- **Lakukan** pencadangan kunci rahasia Anda secara aman untuk pemulihan akun. Kami merekomendasikan penggunaan pengelola kata sandi.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Untuk keamanan tambahan, Anda dapat mengenkripsi kunci dengan kata sandi. Kunci ini diawali dengan **ncryptsec1** dan tidak dapat digunakan tanpa kata sandi Anda.
+    <string name="account_backup_tips3_md">        Untuk keamanan tambahan, Anda dapat mengenkripsi kunci dengan kata sandi. Kunci ini diawali dengan **ncryptsec1** dan tidak dapat digunakan tanpa kata sandi Anda.
         \n\nJika Anda kehilangan kata sandi, Anda tidak akan dapat memulihkan kunci Anda.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Enkripsi dan salin kunci rahasia saya</string>

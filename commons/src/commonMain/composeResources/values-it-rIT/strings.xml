@@ -263,13 +263,13 @@
     <string name="mark_all_known_as_read">Segna tutti i conosciuti come letti</string>
     <string name="mark_all_new_as_read">Segna tutti i nuovi come letti</string>
     <string name="mark_all_as_read">Segna tutti come letti</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Suggerimenti per il backup e la sicurezza della chiave
+    <string name="account_backup_tips2_md">        ## Suggerimenti per il backup e la sicurezza della chiave
         \n\nIl tuo account è protetto da una chiave segreta. La chiave è una lunga sequenza di caratteri che inizia con **nsec1**. Chiunque abbia accesso a questa chiave segreta può pubblicare e modificare la tua identità.
         \n\n- **Non** inserire la tua chiave segreta in nessun sito web o software di cui non ti fidi.
         \n- Gli sviluppatori di Amethyst non chiederanno **mai** la tua chiave segreta.
         \n- **Conserva** un backup sicuro della tua chiave segreta per il recupero dell'account. Si consiglia l'uso di un gestore di password.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Per maggiore sicurezza, puoi cifrare la tua chiave con una password. Questa chiave inizia con **ncryptsec1** e non può essere utilizzata senza la tua password.
+    <string name="account_backup_tips3_md">        Per maggiore sicurezza, puoi cifrare la tua chiave con una password. Questa chiave inizia con **ncryptsec1** e non può essere utilizzata senza la tua password.
         \n\nSe perdi la password, non potrai recuperare la tua chiave.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Cifra e copia la mia chiave segreta</string>

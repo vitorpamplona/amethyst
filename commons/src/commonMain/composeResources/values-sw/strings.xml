@@ -267,13 +267,13 @@
     <string name="mark_all_known_as_read">Funga kama Zimejulikana</string>
     <string name="mark_all_new_as_read">Funga kama Mpya</string>
     <string name="mark_all_as_read">Funga kama Zimejulikana</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Vidokezo vya Nakala Rudufu ya Ufunguo na Usalama
+    <string name="account_backup_tips2_md">        ## Vidokezo vya Nakala Rudufu ya Ufunguo na Usalama
         \n\nAkaunti yako inalindwa na ufunguo wa siri. Ufunguo ni mfululizo mrefu wa herufi unaoanza na **nsec1**. Mtu yeyote anayepata ufunguo huu wa siri anaweza kuchapisha na kubadilisha utambulisho wako.
         \n\n- **Usiweke** ufunguo wako wa siri katika tovuti yoyote au programu unayoitembelewa.
         \n- Watengenezaji wa Amethyst **hawatawahi** kuomba ufunguo wako wa siri.
         \n- **Hifadhi** nakala salama ya ufunguo wako wa siri kwa ajili ya kurejesha akaunti. Tunapendekeza kutumia kidhibiti cha nenosiri.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Kwa usalama zaidi, unaweza kusimba ufunguo wako kwa nenosiri. Ufunguo huu unaanza na **ncryptsec1** na hauwezi kutumika bila nenosiri lako.
+    <string name="account_backup_tips3_md">        Kwa usalama zaidi, unaweza kusimba ufunguo wako kwa nenosiri. Ufunguo huu unaanza na **ncryptsec1** na hauwezi kutumika bila nenosiri lako.
         \n\nUkipoteza nenosiri lako, hutaweza kurejesha ufunguo wako.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Simba na nakili ufunguo wangu wa siri</string>

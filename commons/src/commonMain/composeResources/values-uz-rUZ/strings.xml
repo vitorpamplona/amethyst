@@ -272,13 +272,13 @@
     <string name="mark_all_known_as_read">Barcha ma'lumlarni o'qilgan deb belgilash</string>
     <string name="mark_all_new_as_read">Barcha yangilarni o'qilgan deb belgilash</string>
     <string name="mark_all_as_read">Barchasini o'qilgan deb belgilash</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Kalit zaxiralash va xavfsizlik maslahatlari
+    <string name="account_backup_tips2_md">        ## Kalit zaxiralash va xavfsizlik maslahatlari
         \n\nHisobingiz maxfiy kalit bilan himoyalangan. Kalit **nsec1** bilan boshlanadigan uzun belgilar ketma-ketligidir. Ushbu maxfiy kalitga kirish huquqiga ega bo'lgan har kim sizning nomingizdan post qo'yishi va identifikatoringizni o'zgartirishi mumkin.
         \n\n- Maxfiy kalitingizni ishonmagan veb-sayt yoki dasturga **kiritmang**.
         \n- Amethyst ishlab chiquvchilari maxfiy kalitingizni hech **qachon** so'ramaydi.
         \n- Hisob tiklash uchun maxfiy kalitingizning xavfsiz zaxira nusxasini saqlang. Parol menejeridan foydalanishni tavsiya qilamiz.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Qo'shimcha xavfsizlik uchun kalitingizni parol bilan shifrlashingiz mumkin. Bu kalit **ncryptsec1** bilan boshlanadi va parolsiz ishlatib bo'lmaydi.
+    <string name="account_backup_tips3_md">        Qo'shimcha xavfsizlik uchun kalitingizni parol bilan shifrlashingiz mumkin. Bu kalit **ncryptsec1** bilan boshlanadi va parolsiz ishlatib bo'lmaydi.
         \n\nParolingizni unutsangiz, kalitingizni tiklay olmaysiz.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Maxfiy kalitni shifrlash va nusxalash</string>

@@ -270,13 +270,13 @@
     <string name="mark_all_known_as_read">Marki ĉiujn Konatajn legitaj</string>
     <string name="mark_all_new_as_read">Marki ĉiujn Novajn legitaj</string>
     <string name="mark_all_as_read">Marki ĉiujn legitajn</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Konsiletoj pri Ŝlosila Sekurkopiao kaj Sekureco
+    <string name="account_backup_tips2_md">        ## Konsiletoj pri Ŝlosila Sekurkopiao kaj Sekureco
         \n\nVia konto estas sekurigita per sekreta ŝlosilo. La ŝlosilo estas longa sinsekvo de signoj komencanta per **nsec1**. Ĉiu kiu havas aliron al ĉi tiu sekreta ŝlosilo povas afiŝi kaj ŝanĝi vian identecon.
         \n\n- **Ne** metu vian sekretan ŝlosilon en ajnan retejon aŭ programaron, kiun vi ne fidas.
         \n- Amethyst-programistoj **neniam** petos vian sekretan ŝlosilon.
         \n- **Faru** sekuran sekurkopion de via sekreta ŝlosilo por reakiro de konto. Ni rekomendas uzi pasvortan administrilon.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Por plia sekureco, vi povas ĉifri vian ŝlosilon per pasvorto. Ĉi tiu ŝlosilo komenciĝas per **ncryptsec1** kaj ne povas esti uzata sen via pasvorto.
+    <string name="account_backup_tips3_md">        Por plia sekureco, vi povas ĉifri vian ŝlosilon per pasvorto. Ĉi tiu ŝlosilo komenciĝas per **ncryptsec1** kaj ne povas esti uzata sen via pasvorto.
         \n\nSe vi perdas vian pasvorton, vi ne povos reakiri vian ŝlosilon.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Ĉifri kaj kopii mian seketan ŝlosilon</string>

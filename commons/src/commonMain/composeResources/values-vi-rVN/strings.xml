@@ -263,13 +263,13 @@
     <string name="mark_all_known_as_read">Đánh dấu tất cả đã biết là đã đọc</string>
     <string name="mark_all_new_as_read">Đánh dấu tất cả mới là đã đọc</string>
     <string name="mark_all_as_read">Đánh dấu tất cả là đã đọc</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Mẹo sao lưu khóa và bảo mật
+    <string name="account_backup_tips2_md">        ## Mẹo sao lưu khóa và bảo mật
         \n\nTài khoản của bạn được bảo mật bằng một khóa bí mật. Khóa là một chuỗi ký tự dài bắt đầu bằng **nsec1**. Bất kỳ ai có quyền truy cập vào khóa bí mật này đều có thể đăng bài và thay đổi danh tính của bạn.
         \n\n- **Không** đưa khóa bí mật của bạn vào bất kỳ trang web hoặc phần mềm nào mà bạn không tin tưởng.
         \n- Các nhà phát triển Amethyst sẽ **không bao giờ** yêu cầu khóa bí mật của bạn.
         \n- **Hãy** giữ bản sao lưu an toàn của khóa bí mật để khôi phục tài khoản. Chúng tôi khuyến nghị sử dụng trình quản lý mật khẩu.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Để bảo mật thêm, bạn có thể mã hóa khóa của mình bằng mật khẩu. Khóa này bắt đầu bằng **ncryptsec1** và không thể sử dụng nếu không có mật khẩu của bạn.
+    <string name="account_backup_tips3_md">        Để bảo mật thêm, bạn có thể mã hóa khóa của mình bằng mật khẩu. Khóa này bắt đầu bằng **ncryptsec1** và không thể sử dụng nếu không có mật khẩu của bạn.
         \n\nNếu bạn mất mật khẩu, bạn sẽ không thể khôi phục khóa của mình.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Mã hóa và sao chép khóa bí mật của tôi</string>

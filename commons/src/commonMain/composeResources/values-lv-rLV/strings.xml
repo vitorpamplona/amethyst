@@ -277,13 +277,13 @@
     <string name="mark_all_known_as_read">Atzīmēt visu zināmo kā lasītu</string>
     <string name="mark_all_new_as_read">Atzīmēt visu jauno kā lasītu</string>
     <string name="mark_all_as_read">Atzīmēt visu kā lasītu</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Atslēgas dublēšanas un drošības padomi
+    <string name="account_backup_tips2_md">        ## Atslēgas dublēšanas un drošības padomi
         \n\nJūsu konts ir aizsargāts ar slepeno atslēgu. Atslēga ir gara rakstzīmju secība, kas sākas ar **nsec1**. Ikviens, kam ir piekļuve šai slepenai atslēgai, var publicēt un mainīt jūsu identitāti.
         \n\n- **Neievietojiet** savu slepeno atslēgu nevienā tīmekļa vietnē vai programmatūrā, kurai neuzticaties.
         \n- Amethyst izstrādātāji **nekad** neprasīs jūsu slepeno atslēgu.
         \n- **Glabājiet** drošu slepenas atslēgas dublējumu konta atjaunošanai. Mēs iesakām izmantot paroļu pārvaldnieku.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Papildu drošībai variet šifrēt atslēgu ar paroli. Šī atslēga sāksies ar **ncryptsec1** virkni un to nevarēs izmantot bez šīs paroles.
+    <string name="account_backup_tips3_md">        Papildu drošībai variet šifrēt atslēgu ar paroli. Šī atslēga sāksies ar **ncryptsec1** virkni un to nevarēs izmantot bez šīs paroles.
         \n\nJa jūs aizmirsīsiet paroli, vairs nevarēsiet atgūt savu atslēgu.
     </string>
     <string name="backup_keys_nudge_body">Jūsu slepenā atslēga ir vienīgais veids, kā piekļūt šim kontam. Ja to pazaudēsiet, tad nekad nevarēsiet atgūt piekļuvi kontam. Saglabājiet atslēgu drošā vietā tagad.</string>

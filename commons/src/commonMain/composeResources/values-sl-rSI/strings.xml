@@ -470,14 +470,14 @@
     <string name="mark_all_known_as_read">Označi vse znane kot prebrane</string>
     <string name="mark_all_new_as_read">Označi vse nove kot prebrane</string>
     <string name="mark_all_as_read">Označi vse kot prebrane</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">
+    <string name="account_backup_tips2_md">
         ## Varnostna kopija ključev in varnostni nasveti
         \n\nVaš račun je zaščiten z privatnim ključem. Ta ključ ima dolgo sekvenco znakov kateri se začnejo z **nsec1**. Kdorkoli ima dostop, do tega privatnega ključa, lahko pošiljajo zapiske in spremenijo vašo digitalno identiteto.
         \n\n- Nikoli in **Nikdar** ne vpisuj svojega privatnega ključa v spletne strani in aplikacije katerim ne zaupaš.
         \n- Amethyst ustvarjalci vas ne bojo **nikoli** vprašali po vašem privatnem ključu.
         \n- Ustvari **varnostno kopijo** svojega privatnega ključa, za obnovitev računa. Priporoča se uporaba upravljalnika gesel.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Za dodatno varnost, lahko šifriraš svoj ključ z dodatnim geslom. Ta ključ se začne z **ncryptsec1** in ne more bit uporabljen brez dodatnega gesla.
+    <string name="account_backup_tips3_md">        Za dodatno varnost, lahko šifriraš svoj ključ z dodatnim geslom. Ta ključ se začne z **ncryptsec1** in ne more bit uporabljen brez dodatnega gesla.
         \n\nČe izgubiš geslo, obnova ključa ni več mogoča.
     </string>
     <string name="backup_keys_nudge_title">Varno shrani ključe</string>

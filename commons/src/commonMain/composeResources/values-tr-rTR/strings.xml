@@ -269,13 +269,13 @@
     <string name="mark_all_known_as_read">Tüm bilinenleri okundu olarak işaretle</string>
     <string name="mark_all_new_as_read">Tüm yenileri okundu olarak işaretle</string>
     <string name="mark_all_as_read">Tümünü okundu olarak işaretle</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Anahtar Yedekleme ve Güvenlik İpuçları
+    <string name="account_backup_tips2_md">        ## Anahtar Yedekleme ve Güvenlik İpuçları
         \n\nHesabınız bir gizli anahtarla korunmaktadır. Anahtar, **nsec1** ile başlayan uzun bir karakter dizisidir. Bu gizli anahtara erişimi olan herkes kimliğiniz adına gönderi yapabilir ve kimliğinizi değiştirebilir.
         \n\n- Gizli anahtarınızı güvenmediğiniz herhangi bir web sitesine veya yazılıma **koymayın**.
         \n- Amethyst geliştiricileri gizli anahtarınızı **asla** istemez.
         \n- Hesap kurtarma için gizli anahtarınızın güvenli bir yedeğini **alın**. Bir parola yöneticisi kullanmanızı öneririz.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Ek güvenlik için anahtarınızı bir parola ile şifreleyebilirsiniz. Bu anahtar **ncryptsec1** ile başlar ve parolanız olmadan kullanılamaz.
+    <string name="account_backup_tips3_md">        Ek güvenlik için anahtarınızı bir parola ile şifreleyebilirsiniz. Bu anahtar **ncryptsec1** ile başlar ve parolanız olmadan kullanılamaz.
         \n\nParolanızı kaybederseniz anahtarınızı kurtaramazsınız.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Gizli anahtarımı şifrele ve kopyala</string>

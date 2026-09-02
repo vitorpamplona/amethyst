@@ -265,13 +265,13 @@
     <string name="mark_all_known_as_read">Merkitse kaikki Tunnetut luetuiksi</string>
     <string name="mark_all_new_as_read">Merkitse kaikki Uudet luetuiksi</string>
     <string name="mark_all_as_read">Merkitse kaikki luetuiksi</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Avainten varmuuskopiointi ja turvallisuusvinkit
+    <string name="account_backup_tips2_md">        ## Avainten varmuuskopiointi ja turvallisuusvinkit
         \n\nTilisi on suojattu salaisella avaimella. Avain on pitkä merkkijono, joka alkaa **nsec1**:llä. Kuka tahansa, jolla on pääsy tähän salaiseen avaimeen, voi julkaista ja muuttaa henkilöllisyyttäsi.
         \n\n- **Älä** anna salaista avaintasi mihinkään verkkosivustoon tai ohjelmistoon, johon et luota.
         \n- Amethystin kehittäjät eivät **koskaan** pyydä salaista avaintasi.
         \n- **Tee** turvallinen varmuuskopio salaisesta avaimestasi tilin palauttamista varten. Suosittelemme salasananhallintaohjelman käyttöä.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Lisäturvallisuuden vuoksi voit salata avaimesi salasanalla. Tämä avain alkaa **ncryptsec1**:llä eikä sitä voi käyttää ilman salasanaasi.
+    <string name="account_backup_tips3_md">        Lisäturvallisuuden vuoksi voit salata avaimesi salasanalla. Tämä avain alkaa **ncryptsec1**:llä eikä sitä voi käyttää ilman salasanaasi.
         \n\nJos kadotat salasanasi, et pysty palauttamaan avaintasi.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Salaa ja kopioi salainen avaimeni</string>

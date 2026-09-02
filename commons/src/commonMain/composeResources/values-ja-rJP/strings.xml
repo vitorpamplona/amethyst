@@ -267,13 +267,13 @@
     <string name="mark_all_known_as_read">すべての「知り合い」を既読にする</string>
     <string name="mark_all_new_as_read">すべての「新規リクエスト」を既読にする</string>
     <string name="mark_all_as_read">すべて既読にする</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## 鍵のバックアップとセキュリティのヒント
+    <string name="account_backup_tips2_md">        ## 鍵のバックアップとセキュリティのヒント
         \n\nアカウントは秘密鍵によって保護されています。この鍵は **nsec1** で始まる長い文字列です。この秘密鍵にアクセスできる人は誰でも、あなたの名前でポストしたり、プロフィールを変更したりできます。
         \n\n- 信頼していないウェブサイトやアプリに秘密鍵を **入力しないでください**。
         \n- Amethyst の開発者が秘密鍵を **求めることは絶対にありません**。
         \n- アカウントの復元のために、秘密鍵の安全なバックアップを **必ず** 保管してください。パスワードマネージャーの使用をお勧めします。
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        さらにセキュリティを高めるために、鍵をパスワードで暗号化することができます。この鍵は **ncryptsec1** で始まり、パスワードなしでは使用できません。
+    <string name="account_backup_tips3_md">        さらにセキュリティを高めるために、鍵をパスワードで暗号化することができます。この鍵は **ncryptsec1** で始まり、パスワードなしでは使用できません。
         \n\nパスワードを忘れると、鍵を復元できなくなります。
     </string>
     <string name="encrypt_and_copy_my_secret_key">秘密鍵を暗号化してコピー</string>

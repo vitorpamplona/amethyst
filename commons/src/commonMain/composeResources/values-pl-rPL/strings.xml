@@ -471,13 +471,13 @@
     <string name="mark_all_known_as_read">Zaznacz wszystkie popularne jako przeczytane</string>
     <string name="mark_all_new_as_read">Zaznacz wszystkie nowe jako przeczytane</string>
     <string name="mark_all_as_read">Zaznacz wszystkie jako przeczytane</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Porady dotyczące kopii zapasowej i bezpieczeństwa
+    <string name="account_backup_tips2_md">        ## Porady dotyczące kopii zapasowej i bezpieczeństwa
         \n\nTwoje konto jest zabezpieczone tajnym kluczem. Kluczem jest długa sekwencja znaków, zaczynająca się od **nsec1**. Każdy, kto ma dostęp do tego tajnego klucza może publikować i zmieniać Twoją tożsamość.
         \n\n- **nie** umiejszczaj swojego tajnego klucza na żadnej stronie internetowej lub oprogramowaniu, któremu nie ufasz.
         \n- Deweloperzy Ametyst **nigdy** nie będą prosić o Twój tajny klucz.
         \n- **Zrób **  bezpieczną kopię zapasową swojego tajnego klucza do ewentualnego odzyskania konta. Zalecamy użycie menedżera haseł.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Dla dodatkowego bezpieczeństwa możesz zaszyfrować swój klucz hasłem. Ten klucz zaczyna się od **ncryptsec1** i nie może być użyty bez hasła.
+    <string name="account_backup_tips3_md">        Dla dodatkowego bezpieczeństwa możesz zaszyfrować swój klucz hasłem. Ten klucz zaczyna się od **ncryptsec1** i nie może być użyty bez hasła.
         \n\nJeśli zgubisz hasło, nie będziesz w stanie odzyskać swojego klucza.
     </string>
     <string name="backup_keys_nudge_title">Kopia zapasowa kluczy</string>

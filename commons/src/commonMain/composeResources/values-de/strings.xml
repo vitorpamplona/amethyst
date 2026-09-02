@@ -265,12 +265,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="mark_all_known_as_read">Alle als bekannt markieren</string>
     <string name="mark_all_new_as_read">Alle als neu markieren</string>
     <string name="mark_all_as_read">Alle als gelesen markieren</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Schlüsselsicherheits-Tipps
+    <string name="account_backup_tips2_md">    ## Schlüsselsicherheits-Tipps
     \n\nIhr Konto ist durch einen geheimen Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen geheimen Schlüssel hat, kann Ihre Identität posten und ändern.
     \n\n- Legen Sie Ihren geheimen Schlüssel **nicht** auf eine Website oder in eine Software, der Sie nicht vertrauen.
     \n- Die Entwickler von Amethyst werden Sie **niemals** nach Ihrem geheimen Schlüssel fragen.
     \n- **Bewahren Sie** eine sichere Sicherung Ihres geheimen Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.</string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">    Für zusätzliche Sicherheit können Sie Ihren Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne Ihr Passwort nicht verwendet werden.
+    <string name="account_backup_tips3_md">    Für zusätzliche Sicherheit können Sie Ihren Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne Ihr Passwort nicht verwendet werden.
     \n\nWenn Sie Ihr Passwort verlieren, können Sie Ihren Schlüssel nicht wiederherstellen.</string>
     <string name="encrypt_and_copy_my_secret_key">Verschlüsseln und kopieren Sie meinen geheimen Schlüssel</string>
     <string name="badge_award_image_for">Auszeichnungsbild für %1$s</string>

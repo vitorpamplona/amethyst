@@ -470,12 +470,12 @@
     <string name="mark_all_known_as_read">Označit všechny známé jako přečtené</string>
     <string name="mark_all_new_as_read">Označit všechny nové jako přečtené</string>
     <string name="mark_all_as_read">Označit všechny jako přečtené</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Tipy pro zálohování klíčů a bezpečnost
+    <string name="account_backup_tips2_md">    ## Tipy pro zálohování klíčů a bezpečnost
     \n\nVaše konto je zabezpečeno tajným klíčem. Klíč je dlouhá posloupnost znaků začínající s **nsec1**. Kdo má přístup k tomuto tajnému klíči, může přispívat a měnit vaši identitu.
     \n\n- **Nedávejte** svůj tajný klíč na žádnou webovou stránku nebo do žádného softwaru, kterému nedůvěřujete.
     \n- Vývojáři Amethystu nikdy **nebudou** žádat o váš tajný klíč.
     \n- **Udržujte** bezpečnou zálohu vašeho tajného klíče pro obnovení účtu. Doporučujeme použití správce hesel.</string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">    Pro další zabezpečení můžete svůj klíč zašifrovat heslem. Tento klíč začíná s **ncryptsec1** a nelze ho použít bez vašeho hesla.
+    <string name="account_backup_tips3_md">    Pro další zabezpečení můžete svůj klíč zašifrovat heslem. Tento klíč začíná s **ncryptsec1** a nelze ho použít bez vašeho hesla.
     \n\nPokud zapomenete heslo, nebudete moci obnovit svůj klíč.</string>
     <string name="backup_keys_nudge_title">Zálohujte si klíče</string>
     <string name="backup_keys_nudge_body">Váš tajný klíč je jediný způsob, jak se k tomuto účtu dostat. Pokud ho ztratíte, nelze ho už nikdy obnovit. Uložte si ho někam do bezpečí.</string>

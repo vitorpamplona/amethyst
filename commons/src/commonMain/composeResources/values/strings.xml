@@ -473,14 +473,14 @@
     <string name="mark_all_known_as_read">Mark all Known as read</string>
     <string name="mark_all_new_as_read">Mark all New as read</string>
     <string name="mark_all_as_read">Mark all as read</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">
+    <string name="account_backup_tips2_md">
         ## Key Backup and Safety Tips
         \n\nYour account is secured by a secret key. The key is a long sequence of characters starting with **nsec1**. Anyone who has access to this secret key can post and change your identity.
         \n\n- Do **not** put your secret key in any website or software you do not trust.
         \n- Amethyst developers will **never** ask for your secret key.
         \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">
+    <string name="account_backup_tips3_md">
         For additional security, you can encrypt your key with a password. This key starts with **ncryptsec1** and cannot be used without your password.
         \n\nIf you lose your password, you will not be able to recover your key.
     </string>

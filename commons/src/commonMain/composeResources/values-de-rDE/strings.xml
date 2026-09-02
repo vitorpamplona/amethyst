@@ -460,12 +460,12 @@
     <string name="mark_all_known_as_read">Alle Kontakte als gelesen markieren</string>
     <string name="mark_all_new_as_read">Alle Unbekannten als gelesen markieren</string>
     <string name="mark_all_as_read">Alle als gelesen markieren</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Tipps zur Schlüsselsicherheit
+    <string name="account_backup_tips2_md">    ## Tipps zur Schlüsselsicherheit
     \n\nDein Konto ist durch einen privaten Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen privaten Schlüssel hat, kann in deinem Namen posten und dein Profil ändern.
     \n\n- Lege deinen privaten Schlüssel **nicht** auf einer Website oder in einer Software ab, der du nicht vertraust.
     \n- Die Entwickler von Amethyst werden dich **niemals** nach deinem privaten Schlüssel fragen.
     \n- **Bewahre** eine sichere Kopie deines privaten Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.</string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">    Für zusätzliche Sicherheit kannst du deinen Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne dein Passwort nicht verwendet werden.
+    <string name="account_backup_tips3_md">    Für zusätzliche Sicherheit kannst du deinen Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne dein Passwort nicht verwendet werden.
     \n\nWenn du dein Passwort verlierst, kannst du deinen Schlüssel nicht wiederherstellen.</string>
     <string name="backup_keys_nudge_title">Sichere deine Schlüssel</string>
     <string name="backup_keys_nudge_body">Dein geheimer Schlüssel ist der einzige Weg zu diesem Konto. Wenn du ihn verlierst, kann er nie wiederhergestellt werden. Speichere ihn jetzt an einem sicheren Ort.</string>

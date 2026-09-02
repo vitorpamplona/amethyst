@@ -460,12 +460,12 @@
     <string name="mark_all_known_as_read">Markera alla kända som lästa</string>
     <string name="mark_all_new_as_read">Markera alla nya som lästa</string>
     <string name="mark_all_as_read">Markera allt som läst</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Nyckelsäkerhetsråd
+    <string name="account_backup_tips2_md">    ## Nyckelsäkerhetsråd
     \n\nDitt konto är säkrat med en hemlig nyckel. Nyckeln är en lång följd av tecken som börjar med **nsec1**. Den som har tillgång till denna hemliga nyckel kan posta och ändra din identitet.
     \n\n- **Lägg inte** din hemliga nyckel på någon webbplats eller i någon mjukvara som du inte litar på.
     \n- Utvecklarna av Amethyst kommer **aldrig** att be om din hemliga nyckel.
     \n- **Spara** en säkerhetskopia av din hemliga nyckel för återställning av kontot. Vi rekommenderar att du använder en lösenordshanterare.</string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">    För extra säkerhet kan du kryptera din nyckel med ett lösenord. Denna nyckel börjar med **ncryptsec1** och kan inte användas utan ditt lösenord.
+    <string name="account_backup_tips3_md">    För extra säkerhet kan du kryptera din nyckel med ett lösenord. Denna nyckel börjar med **ncryptsec1** och kan inte användas utan ditt lösenord.
     \n\nOm du tappar bort ditt lösenord kommer du inte att kunna återställa din nyckel.</string>
     <string name="backup_keys_nudge_title">Säkerhetskopiera dina nycklar</string>
     <string name="backup_keys_nudge_body">Din hemliga nyckel är enda sättet att komma åt det här kontot. Om du förlorar den kan den aldrig återskapas. Spara den på ett säkert ställe nu.</string>

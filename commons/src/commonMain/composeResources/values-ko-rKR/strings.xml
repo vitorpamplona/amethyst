@@ -262,13 +262,13 @@
     <string name="mark_all_known_as_read">알려진 항목 모두 읽음 표시</string>
     <string name="mark_all_new_as_read">새 항목 모두 읽음 표시</string>
     <string name="mark_all_as_read">모두 읽음 표시</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## 키 백업 및 보안 팁
+    <string name="account_backup_tips2_md">        ## 키 백업 및 보안 팁
         \n\n계정은 비밀 키로 보호됩니다. 키는 **nsec1**로 시작하는 긴 문자열입니다. 이 비밀 키에 접근할 수 있는 누구든 게시물 작성 및 신원 변경이 가능합니다.
         \n\n- 신뢰하지 않는 웹사이트나 소프트웨어에 비밀 키를 **입력하지** 마세요.
         \n- Amethyst 개발자는 **절대** 비밀 키를 요청하지 않습니다.
         \n- 계정 복구를 위해 비밀 키를 안전하게 백업해 **두세요**. 비밀번호 관리자 사용을 권장합니다.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        추가 보안을 위해 비밀번호로 키를 암호화할 수 있습니다. 이 키는 **ncryptsec1**로 시작하며 비밀번호 없이는 사용할 수 없습니다.
+    <string name="account_backup_tips3_md">        추가 보안을 위해 비밀번호로 키를 암호화할 수 있습니다. 이 키는 **ncryptsec1**로 시작하며 비밀번호 없이는 사용할 수 없습니다.
         \n\n비밀번호를 분실하면 키를 복구할 수 없습니다.
     </string>
     <string name="encrypt_and_copy_my_secret_key">내 비밀 키 암호화 및 복사</string>

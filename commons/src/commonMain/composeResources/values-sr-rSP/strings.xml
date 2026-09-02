@@ -269,13 +269,13 @@
     <string name="mark_all_known_as_read">Označi sve poznate kao pročitano</string>
     <string name="mark_all_new_as_read">Označi sve novo kao pročitano</string>
     <string name="mark_all_as_read">Označi sve kao pročitano</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Saveti za bekap ključa i bezbednost
+    <string name="account_backup_tips2_md">        ## Saveti za bekap ključa i bezbednost
         \n\nVaš nalog je zaštićen tajnim ključem. Ključ je dugačak niz znakova koji počinje sa **nsec1**. Svako ko ima pristup ovom tajnom ključu može da objavljuje i menja vaš identitet.
         \n\n- **Ne** unosite vaš tajni ključ ni na jedan veb-sajt ili softver kojemu ne verujete.
         \n- Amethyst programeri **nikada** neće tražiti vaš tajni ključ.
         \n- **Čuvajte** bezbednu kopiju vašeg tajnog ključa radi oporavka naloga. Preporučujemo korišćenje menadžera lozinki.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Za dodatnu bezbednost, možete šifrovati vaš ključ lozinkom. Ovaj ključ počinje sa **ncryptsec1** i ne može se koristiti bez vaše lozinke.
+    <string name="account_backup_tips3_md">        Za dodatnu bezbednost, možete šifrovati vaš ključ lozinkom. Ovaj ključ počinje sa **ncryptsec1** i ne može se koristiti bez vaše lozinke.
         \n\nAko izgubite lozinku, nećete moći da obnovite ključ.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Šifruj i kopiraj moj tajni ključ</string>

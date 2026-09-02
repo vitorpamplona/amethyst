@@ -261,13 +261,13 @@
     <string name="mark_all_known_as_read">Marquer tous les Connus comme lu</string>
     <string name="mark_all_new_as_read">Marquer tous les Nouveaux comme lu</string>
     <string name="mark_all_as_read">Tout marquer comme lu</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Sauvegarde des Clés et Conseils de Sécurité
+    <string name="account_backup_tips2_md">        ## Sauvegarde des Clés et Conseils de Sécurité
         \n\nVotre compte est sécurisé par une clé secrète. La clé est une longue séquence de caractères commençant par **nsec1**. Toute personne ayant accès à cette clé secrète peut publier et modifier votre identité.
         \n\n- Ne mettez **pas** votre clé secrète sur un site web ou un logiciel auquel vous ne faites pas confiance.
         \n- Les développeurs d'Amethyst ne vous demanderont **jamais** votre clé secrète.
         \n- **Faites** une sauvegarde sécurisée de votre clé secrète pour la récupération de votre compte. Nous vous recommandons d'utiliser un gestionnaire de mots de passe.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        Pour plus de sécurité, vous pouvez chiffrer votre clé avec un mot de passe. Cette clé commence par **ncryptsec1** et ne peut être utilisée sans votre mot de passe.
+    <string name="account_backup_tips3_md">        Pour plus de sécurité, vous pouvez chiffrer votre clé avec un mot de passe. Cette clé commence par **ncryptsec1** et ne peut être utilisée sans votre mot de passe.
         \n\nSi vous perdez votre mot de passe, vous ne pourrez pas récupérer votre clé.
     </string>
     <string name="encrypt_and_copy_my_secret_key">Chiffrer et copier ma clé secrète</string>

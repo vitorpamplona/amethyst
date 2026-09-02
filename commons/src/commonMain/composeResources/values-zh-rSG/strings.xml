@@ -270,13 +270,13 @@
     <string name="mark_all_known_as_read">将所有已知内容标记为已读</string>
     <string name="mark_all_new_as_read">将所有新内容标记为已读</string>
     <string name="mark_all_as_read">将所有内容标记为已读</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">## 备份与安全提示
+    <string name="account_backup_tips2_md">## 备份与安全提示
         \n\n你的帐户由一个私钥保护。私钥是以**nsec1**开头的随机字符串。任何拥有你的私钥的人都可以使用你的身份发布内容。
         \n\n- **不要**将你的私钥添加到任何你不信任的网站或软件，亦不要在网上公开。
         \n- Amethyst 开发人员**永远不会**要求你提供私钥。
         \n- **请**保留你的私钥的安全备份，以备帐户恢复。我们建议使用密码管理器。
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        为了额外的安全性，你可以用密码加密你的密钥。 此密钥以 **ncryptsec1** 开头，没有密码就不能使用。
+    <string name="account_backup_tips3_md">        为了额外的安全性，你可以用密码加密你的密钥。 此密钥以 **ncryptsec1** 开头，没有密码就不能使用。
         \n\n如果你丢失密码， 你将无法恢复你的密钥。
     </string>
     <string name="encrypt_and_copy_my_secret_key">加密并复制我的密钥。</string>
