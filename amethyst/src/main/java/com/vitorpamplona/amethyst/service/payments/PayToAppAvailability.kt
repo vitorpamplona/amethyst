@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.ConcurrentHashMap
 
 /** What the device can do with one `payto` target type. */
 @Immutable
@@ -74,6 +75,16 @@ object PayToAppAvailability {
     private val state = MutableStateFlow<Map<String, PayToAppInfo>>(emptyMap())
     val flow: StateFlow<Map<String, PayToAppInfo>> = state.asStateFlow()
 
+    /**
+     * Decoded icons, kept across warms and keyed by package and size.
+     *
+     * [warm] runs every time the picker opens, so that resolution stays fresh when
+     * the user installs an app and comes back. Re-reading the APK's resources and
+     * re-rasterising the icon each of those times is the expensive half and answers
+     * the same thing, so only the cheap half repeats.
+     */
+    private val icons = ConcurrentHashMap<String, ImageBitmap>()
+
     /** Synchronous read for `RailCapabilityResolver.peek`, which runs inside `remember {}`. */
     fun peek(rawType: String): PayToAppInfo? = state.value[PaymentTargetTypes.probeKeyFor(rawType)]
 
@@ -103,16 +114,12 @@ object PayToAppAvailability {
             return
         }
 
-        val browsers = browserPackages(pm)
+        // Only https targets need the control probe; skip the extra query otherwise.
+        val browsers = if (keys.any(PaymentTargetTypes::isWebTarget)) browserPackages(pm) else emptySet()
         state.value =
             keys.associate { type ->
                 PaymentTargetTypes.probeKeyFor(type) to probe(pm, type, browsers, iconPx)
             }
-    }
-
-    /** Drops everything, so the next [warm] re-reads a changed set of installed apps. */
-    fun clear() {
-        state.value = emptyMap()
     }
 
     private fun probe(
@@ -173,27 +180,43 @@ object PayToAppAvailability {
         pm: PackageManager,
         info: ResolveInfo,
         px: Int,
-    ): ImageBitmap? =
-        runCatching {
+    ): ImageBitmap? {
+        val pkg = info.packageName() ?: return null
+        icons["$pkg@$px"]?.let { return it }
+
+        return runCatching {
             info.loadIcon(pm).toBitmap(px, px).asImageBitmap()
+        }.onSuccess {
+            icons["$pkg@$px"] = it
         }.onFailure {
-            Log.w("PayToAppAvailability") { "Could not load icon for ${info.packageName()}: ${it.message}" }
+            Log.w("PayToAppAvailability", "Could not load icon for $pkg", it)
         }.getOrNull()
+    }
 
     @SuppressLint("QueryPermissionsNeeded")
     private fun queryActivities(
         pm: PackageManager,
         intent: Intent,
-    ): List<ResolveInfo> = runCatching { pm.queryIntentActivities(intent, 0) }.getOrDefault(emptyList())
+    ): List<ResolveInfo> =
+        runCatching {
+            // MATCH_DEFAULT_ONLY mirrors startActivity, which implies CATEGORY_DEFAULT.
+            // Without it we would list activities the hand-off could never launch.
+            pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        }.getOrDefault(emptyList())
 
     /** Packages that answer a URL nobody can own — i.e. general-purpose browsers. */
     @SuppressLint("QueryPermissionsNeeded")
     private fun browserPackages(pm: PackageManager): Set<String> = queryActivities(pm, viewIntent(CONTROL_URL)).mapNotNull { it.packageName() }.toSet()
 
-    private fun viewIntent(uri: String) =
-        Intent(Intent.ACTION_VIEW, uri.toUri()).apply {
-            addCategory(Intent.CATEGORY_BROWSABLE)
-        }
+    /**
+     * Deliberately carries **no** category. `IntentFilter.matchCategories` returns
+     * the first category on the *intent* that the filter lacks, so every category
+     * added here narrows the match — a probe carrying `BROWSABLE` would miss any
+     * app whose filter declares only `DEFAULT`, and hide a chip that would have
+     * opened fine. Paired with `MATCH_DEFAULT_ONLY` in [queryActivities], this
+     * resolves exactly the set `startActivity` would.
+     */
+    private fun viewIntent(uri: String) = Intent(Intent.ACTION_VIEW, uri.toUri())
 
     private fun ResolveInfo.packageName(): String? = activityInfo?.packageName
 }

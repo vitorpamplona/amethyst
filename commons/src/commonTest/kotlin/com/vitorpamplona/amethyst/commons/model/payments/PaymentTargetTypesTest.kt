@@ -173,7 +173,7 @@ class PayToRailGateTest {
         sender: List<PaymentTarget> = mine,
         recipient: List<PaymentTarget> = theirs,
         canOpen: (PaymentTarget) -> Boolean = anyAppOpens,
-    ) = PayToRailMatcher.selectFor(enabled, hasAuthor, hasZapSplit, sender, recipient, canOpen)
+    ) = PayToRailMatcher.selectFor(enabled, hasAuthor, hasZapSplit, sender, canOpen) { recipient }
 
     @Test
     fun offeredWhenEveryGatePasses() {
@@ -212,6 +212,26 @@ class PayToRailGateTest {
     fun cappedSoThePopupCannotGrowWithoutBound() {
         val many = listOf(t("venmo"), t("monero"), t("pix"), t("upi"), t("iban"))
         assertEquals(PayToRailMatcher.MAX_CHIPS, select(sender = many, recipient = many).size)
+    }
+
+    @Test
+    fun recipientTargetsAreNotReadWhenACheapGateAlreadyFailed() {
+        // peek() runs on the one-tap zap path too, and reading the recipient's
+        // kind:10133 walks its tag array. Nothing should touch it once a gate fails.
+        var reads = 0
+        val counted = {
+            reads++
+            theirs
+        }
+
+        PayToRailMatcher.selectFor(false, true, false, mine, anyAppOpens, counted)
+        PayToRailMatcher.selectFor(true, false, false, mine, anyAppOpens, counted)
+        PayToRailMatcher.selectFor(true, true, true, mine, anyAppOpens, counted)
+        PayToRailMatcher.selectFor(true, true, false, emptyList(), anyAppOpens, counted)
+        assertEquals(0, reads)
+
+        PayToRailMatcher.selectFor(true, true, false, mine, anyAppOpens, counted)
+        assertEquals(1, reads)
     }
 
     @Test

@@ -84,16 +84,20 @@ object PayToRailMatcher {
      * @param hasZapSplit a `payto` hand-off leaves with one authority and returns
      *   no receipt, so it cannot honour a note that asks to divide the zap.
      * @param canOpen whether an installed app resolves this target's URI.
+     * @param recipientTargets read lazily. Parsing the recipient's kind:10133 walks
+     *   its tag array and allocates, and the common case is that a gate has already
+     *   failed — the setting is off, or the note carries a split — so the cheap
+     *   checks must run first. `peek` is on the one-tap zap path too.
      */
     fun selectFor(
         enabled: Boolean,
         hasAuthor: Boolean,
         hasZapSplit: Boolean,
         senderTargets: List<PaymentTarget>,
-        recipientTargets: List<PaymentTarget>,
         canOpen: (PaymentTarget) -> Boolean,
+        recipientTargets: () -> List<PaymentTarget>,
     ): List<PaymentTarget> {
-        if (!enabled || !hasAuthor || hasZapSplit) return emptyList()
-        return match(senderTargets, recipientTargets).filter(canOpen).take(MAX_CHIPS)
+        if (!enabled || !hasAuthor || hasZapSplit || senderTargets.isEmpty()) return emptyList()
+        return match(senderTargets, recipientTargets()).filter(canOpen).take(MAX_CHIPS)
     }
 }

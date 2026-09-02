@@ -2427,8 +2427,14 @@ private fun PayToHandoffChip(
     onHandedOff: () -> Unit,
 ) {
     val style = remember(target.type) { paymentTargetStyleFor(target.type) }
-    val app = remember(target.type) { PayToAppAvailability.peek(target.type) }
     val uri = remember(target) { PaymentTargetTypes.uriFor(target.type, target.authority) }
+
+    // Collected, not peeked once: a web target is offered before the probe has run
+    // (any browser opens https), so a snapshot taken at first composition would pin
+    // the fallback glyph and the real app icon would never arrive until the picker
+    // was closed and reopened.
+    val apps by PayToAppAvailability.flow.collectAsStateWithLifecycle()
+    val app = remember(apps, target.type) { apps[PaymentTargetTypes.probeKeyFor(target.type)] }
 
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current

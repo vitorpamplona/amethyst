@@ -178,12 +178,13 @@ object RailCapabilityResolver {
             hasAuthor = baseNote.author != null,
             hasZapSplit = splits.isNotEmpty(),
             senderTargets = senderTargets,
-            recipientTargets = baseNote.author?.paymentTargets().orEmpty(),
             // An unresolvable URI would open nothing, so the chip is not offered.
             // Web targets always resolve; there the probe only decides the icon.
             canOpen = {
                 PayToAppAvailability.peek(it.type)?.resolves == true ||
                     PaymentTargetTypes.isWebTarget(it.type)
             },
+            // Lazy: the tag walk only happens once the cheap gates have passed.
+            recipientTargets = { baseNote.author?.paymentTargets().orEmpty() },
         )
 }
