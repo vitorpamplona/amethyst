@@ -60,10 +60,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_compressing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_downloading
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_error
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_finished
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_hashing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_ready
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_server_processing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -266,14 +274,14 @@ fun UploadingState(
 
             val txt =
                 when (progressState) {
-                    is UploadingState.Ready -> stringRes(R.string.uploading_state_ready)
-                    is UploadingState.Compressing -> stringRes(R.string.uploading_state_compressing)
-                    is UploadingState.Uploading -> stringRes(R.string.uploading_state_uploading)
-                    is UploadingState.ServerProcessing -> stringRes(R.string.uploading_state_server_processing)
-                    is UploadingState.Downloading -> stringRes(R.string.uploading_state_downloading)
-                    is UploadingState.Hashing -> stringRes(R.string.uploading_state_hashing)
-                    is UploadingState.Finished -> stringRes(R.string.uploading_state_finished)
-                    is UploadingState.Error -> stringRes(R.string.uploading_state_error)
+                    is UploadingState.Ready -> stringRes(Res.string.uploading_state_ready)
+                    is UploadingState.Compressing -> stringRes(Res.string.uploading_state_compressing)
+                    is UploadingState.Uploading -> stringRes(Res.string.uploading_state_uploading)
+                    is UploadingState.ServerProcessing -> stringRes(Res.string.uploading_state_server_processing)
+                    is UploadingState.Downloading -> stringRes(Res.string.uploading_state_downloading)
+                    is UploadingState.Hashing -> stringRes(Res.string.uploading_state_hashing)
+                    is UploadingState.Finished -> stringRes(Res.string.uploading_state_finished)
+                    is UploadingState.Error -> stringRes(Res.string.uploading_state_error)
                 }
 
             Text(

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal
 
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent

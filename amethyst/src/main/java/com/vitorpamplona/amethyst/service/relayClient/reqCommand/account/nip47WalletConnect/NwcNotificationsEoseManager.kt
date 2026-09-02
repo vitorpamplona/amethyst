@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip47WalletConnect
 
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

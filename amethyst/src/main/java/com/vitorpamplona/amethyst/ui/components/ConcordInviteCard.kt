@@ -45,6 +45,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_join
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_subtitle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -91,13 +94,13 @@ fun ConcordInviteCard(
         ConcordInvitePreviewRow(
             robotSeed = robotSeed,
             title = title,
-            subtitle = stringRes(R.string.concord_invite_card_subtitle),
+            subtitle = stringRes(Res.string.concord_invite_card_subtitle),
             accountViewModel = accountViewModel,
             autoPlayGif = autoPlayGif,
         ) {
             SymbolIcon(
                 symbol = MaterialSymbols.ChevronRight,
-                contentDescription = stringRes(R.string.concord_invite_card_join),
+                contentDescription = stringRes(Res.string.concord_invite_card_join),
                 modifier = Modifier.size(22.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )

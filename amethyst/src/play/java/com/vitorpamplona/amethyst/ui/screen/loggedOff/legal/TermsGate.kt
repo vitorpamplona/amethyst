@@ -28,7 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.buildAnnotatedString
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.acceptance_of_terms_is_required
+import com.vitorpamplona.amethyst.commons.resources.i_accept_the
+import com.vitorpamplona.amethyst.commons.resources.terms_of_use
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -42,7 +45,7 @@ fun TermsGate(
 
     if (showError) {
         Text(
-            text = stringRes(R.string.acceptance_of_terms_is_required),
+            text = stringRes(Res.string.acceptance_of_terms_is_required),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -65,8 +68,8 @@ private fun AcceptTerms(
 
         Text(
             buildAnnotatedString {
-                append(stringRes(R.string.i_accept_the))
-                appendLink(stringRes(R.string.terms_of_use), primary) {
+                append(stringRes(Res.string.i_accept_the))
+                appendLink(stringRes(Res.string.terms_of_use), primary) {
                     runCatching {
                         uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
                     }

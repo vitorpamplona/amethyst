@@ -46,7 +46,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_repositories_search_no_results
+import com.vitorpamplona.amethyst.commons.resources.git_repositories_search_placeholder
 import com.vitorpamplona.amethyst.commons.search.GitRepositorySearchMatcher
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -198,7 +200,7 @@ private fun GitRepositorySearchField(
             modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.git_repositories_search_placeholder),
+                    text = stringRes(Res.string.git_repositories_search_placeholder),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -254,7 +256,7 @@ private fun RenderFilteredFeed(
                     modifier = Modifier.fillMaxSize().padding(24.dp),
                 ) {
                     Text(
-                        text = stringRes(R.string.git_repositories_search_no_results),
+                        text = stringRes(Res.string.git_repositories_search_no_results),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

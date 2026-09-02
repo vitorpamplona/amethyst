@@ -65,6 +65,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wallet_amount_sats
+import com.vitorpamplona.amethyst.commons.resources.wallet_copy_invoice
+import com.vitorpamplona.amethyst.commons.resources.wallet_create_invoice
+import com.vitorpamplona.amethyst.commons.resources.wallet_creating_invoice
+import com.vitorpamplona.amethyst.commons.resources.wallet_description
+import com.vitorpamplona.amethyst.commons.resources.wallet_receive
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
@@ -97,7 +105,7 @@ fun WalletReceiveScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_receive)) },
+                title = { Text(stringRes(Res.string.wallet_receive)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -124,7 +132,7 @@ fun WalletReceiveScreen(
                     OutlinedTextField(
                         value = amountText,
                         onValueChange = { amountText = it.filter { c -> c.isDigit() } },
-                        label = { Text(stringRes(R.string.wallet_amount_sats)) },
+                        label = { Text(stringRes(Res.string.wallet_amount_sats)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -136,7 +144,7 @@ fun WalletReceiveScreen(
                     OutlinedTextField(
                         value = descriptionText,
                         onValueChange = { descriptionText = it },
-                        label = { Text(stringRes(R.string.wallet_description)) },
+                        label = { Text(stringRes(Res.string.wallet_description)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -162,7 +170,7 @@ fun WalletReceiveScreen(
                         enabled = amountText.isNotBlank() && (amountText.toLongOrNull() ?: 0L) > 0,
                     ) {
                         Text(
-                            stringRes(R.string.wallet_create_invoice),
+                            stringRes(Res.string.wallet_create_invoice),
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
@@ -173,7 +181,7 @@ fun WalletReceiveScreen(
                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        stringRes(R.string.wallet_creating_invoice),
+                        stringRes(Res.string.wallet_creating_invoice),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Spacer(modifier = Modifier.weight(1f))
@@ -189,7 +197,7 @@ fun WalletReceiveScreen(
                         }
 
                     Text(
-                        text = "$formattedAmount ${stringRes(R.string.wallet_sats)}",
+                        text = "$formattedAmount ${stringRes(Res.string.wallet_sats)}",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -238,7 +246,7 @@ fun WalletReceiveScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(R.string.wallet_copy_invoice))
+                            Text(stringRes(Res.string.wallet_copy_invoice))
                         }
                     }
 

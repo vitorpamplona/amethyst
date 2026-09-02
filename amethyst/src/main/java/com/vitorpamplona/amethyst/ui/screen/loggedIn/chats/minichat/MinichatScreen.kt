@@ -55,9 +55,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_minichat_title
+import com.vitorpamplona.amethyst.commons.resources.chat_send_image_title
+import com.vitorpamplona.amethyst.commons.resources.concord_open_channel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -159,7 +163,7 @@ fun MinichatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.chat_minichat_title), maxLines = 1) },
+                title = { Text(stringRes(Res.string.chat_minichat_title), maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
@@ -171,7 +175,7 @@ fun MinichatScreen(
                     // join. This is the way out when the pinned root is still backfilling or unavailable.
                     if (isConcord) {
                         IconButton(onClick = { nav.nav(Route.Concord(communityId, channelId)) }) {
-                            SymbolIcon(symbol = MaterialSymbols.Forum, contentDescription = stringRes(R.string.concord_open_channel))
+                            SymbolIcon(symbol = MaterialSymbols.Forum, contentDescription = stringRes(Res.string.concord_open_channel))
                         }
                     }
                 },
@@ -224,7 +228,7 @@ fun MinichatScreen(
             uploadState.multiOrchestrator?.let {
                 ChatFileUploadDialog(
                     state = uploadState,
-                    title = { Text(stringRes(R.string.chat_send_image_title)) },
+                    title = { Text(stringRes(Res.string.chat_send_image_title)) },
                     upload = {
                         scope.launch(Dispatchers.IO) {
                             ChatFileUploader(accountViewModel.account).justUploadNIP17(

@@ -34,9 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pinned_notes
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -93,7 +94,7 @@ private fun RenderPinnedNotesScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.pinned_notes), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.pinned_notes), nav)
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->

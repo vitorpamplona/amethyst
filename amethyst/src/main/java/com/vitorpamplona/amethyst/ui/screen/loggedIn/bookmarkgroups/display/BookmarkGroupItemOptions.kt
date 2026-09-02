@@ -33,8 +33,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.block_report
+import com.vitorpamplona.amethyst.commons.resources.bookmark_item_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.bookmark_remove_action_label
+import com.vitorpamplona.amethyst.commons.resources.broadcast
+import com.vitorpamplona.amethyst.commons.resources.copy_note_id
+import com.vitorpamplona.amethyst.commons.resources.copy_text
+import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
+import com.vitorpamplona.amethyst.commons.resources.edit_article
+import com.vitorpamplona.amethyst.commons.resources.edit_draft
+import com.vitorpamplona.amethyst.commons.resources.timestamp_it
+import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -145,7 +157,7 @@ fun BookmarkGroupItemOptionsMenu(
     }
 
     M3ActionDialog(
-        title = stringRes(R.string.bookmark_item_actions_dialog_title),
+        title = stringRes(Res.string.bookmark_item_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
         val clipboardManager = LocalClipboard.current
@@ -162,7 +174,7 @@ fun BookmarkGroupItemOptionsMenu(
             }
             M3ActionRow(
                 icon = MaterialSymbols.BookmarkRemove,
-                text = stringRes(R.string.bookmark_remove_action_label),
+                text = stringRes(Res.string.bookmark_remove_action_label),
                 isDestructive = true,
             ) {
                 onDeleteBookmarkItem()
@@ -199,11 +211,11 @@ fun BookmarkGroupItemOptionsMenu(
 
         // Copy & Share section
         M3ActionSection {
-            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_text)) {
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(Res.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
                 copyNoteText(note, lastNoteVersion)
             }
-            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(Res.string.copy_user_pubkey)) {
                 note.author?.let {
                     scope.launch(Dispatchers.IO) {
                         clipboardManager.setText("nostr:${it.pubkeyNpub()}")
@@ -211,7 +223,7 @@ fun BookmarkGroupItemOptionsMenu(
                     }
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_note_id)) {
+            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(Res.string.copy_note_id)) {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(note.toNostrUri())
                     onDismiss()
@@ -242,7 +254,7 @@ fun BookmarkGroupItemOptionsMenu(
         // Edit & Broadcast section
         M3ActionSection {
             if (state.isLoggedUser && note.isDraft()) {
-                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_draft)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.edit_draft)) {
                     nav.nav {
                         routeEditDraftTo(note, accountViewModel.account)
                     }
@@ -260,12 +272,12 @@ fun BookmarkGroupItemOptionsMenu(
                         }
                     }
                 } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
-                    M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_article)) {
+                    M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.edit_article)) {
                         nav.nav { Route.NewLongFormPost(version = note.idHex) }
                     }
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.broadcast)) {
+            M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(Res.string.broadcast)) {
                 accountViewModel.broadcast(note)
                 onDismiss()
             }
@@ -274,11 +286,11 @@ fun BookmarkGroupItemOptionsMenu(
         // Timestamp & Moderation section
         M3ActionSection {
             if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_pending)) {
+                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(Res.string.timestamp_pending)) {
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_it)) {
+                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(Res.string.timestamp_it)) {
                     accountViewModel.timestamp(note)
                     onDismiss()
                 }
@@ -289,7 +301,7 @@ fun BookmarkGroupItemOptionsMenu(
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.block_report), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(Res.string.block_report), isDestructive = true) {
                     reportDialogShowing = true
                 }
             }

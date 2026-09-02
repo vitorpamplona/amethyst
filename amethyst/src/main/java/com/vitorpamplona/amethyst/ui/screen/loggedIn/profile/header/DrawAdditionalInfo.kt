@@ -52,9 +52,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy_nprofile_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_npub_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.show_nprofile_as_a_qr_code
+import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -168,7 +173,7 @@ fun DrawAdditionalInfo(
             ) {
                 Icon(
                     symbol = MaterialSymbols.ContentCopy,
-                    contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
+                    contentDescription = stringRes(id = Res.string.copy_npub_to_clipboard),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -192,7 +197,7 @@ fun DrawAdditionalInfo(
             ) {
                 Icon(
                     symbol = MaterialSymbols.ContentCopy,
-                    contentDescription = stringRes(id = R.string.copy_nprofile_to_clipboard),
+                    contentDescription = stringRes(id = Res.string.copy_nprofile_to_clipboard),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -204,7 +209,7 @@ fun DrawAdditionalInfo(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 1),
-                    contentDescription = stringRes(id = R.string.show_nprofile_as_a_qr_code),
+                    contentDescription = stringRes(id = Res.string.show_nprofile_as_a_qr_code),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -221,7 +226,7 @@ fun DrawAdditionalInfo(
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
                     symbol = MaterialSymbols.Link,
-                    contentDescription = stringRes(R.string.website),
+                    contentDescription = stringRes(Res.string.website),
                     modifier = Modifier.size(18.dp),
                 )
 

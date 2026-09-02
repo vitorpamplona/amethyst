@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.TimeSource
 
 /**
@@ -108,20 +109,25 @@ class PoolEventOutboxScaleTest {
         // Equal-sized windows at the START and the END of a long run. Halves
         // would not do: over 20k publishes the average backlog only grows from
         // ~7k to ~17k, a 2.4x expected ratio that hides inside JIT noise. Here
-        // the late window carries ~29x the backlog of the early one, so a
+        // the late windows carry ~10-29x the backlog of the early ones, so a
         // per-entry cost shows up as a per-entry cost.
+        //
+        // Each side is the MINIMUM of three consecutive windows: a single
+        // window is one GC pause away from a false 5x on a shared CI runner
+        // (seen on the macos-latest 3-core VM), and the same GC-dominance
+        // reasoning already retired this assertion on Apple targets. The min
+        // keeps the intent — a real per-entry cost slows every window, a
+        // stop-the-world pause only one.
+        fun timedWindow(from: Int): Duration {
+            val start = clock.markNow()
+            publishRange(from, from + sample)
+            return start.elapsedNow()
+        }
+
         repeat(sample) { outbox.markAsSending(event(it), relays) } // warm up
-        val early =
-            clock.markNow().let { start ->
-                publishRange(sample, sample * 2)
-                start.elapsedNow()
-            }
-        publishRange(sample * 2, total - sample)
-        val late =
-            clock.markNow().let { start ->
-                publishRange(total - sample, total)
-                start.elapsedNow()
-            }
+        val early = (0 until 3).minOf { timedWindow(sample + it * sample) }
+        publishRange(sample * 4, total - sample * 3)
+        val late = (0 until 3).minOf { timedWindow(total - sample * (3 - it)) }
 
         assertEquals(total, outbox.activeOutboxCacheFor(relay).size, "every publish is tracked")
 

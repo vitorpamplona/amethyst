@@ -26,8 +26,8 @@ import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

@@ -60,10 +60,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.badge_award_image
+import com.vitorpamplona.amethyst.commons.resources.badge_award_image_for
+import com.vitorpamplona.amethyst.commons.resources.badge_untitled
+import com.vitorpamplona.amethyst.commons.resources.profile_badges_header
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
@@ -160,7 +165,7 @@ private fun RenderProfileBadgeStrip(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.profile_badges_header, list.size),
+                text = stringRes(Res.string.profile_badges_header, list.size),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
@@ -246,7 +251,7 @@ private fun AllBadgesSheet(
         sheetState = sheetState,
     ) {
         Text(
-            text = stringRes(R.string.profile_badges_header, awards.size),
+            text = stringRes(Res.string.profile_badges_header, awards.size),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
         )
@@ -299,7 +304,7 @@ private fun BadgeSheetRow(
         Spacer(modifier = Modifier.size(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = definition.name()?.ifBlank { null } ?: stringRes(R.string.badge_untitled),
+                text = definition.name()?.ifBlank { null } ?: stringRes(Res.string.badge_untitled),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -393,9 +398,9 @@ private fun RenderBadgeImage(
 ) {
     val description =
         if (name != null) {
-            stringRes(id = R.string.badge_award_image_for, name)
+            stringRes(id = Res.string.badge_award_image_for, name)
         } else {
-            stringRes(id = R.string.badge_award_image)
+            stringRes(id = Res.string.badge_award_image)
         }
 
     val modifier = Modifier.size(ProfileBadgeSize).clip(ProfileBadgeShape)

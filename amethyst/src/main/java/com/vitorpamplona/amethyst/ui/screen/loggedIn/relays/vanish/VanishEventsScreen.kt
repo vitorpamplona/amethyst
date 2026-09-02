@@ -52,9 +52,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.vanish_all_relays
+import com.vitorpamplona.amethyst.commons.resources.vanish_all_relays_compliance_hint
+import com.vitorpamplona.amethyst.commons.resources.vanish_compliant
+import com.vitorpamplona.amethyst.commons.resources.vanish_date_label
+import com.vitorpamplona.amethyst.commons.resources.vanish_events_description
+import com.vitorpamplona.amethyst.commons.resources.vanish_events_empty
+import com.vitorpamplona.amethyst.commons.resources.vanish_events_empty_hint
+import com.vitorpamplona.amethyst.commons.resources.vanish_events_title
+import com.vitorpamplona.amethyst.commons.resources.vanish_non_compliant
+import com.vitorpamplona.amethyst.commons.resources.vanish_target_relays_label
+import com.vitorpamplona.amethyst.commons.resources.vanish_test_button
+import com.vitorpamplona.amethyst.commons.resources.vanish_test_error
 import com.vitorpamplona.amethyst.model.nip62Vanish.ComplianceStatus
 import com.vitorpamplona.amethyst.model.nip62Vanish.VanishEventItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -75,7 +87,7 @@ fun VanishEventsScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                stringRes(id = R.string.vanish_events_title),
+                stringRes(id = Res.string.vanish_events_title),
                 nav,
             )
         },
@@ -114,13 +126,13 @@ fun VanishEventsBody(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = stringRes(R.string.vanish_events_empty),
+                text = stringRes(Res.string.vanish_events_empty),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = stringRes(R.string.vanish_events_empty_hint),
+                text = stringRes(Res.string.vanish_events_empty_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -131,7 +143,7 @@ fun VanishEventsBody(
         ) {
             item {
                 Text(
-                    text = stringRes(R.string.vanish_events_description),
+                    text = stringRes(Res.string.vanish_events_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -177,7 +189,7 @@ private fun VanishEventCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(R.string.vanish_date_label),
+                    text = stringRes(Res.string.vanish_date_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -204,7 +216,7 @@ private fun VanishEventCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = stringRes(R.string.vanish_all_relays),
+                        text = stringRes(Res.string.vanish_all_relays),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.error,
@@ -214,13 +226,13 @@ private fun VanishEventCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = stringRes(R.string.vanish_all_relays_compliance_hint),
+                    text = stringRes(Res.string.vanish_all_relays_compliance_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 Text(
-                    text = stringRes(R.string.vanish_target_relays_label),
+                    text = stringRes(Res.string.vanish_target_relays_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -298,7 +310,7 @@ private fun RelayComplianceRow(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        stringRes(R.string.vanish_test_button),
+                        stringRes(Res.string.vanish_test_button),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
@@ -311,13 +323,13 @@ private fun RelayComplianceRow(
             ComplianceStatus.COMPLIANT -> {
                 Icon(
                     MaterialSymbols.CheckCircle,
-                    contentDescription = stringRes(R.string.vanish_compliant),
+                    contentDescription = stringRes(Res.string.vanish_compliant),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    stringRes(R.string.vanish_compliant),
+                    stringRes(Res.string.vanish_compliant),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -326,13 +338,13 @@ private fun RelayComplianceRow(
             ComplianceStatus.NON_COMPLIANT -> {
                 Icon(
                     MaterialSymbols.Error,
-                    contentDescription = stringRes(R.string.vanish_non_compliant),
+                    contentDescription = stringRes(Res.string.vanish_non_compliant),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    stringRes(R.string.vanish_non_compliant),
+                    stringRes(Res.string.vanish_non_compliant),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -341,13 +353,13 @@ private fun RelayComplianceRow(
             ComplianceStatus.ERROR -> {
                 Icon(
                     MaterialSymbols.Error,
-                    contentDescription = stringRes(R.string.vanish_test_error),
+                    contentDescription = stringRes(Res.string.vanish_test_error),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    stringRes(R.string.vanish_test_error),
+                    stringRes(Res.string.vanish_test_error),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

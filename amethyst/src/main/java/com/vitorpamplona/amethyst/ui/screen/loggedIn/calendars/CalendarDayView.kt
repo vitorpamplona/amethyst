@@ -51,14 +51,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarLocalDayKeyRange
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
+import com.vitorpamplona.amethyst.commons.resources.calendar_continues
+import com.vitorpamplona.amethyst.commons.resources.calendar_day_of_total
+import com.vitorpamplona.amethyst.commons.resources.calendar_empty_day_subtitle
+import com.vitorpamplona.amethyst.commons.resources.calendar_empty_day_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_day
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_day
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -116,8 +123,8 @@ fun CalendarDayView(
         item(key = "day-nav") {
             CalendarNavigationHeader(
                 title = formatLongDate(visibleDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
-                prevContentDescription = stringRes(R.string.calendar_nav_previous_day),
-                nextContentDescription = stringRes(R.string.calendar_nav_next_day),
+                prevContentDescription = stringRes(Res.string.calendar_nav_previous_day),
+                nextContentDescription = stringRes(Res.string.calendar_nav_next_day),
                 onPrev = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
                 onNext = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
                 onToday = { visibleEpochDay = LocalDate.now().toEpochDay() },
@@ -127,8 +134,8 @@ fun CalendarDayView(
         if (dayEvents.isEmpty()) {
             item(key = "day-empty") {
                 CalendarEmptyState(
-                    title = stringRes(R.string.calendar_empty_day_title),
-                    subtitle = stringRes(R.string.calendar_empty_day_subtitle),
+                    title = stringRes(Res.string.calendar_empty_day_title),
+                    subtitle = stringRes(Res.string.calendar_empty_day_subtitle),
                 )
             }
         } else {
@@ -168,12 +175,12 @@ private fun DayRow(
     val context = LocalContext.current
     val timeLabel =
         when {
-            view.isAllDay -> stringRes(R.string.calendar_all_day)
+            view.isAllDay -> stringRes(Res.string.calendar_all_day)
             startSeconds != null && visibleEpochDay > (range?.first ?: visibleEpochDay) ->
                 // Continuation day of a multi-day timed event — the "9:00 AM" of day 1 is
                 // misleading on day 2 since the event has been ongoing overnight. Show a
                 // continuation marker so the user reads it as "still happening".
-                stringRes(R.string.calendar_continues)
+                stringRes(Res.string.calendar_continues)
             startSeconds != null -> formatTimeOfDay(startSeconds, context)
             else -> "—"
         }
@@ -215,7 +222,7 @@ private fun DayRow(
             }
             dayOfTotal?.let { (day, total) ->
                 Text(
-                    text = stringRes(R.string.calendar_day_of_total, day, total),
+                    text = stringRes(Res.string.calendar_day_of_total, day, total),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,

@@ -37,12 +37,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_status_close
+import com.vitorpamplona.amethyst.commons.resources.git_status_mark_merged
+import com.vitorpamplona.amethyst.commons.resources.git_status_reopen
 import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -97,7 +100,7 @@ fun GitStatusActions(
                 contentPadding = CompactButtonPadding,
             ) {
                 Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(R.string.git_status_reopen), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+                Text(stringRes(Res.string.git_status_reopen), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
         } else {
             if (isPatchOrPr) {
@@ -107,7 +110,7 @@ fun GitStatusActions(
                     contentPadding = CompactButtonPadding,
                 ) {
                     Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(stringRes(R.string.git_status_mark_merged), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+                    Text(stringRes(Res.string.git_status_mark_merged), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
                 }
             }
             OutlinedButton(
@@ -117,7 +120,7 @@ fun GitStatusActions(
                 contentPadding = CompactButtonPadding,
             ) {
                 Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(R.string.git_status_close), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+                Text(stringRes(Res.string.git_status_close), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
         }
     }

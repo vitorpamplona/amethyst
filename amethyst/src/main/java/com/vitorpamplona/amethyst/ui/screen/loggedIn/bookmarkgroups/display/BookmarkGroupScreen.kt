@@ -52,9 +52,19 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_broadcast_btn_label
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_delete_btn_label
+import com.vitorpamplona.amethyst.commons.resources.list_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.private_articles_count
+import com.vitorpamplona.amethyst.commons.resources.private_posts_count
+import com.vitorpamplona.amethyst.commons.resources.private_posts_label
+import com.vitorpamplona.amethyst.commons.resources.public_articles_count
+import com.vitorpamplona.amethyst.commons.resources.public_articles_label
+import com.vitorpamplona.amethyst.commons.resources.public_posts_count
+import com.vitorpamplona.amethyst.commons.resources.public_posts_label
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -321,14 +331,14 @@ fun BookmarkGroupHeaderTabs(
         when (bookmarkType) {
             BookmarkType.PostBookmark -> {
                 bookmarkGroup?.let {
-                    stringRes(R.string.private_posts_count, it.privatePostBookmarks.size)
-                } ?: stringRes(R.string.private_posts_label)
+                    stringRes(Res.string.private_posts_count, it.privatePostBookmarks.size)
+                } ?: stringRes(Res.string.private_posts_label)
             }
 
             BookmarkType.ArticleBookmark -> {
                 bookmarkGroup?.let {
-                    stringRes(R.string.private_articles_count, it.privateArticleBookmarks.size)
-                } ?: stringRes(R.string.private_posts_label)
+                    stringRes(Res.string.private_articles_count, it.privateArticleBookmarks.size)
+                } ?: stringRes(Res.string.private_posts_label)
             }
         }
 
@@ -336,14 +346,14 @@ fun BookmarkGroupHeaderTabs(
         when (bookmarkType) {
             BookmarkType.PostBookmark -> {
                 bookmarkGroup?.let {
-                    stringRes(R.string.public_posts_count, it.publicPostBookmarks.size)
-                } ?: stringRes(R.string.public_posts_label)
+                    stringRes(Res.string.public_posts_count, it.publicPostBookmarks.size)
+                } ?: stringRes(Res.string.public_posts_label)
             }
 
             BookmarkType.ArticleBookmark -> {
                 bookmarkGroup?.let {
-                    stringRes(R.string.public_articles_count, it.publicArticleBookmarks.size)
-                } ?: stringRes(R.string.public_articles_label)
+                    stringRes(Res.string.public_articles_count, it.publicArticleBookmarks.size)
+                } ?: stringRes(Res.string.public_articles_label)
             }
         }
 
@@ -376,20 +386,20 @@ fun BookmarkGroupActionsMenuButton(
 
     if (isActionListOpen.value) {
         M3ActionDialog(
-            title = stringRes(R.string.list_actions_dialog_title),
+            title = stringRes(Res.string.list_actions_dialog_title),
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {
                 M3ActionRow(
                     icon = MaterialSymbols.CellTower,
-                    text = stringRes(R.string.bookmark_list_broadcast_btn_label),
+                    text = stringRes(Res.string.bookmark_list_broadcast_btn_label),
                 ) {
                     onBroadcastList()
                     isActionListOpen.value = false
                 }
                 M3ActionRow(
                     icon = MaterialSymbols.Delete,
-                    text = stringRes(R.string.bookmark_list_delete_btn_label),
+                    text = stringRes(Res.string.bookmark_list_delete_btn_label),
                     isDestructive = true,
                 ) {
                     onDeleteList()

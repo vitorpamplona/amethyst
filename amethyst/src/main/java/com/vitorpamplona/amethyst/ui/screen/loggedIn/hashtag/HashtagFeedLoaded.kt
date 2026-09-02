@@ -37,12 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.hashtag_label_added_by
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -148,7 +149,7 @@ fun HashtagLabelAttribution(
         )
         Spacer(StdHorzSpacer)
         Text(
-            stringRes(R.string.hashtag_label_added_by),
+            stringRes(Res.string.hashtag_label_added_by),
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,
         )

@@ -42,9 +42,11 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_explainer
+import com.vitorpamplona.amethyst.commons.resources.geohash_title
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -100,7 +102,7 @@ fun DisplayLocationBox(
             }
 
             Text(
-                text = stringRes(R.string.geohash_title),
+                text = stringRes(Res.string.geohash_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -112,7 +114,7 @@ fun DisplayLocationBox(
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringRes(R.string.geohash_explainer),
+            text = stringRes(Res.string.geohash_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )

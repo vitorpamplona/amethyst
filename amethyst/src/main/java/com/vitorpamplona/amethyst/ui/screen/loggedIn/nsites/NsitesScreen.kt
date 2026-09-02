@@ -35,14 +35,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nsite_none_found
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -51,7 +52,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
  * Lists the NIP-5A static-site manifests currently in the local cache (kinds 15128/35128). These are
  * replaceable/addressable events, so the screen observes the **AddressableNote** store ([observeNotes],
  * which scans `LocalCache.addressables`): exactly one note per address — the latest version — keyed by
- * the stable address ([com.vitorpamplona.amethyst.model.Note.idHex]) and auto-updating in place as
+ * the stable address ([com.vitorpamplona.amethyst.commons.model.Note.idHex]) and auto-updating in place as
  * newer versions arrive. Mirrors the nApplets browse screen: a follow-list filter in the top bar and
  * each row rendered through the shared [NoteCompose] — the same path the main feed uses for these
  * events — so it gets the author header, the
@@ -91,7 +92,7 @@ fun NsitesScreen(
         if (visible.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    stringResource(R.string.nsite_none_found),
+                    stringRes(Res.string.nsite_none_found),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

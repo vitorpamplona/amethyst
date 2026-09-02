@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.paid_relay
+import com.vitorpamplona.amethyst.commons.resources.tor_relay
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -77,7 +80,7 @@ fun RelayNameAndRemoveButton(
             if (item.paidRelay) {
                 Icon(
                     symbol = MaterialSymbols.Paid,
-                    contentDescription = stringRes(id = R.string.paid_relay),
+                    contentDescription = stringRes(id = Res.string.paid_relay),
                     modifier =
                         Modifier
                             .padding(start = 5.dp)
@@ -89,7 +92,7 @@ fun RelayNameAndRemoveButton(
             if (item.forcesTor) {
                 Icon(
                     painter = painterRes(R.drawable.ic_tor, 2),
-                    contentDescription = stringRes(id = R.string.tor_relay),
+                    contentDescription = stringRes(id = Res.string.tor_relay),
                     modifier =
                         Modifier
                             .padding(start = 5.dp)

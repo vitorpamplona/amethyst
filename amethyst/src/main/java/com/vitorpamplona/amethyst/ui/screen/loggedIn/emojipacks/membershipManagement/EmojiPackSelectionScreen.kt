@@ -43,10 +43,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_emoji_list
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_is_in_list
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_is_not_in_list
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_management_title
+import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_title
+import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -88,7 +94,7 @@ private fun EmojiPackSelectionView(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.emoji_pack_management_title), nav)
+            TopBarWithBackButton(caption = stringRes(Res.string.emoji_pack_management_title), nav)
         },
     ) { contentPadding ->
         Column(
@@ -150,7 +156,7 @@ private fun EmojiPackSelectionItem(
         modifier = Modifier.fillMaxWidth().clickable(onClick = { if (isIncluded) onRemove() else onAdd() }),
         headlineContent = {
             Text(
-                text = stringRes(R.string.my_emoji_list_title),
+                text = stringRes(Res.string.my_emoji_list_title),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -159,9 +165,9 @@ private fun EmojiPackSelectionItem(
             Text(
                 text =
                     if (isIncluded) {
-                        stringRes(R.string.emoji_pack_is_in_list, packTitle)
+                        stringRes(Res.string.emoji_pack_is_in_list, packTitle)
                     } else {
-                        stringRes(R.string.emoji_pack_is_not_in_list, packTitle)
+                        stringRes(Res.string.emoji_pack_is_not_in_list, packTitle)
                     },
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 2,
@@ -201,13 +207,13 @@ private fun EmojiPackSelectionItem(
                     if (isIncluded) {
                         Icon(
                             symbol = MaterialSymbols.BookmarkRemove,
-                            contentDescription = stringRes(R.string.remove_from_emoji_list),
+                            contentDescription = stringRes(Res.string.remove_from_emoji_list),
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                         )
                     } else {
                         Icon(
                             symbol = MaterialSymbols.BookmarkAdd,
-                            contentDescription = stringRes(R.string.add_to_emoji_list),
+                            contentDescription = stringRes(Res.string.add_to_emoji_list),
                             tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }

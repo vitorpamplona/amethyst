@@ -65,6 +65,16 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_empty
+import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_label
+import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_none
+import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_none_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_pick_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_search
+import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_top_level_option
+import com.vitorpamplona.amethyst.commons.resources.relay_group_section_structure
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
@@ -95,12 +105,12 @@ fun ParentGroupSection(
     var pickerOpen by remember { mutableStateOf(false) }
 
     Text(
-        text = stringRes(R.string.relay_group_section_structure),
+        text = stringRes(Res.string.relay_group_section_structure),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
     )
     Text(
-        text = stringRes(R.string.relay_group_parent_desc),
+        text = stringRes(Res.string.relay_group_parent_desc),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 2.dp),
@@ -188,12 +198,12 @@ private fun ParentSelectorCard(
 
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = stringRes(R.string.relay_group_parent_label),
+                    text = stringRes(Res.string.relay_group_parent_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = liveParent?.toBestDisplayName() ?: stringRes(R.string.relay_group_parent_none),
+                    text = liveParent?.toBestDisplayName() ?: stringRes(Res.string.relay_group_parent_none),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -282,7 +292,7 @@ private fun ParentGroupPickerSheet(
     ) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
             Text(
-                text = stringRes(R.string.relay_group_parent_pick_title),
+                text = stringRes(Res.string.relay_group_parent_pick_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -300,7 +310,7 @@ private fun ParentGroupPickerSheet(
                         modifier = Modifier.size(20.dp),
                     )
                 },
-                placeholder = { Text(stringRes(R.string.relay_group_parent_search)) },
+                placeholder = { Text(stringRes(Res.string.relay_group_parent_search)) },
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -325,7 +335,7 @@ private fun ParentGroupPickerSheet(
                 if (filtered.isEmpty()) {
                     item {
                         Text(
-                            text = stringRes(R.string.relay_group_parent_empty),
+                            text = stringRes(Res.string.relay_group_parent_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -354,12 +364,12 @@ private fun TopLevelRow(
         }
         Column(Modifier.weight(1f)) {
             Text(
-                text = stringRes(R.string.relay_group_parent_top_level_option),
+                text = stringRes(Res.string.relay_group_parent_top_level_option),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringRes(R.string.relay_group_parent_none_desc),
+                text = stringRes(Res.string.relay_group_parent_none_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

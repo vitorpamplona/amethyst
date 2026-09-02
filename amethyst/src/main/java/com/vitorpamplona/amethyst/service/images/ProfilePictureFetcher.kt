@@ -35,8 +35,10 @@ import coil3.network.ConnectivityChecker
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
+import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
+import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
-import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import okhttp3.Call

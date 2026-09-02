@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model.nipA3PaymentTargets
 
+import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

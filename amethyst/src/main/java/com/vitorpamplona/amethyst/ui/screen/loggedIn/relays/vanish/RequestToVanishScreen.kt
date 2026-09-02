@@ -69,6 +69,23 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.confirm
+import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.resources.request_to_vanish_description
+import com.vitorpamplona.amethyst.commons.resources.vanish_all_relays
+import com.vitorpamplona.amethyst.commons.resources.vanish_all_relays_warning
+import com.vitorpamplona.amethyst.commons.resources.vanish_confirm_all_relays
+import com.vitorpamplona.amethyst.commons.resources.vanish_confirm_single_relay
+import com.vitorpamplona.amethyst.commons.resources.vanish_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.vanish_date_explainer
+import com.vitorpamplona.amethyst.commons.resources.vanish_date_label
+import com.vitorpamplona.amethyst.commons.resources.vanish_reason_label
+import com.vitorpamplona.amethyst.commons.resources.vanish_reason_placeholder
+import com.vitorpamplona.amethyst.commons.resources.vanish_select_date
+import com.vitorpamplona.amethyst.commons.resources.vanish_select_time
+import com.vitorpamplona.amethyst.commons.resources.vanish_send_request
+import com.vitorpamplona.amethyst.commons.resources.vanish_target_relay
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -164,7 +181,7 @@ fun RequestToVanishScreen(
 
             // Description
             Text(
-                text = stringRes(R.string.request_to_vanish_description),
+                text = stringRes(Res.string.request_to_vanish_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -178,7 +195,7 @@ fun RequestToVanishScreen(
             ) {
                 // Relay Selection
                 Text(
-                    text = stringRes(R.string.vanish_target_relay),
+                    text = stringRes(Res.string.vanish_target_relay),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -190,7 +207,7 @@ fun RequestToVanishScreen(
                     },
                 )
                 Text(
-                    text = stringRes(R.string.vanish_all_relays),
+                    text = stringRes(Res.string.vanish_all_relays),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error,
@@ -245,7 +262,7 @@ fun RequestToVanishScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = stringRes(R.string.vanish_all_relays_warning),
+                        text = stringRes(Res.string.vanish_all_relays_warning),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -260,7 +277,7 @@ fun RequestToVanishScreen(
 
             // Date Picker
             Text(
-                text = stringRes(R.string.vanish_date_label),
+                text = stringRes(Res.string.vanish_date_label),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -268,7 +285,7 @@ fun RequestToVanishScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = stringRes(R.string.vanish_date_explainer),
+                text = stringRes(Res.string.vanish_date_explainer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -285,7 +302,7 @@ fun RequestToVanishScreen(
                 ) {
                     Icon(
                         MaterialSymbols.CalendarMonth,
-                        contentDescription = stringRes(R.string.vanish_select_date),
+                        contentDescription = stringRes(Res.string.vanish_select_date),
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
@@ -305,8 +322,8 @@ fun RequestToVanishScreen(
             OutlinedTextField(
                 value = reason,
                 onValueChange = { reason = it },
-                label = { Text(stringRes(R.string.vanish_reason_label)) },
-                placeholder = { Text(stringRes(R.string.vanish_reason_placeholder)) },
+                label = { Text(stringRes(Res.string.vanish_reason_label)) },
+                placeholder = { Text(stringRes(Res.string.vanish_reason_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 1,
                 maxLines = 4,
@@ -330,7 +347,7 @@ fun RequestToVanishScreen(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(stringRes(R.string.vanish_send_request))
+                Text(stringRes(Res.string.vanish_send_request))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -344,7 +361,7 @@ fun RequestToVanishScreen(
                 TextButton(onClick = {
                     showDatePicker = false
                     showTimePicker = true
-                }) { Text(stringRes(R.string.next)) }
+                }) { Text(stringRes(Res.string.next)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -354,7 +371,7 @@ fun RequestToVanishScreen(
     if (showTimePicker) {
         TimePickerDialog(
             title = {
-                Text(stringRes(R.string.vanish_select_time))
+                Text(stringRes(Res.string.vanish_select_time))
             },
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
@@ -373,7 +390,7 @@ fun RequestToVanishScreen(
 
                         showTimePicker = false
                     },
-                ) { Text(stringRes(R.string.confirm)) }
+                ) { Text(stringRes(Res.string.confirm)) }
             },
         ) {
             TimePicker(state = timePickerState)
@@ -423,7 +440,7 @@ private fun ConfirmVanishDialog(
         },
         title = {
             Text(
-                text = stringRes(R.string.vanish_confirm_title),
+                text = stringRes(Res.string.vanish_confirm_title),
                 textAlign = TextAlign.Center,
             )
         },
@@ -431,7 +448,7 @@ private fun ConfirmVanishDialog(
             Text(
                 text =
                     if (isAllRelays) {
-                        stringRes(R.string.vanish_confirm_all_relays)
+                        stringRes(Res.string.vanish_confirm_all_relays)
                     } else {
                         val relayNames =
                             relays.joinToString(
@@ -439,7 +456,7 @@ private fun ConfirmVanishDialog(
                                 limit = 10,
                                 transform = { it.displayUrl() },
                             )
-                        stringRes(R.string.vanish_confirm_single_relay, relayNames)
+                        stringRes(Res.string.vanish_confirm_single_relay, relayNames)
                     },
             )
         },
@@ -451,7 +468,7 @@ private fun ConfirmVanishDialog(
                         containerColor = MaterialTheme.colorScheme.error,
                     ),
             ) {
-                Text(stringRes(R.string.vanish_send_request))
+                Text(stringRes(Res.string.vanish_send_request))
             }
         },
         dismissButton = {

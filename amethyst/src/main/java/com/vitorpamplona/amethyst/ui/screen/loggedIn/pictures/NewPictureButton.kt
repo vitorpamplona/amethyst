@@ -47,6 +47,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_picture
+import com.vitorpamplona.amethyst.commons.resources.take_a_picture
+import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -148,7 +152,7 @@ fun NewPictureButton(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.CameraAlt,
-                        contentDescription = stringRes(id = R.string.take_a_picture),
+                        contentDescription = stringRes(id = Res.string.take_a_picture),
                         modifier = Modifier.size(26.dp),
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
@@ -167,7 +171,7 @@ fun NewPictureButton(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.AddPhotoAlternate,
-                        contentDescription = stringRes(id = R.string.upload_image),
+                        contentDescription = stringRes(id = Res.string.upload_image),
                         modifier = Modifier.size(26.dp),
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
@@ -190,7 +194,7 @@ fun NewPictureButton(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(id = R.string.new_picture),
+                    contentDescription = stringRes(id = Res.string.new_picture),
                     modifier = Size26Modifier,
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
@@ -203,7 +207,7 @@ fun NewPictureButton(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_compose, 5),
-                    contentDescription = stringRes(id = R.string.new_picture),
+                    contentDescription = stringRes(id = Res.string.new_picture),
                     modifier = Size26Modifier,
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )

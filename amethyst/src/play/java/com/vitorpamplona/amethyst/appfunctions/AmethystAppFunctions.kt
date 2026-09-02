@@ -1715,7 +1715,7 @@ class AmethystAppFunctions {
     private suspend fun payViaDefaultSourceOrNull(
         account: com.vitorpamplona.amethyst.model.Account,
         bolt11: String,
-        zappedNote: com.vitorpamplona.amethyst.model.Note?,
+        zappedNote: com.vitorpamplona.amethyst.commons.model.Note?,
     ): PayOutcome? =
         when (val source = account.settings.defaultPaymentSource()) {
             is PaymentSource.Nwc -> payViaNwc(account, bolt11, zappedNote)
@@ -1746,7 +1746,7 @@ class AmethystAppFunctions {
     private suspend fun payViaNwc(
         account: com.vitorpamplona.amethyst.model.Account,
         bolt11: String,
-        zappedNote: com.vitorpamplona.amethyst.model.Note?,
+        zappedNote: com.vitorpamplona.amethyst.commons.model.Note?,
     ): PayOutcome {
         val deferred = CompletableDeferred<Response?>()
         // sendZapPaymentRequestFor fires onResponse exactly once when the wallet replies

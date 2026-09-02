@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies
 
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadQueryState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

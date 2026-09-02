@@ -49,7 +49,12 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream_hint
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream_rate
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_streamed_total
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -166,13 +171,13 @@ fun PodcastStreamingControl(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.podcast_value_stream),
+                    text = stringRes(Res.string.podcast_value_stream),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                 )
                 // Rate chip — tap to change sats/minute.
                 Text(
-                    text = stringRes(R.string.podcast_value_stream_rate, rate.toInt()),
+                    text = stringRes(Res.string.podcast_value_stream_rate, rate.toInt()),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -184,7 +189,7 @@ fun PodcastStreamingControl(
                 ) {
                     STREAM_RATE_CHOICES.forEach { choice ->
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.podcast_value_stream_rate, choice.toInt())) },
+                            text = { Text(stringRes(Res.string.podcast_value_stream_rate, choice.toInt())) },
                             onClick = {
                                 rate = choice
                                 rateMenuOpen = false
@@ -195,9 +200,9 @@ fun PodcastStreamingControl(
             }
             val status =
                 if (streamedSats > 0L) {
-                    stringRes(R.string.podcast_value_streamed_total, streamedSats.toInt())
+                    stringRes(Res.string.podcast_value_streamed_total, streamedSats.toInt())
                 } else {
-                    stringRes(R.string.podcast_value_stream_hint)
+                    stringRes(Res.string.podcast_value_stream_hint)
                 }
             Text(
                 text = status,

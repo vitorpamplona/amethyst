@@ -28,10 +28,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.note_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -171,10 +175,10 @@ fun NoteDropDownMenu(
 
     if (deleteConfirmationShowing) {
         QuickActionAlertDialog(
-            title = stringRes(R.string.quick_action_request_deletion_alert_title),
-            textContent = stringRes(R.string.quick_action_request_deletion_alert_body),
+            title = stringRes(Res.string.quick_action_request_deletion_alert_title),
+            textContent = stringRes(Res.string.quick_action_request_deletion_alert_body),
             buttonIcon = MaterialSymbols.Delete,
-            buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
+            buttonText = stringRes(Res.string.quick_action_delete_dialog_btn),
             onClickDoOnce = {
                 performDelete()
                 onDismiss()
@@ -221,7 +225,7 @@ fun NoteDropDownMenu(
     val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
 
     M3ActionDialog(
-        title = stringRes(R.string.note_actions_dialog_title),
+        title = stringRes(Res.string.note_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
         // The action inventory is shared with the chat long-press sheet

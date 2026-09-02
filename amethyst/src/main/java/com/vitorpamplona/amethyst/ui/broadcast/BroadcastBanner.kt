@@ -70,6 +70,22 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_failure
+import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_partial
+import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_success
+import com.vitorpamplona.amethyst.commons.resources.broadcasting
+import com.vitorpamplona.amethyst.commons.resources.broadcasting_name
+import com.vitorpamplona.amethyst.commons.resources.broadcasting_number_events
+import com.vitorpamplona.amethyst.commons.resources.event_sent
+import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_discard
+import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_message
+import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_send_without_pow
+import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.retry_failed
+import com.vitorpamplona.amethyst.commons.resources.sent_number_events
+import com.vitorpamplona.amethyst.commons.resources.share_of
+import com.vitorpamplona.amethyst.commons.resources.tap_to_view_details
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
@@ -371,17 +387,17 @@ private fun PoWCancelDialog(
 ) {
     AlertDialog(
         onDismissRequest = onKeepMining,
-        title = { Text(stringRes(R.string.pow_cancel_dialog_title)) },
-        text = { Text(stringRes(R.string.pow_cancel_dialog_message)) },
+        title = { Text(stringRes(Res.string.pow_cancel_dialog_title)) },
+        text = { Text(stringRes(Res.string.pow_cancel_dialog_message)) },
         confirmButton = {
             TextButton(onClick = onSendWithoutPow) {
-                Text(stringRes(R.string.pow_cancel_dialog_send_without_pow))
+                Text(stringRes(Res.string.pow_cancel_dialog_send_without_pow))
             }
         },
         dismissButton = {
             TextButton(onClick = onDiscard) {
                 Text(
-                    text = stringRes(R.string.pow_cancel_dialog_discard),
+                    text = stringRes(Res.string.pow_cancel_dialog_discard),
                     color = MaterialTheme.colorScheme.error,
                 )
             }
@@ -398,7 +414,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
     ) {
         Icon(
             symbol = MaterialSymbols.Sync,
-            contentDescription = stringRes(R.string.broadcasting),
+            contentDescription = stringRes(Res.string.broadcasting),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
         )
@@ -409,7 +425,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(R.string.broadcasting_name, broadcast.event.toKindName()),
+                    text = stringRes(Res.string.broadcasting_name, broadcast.event.toKindName()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -420,7 +436,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
                 Spacer(Modifier.width(8.dp))
 
                 Text(
-                    text = stringRes(R.string.share_of, broadcast.results.size, broadcast.totalRelays),
+                    text = stringRes(Res.string.share_of, broadcast.results.size, broadcast.totalRelays),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -456,7 +472,7 @@ private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>)
     ) {
         Icon(
             symbol = MaterialSymbols.Sync,
-            contentDescription = stringRes(R.string.broadcasting),
+            contentDescription = stringRes(Res.string.broadcasting),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
         )
@@ -467,13 +483,13 @@ private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>)
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(R.string.broadcasting_number_events, broadcasts.size),
+                    text = stringRes(Res.string.broadcasting_number_events, broadcasts.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Text(
-                    text = stringRes(R.string.share_of, completedResponses, totalRelays),
+                    text = stringRes(Res.string.share_of, completedResponses, totalRelays),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -536,7 +552,7 @@ fun CompletedBroadcastContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(R.string.event_sent, broadcast.event.toKindName()),
+                    text = stringRes(Res.string.event_sent, broadcast.event.toKindName()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -547,7 +563,7 @@ fun CompletedBroadcastContent(
 
             if (broadcast.failedRelays.isNotEmpty()) {
                 Text(
-                    text = stringRes(R.string.tap_to_view_details),
+                    text = stringRes(Res.string.tap_to_view_details),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -555,7 +571,7 @@ fun CompletedBroadcastContent(
         }
 
         Text(
-            text = stringRes(R.string.share_of, broadcast.successCount, broadcast.totalRelays),
+            text = stringRes(Res.string.share_of, broadcast.successCount, broadcast.totalRelays),
             style = MaterialTheme.typography.labelMedium,
             color = iconTint,
         )
@@ -568,7 +584,7 @@ fun CompletedBroadcastContent(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Refresh,
-                    contentDescription = stringRes(R.string.retry_failed),
+                    contentDescription = stringRes(Res.string.retry_failed),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )
@@ -622,11 +638,11 @@ fun MultipleCompletedBroadcastContent(
             symbol = statusIcon,
             contentDescription =
                 if (allSuccess) {
-                    stringRes(R.string.bradcasting_result_success)
+                    stringRes(Res.string.bradcasting_result_success)
                 } else if (allFailed) {
-                    stringRes(R.string.bradcasting_result_failure)
+                    stringRes(Res.string.bradcasting_result_failure)
                 } else {
-                    stringRes(R.string.bradcasting_result_partial)
+                    stringRes(Res.string.bradcasting_result_partial)
                 },
             tint = iconTint,
             modifier = Modifier.size(18.dp),
@@ -639,7 +655,7 @@ fun MultipleCompletedBroadcastContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(R.string.sent_number_events, broadcasts.size),
+                    text = stringRes(Res.string.sent_number_events, broadcasts.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -650,7 +666,7 @@ fun MultipleCompletedBroadcastContent(
 
             if (failedRelayCount > 0) {
                 Text(
-                    text = stringRes(R.string.tap_to_view_details),
+                    text = stringRes(Res.string.tap_to_view_details),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -658,7 +674,7 @@ fun MultipleCompletedBroadcastContent(
         }
 
         Text(
-            text = stringRes(R.string.share_of, (totalRelayCount - failedRelayCount), totalRelayCount),
+            text = stringRes(Res.string.share_of, (totalRelayCount - failedRelayCount), totalRelayCount),
             style = MaterialTheme.typography.labelMedium,
             color = iconTint,
         )
@@ -671,7 +687,7 @@ fun MultipleCompletedBroadcastContent(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Refresh,
-                    contentDescription = stringRes(R.string.retry_failed),
+                    contentDescription = stringRes(Res.string.retry_failed),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )

@@ -55,6 +55,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bolt12_offer
+import com.vitorpamplona.amethyst.commons.resources.bolt12_offers_explainer
+import com.vitorpamplona.amethyst.commons.resources.delete_bolt12_offer
+import com.vitorpamplona.amethyst.commons.resources.invalid_bolt12_offer
+import com.vitorpamplona.amethyst.commons.resources.no_bolt12_offers_message
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -122,7 +128,7 @@ fun Bolt12OffersScaffold(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringRes(id = R.string.bolt12_offers_explainer),
+                text = stringRes(id = Res.string.bolt12_offers_explainer),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 10.dp),
                 style = MaterialTheme.typography.bodyLarge,
@@ -154,7 +160,7 @@ fun Bolt12OffersBody(viewModel: Bolt12OffersViewModel) {
         if (offers.isEmpty()) {
             item {
                 Text(
-                    text = stringRes(id = R.string.no_bolt12_offers_message),
+                    text = stringRes(id = Res.string.no_bolt12_offers_message),
                     modifier = Modifier.padding(vertical = 16.dp),
                 )
             }
@@ -195,7 +201,7 @@ fun Bolt12OfferEntry(
         IconButton(onClick = onDelete) {
             Icon(
                 symbol = MaterialSymbols.Delete,
-                contentDescription = stringRes(id = R.string.delete_bolt12_offer),
+                contentDescription = stringRes(id = Res.string.delete_bolt12_offer),
             )
         }
     }
@@ -208,7 +214,7 @@ fun Bolt12OfferAddField(onAdd: (raw: String) -> Boolean) {
 
     Column(verticalArrangement = Arrangement.spacedBy(Size10dp)) {
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.bolt12_offer)) },
+            label = { Text(text = stringRes(Res.string.bolt12_offer)) },
             modifier = Modifier.fillMaxWidth(),
             value = offer,
             onValueChange = {
@@ -218,7 +224,7 @@ fun Bolt12OfferAddField(onAdd: (raw: String) -> Boolean) {
             isError = isError,
             supportingText =
                 if (isError) {
-                    { Text(text = stringRes(R.string.invalid_bolt12_offer)) }
+                    { Text(text = stringRes(Res.string.invalid_bolt12_offer)) }
                 } else {
                     null
                 },

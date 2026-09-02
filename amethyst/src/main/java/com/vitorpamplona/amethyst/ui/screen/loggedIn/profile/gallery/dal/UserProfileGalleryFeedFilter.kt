@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.dal
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.filter
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent

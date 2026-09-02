@@ -50,8 +50,26 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_banned_add
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_banned_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_banned_placeholder
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_add
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_custom_label
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kinds_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_max_bytes
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_max_per_day
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_save
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_title
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_unlimited
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_max_event_size_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_add
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_depth
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_root
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -80,7 +98,7 @@ internal fun CommunityRulesEditorSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringRes(R.string.new_community_rules_hint),
+            text = stringRes(Res.string.new_community_rules_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -115,7 +133,7 @@ private fun AllowedKindsBlock(model: NewCommunityModel) {
     SectionLabel(R.string.new_community_rules_kinds_section)
 
     Text(
-        text = stringRes(R.string.new_community_rules_kinds_hint),
+        text = stringRes(Res.string.new_community_rules_kinds_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -147,7 +165,7 @@ private fun AllowedKindsBlock(model: NewCommunityModel) {
                                 Icon(
                                     symbol = MaterialSymbols.Edit,
                                     contentDescription =
-                                        stringRes(R.string.new_community_rules_limits_title, known.kind),
+                                        stringRes(Res.string.new_community_rules_limits_title, known.kind),
                                 )
                             }
                         }
@@ -165,7 +183,7 @@ private fun AllowedKindsBlock(model: NewCommunityModel) {
                     onClick = { editingKind = rule.kind },
                     label = {
                         Text(
-                            stringRes(R.string.new_community_rules_kind_custom_label) + " " + rule.kind,
+                            stringRes(Res.string.new_community_rules_kind_custom_label) + " " + rule.kind,
                             style = MaterialTheme.typography.labelMedium,
                         )
                     },
@@ -212,7 +230,7 @@ private fun CustomKindAddRow(model: NewCommunityModel) {
         OutlinedTextField(
             value = raw,
             onValueChange = { input -> raw = input.filter { it.isDigit() } },
-            label = { Text(stringRes(R.string.new_community_rules_kind_custom_label)) },
+            label = { Text(stringRes(Res.string.new_community_rules_kind_custom_label)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
@@ -227,7 +245,7 @@ private fun CustomKindAddRow(model: NewCommunityModel) {
             },
             enabled = raw.toIntOrNull()?.let { it >= 0 } == true,
         ) {
-            Text(stringRes(R.string.new_community_rules_kind_add))
+            Text(stringRes(Res.string.new_community_rules_kind_add))
         }
     }
 }
@@ -243,13 +261,13 @@ private fun KindRuleLimitsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.new_community_rules_limits_title, rule.kind)) },
+        title = { Text(stringRes(Res.string.new_community_rules_limits_title, rule.kind)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = maxBytes,
                     onValueChange = { input -> maxBytes = input.filter { it.isDigit() } },
-                    label = { Text(stringRes(R.string.new_community_rules_limits_max_bytes)) },
+                    label = { Text(stringRes(Res.string.new_community_rules_limits_max_bytes)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -257,13 +275,13 @@ private fun KindRuleLimitsDialog(
                 OutlinedTextField(
                     value = maxPerDay,
                     onValueChange = { input -> maxPerDay = input.filter { it.isDigit() } },
-                    label = { Text(stringRes(R.string.new_community_rules_limits_max_per_day)) },
+                    label = { Text(stringRes(Res.string.new_community_rules_limits_max_per_day)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    text = stringRes(R.string.new_community_rules_limits_unlimited),
+                    text = stringRes(Res.string.new_community_rules_limits_unlimited),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -280,7 +298,7 @@ private fun KindRuleLimitsDialog(
                     )
                 },
             ) {
-                Text(stringRes(R.string.new_community_rules_limits_save))
+                Text(stringRes(Res.string.new_community_rules_limits_save))
             }
         },
         dismissButton = {
@@ -302,7 +320,7 @@ private fun BannedUsersBlock(
     SectionLabel(R.string.new_community_rules_banned_section)
 
     Text(
-        text = stringRes(R.string.new_community_rules_banned_hint),
+        text = stringRes(Res.string.new_community_rules_banned_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -340,8 +358,8 @@ private fun BannedUsersBlock(
                     userSuggestions.reset()
                 }
             },
-            label = { Text(stringRes(R.string.new_community_rules_banned_add)) },
-            placeholder = { Text(stringRes(R.string.new_community_rules_banned_placeholder)) },
+            label = { Text(stringRes(Res.string.new_community_rules_banned_add)) },
+            placeholder = { Text(stringRes(Res.string.new_community_rules_banned_placeholder)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -406,7 +424,7 @@ private fun WotGateBlock(model: NewCommunityModel) {
     SectionLabel(R.string.new_community_rules_wot_section)
 
     Text(
-        text = stringRes(R.string.new_community_rules_wot_hint),
+        text = stringRes(Res.string.new_community_rules_wot_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -439,14 +457,14 @@ private fun WotGateBlock(model: NewCommunityModel) {
             OutlinedTextField(
                 value = rootRaw,
                 onValueChange = { rootRaw = it },
-                label = { Text(stringRes(R.string.new_community_rules_wot_root)) },
+                label = { Text(stringRes(Res.string.new_community_rules_wot_root)) },
                 singleLine = true,
                 modifier = Modifier.weight(2f),
             )
             OutlinedTextField(
                 value = depthRaw,
                 onValueChange = { input -> depthRaw = input.filter { it.isDigit() } },
-                label = { Text(stringRes(R.string.new_community_rules_wot_depth)) },
+                label = { Text(stringRes(Res.string.new_community_rules_wot_depth)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
@@ -466,7 +484,7 @@ private fun WotGateBlock(model: NewCommunityModel) {
                     depthRaw.toIntOrNull()?.let { it > 0 } == true &&
                     parsePubkeyToHex(rootRaw.trim()) != null,
         ) {
-            Text(stringRes(R.string.new_community_rules_wot_add))
+            Text(stringRes(Res.string.new_community_rules_wot_add))
         }
     }
 }
@@ -491,7 +509,7 @@ private fun MaxEventSizeField(model: NewCommunityModel) {
     SectionLabel(R.string.new_community_rules_max_event_size_section)
 
     Text(
-        text = stringRes(R.string.new_community_rules_max_event_size_hint),
+        text = stringRes(Res.string.new_community_rules_max_event_size_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -506,7 +524,7 @@ private fun MaxEventSizeField(model: NewCommunityModel) {
             raw = cleaned
             model.maxEventSize = cleaned.toIntOrNull()?.takeIf { it > 0 }
         },
-        label = { Text(stringRes(R.string.new_community_rules_limits_max_bytes)) },
+        label = { Text(stringRes(Res.string.new_community_rules_limits_max_bytes)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),

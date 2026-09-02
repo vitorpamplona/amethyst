@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.service.notifications
 import android.content.Context
 import android.os.PowerManager
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview

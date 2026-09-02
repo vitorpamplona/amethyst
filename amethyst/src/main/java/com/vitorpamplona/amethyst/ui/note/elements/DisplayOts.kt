@@ -27,8 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.timestamp_pending_short
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.LoadOts
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -80,7 +82,7 @@ fun DisplayOts(
             HeaderPill(
                 symbol = MaterialSymbols.OpenTimestamps,
                 text = "…",
-                contentDescription = stringRes(R.string.timestamp_pending_short),
+                contentDescription = stringRes(Res.string.timestamp_pending_short),
                 onClick = {
                     accountViewModel.toastManager.toast(
                         R.string.ots_info_title,

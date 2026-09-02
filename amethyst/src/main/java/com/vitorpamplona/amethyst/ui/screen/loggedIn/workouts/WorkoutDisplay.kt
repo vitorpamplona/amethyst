@@ -49,8 +49,25 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.workout
+import com.vitorpamplona.amethyst.commons.resources.workout_calories
+import com.vitorpamplona.amethyst.commons.resources.workout_distance
+import com.vitorpamplona.amethyst.commons.resources.workout_duration
+import com.vitorpamplona.amethyst.commons.resources.workout_elevation
+import com.vitorpamplona.amethyst.commons.resources.workout_elevation_loss
+import com.vitorpamplona.amethyst.commons.resources.workout_exercises
+import com.vitorpamplona.amethyst.commons.resources.workout_heart_rate
+import com.vitorpamplona.amethyst.commons.resources.workout_max_heart_rate
+import com.vitorpamplona.amethyst.commons.resources.workout_pace
+import com.vitorpamplona.amethyst.commons.resources.workout_reps
+import com.vitorpamplona.amethyst.commons.resources.workout_sets
+import com.vitorpamplona.amethyst.commons.resources.workout_speed
+import com.vitorpamplona.amethyst.commons.resources.workout_steps
+import com.vitorpamplona.amethyst.commons.resources.workout_volume
+import com.vitorpamplona.amethyst.commons.resources.workout_weight
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -287,7 +304,7 @@ fun WorkoutDisplay(
         info.type?.let { stringRes(it.labelRes()) }
             ?: info.exerciseRaw
             ?: info.typeRaw?.replaceFirstChar { it.uppercaseChar() }
-            ?: stringRes(R.string.workout)
+            ?: stringRes(Res.string.workout)
 
     val duration = info.durationSeconds
     val distance = info.distance
@@ -306,21 +323,21 @@ fun WorkoutDisplay(
             info = info,
             heroKind = heroKind,
             miles = miles,
-            durationLabel = stringRes(R.string.workout_duration),
-            distanceLabel = stringRes(R.string.workout_distance),
-            paceLabel = stringRes(R.string.workout_pace),
-            speedLabel = stringRes(R.string.workout_speed),
-            elevationGainLabel = stringRes(R.string.workout_elevation),
-            elevationLossLabel = stringRes(R.string.workout_elevation_loss),
-            caloriesLabel = stringRes(R.string.workout_calories),
-            stepsLabel = stringRes(R.string.workout_steps),
-            heartRateLabel = stringRes(R.string.workout_heart_rate),
-            maxHeartRateLabel = stringRes(R.string.workout_max_heart_rate),
-            setsLabel = stringRes(R.string.workout_sets),
-            repsLabel = stringRes(R.string.workout_reps),
-            weightLabel = stringRes(R.string.workout_weight),
-            exercisesLabel = stringRes(R.string.workout_exercises),
-            volumeLabel = stringRes(R.string.workout_volume),
+            durationLabel = stringRes(Res.string.workout_duration),
+            distanceLabel = stringRes(Res.string.workout_distance),
+            paceLabel = stringRes(Res.string.workout_pace),
+            speedLabel = stringRes(Res.string.workout_speed),
+            elevationGainLabel = stringRes(Res.string.workout_elevation),
+            elevationLossLabel = stringRes(Res.string.workout_elevation_loss),
+            caloriesLabel = stringRes(Res.string.workout_calories),
+            stepsLabel = stringRes(Res.string.workout_steps),
+            heartRateLabel = stringRes(Res.string.workout_heart_rate),
+            maxHeartRateLabel = stringRes(Res.string.workout_max_heart_rate),
+            setsLabel = stringRes(Res.string.workout_sets),
+            repsLabel = stringRes(Res.string.workout_reps),
+            weightLabel = stringRes(Res.string.workout_weight),
+            exercisesLabel = stringRes(Res.string.workout_exercises),
+            volumeLabel = stringRes(Res.string.workout_volume),
         )
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp)) {
@@ -366,11 +383,11 @@ fun WorkoutDisplay(
 
         when (heroKind) {
             HeroKind.DISTANCE ->
-                WorkoutHero(distance!!.value.trimmed(), distance.unit, stringRes(R.string.workout_distance))
+                WorkoutHero(distance!!.value.trimmed(), distance.unit, stringRes(Res.string.workout_distance))
             HeroKind.STEPS ->
-                WorkoutHero(steps!!.toString(), null, stringRes(R.string.workout_steps))
+                WorkoutHero(steps!!.toString(), null, stringRes(Res.string.workout_steps))
             HeroKind.DURATION ->
-                WorkoutHero(DurationTag.formatTime(duration!!), null, stringRes(R.string.workout_duration))
+                WorkoutHero(DurationTag.formatTime(duration!!), null, stringRes(Res.string.workout_duration))
             HeroKind.NONE -> {}
         }
 

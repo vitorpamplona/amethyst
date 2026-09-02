@@ -42,6 +42,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.invoice_expired
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -126,7 +129,7 @@ fun InvoicePreview(
     val isExpired = remember(expiresAt) { expiresAt != null && expiresAt < TimeUtils.now() }
 
     PaymentCard(
-        title = stringRes(R.string.lightning_invoice),
+        title = stringRes(Res.string.lightning_invoice),
         icon = {
             Icon(
                 imageVector = CustomHashTagIcons.Lightning,
@@ -147,7 +150,7 @@ fun InvoicePreview(
 
         if (isExpired) {
             Text(
-                text = stringRes(R.string.invoice_expired),
+                text = stringRes(Res.string.invoice_expired),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model.nip89AppHandlers
 
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.awaitCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter

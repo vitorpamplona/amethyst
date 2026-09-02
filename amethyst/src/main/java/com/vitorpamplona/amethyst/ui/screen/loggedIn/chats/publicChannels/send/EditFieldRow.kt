@@ -48,6 +48,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_editing_banner
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -112,7 +114,7 @@ fun EditFieldRow(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringRes(R.string.buzz_editing_banner),
+                text = stringRes(Res.string.buzz_editing_banner),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f).padding(start = 8.dp),

@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_title
+import com.vitorpamplona.amethyst.commons.resources.remove_location
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 
@@ -77,7 +80,7 @@ fun GeoHashPostSection(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = stringRes(R.string.geohash_title),
+                    text = stringRes(Res.string.geohash_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.W500,
                     modifier = Modifier.padding(start = 10.dp),
@@ -87,7 +90,7 @@ fun GeoHashPostSection(
                 IconButton(onClick = { model.pickedGeoHash = null }) {
                     Icon(
                         symbol = MaterialSymbols.Close,
-                        contentDescription = stringRes(R.string.remove_location),
+                        contentDescription = stringRes(Res.string.remove_location),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

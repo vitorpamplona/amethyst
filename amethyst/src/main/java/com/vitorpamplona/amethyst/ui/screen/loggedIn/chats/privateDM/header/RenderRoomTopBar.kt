@@ -46,9 +46,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_video
+import com.vitorpamplona.amethyst.commons.resources.call_voice
+import com.vitorpamplona.amethyst.commons.resources.edits_the_channel_metadata
+import com.vitorpamplona.amethyst.commons.resources.messages_group_descriptor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -96,7 +100,7 @@ fun RenderRoomTopBar(
                             ) {
                                 Icon(
                                     symbol = MaterialSymbols.Videocam,
-                                    contentDescription = stringRes(R.string.call_video),
+                                    contentDescription = stringRes(Res.string.call_video),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -110,7 +114,7 @@ fun RenderRoomTopBar(
                             ) {
                                 Icon(
                                     symbol = MaterialSymbols.Call,
-                                    contentDescription = stringRes(R.string.call_voice),
+                                    contentDescription = stringRes(Res.string.call_voice),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -151,7 +155,7 @@ fun RenderRoomTopBar(
                         ) {
                             Icon(
                                 symbol = MaterialSymbols.Videocam,
-                                contentDescription = stringRes(R.string.call_video),
+                                contentDescription = stringRes(Res.string.call_video),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -165,7 +169,7 @@ fun RenderRoomTopBar(
                         ) {
                             Icon(
                                 symbol = MaterialSymbols.Call,
-                                contentDescription = stringRes(R.string.call_voice),
+                                contentDescription = stringRes(Res.string.call_voice),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -196,7 +200,7 @@ fun GroupMembersHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringRes(id = R.string.messages_group_descriptor),
+            text = stringRes(id = Res.string.messages_group_descriptor),
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -250,7 +254,7 @@ private fun EditRoomSubjectButton(
     ) {
         Icon(
             symbol = MaterialSymbols.EditNote,
-            contentDescription = stringRes(R.string.edits_the_channel_metadata),
+            contentDescription = stringRes(Res.string.edits_the_channel_metadata),
         )
     }
 }

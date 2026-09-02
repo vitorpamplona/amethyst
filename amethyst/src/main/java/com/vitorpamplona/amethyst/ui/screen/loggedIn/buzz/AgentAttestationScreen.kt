@@ -59,11 +59,34 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_after_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_agent_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_agent_paste_error
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_authtag_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_before_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_change_agent
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_conditions_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_copy_tag
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_form_desc
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_generate
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_grants_prefix
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_grants_unrestricted
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_hold_button
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_hold_desc
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_hold_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_holding
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_kind_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_readonly_desc
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_readonly_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_remove
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_signed_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_topbar
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_warning
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -125,7 +148,7 @@ fun AgentAttestationScreen(
     val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_attest_topbar), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_attest_topbar), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -171,26 +194,26 @@ private fun HoldAttestationSection(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = stringRes(R.string.buzz_attest_hold_title),
+                text = stringRes(Res.string.buzz_attest_hold_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             if (mine != null) {
                 Text(
-                    text = stringRes(R.string.buzz_attest_holding),
+                    text = stringRes(Res.string.buzz_attest_holding),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = stringRes(R.string.buzz_attest_grants_prefix, mine.conditions.ifEmpty { stringRes(R.string.buzz_attest_grants_unrestricted) }),
+                    text = stringRes(Res.string.buzz_attest_grants_prefix, mine.conditions.ifEmpty { stringRes(Res.string.buzz_attest_grants_unrestricted) }),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedButton(onClick = { attestation.clear() }) {
-                    Text(stringRes(R.string.buzz_attest_remove))
+                    Text(stringRes(Res.string.buzz_attest_remove))
                 }
             } else {
                 Text(
-                    text = stringRes(R.string.buzz_attest_hold_desc),
+                    text = stringRes(Res.string.buzz_attest_hold_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -200,7 +223,7 @@ private fun HoldAttestationSection(
                         input = it
                         error = null
                     },
-                    label = { Text(stringRes(R.string.buzz_attest_authtag_label)) },
+                    label = { Text(stringRes(Res.string.buzz_attest_authtag_label)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -227,7 +250,7 @@ private fun HoldAttestationSection(
                     enabled = input.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringRes(R.string.buzz_attest_hold_button))
+                    Text(stringRes(Res.string.buzz_attest_hold_button))
                 }
             }
         }
@@ -280,12 +303,12 @@ private fun ReadOnlyKeyNotice() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = stringRes(R.string.buzz_attest_readonly_title),
+                text = stringRes(Res.string.buzz_attest_readonly_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = stringRes(R.string.buzz_attest_readonly_desc),
+                text = stringRes(Res.string.buzz_attest_readonly_desc),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -309,7 +332,7 @@ private fun AttestationForm(
     var result by remember { mutableStateOf<OwnerAttestation?>(null) }
 
     Text(
-        text = stringRes(R.string.buzz_attest_form_desc),
+        text = stringRes(Res.string.buzz_attest_form_desc),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -333,7 +356,7 @@ private fun AttestationForm(
     )
 
     Text(
-        text = stringRes(R.string.buzz_attest_conditions_hint),
+        text = stringRes(Res.string.buzz_attest_conditions_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -346,7 +369,7 @@ private fun AttestationForm(
             error = null
             result = null
         },
-        label = stringRes(R.string.buzz_attest_kind_label),
+        label = stringRes(Res.string.buzz_attest_kind_label),
         options = KIND_OPTIONS,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         supportingText = KIND_LABELS[kindInput],
@@ -359,7 +382,7 @@ private fun AttestationForm(
             error = null
             result = null
         },
-        label = { Text(stringRes(R.string.buzz_attest_after_label)) },
+        label = { Text(stringRes(Res.string.buzz_attest_after_label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         // Echo the entered epoch back as a readable UTC time so nobody has to eyeball unix seconds.
@@ -374,7 +397,7 @@ private fun AttestationForm(
             error = null
             result = null
         },
-        label = { Text(stringRes(R.string.buzz_attest_before_label)) },
+        label = { Text(stringRes(Res.string.buzz_attest_before_label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         supportingText = unixEcho(beforeInput)?.let { echo -> { Text(echo) } },
@@ -406,7 +429,7 @@ private fun AttestationForm(
         enabled = selectedAgent != null,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(stringRes(R.string.buzz_attest_generate))
+        Text(stringRes(Res.string.buzz_attest_generate))
     }
 
     result?.let { attestation ->
@@ -460,12 +483,12 @@ private fun AgentKeyPicker(
             query = it
             pasteError = false
         },
-        label = { Text(stringRes(R.string.buzz_attest_agent_label)) },
+        label = { Text(stringRes(Res.string.buzz_attest_agent_label)) },
         leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
         singleLine = true,
         isError = pasteError,
         // Keep the invalid-paste error on the field the user just typed in, not far down the form.
-        supportingText = stringRes(R.string.buzz_attest_agent_paste_error).takeIf { pasteError }?.let { msg -> { Text(msg) } },
+        supportingText = stringRes(Res.string.buzz_attest_agent_paste_error).takeIf { pasteError }?.let { msg -> { Text(msg) } },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions =
             KeyboardActions(
@@ -522,7 +545,7 @@ private fun AgentChip(
         onClick = onRemove,
         label = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         avatar = { UserPicture(hex, 22.dp, accountViewModel = accountViewModel, nav = nav) },
-        trailingIcon = { Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.buzz_attest_change_agent), modifier = Modifier.size(16.dp)) },
+        trailingIcon = { Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.buzz_attest_change_agent), modifier = Modifier.size(16.dp)) },
     )
 }
 
@@ -534,12 +557,12 @@ private fun AttestationResultCard(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = stringRes(R.string.buzz_attest_signed_title),
+                text = stringRes(Res.string.buzz_attest_signed_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = stringRes(R.string.buzz_attest_grants_prefix, attestation.conditions.ifEmpty { stringRes(R.string.buzz_attest_grants_unrestricted) }),
+                text = stringRes(Res.string.buzz_attest_grants_prefix, attestation.conditions.ifEmpty { stringRes(Res.string.buzz_attest_grants_unrestricted) }),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
@@ -553,11 +576,11 @@ private fun AttestationResultCard(
                 horizontalArrangement = Arrangement.End,
             ) {
                 OutlinedButton(onClick = onCopy) {
-                    Text(stringRes(R.string.buzz_attest_copy_tag))
+                    Text(stringRes(Res.string.buzz_attest_copy_tag))
                 }
             }
             Text(
-                text = stringRes(R.string.buzz_attest_warning),
+                text = stringRes(Res.string.buzz_attest_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )

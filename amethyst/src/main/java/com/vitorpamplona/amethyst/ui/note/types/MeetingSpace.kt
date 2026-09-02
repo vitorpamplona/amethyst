@@ -47,8 +47,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.meeting_room_in_space
+import com.vitorpamplona.amethyst.commons.resources.meeting_room_in_space_unknown
+import com.vitorpamplona.amethyst.commons.resources.meeting_space_closed_tag
+import com.vitorpamplona.amethyst.commons.resources.meeting_space_open_tag
+import com.vitorpamplona.amethyst.commons.resources.meeting_space_planned_starts_at
+import com.vitorpamplona.amethyst.commons.resources.meeting_space_planned_tag
+import com.vitorpamplona.amethyst.commons.resources.meeting_space_private_tag
+import com.vitorpamplona.amethyst.commons.resources.nest_listen_to_recording
+import com.vitorpamplona.amethyst.commons.resources.nest_no_app_to_open_link
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -198,7 +208,7 @@ private fun ListenToRecordingButton(
     accountViewModel: AccountViewModel,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val noAppMessage = stringRes(R.string.nest_no_app_to_open_link)
+    val noAppMessage = stringRes(Res.string.nest_no_app_to_open_link)
     androidx.compose.material3.OutlinedButton(onClick = {
         val launched =
             runCatching {
@@ -216,7 +226,7 @@ private fun ListenToRecordingButton(
             )
         }
     }) {
-        Text(stringRes(R.string.nest_listen_to_recording))
+        Text(stringRes(Res.string.nest_listen_to_recording))
     }
 }
 
@@ -330,7 +340,7 @@ private fun ParentMeetingSpaceLink(
         val spaceEvent = spaceNote.event as? MeetingSpaceEvent
         val spaceName =
             spaceEvent?.room()?.ifBlank { null }
-                ?: stringRes(R.string.meeting_room_in_space_unknown)
+                ?: stringRes(Res.string.meeting_room_in_space_unknown)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -347,7 +357,7 @@ private fun ParentMeetingSpaceLink(
                     }.padding(vertical = 4.dp),
         ) {
             Text(
-                text = stringRes(R.string.meeting_room_in_space, spaceName),
+                text = stringRes(Res.string.meeting_room_in_space, spaceName),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
@@ -492,7 +502,7 @@ private val MeetingSpaceClosedModifier =
 @Composable
 fun MeetingSpaceOpenFlag() {
     Text(
-        text = stringRes(id = R.string.meeting_space_open_tag),
+        text = stringRes(id = Res.string.meeting_space_open_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
@@ -503,7 +513,7 @@ fun MeetingSpaceOpenFlag() {
 @Composable
 fun MeetingSpacePrivateFlag() {
     Text(
-        text = stringRes(id = R.string.meeting_space_private_tag),
+        text = stringRes(id = Res.string.meeting_space_private_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
@@ -514,7 +524,7 @@ fun MeetingSpacePrivateFlag() {
 @Composable
 fun MeetingSpaceClosedFlag() {
     Text(
-        text = stringRes(id = R.string.meeting_space_closed_tag),
+        text = stringRes(id = Res.string.meeting_space_closed_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
@@ -537,7 +547,7 @@ fun MeetingSpacePlannedFlag(
 ) {
     Column(horizontalAlignment = horizontalAlignment, verticalArrangement = SpacedBy5dp) {
         Text(
-            text = stringRes(id = R.string.meeting_space_planned_tag),
+            text = stringRes(id = Res.string.meeting_space_planned_tag),
             color = Color.White,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
@@ -558,7 +568,7 @@ fun MeetingSpacePlannedFlag(
                         .format(java.util.Date(startsUnixSec * 1000L))
                 }
             Text(
-                text = stringRes(R.string.meeting_space_planned_starts_at, pretty),
+                text = stringRes(Res.string.meeting_space_planned_starts_at, pretty),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

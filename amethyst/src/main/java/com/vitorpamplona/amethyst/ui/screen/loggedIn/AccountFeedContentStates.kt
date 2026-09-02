@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.ComponentCallbacks2
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState

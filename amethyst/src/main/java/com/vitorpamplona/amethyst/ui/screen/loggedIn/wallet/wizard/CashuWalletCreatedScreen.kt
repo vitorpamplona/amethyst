@@ -52,9 +52,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_created_pick_mints
+import com.vitorpamplona.amethyst.commons.resources.cashu_created_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_created_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -147,7 +150,7 @@ fun CashuWalletCreatedScreen(nav: INav) {
 
             Spacer(Modifier.height(32.dp))
             Text(
-                text = stringRes(R.string.cashu_created_title),
+                text = stringRes(Res.string.cashu_created_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -155,7 +158,7 @@ fun CashuWalletCreatedScreen(nav: INav) {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = stringRes(R.string.cashu_created_subtitle),
+                text = stringRes(Res.string.cashu_created_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -173,7 +176,7 @@ fun CashuWalletCreatedScreen(nav: INav) {
                         .fillMaxWidth()
                         .graphicsLayer { alpha = contentAlpha.value },
             ) {
-                Text(stringRes(R.string.cashu_created_pick_mints))
+                Text(stringRes(Res.string.cashu_created_pick_mints))
             }
         }
     }

@@ -84,6 +84,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_amount_in_sats
+import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
+import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_privacy_section
+import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous
+import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap
+import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_private
+import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_public
+import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_section_explainer
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -130,23 +145,23 @@ fun UpdateZapAmountContent(
         listOf(
             Triple(
                 LnZapEvent.ZapType.PUBLIC,
-                stringRes(id = R.string.zap_type_public),
-                stringRes(id = R.string.zap_type_public_explainer),
+                stringRes(id = Res.string.zap_type_public),
+                stringRes(id = Res.string.zap_type_public_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.PRIVATE,
-                stringRes(id = R.string.zap_type_private),
-                stringRes(id = R.string.zap_type_private_explainer),
+                stringRes(id = Res.string.zap_type_private),
+                stringRes(id = Res.string.zap_type_private_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.ANONYMOUS,
-                stringRes(id = R.string.zap_type_anonymous),
-                stringRes(id = R.string.zap_type_anonymous_explainer),
+                stringRes(id = Res.string.zap_type_anonymous),
+                stringRes(id = Res.string.zap_type_anonymous_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.NONZAP,
-                stringRes(id = R.string.zap_type_nonzap),
-                stringRes(id = R.string.zap_type_nonzap_explainer),
+                stringRes(id = Res.string.zap_type_nonzap),
+                stringRes(id = Res.string.zap_type_nonzap_explainer),
             ),
         )
 
@@ -166,13 +181,13 @@ fun UpdateZapAmountContent(
         // ── Section 1: Quick Zap Amounts ──────────────────────────────────────
 
         Text(
-            text = stringRes(R.string.quick_zap_amounts),
+            text = stringRes(Res.string.quick_zap_amounts),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
             modifier = SettingsCategoryFirstModifier,
         )
         Text(
-            text = stringRes(R.string.quick_zap_amounts_explainer),
+            text = stringRes(Res.string.quick_zap_amounts_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(bottom = 6.dp),
@@ -263,7 +278,7 @@ fun UpdateZapAmountContent(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.new_amount_in_sats)) },
+                label = { Text(text = stringRes(Res.string.new_amount_in_sats)) },
                 value = postViewModel.nextAmount,
                 onValueChange = { postViewModel.nextAmount = it },
                 keyboardOptions =
@@ -298,13 +313,13 @@ fun UpdateZapAmountContent(
         // ── Section 2: Zap Privacy ────────────────────────────────────────────
 
         Text(
-            text = stringRes(R.string.zap_privacy_section),
+            text = stringRes(Res.string.zap_privacy_section),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
             modifier = SettingsCategorySpacingModifier,
         )
         Text(
-            text = stringRes(R.string.zap_type_section_explainer),
+            text = stringRes(Res.string.zap_type_section_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -315,7 +330,7 @@ fun UpdateZapAmountContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextSpinner(
-                label = stringRes(id = R.string.zap_type_explainer),
+                label = stringRes(id = Res.string.zap_type_explainer),
                 placeholder =
                     zapTypes
                         .firstOrNull { it.first == accountViewModel.defaultZapType() }

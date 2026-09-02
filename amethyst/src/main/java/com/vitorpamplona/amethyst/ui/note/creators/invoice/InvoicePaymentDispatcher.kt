@@ -30,6 +30,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_confirm_payment_title
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
@@ -131,7 +133,7 @@ private fun ConfirmPaymentDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.clink_confirm_payment_title)) },
+        title = { Text(stringRes(Res.string.clink_confirm_payment_title)) },
         text = { Text(message) },
         confirmButton = {
             Button(onClick = onConfirm) { Text(stringRes(R.string.pay)) }

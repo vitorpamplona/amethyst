@@ -86,6 +86,14 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.browser_clear
+import com.vitorpamplona.amethyst.commons.resources.browser_discover_napplets
+import com.vitorpamplona.amethyst.commons.resources.browser_discover_nsites
+import com.vitorpamplona.amethyst.commons.resources.browser_go
+import com.vitorpamplona.amethyst.commons.resources.browser_recent_options
+import com.vitorpamplona.amethyst.commons.resources.browser_recent_remove
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -93,7 +101,6 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -102,6 +109,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -345,7 +353,7 @@ private fun OmniBar(
             trailingIcon = {
                 if (field.text.isNotEmpty()) {
                     IconButton(onClick = onClear) {
-                        Icon(MaterialSymbols.Clear, contentDescription = stringResource(R.string.browser_clear))
+                        Icon(MaterialSymbols.Clear, contentDescription = stringRes(Res.string.browser_clear))
                     }
                 }
             },
@@ -357,7 +365,7 @@ private fun OmniBar(
         )
         if (field.text.isNotBlank()) {
             IconButton(onClick = onOpen) {
-                Icon(MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringResource(R.string.browser_go))
+                Icon(MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringRes(Res.string.browser_go))
             }
         }
     }
@@ -452,7 +460,7 @@ private fun SuggestionRow(
         }
         Box {
             IconButton(onClick = { menuOpen = true }) {
-                Icon(MaterialSymbols.MoreVert, contentDescription = stringResource(R.string.browser_recent_options))
+                Icon(MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.browser_recent_options))
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
@@ -467,7 +475,7 @@ private fun SuggestionRow(
                 )
                 if (removableFromHistory) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.browser_recent_remove)) },
+                        text = { Text(stringRes(Res.string.browser_recent_remove)) },
                         leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
                         onClick = {
                             menuOpen = false
@@ -524,13 +532,13 @@ private fun BrowserHome(
             }
         }
         if (nsites.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "h-nsite") { SectionHeader(stringResource(R.string.browser_discover_nsites)) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-nsite") { SectionHeader(stringRes(Res.string.browser_discover_nsites)) }
             items(nsites, span = { GridItemSpan(maxLineSpan) }, key = { "ns:" + it.app.coordinate }) { entry ->
                 NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.app) })
             }
         }
         if (napplets.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "h-napp") { SectionHeader(stringResource(R.string.browser_discover_napplets)) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-napp") { SectionHeader(stringRes(Res.string.browser_discover_napplets)) }
             items(napplets, span = { GridItemSpan(maxLineSpan) }, key = { "np:" + it.app.coordinate }) { entry ->
                 NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.app) })
             }
@@ -740,7 +748,7 @@ private fun RecentRow(
         }
         Box {
             IconButton(onClick = { menuOpen = true }) {
-                Icon(MaterialSymbols.MoreVert, contentDescription = stringResource(R.string.browser_recent_options))
+                Icon(MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.browser_recent_options))
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
@@ -754,7 +762,7 @@ private fun RecentRow(
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.browser_recent_remove)) },
+                    text = { Text(stringRes(Res.string.browser_recent_remove)) },
                     leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
                     onClick = {
                         menuOpen = false

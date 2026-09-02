@@ -55,7 +55,21 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.podcasts.RecipientDraft
 import com.vitorpamplona.amethyst.commons.podcasts.V4VSplitEditorState
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_add_address
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_editor_hint
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_fee
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_lnaddress
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_lnaddress_hint
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_node_pubkey
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_node_pubkey_hint
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_recipient_name
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_remove_recipient
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_search_user
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_search_user_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_split_percent
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_type_lnaddress
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_type_node
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_weight
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -65,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * Editor for a Podcasting-2.0 value-for-value split. Recipients are added the Amethyst-native way —
@@ -110,7 +123,7 @@ fun V4VSplitEditor(
 
         if (state.recipients.isEmpty()) {
             Text(
-                text = stringRes(R.string.podcast_value_editor_hint),
+                text = stringRes(Res.string.podcast_value_editor_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.grayText,
             )
@@ -131,8 +144,8 @@ fun V4VSplitEditor(
                 search = newValue
                 if (newValue.length > 2) userSuggestions.processCurrentWord(newValue) else userSuggestions.reset()
             },
-            label = { Text(stringRes(R.string.podcast_value_search_user)) },
-            placeholder = { Text(stringRes(R.string.podcast_value_search_user_hint)) },
+            label = { Text(stringRes(Res.string.podcast_value_search_user)) },
+            placeholder = { Text(stringRes(Res.string.podcast_value_search_user_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -159,7 +172,7 @@ fun V4VSplitEditor(
         // Fallback for raw destinations (a node pubkey for keysend, or a non-Nostr lightning address).
         TextButton(onClick = { state.addManual() }, modifier = Modifier.fillMaxWidth()) {
             Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(text = stringRes(R.string.podcast_value_add_address), modifier = Modifier.padding(start = 6.dp))
+            Text(text = stringRes(Res.string.podcast_value_add_address), modifier = Modifier.padding(start = 6.dp))
         }
     }
 }
@@ -189,7 +202,7 @@ private fun RecipientShell(
         Row(verticalAlignment = Alignment.CenterVertically) {
             content()
             Text(
-                text = stringResource(Res.string.podcast_value_split_percent, percent),
+                text = stringRes(Res.string.podcast_value_split_percent, percent),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -197,7 +210,7 @@ private fun RecipientShell(
             IconButton(onClick = onRemove) {
                 Icon(
                     symbol = MaterialSymbols.Delete,
-                    contentDescription = stringRes(R.string.podcast_value_remove_recipient),
+                    contentDescription = stringRes(Res.string.podcast_value_remove_recipient),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.error,
                 )
@@ -257,7 +270,7 @@ private fun ManualRecipientCard(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringResource(Res.string.podcast_value_split_percent, percent),
+                text = stringRes(Res.string.podcast_value_split_percent, percent),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -266,7 +279,7 @@ private fun ManualRecipientCard(
             IconButton(onClick = onRemove) {
                 Icon(
                     symbol = MaterialSymbols.Delete,
-                    contentDescription = stringRes(R.string.podcast_value_remove_recipient),
+                    contentDescription = stringRes(Res.string.podcast_value_remove_recipient),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.error,
                 )
@@ -276,7 +289,7 @@ private fun ManualRecipientCard(
         OutlinedTextField(
             value = draft.name.value,
             onValueChange = { draft.name.value = it },
-            label = { Text(stringRes(R.string.podcast_value_recipient_name)) },
+            label = { Text(stringRes(Res.string.podcast_value_recipient_name)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -285,21 +298,21 @@ private fun ManualRecipientCard(
             FilterChip(
                 selected = !isNode,
                 onClick = { draft.isNode.value = false },
-                label = { Text(stringRes(R.string.podcast_value_type_lnaddress)) },
+                label = { Text(stringRes(Res.string.podcast_value_type_lnaddress)) },
             )
             FilterChip(
                 selected = isNode,
                 onClick = { draft.isNode.value = true },
-                label = { Text(stringRes(R.string.podcast_value_type_node)) },
+                label = { Text(stringRes(Res.string.podcast_value_type_node)) },
             )
         }
 
         OutlinedTextField(
             value = draft.address.value,
             onValueChange = { draft.address.value = it },
-            label = { Text(if (isNode) stringRes(R.string.podcast_value_node_pubkey) else stringRes(R.string.podcast_value_lnaddress)) },
+            label = { Text(if (isNode) stringRes(Res.string.podcast_value_node_pubkey) else stringRes(Res.string.podcast_value_lnaddress)) },
             placeholder = {
-                Text(if (isNode) stringRes(R.string.podcast_value_node_pubkey_hint) else stringRes(R.string.podcast_value_lnaddress_hint))
+                Text(if (isNode) stringRes(Res.string.podcast_value_node_pubkey_hint) else stringRes(Res.string.podcast_value_lnaddress_hint))
             },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
@@ -319,7 +332,7 @@ private fun WeightAndFeeRow(
         OutlinedTextField(
             value = draft.split.value,
             onValueChange = { input -> draft.split.value = input.filter { it.isDigit() } },
-            label = { Text(stringRes(R.string.podcast_value_weight)) },
+            label = { Text(stringRes(Res.string.podcast_value_weight)) },
             modifier = Modifier.weight(1f),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -328,7 +341,7 @@ private fun WeightAndFeeRow(
         FilterChip(
             selected = draft.fee.value,
             onClick = { draft.fee.value = !draft.fee.value },
-            label = { Text(stringRes(R.string.podcast_value_fee)) },
+            label = { Text(stringRes(Res.string.podcast_value_fee)) },
         )
     }
 }

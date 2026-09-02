@@ -75,6 +75,28 @@ import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_ago
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_auto_login_when
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_blocked_row_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_blocked_section
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_exception_removed_undo
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_exceptions
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_forget_session
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_global_policy
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_no_blocked
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_no_exceptions
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_no_recent
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_recent_section
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_remove_exception
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_segment_always
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_segment_never
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_forgotten_undo
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_row_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_section
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_undo_blocked
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_undo
+import com.vitorpamplona.amethyst.commons.resources.relay_info
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.relayAuthPurposeLabelRes
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -85,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -153,10 +176,10 @@ fun RelayAuthSettingsScreen(
                 .sortedByDescending { lastUsed[it] ?: 0L }
         }
 
-    val removedLabel = stringResource(R.string.relay_auth_exception_removed_undo)
-    val sessionForgottenLabel = stringResource(R.string.relay_auth_session_forgotten_undo)
-    val sessionUndoBlockedLabel = stringResource(R.string.relay_auth_session_undo_blocked)
-    val undoLabel = stringResource(R.string.relay_auth_undo)
+    val removedLabel = stringRes(Res.string.relay_auth_exception_removed_undo)
+    val sessionForgottenLabel = stringRes(Res.string.relay_auth_session_forgotten_undo)
+    val sessionUndoBlockedLabel = stringRes(Res.string.relay_auth_session_undo_blocked)
+    val undoLabel = stringRes(Res.string.relay_auth_undo)
 
     fun forgetSessionGrant(url: String) {
         ledger.revokeSessionGrant(url)
@@ -220,7 +243,7 @@ fun RelayAuthSettingsScreen(
                     // The mode. One group, one question, one clause of explanation each — every
                     // clause adds a fact its title does not already carry.
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GroupHeader(stringResource(R.string.relay_auth_global_policy))
+                        GroupHeader(stringRes(Res.string.relay_auth_global_policy))
                         Column(
                             Modifier
                                 .clip(RoundedCornerShape(20.dp))
@@ -259,7 +282,7 @@ fun RelayAuthSettingsScreen(
                         val messageStrangers by account.settings.relayAuthTrustMessageStrangers.collectAsState()
 
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            GroupHeader(stringResource(R.string.relay_auth_auto_login_when))
+                            GroupHeader(stringRes(Res.string.relay_auth_auto_login_when))
                             Column(
                                 Modifier
                                     .clip(RoundedCornerShape(20.dp))
@@ -296,13 +319,13 @@ fun RelayAuthSettingsScreen(
                         }
                     }
 
-                    GroupHeader(stringResource(R.string.relay_auth_exceptions))
+                    GroupHeader(stringRes(Res.string.relay_auth_exceptions))
                 }
                 Spacer(Modifier.height(8.dp))
             }
 
             if (exceptionUrls.isEmpty()) {
-                item { EmptyCard(stringResource(R.string.relay_auth_no_exceptions)) }
+                item { EmptyCard(stringRes(Res.string.relay_auth_no_exceptions)) }
             } else {
                 itemsIndexed(exceptionUrls, key = { _, url -> "exception:$url" }) { index, url ->
                     GroupedRow(index, exceptionUrls.size) {
@@ -328,7 +351,7 @@ fun RelayAuthSettingsScreen(
             if (sessionUrls.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(20.dp))
-                    GroupHeader(stringResource(R.string.relay_auth_session_section))
+                    GroupHeader(stringRes(Res.string.relay_auth_session_section))
                     Spacer(Modifier.height(8.dp))
                 }
                 itemsIndexed(sessionUrls, key = { _, url -> "session:$url" }) { index, url ->
@@ -351,12 +374,12 @@ fun RelayAuthSettingsScreen(
 
             item {
                 Spacer(Modifier.height(20.dp))
-                GroupHeader(stringResource(R.string.relay_auth_blocked_section))
+                GroupHeader(stringRes(Res.string.relay_auth_blocked_section))
                 Spacer(Modifier.height(8.dp))
             }
 
             if (blockedUrls.isEmpty()) {
-                item { EmptyCard(stringResource(R.string.relay_auth_no_blocked)) }
+                item { EmptyCard(stringRes(Res.string.relay_auth_no_blocked)) }
             } else {
                 itemsIndexed(blockedUrls, key = { _, url -> "blocked:$url" }) { index, url ->
                     GroupedRow(index, blockedUrls.size) {
@@ -367,12 +390,12 @@ fun RelayAuthSettingsScreen(
 
             item {
                 Spacer(Modifier.height(20.dp))
-                GroupHeader(stringResource(R.string.relay_auth_recent_section))
+                GroupHeader(stringRes(Res.string.relay_auth_recent_section))
                 Spacer(Modifier.height(8.dp))
             }
 
             if (logUrls.isEmpty()) {
-                item { EmptyCard(stringResource(R.string.relay_auth_no_recent)) }
+                item { EmptyCard(stringRes(Res.string.relay_auth_no_recent)) }
             } else {
                 itemsIndexed(logUrls, key = { _, url -> "log:$url" }) { index, url ->
                     GroupedRow(index, logUrls.size) {
@@ -530,7 +553,7 @@ private fun ExceptionRow(
         trailing = {
             DecisionSegments(decision, onDecision)
             IconButton(onClick = onRemove) {
-                Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_remove_exception))
+                Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.relay_auth_remove_exception))
             }
         },
     )
@@ -555,7 +578,7 @@ private fun SessionGrantRow(
         nav = nav,
         subtitle = {
             Text(
-                text = stringResource(R.string.relay_auth_session_row_desc),
+                text = stringRes(Res.string.relay_auth_session_row_desc),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
@@ -566,7 +589,7 @@ private fun SessionGrantRow(
             // one is exactly what these two buttons are for.
             DecisionSegments(current = null, onDecision = onPromote)
             IconButton(onClick = onForget) {
-                Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_forget_session))
+                Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.relay_auth_forget_session))
             }
         },
     )
@@ -585,7 +608,7 @@ private fun BlockedRow(
         nav = nav,
         subtitle = {
             Text(
-                text = stringResource(R.string.relay_auth_blocked_row_desc),
+                text = stringRes(Res.string.relay_auth_blocked_row_desc),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
@@ -631,7 +654,7 @@ private fun RecentLoginRow(
             }
             if (lastUsedSecs != null && lastUsedSecs > 0L) {
                 Text(
-                    text = stringResource(R.string.relay_auth_ago, timeAgo(lastUsedSecs, context, prefix = "")),
+                    text = stringRes(Res.string.relay_auth_ago, timeAgo(lastUsedSecs, context, prefix = "")),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),
@@ -672,14 +695,14 @@ private fun DecisionSegments(
         modifier = Modifier.clip(RoundedCornerShape(100.dp)),
     ) {
         Segment(
-            label = stringResource(R.string.relay_auth_segment_always),
+            label = stringRes(Res.string.relay_auth_segment_always),
             selected = current == RelayAuthDecision.ALLOW,
             selectedContainer = MaterialTheme.colorScheme.primary,
             selectedContent = MaterialTheme.colorScheme.onPrimary,
             onClick = { onDecision(RelayAuthDecision.ALLOW) },
         )
         Segment(
-            label = stringResource(R.string.relay_auth_segment_never),
+            label = stringRes(Res.string.relay_auth_segment_never),
             selected = current == RelayAuthDecision.DENY,
             selectedContainer = MaterialTheme.colorScheme.error,
             selectedContent = MaterialTheme.colorScheme.onError,
@@ -757,7 +780,7 @@ private fun RelayIcon(
     RobohashFallbackAsyncImage(
         robot = info?.id ?: relay?.displayUrl() ?: url,
         model = info?.icon,
-        contentDescription = stringResource(R.string.relay_info, url),
+        contentDescription = stringRes(Res.string.relay_info, url),
         colorFilter = RelayIconFilter,
         modifier = MediumRelayIconModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),

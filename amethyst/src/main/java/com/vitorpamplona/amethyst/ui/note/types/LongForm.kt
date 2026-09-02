@@ -48,7 +48,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.long_form_reading_minutes
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
@@ -251,7 +253,7 @@ private fun ReadingTimeBadge(minutes: Int) {
         )
         Spacer(Modifier.padding(start = 4.dp))
         Text(
-            text = stringRes(R.string.long_form_reading_minutes, minutes),
+            text = stringRes(Res.string.long_form_reading_minutes, minutes),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,

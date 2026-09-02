@@ -24,10 +24,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.forked_from
 import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -76,7 +77,7 @@ fun ForkMark(
     if (route != null) {
         QuietMark(
             symbol = MaterialSymbols.ForkRight,
-            contentDescription = stringRes(id = R.string.forked_from),
+            contentDescription = stringRes(id = Res.string.forked_from),
             modifier = modifier,
             onClick = { nav.nav(route) },
         )

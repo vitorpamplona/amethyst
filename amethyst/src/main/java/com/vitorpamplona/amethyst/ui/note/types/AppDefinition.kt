@@ -79,10 +79,28 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_definition_available_on
+import com.vitorpamplona.amethyst.commons.resources.app_definition_by
+import com.vitorpamplona.amethyst.commons.resources.app_definition_categories
+import com.vitorpamplona.amethyst.commons.resources.app_definition_handles
+import com.vitorpamplona.amethyst.commons.resources.app_definition_implements
+import com.vitorpamplona.amethyst.commons.resources.app_definition_kind_app
+import com.vitorpamplona.amethyst.commons.resources.app_definition_nip
+import com.vitorpamplona.amethyst.commons.resources.app_definition_recommend
+import com.vitorpamplona.amethyst.commons.resources.app_definition_recommended
+import com.vitorpamplona.amethyst.commons.resources.app_definition_related
+import com.vitorpamplona.amethyst.commons.resources.app_definition_supported_nips
+import com.vitorpamplona.amethyst.commons.resources.app_definition_via
+import com.vitorpamplona.amethyst.commons.resources.platform_android
+import com.vitorpamplona.amethyst.commons.resources.platform_ios
+import com.vitorpamplona.amethyst.commons.resources.platform_web
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -145,7 +163,7 @@ fun RenderAppDefinition(
 
                 AsyncImage(
                     model = theAppMetadata.banner,
-                    contentDescription = stringRes(id = R.string.profile_image),
+                    contentDescription = stringRes(id = Res.string.profile_image),
                     contentScale = ContentScale.FillWidth,
                     modifier =
                         Modifier
@@ -175,7 +193,7 @@ fun RenderAppDefinition(
             } else {
                 Image(
                     painter = painterRes(R.drawable.profile_banner, 6),
-                    contentDescription = stringRes(id = R.string.profile_banner),
+                    contentDescription = stringRes(id = Res.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier =
                         Modifier
@@ -274,7 +292,7 @@ fun RenderAppDefinition(
                     val client = remember(noteEvent) { noteEvent.client()?.name }
                     if (!client.isNullOrBlank()) {
                         Text(
-                            text = stringRes(R.string.app_definition_via, client),
+                            text = stringRes(Res.string.app_definition_via, client),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 8.dp),
@@ -321,7 +339,7 @@ fun RenderAppDefinition(
 
                 val categories = remember(noteEvent) { noteEvent.categories().distinct() }
                 if (categories.isNotEmpty()) {
-                    SectionLabel(stringRes(R.string.app_definition_categories))
+                    SectionLabel(stringRes(Res.string.app_definition_categories))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -333,7 +351,7 @@ fun RenderAppDefinition(
 
                 val relatedAddresses = remember(noteEvent) { noteEvent.relatedAddresses() }
                 if (relatedAddresses.isNotEmpty()) {
-                    SectionLabel(stringRes(R.string.app_definition_related))
+                    SectionLabel(stringRes(Res.string.app_definition_related))
                     Column(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.padding(top = 6.dp),
@@ -346,7 +364,7 @@ fun RenderAppDefinition(
 
                 val platforms = remember(noteEvent) { noteEvent.platformLinks().map { it.platform }.distinct() }
                 if (platforms.isNotEmpty()) {
-                    SectionLabel(stringRes(R.string.app_definition_available_on))
+                    SectionLabel(stringRes(Res.string.app_definition_available_on))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -396,7 +414,7 @@ private fun SupportedNipsSection(nips: List<SupportedNipTag>) {
     val overflow = (nips.size - VISIBLE_SUPPORTED_NIP_LIMIT).coerceAtLeast(0)
     val uri = LocalUriHandler.current
 
-    SectionLabel(stringRes(R.string.app_definition_implements))
+    SectionLabel(stringRes(Res.string.app_definition_implements))
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -426,7 +444,7 @@ private fun SupportedKindsSection(kinds: List<Int>) {
     val visible = remember(kinds) { kinds.take(VISIBLE_SUPPORTED_KIND_LIMIT) }
     val overflow = (kinds.size - VISIBLE_SUPPORTED_KIND_LIMIT).coerceAtLeast(0)
 
-    SectionLabel(stringRes(R.string.app_definition_handles))
+    SectionLabel(stringRes(Res.string.app_definition_handles))
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -456,7 +474,7 @@ private fun AllKindsSheet(
         sheetState = sheetState,
     ) {
         Text(
-            text = stringRes(R.string.app_definition_handles),
+            text = stringRes(Res.string.app_definition_handles),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
         )
@@ -489,7 +507,7 @@ private fun AllNipsSheet(
         sheetState = sheetState,
     ) {
         Text(
-            text = stringRes(R.string.app_definition_supported_nips),
+            text = stringRes(Res.string.app_definition_supported_nips),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
         )
@@ -528,7 +546,7 @@ private fun NipChip(
         modifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = onClick) else Modifier,
     ) {
         Text(
-            text = stringRes(R.string.app_definition_nip, nip),
+            text = stringRes(Res.string.app_definition_nip, nip),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -627,7 +645,7 @@ private fun relatedEventName(event: Event?): String? =
 @Composable
 private fun kindLabel(kind: Int): String =
     if (kind == SoftwareApplicationEvent.KIND) {
-        stringRes(R.string.app_definition_kind_app)
+        stringRes(Res.string.app_definition_kind_app)
     } else {
         val resId = kindDisplayName(kind)
         if (resId != -1) stringRes(resId) else (KindNames.nameFor(kind) ?: "k$kind")
@@ -660,9 +678,9 @@ private fun OverflowChip(
 private fun PlatformChip(platform: String) {
     val name =
         when (platform) {
-            PlatformType.WEB.code -> stringRes(R.string.platform_web)
-            PlatformType.ANDROID.code -> stringRes(R.string.platform_android)
-            PlatformType.IOS.code -> stringRes(R.string.platform_ios)
+            PlatformType.WEB.code -> stringRes(Res.string.platform_web)
+            PlatformType.ANDROID.code -> stringRes(Res.string.platform_android)
+            PlatformType.IOS.code -> stringRes(Res.string.platform_ios)
             else -> platform
         }
     Surface(
@@ -706,7 +724,7 @@ fun ByAuthorChip(
                 modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.app_definition_by),
+                    text = stringRes(Res.string.app_definition_by),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -761,7 +779,7 @@ private fun RecommendAppButton(
             modifier = compactHeight,
             contentPadding = compactPadding,
         ) {
-            Text(stringRes(R.string.app_definition_recommended), style = MaterialTheme.typography.labelMedium)
+            Text(stringRes(Res.string.app_definition_recommended), style = MaterialTheme.typography.labelMedium)
         }
     } else {
         Button(
@@ -775,7 +793,7 @@ private fun RecommendAppButton(
             modifier = compactHeight,
             contentPadding = compactPadding,
         ) {
-            Text(stringRes(R.string.app_definition_recommend), style = MaterialTheme.typography.labelMedium)
+            Text(stringRes(Res.string.app_definition_recommend), style = MaterialTheme.typography.labelMedium)
         }
     }
 }

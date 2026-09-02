@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.mergeMutedPublicChats
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

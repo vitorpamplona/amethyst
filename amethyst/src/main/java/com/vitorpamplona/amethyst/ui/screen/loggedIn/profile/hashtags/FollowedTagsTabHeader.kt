@@ -23,8 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.followed_tags
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserTagFollowCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -36,5 +37,5 @@ fun FollowedTagsTabHeader(
 ) {
     val usertags by observeUserTagFollowCount(baseUser, accountViewModel)
 
-    Text(text = "$usertags ${stringRes(R.string.followed_tags)}")
+    Text(text = "$usertags ${stringRes(Res.string.followed_tags)}")
 }

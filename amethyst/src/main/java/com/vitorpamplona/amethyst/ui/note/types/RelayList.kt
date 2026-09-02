@@ -45,8 +45,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.RelayListCard
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.blocked_relays_title
+import com.vitorpamplona.amethyst.commons.resources.broadcast_relays_title
+import com.vitorpamplona.amethyst.commons.resources.favorite_relays_title
+import com.vitorpamplona.amethyst.commons.resources.indexer_relays_title
+import com.vitorpamplona.amethyst.commons.resources.proxy_relays_title
+import com.vitorpamplona.amethyst.commons.resources.trusted_relays_title
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelayIntoList
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -201,7 +208,7 @@ fun DisplayBlockedRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.blocked_relays_title),
+        stringRes(id = Res.string.blocked_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -222,7 +229,7 @@ fun DisplayTrustedRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.trusted_relays_title),
+        stringRes(id = Res.string.trusted_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -243,7 +250,7 @@ fun DisplayRelayFeedsList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.favorite_relays_title),
+        stringRes(id = Res.string.favorite_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -264,7 +271,7 @@ fun DisplayProxyRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.proxy_relays_title),
+        stringRes(id = Res.string.proxy_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -285,7 +292,7 @@ fun DisplayIndexerRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.indexer_relays_title),
+        stringRes(id = Res.string.indexer_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -306,7 +313,7 @@ fun DisplayBroadcastRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.broadcast_relays_title),
+        stringRes(id = Res.string.broadcast_relays_title),
         null,
         backgroundColor,
         accountViewModel,

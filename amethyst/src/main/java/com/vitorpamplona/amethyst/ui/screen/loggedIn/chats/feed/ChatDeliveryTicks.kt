@@ -49,9 +49,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Channel
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDelivery
-import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.RecipientDelivery
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDelivery
+import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.RecipientDelivery
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.broadcast
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
+import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -172,7 +176,7 @@ private fun ChatDeliveryDetailDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.chat_delivery_details_title)) },
+        title = { Text(stringRes(Res.string.chat_delivery_details_title)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -246,13 +250,13 @@ private fun ChatDeliveryDetailDialog(
                         onDismiss()
                     },
                 ) {
-                    Text(stringRes(R.string.broadcast))
+                    Text(stringRes(Res.string.broadcast))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.close))
+                Text(stringRes(Res.string.close))
             }
         },
     )

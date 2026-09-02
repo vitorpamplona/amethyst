@@ -47,10 +47,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.expand_relay_list
+import com.vitorpamplona.amethyst.commons.resources.relay_info
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -116,7 +118,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
     ) {
         Icon(
             symbol = MaterialSymbols.ChevronRight,
-            contentDescription = stringRes(id = R.string.expand_relay_list),
+            contentDescription = stringRes(id = Res.string.expand_relay_list),
             modifier = Size15Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
@@ -218,7 +220,7 @@ fun RenderRelayIcon(
         RobohashFallbackAsyncImage(
             robot = displayUrl,
             model = iconUrl,
-            contentDescription = stringRes(id = R.string.relay_info, displayUrl),
+            contentDescription = stringRes(id = Res.string.relay_info, displayUrl),
             colorFilter = RelayIconFilter,
             modifier = iconModifier,
             loadProfilePicture = loadProfilePicture,

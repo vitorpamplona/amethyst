@@ -25,10 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_dvm_to_favorites
+import com.vitorpamplona.amethyst.commons.resources.remove_dvm_from_favorites
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -86,14 +88,14 @@ fun FavoriteAlgoFeedToggle(
         if (isFavorite) {
             Icon(
                 symbol = MaterialSymbols.Star,
-                contentDescription = stringRes(R.string.remove_dvm_from_favorites),
+                contentDescription = stringRes(Res.string.remove_dvm_from_favorites),
                 modifier = iconSizeModifier,
                 tint = MaterialTheme.colorScheme.primary,
             )
         } else {
             Icon(
                 symbol = MaterialSymbols.StarBorder,
-                contentDescription = stringRes(R.string.add_dvm_to_favorites),
+                contentDescription = stringRes(Res.string.add_dvm_to_favorites),
                 modifier = iconSizeModifier,
                 tint = MaterialTheme.colorScheme.onSurface,
             )

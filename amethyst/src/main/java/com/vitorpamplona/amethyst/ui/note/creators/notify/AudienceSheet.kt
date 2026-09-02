@@ -63,7 +63,17 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.audience_count_with_private
+import com.vitorpamplona.amethyst.commons.resources.audience_over_limit
+import com.vitorpamplona.amethyst.commons.resources.audience_recipients_are_visible
+import com.vitorpamplona.amethyst.commons.resources.audience_sheet_no_lists
+import com.vitorpamplona.amethyst.commons.resources.audience_sheet_search
+import com.vitorpamplona.amethyst.commons.resources.audience_sheet_title
+import com.vitorpamplona.amethyst.commons.resources.follow_sets
+import com.vitorpamplona.amethyst.commons.resources.num_selected
+import com.vitorpamplona.amethyst.commons.resources.select_all
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
@@ -172,7 +182,7 @@ private fun AudienceCatalog(
         }
 
     Text(
-        text = stringRes(R.string.audience_sheet_title),
+        text = stringRes(Res.string.audience_sheet_title),
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
     )
@@ -195,7 +205,7 @@ private fun AudienceCatalog(
         },
         placeholder = {
             Text(
-                text = stringRes(R.string.audience_sheet_search),
+                text = stringRes(Res.string.audience_sheet_search),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -221,7 +231,7 @@ private fun AudienceCatalog(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         if (sets.isNotEmpty()) {
-            item { SectionHeader(stringRes(R.string.follow_sets)) }
+            item { SectionHeader(stringRes(Res.string.follow_sets)) }
             items(sets, key = { "set-" + it.id }) { AudienceListRow(it) { onPickList(it) } }
         }
         if (packs.isNotEmpty()) {
@@ -231,7 +241,7 @@ private fun AudienceCatalog(
         if (sets.isEmpty() && packs.isEmpty()) {
             item {
                 Text(
-                    text = stringRes(R.string.audience_sheet_no_lists),
+                    text = stringRes(Res.string.audience_sheet_no_lists),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.grayText,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -278,7 +288,7 @@ private fun AudienceListRow(
         )
         if (overHard) {
             Text(
-                text = stringRes(R.string.audience_over_limit),
+                text = stringRes(Res.string.audience_over_limit),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.warningColor,
             )
@@ -288,7 +298,7 @@ private fun AudienceListRow(
                 if (list.privateMembers.isEmpty()) {
                     list.memberCount.toString()
                 } else {
-                    stringRes(R.string.audience_count_with_private, list.memberCount, list.privateMembers.size)
+                    stringRes(Res.string.audience_count_with_private, list.memberCount, list.privateMembers.size)
                 },
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.placeholderText,
@@ -353,7 +363,7 @@ private fun AudienceReview(
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = stringRes(R.string.num_selected, selected.size),
+            text = stringRes(Res.string.num_selected, selected.size),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -376,7 +386,7 @@ private fun AudienceReview(
             onCheckedChange = null,
         )
         Spacer(Modifier.size(8.dp))
-        Text(stringRes(R.string.select_all), style = MaterialTheme.typography.bodyMedium)
+        Text(stringRes(Res.string.select_all), style = MaterialTheme.typography.bodyMedium)
     }
 
     HorizontalDivider(thickness = DividerThickness)
@@ -406,7 +416,7 @@ private fun AudienceReview(
 
     if (isPrivate) {
         NoteLine(
-            text = stringRes(R.string.audience_recipients_are_visible),
+            text = stringRes(Res.string.audience_recipients_are_visible),
             color = MaterialTheme.colorScheme.placeholderText,
             symbol = MaterialSymbols.Info,
         )

@@ -32,7 +32,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.notification_tab_everyone
+import com.vitorpamplona.amethyst.commons.resources.notification_tab_following
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
@@ -178,12 +180,12 @@ private fun SplitNotificationsScaffold(
                 ) {
                     Tab(
                         selected = pagerState.currentPage == 0,
-                        text = { Text(stringRes(R.string.notification_tab_following)) },
+                        text = { Text(stringRes(Res.string.notification_tab_following)) },
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                     )
                     Tab(
                         selected = pagerState.currentPage == 1,
-                        text = { Text(stringRes(R.string.notification_tab_everyone)) },
+                        text = { Text(stringRes(Res.string.notification_tab_everyone)) },
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                     )
                 }

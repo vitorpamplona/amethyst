@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable

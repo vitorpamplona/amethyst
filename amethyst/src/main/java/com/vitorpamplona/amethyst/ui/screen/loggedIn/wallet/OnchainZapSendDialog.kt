@@ -71,16 +71,42 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.onchain.DustRecipientException
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSplitter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_amount
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_broadcast_no_receipt
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_button_amount
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_change_recipient
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_close
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_comment_label
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_done
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_dont_split
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_failed_at
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_rate_eta
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_loading_fees
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_min_warning
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_post_author
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_priority
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_recipient
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_recipient_placeholder
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_result_change
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_result_fee
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_result_transaction
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_sats_amount
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_sats_suffix
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_sending
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_success
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_title
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_to
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -296,7 +322,7 @@ fun OnchainZapSendDialog(
                     ) {
                         SuccessBody(r)
                     }
-                    DoneButton(label = stringRes(R.string.onchain_send_done), onClick = onDismiss)
+                    DoneButton(label = stringRes(Res.string.onchain_send_done), onClick = onDismiss)
                 }
 
                 is OnchainZapSendResult.Failure -> {
@@ -309,7 +335,7 @@ fun OnchainZapSendDialog(
                     ) {
                         FailureBody(r)
                     }
-                    DoneButton(label = stringRes(R.string.onchain_send_close), onClick = onDismiss)
+                    DoneButton(label = stringRes(Res.string.onchain_send_close), onClick = onDismiss)
                 }
 
                 null -> {
@@ -381,7 +407,7 @@ fun OnchainZapSendDialog(
                             OutlinedTextField(
                                 value = comment,
                                 onValueChange = { comment = it },
-                                label = { Text(stringRes(R.string.onchain_send_comment_label)) },
+                                label = { Text(stringRes(Res.string.onchain_send_comment_label)) },
                                 modifier = Modifier.fillMaxWidth(),
                             )
 
@@ -479,7 +505,7 @@ private fun Header(onClose: () -> Unit) {
             )
         }
         Text(
-            text = stringRes(R.string.onchain_send_title),
+            text = stringRes(Res.string.onchain_send_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier =
@@ -490,7 +516,7 @@ private fun Header(onClose: () -> Unit) {
         IconButton(onClick = onClose) {
             Icon(
                 symbol = MaterialSymbols.Close,
-                contentDescription = stringRes(R.string.onchain_send_close),
+                contentDescription = stringRes(Res.string.onchain_send_close),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -508,7 +534,7 @@ private fun RecipientSection(
     searchInput: String,
     onSearchChange: (String) -> Unit,
 ) {
-    SectionLabel(stringRes(R.string.onchain_send_to))
+    SectionLabel(stringRes(Res.string.onchain_send_to))
 
     if (recipientPubKey != null) {
         Surface(
@@ -527,7 +553,7 @@ private fun RecipientSection(
                     nav = EmptyNav(),
                 )
                 Text(
-                    text = stringRes(R.string.onchain_send_post_author),
+                    text = stringRes(Res.string.onchain_send_post_author),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(start = 12.dp),
@@ -547,8 +573,8 @@ private fun RecipientSection(
     OutlinedTextField(
         value = searchInput,
         onValueChange = onSearchChange,
-        label = { Text(stringRes(R.string.onchain_send_recipient)) },
-        placeholder = { Text(stringRes(R.string.onchain_send_recipient_placeholder)) },
+        label = { Text(stringRes(Res.string.onchain_send_recipient)) },
+        placeholder = { Text(stringRes(Res.string.onchain_send_recipient_placeholder)) },
         singleLine = true,
         isError =
             searchInput.isNotBlank() &&
@@ -619,7 +645,7 @@ private fun SelectedRecipientChip(
             IconButton(onClick = onClear) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.onchain_send_change_recipient),
+                    contentDescription = stringRes(Res.string.onchain_send_change_recipient),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -635,7 +661,7 @@ private fun AmountSection(
     presetAmounts: List<Long>,
     belowMinimum: Boolean,
 ) {
-    SectionLabel(stringRes(R.string.onchain_send_amount))
+    SectionLabel(stringRes(Res.string.onchain_send_amount))
 
     if (presetAmounts.isNotEmpty()) {
         FlowRow(
@@ -659,7 +685,7 @@ private fun AmountSection(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         placeholder = { Text("0") },
-        suffix = { Text(stringRes(R.string.onchain_send_sats_suffix), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        suffix = { Text(stringRes(Res.string.onchain_send_sats_suffix), color = MaterialTheme.colorScheme.onSurfaceVariant) },
         isError = belowMinimum,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -667,7 +693,7 @@ private fun AmountSection(
     if (belowMinimum) {
         Spacer(Modifier.height(4.dp))
         Text(
-            text = stringRes(R.string.onchain_send_min_warning, NumberFormat.getNumberInstance().format(MIN_ONCHAIN_ZAP_SATS)),
+            text = stringRes(Res.string.onchain_send_min_warning, NumberFormat.getNumberInstance().format(MIN_ONCHAIN_ZAP_SATS)),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.error,
         )
@@ -681,7 +707,7 @@ private fun FeeSection(
     onFeeTierChange: (FeeTier) -> Unit,
     fees: FeeEstimates?,
 ) {
-    SectionLabel(stringRes(R.string.onchain_send_priority))
+    SectionLabel(stringRes(Res.string.onchain_send_priority))
 
     FlowRow(
         modifier =
@@ -713,7 +739,7 @@ private fun FeeSection(
                         Text(
                             text =
                                 if (rate != null) {
-                                    stringRes(R.string.onchain_send_fee_rate_eta, formatRate(rate), stringRes(tier.etaLabelRes))
+                                    stringRes(Res.string.onchain_send_fee_rate_eta, formatRate(rate), stringRes(tier.etaLabelRes))
                                 } else {
                                     stringRes(tier.etaLabelRes)
                                 },
@@ -728,7 +754,7 @@ private fun FeeSection(
     if (fees == null) {
         Spacer(Modifier.height(4.dp))
         Text(
-            text = stringRes(R.string.onchain_send_loading_fees),
+            text = stringRes(Res.string.onchain_send_loading_fees),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -773,7 +799,7 @@ private fun SendButton(
                 when {
                     sats != null && splitWays > 1 ->
                         pluralStringResource(R.plurals.onchain_send_button_amount_split, splitWays, sats, splitWays)
-                    sats != null -> stringRes(R.string.onchain_send_button_amount, sats)
+                    sats != null -> stringRes(Res.string.onchain_send_button_amount, sats)
                     else -> stringRes(R.string.send)
                 },
             fontWeight = FontWeight.SemiBold,
@@ -855,7 +881,7 @@ private fun SplitsRecipientSection(
 
     Spacer(Modifier.height(4.dp))
     TextButton(onClick = onDisable) {
-        Text(stringRes(R.string.onchain_send_dont_split))
+        Text(stringRes(Res.string.onchain_send_dont_split))
     }
 }
 
@@ -905,7 +931,7 @@ private fun SendingState() {
             color = MaterialTheme.colorScheme.bitcoinColor,
         )
         Text(
-            text = stringRes(R.string.onchain_send_sending),
+            text = stringRes(Res.string.onchain_send_sending),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -924,20 +950,20 @@ private fun SuccessBody(result: OnchainZapSendResult.Success) {
             )
             Spacer(Modifier.size(8.dp))
             Text(
-                text = stringRes(R.string.onchain_send_success),
+                text = stringRes(Res.string.onchain_send_success),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        ResultRow(stringRes(R.string.onchain_send_result_transaction), result.txid)
+        ResultRow(stringRes(Res.string.onchain_send_result_transaction), result.txid)
         ResultRow(
-            stringRes(R.string.onchain_send_result_fee),
-            stringRes(R.string.onchain_send_sats_amount, NumberFormat.getNumberInstance().format(result.feeSats)),
+            stringRes(Res.string.onchain_send_result_fee),
+            stringRes(Res.string.onchain_send_sats_amount, NumberFormat.getNumberInstance().format(result.feeSats)),
         )
         if (result.changeSats > 0) {
             ResultRow(
-                stringRes(R.string.onchain_send_result_change),
-                stringRes(R.string.onchain_send_sats_amount, NumberFormat.getNumberInstance().format(result.changeSats)),
+                stringRes(Res.string.onchain_send_result_change),
+                stringRes(Res.string.onchain_send_sats_amount, NumberFormat.getNumberInstance().format(result.changeSats)),
             )
         }
     }
@@ -960,13 +986,13 @@ private fun FailureBody(result: OnchainZapSendResult.Failure) {
         }
         result.broadcastTxid?.let {
             Text(
-                text = stringRes(R.string.onchain_send_broadcast_no_receipt, it),
+                text = stringRes(Res.string.onchain_send_broadcast_no_receipt, it),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            text = stringRes(R.string.onchain_send_failed_at, stringRes(result.stage.labelRes())),
+            text = stringRes(Res.string.onchain_send_failed_at, stringRes(result.stage.labelRes())),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

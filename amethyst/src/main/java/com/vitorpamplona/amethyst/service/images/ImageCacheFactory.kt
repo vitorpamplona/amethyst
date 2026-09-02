@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.images
 import android.content.Context
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.service.image.DeferredDeleteFileSystem
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import kotlinx.coroutines.CoroutineScope
 import okio.FileSystem

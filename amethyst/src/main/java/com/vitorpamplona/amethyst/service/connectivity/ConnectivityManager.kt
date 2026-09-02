@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.connectivity
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

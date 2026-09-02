@@ -32,7 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.your_profile_image
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
@@ -103,7 +104,7 @@ internal fun LoggedInUserPictureDrawer(
         RobohashFallbackAsyncImage(
             robot = accountViewModel.userProfile().pubkeyHex,
             model = profilePicture,
-            contentDescription = stringRes(id = R.string.your_profile_image),
+            contentDescription = stringRes(id = Res.string.your_profile_image),
             modifier = HeaderPictureModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),

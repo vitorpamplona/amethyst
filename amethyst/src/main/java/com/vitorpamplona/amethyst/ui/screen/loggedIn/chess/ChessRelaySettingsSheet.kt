@@ -43,10 +43,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.connected
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -277,7 +278,7 @@ private fun RelayRow(
     ) {
         Icon(
             symbol = MaterialSymbols.CheckCircle,
-            contentDescription = stringRes(R.string.connected),
+            contentDescription = stringRes(Res.string.connected),
             tint =
                 if (isPreferred) {
                     MaterialTheme.colorScheme.tertiary

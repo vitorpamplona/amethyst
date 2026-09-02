@@ -63,6 +63,11 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_empty
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -71,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.ConnectedAppsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
@@ -142,7 +148,7 @@ fun ConnectedAppsScreen(
                             modifier = Modifier.size(56.dp),
                         )
                         Text(
-                            stringResource(R.string.napplet_connected_app_empty),
+                            stringRes(Res.string.napplet_connected_app_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -369,9 +375,9 @@ private fun ConnectedAppCardLayout(
 @Composable
 private fun AppSignerPolicy.shortLabel(): String =
     when (this) {
-        AppSignerPolicy.FULL_TRUST -> stringResource(R.string.napplet_policy_full_trust)
-        AppSignerPolicy.REASONABLE -> stringResource(R.string.napplet_policy_reasonable)
-        AppSignerPolicy.PARANOID -> stringResource(R.string.napplet_policy_paranoid)
+        AppSignerPolicy.FULL_TRUST -> stringRes(Res.string.napplet_policy_full_trust)
+        AppSignerPolicy.REASONABLE -> stringRes(Res.string.napplet_policy_reasonable)
+        AppSignerPolicy.PARANOID -> stringRes(Res.string.napplet_policy_paranoid)
     }
 
 private suspend fun loadConnectedApps(

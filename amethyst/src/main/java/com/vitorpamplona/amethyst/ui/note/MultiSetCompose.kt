@@ -64,16 +64,18 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nutzap
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.NoteState
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
@@ -458,7 +460,7 @@ fun RenderNutzapGallery(
         ) {
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
-                contentDescription = stringRes(R.string.nutzap),
+                contentDescription = stringRes(Res.string.nutzap),
                 modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
                 // Tint the monochrome cashu outline brand orange so the nutzap
                 // gallery matches the lightning ZappedIcon in RenderZapGallery.
@@ -795,7 +797,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
         RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
-            contentDescription = stringRes(id = R.string.profile_image),
+            contentDescription = stringRes(id = Res.string.profile_image),
             modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),

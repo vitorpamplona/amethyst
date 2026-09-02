@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.datasources.subassembies
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent

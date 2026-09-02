@@ -57,7 +57,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsSettings
+import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.OtsSettings
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.ots_explorer_api_label
+import com.vitorpamplona.amethyst.commons.resources.ots_reset_to_auto_select
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
@@ -123,7 +127,7 @@ fun OtsSettingsSection(
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text(stringRes(R.string.ots_reset_to_auto_select))
+                    Text(stringRes(Res.string.ots_reset_to_auto_select))
                 }
             }
         }
@@ -271,7 +275,7 @@ private fun CustomExplorerInput(
                     input = it
                     validationError = null
                 },
-                label = { Text(stringRes(R.string.ots_explorer_api_label)) },
+                label = { Text(stringRes(Res.string.ots_explorer_api_label)) },
                 placeholder = { Text("https://mempool.space/api/") },
                 singleLine = true,
                 isError = validationError != null,
@@ -288,7 +292,7 @@ private fun CustomExplorerInput(
                             }) {
                                 Icon(
                                     MaterialSymbols.Clear,
-                                    contentDescription = stringRes(R.string.clear),
+                                    contentDescription = stringRes(Res.string.clear),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }

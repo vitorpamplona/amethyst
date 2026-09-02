@@ -25,8 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -77,7 +79,7 @@ fun ShareActionRows(
         nav.nav(Route.ShareNoteAsImage(shareId))
         onDismiss()
     }
-    M3ActionRow(icon = MaterialSymbols.QrCode2, text = stringRes(R.string.share_as_qr)) {
+    M3ActionRow(icon = MaterialSymbols.QrCode2, text = stringRes(Res.string.share_as_qr)) {
         nav.nav(Route.ShareNoteAsQr(shareId))
         onDismiss()
     }

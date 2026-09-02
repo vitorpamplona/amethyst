@@ -55,6 +55,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_body_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_edit
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_empty
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -132,7 +138,7 @@ fun BuzzCanvasScreen(
                 title = {
                     Column {
                         Text(
-                            text = stringRes(R.string.buzz_canvas_title),
+                            text = stringRes(Res.string.buzz_canvas_title),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -153,7 +159,7 @@ fun BuzzCanvasScreen(
         floatingActionButton = {
             if (canEdit) {
                 FloatingActionButton(onClick = { editing = true }) {
-                    Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(R.string.buzz_canvas_edit))
+                    Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(Res.string.buzz_canvas_edit))
                 }
             }
         },
@@ -164,7 +170,7 @@ fun BuzzCanvasScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = stringRes(R.string.buzz_canvas_empty),
+                    text = stringRes(Res.string.buzz_canvas_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -220,7 +226,7 @@ private fun CanvasEditor(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.buzz_canvas_edit)) },
+                title = { Text(stringRes(Res.string.buzz_canvas_edit)) },
                 navigationIcon = {
                     IconButton(onClick = onClose, enabled = !saving) {
                         Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.cancel))
@@ -256,7 +262,7 @@ private fun CanvasEditor(
                 if (saving) {
                     CircularProgressIndicator(modifier = Modifier.padding(14.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(symbol = MaterialSymbols.Check, contentDescription = stringRes(R.string.buzz_canvas_save))
+                    Icon(symbol = MaterialSymbols.Check, contentDescription = stringRes(Res.string.buzz_canvas_save))
                 }
             }
         },
@@ -270,7 +276,7 @@ private fun CanvasEditor(
                 },
                 modifier = Modifier.fillMaxSize(),
                 enabled = !saving,
-                label = { Text(stringRes(R.string.buzz_canvas_body_label)) },
+                label = { Text(stringRes(Res.string.buzz_canvas_body_label)) },
             )
             error?.let {
                 SelectionContainer(Modifier.align(Alignment.BottomStart)) {

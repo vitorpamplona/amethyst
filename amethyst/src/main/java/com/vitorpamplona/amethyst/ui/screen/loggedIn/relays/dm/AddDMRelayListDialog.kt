@@ -39,6 +39,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.default_relays_longer
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_editing
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_examples2
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -106,13 +110,13 @@ private fun Explanation(postViewModel: DMRelayListViewModel) {
     Card(modifier = MaterialTheme.colorScheme.imageModifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(id = R.string.dm_relays_not_found_editing),
+                text = stringRes(id = Res.string.dm_relays_not_found_editing),
             )
 
             Spacer(modifier = StdVertSpacer)
 
             Text(
-                text = stringRes(id = R.string.dm_relays_not_found_examples2),
+                text = stringRes(id = Res.string.dm_relays_not_found_examples2),
             )
 
             Spacer(modifier = StdVertSpacer)
@@ -133,6 +137,6 @@ fun ResetDMRelaysLonger(postViewModel: DMRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringRes(R.string.default_relays_longer))
+        Text(stringRes(Res.string.default_relays_longer))
     }
 }

@@ -41,6 +41,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.posts_received
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.MyRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -89,7 +91,7 @@ fun RelayCompose(
             }
 
             Text(
-                "${relay.counter} ${stringRes(R.string.posts_received)}",
+                "${relay.counter} ${stringRes(Res.string.posts_received)}",
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

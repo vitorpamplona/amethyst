@@ -55,13 +55,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.number_followers
+import com.vitorpamplona.amethyst.commons.resources.profile_card_bot
+import com.vitorpamplona.amethyst.commons.resources.profile_card_follows_you
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -299,7 +302,7 @@ private fun ProfileCardChips(
         if (followers != null) {
             ProfileCardChip(
                 symbol = MaterialSymbols.Groups,
-                label = stringRes(R.string.number_followers, followers),
+                label = stringRes(Res.string.number_followers, followers),
                 color = MaterialTheme.colorScheme.primary,
             )
         }
@@ -307,7 +310,7 @@ private fun ProfileCardChips(
         if (followsYou) {
             ProfileCardChip(
                 symbol = MaterialSymbols.Person,
-                label = stringRes(R.string.profile_card_follows_you),
+                label = stringRes(Res.string.profile_card_follows_you),
                 color = MaterialTheme.colorScheme.primary,
             )
         }
@@ -340,7 +343,7 @@ private fun ProfileCardChips(
         if (isBot) {
             ProfileCardChip(
                 symbol = MaterialSymbols.Assistant,
-                label = stringRes(R.string.profile_card_bot),
+                label = stringRes(Res.string.profile_card_bot),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         }

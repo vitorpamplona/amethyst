@@ -79,6 +79,29 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_capabilities
+import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_forget
+import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_op_overrides
+import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_trust_level
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_allow_always
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_deny_always
+import com.vitorpamplona.amethyst.commons.resources.napplet_decision_allow
+import com.vitorpamplona.amethyst.commons.resources.napplet_decision_ask
+import com.vitorpamplona.amethyst.commons.resources.napplet_decision_deny
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind
+import com.vitorpamplona.amethyst.commons.resources.napplet_permissions_ask_each_time
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust_desc
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid_desc
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable_desc
+import com.vitorpamplona.amethyst.commons.resources.napplet_signer_permissions_revoke_all
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_title
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_inbox
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_own_hint
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_title
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
@@ -97,6 +120,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46Reconne
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46StatusDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46AppOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
@@ -217,7 +241,7 @@ fun ConnectedAppDetailScreen(
 
             // Signing trust level section
             if (current.signerPolicy != null) {
-                SectionHeader(stringResource(R.string.napplet_connected_app_trust_level))
+                SectionHeader(stringRes(Res.string.napplet_connected_app_trust_level))
                 PolicyPicker(
                     selected = current.signerPolicy,
                     onSelect = { newPolicy ->
@@ -236,7 +260,7 @@ fun ConnectedAppDetailScreen(
 
             // Signing operation overrides section
             if (current.opOverrides.isNotEmpty()) {
-                SectionHeader(stringResource(R.string.napplet_connected_app_op_overrides))
+                SectionHeader(stringRes(Res.string.napplet_connected_app_op_overrides))
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = MaterialTheme.shapes.medium,
@@ -264,7 +288,7 @@ fun ConnectedAppDetailScreen(
 
             // Capabilities section
             if (current.capabilities.isNotEmpty()) {
-                SectionHeader(stringResource(R.string.napplet_connected_app_capabilities))
+                SectionHeader(stringRes(Res.string.napplet_connected_app_capabilities))
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = MaterialTheme.shapes.medium,
@@ -293,7 +317,7 @@ fun ConnectedAppDetailScreen(
 
             // Recent activity (NIP-46 clients only)
             if (nip46Client != null && nip46Activity.isNotEmpty()) {
-                SectionHeader(stringResource(R.string.nip46_signer_activity_title))
+                SectionHeader(stringRes(Res.string.nip46_signer_activity_title))
                 Nip46ActivityCard(nip46Activity)
             }
 
@@ -324,7 +348,7 @@ fun ConnectedAppDetailScreen(
             ) {
                 Icon(MaterialSymbols.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
-                Text(stringResource(R.string.napplet_connected_app_forget))
+                Text(stringRes(Res.string.napplet_connected_app_forget))
             }
         }
     }
@@ -354,7 +378,7 @@ private fun Nip46RelaysSection(
             }
         }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.weight(1f)) { SectionHeader(stringResource(R.string.nip46_signer_app_relays_title)) }
+        Box(Modifier.weight(1f)) { SectionHeader(stringRes(Res.string.nip46_signer_app_relays_title)) }
         if (anyOffline) {
             Nip46ReconnectPill {
                 onReconnect()
@@ -373,7 +397,7 @@ private fun Nip46RelaysSection(
                 // still reflects whether the signer can be reached at all.
                 val online = nip46AppOnline(emptySet(), inboxRelays, connectedRelays)
                 Text(
-                    stringResource(R.string.nip46_signer_app_relays_inbox),
+                    stringRes(Res.string.nip46_signer_app_relays_inbox),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -396,7 +420,7 @@ private fun Nip46RelaysSection(
                     }
                 }
                 Text(
-                    stringResource(R.string.nip46_signer_app_relays_own_hint),
+                    stringRes(Res.string.nip46_signer_app_relays_own_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -521,22 +545,22 @@ private fun PolicyPicker(
         PolicyCard(
             selected = selected == AppSignerPolicy.FULL_TRUST,
             symbol = MaterialSymbols.LockOpen,
-            label = stringResource(R.string.napplet_policy_full_trust),
-            description = stringResource(R.string.napplet_policy_full_trust_desc),
+            label = stringRes(Res.string.napplet_policy_full_trust),
+            description = stringRes(Res.string.napplet_policy_full_trust_desc),
             onClick = { onSelect(AppSignerPolicy.FULL_TRUST) },
         )
         PolicyCard(
             selected = selected == AppSignerPolicy.REASONABLE,
             symbol = MaterialSymbols.Shield,
-            label = stringResource(R.string.napplet_policy_reasonable),
-            description = stringResource(R.string.napplet_policy_reasonable_desc),
+            label = stringRes(Res.string.napplet_policy_reasonable),
+            description = stringRes(Res.string.napplet_policy_reasonable_desc),
             onClick = { onSelect(AppSignerPolicy.REASONABLE) },
         )
         PolicyCard(
             selected = selected == AppSignerPolicy.PARANOID,
             symbol = MaterialSymbols.Lock,
-            label = stringResource(R.string.napplet_policy_paranoid),
-            description = stringResource(R.string.napplet_policy_paranoid_desc),
+            label = stringRes(Res.string.napplet_policy_paranoid),
+            description = stringRes(Res.string.napplet_policy_paranoid_desc),
             onClick = { onSelect(AppSignerPolicy.PARANOID) },
         )
     }
@@ -575,7 +599,7 @@ private fun OpOverrideRow(
         IconButton(onClick = onRevoke) {
             Icon(
                 MaterialSymbols.Delete,
-                contentDescription = stringResource(R.string.napplet_signer_permissions_revoke_all),
+                contentDescription = stringRes(Res.string.napplet_signer_permissions_revoke_all),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
@@ -629,9 +653,9 @@ private fun CapabilityDetailRow(
         Spacer(Modifier.size(8.dp))
         Text(
             when (grant) {
-                GrantState.ALLOW_ALWAYS -> stringResource(R.string.napplet_consent_allow_always)
-                GrantState.DENY -> stringResource(R.string.napplet_consent_deny_always)
-                else -> stringResource(R.string.napplet_permissions_ask_each_time)
+                GrantState.ALLOW_ALWAYS -> stringRes(Res.string.napplet_consent_allow_always)
+                GrantState.DENY -> stringRes(Res.string.napplet_consent_deny_always)
+                else -> stringRes(Res.string.napplet_permissions_ask_each_time)
             },
             style = MaterialTheme.typography.labelSmall,
             color =
@@ -671,19 +695,19 @@ private fun CapabilityPermissionDialog(
         text = {
             Column {
                 GrantOption(
-                    label = stringResource(R.string.napplet_permissions_ask_each_time),
+                    label = stringRes(Res.string.napplet_permissions_ask_each_time),
                     selected = selected == GrantState.ASK,
                     onClick = { selected = GrantState.ASK },
                 )
                 if (!capability.requiresPerUseConsent) {
                     GrantOption(
-                        label = stringResource(R.string.napplet_consent_allow_always),
+                        label = stringRes(Res.string.napplet_consent_allow_always),
                         selected = selected == GrantState.ALLOW_ALWAYS,
                         onClick = { selected = GrantState.ALLOW_ALWAYS },
                     )
                 }
                 GrantOption(
-                    label = stringResource(R.string.napplet_consent_deny_always),
+                    label = stringRes(Res.string.napplet_consent_deny_always),
                     selected = selected == GrantState.DENY,
                     onClick = { selected = GrantState.DENY },
                 )
@@ -722,7 +746,7 @@ private fun GrantOption(
 @Composable
 private fun NostrSignerOp.opLabel(): String =
     when (this) {
-        is NostrSignerOp.SignKind -> stringResource(R.string.napplet_op_sign_kind, kind)
+        is NostrSignerOp.SignKind -> stringRes(Res.string.napplet_op_sign_kind, kind)
         NostrSignerOp.Encrypt -> stringResource(R.string.napplet_op_encrypt)
         NostrSignerOp.Decrypt -> stringResource(R.string.napplet_op_decrypt)
         is NostrSignerOp.DecryptFrom -> stringResource(R.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
@@ -731,9 +755,9 @@ private fun NostrSignerOp.opLabel(): String =
 @Composable
 private fun NostrOpDecision.decisionLabel(): String =
     when (this) {
-        NostrOpDecision.ALLOW -> stringResource(R.string.napplet_decision_allow)
-        NostrOpDecision.ASK -> stringResource(R.string.napplet_decision_ask)
-        NostrOpDecision.DENY -> stringResource(R.string.napplet_decision_deny)
+        NostrOpDecision.ALLOW -> stringRes(Res.string.napplet_decision_allow)
+        NostrOpDecision.ASK -> stringRes(Res.string.napplet_decision_ask)
+        NostrOpDecision.DENY -> stringRes(Res.string.napplet_decision_deny)
     }
 
 private suspend fun loadDetailState(

@@ -58,6 +58,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_created
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_unreadable
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_action
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_confirm
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_title
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -149,11 +157,11 @@ fun ConcordInviteLinksScreen(
                     CircularProgressIndicator()
                 }
 
-            is LinksState.Unreadable -> CenteredMessage(padding, stringRes(R.string.concord_invite_links_unreadable))
+            is LinksState.Unreadable -> CenteredMessage(padding, stringRes(Res.string.concord_invite_links_unreadable))
 
             is LinksState.Loaded ->
                 if (current.links.isEmpty()) {
-                    CenteredMessage(padding, stringRes(R.string.concord_invite_links_empty))
+                    CenteredMessage(padding, stringRes(Res.string.concord_invite_links_empty))
                 } else {
                     LazyColumn(Modifier.fillMaxSize().padding(padding)) {
                         items(current.links, key = { it.token }) { link ->
@@ -173,8 +181,8 @@ fun ConcordInviteLinksScreen(
     confirming?.let { link ->
         AlertDialog(
             onDismissRequest = { if (!revoking) confirming = null },
-            title = { Text(stringRes(R.string.concord_invite_revoke_title)) },
-            text = { Text(stringRes(R.string.concord_invite_revoke_explainer)) },
+            title = { Text(stringRes(Res.string.concord_invite_revoke_title)) },
+            text = { Text(stringRes(Res.string.concord_invite_revoke_explainer)) },
             confirmButton = {
                 TextButton(
                     enabled = !revoking,
@@ -197,7 +205,7 @@ fun ConcordInviteLinksScreen(
                         }
                     },
                 ) {
-                    Text(stringRes(R.string.concord_invite_revoke_confirm), color = MaterialTheme.colorScheme.error)
+                    Text(stringRes(Res.string.concord_invite_revoke_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -244,7 +252,7 @@ private fun InviteLinkRow(
             // a long prefix, so they are useless as labels until well past where the row wraps.
             Text(link.token.take(8), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
             Text(
-                stringRes(R.string.concord_invite_links_created, DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(link.createdAt * 1000))),
+                stringRes(Res.string.concord_invite_links_created, DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(link.createdAt * 1000))),
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(link.url, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -262,7 +270,7 @@ private fun InviteLinkRow(
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.concord_invite_revoke_action), color = MaterialTheme.colorScheme.error) },
+                text = { Text(stringRes(Res.string.concord_invite_revoke_action), color = MaterialTheme.colorScheme.error) },
                 onClick = {
                     menuOpen = false
                     onRevoke()

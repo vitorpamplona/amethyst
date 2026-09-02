@@ -34,8 +34,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_description
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
@@ -150,7 +152,7 @@ fun ChatPinnedBadge(note: Note) {
     if (!note.isPinnedInRelayGroup()) return
     Icon(
         symbol = MaterialSymbols.PushPin,
-        contentDescription = stringRes(R.string.relay_group_pinned_content_description),
+        contentDescription = stringRes(Res.string.relay_group_pinned_content_description),
         modifier = Modifier.size(12.dp),
         tint = MaterialTheme.colorScheme.primary,
     )

@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupChannelLastReadRoute

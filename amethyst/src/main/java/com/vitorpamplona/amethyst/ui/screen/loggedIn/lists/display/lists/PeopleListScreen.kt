@@ -68,9 +68,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow_set_broadcast
+import com.vitorpamplona.amethyst.commons.resources.follow_set_delete
+import com.vitorpamplona.amethyst.commons.resources.list_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.private_members
+import com.vitorpamplona.amethyst.commons.resources.private_members_count
+import com.vitorpamplona.amethyst.commons.resources.public_members
+import com.vitorpamplona.amethyst.commons.resources.public_members_count
+import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -173,8 +182,8 @@ private fun TopAppTabs(
                 val list = viewModel.selectedList.collectAsStateWithLifecycle()
                 val labelPublic =
                     list.value?.let {
-                        stringRes(R.string.public_members_count, it.publicMembers.size)
-                    } ?: stringRes(R.string.public_members)
+                        stringRes(Res.string.public_members_count, it.publicMembers.size)
+                    } ?: stringRes(Res.string.public_members)
                 Text(labelPublic)
             },
         )
@@ -185,8 +194,8 @@ private fun TopAppTabs(
                 val list = viewModel.selectedList.collectAsStateWithLifecycle()
                 val labelPrivate =
                     list.value?.let {
-                        stringRes(R.string.private_members_count, it.privateMembersList.size)
-                    } ?: stringRes(R.string.private_members)
+                        stringRes(Res.string.private_members_count, it.privateMembersList.size)
+                    } ?: stringRes(Res.string.private_members)
                 Text(labelPrivate)
             },
         )
@@ -319,7 +328,7 @@ private fun PeopleListViewPreview() {
 
             var userName by remember { mutableStateOf("") }
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
+                label = { Text(text = stringRes(Res.string.search_and_add_a_user)) },
                 modifier =
                     Modifier
                         .padding(horizontal = Size10dp)
@@ -422,7 +431,7 @@ private fun ListActionsMenuButton(
     if (isActionListOpen.value) {
         val context = LocalContext.current
         M3ActionDialog(
-            title = stringRes(R.string.list_actions_dialog_title),
+            title = stringRes(Res.string.list_actions_dialog_title),
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {
@@ -450,13 +459,13 @@ private fun ListActionsMenuButton(
                     onEditList()
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.follow_set_broadcast)) {
+                M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(Res.string.follow_set_broadcast)) {
                     onBroadcastList()
                     isActionListOpen.value = false
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.follow_set_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(Res.string.follow_set_delete), isDestructive = true) {
                     onDeleteList()
                     isActionListOpen.value = false
                 }

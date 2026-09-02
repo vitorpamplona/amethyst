@@ -65,8 +65,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geo_post_change_place
+import com.vitorpamplona.amethyst.commons.resources.geo_post_posting_to
+import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.post_anonymously
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -377,7 +384,7 @@ private fun GenericCommentPostBody(
                         ) {
                             Icon(
                                 symbol = MaterialSymbols.NoAccounts,
-                                contentDescription = stringRes(R.string.post_anonymously),
+                                contentDescription = stringRes(Res.string.post_anonymously),
                                 modifier = Size30Modifier,
                                 tint = MaterialTheme.colorScheme.onBackground,
                             )
@@ -481,8 +488,8 @@ private fun GenericCommentPostBody(
                                 lud16,
                                 accountViewModel.account.userProfile(),
                                 accountViewModel,
-                                stringRes(id = R.string.lightning_invoice),
-                                stringRes(id = R.string.lightning_create_and_add_invoice),
+                                stringRes(id = Res.string.lightning_invoice),
+                                stringRes(id = Res.string.lightning_create_and_add_invoice),
                                 onNewInvoice = {
                                     postViewModel.insertAtCursor(it)
                                     postViewModel.wantsInvoice = false
@@ -513,7 +520,7 @@ private fun GenericCommentPostBody(
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ZapRaiserRequest(
-                            stringRes(id = R.string.zapraiser),
+                            stringRes(id = Res.string.zapraiser),
                             postViewModel,
                         )
                     }
@@ -571,7 +578,7 @@ private fun GeoPostLocationChannel(postViewModel: CommentPostViewModel) {
         )
         Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
             Text(
-                text = stringRes(R.string.geo_post_posting_to),
+                text = stringRes(Res.string.geo_post_posting_to),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -580,7 +587,7 @@ private fun GeoPostLocationChannel(postViewModel: CommentPostViewModel) {
             }
         }
         TextButton(onClick = { showPicker = true }) {
-            Text(stringRes(R.string.geo_post_change_place))
+            Text(stringRes(Res.string.geo_post_change_place))
         }
     }
 

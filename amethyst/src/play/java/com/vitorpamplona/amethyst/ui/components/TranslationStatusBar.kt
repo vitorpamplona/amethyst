@@ -41,9 +41,15 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.translations_always_translate_to_lang
+import com.vitorpamplona.amethyst.commons.resources.translations_auto
+import com.vitorpamplona.amethyst.commons.resources.translations_never_translate_from_lang
+import com.vitorpamplona.amethyst.commons.resources.translations_show_in_lang_first
+import com.vitorpamplona.amethyst.commons.resources.translations_to
+import com.vitorpamplona.amethyst.commons.resources.translations_translated_from
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -102,9 +108,9 @@ private fun TranslationStatusText(
     onTargetLabelClick: () -> Unit,
 ) {
     val textColor = MaterialTheme.colorScheme.lessImportantLink
-    val autoLabel = stringRes(R.string.translations_auto)
-    val translatedFromLabel = stringRes(R.string.translations_translated_from)
-    val toLabel = stringRes(R.string.translations_to)
+    val autoLabel = stringRes(Res.string.translations_auto)
+    val translatedFromLabel = stringRes(Res.string.translations_translated_from)
+    val toLabel = stringRes(Res.string.translations_to)
 
     Text(
         text =
@@ -141,7 +147,7 @@ private fun LangSettingsDropdown(
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
         LangMenuItem(
             checked = source in accountViewModel.dontTranslateFrom(),
-            label = stringRes(R.string.translations_never_translate_from_lang, sourceDisplay),
+            label = stringRes(Res.string.translations_never_translate_from_lang, sourceDisplay),
             onClick = {
                 accountViewModel.toggleDontTranslateFrom(source)
                 onDismiss()
@@ -150,7 +156,7 @@ private fun LangSettingsDropdown(
         HorizontalDivider(thickness = DividerThickness)
         LangMenuItem(
             checked = preferenceForPair == source,
-            label = stringRes(R.string.translations_show_in_lang_first, sourceDisplay),
+            label = stringRes(Res.string.translations_show_in_lang_first, sourceDisplay),
             onClick = {
                 accountViewModel.prefer(source, target, source)
                 onDismiss()
@@ -158,7 +164,7 @@ private fun LangSettingsDropdown(
         )
         LangMenuItem(
             checked = preferenceForPair == target,
-            label = stringRes(R.string.translations_show_in_lang_first, targetDisplay),
+            label = stringRes(Res.string.translations_show_in_lang_first, targetDisplay),
             onClick = {
                 accountViewModel.prefer(source, target, target)
                 onDismiss()
@@ -168,7 +174,7 @@ private fun LangSettingsDropdown(
         for (lang in deviceLocales) {
             LangMenuItem(
                 checked = settings.translateToContains(lang.language),
-                label = stringRes(R.string.translations_always_translate_to_lang, lang.displayName),
+                label = stringRes(Res.string.translations_always_translate_to_lang, lang.displayName),
                 onClick = {
                     onDismiss()
                     accountViewModel.updateTranslateTo(lang.language)

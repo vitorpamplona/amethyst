@@ -47,6 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_description
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_hide_all
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_sections
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_show_all
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_title
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSection
@@ -134,7 +140,7 @@ fun DrawerSettingsContent(accountViewModel: AccountViewModel) {
 
         Spacer(Modifier.height(4.dp))
 
-        PickerSectionHeader(title = stringRes(R.string.drawer_settings_sections))
+        PickerSectionHeader(title = stringRes(Res.string.drawer_settings_sections))
 
         // A section with no catalog rows has nothing to configure (Create is composer entry points),
         // so it isn't listed here even though the drawer renders it.
@@ -156,7 +162,7 @@ fun DrawerSettingsContent(accountViewModel: AccountViewModel) {
 @Composable
 private fun SummaryCard(totalHidden: Int) {
     PickerHeroCard(
-        title = stringRes(R.string.drawer_settings_title),
+        title = stringRes(Res.string.drawer_settings_title),
         trailing = {
             Text(
                 text = pluralStringResource(R.plurals.drawer_settings_hidden_count, totalHidden, totalHidden),
@@ -167,7 +173,7 @@ private fun SummaryCard(totalHidden: Int) {
         },
     ) {
         Text(
-            text = stringRes(R.string.drawer_settings_description),
+            text = stringRes(Res.string.drawer_settings_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -208,10 +214,10 @@ private fun SectionCard(
                 horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(onClick = { state.showAll(section) }) {
-                    Text(stringRes(R.string.drawer_settings_show_all))
+                    Text(stringRes(Res.string.drawer_settings_show_all))
                 }
                 TextButton(onClick = { state.hideAll(section) }) {
-                    Text(stringRes(R.string.drawer_settings_hide_all))
+                    Text(stringRes(Res.string.drawer_settings_hide_all))
                 }
             }
         }

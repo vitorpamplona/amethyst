@@ -50,6 +50,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_complete
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_description_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_explicit
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_locked
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_type_episodic
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_type_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_type_serial
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -133,7 +141,7 @@ fun EditPodcastShowScreen(
             OutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
-                label = { Text(stringRes(R.string.podcast_show_description_label)) },
+                label = { Text(stringRes(Res.string.podcast_show_description_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -149,7 +157,7 @@ fun EditPodcastShowScreen(
 
             // Episodic vs serial.
             Text(
-                text = stringRes(R.string.podcast_show_type_label),
+                text = stringRes(Res.string.podcast_show_type_label),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(top = 4.dp),
             )
@@ -157,18 +165,18 @@ fun EditPodcastShowScreen(
                 FilterChip(
                     selected = vm.type.value == "episodic" || vm.type.value.isBlank(),
                     onClick = { vm.type.value = "episodic" },
-                    label = { Text(stringRes(R.string.podcast_show_type_episodic)) },
+                    label = { Text(stringRes(Res.string.podcast_show_type_episodic)) },
                 )
                 FilterChip(
                     selected = vm.type.value == "serial",
                     onClick = { vm.type.value = "serial" },
-                    label = { Text(stringRes(R.string.podcast_show_type_serial)) },
+                    label = { Text(stringRes(Res.string.podcast_show_type_serial)) },
                 )
             }
 
-            SwitchRow(stringRes(R.string.podcast_show_explicit), vm.explicit.value) { vm.explicit.value = it }
-            SwitchRow(stringRes(R.string.podcast_show_complete), vm.complete.value) { vm.complete.value = it }
-            SwitchRow(stringRes(R.string.podcast_show_locked), vm.locked.value) { vm.locked.value = it }
+            SwitchRow(stringRes(Res.string.podcast_show_explicit), vm.explicit.value) { vm.explicit.value = it }
+            SwitchRow(stringRes(Res.string.podcast_show_complete), vm.complete.value) { vm.complete.value = it }
+            SwitchRow(stringRes(Res.string.podcast_show_locked), vm.locked.value) { vm.locked.value = it }
 
             V4VSplitEditor(vm.splitEditor, accountViewModel)
         }

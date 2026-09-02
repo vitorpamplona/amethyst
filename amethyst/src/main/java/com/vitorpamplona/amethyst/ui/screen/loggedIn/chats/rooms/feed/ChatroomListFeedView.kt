@@ -37,11 +37,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip04
+import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip17
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -51,7 +53,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.formatHistoryReachDate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -177,8 +179,8 @@ private fun FeedLoaded(
     val giftWrapsStatus by giftWrapsHistory.status.collectAsStateWithLifecycle()
     val nip04Status by nip04History.status.collectAsStateWithLifecycle()
     val user = accountViewModel.userProfile()
-    val nip17Name = stringResource(R.string.chats_history_proto_nip17)
-    val nip04Name = stringResource(R.string.chats_history_proto_nip04)
+    val nip17Name = stringRes(Res.string.chats_history_proto_nip17)
+    val nip04Name = stringRes(Res.string.chats_history_proto_nip04)
     val oldestNip17Index = items.list.indexOfLast { it.event is ChatroomKeyable && it.event !is PrivateDmEvent }
     val oldestNip04Index = items.list.indexOfLast { it.event is PrivateDmEvent }
 

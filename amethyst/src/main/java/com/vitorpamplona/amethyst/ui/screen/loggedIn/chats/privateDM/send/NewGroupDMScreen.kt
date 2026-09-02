@@ -71,6 +71,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_caption
+import com.vitorpamplona.amethyst.commons.resources.record_a_video
+import com.vitorpamplona.amethyst.commons.resources.take_a_picture
+import com.vitorpamplona.amethyst.commons.resources.upload_image
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
@@ -282,7 +290,7 @@ fun GroupDMScreenContent(
 
                 if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                     ZapRaiserRequest(
-                        stringRes(id = R.string.zapraiser),
+                        stringRes(id = Res.string.zapraiser),
                         postViewModel,
                     )
                 }
@@ -430,7 +438,7 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     symbol = MaterialSymbols.AddPhotoAlternate,
-                    contentDescription = stringRes(id = R.string.upload_image),
+                    contentDescription = stringRes(id = Res.string.upload_image),
                     modifier = Modifier.height(25.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -449,7 +457,7 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     symbol = MaterialSymbols.CameraAlt,
-                    contentDescription = stringRes(id = R.string.take_a_picture),
+                    contentDescription = stringRes(id = Res.string.take_a_picture),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -468,7 +476,7 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Videocam,
-                    contentDescription = stringRes(id = R.string.record_a_video),
+                    contentDescription = stringRes(id = Res.string.record_a_video),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -530,7 +538,7 @@ fun SendDirectMessageTo(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.messages_new_message_to),
+                text = stringRes(Res.string.messages_new_message_to),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -550,7 +558,7 @@ fun SendDirectMessageTo(
                         },
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.messages_new_message_to_caption),
+                        text = stringRes(Res.string.messages_new_message_to_caption),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -585,7 +593,7 @@ fun SendDirectMessageTo(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.messages_new_message_subject_caption),
+                        text = stringRes(Res.string.messages_new_message_subject_caption),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },

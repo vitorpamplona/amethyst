@@ -58,11 +58,15 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.imageLoader
 import coil3.request.ImageRequest
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.content_warning
+import com.vitorpamplona.amethyst.commons.resources.content_warning_explanation
+import com.vitorpamplona.amethyst.commons.resources.content_warning_with_reason
+import com.vitorpamplona.amethyst.commons.resources.show_anyway
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -283,7 +287,7 @@ private fun ContentWarningOverlayBody(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Visibility,
-                    contentDescription = stringRes(R.string.content_warning),
+                    contentDescription = stringRes(Res.string.content_warning),
                     modifier =
                         Modifier
                             .size(70.dp)
@@ -292,7 +296,7 @@ private fun ContentWarningOverlayBody(
                 )
                 Icon(
                     symbol = MaterialSymbols.Warning,
-                    contentDescription = stringRes(R.string.content_warning),
+                    contentDescription = stringRes(Res.string.content_warning),
                     modifier =
                         Modifier
                             .size(30.dp)
@@ -302,7 +306,7 @@ private fun ContentWarningOverlayBody(
             }
 
             Text(
-                text = stringRes(R.string.content_warning),
+                text = stringRes(Res.string.content_warning),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 color = Color.White,
@@ -344,7 +348,7 @@ private fun ContentWarningOverlayBody(
                 contentPadding = ButtonPadding,
             ) {
                 Text(
-                    text = stringRes(R.string.show_anyway),
+                    text = stringRes(Res.string.show_anyway),
                 )
             }
         }
@@ -367,7 +371,7 @@ fun ContentWarningNote(
                     ) {
                         Icon(
                             symbol = MaterialSymbols.Visibility,
-                            contentDescription = stringRes(R.string.content_warning),
+                            contentDescription = stringRes(Res.string.content_warning),
                             modifier =
                                 Modifier
                                     .size(70.dp)
@@ -376,7 +380,7 @@ fun ContentWarningNote(
                         )
                         Icon(
                             symbol = MaterialSymbols.Warning,
-                            contentDescription = stringRes(R.string.content_warning),
+                            contentDescription = stringRes(Res.string.content_warning),
                             modifier =
                                 Modifier
                                     .size(30.dp)
@@ -390,9 +394,9 @@ fun ContentWarningNote(
                     Text(
                         text =
                             if (reason.isNullOrBlank()) {
-                                stringRes(R.string.content_warning)
+                                stringRes(Res.string.content_warning)
                             } else {
-                                stringRes(R.string.content_warning_with_reason, reason)
+                                stringRes(Res.string.content_warning_with_reason, reason)
                             },
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -404,7 +408,7 @@ fun ContentWarningNote(
                 if (reason.isNullOrBlank()) {
                     Row {
                         Text(
-                            text = stringRes(R.string.content_warning_explanation),
+                            text = stringRes(Res.string.content_warning_explanation),
                             color = Color.Gray,
                             modifier = Modifier.padding(top = 10.dp),
                             textAlign = TextAlign.Center,
@@ -420,7 +424,7 @@ fun ContentWarningNote(
                         contentPadding = ButtonPadding,
                     ) {
                         Text(
-                            text = stringRes(R.string.show_anyway),
+                            text = stringRes(Res.string.show_anyway),
                         )
                     }
                 }

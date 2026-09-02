@@ -22,17 +22,21 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.model.HomeFeedType
+import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
+import com.vitorpamplona.amethyst.commons.model.mergeMutedPublicChats
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
@@ -97,96 +101,6 @@ val DefaultSignerPermissions =
         Permission(CommandType.NIP44_DECRYPT),
         Permission(CommandType.DECRYPT_ZAP_EVENT),
     )
-
-@Serializable
-sealed class TopFilter(
-    val code: String,
-) {
-    interface AddressableTopFilter {
-        val address: Address
-    }
-
-    @Serializable
-    object Global : TopFilter(" Global ")
-
-    /**
-     * Notifications-only curated mode: like [Global] it admits authors the
-     * user doesn't follow, but it also applies per-kind relevance heuristics
-     * to remove less interesting notes (reactions/reposts that don't target
-     * the user's own notes, unrelated thread replies, etc.). In Notifications,
-     * [Global] shows every event that p-tags the user instead.
-     */
-    @Serializable
-    object Selected : TopFilter(" Selected ")
-
-    @Serializable
-    object AllFollows : TopFilter(" All Follows ")
-
-    @Serializable
-    object AllUserFollows : TopFilter(" All User Follows ")
-
-    @Serializable
-    object DefaultFollows : TopFilter(" Main User Follows ")
-
-    @Serializable
-    object AroundMe : TopFilter(" Around Me ")
-
-    /**
-     * Not a real selection: a sentinel for the "Teleport" chip in the top-nav filter.
-     * The spinner intercepts it to open the map picker and then applies the chosen
-     * [Geohash] instead — it is never persisted or dispatched to a feed flow.
-     */
-    @Serializable
-    object TeleportPicker : TopFilter(" Teleport ")
-
-    @Serializable
-    object Mine : TopFilter(" Mine ")
-
-    @Serializable
-    class PeopleList(
-        override val address: Address,
-    ) : TopFilter(address.toValue()),
-        AddressableTopFilter
-
-    @Serializable
-    class MuteList(
-        override val address: Address,
-    ) : TopFilter(address.toValue()),
-        AddressableTopFilter
-
-    @Serializable
-    class Community(
-        override val address: Address,
-    ) : TopFilter("Community/${address.toValue()}"),
-        AddressableTopFilter
-
-    @Serializable
-    class Hashtag(
-        val tag: String,
-    ) : TopFilter("Hashtag/$tag")
-
-    @Serializable
-    class Geohash(
-        val tag: String,
-    ) : TopFilter("Geohash/$tag")
-
-    @Serializable
-    class Relay(
-        val url: String,
-    ) : TopFilter("Relay/$url")
-
-    @Serializable
-    class FavoriteAlgoFeed(
-        val address: Address,
-    ) : TopFilter("FavoriteAlgoFeed/${address.toValue()}")
-
-    @Serializable object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
-
-    @Serializable
-    class InterestSet(
-        val address: Address,
-    ) : TopFilter("InterestSet/${address.toValue()}")
-}
 
 @Stable
 class AccountSettings(

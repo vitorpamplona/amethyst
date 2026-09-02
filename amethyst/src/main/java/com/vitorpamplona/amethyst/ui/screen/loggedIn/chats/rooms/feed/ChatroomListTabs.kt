@@ -42,6 +42,11 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.mark_all_as_read
+import com.vitorpamplona.amethyst.commons.resources.mark_all_known_as_read
+import com.vitorpamplona.amethyst.commons.resources.mark_all_new_as_read
+import com.vitorpamplona.amethyst.commons.resources.mark_as_read_dialog_title
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -142,27 +147,27 @@ fun MessagesMarkAsReadDialog(
     onMarkNewAsRead: () -> Unit,
 ) {
     M3ActionDialog(
-        title = stringRes(R.string.mark_as_read_dialog_title),
+        title = stringRes(Res.string.mark_as_read_dialog_title),
         onDismiss = onDismiss,
     ) {
         M3ActionSection {
             M3ActionRow(
                 icon = MaterialSymbols.Groups,
-                text = stringRes(R.string.mark_all_known_as_read),
+                text = stringRes(Res.string.mark_all_known_as_read),
             ) {
                 onMarkKnownAsRead()
                 onDismiss()
             }
             M3ActionRow(
                 icon = MaterialSymbols.MoveToInbox,
-                text = stringRes(R.string.mark_all_new_as_read),
+                text = stringRes(Res.string.mark_all_new_as_read),
             ) {
                 onMarkNewAsRead()
                 onDismiss()
             }
             M3ActionRow(
                 icon = MaterialSymbols.DoneAll,
-                text = stringRes(R.string.mark_all_as_read),
+                text = stringRes(Res.string.mark_all_as_read),
             ) {
                 onMarkKnownAsRead()
                 onMarkNewAsRead()
