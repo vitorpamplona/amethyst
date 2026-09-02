@@ -43,6 +43,8 @@ import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.icons.following
+import com.vitorpamplona.amethyst.commons.icons.symbols.AmethystIconGlyph
+import com.vitorpamplona.amethyst.commons.icons.symbols.AmethystIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -109,8 +111,8 @@ fun LikedIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    Icon(
-        imageVector = Liked,
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Liked,
         contentDescription = stringRes(id = R.string.like_description),
         modifier = modifier,
         tint = tint,
@@ -135,8 +137,8 @@ fun LikeIcon(
     iconSizeModifier: Modifier,
     grayTint: Color,
 ) {
-    Icon(
-        imageVector = Like,
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Like,
         contentDescription = stringRes(id = R.string.like_description),
         modifier = iconSizeModifier,
         tint = grayTint,
@@ -148,8 +150,8 @@ fun RepostIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    Icon(
-        imageVector = Repost,
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Repost,
         contentDescription = stringRes(id = R.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
@@ -161,8 +163,8 @@ fun RepostedIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    Icon(
-        imageVector = Reposted,
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Reposted,
         contentDescription = stringRes(id = R.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
@@ -318,8 +320,8 @@ fun CommentIcon(
     iconSizeModifier: Modifier,
     tint: Color,
 ) {
-    Icon(
-        imageVector = Reply,
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Reply,
         contentDescription = stringRes(id = R.string.reply_description),
         modifier = iconSizeModifier,
         tint = tint,
@@ -350,8 +352,8 @@ fun SearchIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    Icon(
-        imageVector = Search,
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Search,
         contentDescription = stringRes(id = R.string.search_button),
         modifier = modifier,
         tint = tint,
