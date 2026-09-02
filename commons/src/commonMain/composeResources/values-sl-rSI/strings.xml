@@ -205,7 +205,6 @@
     <string name="post_was_hidden">To sporočilo je skrito, ker je omenjena nekatera od skritih uporabnikov ali besed</string>
     <string name="post_was_flagged_as_inappropriate_by">Sporočilo je bilo utišano ali prijavljeno s strani</string>
     <string name="post_not_found">Dogodek se nalaga ali pa ni najden v tvojih relejih</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Slika kanala</string>
     <string name="referenced_event_not_found">Referenčni dogodek ni najden</string>
     <string name="could_not_decrypt_the_message">Dešifriranje sporočila ni uspelo</string>
@@ -241,7 +240,6 @@
     <string name="chat_raid_is_raiding">izvaja vdor</string>
     <string name="chat_clip_created_a_clip">izsek ustvarjen</string>
     <string name="edited">posodobljeno</string>
-    <string name="original">original</string>
     <string name="quote">Citiraj</string>
     <string name="fork">Razcepi</string>
     <string name="new_amount_in_sats">Nova vrednost v Sat</string>
@@ -276,10 +274,7 @@
     <string name="send_payment_source_external">Druga aplikacija denarnice</string>
     <string name="send_payment_source_onchain_wallet">On-chain denarnica</string>
     <string name="send_payment_source_cashu_wallet">Cashu denarnica</string>
-    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">CLINK ponudba</string>
-    <string name="send_payment_method_onchain">On-chain</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Znesek</string>
     <string name="send_payment_fixed_price">Ceno določa ponudba</string>
     <string name="send_payment_receipt_section">Potrdilo o zapu</string>
@@ -312,7 +307,6 @@
     <string name="secret_note_to_receiver">Skrivno sporočilo</string>
     <string name="secret_note_to_receiver_placeholder">Moje skrito sporočilo</string>
     <string name="secret_visible_text">Vidna predpona</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Dodaj v zapisek</string>
     <string name="article">Članek</string>
     <string name="channel_name">Ime kanala</string>
@@ -442,7 +436,6 @@
     <string name="dm_sender_reported_hide">Skrij</string>
     <string name="dm_sender_reported_subtitle">Oseba, ki jo spremljate, je opozorila na ta račun.</string>
     <string name="dm_sender_reported_icon">Prijavljeno</string>
-    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">Napaka pri nalaganju odgovorov: </string>
     <string name="try_again">Poskusi ponovno</string>
     <string name="notification_feed_is_empty">Ni še obvestil.</string>
@@ -487,7 +480,7 @@
     <string name="backup_keys_nudge_dismiss">Opusti</string>
     <string name="encrypt_and_copy_my_secret_key">Šifriraj in kopiraj moj privatni ključ</string>
     <string name="badge_award_image_for">Slika nagradne značke za %1$s</string>
-    <string name="badge_award_image">"Slika nagradne značke</string>
+    <string name="badge_award_image">\"Slika nagradne značke</string>
     <string name="new_badge_award_notif">Prejel/a si novo nagradno značko</string>
     <string name="award_granted_to">Nagradna značka podeljena</string>
     <string name="account_switch_add_account_dialog_title">Dodaj nov račun</string>
@@ -627,11 +620,8 @@
     <string name="app_definition_implements">Implementacije</string>
     <string name="app_definition_supported_nips">Podprti NIPi</string>
     <string name="app_definition_via">prek %1$s</string>
-    <string name="app_definition_nip">NIP-%1$s</string>
     <string name="app_definition_kind_app">Aplikacija</string>
     <string name="platform_web">Splet</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">Vadba</string>
     <string name="workout_title">Naslov</string>
     <string name="workout_duration">Trajanje</string>
@@ -656,7 +646,6 @@
     <string name="workout_suggestion_connect_title">Deli svoje vadbe</string>
     <string name="workout_suggestion_connect_message">Dovoli aplikaciji Amethyst branje zaključenih vadb iz Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) , da ti predlaga objavo</string>
     <string name="workout_suggestion_connect_button">Poveži</string>
-    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Iz Health Connect</string>
     <string name="nsite_none_found">nSites še niso najdena.</string>
     <string name="browser_reload">Ponovno naloži</string>
@@ -744,9 +733,7 @@
     <string name="nip46_signer_act_decrypted">Dešifrirano sporočilo</string>
     <string name="nip46_signer_act_shared_pubkey">Deljen vaš javni ključ</string>
     <string name="nip46_signer_act_connected">Povezan</string>
-    <string name="nip46_signer_act_ping">Ping</string>
     <string name="nip46_signer_act_listed_relays">Prikazan seznam relejev</string>
-    <string name="nip46_signer_act_other">%1$s</string>
     <string name="nip46_signer_scan_caption">Skenirajte za povezavo aplikacije z vašim ključem</string>
     <string name="nip46_signer_scan_connect">Skeniraj kodo</string>
     <string name="nip46_signer_paste_link">Raje prilepite povezavo</string>
@@ -794,7 +781,6 @@
     <string name="relay_auth_no_recent">Niti eden rele vas še ni pozval k prijavi.</string>
     <string name="relay_auth_ago">Pred %1$s</string>
     <string name="nip82_repository_label">Vir: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Prenos</string>
     <string name="nip82_section_about">Opis</string>
     <string name="nip82_section_platforms">Platforme</string>
@@ -832,7 +818,6 @@
     <string name="nest_lobby_no_listeners">Trenutno v sobi ni nikogar</string>
     <string name="nest_lobby_listeners_count">%1$d jih posluša</string>
     <string name="nest_role_host">Gostitelj</string>
-    <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon je utišan</string>
     <string name="nest_state_speaking">Zdaj govori</string>
     <string name="nest_state_mic_open">Mikrofon odprt</string>
@@ -917,10 +902,7 @@
     <string name="podcast_completed">Zaključeno</string>
     <string name="podcast_support_show">Podpri tole epizodo</string>
     <string name="podcast_by_author">od %1$s</string>
-    <string name="podcast_season_episode">S%1$d · E%2$d</string>
-    <string name="podcast_episode_number">Ep %1$d</string>
     <string name="podcast_season">Sezona %1$d</string>
-    <string name="podcast_video">Video</string>
     <string name="podcast_transcript">Prepis</string>
     <string name="podcast_chapters">Poglavja</string>
     <string name="podcast_hosts_and_guests">Gostitelji in Gostje</string>
@@ -943,7 +925,6 @@
     <string name="podcast_episode_topics_label">Teme</string>
     <string name="podcast_episode_topics_placeholder">z vejico ločene oznake</string>
     <string name="podcast_episode_audio_url_label">URL zvočnega posnetka</string>
-    <string name="podcast_episode_audio_url_placeholder">https://…/episode.mp3</string>
     <string name="podcast_episode_audio_picked">Zvočni posnetek pripravljen</string>
     <string name="podcast_episode_delete">Izbriši epizodo</string>
     <string name="podcast_episode_delete_confirm">Izbrišem to epizodo? Tega ni mogoče razveljavit</string>
@@ -973,7 +954,6 @@
     <string name="podcast_value_lnaddress">Lightning naslov</string>
     <string name="podcast_value_lnaddress_hint">Ime@primer.com</string>
     <string name="podcast_value_node_pubkey">Pubkej vozlišča</string>
-    <string name="podcast_value_node_pubkey_hint">02abc… (33-byte hex)</string>
     <string name="podcast_value_weight">Teža</string>
     <string name="podcast_value_fee">Provizija</string>
     <string name="music_track_title_label">Naslov</string>
@@ -1044,7 +1024,6 @@
     <string name="private_rumor_mark">Zasebno — vidno le označenim sodelujočim</string>
     <string name="audience_manage">Nastavite kdo to vidi</string>
     <string name="audience_summary_two">%1$s in %2$s</string>
-    <string name="audience_group_chip">%1$s \u00b7 %2$s</string>
     <string name="audience_group_remove">Odstrani vse dodane iz %1$s</string>
     <string name="audience_sheet_title">Dodaj ljudi</string>
     <string name="audience_sheet_search">Išči ljudi in sezname</string>
@@ -1087,7 +1066,6 @@
     <string name="see_relay_feed">Pogled rele vira vsebin</string>
     <string name="pledge_amount_in_sats">Prispevaj vsoto v sat</string>
     <string name="poll_option_description">Opis izbire v anketi</string>
-    <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maksimum</string>
     <string name="poll_consensus_threshold">Soglasje</string>
     <string name="poll_closing_date_time">Datum in čas konca glasovanja</string>
@@ -1097,7 +1075,6 @@
     <string name="custom_zaps_add_a_message">Dodaj javno sporočilo</string>
     <string name="custom_zaps_add_a_message_private">Dodaj privatno sporočilo</string>
     <string name="custom_zaps_add_a_message_nonzap">Dodaj sporočilo k fakturi</string>
-    <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
     <string name="lightning_create_and_add_invoice">Ustvari in dodaj</string>
     <string name="add_content">Dodaj v sporočilo</string>
     <string name="add_caption">Dodaj napis</string>
@@ -1142,7 +1119,7 @@
     <string name="blossom_open">Odpri</string>
     <string name="blossom_payment_title">Zahtevano plačilo</string>
     <string name="blossom_payment_message">%1$s za shranjevanje te datoteke zahteva plačilo preko omrežja Lightning. Za nadaljevanje plačajte iz svoje povezane denarnice.</string>
-    <string name="blossom_payment_server_says">%1$s pove: "%2$s"</string>
+    <string name="blossom_payment_server_says">%1$s pove: \"%2$s\"</string>
     <string name="blossom_pay">Plačaj</string>
     <string name="blossom_report_title">Prijavi blob</string>
     <string name="blossom_report_comment_hint">Razlog (izbirno)</string>
@@ -1259,7 +1236,6 @@
     <string name="active_subs_scope_authors">Izbran seznam ljudi</string>
     <string name="active_subs_scope_muted">Utišani ljudje</string>
     <string name="active_subs_scope_all_communities">Vaše skupnost</string>
-    <string name="active_subs_scope_algo"></string>
     <string name="notification_tab_following">Sledim</string>
     <string name="notification_tab_everyone">Vsi</string>
     <string name="battery_optimization_title">Optimizacija baterije je aktivna</string>
@@ -1274,9 +1250,7 @@
     <string name="show_sensitive_content_explainer">Prikaže opozorilo, če je avtor objavo označil kot občutljivo</string>
     <string name="max_hashtag_limit_title">Največje število ključnikov na objavo</string>
     <string name="max_hashtag_limit_explainer">Skrije objave, ki imajo več oznak od te omejitve. Za izklop nastavi na 0</string>
-    <string name="security_unlimited">∞</string>
     <string name="new_reaction_symbol">Nov reakcijski simbol</string>
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Dodaj ciljni znesek v satoshi-jih, za zbiranje donacij v tej objavi. Podprti Nostr odjemalci lahko ta cilj prikažejo kot vrstico napredka za spodbujanje donacij</string>
     <string name="zapraiser_target_amount_in_sats">Ciljni znesek v sat</string>
     <string name="sats_to_complete">Zapraiser na %1$s. %2$s satoshi-jev do cilja</string>
@@ -1304,7 +1278,6 @@
     <string name="all_languages">Vsi jeziki</string>
     <string name="posting_policy">Pravila objavljanja</string>
     <string name="terms_and_conditions">Določila &amp; Pogoji</string>
-    <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Napake in obvestila s tega releja</string>
     <string name="relay_monitor_reports">Poročila o delovanju relejev</string>
     <string name="relay_active_subscriptions">Aktivne naročnine</string>
@@ -1312,10 +1285,8 @@
     <string name="relay_count_subscriptions">COUNT Naročnine (%1$d)</string>
     <string name="relay_outbox_events">Izhodni dogodki (%1$d)</string>
     <string name="relay_filter_authors">%1$d avtorjev</string>
-    <string name="relay_filter_ids">%1$d ids</string>
     <string name="relay_filter_since">od %1$s</string>
     <string name="relay_filter_until">do %1$s</string>
-    <string name="relay_filter_limit">limit %1$d</string>
     <string name="minimum_prefix">Minimalna predpona</string>
     <string name="maximum_event_tags">Največ oznak v dogodku</string>
     <string name="max_content_length">Največja dolžina vsebine</string>
@@ -1360,7 +1331,7 @@
     <string name="community_no_descriptor">Ta skupnost nima opisa. Obrnite se na lastnika, da ga doda</string>
     <string name="user_preferences">Nastavitve uporabnika</string>
     <string name="settings_search_placeholder">Nastavitve iskanja</string>
-    <string name="settings_search_no_results">Ni najdenih nastavitev za "%1$s"</string>
+    <string name="settings_search_no_results">Ni najdenih nastavitev za \"%1$s\"</string>
     <string name="reset_marmot_confirm_title">Ponastavim Marmot stanje?</string>
     <string name="reset_marmot_confirm_body">To trajno izbriše skupinske klepete Marmot, zgodovino sporočil in ključe MLS za trenutni račun na tej napravi. Drugi uporabniki ne bodo obveščeni in vas bodo morda še vedno videli v skupinah do svoje naslednje posodobitve. Tega dejanja ni mogoče preklicati. Ob naslednji sinhronizaciji bo objavljen nov KeyPackage.</string>
     <string name="reset_marmot_confirm_action">Ponastavi</string>
@@ -1399,7 +1370,7 @@
     <string name="music_playlist_collaborative_hint">Dovoli drugim, da dodajo skladbe v ta seznam predvajanja.</string>
     <string name="music_playlist_delete">Izbriši ta seznam predvajanja</string>
     <string name="music_playlist_delete_confirm">Objavi zahtevo za izbris NIP-09 za ta seznam predvajanja?</string>
-    <string name="music_playlist_no_tracks_hint">Seznam je prazen. Dodaj skladbe iz menija posamezne pesmi z možnostjo "Dodaj na seznam predvajanja".</string>
+    <string name="music_playlist_no_tracks_hint">Seznam je prazen. Dodaj skladbe iz menija posamezne pesmi z možnostjo \"Dodaj na seznam predvajanja\".</string>
     <string name="music_playlist_move_track_up">Premakni skladbo navzgor</string>
     <string name="music_playlist_move_track_down">Premakni skladbo na dol</string>
     <string name="music_playlist_remove_track">Odstrani skladbo iz seznama predvajanja</string>
@@ -1423,14 +1394,13 @@
     <string name="relay_group_relay_no_nip29">Ta relej ne oglašuje podpore za skupine NIP-29. Skupina, ustvarjena tukaj, ne bo delovala – relej ne bo upravljal njenega imena, članov in sporočil. Izberite rele, ki podpira skupine na ravni releja.</string>
     <string name="relay_group_invite_title">Povabi ljudi</string>
     <string name="relay_group_invite_description">Delite to kodo, da se lahko ljudje pridružijo skupini.</string>
-    <string name="relay_group_invite_code_label">Koda povabila (samo za to "samo s povabilom" skupino)</string>
+    <string name="relay_group_invite_code_label">Koda povabila (samo za to \"samo s povabilom\" skupino)</string>
     <string name="relay_group_join_title">Pridruži se skupini</string>
     <string name="relay_group_join_code_label">Koda povabila</string>
-    <string name="relay_group_join_code_hint">Ta skupina je "samo s povabilom". Vpiši kodo povabila</string>
+    <string name="relay_group_join_code_hint">Ta skupina je \"samo s povabilom\". Vpiši kodo povabila</string>
     <string name="relay_group_join_confirm">Pridruži se</string>
     <string name="relay_group_pending">Zahtevano</string>
     <string name="relay_group_role_admin">Administrator</string>
-    <string name="relay_group_role_moderator">Moderator</string>
     <string name="relay_group_role_member">Član</string>
     <string name="relay_group_members_title">Člani</string>
     <string name="relay_group_make_admin">Dodeli vlogo skrbnika</string>
@@ -1454,7 +1424,6 @@
     <string name="relay_group_badge_private">Zasebno</string>
     <string name="relay_group_badge_invite_only">samo s povabilom</string>
     <string name="relay_group_badge_live">V ŽIVO</string>
-    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Vnesite veljaven URL releja (wss://…)</string>
     <string name="relay_group_field_name">Ime</string>
     <string name="relay_group_field_about">Opis</string>
@@ -1521,7 +1490,7 @@
     <string name="relay_group_invite_only_to_post">Ta skupina je zaprtega tipa – za objavljanje potrebujete povabilo.</string>
     <string name="messages_new_message_to">Za</string>
     <string name="messages_new_message_subject_caption">Tema pogovora</string>
-    <string name="messages_new_message_to_caption">@Uporabnik1, @Uporabnik2, @Uporabnik3</string>
+    <string name="messages_new_message_to_caption">\@Uporabnik1, @Uporabnik2, @Uporabnik3</string>
     <string name="messages_group_descriptor">Člani te skupine</string>
     <string name="messages_new_subject_message">Razlaga članom</string>
     <string name="messages_new_subject_message_placeholder">Spreminjanje imena za dosego novih ciljev.</string>
@@ -1547,7 +1516,6 @@
     <string name="poll_zap_value_min_max_explainer">Glasovi so ovrednoteni glede na količino zapov. Lahko nastavite minimalni znesek, da se izognete nezaželjenim glasovom, in največji znesek, da preprečite, da bi bogatejši volilci prevzeli glasovanje. V obeh poljih uporabite enak znesek, da zagotovite, da je vsak glas enako ovrednoten. Pustite prazno, če želite sprejeti poljubno količino.</string>
     <string name="error_dialog_talk_to_user">Pošlji sporočilo uporabniku</string>
     <string name="error_dialog_talk_to_user_name">Sporočilo %1$s</string>
-    <string name="error_dialog_button_ok">OK</string>
     <string name="zap_split_title">Razdeli in posreduj Zape</string>
     <string name="zap_split_explainer">Podprti Nostr odjemalci bojo razdelili in posredovali Zap-e, uporabnikom dodanim tukaj namesto k vam</string>
     <string name="zap_split_search_and_add_user">Išči in dodaj uporabnika</string>
@@ -1567,10 +1535,9 @@
     <string name="notification_channel_status_on">Vklop</string>
     <string name="notification_channel_status_silent">Tiho</string>
     <string name="notification_channel_status_off">Izklop</string>
-    <string name="select_push_server">Izberi "UnifiedPush" aplikacijo</string>
+    <string name="select_push_server">Izberi \"UnifiedPush\" aplikacijo</string>
     <string name="push_server_title">Potisna obvestila</string>
-    <string name="push_server_explainer">Od nameščenih "UnifiedPush" aplikacij</string>
-    <string name="push_server_none">None</string>
+    <string name="push_server_explainer">Od nameščenih \"UnifiedPush\" aplikacij</string>
     <string name="push_server_none_explainer">Onemogoči potisna obvestila</string>
     <string name="push_server_uses_app_explainer">Uporablja aplikacijo %1$s</string>
     <string name="push_server_install_app">Nastavitev potisnih obvestil</string>
@@ -1610,7 +1577,6 @@
     <string name="wallet_send">Pošlji</string>
     <string name="wallet_receive">Prejmi</string>
     <string name="wallet_transactions">Transakcije</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">prilepi BOLT-11 fakturo</string>
     <string name="wallet_pay">Plačaj</string>
     <string name="wallet_payment_success">Plačilo uspešno</string>
@@ -1728,7 +1694,7 @@
     <string name="cashu_settings_import_key_subtitle">Zamenjaj ključ za nutzape s prilepljenim – na primer za obnovitev denarnice iz varnostne kopije. To je le redko potrebno. Nutzapi, zaklenjeni na stari ključ, ne bodo več unovčljivi.</string>
     <string name="cashu_settings_import_key_confirm_title">Uvozim ključ za nutzape?</string>
     <string name="cashu_settings_import_key_confirm_body">Prilepite zasebni ključ P2PK (hex) za prejemanje nutzapov. Objavili bomo novo verzijo vaših sporočil vrst 10019 in 17375 z uporabo tega ključa, pri čemer se obstoječe kovnice ohranijo. Nutzapi, zaklenjeni na vaš trenutni ključ, ne bodo več unovčljivi, razen če se ključa ujemata. To je le redko potrebno.</string>
-    <string name="cashu_settings_import_key_field">P"PK zasebni ključ (hex)</string>
+    <string name="cashu_settings_import_key_field">P\"PK zasebni ključ (hex)</string>
     <string name="cashu_settings_import_key_action">Uvozi ključ</string>
     <string name="cashu_settings_delete_wallet">Izbriši denarnico</string>
     <string name="cashu_settings_delete_wallet_subtitle">Odstrani denarnico in ustavi nutzape. Morebitno preostalo stanje lahko postane nepopravljivo izgubljeno.</string>
@@ -1739,9 +1705,7 @@
     <string name="cashu_getting_quote">Zahtevam tečaj od kovnice…</string>
     <string name="cashu_verify">Preveri</string>
     <string name="cashu_mint_reachable">✓ Kovnica je dosegljiva</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Povezava s kovnico ni uspela: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Ustvari žeton</string>
     <string name="cashu_redeem_button">Unovči</string>
     <string name="cashu_done">Končano</string>
@@ -1780,7 +1744,6 @@
     <string name="onchain_send_min_warning">Minimalni on-chain zap je %1$s satov, saj bi manjše zneske pojedle provizije rudarjev. Uporabi raje Lightning zap.</string>
     <string name="onchain_send_comment_label">Komentar (neobvezno)</string>
     <string name="onchain_send_priority">Prioriteta</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Izračunavanje provizij…</string>
     <string name="onchain_send_button_amount">Pošlji %1$s satov</string>
     <string name="onchain_send_dont_split">Ne razdeli — plačaj samo enemu prejemniku</string>
@@ -1841,7 +1804,7 @@
     <string name="calendar_untitled">(neimenovano)</string>
     <string name="calendar_all_day">Ves dan</string>
     <string name="calendar_rsvp_going_prefixed">✓ Pridem</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Mogoče</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Mogoče</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Ne morem</string>
     <string name="calendar_collection_title">Naslov</string>
     <string name="calendar_collection_description">Opis</string>
@@ -1889,7 +1852,6 @@
     <string name="jump_to_parent_reply">Skoči na izvorno sporočilo</string>
     <string name="boost_or_quote_description">Posreduj ali citiraj</string>
     <string name="like_description">Všečkaj</string>
-    <string name="onchain_zap_description">On-chain Bitcoin zap</string>
     <string name="onchain_zap_pending">V potrjevanju</string>
     <string name="change_reaction">Spremeni hitre odzive</string>
     <string name="bottom_bar_settings_available">Dostopno</string>
@@ -1915,7 +1877,6 @@
     <string name="reactions_settings_boost_description">Ponovno objavi ali citiraj to objavo</string>
     <string name="reactions_settings_like">Všečkaj</string>
     <string name="reactions_settings_like_description">Odzovi se na to objavo z emojijem</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Pošlji avtorju plačilo prek Lightninga</string>
     <string name="reactions_settings_share">Deli</string>
     <string name="reactions_settings_share_description">Deli to objavo z drugimi</string>
@@ -1956,7 +1917,6 @@
     <string name="disable_poll">Onemogoči anketo</string>
     <string name="add_bitcoin_invoice">Bitcoin račun</string>
     <string name="cancel_bitcoin_invoice">Prekliči Bitcoin fakturo</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">Prekliči Zapraiser</string>
     <string name="add_location">Lokacija</string>
     <string name="remove_location">Odstrani lokacijo</string>
@@ -1971,9 +1931,9 @@
     <string name="buzz_system_member_added">%2$s je dodal %1$s</string>
     <string name="buzz_system_member_left">%1$s se je odjavil</string>
     <string name="buzz_system_member_removed">%2$s je odstranil %1$s</string>
-    <string name="buzz_system_topic_changed">%1$s nastavil temo o "%2$s"</string>
+    <string name="buzz_system_topic_changed">%1$s nastavil temo o \"%2$s\"</string>
     <string name="buzz_system_topic_cleared">%1$s počistil temo</string>
-    <string name="buzz_system_purpose_changed">%1$s nastavil namen v "%2$s"</string>
+    <string name="buzz_system_purpose_changed">%1$s nastavil namen v \"%2$s\"</string>
     <string name="buzz_system_purpose_cleared">%1$s počištil namen</string>
     <string name="buzz_system_visibility_open">%1$s je spremenil kanal v javnega — sedaj ga lahko najde vsak</string>
     <string name="buzz_system_visibility_private">%1$s nastavil ta kanal zaseben — Samo z povabilom</string>
@@ -1987,7 +1947,6 @@
     <string name="buzz_system_message_deleted">%1$s izbrisal sporočilo</string>
     <string name="buzz_system_message_deleted_reason">%1$s izbrisal sporočilo: %2$s</string>
     <string name="buzz_system_dm_created">%1$s začel ta pogovor</string>
-    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <string name="buzz_huddle_started">🔊 %1$s je začel ta posvet</string>
     <string name="buzz_huddle_joined">🔊 %1$s se je pridružil posvetu</string>
     <string name="buzz_huddle_left">🔊 %1$s je zapustil posvet</string>
@@ -2056,7 +2015,6 @@
     <string name="buzz_invite_share">Deli</string>
     <string name="buzz_invite_copy">Kopiraj</string>
     <string name="buzz_invite_error_title">Ne morem ustvarii povabila</string>
-    <string name="buzz_invite_dismiss">OK</string>
     <string name="buzz_dm_section_empty">Še ni pogovorov</string>
     <string name="chat_delivery_details_title">Dostava sporočila</string>
     <string name="close">Zapri</string>
@@ -2177,7 +2135,6 @@
     <string name="accessibility_download_for_offline">Prenesi</string>
     <string name="accessibility_send">Pošlji</string>
     <string name="accessibility_play_username">Predvajaj uporabniško ime</string>
-    <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Skeniraj QR kodo</string>
     <string name="accessibility_select_date">Izberi datum</string>
     <string name="draft">Osnutek</string>
@@ -2196,7 +2153,7 @@
     <string name="remove_dvm_from_favorites">Odstrani iz priljubljenih</string>
     <string name="favorite_dvms_explainer">Algoritmi vira vsebin, ki jih tukaj označite z zvezdico, se bodo prikazali kot filtri na začetnem zaslonu. Za nove odprite »Odkrij«.</string>
     <string name="favorite_dvms_empty_headline">Pripni svoje najljubše algoritme</string>
-    <string name="favorite_dvms_empty_step1">Tapni "%1$s" spodaj za brskanje med algoritmi.</string>
+    <string name="favorite_dvms_empty_step1">Tapni \"%1$s\" spodaj za brskanje med algoritmi.</string>
     <string name="favorite_dvms_empty_step2">Tapni %1$s ob viru vsebin, da ga ohraniš tukaj.</string>
     <string name="favorite_dvms_empty_cta">Dodaj nekaj virov vsebin</string>
     <string name="favorite_dvms_add_more">Dodaj več…</string>
@@ -2226,7 +2183,6 @@
     <string name="search_filters_section_source">Vir</string>
     <string name="search_filters_section_sort">Razvrsti po</string>
     <string name="search_filters_open">Filtri</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Išči jezike</string>
     <string name="add_language">Dodaj jezik</string>
     <string name="add_language_pair">Dodaj jezikovni par</string>
@@ -2286,7 +2242,6 @@
     <string name="timeout">Čas je potekel</string>
     <string name="retrying">Poskušam ponovno…</string>
     <string name="dismiss">Zavrni</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Oddajam</string>
     <string name="broadcasting_name">Oddajam %1$s</string>
     <string name="broadcasting_number_events">Oddajam %1$d dogodkov…</string>
@@ -2391,7 +2346,6 @@
     <string name="cashu_move_coins_withdraw_ln">Izplačaj prek Lightninga…</string>
     <string name="cashu_move_coins_export_token">Izvozi kot žeton Cashu…</string>
     <string name="cashu_move_coins_working">Premikam kovance…</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Povezujem</string>
     <string name="event_sync_status_downloading">Prenašam</string>
     <string name="event_sync_status_error">Napaka</string>
@@ -2416,7 +2370,6 @@
     <string name="hls_content_warning_reason_placeholder">Razlog (neobvezno)</string>
     <string name="hls_codec_label">Kodek</string>
     <string name="hls_codec_h265">H.265 (boljše stiskanje)</string>
-    <string name="hls_codec_h264">H.264</string>
     <string name="hls_codec_fallback_notice">Naprava ne podpira H.265 — izbran bo H.264.</string>
     <string name="hls_renditions_label">Izvedbe</string>
     <string name="hls_renditions_source_format">Resolucija vira: %1$d×%2$d</string>
@@ -2454,8 +2407,6 @@
     <string name="event_sync_date_filter_until">Do</string>
     <string name="event_sync_date_filter_now">Zdaj</string>
     <string name="event_sync_date_filter_all_time">Vse do zdaj</string>
-    <string name="web_bookmark_url_label">URL</string>
-    <string name="web_bookmark_url_placeholder">https://example.com</string>
     <string name="web_bookmark_title_label">Naslov</string>
     <string name="web_bookmark_title_placeholder">Naslov zaznamka</string>
     <string name="web_bookmark_description_label">Opis</string>
@@ -2470,15 +2421,12 @@
     <string name="fundraiser_ends">Izteče se: %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain donacija</string>
     <string name="goal_amount_label">Ciljni znesek (sat)</string>
-    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Opiši svoj cilj</string>
     <string name="goal_description_placeholder">Namen zbiranja sredstev?</string>
     <string name="goal_summary_label">Kratek povzetek</string>
     <string name="goal_summary_placeholder">Kratek opis za predogled</string>
     <string name="goal_image_label">URL slike (poljubno)</string>
-    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">URL spletišča (poljubno)</string>
-    <string name="goal_website_placeholder">https://example.com</string>
     <string name="goal_set_deadline">Izberi končni rok</string>
     <string name="request_to_vanish_description">Zahtevajte od relejev, da trajno izbrišejo vse vaše podatke do izbranega datuma. To dejanje temelji na standardu NIP-62 in je v nekaterih regijah pravno zavezujoče.</string>
     <string name="vanish_target_relay">Naslovni releji</string>
@@ -2500,7 +2448,6 @@
     <string name="vanish_events_empty_hint">Doslej še niste poslali nobene zahteve za izbris sledi.</string>
     <string name="vanish_target_relays_label">Ciljni releji</string>
     <string name="vanish_all_relays_compliance_hint">Ta zahteva je usmerjena na vse releje. Za preizkus skladnosti posameznih relejev uporabite zaslon Zahteva za izbris sledi.</string>
-    <string name="vanish_test_button">Test</string>
     <string name="vanish_compliant">Skladen</string>
     <string name="vanish_non_compliant">Neskladen</string>
     <string name="vanish_test_error">Napaka</string>
@@ -2606,12 +2553,11 @@
     <string name="emoji_add_dialog_title">Dodaj emoji po meri</string>
     <string name="emoji_remove_dialog_title">Odstrani:%1$s:?</string>
     <string name="emoji_long_press_hint">Z dolgim pritiskom na emoji ga odstraniš.</string>
-    <string name="emoji_pack_is_in_list">"%1$s" je na vašem seznamu emojijev</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" ni na vašem seznamu emojijev</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" je na vašem seznamu emojijev</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" ni na vašem seznamu emojijev</string>
     <string name="emoji_pack_actions_dialog_title">Možnosti paketa emojijev</string>
     <string name="emoji_private_toggle">Zasebno</string>
     <string name="emoji_private_badge">Zasebni emojiji</string>
-    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Kršitev pravil skupnosti</string>
     <string name="community_rules_violation_author_denied">Ste na seznamu blokiranih v tej skupnosti. Objave ne bodo sprejete.</string>
     <string name="community_rules_violation_kind_not_allowed">Dogodki tipa (kind) %1$d v tej skupnosti niso dovoljene.</string>
@@ -2623,7 +2569,6 @@
     <string name="marmot_create_group_footer">Ustvarjena bo nova skupina MLS. Člane lahko dodate kasneje.</string>
     <string name="marmot_group_default_name">Marmot skupina</string>
     <string name="marmot_group_fallback_name">Skupina %1$s…</string>
-    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Znano</string>
     <string name="marmot_tab_known_count">Znano (%1$d)</string>
     <string name="marmot_tab_new_requests">Nova prošnja</string>
@@ -2649,7 +2594,7 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="marmot_edit_group_info">Uredi podatke o skupini</string>
     <string name="marmot_leave_group">Zapusti skupino</string>
     <string name="marmot_this_group">ta skupina</string>
-    <string name="marmot_leave_group_confirm">Ste prepričani, da želite zapustiti skupino "%1$s"? Po tem ne boste več prejemali sporočil iz te skupine.</string>
+    <string name="marmot_leave_group_confirm">Ste prepričani, da želite zapustiti skupino \"%1$s\"? Po tem ne boste več prejemali sporočil iz te skupine.</string>
     <string name="marmot_keypackage_required">Če želite osebo dodati, mora najprej objaviti svoj KeyPackage (kind: 30443).</string>
     <string name="marmot_add_to_group">Dodaj v skupino</string>
     <string name="marmot_add_member">Dodaj člana</string>
@@ -2666,7 +2611,6 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="marmot_revoke">Prekliči</string>
     <string name="marmot_revoke_admin_privileges">Prekliči administratorske pravice</string>
     <string name="marmot_revoke_admin_title">Prekliči administratorske pravice</string>
-    <string name="marmot_revoke_admin_confirm">Revoke admin privileges from "%1$s"? They will remain a member of the group.</string>
     <string name="marmot_relays_header">Releji</string>
     <string name="marmot_relay_no_events">ni dogodkov</string>
     <string name="marmot_relay_last_event">zadnji dogodek%1$s</string>
@@ -2720,7 +2664,7 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="buzz_workflow_picker_choose">Izberite potek dela (workflow)</string>
     <string name="buzz_workflow_new_definition">Nova definicija…</string>
     <string name="buzz_workflow_def_title">Nova definicija poteka dela</string>
-    <string name="buzz_workflow_def_desc">Poimenuje ga za kanal in objavi njegov recept YAML (tip "kind" 30620). Pravi Buzz rele  zažene YAML. Samostojno gostujoči izvajalec izvede svoj nastavljeni ukaz — tukaj definicija le poimenuje in popiše zagon.</string>
+    <string name="buzz_workflow_def_desc">Poimenuje ga za kanal in objavi njegov recept YAML (tip \"kind\" 30620). Pravi Buzz rele  zažene YAML. Samostojno gostujoči izvajalec izvede svoj nastavljeni ukaz — tukaj definicija le poimenuje in popiše zagon.</string>
     <string name="buzz_workflow_def_name">Ime</string>
     <string name="buzz_workflow_def_name_hint">zgradi-in-testiraj</string>
     <string name="buzz_workflow_def_yaml">YAML recept</string>
@@ -2745,7 +2689,7 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="buzz_attest_agent_paste_error">Vnesite npub ali 64-znakovni ključ hex.</string>
     <string name="buzz_attest_change_agent">Zamenjaj agenta</string>
     <string name="buzz_attest_conditions_hint">Pogoji (izbirno) — pustite prazno za neomejeno potrdilo.</string>
-    <string name="buzz_attest_kind_label">Omeji na tip "kind" (0–65535)</string>
+    <string name="buzz_attest_kind_label">Omeji na tip \"kind\" (0–65535)</string>
     <string name="buzz_attest_after_label">Samo dogodki po (unix sekunde)</string>
     <string name="buzz_attest_before_label">Samo dogodki pred (unix sekunde)</string>
     <string name="buzz_attest_generate">Generiraj potrdilo</string>
@@ -2755,7 +2699,7 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="buzz_persona_new_title">Nova persona</string>
     <string name="buzz_persona_edit_title">Uredi persono</string>
     <string name="buzz_persona_slug">Slug (ID persone)</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, '-' ali '_'. Po ustvarjanju sprememba ni mogoča.</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' ali \'_\'. Po ustvarjanju sprememba ni mogoča.</string>
     <string name="buzz_persona_display_name">Prikazano ime</string>
     <string name="buzz_persona_system_prompt">Sistemski poziv</string>
     <string name="buzz_persona_model">Model (izbirno)</string>

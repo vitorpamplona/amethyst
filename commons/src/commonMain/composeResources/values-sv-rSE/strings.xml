@@ -195,7 +195,6 @@
     <string name="post_was_hidden">Detta inlägg doldes eftersom det nämner dina dolda användare eller ord</string>
     <string name="post_was_flagged_as_inappropriate_by">Inlägget flaggades som olämpligt av</string>
     <string name="post_not_found">Inlägg hittades inte</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanal bild</string>
     <string name="referenced_event_not_found">Refererad händelse hittades inte</string>
     <string name="could_not_decrypt_the_message">Kunde inte dekryptera meddelandet</string>
@@ -231,7 +230,6 @@
     <string name="chat_raid_is_raiding">gör en raid</string>
     <string name="chat_clip_created_a_clip">skapade ett klipp</string>
     <string name="edited">redigerat</string>
-    <string name="original">original</string>
     <string name="quote">Citera</string>
     <string name="fork">Förgrening</string>
     <string name="new_amount_in_sats">Nytt belopp i Sats</string>
@@ -250,13 +248,11 @@
     <string name="clink_offer_amount_sats">Belopp (sats)</string>
     <string name="clink_offer_amount_range">Tillåtet intervall: %1$s–%2$s sats</string>
     <string name="clink_offer_label">CLINK-erbjudande (noffer)</string>
-    <string name="clink_budget_set">Budget</string>
     <string name="clink_budget_title">Utgiftsbudget</string>
     <string name="clink_budget_amount_sats">Belopp (sats)</string>
     <string name="clink_budget_request">Begär</string>
     <string name="clink_budget_approved">Budget godkänd</string>
     <string name="clink_debit_pay_only">Endast betalning</string>
-    <string name="wallet_add_clink_title">CLINK Debit</string>
     <string name="wallet_add_clink_description">Betala och zappa från en plånbok som har förauktoriserat ditt konto. Endast utgifter — inget saldo eller historik.</string>
     <string name="wallet_add_clink_invalid">Ogiltig CLINK-debitpekare. En ndebit1…-sträng förväntades.</string>
     <string name="wallet_paste_ndebit">Klistra in ndebit-pekare</string>
@@ -266,10 +262,7 @@
     <string name="send_payment_source_external">En annan plånboksapp</string>
     <string name="send_payment_source_onchain_wallet">On-chain-plånbok</string>
     <string name="send_payment_source_cashu_wallet">Cashu-plånbok</string>
-    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">CLINK-erbjudande</string>
-    <string name="send_payment_method_onchain">On-chain</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Belopp</string>
     <string name="send_payment_fixed_price">Pris satt av erbjudandet</string>
     <string name="send_payment_receipt_section">Zap-kvitto</string>
@@ -302,7 +295,6 @@
     <string name="secret_note_to_receiver">Hemlig anteckning till mottagaren</string>
     <string name="secret_note_to_receiver_placeholder">Mitt dolda inlägg</string>
     <string name="secret_visible_text">Synligt Prefix</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Lägg till inlägg</string>
     <string name="article">Artikel</string>
     <string name="channel_name">Kanal Namn</string>
@@ -321,7 +313,6 @@
     <string name="username">Användarnamn</string>
     <string name="about_me">Om mig</string>
     <string name="avatar_url">Profilbild URL</string>
-    <string name="banner_url">Banner URL</string>
     <string name="website_url">Websida URL</string>
     <string name="pronouns">Pronomen</string>
     <string name="stale_relay_hint_label">Källrelän kan vara föråldrade</string>
@@ -432,7 +423,6 @@
     <string name="dm_sender_reported_hide">Dölj</string>
     <string name="dm_sender_reported_subtitle">Någon du följer har flaggat detta konto</string>
     <string name="dm_sender_reported_icon">Anmäld</string>
-    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">Det gick inte att läsa in svar: </string>
     <string name="try_again">Försök igen</string>
     <string name="notification_feed_is_empty">Inga aviseringar ännu.</string>
@@ -613,12 +603,6 @@
     <string name="app_definition_related">Relaterat</string>
     <string name="app_definition_implements">Implementerar</string>
     <string name="app_definition_supported_nips">NIP:er som stöds</string>
-    <string name="app_definition_via">via %1$s</string>
-    <string name="app_definition_nip">NIP-%1$s</string>
-    <string name="app_definition_kind_app">App</string>
-    <string name="platform_web">Web</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">Träningspass</string>
     <string name="workout_title">Titel</string>
     <string name="workout_duration">Varaktighet</string>
@@ -643,7 +627,6 @@
     <string name="workout_suggestion_connect_title">Dela dina träningspass</string>
     <string name="workout_suggestion_connect_message">Låt Amethyst läsa avslutade träningspass från Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) och föreslå ett inlägg.</string>
     <string name="workout_suggestion_connect_button">Anslut</string>
-    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Från Health Connect</string>
     <string name="nsite_none_found">Inga nSites hittades ännu.</string>
     <string name="browser_reload">Ladda om</string>
@@ -719,7 +702,6 @@
     <string name="nip46_signer_background_hint">Amethyst håller en bakgrundsanslutning (visas som en pågående notifiering) så att den kan besvara signeringsförfrågningar när den är stängd.</string>
     <string name="nip46_signer_hero_title">Signera åt andra appar</string>
     <string name="nip46_signer_turn_on">Slå på fjärrsignatären</string>
-    <string name="nip46_signer_live">Live</string>
     <string name="nip46_signer_batch_remember">Kom ihåg dessa för varje app</string>
     <string name="nip46_signer_batch_signing_as">som %1$s</string>
     <string name="nip46_signer_batch_allow">Tillåt %1$d</string>
@@ -731,9 +713,7 @@
     <string name="nip46_signer_act_decrypted">Dekrypterade ett meddelande</string>
     <string name="nip46_signer_act_shared_pubkey">Delade din publika nyckel</string>
     <string name="nip46_signer_act_connected">Ansluten</string>
-    <string name="nip46_signer_act_ping">Ping</string>
     <string name="nip46_signer_act_listed_relays">Listade reläer</string>
-    <string name="nip46_signer_act_other">%1$s</string>
     <string name="nip46_signer_scan_caption">Skanna för att ansluta en app till din nyckel</string>
     <string name="nip46_signer_scan_connect">Skanna en kod</string>
     <string name="nip46_signer_paste_link">Klistra in en länk istället</string>
@@ -781,7 +761,6 @@
     <string name="relay_auth_no_recent">Inget relä har bett dig logga in än.</string>
     <string name="relay_auth_ago">för %1$s sedan</string>
     <string name="nip82_repository_label">Källa: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Ladda ner</string>
     <string name="nip82_section_about">Om</string>
     <string name="nip82_section_platforms">Plattformar</string>
@@ -819,15 +798,13 @@
     <string name="nest_lobby_no_listeners">Ingen är i rummet just nu.</string>
     <string name="nest_lobby_listeners_count">%1$d lyssnar</string>
     <string name="nest_role_host">Värd</string>
-    <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon avstängd</string>
     <string name="nest_state_speaking">Talar nu</string>
     <string name="nest_state_mic_open">Mikrofon på</string>
     <string name="nest_leave_host_title">Avsluta det här nestet?</string>
-    <string name="nest_leave_host_body">Du är värden. Att stänga rummet kopplar bort alla. Välj "Bara lämna" om du vill komma tillbaka senare — rummet stängs automatiskt efter 8 timmars inaktivitet.</string>
+    <string name="nest_leave_host_body">Du är värden. Att stänga rummet kopplar bort alla. Välj \"Bara lämna\" om du vill komma tillbaka senare — rummet stängs automatiskt efter 8 timmars inaktivitet.</string>
     <string name="nest_leave_host_close">Stäng rum</string>
     <string name="nest_leave_host_just_leave">Bara lämna</string>
-    <string name="nest_live_chip">LIVE</string>
     <string name="nest_tab_chat">Chatt</string>
     <string name="nest_tab_audience">Publik</string>
     <string name="nest_tab_hands">Händer</string>
@@ -898,16 +875,13 @@
     <string name="nests_servers_empty">Inga nest-servrar än. Lägg till en nedan eller välj en rekommenderad server.</string>
     <string name="podcast_view_episodes">Visa avsnitt</string>
     <string name="podcast_no_episodes">Inga avsnitt hittades än</string>
-    <string name="podcast_trailer">Trailer</string>
     <string name="podcast_trailer_season">Säsong %1$d</string>
-    <string name="podcast_explicit">Explicit</string>
     <string name="podcast_completed">Slutförd</string>
     <string name="podcast_support_show">Stöd podden</string>
     <string name="podcast_by_author">av %1$s</string>
     <string name="podcast_season_episode">S%1$d · A%2$d</string>
     <string name="podcast_episode_number">Avs %1$d</string>
     <string name="podcast_season">Säsong %1$d</string>
-    <string name="podcast_video">Video</string>
     <string name="podcast_transcript">Transkription</string>
     <string name="podcast_chapters">Kapitel</string>
     <string name="podcast_hosts_and_guests">Värdar &amp; gäster</string>
@@ -917,7 +891,6 @@
     <string name="podcast_role_editor">Redaktör</string>
     <string name="podcast_author_verified">Verifierad författare</string>
     <string name="podcast_value_stream">Streama sats</string>
-    <string name="podcast_value_stream_rate">%1$d sats/min</string>
     <string name="podcast_value_stream_hint">Skickar värde automatiskt medan du lyssnar.</string>
     <string name="podcast_value_streamed_total">Streamade %1$d sats denna session</string>
     <string name="podcast_episode_title_label">Titel</string>
@@ -960,12 +933,10 @@
     <string name="podcast_value_lnaddress">Lightning-adress</string>
     <string name="podcast_value_lnaddress_hint">namn@example.com</string>
     <string name="podcast_value_node_pubkey">Nodens publika nyckel</string>
-    <string name="podcast_value_node_pubkey_hint">02abc… (33-byte hex)</string>
     <string name="podcast_value_weight">Vikt</string>
     <string name="podcast_value_fee">Avgift</string>
     <string name="music_track_title_label">Titel</string>
     <string name="music_track_title_placeholder">Spårtitel</string>
-    <string name="music_track_artist_label">Artist</string>
     <string name="music_track_artist_placeholder">Artistens namn</string>
     <string name="music_track_album_label">Album (valfritt)</string>
     <string name="music_track_duration_label">Längd i sekunder (valfritt)</string>
@@ -990,7 +961,6 @@
     <string name="add_hashtag_label">Lägg till hashtag</string>
     <string name="add_hashtag_label_title">Lägg till en hashtag</string>
     <string name="add_hashtag_label_explainer">Tagga det här inlägget offentligt med en hashtag (NIP-32-etikett). De som följer dig ser det i den hashtaggens flöde.</string>
-    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Lägg till</string>
     <string name="hashtag_label_added_by">tillagd av</string>
     <string name="pinned_notes">Fästa anteckningar</string>
@@ -1049,7 +1019,6 @@
     <string name="quick_zap_amounts_explainer">Visas när du trycker på Zap-knappen. Tryck på ett belopp för att ta bort det. Om du lämnar det tomt öppnas en dialog för att ange ett belopp varje gång.</string>
     <string name="send_onchain_instead">Skicka on-chain istället</string>
     <string name="reload_mint_title">Fyll på mint</string>
-    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Påfyllningsbelopp</string>
     <string name="reload_mint_section_to">Mint att fylla på</string>
     <string name="reload_mint_section_from">Medel från</string>
@@ -1110,7 +1079,7 @@
     <string name="local_blossom_cache_not_detected">Ingen lokal cache hittad på port 24242.</string>
     <string name="local_blossom_cache_profile_pics_only">Cacha endast profilbilder</string>
     <string name="local_blossom_cache_profile_pics_only_caption">Begränsa den lokala cachen till profilbilder. Bilder och videor i flödet hämtas direkt från originalservrarna.</string>
-    <string name="no_blossom_server_message">Du har inga Blossom servrar satta. Du kan använda Amethyst's lista, eller lägga till en nedan ↓</string>
+    <string name="no_blossom_server_message">Du har inga Blossom servrar satta. Du kan använda Amethyst\'s lista, eller lägga till en nedan ↓</string>
     <string name="media_servers_upload_section">Uppladdningsbeteende</string>
     <string name="blossom_mirror_uploads">Spegla uppladdningar</string>
     <string name="blossom_mirror_uploads_caption">Efter uppladdning kopieras filen till dina andra Blossom-servrar så att den förblir tillgänglig om en går offline.</string>
@@ -1261,7 +1230,6 @@
     <string name="show_sensitive_content_explainer">Visar ett varningsmeddelande när författaren till inlägget markerar det som känsligt</string>
     <string name="max_hashtag_limit_title">Max hashtags per inlägg</string>
     <string name="max_hashtag_limit_explainer">Döljer inlägg med fler hashtaggar än denna gräns. Sätt till 0 för att inaktivera</string>
-    <string name="security_unlimited">∞</string>
     <string name="new_reaction_symbol">Ny reaktionssymbol</string>
     <string name="zapraiser">Zap insamling</string>
     <string name="zapraiser_explainer">Lägger till en målsumma av sats för detta inlägg. Stödjande klienter kan visa detta som en framstegsindikator för att stimulera donationer</string>
@@ -1271,7 +1239,6 @@
     <string name="owner">Ägare</string>
     <string name="used_by">Används av</string>
     <string name="self">Service-nyckel</string>
-    <string name="version">Version</string>
     <string name="software">Programvara</string>
     <string name="contact">Kontakt</string>
     <string name="supports">Stödda NIPs</string>
@@ -1291,7 +1258,6 @@
     <string name="all_languages">Alla språk</string>
     <string name="posting_policy">Publiceringspolicy</string>
     <string name="terms_and_conditions">Villkor &amp; bestämmelser</string>
-    <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Fel och meddelanden från detta relä</string>
     <string name="relay_monitor_reports">Reläövervakningsrapporter</string>
     <string name="relay_active_subscriptions">Aktiva prenumerationer</string>
@@ -1323,12 +1289,9 @@
     <string name="max_filters_per_sub">Max. filter per prenumeration</string>
     <string name="max_limit_events_returning">Maxgräns (returnerade händelser)</string>
     <string name="max_subid_length">Max. SubID-längd</string>
-    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Inlösen</string>
     <string name="cashu_copy_token">Kopiera Token</string>
     <string name="quick_actions_open_in_another_app">Öppna i annan app</string>
-    <string name="live_stream_live_tag">LIVE</string>
-    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">SLUTADE</string>
     <string name="live_stream_planned_tag">PLANERAD</string>
     <string name="live_stream_private_tag">PRIVAT</string>
@@ -1386,7 +1349,7 @@
     <string name="music_playlist_collaborative_hint">Låt andra lägga till spår i den här spellistan.</string>
     <string name="music_playlist_delete">Ta bort den här spellistan</string>
     <string name="music_playlist_delete_confirm">Publicera en NIP-09-borttagning för den här spellistan?</string>
-    <string name="music_playlist_no_tracks_hint">Inga spår ännu. Lägg till spår från en låts meny med "Lägg till i spellista".</string>
+    <string name="music_playlist_no_tracks_hint">Inga spår ännu. Lägg till spår från en låts meny med \"Lägg till i spellista\".</string>
     <string name="music_playlist_move_track_up">Flytta spår uppåt</string>
     <string name="music_playlist_move_track_down">Flytta spår nedåt</string>
     <string name="music_playlist_remove_track">Ta bort spår från spellista</string>
@@ -1417,7 +1380,6 @@
     <string name="relay_group_join_confirm">Gå med</string>
     <string name="relay_group_pending">Begärd</string>
     <string name="relay_group_role_admin">Administratör</string>
-    <string name="relay_group_role_moderator">Moderator</string>
     <string name="relay_group_role_member">Medlem</string>
     <string name="relay_group_members_title">Medlemmar</string>
     <string name="relay_group_make_admin">Gör till admin</string>
@@ -1440,8 +1402,6 @@
     <string name="relay_group_invite_preparing">Förbereder inbjudan…</string>
     <string name="relay_group_badge_private">Privat</string>
     <string name="relay_group_badge_invite_only">Endast inbjudan</string>
-    <string name="relay_group_badge_live">LIVE</string>
-    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Ange en giltig relä-URL (wss://…).</string>
     <string name="relay_group_field_name">Namn</string>
     <string name="relay_group_field_about">Beskrivning</string>
@@ -1508,7 +1468,7 @@
     <string name="relay_group_invite_only_to_post">Den här gruppen är endast för inbjudna — du behöver en inbjudan för att publicera.</string>
     <string name="messages_new_message_to">Till</string>
     <string name="messages_new_message_subject_caption">Samtalsämne</string>
-    <string name="messages_new_message_to_caption">@Användare1, @Användare2, @Användare3</string>
+    <string name="messages_new_message_to_caption">\@Användare1, @Användare2, @Användare3</string>
     <string name="messages_group_descriptor">Medlemmar i denna grupp</string>
     <string name="messages_new_subject_message">Förklaring till medlemmar</string>
     <string name="messages_new_subject_message_placeholder">Ändra namnet för de nya målen.</string>
@@ -1568,7 +1528,6 @@
     <string name="send_the_seller_a_message">Skicka ett meddelande till säljaren</string>
     <string name="hi_there_is_this_still_available">Hallå där, är detta fortfarande tillgängligt?</string>
     <string name="classifieds_title">Titel</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Skick</string>
     <string name="classifieds_category">Kategori</string>
     <string name="classifieds_price">Pris (i Sats)</string>
@@ -1597,7 +1556,6 @@
     <string name="wallet_send">Skicka</string>
     <string name="wallet_receive">Ta emot</string>
     <string name="wallet_transactions">Transaktioner</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Klistra in en BOLT-11-faktura</string>
     <string name="wallet_pay">Betala</string>
     <string name="wallet_payment_success">Betalning lyckades</string>
@@ -1614,7 +1572,6 @@
     <string name="wallet_outgoing">Skickad</string>
     <string name="wallet_refresh">Uppdatera</string>
     <string name="wallet_filter_all">Alla</string>
-    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Övriga</string>
     <string name="wallet_add">Lägg till plånbok</string>
     <string name="wallet_default">Standard</string>
@@ -1660,12 +1617,10 @@
     <string name="cashu_wizard_set_main_first">Ange din huvudplånbok först, återhämta sedan medel från de äldre.</string>
     <string name="cashu_wizard_adopting">Konfigurerar din plånbok…</string>
     <string name="cashu_wizard_retry">Sök igen</string>
-    <string name="cashu_wizard_mints_label">Mints: %1$s</string>
     <string name="cashu_created_title">Plånbok skapad</string>
     <string name="cashu_created_subtitle">Välj nu några mints som ska hosta dina sats.</string>
     <string name="cashu_created_pick_mints">Välj mints</string>
     <string name="cashu_balance">Saldo</string>
-    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">Mint-URL</string>
     <string name="cashu_remove_mint">Ta bort mint</string>
     <string name="cashu_add_mint">Lägg till mint</string>
@@ -1726,9 +1681,7 @@
     <string name="cashu_getting_quote">Ber mint om en offert…</string>
     <string name="cashu_verify">Verifiera</string>
     <string name="cashu_mint_reachable">✓ Mint är nåbar</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Kunde inte nå mint: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Skapa token</string>
     <string name="cashu_redeem_button">Lös in</string>
     <string name="cashu_done">Klar</string>
@@ -1763,11 +1716,9 @@
     <string name="onchain_send_recipient_placeholder">namn, NIP-05 eller npub</string>
     <string name="onchain_send_change_recipient">Ändra mottagare</string>
     <string name="onchain_send_amount">Belopp</string>
-    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Minsta on-chain-zap är %1$s sats — mindre belopp äts upp av brytaravgifter. Använd en Lightning-zap istället.</string>
     <string name="onchain_send_comment_label">Kommentar (valfritt)</string>
     <string name="onchain_send_priority">Prioritet</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Laddar avgiftsuppskattningar…</string>
     <string name="onchain_send_button_amount">Skicka %1$s sats</string>
     <string name="onchain_send_dont_split">Dela inte upp — betala en mottagare istället</string>
@@ -1776,7 +1727,6 @@
     <string name="onchain_send_result_transaction">Transaktion</string>
     <string name="onchain_send_result_fee">Avgift</string>
     <string name="onchain_send_result_change">Växel</string>
-    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Klar</string>
     <string name="onchain_send_failed_at">Misslyckades vid: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Betalningen sändes ut (tx %1$s) men kvittot publicerades inte.</string>
@@ -1828,7 +1778,7 @@
     <string name="calendar_untitled">(utan titel)</string>
     <string name="calendar_all_day">Heldag</string>
     <string name="calendar_rsvp_going_prefixed">✓ Kommer</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Kanske</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Kanske</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Kommer inte</string>
     <string name="calendar_collection_title">Titel</string>
     <string name="calendar_collection_description">Beskrivning</string>
@@ -1902,7 +1852,6 @@
     <string name="reactions_settings_boost_description">Reposta eller citera denna notis</string>
     <string name="reactions_settings_like">Gilla</string>
     <string name="reactions_settings_like_description">Reagera på denna notis med en emoji</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Skicka en lightning-betalning till författaren</string>
     <string name="reactions_settings_share">Dela</string>
     <string name="reactions_settings_share_description">Dela denna notis externt</string>
@@ -1929,9 +1878,7 @@
     <string name="audio_visualizer_settings_description">Välj animeringen som visas när ljudanteckningar spelas upp.</string>
     <string name="audio_visualizer_off">Av</string>
     <string name="audio_visualizer_bars">Spektrumstaplar</string>
-    <string name="audio_visualizer_waves">Color Waves</string>
     <string name="audio_visualizer_radial">Radiell ring</string>
-    <string name="audio_visualizer_aurora">Aurora Glow</string>
     <string name="audio_visualizer_classic">Klassisk vågform</string>
     <string name="audio_visualizer_static">Statisk bild</string>
     <string name="profile_image_of_user">%1$s Profilbild</string>
@@ -1974,7 +1921,6 @@
     <string name="buzz_system_message_deleted">%1$s tog bort ett meddelande</string>
     <string name="buzz_system_message_deleted_reason">%1$s tog bort ett meddelande: %2$s</string>
     <string name="buzz_system_dm_created">%1$s startade den här konversationen</string>
-    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <string name="buzz_huddle_started">🔊 %1$s startade en huddle</string>
     <string name="buzz_huddle_joined">🔊 %1$s gick med i huddlen</string>
     <string name="buzz_huddle_left">🔊 %1$s lämnade huddlen</string>
@@ -1987,11 +1933,9 @@
     <string name="buzz_job_error">⚠ Jobbfel</string>
     <string name="buzz_forum_upvoted">▲ %1$s röstade upp ett inlägg</string>
     <string name="buzz_forum_downvoted">▼ %1$s röstade ner ett inlägg</string>
-    <string name="buzz_canvas_title">Canvas</string>
     <string name="buzz_canvas_empty">Ingen canvas har delats i den här arbetsytan än.</string>
     <string name="buzz_canvas_edit">Redigera canvas</string>
     <string name="buzz_canvas_save">Spara canvas</string>
-    <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
     <string name="buzz_editing_banner">Redigerar meddelande</string>
     <string name="message_edited">(redigerat)</string>
     <string name="buzz_typing_one">%1$s skriver…</string>
@@ -2043,7 +1987,6 @@
     <string name="buzz_invite_share">Dela</string>
     <string name="buzz_invite_copy">Kopiera</string>
     <string name="buzz_invite_error_title">Kunde inte skapa inbjudan</string>
-    <string name="buzz_invite_dismiss">OK</string>
     <string name="buzz_dm_section_empty">Inga konversationer än</string>
     <string name="chat_delivery_details_title">Meddelandeleverans</string>
     <string name="close">Stäng</string>
@@ -2086,13 +2029,11 @@
     <string name="donate_now">Donera nu</string>
     <string name="brought_to_you_by">tillhandahölls av:</string>
     <string name="this_version_brought_to_you_by">Denna version tillhandahölls av:</string>
-    <string name="version_name">Version %1$s</string>
     <string name="thank_you">Tack!</string>
     <string name="restricted_writes">Begränsade skrivningar</string>
     <string name="forked_from">Forkad från</string>
     <string name="git_clone_address">Klona:</string>
     <string name="git_branch">Gren</string>
-    <string name="git_commit">Commit</string>
     <string name="git_merge_base">Mergebas</string>
     <string name="git_pr_update_description">Uppdaterade pull request till en ny commit.</string>
     <string name="git_repo_tab_issues">Ärenden</string>
@@ -2126,10 +2067,8 @@
     <string name="git_repo_tags">Taggar</string>
     <string name="git_repo_search_files">Sök filer…</string>
     <string name="git_repo_no_search_results">Inga matchande filer.</string>
-    <string name="git_repo_commits">Commits</string>
     <string name="git_repo_no_commits">Ingen commit-historik tillgänglig.</string>
     <string name="git_repo_copy_file">Kopiera filinnehåll</string>
-    <string name="git_repo_plain_text">Text</string>
     <string name="git_new_issue_button">Ny</string>
     <string name="git_new_issue_title">Nytt ärende</string>
     <string name="git_new_issue_subject">Titel</string>
@@ -2182,7 +2121,7 @@
     <string name="remove_dvm_from_favorites">Ta bort från favoriter</string>
     <string name="favorite_dvms_explainer">Flödesalgoritmer du stjärnmarkerar visas som filterchips på Hem-flödet. Öppna Upptäck för att lägga till fler.</string>
     <string name="favorite_dvms_empty_headline">Fäst dina favoritalgoritmer</string>
-    <string name="favorite_dvms_empty_step1">Tryck på "%1$s" nedan för att bläddra bland algoritmer.</string>
+    <string name="favorite_dvms_empty_step1">Tryck på \"%1$s\" nedan för att bläddra bland algoritmer.</string>
     <string name="favorite_dvms_empty_step2">Tryck på %1$s bredvid ett flöde för att behålla det här.</string>
     <string name="favorite_dvms_empty_cta">Lägg till några flöden</string>
     <string name="favorite_dvms_add_more">Lägg till fler…</string>
@@ -2212,7 +2151,6 @@
     <string name="search_filters_section_source">Källa</string>
     <string name="search_filters_section_sort">Sortera efter</string>
     <string name="search_filters_open">Filter</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Sök språk</string>
     <string name="add_language">Lägg till språk</string>
     <string name="add_language_pair">Lägg till språkpar</string>
@@ -2272,7 +2210,6 @@
     <string name="timeout">Tidsgräns överskriden</string>
     <string name="retrying">Försöker igen…</string>
     <string name="dismiss">Avfärda</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Sänder</string>
     <string name="broadcasting_name">Sänder %1$s</string>
     <string name="broadcasting_number_events">Sänder %1$d händelser…</string>
@@ -2377,7 +2314,6 @@
     <string name="cashu_move_coins_withdraw_ln">Ta ut via Lightning…</string>
     <string name="cashu_move_coins_export_token">Exportera som Cashu-token…</string>
     <string name="cashu_move_coins_working">Flyttar mynt…</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Ansluter</string>
     <string name="event_sync_status_downloading">Laddar ner</string>
     <string name="event_sync_status_error">Fel</string>
@@ -2387,7 +2323,6 @@
     <string name="profile_actions_dialog_title">Profilåtgärder</string>
     <string name="media_actions_dialog_title">Medieåtgärder</string>
     <string name="playback_actions_dialog_title">Uppspelning</string>
-    <string name="video_quality_auto">Auto</string>
     <string name="edit_nickname">Redigera smeknamn</string>
     <string name="nickname_private">Endast synligt för dig</string>
     <string name="cast_to_device_dialog_title">Casta till…</string>
@@ -2400,9 +2335,7 @@
     <string name="hls_description_label">Beskrivning</string>
     <string name="hls_description_placeholder">Vad handlar den här videon om?</string>
     <string name="hls_content_warning_reason_placeholder">Anledning (valfritt)</string>
-    <string name="hls_codec_label">Codec</string>
     <string name="hls_codec_h265">H.265 (bättre komprimering)</string>
-    <string name="hls_codec_h264">H.264</string>
     <string name="hls_codec_fallback_notice">H.265 inte tillgängligt på den här enheten — växlar till H.264.</string>
     <string name="hls_renditions_label">Versioner</string>
     <string name="hls_renditions_source_format">Källupplösning: %1$d×%2$d</string>
@@ -2440,14 +2373,12 @@
     <string name="event_sync_date_filter_until">Till</string>
     <string name="event_sync_date_filter_now">Nu</string>
     <string name="event_sync_date_filter_all_time">All tid</string>
-    <string name="web_bookmark_url_label">URL</string>
     <string name="web_bookmark_url_placeholder">https://exempel.se</string>
     <string name="web_bookmark_title_label">Titel</string>
     <string name="web_bookmark_title_placeholder">Bokmärkets titel</string>
     <string name="web_bookmark_description_label">Beskrivning</string>
     <string name="web_bookmark_description_placeholder">En kort beskrivning</string>
     <string name="web_bookmark_tags_label">Taggar (kommaseparerade)</string>
-    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
     <string name="web_bookmark_save">Spara</string>
     <string name="web_bookmark_delete">Radera</string>
     <string name="web_bookmark_delete_confirm">Radera detta webbbokmärke?</string>
@@ -2456,13 +2387,11 @@
     <string name="fundraiser_ends">Slutar %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain-donation</string>
     <string name="goal_amount_label">Målbelopp (sats)</string>
-    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Beskriv ditt mål</string>
     <string name="goal_description_placeholder">Vad samlar du in pengar till?</string>
     <string name="goal_summary_label">Kort sammanfattning</string>
     <string name="goal_summary_placeholder">Kort beskrivning som visas i förhandsvisningar</string>
     <string name="goal_image_label">Bild-URL (valfritt)</string>
-    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">Webbplats-URL (valfritt)</string>
     <string name="goal_website_placeholder">https://exempel.se</string>
     <string name="goal_set_deadline">Sätt en tidsfrist</string>
@@ -2583,7 +2512,6 @@
     <string name="emoji_pack_upload_image_cta">Ladda upp en omslagsbild</string>
     <string name="emoji_pack_upload_image_hint">Välj en fyrkantig bild som ska representera detta emoji-paket.</string>
     <string name="no_emoji_packs">Du har inga emoji-paket ännu</string>
-    <string name="emoji_pack_count">%1$d emojis</string>
     <string name="my_emoji_list_title">Min emoji-lista</string>
     <string name="my_emoji_list_explainer">Emoji-paket som du har lagt till i ditt urval (NIP-51 kind 10030)</string>
     <string name="my_emoji_list_empty">Du har inte lagt till några emoji-paket i din lista ännu</string>
@@ -2592,12 +2520,11 @@
     <string name="emoji_add_dialog_title">Lägg till anpassad emoji</string>
     <string name="emoji_remove_dialog_title">Ta bort :%1$s:?</string>
     <string name="emoji_long_press_hint">Tryck och håll på en emoji för att ta bort den</string>
-    <string name="emoji_pack_is_in_list">"%1$s" finns i din emoji-lista</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" finns inte i din emoji-lista</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" finns i din emoji-lista</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" finns inte i din emoji-lista</string>
     <string name="emoji_pack_actions_dialog_title">Åtgärder för emoji-paket</string>
     <string name="emoji_private_toggle">Privat</string>
     <string name="emoji_private_badge">Privat emoji</string>
-    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Brott mot gemenskapens regler</string>
     <string name="community_rules_violation_author_denied">Du står på den här gemenskapens blockeringslista. Inlägg kommer inte att accepteras.</string>
     <string name="community_rules_violation_kind_not_allowed">Den här gemenskapen accepterar inte händelser av typ %1$d.</string>
@@ -2609,7 +2536,6 @@
     <string name="marmot_create_group_footer">En ny MLS-grupp kommer att skapas. Du kan lägga till medlemmar efteråt.</string>
     <string name="marmot_group_default_name">Marmot-grupp</string>
     <string name="marmot_group_fallback_name">Grupp %1$s…</string>
-    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Kända</string>
     <string name="marmot_tab_known_count">Kända (%1$d)</string>
     <string name="marmot_tab_new_requests">Nya förfrågningar</string>
@@ -2633,7 +2559,7 @@
     <string name="marmot_edit_group_info">Redigera gruppinfo</string>
     <string name="marmot_leave_group">Lämna grupp</string>
     <string name="marmot_this_group">den här gruppen</string>
-    <string name="marmot_leave_group_confirm">Är du säker på att du vill lämna "%1$s"? Du kommer inte längre att ta emot meddelanden från den här gruppen.</string>
+    <string name="marmot_leave_group_confirm">Är du säker på att du vill lämna \"%1$s\"? Du kommer inte längre att ta emot meddelanden från den här gruppen.</string>
     <string name="marmot_keypackage_required">De måste ha publicerat ett KeyPackage (kind:30443) för att kunna läggas till.</string>
     <string name="marmot_add_to_group">Lägg till i grupp</string>
     <string name="marmot_add_member">Lägg till medlem</string>
@@ -2642,15 +2568,15 @@
     <string name="marmot_member_suffix_you"> (du)</string>
     <string name="marmot_member_suffix_admin"> - administratör</string>
     <string name="marmot_remove_member">Ta bort medlem</string>
-    <string name="marmot_remove_member_confirm">Är du säker på att du vill ta bort "%1$s" från den här gruppen?</string>
+    <string name="marmot_remove_member_confirm">Är du säker på att du vill ta bort \"%1$s\" från den här gruppen?</string>
     <string name="marmot_grant">Bevilja</string>
     <string name="marmot_grant_admin_privileges">Bevilja administratörsbehörighet</string>
     <string name="marmot_grant_admin_title">Bevilja administratörsbehörighet</string>
-    <string name="marmot_grant_admin_confirm">Gör "%1$s" till administratör i den här gruppen? Administratörer kan lägga till eller ta bort medlemmar, ändra gruppinfo och bevilja administratörsbehörighet till andra medlemmar.</string>
+    <string name="marmot_grant_admin_confirm">Gör \"%1$s\" till administratör i den här gruppen? Administratörer kan lägga till eller ta bort medlemmar, ändra gruppinfo och bevilja administratörsbehörighet till andra medlemmar.</string>
     <string name="marmot_revoke">Återkalla</string>
     <string name="marmot_revoke_admin_privileges">Återkalla administratörsbehörighet</string>
     <string name="marmot_revoke_admin_title">Återkalla administratörsbehörighet</string>
-    <string name="marmot_revoke_admin_confirm">Återkalla administratörsbehörighet från "%1$s"? De förblir medlem i gruppen.</string>
+    <string name="marmot_revoke_admin_confirm">Återkalla administratörsbehörighet från \"%1$s\"? De förblir medlem i gruppen.</string>
     <string name="marmot_relays_header">Reläer</string>
     <string name="marmot_relay_no_events">inga händelser ännu</string>
     <string name="marmot_relay_last_event">senaste händelse%1$s</string>
@@ -2739,7 +2665,7 @@
     <string name="buzz_persona_new_title">Ny persona</string>
     <string name="buzz_persona_edit_title">Redigera persona</string>
     <string name="buzz_persona_slug">Slug (persona-id)</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, '-' eller '_'. Kan inte ändras efter skapandet.</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' eller \'_\'. Kan inte ändras efter skapandet.</string>
     <string name="buzz_persona_display_name">Visningsnamn</string>
     <string name="buzz_persona_system_prompt">Systemprompt</string>
     <string name="buzz_persona_model">Modell (valfritt)</string>

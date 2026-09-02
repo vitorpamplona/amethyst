@@ -1826,4 +1826,5 @@
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="podcast_value_for_value">Value-for-Value</string>
 </resources>

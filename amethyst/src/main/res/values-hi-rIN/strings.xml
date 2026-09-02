@@ -568,6 +568,14 @@
         <item quantity="other">यह %1$d अन्य वस्तुओं को भी रोक रहा है।</item>
     </plurals>
     <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">सर्वदा प्रवेशांकन</string>
+    <string name="relay_auth_never">कभी नहीं</string>
+    <string name="relay_auth_always_allow_everywhere">सर्वदा तथा सभी पुनःप्रसारक</string>
+    <string name="relay_auth_never_allow_everywhere">कभी नही तथा सभी पुनःप्रसारक</string>
+    <string name="relay_auth_always_everywhere_title">क्या सभी पुनःप्रसारकों में प्रवेशांकन करें।</string>
+    <string name="relay_auth_always_everywhere_body">अमेथिस्ट %1$s के नाम से प्रवेशांकन करेगा प्रत्येक पुनःप्रसारक में जो पूछता है तथा आपको नहीं पूछेगा। पुनःप्रसारक जिनको आपने बाधित किए अथवा जिनमें कभी भी प्रवेशांकन ना करने का विकल्प आपने स्थापित किए हैं वैसे ही रहेंगे। आप इसका परिवर्तन कर सकते हैं पुनःप्रसारक प्रवेशांकन के नीचे।</string>
+    <string name="relay_auth_never_everywhere_title">क्या किसी भी पुनःप्रसारक में प्रवेशांकन ना करें।</string>
+    <string name="relay_auth_never_everywhere_body">अमेथिस्ट पुनःप्रसारकों को आप %1$s हैं बताना रोकेगा तथा आपको पूछना भी रोकेगा। कुछ पुनःप्रसारक आपकी सेवा करना रोकेंगे। सन्देश प्रत्युत्तर तथा सूचनाएँ सम्भाव्यतः प्राप्त नहीं होंगे। पुनःप्रसारक जिनपर आपने सर्वदा प्रवेशांकन करने का विकल्प स्थापित किए हैं वैसे ही रहेंगे। आप इसका परिवर्तन कर सकते हैं पुनःप्रसारक प्रवेशांकन के नीचे।</string>
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">सर्वदा। आपके द्वारा स्थापित</string>
@@ -926,11 +934,22 @@
     <string name="app_notification_articles_summary">नए निबन्ध</string>
     <!-- Code &amp; git -->
     <string name="app_notification_code_channel_name">क्रमलेख तथा गिट॰</string>
-    <string name="app_notification_code_channel_description">आपको सूचित करता है विषय तथा सुधारलेख तथा कर्षण अनुरोधों पर</string>
+    <string name="app_notification_code_channel_description">आपको सूचित करता है समस्याएँ सुधारलेख कर्षण अनुरोध टिप्पणियाँ विलय तथा आवृतों पर</string>
     <string name="app_notification_code_channel_message_issue">%1$s ने एक विषय खोला</string>
     <string name="app_notification_code_channel_message_patch">%1$s ने एक सुधारलेख भेजा</string>
     <string name="app_notification_code_channel_message_pr">%1$s ने एक कर्षण अनुरोध खोला</string>
     <string name="app_notification_code_channel_message_pr_update">%1$s ने एक कर्षण अनुरोध का अद्यतन किया</string>
+    <string name="app_notification_code_channel_message_reply">%1$s ने टिप्पणी की</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s ने एक सूत्र को पुनः खोला</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s ने एक कर्षण अनुरोध को विलय किया</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s ने एक सुधारलेख का प्रयोग किया</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s ने एक समस्या का समाधान किया</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s ने एक सूत्र का विलय अथवा समाधान किया</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s ने एक कर्षण अनुरोध को आवृत किया</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s ने एक सुधारलेख को आवृत किया</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s ने एक समस्या को आवृत किया</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s ने एक सूत्र को आवृत किया</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s ने एक सूत्र को कच्चा चिह्नित किया</string>
     <string name="app_notification_code_summary">नई क्रमलेख गतिविधि</string>
     <!-- Badges -->
     <string name="app_notification_badges_channel_name">पदक</string>
@@ -1450,6 +1469,7 @@
     <string name="notification_settings_section_display">क्रमकाभ्यन्तर प्रदर्शन</string>
     <string name="notification_settings_section_categories">श्रेणियाँ</string>
     <string name="payment_required_title">%1$s से संदेश</string>
+    <string name="notify_block_relay">पुनःप्रसारक अवरोधन</string>
     <string name="hi_seller_is_this_still_available">नमस्ते %1$s, क्या यह अब भी उपलब्ध है?</string>
     <string name="classifieds_category_clothing">वस्त्र</string>
     <string name="classifieds_category_accessories">आभूषण</string>
@@ -1496,6 +1516,7 @@
     <string name="route_notifications">सूचनाएँ</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
+    <string name="route_media">श्रव्यदृश्याभिलेख</string>
     <string name="route_calendars">दिनदर्शिकाएँ</string>
     <string name="route_calendar_collections">दिनदर्शिका सूचियाँ</string>
     <string name="route_chess">चतुरंग</string>
@@ -2020,6 +2041,10 @@
     <string name="kind_git_reply">गिट उत्तर</string>
     <string name="kind_git_pr">कर्षण अनुरोध</string>
     <string name="kind_git_pr_update">कर्षण अनुरोध अद्यतन</string>
+    <string name="kind_git_status_open">गिट स्थिति। खुला</string>
+    <string name="kind_git_status_applied">गिट स्थिति। प्रयुक्त</string>
+    <string name="kind_git_status_closed">गिट स्थिति। आवृत</string>
+    <string name="kind_git_status_draft">गिट स्थिति। कच्चा</string>
     <string name="kind_zap_goals">ज्साप उद्देश्य</string>
     <string name="kind_hashtag_follows">विषयसूचक अनुचरित</string>
     <string name="kind_highlights">प्रमुखताएँ</string>
@@ -2330,4 +2355,5 @@
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
 </resources>

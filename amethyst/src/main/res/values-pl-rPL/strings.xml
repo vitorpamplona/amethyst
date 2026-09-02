@@ -632,6 +632,14 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="other">Trzyma również %1$d inne rzeczy.</item>
     </plurals>
     <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">Zawsze się loguj</string>
+    <string name="relay_auth_never">Nigdy</string>
+    <string name="relay_auth_always_allow_everywhere">Zawsze, na wszystkie transmitery</string>
+    <string name="relay_auth_never_allow_everywhere">Nigdy nie loguj się do żadnych transmiterów</string>
+    <string name="relay_auth_always_everywhere_title">Zalogować się do każdego transmitera?</string>
+    <string name="relay_auth_always_everywhere_body">Amethyst będzie logować się jako %1$s na każdy transmiter, który o to poprosi, i przestanie wysyłać takie zapytania. Transmitery, które zablokowałeś, oraz te, dla których ustawiłeś opcję „nigdy nie loguj się”, pozostaną bez zmian. Możesz to zmienić w sekcji „Logowanie do transmiterów”.</string>
+    <string name="relay_auth_never_everywhere_title">Nigdy nie logować się do żadnego transmitera?</string>
+    <string name="relay_auth_never_everywhere_body">Amethyst przestanie informować transmitery, że jesteś %1$s, i przestanie o to pytać. Niektóre transmitery odmówią obsługi: wiadomości, odpowiedzi i powiadomienia mogą nie zostać dostarczone. Transmitery, dla których ustawiono opcję „Zawsze loguj się”, pozostaną w tym trybie. Możesz to zmienić w sekcji „Logowanie do transmiterów”.</string>
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Zawsze, ustawione przez Ciebie</string>
@@ -1025,6 +1033,17 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="app_notification_code_channel_message_patch">%1$s wysłał łatkę</string>
     <string name="app_notification_code_channel_message_pr">%1$s otworzył Pull Request</string>
     <string name="app_notification_code_channel_message_pr_update">%1$s zaktualizował Pull Request</string>
+    <string name="app_notification_code_channel_message_reply">%1$s skomentował</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s otworzył ponownie wątek</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s scalił Pull Request</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s zainstalował łatkę</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s rozwiązał problem</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s scalił/rozwiązał wątek</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s zamknął Pull Request</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s zamknął łatkę</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s zamknął zgłoszenie</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s zamknął wątek</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s oznaczył wątek jako szkic</string>
     <string name="app_notification_code_summary">Nowa aktywność związana z kodem</string>
     <!-- Badges -->
     <string name="app_notification_badges_channel_name">Odznaki</string>
@@ -1572,6 +1591,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="notification_settings_section_display">Wyświetlanie w aplikacji</string>
     <string name="notification_settings_section_categories">Kategorie</string>
     <string name="payment_required_title">Wiadomość od %1$s</string>
+    <string name="notify_block_relay">Zablokuj transmiter</string>
     <string name="hi_seller_is_this_still_available">Witaj %1$s, czy to nadal jest dostępne?</string>
     <string name="classifieds_category_clothing">Odzież</string>
     <string name="classifieds_category_accessories">Akcesoria</string>
@@ -1618,6 +1638,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="route_notifications">Powiadomienia</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
+    <string name="route_media">Multimedia</string>
     <string name="route_calendars">Kalendarze</string>
     <string name="route_calendar_collections">Listy kalendarzy</string>
     <string name="route_chess">Szachy</string>
@@ -2190,6 +2211,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="kind_git_reply">Odpowiedź Git</string>
     <string name="kind_git_pr">Wniosek o zmianę</string>
     <string name="kind_git_pr_update">Aktualizacja PR</string>
+    <string name="kind_git_status_open">Status Git: Otwarty</string>
+    <string name="kind_git_status_applied">Status Git: Zastosowano</string>
+    <string name="kind_git_status_closed">Status Git: Zamknięty</string>
+    <string name="kind_git_status_draft">Status Git: Szkic</string>
     <string name="kind_zap_goals">Cele Zap-a</string>
     <string name="kind_hashtag_follows">Obserwowane hashtagi</string>
     <string name="kind_highlights">Wyróżnienia</string>
@@ -2544,4 +2569,5 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="podcast_value_for_value">Wartość-za-wartość</string>
 </resources>

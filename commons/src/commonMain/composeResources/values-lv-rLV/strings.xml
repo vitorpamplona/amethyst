@@ -10,8 +10,15 @@
     <!-- Accessibility -->
     <!-- Relay history paging (shared feed markers + status card) -->
     <!-- Notes & Replies -->
+    <string name="replying_to">atbild uz </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">Atļaujas:</string>
+    <string name="nsite_root_site">Saknes vietne</string>
+    <string name="nsite_source">Avots:</string>
+    <string name="nsite_servers">Serveri:</string>
+    <string name="nsite_open">Atvērt</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Izmantot tiešo URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Atvērts</string>
     <string name="git_status_merged">Sapludināts</string>
@@ -72,7 +79,6 @@
     <string name="post_was_hidden">Šis ieraksts tika paslēpts, jo tajā minēti jūsu slēptie lietotāji vai vārdi</string>
     <string name="post_was_flagged_as_inappropriate_by">Ierakstu apklusinājis vai ziņojis</string>
     <string name="post_not_found">Notikums tiek ielādēts vai nav atrodams jūsu relay sarakstā</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanāla attēls</string>
     <string name="referenced_event_not_found">Atsaucētais notikums nav atrasts</string>
     <string name="could_not_decrypt_the_message">Neizdevās atšifrēt ziņojumu</string>
@@ -107,7 +113,6 @@
     <string name="quote">Citāts</string>
     <string name="fork">Dakša</string>
     <string name="new_amount_in_sats">Jauna summa sats</string>
-    <string name="replying_to">atbild uz </string>
     <string name="and"> un </string>
     <string name="following"> Seko</string>
     <string name="followers"> Sekotāji</string>
@@ -173,7 +178,6 @@
     <string name="secret_note_to_receiver">Slepenā piezīme saņēmējam</string>
     <string name="secret_note_to_receiver_placeholder">Mans slēptais ziņojums</string>
     <string name="secret_visible_text">Redzamais prefikss</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Pievienot ierakstam</string>
     <string name="article">Raksts</string>
     <string name="channel_name">Kanāla nosaukums</string>
@@ -290,7 +294,7 @@
     <string name="backup_keys_nudge_already_saved">Esiet tās saglabājuši</string>
     <string name="encrypt_and_copy_my_secret_key">Šifrēt un kopēt manu slepeno atslēgu</string>
     <string name="badge_award_image_for">Žetona piešķiršanas attēls par %1$s</string>
-    <string name="badge_award_image">"Žetona piešķiršanas attēls</string>
+    <string name="badge_award_image">\"Žetona piešķiršanas attēls</string>
     <string name="new_badge_award_notif">Jūs saņēmāt jaunu žetonu</string>
     <string name="award_granted_to">Žetons piešķirts</string>
     <string name="account_switch_add_account_dialog_title">Pievienot jaunu kontu</string>
@@ -503,7 +507,7 @@
     <string name="nest_state_speaking">Runā tagad</string>
     <string name="nest_state_mic_open">Mikrofons ieslēgts</string>
     <string name="nest_leave_host_title">Beigt šo nest?</string>
-    <string name="nest_leave_host_body">Jūs esat saimnieks. Aizvērot telpu, visi tiks atvienoti. Izvēlieties "Vienkārši atstāt", ja vēlaties atgriezties vēlāk — telpa tiks automātiski aizvērta pēc 8 stundām neaktivitātes.</string>
+    <string name="nest_leave_host_body">Jūs esat saimnieks. Aizvērot telpu, visi tiks atvienoti. Izvēlieties \"Vienkārši atstāt\", ja vēlaties atgriezties vēlāk — telpa tiks automātiski aizvērta pēc 8 stundām neaktivitātes.</string>
     <string name="nest_leave_host_close">Aizvērt telpu</string>
     <string name="nest_leave_host_just_leave">Vienkārši atstāt</string>
     <string name="nest_live_chip">TIEŠRAIDE</string>
@@ -611,7 +615,7 @@
     <string name="bookmark_list_delete_btn_label">Dzēst grāmatzīmju sarakstu</string>
     <string name="bookmark_list_posts_btn_label">Skatīt ierakstus</string>
     <string name="bookmark_list_articles_btn_label">Skatīt rakstus</string>
-    <string name="interest_sets_empty">Jums vēl nav nevienas interešu kopas. Pieskarieties pogai "Jauns" zemāk, lai izveidotu vienu.</string>
+    <string name="interest_sets_empty">Jums vēl nav nevienas interešu kopas. Pieskarieties pogai \"Jauns\" zemāk, lai izveidotu vienu.</string>
     <string name="interest_set_create_btn_label">Jauna interešu kopa</string>
     <string name="interest_set_name_label">Kopas nosaukums</string>
     <string name="interest_set_name_placeholder">Manas intereses</string>
@@ -876,7 +880,7 @@
     <string name="community_no_descriptor">Šai kopienai nav apraksta. Sazinieties ar īpašnieku, lai pievienotu</string>
     <string name="user_preferences">Lietotāja iestatījumi</string>
     <string name="settings_search_placeholder">Meklēt iestatījumus</string>
-    <string name="settings_search_no_results">Nav atrasti iestatījumi "%1$s"</string>
+    <string name="settings_search_no_results">Nav atrasti iestatījumi \"%1$s\"</string>
     <string name="reset_marmot_confirm_title">Atiestatīt Marmot stāvokli?</string>
     <string name="reset_marmot_confirm_body">Tas neatgriezeniski dzēsīs visas Marmot grupu tērzēšanas, ziņojumu vēsturi un MLS atslēgas šajā ierīcē pašreizējam kontam. Vienādinieki netiks paziņoti un var joprojām redzēt jūs grupās līdz nākamajai apstiprināšanai. To nevar atsaukt. Jauns KeyPackage tiks publicēts nākamajā reizē, kad lietotne sinhronizējas.</string>
     <string name="reset_marmot_confirm_action">Atiestatīt</string>
@@ -909,7 +913,7 @@
     <string name="music_playlist_collaborative_hint">Ļaut citiem pievienot ierakstus šim atskaņošanas sarakstam.</string>
     <string name="music_playlist_delete">Dzēst šo atskaņošanas sarakstu</string>
     <string name="music_playlist_delete_confirm">Publicēt NIP-09 dzēšanu šim atskaņošanas sarakstam?</string>
-    <string name="music_playlist_no_tracks_hint">Vēl nav ierakstu. Pievienojiet ierakstus no dziesmas izvēlnes, izmantojot "Pievienot atskaņošanas sarakstam".</string>
+    <string name="music_playlist_no_tracks_hint">Vēl nav ierakstu. Pievienojiet ierakstus no dziesmas izvēlnes, izmantojot \"Pievienot atskaņošanas sarakstam\".</string>
     <string name="music_playlist_move_track_up">Pārvietot ierakstu augšup</string>
     <string name="music_playlist_move_track_down">Pārvietot ierakstu lejup</string>
     <string name="music_playlist_remove_track">Noņemt ierakstu no atskaņošanas saraksta</string>
@@ -920,7 +924,7 @@
     <string name="messages_create_public_private_chat_description">Jauna publiska vai privāta grupa</string>
     <string name="messages_new_message_to">Kam</string>
     <string name="messages_new_message_subject_caption">Sarunas tēma</string>
-    <string name="messages_new_message_to_caption">@Lietotājs1, @Lietotājs2, @Lietotājs3</string>
+    <string name="messages_new_message_to_caption">\@Lietotājs1, @Lietotājs2, @Lietotājs3</string>
     <string name="messages_group_descriptor">Šīs grupas dalībnieki</string>
     <string name="messages_new_subject_message">Paskaidrojums dalībniekiem</string>
     <string name="messages_new_subject_message_placeholder">Nosaukuma maiņa jauniem mērķiem.</string>
@@ -1193,7 +1197,7 @@
     <string name="calendar_untitled">(bez nosaukuma)</string>
     <string name="calendar_all_day">Visu dienu</string>
     <string name="calendar_rsvp_going_prefixed">✓ Iešu</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Varbūt</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Varbūt</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Nevarēšu</string>
     <string name="calendar_collection_title">Virsraksts</string>
     <string name="calendar_collection_description">Apraksts</string>
@@ -1372,7 +1376,7 @@
     <string name="remove_dvm_from_favorites">Noņemt no izlases</string>
     <string name="favorite_dvms_explainer">Plūsmas algoritmi, kurus atzīmējat ar zvaigznīti, parādās šeit un kā filtra pogas sākuma plūsmā.</string>
     <string name="favorite_dvms_empty_headline">Piespraudiet savus iecienītos algoritmus</string>
-    <string name="favorite_dvms_empty_step1">Pieskarieties „%1$s" zemāk, lai pārlūkotu algoritmus.</string>
+    <string name="favorite_dvms_empty_step1">Pieskarieties „%1$s\" zemāk, lai pārlūkotu algoritmus.</string>
     <string name="favorite_dvms_empty_step2">Pieskarieties %1$s blakus plūsmai, lai to paturētu šeit.</string>
     <string name="favorite_dvms_empty_cta">Pievienot dažas plūsmas</string>
     <string name="favorite_dvms_add_more">Pievienot vairāk…</string>
@@ -1568,7 +1572,7 @@
     <string name="hls_renditions_label">Versijas</string>
     <string name="hls_renditions_source_format">Avota izšķirtspēja: %1$d×%2$d</string>
     <string name="hls_publish_button">Publicēt HD video</string>
-    <string name="hls_publishing_header_format">Publicē "%1$s"…</string>
+    <string name="hls_publishing_header_format">Publicē \"%1$s\"…</string>
     <string name="hls_state_transcoding_format">Transkodē %1$s</string>
     <string name="hls_state_uploading_idle">Augšupielāde</string>
     <string name="hls_state_uploading_format">Augšupielādē %1$d no %2$d</string>
@@ -1731,8 +1735,8 @@
     <string name="emoji_add_dialog_title">Pievienot pielāgotu emoji</string>
     <string name="emoji_remove_dialog_title">Noņemt :%1$s:?</string>
     <string name="emoji_long_press_hint">Ilgi nospiediet uz emoji, lai to noņemtu</string>
-    <string name="emoji_pack_is_in_list">"%1$s" ir jūsu emoji sarakstā</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" nav jūsu emoji sarakstā</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" ir jūsu emoji sarakstā</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" nav jūsu emoji sarakstā</string>
     <string name="emoji_pack_actions_dialog_title">Emoji pakotnes darbības</string>
     <string name="emoji_private_toggle">Privāts</string>
     <string name="emoji_private_badge">Privāts emoji</string>
@@ -1768,7 +1772,7 @@
     <string name="marmot_edit_group_info">Rediģēt grupas informāciju</string>
     <string name="marmot_leave_group">Pamest grupu</string>
     <string name="marmot_this_group">šo grupu</string>
-    <string name="marmot_leave_group_confirm">Vai tiešām vēlaties pamest "%1$s"? Jūs vairs nesaņemsiet ziņojumus no šīs grupas.</string>
+    <string name="marmot_leave_group_confirm">Vai tiešām vēlaties pamest \"%1$s\"? Jūs vairs nesaņemsiet ziņojumus no šīs grupas.</string>
     <string name="marmot_keypackage_required">Viņiem jābūt publicējušiem KeyPackage (kind:30443), lai varētu pievienot.</string>
     <string name="marmot_add_to_group">Pievienot grupai</string>
     <string name="marmot_add_member">Pievienot dalībnieku</string>
@@ -1777,15 +1781,15 @@
     <string name="marmot_member_suffix_you"> (jūs)</string>
     <string name="marmot_member_suffix_admin"> - administrators</string>
     <string name="marmot_remove_member">Noņemt dalībnieku</string>
-    <string name="marmot_remove_member_confirm">Vai tiešām vēlaties noņemt "%1$s" no šīs grupas?</string>
+    <string name="marmot_remove_member_confirm">Vai tiešām vēlaties noņemt \"%1$s\" no šīs grupas?</string>
     <string name="marmot_grant">Piešķirt</string>
     <string name="marmot_grant_admin_privileges">Piešķirt administratora tiesības</string>
     <string name="marmot_grant_admin_title">Piešķirt administratora tiesības</string>
-    <string name="marmot_grant_admin_confirm">Padarīt "%1$s" par šīs grupas administratoru? Administratori var pievienot vai noņemt dalībniekus, mainīt grupas informāciju un piešķirt administratora tiesības citiem dalībniekiem.</string>
+    <string name="marmot_grant_admin_confirm">Padarīt \"%1$s\" par šīs grupas administratoru? Administratori var pievienot vai noņemt dalībniekus, mainīt grupas informāciju un piešķirt administratora tiesības citiem dalībniekiem.</string>
     <string name="marmot_revoke">Atsaukt</string>
     <string name="marmot_revoke_admin_privileges">Atsaukt administratora tiesības</string>
     <string name="marmot_revoke_admin_title">Atsaukt administratora tiesības</string>
-    <string name="marmot_revoke_admin_confirm">Atsaukt administratora tiesības no "%1$s"? Viņš joprojām paliks grupas dalībnieks.</string>
+    <string name="marmot_revoke_admin_confirm">Atsaukt administratora tiesības no \"%1$s\"? Viņš joprojām paliks grupas dalībnieks.</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">vēl nav notikumu</string>
     <string name="marmot_relay_last_event">pēdējais notikums%1$s</string>
@@ -1794,10 +1798,4 @@
     <string name="ots_explorer_api_label">Explorer API bāzes URL</string>
     <string name="dvm_pay_invoice_from_dvm">Apmaksāt rēķinu no DVM</string>
     <string name="dvm_pay_amount_to_dvm">Samaksāt %1$s sats DVM</string>
-    <string name="use_direct_url">Izmantot tiešo URL</string>
-    <string name="napplet_card_permissions">Atļaujas:</string>
-    <string name="nsite_root_site">Saknes vietne</string>
-    <string name="nsite_source">Avots:</string>
-    <string name="nsite_servers">Serveri:</string>
-    <string name="nsite_open">Atvērt</string>
 </resources>
