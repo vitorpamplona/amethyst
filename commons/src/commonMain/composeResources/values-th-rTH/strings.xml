@@ -219,7 +219,7 @@
     <string name="lightning_address">ไม่ได้ตั้งค่า Lightning Address</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">คัดลอก Nsec ID (รหัสผ่านของคุณ) ลงคลิปบอร์ดเพื่อสำรองข้อมูล</string>
     <string name="send_a_direct_message">ส่งข้อความส่วนตัว</string>
-    <string name="edits_the_user_s_metadata">แก้ไข the User\'s Metadata</string>
+    <string name="edits_the_user_s_metadata">แก้ไข the User's Metadata</string>
     <string name="unblock">เลิกบล๊อก</string>
     <string name="copy_user_id">คัดลอก ID ผู้ใช้</string>
     <string name="unblock_user">เลิกบล๊อกผู้ใช้</string>
@@ -281,7 +281,7 @@
         \n\n**แต่**  หากคุณสูญหายรหัสผ่าน คุณจะไม่สามารถกู้คืนคีย์ของคุณได้        </string>
     <string name="encrypt_and_copy_my_secret_key">เข้ารหัสและคัดลอกคีย์ความปลอดภัยของฉัน</string>
     <string name="badge_award_image_for">ภาพเหรียญตราสําหรับ %1$s</string>
-    <string name="badge_award_image">\"รูปภาพรางวัลป้าย</string>
+    <string name="badge_award_image">"รูปภาพรางวัลป้าย</string>
     <string name="new_badge_award_notif">คุณได้รับเหรียญตราใหม่</string>
     <string name="award_granted_to">เหรียญตราถูกมอบให้กับ</string>
     <string name="account_switch_add_account_dialog_title">เพิ่มบัญชีใหม่</string>
@@ -491,7 +491,7 @@
     <string name="nest_state_speaking">กำลังพูดอยู่</string>
     <string name="nest_state_mic_open">ไมโครโฟนเปิดอยู่</string>
     <string name="nest_leave_host_title">สิ้นสุด nest นี้หรือไม่?</string>
-    <string name="nest_leave_host_body">คุณเป็น Host การปิดห้องจะตัดการเชื่อมต่อทุกคน เลือก \"แค่ออก\" หากคุณต้องการกลับมาในภายหลัง — ห้องจะปิดอัตโนมัติหลังจากไม่มีกิจกรรม 8 ชั่วโมง</string>
+    <string name="nest_leave_host_body">คุณเป็น Host การปิดห้องจะตัดการเชื่อมต่อทุกคน เลือก "แค่ออก" หากคุณต้องการกลับมาในภายหลัง — ห้องจะปิดอัตโนมัติหลังจากไม่มีกิจกรรม 8 ชั่วโมง</string>
     <string name="nest_leave_host_close">ปิดห้อง</string>
     <string name="nest_leave_host_just_leave">แค่ออก</string>
     <string name="nest_tab_chat">แชท</string>
@@ -864,7 +864,7 @@
     <string name="community_no_descriptor">ชุมชนนี้ไม่มีคำอธิบาย พูดคุยกับเจ้าของเพื่อเพิ่มเติมสิ่งนี้</string>
     <string name="user_preferences">การตั้งค่าผู้ใช้</string>
     <string name="settings_search_placeholder">ค้นหาการตั้งค่า</string>
-    <string name="settings_search_no_results">ไม่พบการตั้งค่าสำหรับ \"%1$s\"</string>
+    <string name="settings_search_no_results">ไม่พบการตั้งค่าสำหรับ "%1$s"</string>
     <string name="reset_marmot_confirm_title">รีเซ็ตสถานะ Marmot?</string>
     <string name="reset_marmot_confirm_body">การดำเนินการนี้จะลบแชทกลุ่ม Marmot ประวัติข้อความ และคีย์ MLS ทั้งหมดในอุปกรณ์นี้สำหรับบัญชีปัจจุบันอย่างถาวร เพื่อนในกลุ่มจะไม่ได้รับการแจ้งเตือนและอาจยังเห็นคุณในกลุ่มจนกว่าจะมีการ commit ครั้งถัดไป ไม่สามารถย้อนกลับได้ KeyPackage ใหม่จะถูกเผยแพร่ครั้งต่อไปที่แอปซิงค์</string>
     <string name="reset_marmot_confirm_action">รีเซ็ต</string>
@@ -897,7 +897,7 @@
     <string name="music_playlist_collaborative_hint">อนุญาตให้ผู้อื่นเพิ่มแทร็กในเพลย์ลิสต์นี้</string>
     <string name="music_playlist_delete">ลบเพลย์ลิสต์นี้</string>
     <string name="music_playlist_delete_confirm">เผยแพร่คำขอลบ NIP-09 สำหรับเพลย์ลิสต์นี้ใช่หรือไม่?</string>
-    <string name="music_playlist_no_tracks_hint">ยังไม่มีแทร็ก เพิ่มแทร็กจากเมนูของเพลงโดยใช้ \"เพิ่มในเพลย์ลิสต์\"</string>
+    <string name="music_playlist_no_tracks_hint">ยังไม่มีแทร็ก เพิ่มแทร็กจากเมนูของเพลงโดยใช้ "เพิ่มในเพลย์ลิสต์"</string>
     <string name="music_playlist_move_track_up">เลื่อนแทร็กขึ้น</string>
     <string name="music_playlist_move_track_down">เลื่อนแทร็กลง</string>
     <string name="music_playlist_remove_track">ลบแทร็กออกจากเพลย์ลิสต์</string>
@@ -912,7 +912,7 @@
     <string name="messages_new_subject_message">คําอธิบายต่อสมาชิก</string>
     <string name="messages_new_subject_message_placeholder">เปลี่ยนชื่อสําหรับเป้าหมายใหม่</string>
     <string name="paste_from_clipboard">วาง</string>
-    <string name="language_description">สำหรับ App\'s Interface</string>
+    <string name="language_description">สำหรับ App's Interface</string>
     <string name="copy_stack_to_clipboard">คัดลอก Stack</string>
     <string name="copy_nprofile_to_clipboard">คัดลอก nprofile ไปยังคลิปบอร์ด</string>
     <string name="copy_npub_to_clipboard">คัดลอก npub ไปยังคลิปบอร์ด</string>
@@ -1177,7 +1177,7 @@
     <string name="calendar_untitled">(ไม่มีชื่อ)</string>
     <string name="calendar_all_day">ทั้งวัน</string>
     <string name="calendar_rsvp_going_prefixed">✓ ไป</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? อาจไป</string>
+    <string name="calendar_rsvp_maybe_prefixed">? อาจไป</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ ไม่ได้</string>
     <string name="calendar_collection_title">ชื่อเรื่อง</string>
     <string name="calendar_collection_description">คำอธิบาย</string>
@@ -1345,7 +1345,7 @@
     <string name="remove_dvm_from_favorites">ลบออกจากรายการโปรด</string>
     <string name="favorite_dvms_explainer">อัลกอริทึมฟีดที่คุณติดดาวจะปรากฏที่นี่และเป็นชิปตัวกรองในฟีดหน้าหลัก</string>
     <string name="favorite_dvms_empty_headline">ปักหมุดอัลกอริทึมโปรดของคุณ</string>
-    <string name="favorite_dvms_empty_step1">แตะ \"%1$s\" ด้านล่างเพื่อเรียกดูอัลกอริทึม</string>
+    <string name="favorite_dvms_empty_step1">แตะ "%1$s" ด้านล่างเพื่อเรียกดูอัลกอริทึม</string>
     <string name="favorite_dvms_empty_step2">แตะ %1$s ถัดจากฟีดเพื่อเก็บไว้ที่นี่</string>
     <string name="favorite_dvms_empty_cta">เพิ่มฟีดบางอย่าง</string>
     <string name="favorite_dvms_add_more">เพิ่มเติม…</string>
@@ -1534,7 +1534,7 @@
     <string name="hls_codec_fallback_notice">H.265 ไม่พร้อมใช้งานบนอุปกรณ์นี้ — ย้อนกลับไปใช้ H.264</string>
     <string name="hls_renditions_source_format">ความละเอียดต้นฉบับ: %1$d×%2$d</string>
     <string name="hls_publish_button">เผยแพร่วิดีโอ HD</string>
-    <string name="hls_publishing_header_format">กำลังเผยแพร่ \"%1$s\"…</string>
+    <string name="hls_publishing_header_format">กำลังเผยแพร่ "%1$s"…</string>
     <string name="hls_state_transcoding_format">กำลังแปลง %1$s</string>
     <string name="hls_state_uploading_idle">อัปโหลด</string>
     <string name="hls_state_uploading_format">กำลังอัปโหลด %1$d จาก %2$d</string>
@@ -1696,8 +1696,8 @@
     <string name="emoji_add_dialog_title">เพิ่ม emoji กำหนดเอง</string>
     <string name="emoji_remove_dialog_title">ลบ :%1$s: ออก?</string>
     <string name="emoji_long_press_hint">กดค้างที่ emoji เพื่อลบออก</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" อยู่ในรายการ emoji ของคุณ</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" ไม่อยู่ในรายการ emoji ของคุณ</string>
+    <string name="emoji_pack_is_in_list">"%1$s" อยู่ในรายการ emoji ของคุณ</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" ไม่อยู่ในรายการ emoji ของคุณ</string>
     <string name="emoji_pack_actions_dialog_title">การดำเนินการแพ็ค Emoji</string>
     <string name="emoji_private_toggle">ส่วนตัว</string>
     <string name="emoji_private_badge">Emoji ส่วนตัว</string>
@@ -1733,7 +1733,7 @@
     <string name="marmot_edit_group_info">แก้ไขข้อมูลกลุ่ม</string>
     <string name="marmot_leave_group">ออกจากกลุ่ม</string>
     <string name="marmot_this_group">กลุ่มนี้</string>
-    <string name="marmot_leave_group_confirm">คุณแน่ใจหรือไม่ว่าต้องการออกจาก \"%1$s\"? คุณจะไม่ได้รับข้อความจากกลุ่มนี้อีกต่อไป</string>
+    <string name="marmot_leave_group_confirm">คุณแน่ใจหรือไม่ว่าต้องการออกจาก "%1$s"? คุณจะไม่ได้รับข้อความจากกลุ่มนี้อีกต่อไป</string>
     <string name="marmot_keypackage_required">พวกเขาต้องเผยแพร่ KeyPackage (kind:30443) จึงจะสามารถเพิ่มได้</string>
     <string name="marmot_add_to_group">เพิ่มในกลุ่ม</string>
     <string name="marmot_add_member">เพิ่มสมาชิก</string>
@@ -1742,15 +1742,15 @@
     <string name="marmot_member_suffix_you"> (คุณ)</string>
     <string name="marmot_member_suffix_admin"> - ผู้ดูแล</string>
     <string name="marmot_remove_member">ลบสมาชิก</string>
-    <string name="marmot_remove_member_confirm">คุณแน่ใจหรือไม่ว่าต้องการลบ \"%1$s\" ออกจากกลุ่มนี้?</string>
+    <string name="marmot_remove_member_confirm">คุณแน่ใจหรือไม่ว่าต้องการลบ "%1$s" ออกจากกลุ่มนี้?</string>
     <string name="marmot_grant">มอบสิทธิ์</string>
     <string name="marmot_grant_admin_privileges">มอบสิทธิ์ผู้ดูแลระบบ</string>
     <string name="marmot_grant_admin_title">มอบสิทธิ์ผู้ดูแลระบบ</string>
-    <string name="marmot_grant_admin_confirm">ทำให้ \"%1$s\" เป็นผู้ดูแลระบบของกลุ่มนี้หรือไม่? ผู้ดูแลระบบสามารถเพิ่มหรือลบสมาชิก เปลี่ยนข้อมูลกลุ่ม และมอบสิทธิ์ผู้ดูแลระบบให้สมาชิกคนอื่นได้</string>
+    <string name="marmot_grant_admin_confirm">ทำให้ "%1$s" เป็นผู้ดูแลระบบของกลุ่มนี้หรือไม่? ผู้ดูแลระบบสามารถเพิ่มหรือลบสมาชิก เปลี่ยนข้อมูลกลุ่ม และมอบสิทธิ์ผู้ดูแลระบบให้สมาชิกคนอื่นได้</string>
     <string name="marmot_revoke">เพิกถอน</string>
     <string name="marmot_revoke_admin_privileges">เพิกถอนสิทธิ์ผู้ดูแลระบบ</string>
     <string name="marmot_revoke_admin_title">เพิกถอนสิทธิ์ผู้ดูแลระบบ</string>
-    <string name="marmot_revoke_admin_confirm">เพิกถอนสิทธิ์ผู้ดูแลระบบจาก \"%1$s\" หรือไม่? พวกเขาจะยังคงเป็นสมาชิกของกลุ่มต่อไป</string>
+    <string name="marmot_revoke_admin_confirm">เพิกถอนสิทธิ์ผู้ดูแลระบบจาก "%1$s" หรือไม่? พวกเขาจะยังคงเป็นสมาชิกของกลุ่มต่อไป</string>
     <string name="marmot_relay_no_events">ยังไม่มีเหตุการณ์</string>
     <string name="marmot_relay_last_event">เหตุการณ์ล่าสุด%1$s</string>
     <string name="copy">คัดลอก</string>

@@ -286,7 +286,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">Cifrar y copiar mi clave secreta</string>
     <string name="badge_award_image_for">Imagen de premio de insignia por %1$s</string>
-    <string name="badge_award_image">\"Imagen de premio de insignia</string>
+    <string name="badge_award_image">"Imagen de premio de insignia</string>
     <string name="new_badge_award_notif">Recibiste un nuevo premio de insignia</string>
     <string name="award_granted_to">Premio de insignia otorgado a</string>
     <string name="account_switch_add_account_dialog_title">Agregar cuenta nueva</string>
@@ -314,7 +314,7 @@
     <string name="report_dialog_impersonation">Suplantación de identidad malintencionada</string>
     <string name="report_dialog_nudity">Desnudez o contenido gráfico</string>
     <string name="report_dialog_illegal">Comportamiento ilegal</string>
-    <string name="report_dialog_blocking_a_user">Si bloqueas a un usuario, se ocultará su contenido en tu app. Tus notas todavía son visibles públicamente, incluso para las personas que bloquees. Los usuarios bloqueados aparecen en la pantalla \"Filtros de seguridad\".</string>
+    <string name="report_dialog_blocking_a_user">Si bloqueas a un usuario, se ocultará su contenido en tu app. Tus notas todavía son visibles públicamente, incluso para las personas que bloquees. Los usuarios bloqueados aparecen en la pantalla "Filtros de seguridad".</string>
     <string name="report_dialog_report_btn">Reportar abuso</string>
     <string name="report_dialog_reminder_public">Todos los reportes publicados serán visibles públicamente.</string>
     <string name="report_dialog_additional_reason_placeholder">Si quieres puedes agregar más contexto al reporte…</string>
@@ -870,7 +870,7 @@
     <string name="community_no_descriptor">Esta comunidad no tiene descripción. Habla con el propietario para agregar una.</string>
     <string name="user_preferences">Preferencias de usuario</string>
     <string name="settings_search_placeholder">Buscar ajustes</string>
-    <string name="settings_search_no_results">No se encontraron ajustes para \"%1$s\"</string>
+    <string name="settings_search_no_results">No se encontraron ajustes para "%1$s"</string>
     <string name="reset_marmot_confirm_title">¿Restablecer el estado de Marmot?</string>
     <string name="reset_marmot_confirm_body">Esta acción eliminará permanentemente todos los chats de grupo, el historial de mensajes y las claves MLS de Marmot en este dispositivo para la cuenta actual. Los demás participantes no serán notificados y puede que aún te vean en los grupos hasta su próximo commit. Esta acción no se puede deshacer. Se publicará un nuevo KeyPackage la próxima vez que la aplicación se sincronice.</string>
     <string name="reset_marmot_confirm_action">Restablecer</string>
@@ -904,7 +904,7 @@
     <string name="music_playlist_collaborative_hint">Permite que otros añadan pistas a esta lista de reproducción.</string>
     <string name="music_playlist_delete">Eliminar esta lista de reproducción</string>
     <string name="music_playlist_delete_confirm">¿Publicar una eliminación NIP-09 para esta lista de reproducción?</string>
-    <string name="music_playlist_no_tracks_hint">Aún no hay pistas. Añade pistas desde el menú de una canción usando \"Añadir a la lista de reproducción\".</string>
+    <string name="music_playlist_no_tracks_hint">Aún no hay pistas. Añade pistas desde el menú de una canción usando "Añadir a la lista de reproducción".</string>
     <string name="music_playlist_move_track_up">Mover pista arriba</string>
     <string name="music_playlist_move_track_down">Mover pista abajo</string>
     <string name="music_playlist_remove_track">Eliminar pista de la lista de reproducción</string>
@@ -915,7 +915,7 @@
     <string name="messages_create_public_private_chat_description">Nuevo grupo público o privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject_caption">Tema de la conversación</string>
-    <string name="messages_new_message_to_caption">\@Usuario1, @Usuario2, @Usuario3</string>
+    <string name="messages_new_message_to_caption">@Usuario1, @Usuario2, @Usuario3</string>
     <string name="messages_group_descriptor">Miembros de este grupo</string>
     <string name="messages_new_subject_message">Explicación para los miembros</string>
     <string name="messages_new_subject_message_placeholder">Cambio de nombre para los nuevos objetivos.</string>
@@ -1188,7 +1188,7 @@
     <string name="calendar_untitled">(sin título)</string>
     <string name="calendar_all_day">Todo el día</string>
     <string name="calendar_rsvp_going_prefixed">✓ Asistiré</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Tal vez</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Tal vez</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ No puedo ir</string>
     <string name="calendar_collection_title">Título</string>
     <string name="calendar_collection_description">Descripción</string>
@@ -1376,7 +1376,7 @@
     <string name="remove_dvm_from_favorites">Eliminar de favoritos</string>
     <string name="favorite_dvms_explainer">Los algoritmos de feed que marques con estrella aparecerán aquí y como filtros en el feed de inicio.</string>
     <string name="favorite_dvms_empty_headline">Fija tus algoritmos favoritos</string>
-    <string name="favorite_dvms_empty_step1">Pulsa \"%1$s\" abajo para explorar algoritmos.</string>
+    <string name="favorite_dvms_empty_step1">Pulsa "%1$s" abajo para explorar algoritmos.</string>
     <string name="favorite_dvms_empty_step2">Pulsa %1$s junto a un feed para guardarlo aquí.</string>
     <string name="favorite_dvms_empty_cta">Añadir algunos feeds</string>
     <string name="favorite_dvms_add_more">Añadir más…</string>
@@ -1729,8 +1729,8 @@
     <string name="emoji_add_dialog_title">Añadir emoji personalizado</string>
     <string name="emoji_remove_dialog_title">¿Eliminar :%1$s:?</string>
     <string name="emoji_long_press_hint">Mantén pulsado un emoji para eliminarlo</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" está en tu lista de emojis</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" no está en tu lista de emojis</string>
+    <string name="emoji_pack_is_in_list">"%1$s" está en tu lista de emojis</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" no está en tu lista de emojis</string>
     <string name="emoji_pack_actions_dialog_title">Acciones del paquete de emojis</string>
     <string name="emoji_private_toggle">Privado</string>
     <string name="emoji_private_badge">Emoji privado</string>
@@ -1766,7 +1766,7 @@
     <string name="marmot_edit_group_info">Editar información del grupo</string>
     <string name="marmot_leave_group">Salir del grupo</string>
     <string name="marmot_this_group">este grupo</string>
-    <string name="marmot_leave_group_confirm">¿Seguro que quieres salir de \"%1$s\"? Ya no recibirás mensajes de este grupo.</string>
+    <string name="marmot_leave_group_confirm">¿Seguro que quieres salir de "%1$s"? Ya no recibirás mensajes de este grupo.</string>
     <string name="marmot_keypackage_required">Deben haber publicado un KeyPackage (kind:30443) para poder ser añadidos.</string>
     <string name="marmot_add_to_group">Añadir al grupo</string>
     <string name="marmot_add_member">Añadir miembro</string>
@@ -1775,15 +1775,15 @@
     <string name="marmot_member_suffix_you"> (tú)</string>
     <string name="marmot_member_suffix_admin"> - administrador</string>
     <string name="marmot_remove_member">Eliminar miembro</string>
-    <string name="marmot_remove_member_confirm">¿Seguro que quieres eliminar a \"%1$s\" de este grupo?</string>
+    <string name="marmot_remove_member_confirm">¿Seguro que quieres eliminar a "%1$s" de este grupo?</string>
     <string name="marmot_grant">Conceder</string>
     <string name="marmot_grant_admin_privileges">Conceder privilegios de administrador</string>
     <string name="marmot_grant_admin_title">Conceder privilegios de administrador</string>
-    <string name="marmot_grant_admin_confirm">¿Hacer a \"%1$s\" administrador de este grupo? Los administradores pueden añadir o eliminar miembros, cambiar la información del grupo y conceder privilegios de administrador a otros miembros.</string>
+    <string name="marmot_grant_admin_confirm">¿Hacer a "%1$s" administrador de este grupo? Los administradores pueden añadir o eliminar miembros, cambiar la información del grupo y conceder privilegios de administrador a otros miembros.</string>
     <string name="marmot_revoke">Revocar</string>
     <string name="marmot_revoke_admin_privileges">Revocar privilegios de administrador</string>
     <string name="marmot_revoke_admin_title">Revocar privilegios de administrador</string>
-    <string name="marmot_revoke_admin_confirm">¿Revocar los privilegios de administrador de \"%1$s\"? Seguirá siendo miembro del grupo.</string>
+    <string name="marmot_revoke_admin_confirm">¿Revocar los privilegios de administrador de "%1$s"? Seguirá siendo miembro del grupo.</string>
     <string name="marmot_relay_no_events">aún no hay eventos</string>
     <string name="marmot_relay_last_event">último evento%1$s</string>
     <string name="copy">Copiar</string>
