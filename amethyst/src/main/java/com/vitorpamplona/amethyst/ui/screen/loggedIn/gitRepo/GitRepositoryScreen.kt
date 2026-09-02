@@ -57,18 +57,29 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_new_issue_button
+import com.vitorpamplona.amethyst.commons.resources.git_repo_bookmark
+import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_closed
+import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_open
+import com.vitorpamplona.amethyst.commons.resources.git_repo_label_all
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_title
+import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_code
+import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_issues
+import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_patches
+import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 import com.vitorpamplona.amethyst.model.GitStatusIndex
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -79,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitCodeTab
@@ -293,13 +303,13 @@ private fun GitRepositoryHome(
                     IconButton(onClick = { accountViewModel.toggleRepositoryBookmark(note, isBookmarked) }) {
                         Icon(
                             symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
-                            contentDescription = stringRes(R.string.git_repo_bookmark),
+                            contentDescription = stringRes(Res.string.git_repo_bookmark),
                             tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     if (event != null && accountViewModel.isLoggedUser(event?.pubKey)) {
                         IconButton(onClick = { showSettings = true }) {
-                            Icon(MaterialSymbols.Edit, contentDescription = stringRes(R.string.git_repo_settings_title))
+                            Icon(MaterialSymbols.Edit, contentDescription = stringRes(Res.string.git_repo_settings_title))
                         }
                     }
                     Row(Modifier.padding(end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -350,7 +360,7 @@ private fun GitRepositoryHome(
                 RepoSocialRow(note, accountViewModel, nav)
                 GitReadmeSection(browserState, browserViewModel, currentEvent, accountViewModel, nav)
             } else {
-                EmptyMessage(stringRes(R.string.loading_feed))
+                EmptyMessage(stringRes(Res.string.loading_feed))
             }
         }
     }
@@ -508,13 +518,13 @@ private fun RepoNavCards(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        RepoNavCard(MaterialSymbols.Code, stringRes(R.string.git_repo_tab_code), null) {
+        RepoNavCard(MaterialSymbols.Code, stringRes(Res.string.git_repo_tab_code), null) {
             nav.nav(Route.GitRepositoryCode(note.address))
         }
-        RepoNavCard(MaterialSymbols.ErrorOutline, stringRes(R.string.git_repo_tab_issues), openIssues) {
+        RepoNavCard(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_tab_issues), openIssues) {
             nav.nav(Route.GitRepositoryIssues(note.address))
         }
-        RepoNavCard(MaterialSymbols.CallMerge, stringRes(R.string.git_repo_tab_patches), openPulls) {
+        RepoNavCard(MaterialSymbols.CallMerge, stringRes(Res.string.git_repo_tab_patches), openPulls) {
             nav.nav(Route.GitRepositoryPulls(note.address))
         }
     }
@@ -664,7 +674,7 @@ private fun StatusFilterChips(
             FilterChip(
                 selected = !showClosed,
                 onClick = { onShowClosed(false) },
-                label = { Text(countedLabel(stringRes(R.string.git_repo_filter_open), openCount)) },
+                label = { Text(countedLabel(stringRes(Res.string.git_repo_filter_open), openCount)) },
                 leadingIcon =
                     if (!showClosed) {
                         { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
@@ -675,7 +685,7 @@ private fun StatusFilterChips(
             FilterChip(
                 selected = showClosed,
                 onClick = { onShowClosed(true) },
-                label = { Text(countedLabel(stringRes(R.string.git_repo_filter_closed), closedCount)) },
+                label = { Text(countedLabel(stringRes(Res.string.git_repo_filter_closed), closedCount)) },
                 leadingIcon =
                     if (showClosed) {
                         { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
@@ -698,7 +708,7 @@ private fun StatusFilterChips(
                 FilterChip(
                     selected = selectedLabel == null,
                     onClick = { onSelectLabel(null) },
-                    label = { Text(stringRes(R.string.git_repo_label_all)) },
+                    label = { Text(stringRes(Res.string.git_repo_label_all)) },
                 )
                 labels.forEach { label ->
                     FilterChip(
@@ -720,7 +730,7 @@ private fun NewIssueFab(onClick: () -> Unit) {
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         icon = { Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
-        text = { Text(stringRes(R.string.git_new_issue_button)) },
+        text = { Text(stringRes(Res.string.git_new_issue_button)) },
     )
 }
 

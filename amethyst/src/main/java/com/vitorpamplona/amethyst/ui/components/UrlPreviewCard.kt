@@ -44,6 +44,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy_url_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.link_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.url_preview_open_in_browser
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -71,13 +75,13 @@ fun UrlPreviewCard(
         val clipboardManager = LocalClipboard.current
         val scope = rememberCoroutineScope()
         M3ActionDialog(
-            title = stringRes(R.string.link_actions_dialog_title),
+            title = stringRes(Res.string.link_actions_dialog_title),
             onDismiss = { popupExpanded.value = false },
         ) {
             M3ActionSection {
                 M3ActionRow(
                     icon = MaterialSymbols.ContentCopy,
-                    text = stringRes(R.string.copy_url_to_clipboard),
+                    text = stringRes(Res.string.copy_url_to_clipboard),
                 ) {
                     scope.launch {
                         clipboardManager.setText(url)
@@ -141,7 +145,7 @@ fun UrlPreviewCard(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-                        contentDescription = stringRes(R.string.url_preview_open_in_browser),
+                        contentDescription = stringRes(Res.string.url_preview_open_in_browser),
                         modifier = Size14Modifier,
                         tint = Color.Gray,
                     )

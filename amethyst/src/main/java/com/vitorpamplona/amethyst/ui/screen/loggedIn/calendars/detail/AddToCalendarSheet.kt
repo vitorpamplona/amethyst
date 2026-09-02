@@ -43,7 +43,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_add_to_calendar_none
+import com.vitorpamplona.amethyst.commons.resources.calendar_add_to_calendar_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -86,7 +89,7 @@ fun AddToCalendarSheet(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = stringRes(R.string.calendar_add_to_calendar_title),
+                text = stringRes(Res.string.calendar_add_to_calendar_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -96,7 +99,7 @@ fun AddToCalendarSheet(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = stringRes(R.string.calendar_add_to_calendar_none),
+                        text = stringRes(Res.string.calendar_add_to_calendar_none),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -107,7 +110,7 @@ fun AddToCalendarSheet(
                 items(ownCalendars, key = { it.dTag() }) { calendar ->
                     val isMember = calendar.calendarEventAddresses().contains(targetAddress)
                     CalendarPickerRow(
-                        title = calendar.title() ?: stringRes(R.string.calendar_untitled),
+                        title = calendar.title() ?: stringRes(Res.string.calendar_untitled),
                         isMember = isMember,
                         onToggle = {
                             toggleMembership(

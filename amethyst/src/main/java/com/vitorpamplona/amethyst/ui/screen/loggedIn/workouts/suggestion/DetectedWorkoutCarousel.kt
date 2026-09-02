@@ -57,6 +57,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.workout_from_health_connect
+import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_button
+import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_message
+import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_title
+import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_distance_km
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
@@ -130,7 +136,7 @@ fun DetectedWorkoutCarousel(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.workout_from_health_connect),
+                    text = stringRes(Res.string.workout_from_health_connect),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp),
@@ -183,11 +189,11 @@ private fun ConnectCard(
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(
-                    text = stringRes(R.string.workout_suggestion_connect_title),
+                    text = stringRes(Res.string.workout_suggestion_connect_title),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = stringRes(R.string.workout_suggestion_connect_message),
+                    text = stringRes(Res.string.workout_suggestion_connect_message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -198,7 +204,7 @@ private fun ConnectCard(
             horizontalArrangement = Arrangement.End,
         ) {
             Button(onClick = onConnect) {
-                Text(stringRes(R.string.workout_suggestion_connect_button))
+                Text(stringRes(Res.string.workout_suggestion_connect_button))
             }
         }
     }
@@ -208,7 +214,7 @@ private fun ConnectCard(
 private fun summaryLine(workout: DetectedWorkout): String {
     val parts = mutableListOf<String>()
     workout.distanceMeters?.takeIf { it > 0 }?.let {
-        parts.add(stringRes(R.string.workout_suggestion_distance_km, "%.2f".format(it / 1000.0)))
+        parts.add(stringRes(Res.string.workout_suggestion_distance_km, "%.2f".format(it / 1000.0)))
     }
     parts.add(formatWorkoutDuration(workout.durationSeconds))
     if (workout.sessionCount > 1) {

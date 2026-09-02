@@ -55,6 +55,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_delete
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_delete_confirm_message
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_delete_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_description
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_events_section
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_invalid
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_no_events_yet
+import com.vitorpamplona.amethyst.commons.resources.calendar_collection_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -103,7 +114,7 @@ fun NewCalendarCollectionScreen(
             OutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
-                label = { Text(stringRes(R.string.calendar_collection_title)) },
+                label = { Text(stringRes(Res.string.calendar_collection_title)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -113,7 +124,7 @@ fun NewCalendarCollectionScreen(
             OutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
-                label = { Text(stringRes(R.string.calendar_collection_description)) },
+                label = { Text(stringRes(Res.string.calendar_collection_description)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -121,7 +132,7 @@ fun NewCalendarCollectionScreen(
 
             if (!vm.isValid()) {
                 Text(
-                    text = stringRes(R.string.calendar_collection_invalid),
+                    text = stringRes(Res.string.calendar_collection_invalid),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -149,14 +160,14 @@ private fun DeleteCalendarRow(
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
-        Text(text = stringRes(R.string.calendar_collection_delete))
+        Text(text = stringRes(Res.string.calendar_collection_delete))
     }
 
     if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },
-            title = { Text(stringRes(R.string.calendar_collection_delete_confirm_title)) },
-            text = { Text(stringRes(R.string.calendar_collection_delete_confirm_message)) },
+            title = { Text(stringRes(Res.string.calendar_collection_delete_confirm_title)) },
+            text = { Text(stringRes(Res.string.calendar_collection_delete_confirm_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirming = false
@@ -165,7 +176,7 @@ private fun DeleteCalendarRow(
                     }
                 }) {
                     Text(
-                        text = stringRes(R.string.calendar_collection_delete),
+                        text = stringRes(Res.string.calendar_collection_delete),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -185,7 +196,7 @@ private fun AppointmentPickerSection(vm: NewCalendarCollectionViewModel) {
     val selectedCount = vm.selectedAddresses.size
 
     Text(
-        text = stringRes(R.string.calendar_collection_events_section, selectedCount),
+        text = stringRes(Res.string.calendar_collection_events_section, selectedCount),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
@@ -194,7 +205,7 @@ private fun AppointmentPickerSection(vm: NewCalendarCollectionViewModel) {
 
     if (available.isEmpty()) {
         Text(
-            text = stringRes(R.string.calendar_collection_no_events_yet),
+            text = stringRes(Res.string.calendar_collection_no_events_yet),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(vertical = 8.dp),
@@ -223,7 +234,7 @@ private fun AppointmentPickerRow(
 ) {
     // `stringRes` must be called outside `remember` (it's @Composable). The date format is the
     // only piece worth memoising — the localised "All-day" label is a single lookup per row.
-    val allDayLabel = stringRes(R.string.calendar_all_day)
+    val allDayLabel = stringRes(Res.string.calendar_all_day)
     val whenLabel =
         remember(summary.address, summary.startSeconds, summary.isAllDay, allDayLabel) {
             when {
@@ -247,7 +258,7 @@ private fun AppointmentPickerRow(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
-                text = summary.title.ifBlank { stringRes(R.string.calendar_untitled) },
+                text = summary.title.ifBlank { stringRes(Res.string.calendar_untitled) },
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

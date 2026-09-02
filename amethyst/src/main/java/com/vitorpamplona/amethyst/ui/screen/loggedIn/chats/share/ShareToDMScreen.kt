@@ -35,7 +35,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.share_to_dm_start_new
+import com.vitorpamplona.amethyst.commons.resources.share_to_dm_title
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -79,18 +81,18 @@ fun ShareToDMScreen(
 
     Scaffold(
         topBar = {
-            ShorterTopAppBar(title = { Text(stringRes(R.string.share_to_dm_title)) })
+            ShorterTopAppBar(title = { Text(stringRes(Res.string.share_to_dm_title)) })
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             Text(
-                text = stringRes(R.string.share_to_dm_start_new),
+                text = stringRes(Res.string.share_to_dm_start_new),
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .clickable(
                             role = Role.Button,
-                            onClickLabel = stringRes(R.string.share_to_dm_start_new),
+                            onClickLabel = stringRes(Res.string.share_to_dm_start_new),
                         ) { nav.popUpTo(Route.NewGroupDM(message = message, attachment = attachment), Route.ShareToDM::class) }
                         .padding(16.dp),
             )

@@ -55,7 +55,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_create_cancel
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_endpoint
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_endpoint_hint
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_image
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_room
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_service
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_service_hint
+import com.vitorpamplona.amethyst.commons.resources.nest_create_field_summary
+import com.vitorpamplona.amethyst.commons.resources.nest_create_schedule_toggle
+import com.vitorpamplona.amethyst.commons.resources.nest_create_submit
+import com.vitorpamplona.amethyst.commons.resources.nest_create_title
+import com.vitorpamplona.amethyst.commons.resources.nest_create_when
+import com.vitorpamplona.amethyst.commons.resources.next
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
@@ -102,14 +115,14 @@ fun CreateNestSheet(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = stringRes(R.string.nest_create_title),
+                text = stringRes(Res.string.nest_create_title),
                 style = MaterialTheme.typography.titleLarge,
             )
 
             OutlinedTextField(
                 value = state.roomName,
                 onValueChange = viewModel::onRoomNameChange,
-                label = { Text(stringRes(R.string.nest_create_field_room)) },
+                label = { Text(stringRes(Res.string.nest_create_field_room)) },
                 singleLine = true,
                 isError = state.error != null && state.roomName.isBlank(),
                 modifier = Modifier.fillMaxWidth(),
@@ -118,7 +131,7 @@ fun CreateNestSheet(
             OutlinedTextField(
                 value = state.summary,
                 onValueChange = viewModel::onSummaryChange,
-                label = { Text(stringRes(R.string.nest_create_field_summary)) },
+                label = { Text(stringRes(Res.string.nest_create_field_summary)) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
@@ -126,27 +139,27 @@ fun CreateNestSheet(
             OutlinedTextField(
                 value = state.serviceUrl,
                 onValueChange = viewModel::onServiceUrlChange,
-                label = { Text(stringRes(R.string.nest_create_field_service)) },
+                label = { Text(stringRes(Res.string.nest_create_field_service)) },
                 singleLine = true,
                 isError = state.error != null && state.serviceUrl.isBlank(),
-                supportingText = { Text(stringRes(R.string.nest_create_field_service_hint)) },
+                supportingText = { Text(stringRes(Res.string.nest_create_field_service_hint)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
             OutlinedTextField(
                 value = state.endpointUrl,
                 onValueChange = viewModel::onEndpointUrlChange,
-                label = { Text(stringRes(R.string.nest_create_field_endpoint)) },
+                label = { Text(stringRes(Res.string.nest_create_field_endpoint)) },
                 singleLine = true,
                 isError = state.error != null && state.endpointUrl.isBlank(),
-                supportingText = { Text(stringRes(R.string.nest_create_field_endpoint_hint)) },
+                supportingText = { Text(stringRes(Res.string.nest_create_field_endpoint_hint)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
             OutlinedTextField(
                 value = state.imageUrl,
                 onValueChange = viewModel::onImageUrlChange,
-                label = { Text(stringRes(R.string.nest_create_field_image)) },
+                label = { Text(stringRes(Res.string.nest_create_field_image)) },
                 singleLine = true,
                 leadingIcon = {
                     SelectSingleFromGallery(
@@ -176,7 +189,7 @@ fun CreateNestSheet(
                     onCheckedChange = viewModel::onScheduledToggle,
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(stringRes(R.string.nest_create_schedule_toggle))
+                Text(stringRes(Res.string.nest_create_schedule_toggle))
             }
             if (state.scheduled) {
                 ScheduleStartPicker(
@@ -200,7 +213,7 @@ fun CreateNestSheet(
                 horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(onClick = onDismiss, enabled = !state.isPublishing) {
-                    Text(stringRes(R.string.nest_create_cancel))
+                    Text(stringRes(Res.string.nest_create_cancel))
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(
@@ -226,7 +239,7 @@ fun CreateNestSheet(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Text(stringRes(R.string.nest_create_submit))
+                        Text(stringRes(Res.string.nest_create_submit))
                     }
                 }
             }
@@ -254,7 +267,7 @@ private fun ScheduleStartPicker(
 
     val pretty =
         if (unixSeconds <= 0L) {
-            stringRes(R.string.nest_create_when)
+            stringRes(Res.string.nest_create_when)
         } else {
             val instant = java.util.Date(unixSeconds * 1000L)
             java.text.DateFormat
@@ -311,14 +324,14 @@ private fun ScheduleStartPicker(
                 TextButton(onClick = {
                     showDate = false
                     showTime = true
-                }) { Text(stringRes(R.string.next)) }
+                }) { Text(stringRes(Res.string.next)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     resetPickersToCommitted()
                     showDate = false
                 }) {
-                    Text(stringRes(R.string.nest_create_cancel))
+                    Text(stringRes(Res.string.nest_create_cancel))
                 }
             },
         ) {
@@ -328,7 +341,7 @@ private fun ScheduleStartPicker(
 
     if (showTime) {
         androidx.compose.material3.TimePickerDialog(
-            title = { Text(stringRes(R.string.nest_create_when)) },
+            title = { Text(stringRes(Res.string.nest_create_when)) },
             onDismissRequest = {
                 resetPickersToCommitted()
                 showTime = false
@@ -358,14 +371,14 @@ private fun ScheduleStartPicker(
                         onChange(pickedZdt.toEpochSecond())
                     }
                     showTime = false
-                }) { Text(stringRes(R.string.nest_create_submit)) }
+                }) { Text(stringRes(Res.string.nest_create_submit)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     resetPickersToCommitted()
                     showTime = false
                 }) {
-                    Text(stringRes(R.string.nest_create_cancel))
+                    Text(stringRes(Res.string.nest_create_cancel))
                 }
             },
         ) {

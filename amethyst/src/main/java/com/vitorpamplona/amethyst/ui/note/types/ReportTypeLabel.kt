@@ -22,6 +22,12 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.explicit_content
+import com.vitorpamplona.amethyst.commons.resources.harassment
+import com.vitorpamplona.amethyst.commons.resources.malware
+import com.vitorpamplona.amethyst.commons.resources.other
+import com.vitorpamplona.amethyst.commons.resources.violence
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 
@@ -36,15 +42,15 @@ fun reportTypeLabels(types: Collection<ReportType?>): List<String> = types.map {
 @Composable
 fun reportTypeLabel(type: ReportType?): String =
     when (type) {
-        ReportType.EXPLICIT -> stringRes(R.string.explicit_content)
+        ReportType.EXPLICIT -> stringRes(Res.string.explicit_content)
         ReportType.NUDITY -> stringRes(R.string.nudity)
         ReportType.PROFANITY -> stringRes(R.string.profanity_hateful_speech)
         ReportType.SPAM -> stringRes(R.string.spam)
         ReportType.IMPERSONATION -> stringRes(R.string.impersonation)
         ReportType.ILLEGAL -> stringRes(R.string.illegal_behavior)
-        ReportType.MALWARE -> stringRes(R.string.malware)
-        ReportType.OTHER -> stringRes(R.string.other)
-        ReportType.HARASSMENT -> stringRes(R.string.harassment)
-        ReportType.VIOLENCE -> stringRes(R.string.violence)
-        null -> stringRes(R.string.other)
+        ReportType.MALWARE -> stringRes(Res.string.malware)
+        ReportType.OTHER -> stringRes(Res.string.other)
+        ReportType.HARASSMENT -> stringRes(Res.string.harassment)
+        ReportType.VIOLENCE -> stringRes(Res.string.violence)
+        null -> stringRes(Res.string.other)
     }

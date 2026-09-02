@@ -36,7 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_confirm
+import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_explainer
+import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_field
+import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_title
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -64,15 +69,15 @@ fun AddHashtagLabelDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.add_hashtag_label_title)) },
+        title = { Text(stringRes(Res.string.add_hashtag_label_title)) },
         text = {
             Column {
-                Text(stringRes(R.string.add_hashtag_label_explainer))
+                Text(stringRes(Res.string.add_hashtag_label_explainer))
                 OutlinedTextField(
                     value = hashtag,
                     onValueChange = { hashtag = it },
                     singleLine = true,
-                    label = { Text(stringRes(R.string.add_hashtag_label_field)) },
+                    label = { Text(stringRes(Res.string.add_hashtag_label_field)) },
                     prefix = { Text("#") },
                     keyboardOptions =
                         KeyboardOptions(
@@ -91,7 +96,7 @@ fun AddHashtagLabelDialog(
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.add_hashtag_label_confirm))
+                Text(stringRes(Res.string.add_hashtag_label_confirm))
             }
         },
         dismissButton = {

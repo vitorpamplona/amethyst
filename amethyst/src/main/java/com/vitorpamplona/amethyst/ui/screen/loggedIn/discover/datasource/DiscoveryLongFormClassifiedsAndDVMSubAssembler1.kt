@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 
-import com.vitorpamplona.amethyst.model.TopFilter
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.makeLongFormFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.makeContentDVMsFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.makeClassifiedsFilter

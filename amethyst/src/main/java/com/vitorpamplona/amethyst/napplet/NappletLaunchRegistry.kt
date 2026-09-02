@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import java.security.SecureRandom
+import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * Main-process registry that binds a sandbox launch to its **trusted** identity + declared capability
@@ -63,27 +64,24 @@ object NappletLaunchRegistry {
     // Access-ordered + capped so tokens from long-closed napplets can't accumulate without bound. The
     // active napplet always re-touches its token, so only stale sessions are ever evicted.
     private const val MAX_SESSIONS = 128
-    private val sessions =
-        object : LinkedHashMap<String, Session>(16, 0.75f, true) {
-            override fun removeEldestEntry(eldest: Map.Entry<String, Session>) = size > MAX_SESSIONS
-        }
-    private val secureRandom = SecureRandom()
 
-    @Synchronized
+    // LruCache is internally synchronized and access-ordered — the same
+    // touch-on-resolve + evict-eldest-beyond-cap semantics the old access-ordered
+    // LinkedHashMap + @Synchronized pair provided, without JVM-only APIs.
+    private val sessions = LruCache<String, Session>(MAX_SESSIONS)
+
     fun register(
         identity: NappletIdentity,
         declared: Set<NappletCapability>,
         accountPubKey: HexKey,
     ): String {
-        val token = ByteArray(32).also(secureRandom::nextBytes).toHexKey()
-        sessions[token] = Session(identity.copy(instanceId = token), declared, accountPubKey)
+        val token = RandomInstance.bytes(32).toHexKey()
+        sessions.put(token, Session(identity.copy(instanceId = token), declared, accountPubKey))
         return token
     }
 
-    @Synchronized
     fun resolve(token: String?): Session? = token?.let { sessions[it] }
 
-    @Synchronized
     fun unregister(token: String?) {
         token?.let { sessions.remove(it) }
     }

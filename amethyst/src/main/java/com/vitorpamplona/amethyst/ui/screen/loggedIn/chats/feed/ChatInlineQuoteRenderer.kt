@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.ui.components.DefaultInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.components.InlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent

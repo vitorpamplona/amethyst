@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.NotificationsPerKeyKinds2
 import com.vitorpamplona.amethyst.commons.relayClient.event.watchers.RepliesAndReactionsKinds2
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.NotificationsPerKeyKinds2
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent

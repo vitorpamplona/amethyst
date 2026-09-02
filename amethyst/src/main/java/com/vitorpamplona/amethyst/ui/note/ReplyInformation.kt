@@ -33,9 +33,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.and
+import com.vitorpamplona.amethyst.commons.resources.replying_to
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -88,7 +90,7 @@ fun ReplyInformationChannel(
     FlowRow {
         if (!mentions.isNullOrEmpty() && !replyTo.isNullOrEmpty()) {
             Text(
-                stringRes(id = R.string.replying_to),
+                stringRes(id = Res.string.replying_to),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.placeholderText,
             )
@@ -104,7 +106,7 @@ fun ReplyInformationChannel(
                     )
                 } else if (idx < mentions.size - 1) {
                     Text(
-                        " ${stringRes(id = R.string.and)} ",
+                        " ${stringRes(id = Res.string.and)} ",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.placeholderText,
                     )

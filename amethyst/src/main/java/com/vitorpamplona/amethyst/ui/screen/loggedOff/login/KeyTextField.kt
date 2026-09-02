@@ -47,6 +47,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_with_qr_code
+import com.vitorpamplona.amethyst.commons.resources.nsec_npub_hex_private_key
+import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -76,7 +80,7 @@ fun KeyTextField(
             ),
         placeholder = {
             Text(
-                text = stringRes(R.string.nsec_npub_hex_private_key),
+                text = stringRes(Res.string.nsec_npub_hex_private_key),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -87,7 +91,7 @@ fun KeyTextField(
                         symbol = if (showCharsKey) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
                         contentDescription =
                             if (showCharsKey) {
-                                stringRes(R.string.show_password)
+                                stringRes(Res.string.show_password)
                             } else {
                                 stringRes(
                                     R.string.hide_password,
@@ -109,7 +113,7 @@ fun KeyTextField(
             IconButton(onClick = { dialogOpen = true }) {
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 5),
-                    contentDescription = stringRes(R.string.login_with_qr_code),
+                    contentDescription = stringRes(Res.string.login_with_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )

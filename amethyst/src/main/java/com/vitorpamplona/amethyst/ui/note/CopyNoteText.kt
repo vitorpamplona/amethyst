@@ -26,9 +26,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalClipboard
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy_text
+import com.vitorpamplona.amethyst.commons.resources.copy_text_original
+import com.vitorpamplona.amethyst.commons.resources.copy_text_translated
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -128,18 +131,18 @@ fun CopyTextChooserDialog(
     onDismiss: () -> Unit,
 ) {
     M3ActionDialog(
-        title = stringRes(R.string.copy_text),
+        title = stringRes(Res.string.copy_text),
         onDismiss = onDismiss,
     ) {
         M3ActionSection {
             M3ActionRow(
                 icon = MaterialSymbols.ContentCopy,
-                text = stringRes(R.string.copy_text_original),
+                text = stringRes(Res.string.copy_text_original),
                 onClick = onCopyOriginal,
             )
             M3ActionRow(
                 icon = MaterialSymbols.Translate,
-                text = stringRes(R.string.copy_text_translated),
+                text = stringRes(Res.string.copy_text_translated),
                 onClick = onCopyTranslated,
             )
         }

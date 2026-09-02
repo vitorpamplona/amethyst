@@ -29,7 +29,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.unblock_user
+import com.vitorpamplona.amethyst.commons.resources.user_is_blocked_hidden
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
@@ -40,8 +42,8 @@ fun UserBlockedFeed(onUnblock: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringRes(R.string.user_is_blocked_hidden))
+        Text(stringRes(Res.string.user_is_blocked_hidden))
         Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onUnblock) { Text(text = stringRes(R.string.unblock_user)) }
+        OutlinedButton(onClick = onUnblock) { Text(text = stringRes(Res.string.unblock_user)) }
     }
 }

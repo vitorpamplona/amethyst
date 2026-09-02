@@ -58,6 +58,23 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_all_day
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_all_day_locked
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_end
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_end_before_start
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_hashtags
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_image
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_invalid
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_location
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_participant_input
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_participant_remove
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_participants_section
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_pick_date
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_pick_image
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_start
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_summary
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_title
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -121,25 +138,25 @@ fun NewCalendarEventScreen(
             OutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
-                label = { Text(stringRes(R.string.calendar_event_title)) },
+                label = { Text(stringRes(Res.string.calendar_event_title)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
 
             val isAllDay by vm.isAllDay
-            FieldLabel(stringRes(R.string.calendar_event_start))
+            FieldLabel(stringRes(Res.string.calendar_event_start))
             CalendarDateTimePickerButton(
                 unixSeconds = vm.startSeconds.value,
-                placeholder = stringRes(R.string.calendar_event_pick_date),
+                placeholder = stringRes(Res.string.calendar_event_pick_date),
                 includeTime = !isAllDay,
                 onChange = { vm.startSeconds.value = it },
             )
 
-            FieldLabel(stringRes(R.string.calendar_event_end))
+            FieldLabel(stringRes(Res.string.calendar_event_end))
             CalendarDateTimePickerButton(
                 unixSeconds = vm.endSeconds.value,
-                placeholder = stringRes(R.string.calendar_event_pick_date),
+                placeholder = stringRes(Res.string.calendar_event_pick_date),
                 includeTime = !isAllDay,
                 onChange = { vm.endSeconds.value = it },
             )
@@ -147,7 +164,7 @@ fun NewCalendarEventScreen(
             OutlinedTextField(
                 value = vm.location.value,
                 onValueChange = { vm.location.value = it },
-                label = { Text(stringRes(R.string.calendar_event_location)) },
+                label = { Text(stringRes(Res.string.calendar_event_location)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -155,7 +172,7 @@ fun NewCalendarEventScreen(
             OutlinedTextField(
                 value = vm.summary.value,
                 onValueChange = { vm.summary.value = it },
-                label = { Text(stringRes(R.string.calendar_event_summary)) },
+                label = { Text(stringRes(Res.string.calendar_event_summary)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -166,7 +183,7 @@ fun NewCalendarEventScreen(
             OutlinedTextField(
                 value = vm.hashtags.value,
                 onValueChange = { vm.hashtags.value = it },
-                label = { Text(stringRes(R.string.calendar_event_hashtags)) },
+                label = { Text(stringRes(Res.string.calendar_event_hashtags)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -175,13 +192,13 @@ fun NewCalendarEventScreen(
 
             if (!vm.isValid()) {
                 Text(
-                    text = stringRes(R.string.calendar_event_invalid),
+                    text = stringRes(Res.string.calendar_event_invalid),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
             } else if (!vm.isEndAfterStart()) {
                 Text(
-                    text = stringRes(R.string.calendar_event_end_before_start),
+                    text = stringRes(Res.string.calendar_event_end_before_start),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -200,7 +217,7 @@ private fun AllDayToggleRow(vm: NewCalendarEventViewModel) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringRes(R.string.calendar_event_all_day),
+                text = stringRes(Res.string.calendar_event_all_day),
                 style = MaterialTheme.typography.titleSmall,
             )
             if (vm.isEditing) {
@@ -208,7 +225,7 @@ private fun AllDayToggleRow(vm: NewCalendarEventViewModel) {
                 // and a different addressable, leaving the original event live as a stale copy.
                 // The user can delete the appointment and re-create if they want to change kind.
                 Text(
-                    text = stringRes(R.string.calendar_event_all_day_locked),
+                    text = stringRes(Res.string.calendar_event_all_day_locked),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -269,7 +286,7 @@ private fun ImageRow(
         OutlinedTextField(
             value = vm.imageUrl.value,
             onValueChange = { vm.imageUrl.value = it },
-            label = { Text(stringRes(R.string.calendar_event_image)) },
+            label = { Text(stringRes(Res.string.calendar_event_image)) },
             modifier = Modifier.weight(1f),
             singleLine = true,
             enabled = !vm.isUploadingImage.value,
@@ -283,7 +300,7 @@ private fun ImageRow(
             IconButton(onClick = { launcher.launch("image/*") }) {
                 Icon(
                     symbol = MaterialSymbols.AddPhotoAlternate,
-                    contentDescription = stringRes(R.string.calendar_event_pick_image),
+                    contentDescription = stringRes(Res.string.calendar_event_pick_image),
                     modifier = Modifier.size(22.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -316,7 +333,7 @@ private fun ParticipantsRow(
     var searchInput by rememberSaveable { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        FieldLabel(stringRes(R.string.calendar_event_participants_section, vm.participants.size))
+        FieldLabel(stringRes(Res.string.calendar_event_participants_section, vm.participants.size))
 
         OutlinedTextField(
             value = searchInput,
@@ -328,7 +345,7 @@ private fun ParticipantsRow(
                     userSuggestions.reset()
                 }
             },
-            label = { Text(stringRes(R.string.calendar_event_participant_input)) },
+            label = { Text(stringRes(Res.string.calendar_event_participant_input)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -371,7 +388,7 @@ private fun ParticipantsRow(
                 IconButton(onClick = { vm.removeParticipant(pubKey) }) {
                     Icon(
                         symbol = MaterialSymbols.Close,
-                        contentDescription = stringRes(R.string.calendar_event_participant_remove),
+                        contentDescription = stringRes(Res.string.calendar_event_participant_remove),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

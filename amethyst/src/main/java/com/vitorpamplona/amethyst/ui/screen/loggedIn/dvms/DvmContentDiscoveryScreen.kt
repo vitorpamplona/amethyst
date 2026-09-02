@@ -49,9 +49,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dvm_looking_for_app
+import com.vitorpamplona.amethyst.commons.resources.dvm_pay_amount_to_dvm
+import com.vitorpamplona.amethyst.commons.resources.dvm_pay_invoice_from_dvm
+import com.vitorpamplona.amethyst.commons.resources.dvm_requesting_job
+import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_status
+import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_to_confirm_payment
+import com.vitorpamplona.amethyst.commons.resources.nwc_payment_request
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -106,7 +114,7 @@ fun DvmContentDiscoveryScreen(
                         DvmContentDiscoveryScreen(baseNote, accountViewModel, nav)
                     },
                     onBlank = {
-                        FeedEmptyWithStatus(baseNote, stringRes(R.string.dvm_looking_for_app), accountViewModel, nav)
+                        FeedEmptyWithStatus(baseNote, stringRes(Res.string.dvm_looking_for_app), accountViewModel, nav)
                     },
                     accountViewModel,
                 )
@@ -158,7 +166,7 @@ fun DvmContentDiscoveryScreen(
         } else {
             // TODO: Make a good splash screen with loading animation for this DVM.
             // FeedDVM(appDefinition, null, accountViewModel, nav)
-            FeedEmptyWithStatus(appDefinition, stringRes(R.string.dvm_requesting_job), accountViewModel, nav)
+            FeedEmptyWithStatus(appDefinition, stringRes(Res.string.dvm_requesting_job), accountViewModel, nav)
         }
     }
 }
@@ -238,7 +246,7 @@ fun ObserverDvmStatusResponse(
         }
     } else {
         // TODO: Make a good splash screen with loading animation for this DVM.
-        FeedEmptyWithStatus(appDefinition, stringRes(R.string.dvm_waiting_status), accountViewModel, nav)
+        FeedEmptyWithStatus(appDefinition, stringRes(Res.string.dvm_waiting_status), accountViewModel, nav)
     }
 }
 
@@ -375,8 +383,8 @@ fun DvmPaymentActions(
     val amount = amountTag?.amount
     val invoice = amountTag?.lnInvoice
 
-    val thankYou = stringRes(id = R.string.dvm_waiting_to_confirm_payment)
-    val nwcPaymentRequest = stringRes(id = R.string.nwc_payment_request)
+    val thankYou = stringRes(id = Res.string.dvm_waiting_to_confirm_payment)
+    val nwcPaymentRequest = stringRes(id = Res.string.nwc_payment_request)
 
     if (invoice != null) {
         val context = LocalContext.current
@@ -436,9 +444,9 @@ fun DvmPaymentActions(
                 }
 
             if (amountInInvoice != null) {
-                Text(text = stringRes(R.string.dvm_pay_amount_to_dvm, amountInInvoice.toString()))
+                Text(text = stringRes(Res.string.dvm_pay_amount_to_dvm, amountInInvoice.toString()))
             } else {
-                Text(text = stringRes(R.string.dvm_pay_invoice_from_dvm))
+                Text(text = stringRes(Res.string.dvm_pay_invoice_from_dvm))
             }
         }
     } else if (amount != null) {

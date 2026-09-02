@@ -38,6 +38,12 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_author_denied
+import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_icon
+import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_kind_not_allowed
+import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_stale_rules
+import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_wot_gate_failed
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator
 
@@ -61,7 +67,7 @@ fun CommunityRulesViolationBanner(violation: CommunityRulesValidator.Violation) 
     ) {
         Icon(
             symbol = MaterialSymbols.Warning,
-            contentDescription = stringRes(R.string.community_rules_violation_icon),
+            contentDescription = stringRes(Res.string.community_rules_violation_icon),
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.onErrorContainer,
         )
@@ -78,11 +84,11 @@ fun CommunityRulesViolationBanner(violation: CommunityRulesValidator.Violation) 
 private fun describeViolation(violation: CommunityRulesValidator.Violation): String =
     when (violation) {
         is CommunityRulesValidator.Violation.AuthorDenied -> {
-            stringRes(R.string.community_rules_violation_author_denied)
+            stringRes(Res.string.community_rules_violation_author_denied)
         }
 
         is CommunityRulesValidator.Violation.KindNotAllowed -> {
-            stringRes(R.string.community_rules_violation_kind_not_allowed, violation.kind)
+            stringRes(Res.string.community_rules_violation_kind_not_allowed, violation.kind)
         }
 
         is CommunityRulesValidator.Violation.KindSizeExceeded -> {
@@ -110,10 +116,10 @@ private fun describeViolation(violation: CommunityRulesValidator.Violation): Str
         }
 
         is CommunityRulesValidator.Violation.WotGateFailed -> {
-            stringRes(R.string.community_rules_violation_wot_gate_failed)
+            stringRes(Res.string.community_rules_violation_wot_gate_failed)
         }
 
         is CommunityRulesValidator.Violation.StaleRules -> {
-            stringRes(R.string.community_rules_violation_stale_rules)
+            stringRes(Res.string.community_rules_violation_stale_rules)
         }
     }

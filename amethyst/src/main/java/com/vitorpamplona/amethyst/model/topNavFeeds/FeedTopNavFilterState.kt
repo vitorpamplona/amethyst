@@ -20,8 +20,18 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedDecryptionCaches
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedFlowsType
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.GeohashFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.MultiHashtagFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.mine.MineFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.NoteFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
@@ -29,15 +39,8 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlo
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFollowsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
-import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.GeohashFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.AllFavoriteAlgoFeedsFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedFlow
-import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
-import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagFeedFlow
-import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.MultiHashtagFeedFlow
-import com.vitorpamplona.amethyst.model.topNavFeeds.mine.MineFeedFlow
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
-import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

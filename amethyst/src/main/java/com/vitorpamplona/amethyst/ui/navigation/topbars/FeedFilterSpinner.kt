@@ -69,8 +69,15 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.feed_filter_select_an_option
+import com.vitorpamplona.amethyst.commons.resources.feed_filter_selected
+import com.vitorpamplona.amethyst.commons.resources.lack_location_permissions
+import com.vitorpamplona.amethyst.commons.resources.loading_location
+import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
+import com.vitorpamplona.amethyst.commons.resources.select_an_option
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
@@ -109,7 +116,7 @@ fun FeedFilterSpinner(
     var optionsShowing by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val selectAnOption = stringRes(id = R.string.select_an_option)
+    val selectAnOption = stringRes(id = Res.string.select_an_option)
 
     val selected =
         remember(placeholderCode, options) {
@@ -125,12 +132,12 @@ fun FeedFilterSpinner(
 
     val accessibilityDescription =
         if (selected != null) {
-            stringRes(R.string.feed_filter_selected, currentText)
+            stringRes(Res.string.feed_filter_selected, currentText)
         } else {
-            stringRes(R.string.feed_filter_select_an_option, selectAnOption)
+            stringRes(Res.string.feed_filter_select_an_option, selectAnOption)
         }
 
-    val openDropdownLabel = stringRes(R.string.open_dropdown_menu)
+    val openDropdownLabel = stringRes(Res.string.open_dropdown_menu)
 
     val filter = selected?.code ?: placeholderCode
 
@@ -183,7 +190,7 @@ fun FeedFilterSpinner(
                             LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
 
                             Text(
-                                text = stringRes(R.string.lack_location_permissions),
+                                text = stringRes(Res.string.lack_location_permissions),
                                 fontSize = Font12SP,
                                 lineHeight = 12.sp,
                                 maxLines = 1,
@@ -223,7 +230,7 @@ fun FeedFilterSpinner(
 
                                 LocationState.LocationResult.LackPermission -> {
                                     Text(
-                                        text = stringRes(R.string.lack_location_permissions),
+                                        text = stringRes(Res.string.lack_location_permissions),
                                         fontSize = Font12SP,
                                         lineHeight = 12.sp,
                                         maxLines = 1,
@@ -233,7 +240,7 @@ fun FeedFilterSpinner(
 
                                 LocationState.LocationResult.Loading -> {
                                     Text(
-                                        text = stringRes(R.string.loading_location),
+                                        text = stringRes(Res.string.loading_location),
                                         fontSize = Font12SP,
                                         lineHeight = 12.sp,
                                         maxLines = 1,

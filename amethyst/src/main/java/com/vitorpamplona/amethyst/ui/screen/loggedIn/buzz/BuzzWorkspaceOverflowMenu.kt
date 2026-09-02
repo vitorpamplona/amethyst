@@ -43,9 +43,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.actions.BuzzInviteMinter
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.service.buzz.BuzzInviteMinter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_community_add_people
+import com.vitorpamplona.amethyst.commons.resources.buzz_console_card_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_import_add_all
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_copy
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_create
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_dismiss
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_error_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_link_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_invite_share
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -95,7 +105,7 @@ fun BuzzWorkspaceOverflowMenu(
                 leadingIcon = {
                     Icon(symbol = MaterialSymbols.DoneAll, contentDescription = null, modifier = Modifier.size(20.dp))
                 },
-                text = { Text(stringRes(R.string.buzz_import_add_all)) },
+                text = { Text(stringRes(Res.string.buzz_import_add_all)) },
                 onClick = {
                     menuOpen = false
                     onAddAll()
@@ -106,7 +116,7 @@ fun BuzzWorkspaceOverflowMenu(
             leadingIcon = {
                 Icon(symbol = MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp))
             },
-            text = { Text(stringRes(R.string.buzz_console_card_title)) },
+            text = { Text(stringRes(Res.string.buzz_console_card_title)) },
             onClick = {
                 menuOpen = false
                 onOpenAgentConsole()
@@ -116,7 +126,7 @@ fun BuzzWorkspaceOverflowMenu(
             leadingIcon = {
                 Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = null, modifier = Modifier.size(20.dp))
             },
-            text = { Text(stringRes(R.string.buzz_community_add_people)) },
+            text = { Text(stringRes(Res.string.buzz_community_add_people)) },
             onClick = {
                 menuOpen = false
                 onAddPeople()
@@ -130,7 +140,7 @@ fun BuzzWorkspaceOverflowMenu(
                     Icon(symbol = MaterialSymbols.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                 }
             },
-            text = { Text(stringRes(R.string.buzz_invite_create)) },
+            text = { Text(stringRes(Res.string.buzz_invite_create)) },
             enabled = !minting,
             onClick = {
                 menuOpen = false
@@ -160,7 +170,7 @@ fun BuzzWorkspaceOverflowMenu(
     result?.let { minted ->
         AlertDialog(
             onDismissRequest = { result = null },
-            title = { Text(stringRes(R.string.buzz_invite_link_title)) },
+            title = { Text(stringRes(Res.string.buzz_invite_link_title)) },
             text = {
                 SelectionContainer {
                     Text(minted.url, style = MaterialTheme.typography.bodyMedium)
@@ -175,13 +185,13 @@ fun BuzzWorkspaceOverflowMenu(
                         }
                     context.startActivity(Intent.createChooser(send, null))
                     result = null
-                }) { Text(stringRes(R.string.buzz_invite_share)) }
+                }) { Text(stringRes(Res.string.buzz_invite_share)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     scope.launch { clipboard.setText(minted.url) }
                     result = null
-                }) { Text(stringRes(R.string.buzz_invite_copy)) }
+                }) { Text(stringRes(Res.string.buzz_invite_copy)) }
             },
         )
     }
@@ -189,10 +199,10 @@ fun BuzzWorkspaceOverflowMenu(
     error?.let { message ->
         AlertDialog(
             onDismissRequest = { error = null },
-            title = { Text(stringRes(R.string.buzz_invite_error_title)) },
+            title = { Text(stringRes(Res.string.buzz_invite_error_title)) },
             text = { Text(message, color = MaterialTheme.colorScheme.error) },
             confirmButton = {
-                TextButton(onClick = { error = null }) { Text(stringRes(R.string.buzz_invite_dismiss)) }
+                TextButton(onClick = { error = null }) { Text(stringRes(Res.string.buzz_invite_dismiss)) }
             },
         )
     }

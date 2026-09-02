@@ -34,9 +34,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.article_bookmark_management_title
+import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -78,7 +80,7 @@ private fun ListManagementView(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.article_bookmark_management_title), nav)
+            TopBarWithBackButton(caption = stringRes(Res.string.article_bookmark_management_title), nav)
         },
         floatingActionButton = {
             FabBottomBarPadded(nav) {
@@ -122,7 +124,7 @@ private fun ListManagementViewBody(
 
             BookmarkGroupManagementItem(
                 modifier = Modifier.fillMaxWidth().animateItem(),
-                listTitle = stringRes(R.string.bookmarks_title),
+                listTitle = stringRes(Res.string.bookmarks_title),
                 isPublicMemberBookmark = maybePublicBookmark,
                 isPrivateMemberBookmark = maybePrivateBookmark,
                 totalPostBookmarkSize = defaultBookmarks.public.size + defaultBookmarks.private.size,

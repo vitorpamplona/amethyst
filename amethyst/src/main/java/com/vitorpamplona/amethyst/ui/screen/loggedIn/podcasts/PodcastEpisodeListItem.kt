@@ -36,8 +36,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_number
+import com.vitorpamplona.amethyst.commons.resources.podcast_season
+import com.vitorpamplona.amethyst.commons.resources.podcast_season_episode
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
@@ -78,9 +81,9 @@ fun PodcastEpisodeListItem(
     val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, context, prefix = "") }
     val seasonEpisodeLabel =
         when {
-            season != null && episodeNumber != null -> stringRes(R.string.podcast_season_episode, season, episodeNumber)
-            episodeNumber != null -> stringRes(R.string.podcast_episode_number, episodeNumber)
-            season != null -> stringRes(R.string.podcast_season, season)
+            season != null && episodeNumber != null -> stringRes(Res.string.podcast_season_episode, season, episodeNumber)
+            episodeNumber != null -> stringRes(Res.string.podcast_episode_number, episodeNumber)
+            season != null -> stringRes(Res.string.podcast_season, season)
             else -> null
         }
     val subtitle = listOfNotNull(seasonEpisodeLabel, dateStr.takeIf { it.isNotBlank() }).joinToString(" · ")

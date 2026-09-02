@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.service.http.OkHttpClientFactory
+import com.vitorpamplona.amethyst.commons.service.http.OkHttpClientFactoryForRelays
+import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
+import com.vitorpamplona.amethyst.commons.service.http.OnionLocationInterceptor
+import com.vitorpamplona.amethyst.commons.service.http.OnionUrlRewriteInterceptor
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.Protocol

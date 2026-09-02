@@ -40,11 +40,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.created_at
+import com.vitorpamplona.amethyst.commons.resources.groups_no_descriptor
+import com.vitorpamplona.amethyst.commons.resources.owner
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -94,7 +97,7 @@ fun LongLiveActivityChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(id = R.string.owner),
+                    text = stringRes(id = Res.string.owner),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -110,7 +113,7 @@ fun LongLiveActivityChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(id = R.string.created_at),
+                    text = stringRes(id = Res.string.created_at),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -178,7 +181,7 @@ private fun RowScope.RenderSummary(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val summary = activity.summary() ?: stringRes(id = R.string.groups_no_descriptor)
+    val summary = activity.summary() ?: stringRes(id = Res.string.groups_no_descriptor)
 
     Column(Modifier.weight(1f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {

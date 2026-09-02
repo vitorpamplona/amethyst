@@ -57,7 +57,24 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_additional_reason_label
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_additional_reason_placeholder
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_illegal
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_impersonation
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_nudity
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_post_report_btn
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_profanity
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_reminder_public
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_report_btn
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_select_reason_label
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_select_reason_placeholder
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_spam
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.report_malware
+import com.vitorpamplona.amethyst.commons.resources.violence
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -77,13 +94,13 @@ fun ReportNoteDialog(
 ) {
     val reportTypes =
         listOf(
-            Pair(ReportType.SPAM, stringRes(R.string.report_dialog_spam)),
-            Pair(ReportType.PROFANITY, stringRes(R.string.report_dialog_profanity)),
-            Pair(ReportType.IMPERSONATION, stringRes(R.string.report_dialog_impersonation)),
-            Pair(ReportType.NUDITY, stringRes(R.string.report_dialog_nudity)),
-            Pair(ReportType.ILLEGAL, stringRes(R.string.report_dialog_illegal)),
-            Pair(ReportType.MALWARE, stringRes(R.string.report_malware)),
-            Pair(ReportType.VIOLENCE, stringRes(R.string.violence)),
+            Pair(ReportType.SPAM, stringRes(Res.string.report_dialog_spam)),
+            Pair(ReportType.PROFANITY, stringRes(Res.string.report_dialog_profanity)),
+            Pair(ReportType.IMPERSONATION, stringRes(Res.string.report_dialog_impersonation)),
+            Pair(ReportType.NUDITY, stringRes(Res.string.report_dialog_nudity)),
+            Pair(ReportType.ILLEGAL, stringRes(Res.string.report_dialog_illegal)),
+            Pair(ReportType.MALWARE, stringRes(Res.string.report_malware)),
+            Pair(ReportType.VIOLENCE, stringRes(Res.string.violence)),
         )
 
     val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
@@ -97,7 +114,7 @@ fun ReportNoteDialog(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(text = stringRes(id = R.string.report_dialog_title)) },
+                    title = { Text(text = stringRes(id = Res.string.report_dialog_title)) },
                     navigationIcon = { IconButton(onClick = onDismiss) { ArrowBackIcon() } },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
@@ -115,7 +132,7 @@ fun ReportNoteDialog(
                 SectionHeader(text = stringRes(id = R.string.block_only))
                 SpacerH16()
                 Text(
-                    text = stringRes(R.string.report_dialog_blocking_a_user),
+                    text = stringRes(Res.string.report_dialog_blocking_a_user),
                 )
                 SpacerH16()
                 ActionButton(
@@ -131,13 +148,13 @@ fun ReportNoteDialog(
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface, thickness = DividerThickness)
 
                 SpacerH16()
-                SectionHeader(text = stringRes(R.string.report_dialog_report_btn))
+                SectionHeader(text = stringRes(Res.string.report_dialog_report_btn))
                 SpacerH16()
-                Text(stringRes(R.string.report_dialog_reminder_public))
+                Text(stringRes(Res.string.report_dialog_reminder_public))
                 SpacerH16()
                 TextSpinner(
-                    label = stringRes(R.string.report_dialog_select_reason_label),
-                    placeholder = stringRes(R.string.report_dialog_select_reason_placeholder),
+                    label = stringRes(Res.string.report_dialog_select_reason_label),
+                    placeholder = stringRes(Res.string.report_dialog_select_reason_placeholder),
                     options = reasonOptions,
                     onSelect = { selectedReason = it },
                     modifier = Modifier.fillMaxWidth(),
@@ -147,15 +164,15 @@ fun ReportNoteDialog(
                     value = additionalReason,
                     onValueChange = { additionalReason = it },
                     placeholder = {
-                        Text(text = stringRes(R.string.report_dialog_additional_reason_placeholder))
+                        Text(text = stringRes(Res.string.report_dialog_additional_reason_placeholder))
                     },
-                    label = { Text(stringRes(R.string.report_dialog_additional_reason_label)) },
+                    label = { Text(stringRes(Res.string.report_dialog_additional_reason_label)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 SpacerH16()
 
                 ActionButton(
-                    text = stringRes(R.string.report_dialog_post_report_btn),
+                    text = stringRes(Res.string.report_dialog_post_report_btn),
                     icon = MaterialSymbols.Report,
                     enabled = selectedReason in 0..reportTypes.lastIndex,
                     onClick = {

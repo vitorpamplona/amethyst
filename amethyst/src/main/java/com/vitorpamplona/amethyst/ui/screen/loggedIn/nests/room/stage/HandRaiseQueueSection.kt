@@ -40,7 +40,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_hand_raise_approve
+import com.vitorpamplona.amethyst.commons.resources.nest_hand_raise_queue_title
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomPresence
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -97,7 +99,7 @@ internal fun HandRaiseQueueSection(
 
     Column(modifier = modifier.fillMaxSize().padding(top = 12.dp)) {
         Text(
-            text = stringRes(R.string.nest_hand_raise_queue_title),
+            text = stringRes(Res.string.nest_hand_raise_queue_title),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -159,7 +161,7 @@ private fun HandRaiseRow(
         )
         Spacer(Modifier.width(4.dp))
         Button(onClick = onApprove) {
-            Text(stringRes(R.string.nest_hand_raise_approve))
+            Text(stringRes(Res.string.nest_hand_raise_approve))
         }
     }
 }

@@ -47,6 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
+import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message
+import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message_placeholder
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
@@ -125,7 +129,7 @@ fun NewChatroomSubjectDialog(
                     onValueChange = { groupName.value = it },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.messages_new_message_subject_caption),
+                            text = stringRes(Res.string.messages_new_message_subject_caption),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -139,7 +143,7 @@ fun NewChatroomSubjectDialog(
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.messages_new_subject_message)) },
+                    label = { Text(text = stringRes(Res.string.messages_new_subject_message)) },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -148,7 +152,7 @@ fun NewChatroomSubjectDialog(
                     onValueChange = { message.value = it },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.messages_new_subject_message_placeholder),
+                            text = stringRes(Res.string.messages_new_subject_message_placeholder),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },

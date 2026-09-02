@@ -53,12 +53,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataViewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
@@ -230,7 +231,7 @@ private fun ProfilePictureUploadButton(
         ) {
             Icon(
                 symbol = MaterialSymbols.AddPhotoAlternate,
-                contentDescription = stringRes(R.string.upload_image),
+                contentDescription = stringRes(Res.string.upload_image),
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
             )

@@ -55,7 +55,10 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bolt12_pay_with_wallet
+import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_amount_sats
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -228,7 +231,7 @@ private fun Bolt12OfferRow(
             IconButton(onClick = onPayInApp) {
                 Icon(
                     symbol = MaterialSymbols.AccountBalanceWallet,
-                    contentDescription = stringRes(R.string.bolt12_pay_with_wallet),
+                    contentDescription = stringRes(Res.string.bolt12_pay_with_wallet),
                     modifier = Size20Modifier,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -263,13 +266,13 @@ private fun Bolt12NwcAmountDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.bolt12_pay_with_wallet),
+                    text = stringRes(Res.string.bolt12_pay_with_wallet),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 OutlinedTextField(
                     value = sats,
                     onValueChange = { new -> sats = new.filter { it.isDigit() } },
-                    label = { Text(text = stringRes(R.string.bolt12_payment_amount_sats)) },
+                    label = { Text(text = stringRes(Res.string.bolt12_payment_amount_sats)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -285,7 +288,7 @@ private fun Bolt12NwcAmountDialog(
                         shape = ButtonBorder,
                         enabled = (sats.toLongOrNull() ?: 0) > 0,
                     ) {
-                        Text(text = stringRes(R.string.bolt12_pay_with_wallet))
+                        Text(text = stringRes(Res.string.bolt12_pay_with_wallet))
                     }
                 }
             }

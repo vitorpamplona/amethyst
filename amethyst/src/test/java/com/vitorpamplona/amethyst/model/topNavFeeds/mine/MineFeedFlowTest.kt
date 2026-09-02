@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.mine
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.mine.MineFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first

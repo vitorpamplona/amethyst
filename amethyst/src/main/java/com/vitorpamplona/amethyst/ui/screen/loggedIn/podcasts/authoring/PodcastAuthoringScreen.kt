@@ -59,6 +59,13 @@ import coil3.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_create_show_hint
+import com.vitorpamplona.amethyst.commons.resources.podcast_create_your_show
+import com.vitorpamplona.amethyst.commons.resources.podcast_no_episodes_yet
+import com.vitorpamplona.amethyst.commons.resources.podcast_tap_to_edit_show
+import com.vitorpamplona.amethyst.commons.resources.podcast_untitled
+import com.vitorpamplona.amethyst.commons.resources.podcast_your_podcast
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -141,7 +148,7 @@ fun PodcastAuthoringScreen(
         }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.podcast_your_podcast), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.podcast_your_podcast), nav) },
     ) { pad ->
         LazyColumn(
             modifier = Modifier.padding(pad).fillMaxWidth().padding(horizontal = 16.dp),
@@ -174,7 +181,7 @@ fun PodcastAuthoringScreen(
                 item { SectionHeader(pluralStringResource(R.plurals.podcast_episode_count, episodes.size, episodes.size)) }
                 items(episodes, key = { it.id }) { ep ->
                     EpisodeRow(
-                        title = ep.title() ?: stringRes(R.string.podcast_untitled),
+                        title = ep.title() ?: stringRes(Res.string.podcast_untitled),
                         subtitle = episodeSubtitle(ep),
                         onClick = { nav.nav(Route.NewPodcastEpisode(ep.dTag())) },
                     )
@@ -185,7 +192,7 @@ fun PodcastAuthoringScreen(
                 item { SectionHeader(pluralStringResource(R.plurals.podcast_trailer_count, trailers.size, trailers.size)) }
                 items(trailers, key = { it.id }) { tr ->
                     EpisodeRow(
-                        title = tr.title() ?: stringRes(R.string.podcast_untitled),
+                        title = tr.title() ?: stringRes(Res.string.podcast_untitled),
                         subtitle = tr.url(),
                         onClick = null,
                     )
@@ -195,7 +202,7 @@ fun PodcastAuthoringScreen(
             if (episodes.isEmpty()) {
                 item {
                     Text(
-                        text = stringRes(R.string.podcast_no_episodes_yet),
+                        text = stringRes(Res.string.podcast_no_episodes_yet),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.grayText,
                         modifier = Modifier.padding(vertical = 8.dp),
@@ -240,14 +247,14 @@ private fun ShowHeaderCard(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = show?.showTitle()?.takeIf { it.isNotBlank() } ?: stringRes(R.string.podcast_create_your_show),
+                text = show?.showTitle()?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.podcast_create_your_show),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = if (show != null) stringRes(R.string.podcast_tap_to_edit_show) else stringRes(R.string.podcast_create_show_hint),
+                text = if (show != null) stringRes(Res.string.podcast_tap_to_edit_show) else stringRes(Res.string.podcast_create_show_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.grayText,
                 maxLines = 2,

@@ -62,6 +62,25 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_cast
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_cast_description
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_download
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_download_description
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_fullscreen
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_fullscreen_description
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_mute
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_mute_description
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_pip
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_pip_description
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_quality
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_quality_description
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_share
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_share_description
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_description
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_location_overflow
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_location_top_bar
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_reorder
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.model.VideoPlayerButtonItem
@@ -132,7 +151,7 @@ fun VideoPlayerSettingsContent(accountViewModel: AccountViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = stringRes(R.string.video_player_settings_description),
+            text = stringRes(Res.string.video_player_settings_description),
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             modifier = Modifier.padding(bottom = 16.dp, start = Size20dp, end = Size20dp),
@@ -303,7 +322,7 @@ private fun VideoPlayerButtonItemCard(
             ) {
                 Icon(
                     MaterialSymbols.DragIndicator,
-                    contentDescription = stringRes(R.string.video_player_settings_reorder),
+                    contentDescription = stringRes(Res.string.video_player_settings_reorder),
                     modifier = Modifier.size(28.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -319,12 +338,12 @@ private fun VideoPlayerButtonItemCard(
             FilterChip(
                 selected = item.location == VideoButtonLocation.TopBar,
                 onClick = { onSelectLocation(VideoButtonLocation.TopBar) },
-                label = { Text(stringRes(R.string.video_player_settings_location_top_bar)) },
+                label = { Text(stringRes(Res.string.video_player_settings_location_top_bar)) },
             )
             FilterChip(
                 selected = item.location == VideoButtonLocation.OverflowMenu,
                 onClick = { onSelectLocation(VideoButtonLocation.OverflowMenu) },
-                label = { Text(stringRes(R.string.video_player_settings_location_overflow)) },
+                label = { Text(stringRes(Res.string.video_player_settings_location_overflow)) },
             )
         }
     }
@@ -333,23 +352,23 @@ private fun VideoPlayerButtonItemCard(
 @Composable
 fun videoPlayerActionName(action: VideoPlayerAction): String =
     when (action) {
-        VideoPlayerAction.Fullscreen -> stringRes(R.string.video_player_settings_action_fullscreen)
-        VideoPlayerAction.Mute -> stringRes(R.string.video_player_settings_action_mute)
-        VideoPlayerAction.Quality -> stringRes(R.string.video_player_settings_action_quality)
-        VideoPlayerAction.Share -> stringRes(R.string.video_player_settings_action_share)
-        VideoPlayerAction.Download -> stringRes(R.string.video_player_settings_action_download)
-        VideoPlayerAction.PictureInPicture -> stringRes(R.string.video_player_settings_action_pip)
-        VideoPlayerAction.Cast -> stringRes(R.string.video_player_settings_action_cast)
+        VideoPlayerAction.Fullscreen -> stringRes(Res.string.video_player_settings_action_fullscreen)
+        VideoPlayerAction.Mute -> stringRes(Res.string.video_player_settings_action_mute)
+        VideoPlayerAction.Quality -> stringRes(Res.string.video_player_settings_action_quality)
+        VideoPlayerAction.Share -> stringRes(Res.string.video_player_settings_action_share)
+        VideoPlayerAction.Download -> stringRes(Res.string.video_player_settings_action_download)
+        VideoPlayerAction.PictureInPicture -> stringRes(Res.string.video_player_settings_action_pip)
+        VideoPlayerAction.Cast -> stringRes(Res.string.video_player_settings_action_cast)
     }
 
 @Composable
 fun videoPlayerActionDescription(action: VideoPlayerAction): String =
     when (action) {
-        VideoPlayerAction.Fullscreen -> stringRes(R.string.video_player_settings_action_fullscreen_description)
-        VideoPlayerAction.Mute -> stringRes(R.string.video_player_settings_action_mute_description)
-        VideoPlayerAction.Quality -> stringRes(R.string.video_player_settings_action_quality_description)
-        VideoPlayerAction.Share -> stringRes(R.string.video_player_settings_action_share_description)
-        VideoPlayerAction.Download -> stringRes(R.string.video_player_settings_action_download_description)
-        VideoPlayerAction.PictureInPicture -> stringRes(R.string.video_player_settings_action_pip_description)
-        VideoPlayerAction.Cast -> stringRes(R.string.video_player_settings_action_cast_description)
+        VideoPlayerAction.Fullscreen -> stringRes(Res.string.video_player_settings_action_fullscreen_description)
+        VideoPlayerAction.Mute -> stringRes(Res.string.video_player_settings_action_mute_description)
+        VideoPlayerAction.Quality -> stringRes(Res.string.video_player_settings_action_quality_description)
+        VideoPlayerAction.Share -> stringRes(Res.string.video_player_settings_action_share_description)
+        VideoPlayerAction.Download -> stringRes(Res.string.video_player_settings_action_download_description)
+        VideoPlayerAction.PictureInPicture -> stringRes(Res.string.video_player_settings_action_pip_description)
+        VideoPlayerAction.Cast -> stringRes(Res.string.video_player_settings_action_cast_description)
     }

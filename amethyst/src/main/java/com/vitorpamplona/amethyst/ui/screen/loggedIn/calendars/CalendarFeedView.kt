@@ -38,13 +38,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarEndSeconds
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarStartSeconds
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_empty_feed_subtitle
+import com.vitorpamplona.amethyst.commons.resources.calendar_empty_feed_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_section_past
+import com.vitorpamplona.amethyst.commons.resources.calendar_section_upcoming
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -102,7 +106,7 @@ private fun CalendarFeedLoadedBody(
     ) {
         if (split.upcoming.isNotEmpty()) {
             item(key = "section-upcoming") {
-                SectionHeader(stringRes(R.string.calendar_section_upcoming))
+                SectionHeader(stringRes(Res.string.calendar_section_upcoming))
             }
             items(split.upcoming, key = { it.idHex }) { note ->
                 CalendarEventListCard(note, accountViewModel, nav)
@@ -114,7 +118,7 @@ private fun CalendarFeedLoadedBody(
                 if (split.upcoming.isNotEmpty()) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 }
-                SectionHeader(stringRes(R.string.calendar_section_past))
+                SectionHeader(stringRes(Res.string.calendar_section_past))
             }
             items(split.past, key = { it.idHex }) { note ->
                 CalendarEventListCard(note, accountViewModel, nav)
@@ -137,8 +141,8 @@ private fun SectionHeader(text: String) {
 @Composable
 private fun CalendarFeedEmpty() {
     CalendarEmptyState(
-        title = stringRes(R.string.calendar_empty_feed_title),
-        subtitle = stringRes(R.string.calendar_empty_feed_subtitle),
+        title = stringRes(Res.string.calendar_empty_feed_title),
+        subtitle = stringRes(Res.string.calendar_empty_feed_subtitle),
     )
 }
 

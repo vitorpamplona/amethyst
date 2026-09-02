@@ -50,8 +50,24 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_action_btn_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_indicator_description
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_name_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_current_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_desc_modify_btn_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_desc_modify_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_empty_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_empty_label2
+import com.vitorpamplona.amethyst.commons.resources.follow_set_icon_description
+import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_btn_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_dialog_indicator_first_part
+import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_dialog_indicator_second_part
+import com.vitorpamplona.amethyst.commons.resources.list_management_dialog_title
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -205,7 +221,7 @@ fun PeopleListItem(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     symbol = MaterialSymbols.Groups,
-                    contentDescription = stringRes(R.string.follow_set_icon_description),
+                    contentDescription = stringRes(Res.string.follow_set_icon_description),
                     modifier = Size50ModifierOffset10,
                 )
                 DisplayParticipantNumberAndStatus(
@@ -231,7 +247,7 @@ fun DisplayParticipantNumberAndStatus(
     ) {
         if (privateMembersSize <= 0 && publicMembersSize <= 0) {
             Text(
-                text = stringRes(R.string.follow_set_empty_label2),
+                text = stringRes(Res.string.follow_set_empty_label2),
                 fontSize = Font10SP,
             )
         } else {
@@ -309,7 +325,7 @@ private fun ListOptionsMenu(
 
     if (isExpanded) {
         M3ActionDialog(
-            title = stringRes(R.string.list_management_dialog_title),
+            title = stringRes(Res.string.list_management_dialog_title),
             onDismiss = onDismiss,
         ) {
             M3ActionSection {
@@ -317,7 +333,7 @@ private fun ListOptionsMenu(
                     onListEditMetadata()
                     onDismiss()
                 }
-                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
+                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(Res.string.follow_set_copy_action_btn_label)) {
                     isCopyDialogOpen.value = true
                     onDismiss()
                 }
@@ -360,7 +376,7 @@ private fun ListRenameDialog(
 ) {
     val renameIndicator =
         buildAnnotatedString {
-            append(stringRes(R.string.follow_set_rename_dialog_indicator_first_part) + " ")
+            append(stringRes(Res.string.follow_set_rename_dialog_indicator_first_part) + " ")
             withStyle(
                 SpanStyle(
                     fontWeight = FontWeight.Bold,
@@ -370,13 +386,13 @@ private fun ListRenameDialog(
             ) {
                 append("\"" + currentName + "\"")
             }
-            append(" " + stringRes(R.string.follow_set_rename_dialog_indicator_second_part))
+            append(" " + stringRes(Res.string.follow_set_rename_dialog_indicator_second_part))
         }
 
     AlertDialog(
         onDismissRequest = onDismissDialog,
         title = {
-            Text(text = stringRes(R.string.follow_set_rename_btn_label))
+            Text(text = stringRes(Res.string.follow_set_rename_btn_label))
         },
         text = {
             Column(
@@ -420,10 +436,10 @@ private fun ListModifyDescriptionDialog(
 
     val modifyIndicatorLabel =
         if (currentDescription == null) {
-            stringRes(R.string.follow_set_empty_desc_label)
+            stringRes(Res.string.follow_set_empty_desc_label)
         } else {
             buildAnnotatedString {
-                append(stringRes(R.string.follow_set_current_desc_label) + " ")
+                append(stringRes(Res.string.follow_set_current_desc_label) + " ")
                 withStyle(
                     SpanStyle(
                         fontWeight = FontWeight.Bold,
@@ -439,7 +455,7 @@ private fun ListModifyDescriptionDialog(
     AlertDialog(
         onDismissRequest = onDismissDialog,
         title = {
-            Text(text = stringRes(R.string.follow_set_desc_modify_label))
+            Text(text = stringRes(Res.string.follow_set_desc_modify_label))
         },
         text = {
             Column(
@@ -464,7 +480,7 @@ private fun ListModifyDescriptionDialog(
                     onModifyDescription(updatedDescription.value)
                     onDismissDialog()
                 },
-            ) { Text(text = stringRes(R.string.follow_set_desc_modify_btn_label)) }
+            ) { Text(text = stringRes(Res.string.follow_set_desc_modify_btn_label)) }
         },
         dismissButton = {
             Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
@@ -490,7 +506,7 @@ private fun ListCloneDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = stringRes(R.string.follow_set_copy_dialog_title),
+                    text = stringRes(Res.string.follow_set_copy_dialog_title),
                 )
             }
         },
@@ -499,7 +515,7 @@ private fun ListCloneDialog(
                 verticalArrangement = Arrangement.spacedBy(Size5dp),
             ) {
                 Text(
-                    text = stringRes(R.string.follow_set_copy_indicator_description),
+                    text = stringRes(Res.string.follow_set_copy_indicator_description),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Light,
                     fontStyle = FontStyle.Italic,
@@ -509,7 +525,7 @@ private fun ListCloneDialog(
                     value = optionalNewName ?: "",
                     onValueChange = onCloneNameChange,
                     label = {
-                        Text(text = stringRes(R.string.follow_set_copy_name_label))
+                        Text(text = stringRes(Res.string.follow_set_copy_name_label))
                     },
                 )
                 Spacer(modifier = DoubleVertSpacer)
@@ -518,7 +534,7 @@ private fun ListCloneDialog(
                     value = optionalNewDesc ?: "",
                     onValueChange = onCloneDescChange,
                     label = {
-                        Text(text = stringRes(R.string.follow_set_copy_desc_label))
+                        Text(text = stringRes(Res.string.follow_set_copy_desc_label))
                     },
                 )
             }
@@ -530,7 +546,7 @@ private fun ListCloneDialog(
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.follow_set_copy_action_btn_label))
+                Text(stringRes(Res.string.follow_set_copy_action_btn_label))
             }
         },
         dismissButton = {

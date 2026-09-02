@@ -52,10 +52,30 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_confirm_cancel
+import com.vitorpamplona.amethyst.commons.resources.nest_confirm_force_mute_body
+import com.vitorpamplona.amethyst.commons.resources.nest_confirm_force_mute_confirm
+import com.vitorpamplona.amethyst.commons.resources.nest_confirm_force_mute_title
+import com.vitorpamplona.amethyst.commons.resources.nest_confirm_kick_body
+import com.vitorpamplona.amethyst.commons.resources.nest_confirm_kick_confirm
+import com.vitorpamplona.amethyst.commons.resources.nest_confirm_kick_title
+import com.vitorpamplona.amethyst.commons.resources.nest_demote_listener
+import com.vitorpamplona.amethyst.commons.resources.nest_force_mute
+import com.vitorpamplona.amethyst.commons.resources.nest_force_mute_note
+import com.vitorpamplona.amethyst.commons.resources.nest_kick_action
+import com.vitorpamplona.amethyst.commons.resources.nest_no_app_to_open_link
+import com.vitorpamplona.amethyst.commons.resources.nest_participant_view_profile
+import com.vitorpamplona.amethyst.commons.resources.nest_participant_zap
+import com.vitorpamplona.amethyst.commons.resources.nest_participant_zap_split_unsupported
+import com.vitorpamplona.amethyst.commons.resources.nest_promote_moderator
+import com.vitorpamplona.amethyst.commons.resources.nest_promote_speaker
+import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_template_null
+import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_title
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
@@ -164,9 +184,9 @@ internal fun ParticipantHostActionsSheet(
 
         SheetDialog.Kick -> {
             DestructiveConfirmDialog(
-                title = stringRes(R.string.nest_confirm_kick_title),
-                body = stringRes(R.string.nest_confirm_kick_body, displayName),
-                confirmLabel = stringRes(R.string.nest_confirm_kick_confirm),
+                title = stringRes(Res.string.nest_confirm_kick_title),
+                body = stringRes(Res.string.nest_confirm_kick_body, displayName),
+                confirmLabel = stringRes(Res.string.nest_confirm_kick_confirm),
                 onConfirm = {
                     openDialog = null
                     val roomATag = ATag(event.kind, event.pubKey, event.dTag(), null)
@@ -186,9 +206,9 @@ internal fun ParticipantHostActionsSheet(
 
         SheetDialog.ForceMute -> {
             DestructiveConfirmDialog(
-                title = stringRes(R.string.nest_confirm_force_mute_title),
-                body = stringRes(R.string.nest_confirm_force_mute_body, displayName),
-                confirmLabel = stringRes(R.string.nest_confirm_force_mute_confirm),
+                title = stringRes(Res.string.nest_confirm_force_mute_title),
+                body = stringRes(Res.string.nest_confirm_force_mute_body, displayName),
+                confirmLabel = stringRes(Res.string.nest_confirm_force_mute_confirm),
                 onConfirm = {
                     openDialog = null
                     val roomATag = ATag(event.kind, event.pubKey, event.dTag(), null)
@@ -258,12 +278,12 @@ private fun AudienceActions(
     // NEW_TASK + REORDER_TO_FRONT brings the already-running MainActivity
     // instance forward; the audio-room foreground service keeps audio
     // alive while the user is on the profile screen.
-    ActionRow(stringRes(R.string.nest_participant_view_profile)) {
+    ActionRow(stringRes(Res.string.nest_participant_view_profile)) {
         openProfileInMainActivity(context, target, accountViewModel, toasts.noAppMessage)
         onDismiss()
     }
 
-    ActionRow(stringRes(R.string.nest_participant_zap)) { onZapRequested() }
+    ActionRow(stringRes(Res.string.nest_participant_zap)) { onZapRequested() }
 
     ActionRow(
         text =
@@ -357,12 +377,12 @@ private fun HostActions(
     // role — re-publishing kind-30312 with the same role string is
     // wasted relay traffic and an obvious UX tell.
     if (targetRole != ROLE.SPEAKER) {
-        ActionRow(stringRes(R.string.nest_promote_speaker)) {
+        ActionRow(stringRes(Res.string.nest_promote_speaker)) {
             hostAction(RoomParticipantActions.setRole(event, target, ROLE.SPEAKER))
         }
     }
     if (targetRole != ROLE.MODERATOR) {
-        ActionRow(stringRes(R.string.nest_promote_moderator)) {
+        ActionRow(stringRes(Res.string.nest_promote_moderator)) {
             hostAction(RoomParticipantActions.setRole(event, target, ROLE.MODERATOR))
         }
     }
@@ -370,7 +390,7 @@ private fun HostActions(
     // otherwise the call is a no-op (RoomParticipantActions.demoteToListener)
     // and the visible row sets up a misleading expectation.
     if (targetRole != null && targetRole != ROLE.PARTICIPANT) {
-        ActionRow(stringRes(R.string.nest_demote_listener)) {
+        ActionRow(stringRes(Res.string.nest_demote_listener)) {
             hostAction(RoomParticipantActions.demoteToListener(event, target))
         }
     }
@@ -381,11 +401,11 @@ private fun HostActions(
     // the host doesn't expect a hard mute against non-Amethyst clients.
     if (targetCanSpeak && targetIsBroadcasting) {
         ActionRow(
-            text = stringRes(R.string.nest_force_mute),
+            text = stringRes(Res.string.nest_force_mute),
             color = MaterialTheme.colorScheme.error,
         ) { onForceMuteRequested() }
         Text(
-            text = stringRes(R.string.nest_force_mute_note),
+            text = stringRes(Res.string.nest_force_mute_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
@@ -395,7 +415,7 @@ private fun HostActions(
         )
     }
     ActionRow(
-        text = stringRes(R.string.nest_kick_action),
+        text = stringRes(Res.string.nest_kick_action),
         color = MaterialTheme.colorScheme.error,
     ) { onKickRequested() }
 }
@@ -467,7 +487,7 @@ private fun DestructiveConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.nest_confirm_cancel))
+                Text(stringRes(Res.string.nest_confirm_cancel))
             }
         },
     )
@@ -589,8 +609,8 @@ private data class ParticipantToasts(
 @Composable
 private fun rememberParticipantToasts(): ParticipantToasts =
     ParticipantToasts(
-        failedTitle = stringRes(R.string.nest_toast_host_action_failed_title),
-        failedTemplateNull = stringRes(R.string.nest_toast_host_action_failed_template_null),
-        noAppMessage = stringRes(R.string.nest_no_app_to_open_link),
-        zapSplitUnsupported = stringRes(R.string.nest_participant_zap_split_unsupported),
+        failedTitle = stringRes(Res.string.nest_toast_host_action_failed_title),
+        failedTemplateNull = stringRes(Res.string.nest_toast_host_action_failed_template_null),
+        noAppMessage = stringRes(Res.string.nest_no_app_to_open_link),
+        zapSplitUnsupported = stringRes(Res.string.nest_participant_zap_split_unsupported),
     )

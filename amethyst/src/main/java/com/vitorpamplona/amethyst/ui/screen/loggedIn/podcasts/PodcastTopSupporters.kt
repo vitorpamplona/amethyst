@@ -37,13 +37,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.LiveActivityTopZappersAggregator
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.TopZapperEntry
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ZapContribution
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_zap_anonymous
+import com.vitorpamplona.amethyst.commons.resources.podcast_top_supporters
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -100,7 +102,7 @@ fun PodcastTopSupporters(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = stringRes(R.string.podcast_top_supporters),
+            text = stringRes(Res.string.podcast_top_supporters),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
         )
@@ -127,7 +129,7 @@ private fun SupporterRow(
 
         if (entry.isAnonymous) {
             Text(
-                text = stringRes(R.string.chat_zap_anonymous),
+                text = stringRes(Res.string.chat_zap_anonymous),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f),

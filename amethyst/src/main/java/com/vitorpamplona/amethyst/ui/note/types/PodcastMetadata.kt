@@ -42,14 +42,19 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_by_author
+import com.vitorpamplona.amethyst.commons.resources.podcast_completed
+import com.vitorpamplona.amethyst.commons.resources.podcast_explicit
+import com.vitorpamplona.amethyst.commons.resources.podcast_support_show
+import com.vitorpamplona.amethyst.commons.resources.podcast_view_episodes
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastBadge
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastLinkChip
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastValueSplits
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -122,7 +127,7 @@ fun RenderPodcastMetadata(
 
             author?.let {
                 Text(
-                    text = stringRes(R.string.podcast_by_author, it),
+                    text = stringRes(Res.string.podcast_by_author, it),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
@@ -137,7 +142,7 @@ fun RenderPodcastMetadata(
                 ) {
                     if (isComplete) {
                         PodcastBadge(
-                            label = stringRes(R.string.podcast_completed),
+                            label = stringRes(Res.string.podcast_completed),
                             symbol = MaterialSymbols.CheckCircle,
                             container = MaterialTheme.colorScheme.tertiaryContainer,
                             content = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -145,7 +150,7 @@ fun RenderPodcastMetadata(
                     }
                     if (isExplicit) {
                         PodcastBadge(
-                            label = stringRes(R.string.podcast_explicit),
+                            label = stringRes(Res.string.podcast_explicit),
                             symbol = null,
                             container = MaterialTheme.colorScheme.errorContainer,
                             content = MaterialTheme.colorScheme.onErrorContainer,
@@ -195,7 +200,7 @@ fun RenderPodcastMetadata(
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
                     Text(
-                        text = stringRes(R.string.podcast_support_show),
+                        text = stringRes(Res.string.podcast_support_show),
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.padding(start = 8.dp),
                     )
@@ -236,7 +241,7 @@ fun RenderPodcastMetadata(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = stringRes(R.string.podcast_view_episodes),
+                    text = stringRes(Res.string.podcast_view_episodes),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),

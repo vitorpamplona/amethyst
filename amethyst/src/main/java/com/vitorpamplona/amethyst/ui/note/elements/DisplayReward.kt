@@ -53,11 +53,13 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bounty_label
+import com.vitorpamplona.amethyst.commons.resources.pledge_amount_in_sats
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplies
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
@@ -127,7 +129,7 @@ private fun RenderPledgeAmount(
     HeaderPill(
         symbol = MaterialSymbols.Bolt,
         text = reward,
-        contentDescription = stringRes(R.string.bounty_label),
+        contentDescription = stringRes(Res.string.bounty_label),
         iconTint = if (hasPledge) BitcoinOrange else null,
         onClick = onClick,
     )
@@ -223,7 +225,7 @@ fun AddBountyAmountDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.pledge_amount_in_sats)) },
+                        label = { Text(text = stringRes(Res.string.pledge_amount_in_sats)) },
                         value = postViewModel.nextAmount,
                         onValueChange = { postViewModel.nextAmount = it },
                         keyboardOptions =

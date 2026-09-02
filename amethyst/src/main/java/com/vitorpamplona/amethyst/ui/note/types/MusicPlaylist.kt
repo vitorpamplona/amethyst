@@ -59,10 +59,16 @@ import coil3.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_collaborative
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_edit_action
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_loading_track
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_private
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_unknown_track
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -189,16 +195,16 @@ fun MusicPlaylistHeader(
                     color = MaterialTheme.colorScheme.grayText,
                 )
                 if (isCollaborative) {
-                    PlaylistTag(text = stringRes(R.string.music_playlist_collaborative))
+                    PlaylistTag(text = stringRes(Res.string.music_playlist_collaborative))
                 }
                 if (isPrivate) {
-                    PlaylistTag(text = stringRes(R.string.music_playlist_private))
+                    PlaylistTag(text = stringRes(Res.string.music_playlist_private))
                 }
                 if (isOwnPlaylist) {
                     Spacer(Modifier.weight(1f))
                     Icon(
                         symbol = MaterialSymbols.Edit,
-                        contentDescription = stringRes(R.string.music_playlist_edit_action),
+                        contentDescription = stringRes(Res.string.music_playlist_edit_action),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier =
                             Modifier
@@ -420,7 +426,7 @@ private fun PlaylistTrackRow(
     // EventFinderFilterAssembler subscription, so the row pulls the track itself if only
     // the address is known.
     val trackEvent by observeNoteEvent<MusicTrackEvent>(trackNote, accountViewModel)
-    val title = trackEvent?.title() ?: stringRes(R.string.music_playlist_unknown_track)
+    val title = trackEvent?.title() ?: stringRes(Res.string.music_playlist_unknown_track)
     val artist = trackEvent?.artist()
     val duration = trackEvent?.duration()
     val cover = trackEvent?.image()
@@ -521,7 +527,7 @@ private fun MissingPlaylistTrackRow(position: Int) {
         TrackCoverPlaceholder()
         Spacer(Modifier.padding(start = 10.dp))
         Text(
-            text = stringRes(R.string.music_playlist_loading_track),
+            text = stringRes(Res.string.music_playlist_loading_track),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,

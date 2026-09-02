@@ -35,11 +35,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_join_request
+import com.vitorpamplona.amethyst.commons.resources.relay_leave_request
+import com.vitorpamplona.amethyst.commons.resources.relay_member_added
+import com.vitorpamplona.amethyst.commons.resources.relay_member_removed
+import com.vitorpamplona.amethyst.commons.resources.relay_members_added
+import com.vitorpamplona.amethyst.commons.resources.relay_members_count
+import com.vitorpamplona.amethyst.commons.resources.relay_members_removed
+import com.vitorpamplona.amethyst.commons.resources.relay_membership_list
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -59,8 +67,8 @@ fun RenderRelayMembershipList(
 
     RelayMemberEventCard(
         icon = MaterialSymbols.People,
-        title = stringRes(R.string.relay_membership_list),
-        subtitle = stringRes(R.string.relay_members_count, memberCount),
+        title = stringRes(Res.string.relay_membership_list),
+        subtitle = stringRes(Res.string.relay_members_count, memberCount),
         nav = nav,
         relayPubKey = noteEvent.pubKey,
     )
@@ -76,9 +84,9 @@ fun RenderRelayAddMember(
     val memberKeys = remember(noteEvent) { noteEvent.memberPubKeys() }
     val title =
         if (memberKeys.size == 1) {
-            stringRes(R.string.relay_member_added)
+            stringRes(Res.string.relay_member_added)
         } else {
-            stringRes(R.string.relay_members_added, memberKeys.size)
+            stringRes(Res.string.relay_members_added, memberKeys.size)
         }
     val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
 
@@ -100,9 +108,9 @@ fun RenderRelayRemoveMember(
     val memberKeys = remember(noteEvent) { noteEvent.memberPubKeys() }
     val title =
         if (memberKeys.size == 1) {
-            stringRes(R.string.relay_member_removed)
+            stringRes(Res.string.relay_member_removed)
         } else {
-            stringRes(R.string.relay_members_removed, memberKeys.size)
+            stringRes(Res.string.relay_members_removed, memberKeys.size)
         }
     val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
 
@@ -122,7 +130,7 @@ fun RenderRelayJoinRequest(
 ) {
     RelayMemberEventCard(
         icon = MaterialSymbols.PersonAdd,
-        title = stringRes(R.string.relay_join_request),
+        title = stringRes(Res.string.relay_join_request),
         subtitle = null,
         nav = nav,
         relayPubKey = null,
@@ -137,7 +145,7 @@ fun RenderRelayLeaveRequest(
 ) {
     RelayMemberEventCard(
         icon = MaterialSymbols.AutoMirrored.ExitToApp,
-        title = stringRes(R.string.relay_leave_request),
+        title = stringRes(Res.string.relay_leave_request),
         subtitle = null,
         nav = nav,
         relayPubKey = null,

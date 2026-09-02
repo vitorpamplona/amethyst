@@ -39,6 +39,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.max_hashtag_limit_explainer
+import com.vitorpamplona.amethyst.commons.resources.max_hashtag_limit_title
+import com.vitorpamplona.amethyst.commons.resources.report_warning_threshold_explainer
+import com.vitorpamplona.amethyst.commons.resources.report_warning_threshold_title
+import com.vitorpamplona.amethyst.commons.resources.security_unlimited
+import com.vitorpamplona.amethyst.commons.resources.show_sensitive_content_explainer
+import com.vitorpamplona.amethyst.commons.resources.show_sensitive_content_title
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -96,8 +104,8 @@ private fun SensitiveContentTile(accountViewModel: AccountViewModel) {
 
     SettingsBlockTile(
         icon = MaterialSymbols.Visibility,
-        title = stringRes(R.string.show_sensitive_content_title),
-        description = stringRes(R.string.show_sensitive_content_explainer),
+        title = stringRes(Res.string.show_sensitive_content_title),
+        description = stringRes(Res.string.show_sensitive_content_explainer),
     ) {
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, type ->
@@ -156,8 +164,8 @@ private fun WarnReportsTile(accountViewModel: AccountViewModel) {
         onCheckedChange = accountViewModel::updateWarnReports,
     )
     SettingsSubControlRow(
-        title = stringRes(R.string.report_warning_threshold_title),
-        description = stringRes(R.string.report_warning_threshold_explainer),
+        title = stringRes(Res.string.report_warning_threshold_title),
+        description = stringRes(Res.string.report_warning_threshold_explainer),
         enabled = warnReports,
     ) {
         SettingsStepper(
@@ -178,14 +186,14 @@ private fun MaxHashtagsTile(accountViewModel: AccountViewModel) {
 
     SettingsControlRow(
         icon = MaterialSymbols.Tag,
-        title = stringRes(R.string.max_hashtag_limit_title),
-        description = stringRes(R.string.max_hashtag_limit_explainer),
+        title = stringRes(Res.string.max_hashtag_limit_title),
+        description = stringRes(Res.string.max_hashtag_limit_explainer),
     ) {
         SettingsStepper(
             value = maxHashtags,
             min = 0,
             max = 99,
-            unsetLabel = stringRes(R.string.security_unlimited),
+            unsetLabel = stringRes(Res.string.security_unlimited),
             onValueChange = accountViewModel::updateMaxHashtagLimit,
         )
     }

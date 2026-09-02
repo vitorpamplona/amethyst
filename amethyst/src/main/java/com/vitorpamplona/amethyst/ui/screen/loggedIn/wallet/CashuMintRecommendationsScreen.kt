@@ -66,6 +66,12 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_add_recommendation
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_recommendation
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_my_recommendations
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_no_recommendations
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -101,7 +107,7 @@ fun CashuMintRecommendationsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.cashu_settings_my_recommendations)) },
+                title = { Text(stringRes(Res.string.cashu_settings_my_recommendations)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -148,7 +154,7 @@ fun CashuMintRecommendationsScreen(
     if (target != null) {
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text(stringRes(R.string.cashu_settings_delete_confirm_title)) },
+            title = { Text(stringRes(Res.string.cashu_settings_delete_confirm_title)) },
             text = {
                 Text(
                     stringRes(
@@ -163,7 +169,7 @@ fun CashuMintRecommendationsScreen(
                         viewModel.deleteRecommendation(target)
                         pendingDelete = null
                     },
-                ) { Text(stringRes(R.string.cashu_settings_delete_recommendation)) }
+                ) { Text(stringRes(Res.string.cashu_settings_delete_recommendation)) }
             },
             dismissButton = {
                 TextButton(onClick = { pendingDelete = null }) {
@@ -248,7 +254,7 @@ private fun AddRecommendationRow(
         OutlinedTextField(
             value = input,
             onValueChange = onInputChange,
-            label = { Text(stringRes(R.string.cashu_settings_add_recommendation)) },
+            label = { Text(stringRes(Res.string.cashu_settings_add_recommendation)) },
             placeholder = { Text("https://mint.example.com") },
             singleLine = true,
             modifier = Modifier.weight(1f),
@@ -257,7 +263,7 @@ private fun AddRecommendationRow(
         IconButton(onClick = onAdd, enabled = canAdd) {
             Icon(
                 symbol = MaterialSymbols.Add,
-                contentDescription = stringRes(R.string.cashu_settings_add_recommendation),
+                contentDescription = stringRes(Res.string.cashu_settings_add_recommendation),
                 modifier = Modifier.size(22.dp),
                 tint =
                     if (canAdd) {
@@ -322,7 +328,7 @@ private fun EmptyRecommendationsHint() {
     ) {
         Text(
             modifier = Modifier.padding(16.dp),
-            text = stringRes(R.string.cashu_settings_no_recommendations),
+            text = stringRes(Res.string.cashu_settings_no_recommendations),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -382,7 +388,7 @@ private fun RecommendationRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     symbol = MaterialSymbols.Delete,
-                    contentDescription = stringRes(R.string.cashu_settings_delete_recommendation),
+                    contentDescription = stringRes(Res.string.cashu_settings_delete_recommendation),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.error,
                 )

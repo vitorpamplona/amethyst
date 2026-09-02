@@ -31,9 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_content_warning
+import com.vitorpamplona.amethyst.commons.resources.remove_content_warning
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -52,7 +54,7 @@ fun MarkAsSensitiveButton(
             if (!isActive) {
                 Icon(
                     symbol = MaterialSymbols.Visibility,
-                    contentDescription = stringRes(R.string.add_content_warning),
+                    contentDescription = stringRes(Res.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -61,7 +63,7 @@ fun MarkAsSensitiveButton(
                 )
                 Icon(
                     symbol = MaterialSymbols.Warning,
-                    contentDescription = stringRes(R.string.add_content_warning),
+                    contentDescription = stringRes(Res.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -71,7 +73,7 @@ fun MarkAsSensitiveButton(
             } else {
                 Icon(
                     symbol = MaterialSymbols.VisibilityOff,
-                    contentDescription = stringRes(id = R.string.remove_content_warning),
+                    contentDescription = stringRes(id = Res.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -80,7 +82,7 @@ fun MarkAsSensitiveButton(
                 )
                 Icon(
                     symbol = MaterialSymbols.Warning,
-                    contentDescription = stringRes(id = R.string.remove_content_warning),
+                    contentDescription = stringRes(id = Res.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)

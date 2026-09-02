@@ -44,9 +44,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.profile_image_of_user
+import com.vitorpamplona.amethyst.commons.resources.unknown_author
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
@@ -108,7 +111,7 @@ fun DisplayBlankAuthor(
 
     RobohashAsyncImage(
         robot = "authornotfound",
-        contentDescription = stringRes(R.string.unknown_author),
+        contentDescription = stringRes(Res.string.unknown_author),
         modifier = nullModifier,
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
@@ -629,9 +632,9 @@ fun InnerUserPicture(
         model = userPicture,
         contentDescription =
             if (userName != null) {
-                stringRes(id = R.string.profile_image_of_user, userName)
+                stringRes(id = Res.string.profile_image_of_user, userName)
             } else {
-                stringRes(id = R.string.profile_image)
+                stringRes(id = Res.string.profile_image)
             },
         modifier = myImageModifier,
         contentScale = ContentScale.Crop,

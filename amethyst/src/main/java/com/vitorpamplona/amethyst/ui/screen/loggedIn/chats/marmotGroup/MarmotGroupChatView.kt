@@ -46,6 +46,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_default_name
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -287,7 +289,7 @@ private fun MarmotGroupFileUploadDialog(
                 remember(nostrGroupId) {
                     accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
                 }
-            Text(chatroom.displayName.value ?: stringRes(R.string.marmot_group_default_name))
+            Text(chatroom.displayName.value ?: stringRes(Res.string.marmot_group_default_name))
         },
         upload = {
             scope.launch(Dispatchers.IO) {

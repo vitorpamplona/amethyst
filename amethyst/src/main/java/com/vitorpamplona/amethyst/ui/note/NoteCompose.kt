@@ -58,9 +58,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.textNoteModifications
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.approve
+import com.vitorpamplona.amethyst.commons.resources.draft
+import com.vitorpamplona.amethyst.commons.resources.group_picture
+import com.vitorpamplona.amethyst.commons.resources.jump_to_parent_reply
+import com.vitorpamplona.amethyst.commons.resources.one_year_plus
+import com.vitorpamplona.amethyst.commons.resources.pinned_notes
+import com.vitorpamplona.amethyst.commons.resources.private_rumor_mark
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
@@ -70,10 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.isCommunityDefinition
 import com.vitorpamplona.amethyst.commons.ui.note.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.textNoteModifications
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -857,7 +865,7 @@ fun RenderApproveButton(
             accountViewModel.approveCommunityPost(post, community)
         },
     ) {
-        Text(stringRes(R.string.approve))
+        Text(stringRes(Res.string.approve))
     }
 }
 
@@ -1811,7 +1819,7 @@ fun DisplayExpiration(
     // for the pill: clamp it.
     val text =
         if (expirationDate - TimeUtils.now() > TimeUtils.ONE_YEAR) {
-            stringRes(R.string.one_year_plus)
+            stringRes(Res.string.one_year_plus)
         } else {
             timeAheadNoDot(expirationDate, context)
         }
@@ -1846,12 +1854,12 @@ fun DisplayOtsIfInOriginal(
 
 @Composable
 fun DisplayDraft() {
-    QuietMark(text = stringRes(R.string.draft))
+    QuietMark(text = stringRes(Res.string.draft))
 }
 
 @Composable
 fun DisplayDraftChat() {
-    QuietMark(text = stringRes(R.string.draft))
+    QuietMark(text = stringRes(Res.string.draft))
 }
 
 @Composable
@@ -1980,7 +1988,7 @@ fun FirstUserInfoRow(
 fun PinnedMark() {
     QuietMark(
         symbol = MaterialSymbols.PushPin,
-        contentDescription = stringRes(R.string.pinned_notes),
+        contentDescription = stringRes(Res.string.pinned_notes),
     )
 }
 
@@ -1988,7 +1996,7 @@ fun PinnedMark() {
 fun PrivateRumorMark(accountViewModel: AccountViewModel) {
     QuietMark(
         symbol = MaterialSymbols.Lock,
-        contentDescription = stringRes(R.string.private_rumor_mark),
+        contentDescription = stringRes(Res.string.private_rumor_mark),
         onClick = {
             accountViewModel.toastManager.toast(
                 R.string.private_rumor_info_title,
@@ -2020,7 +2028,7 @@ fun JumpToParentReplyButton(
     ) {
         Icon(
             symbol = MaterialSymbols.KeyboardArrowUp,
-            contentDescription = stringRes(R.string.jump_to_parent_reply),
+            contentDescription = stringRes(Res.string.jump_to_parent_reply),
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
@@ -2152,7 +2160,7 @@ private fun ChannelNotePicture(
     RobohashFallbackAsyncImage(
         robot = baseChannel.idHex,
         model = model,
-        contentDescription = stringRes(R.string.group_picture),
+        contentDescription = stringRes(Res.string.group_picture),
         modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),

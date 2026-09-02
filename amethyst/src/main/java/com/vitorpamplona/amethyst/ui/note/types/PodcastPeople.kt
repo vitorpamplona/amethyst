@@ -41,8 +41,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_hosts_and_guests
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -78,7 +79,7 @@ fun PodcastPeople(
         verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
         Text(
-            text = stringRes(R.string.podcast_hosts_and_guests),
+            text = stringRes(Res.string.podcast_hosts_and_guests),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.grayText,
         )

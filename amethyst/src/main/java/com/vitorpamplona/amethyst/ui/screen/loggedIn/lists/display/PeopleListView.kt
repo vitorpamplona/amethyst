@@ -31,10 +31,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.remove_user_from_the_list
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserComposeNoAction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -98,7 +99,7 @@ fun PeopleListItem(
             ) {
                 Icon(
                     symbol = MaterialSymbols.PersonRemove,
-                    contentDescription = stringRes(R.string.remove_user_from_the_list),
+                    contentDescription = stringRes(Res.string.remove_user_from_the_list),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }

@@ -54,6 +54,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_action
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -191,7 +196,7 @@ private fun SettingsSearchEmptyState(
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Text(
-            text = stringRes(R.string.settings_search_no_results, query),
+            text = stringRes(Res.string.settings_search_no_results, query),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -248,12 +253,12 @@ private fun ResetMarmotStateDialog(
         },
         title = {
             Text(
-                text = stringRes(R.string.reset_marmot_confirm_title),
+                text = stringRes(Res.string.reset_marmot_confirm_title),
                 textAlign = TextAlign.Center,
             )
         },
         text = {
-            Text(text = stringRes(R.string.reset_marmot_confirm_body))
+            Text(text = stringRes(Res.string.reset_marmot_confirm_body))
         },
         confirmButton = {
             Button(
@@ -263,7 +268,7 @@ private fun ResetMarmotStateDialog(
                         containerColor = MaterialTheme.colorScheme.error,
                     ),
             ) {
-                Text(stringRes(R.string.reset_marmot_confirm_action))
+                Text(stringRes(Res.string.reset_marmot_confirm_action))
             }
         },
         dismissButton = {

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
 
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
-import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid

@@ -41,9 +41,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.settings_search_placeholder
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -135,7 +137,7 @@ private fun CompactSettingsSearchField(
                 ) {
                     if (query.isEmpty()) {
                         Text(
-                            text = stringRes(R.string.settings_search_placeholder),
+                            text = stringRes(Res.string.settings_search_placeholder),
                             style = MaterialTheme.typography.bodyLarge,
                             color = colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -148,7 +150,7 @@ private fun CompactSettingsSearchField(
                     IconButton(onClick = onClear) {
                         Icon(
                             symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.clear),
+                            contentDescription = stringRes(Res.string.clear),
                             modifier = Modifier.size(20.dp),
                             tint = LocalContentColor.current,
                         )

@@ -37,6 +37,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found_editing
+import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found_examples
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -105,13 +108,13 @@ private fun Explanation(postViewModel: Nip65RelayListViewModel) {
     Card(modifier = MaterialTheme.colorScheme.imageModifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(id = R.string.outbox_relays_not_found_editing),
+                text = stringRes(id = Res.string.outbox_relays_not_found_editing),
             )
 
             Spacer(modifier = StdVertSpacer)
 
             Text(
-                text = stringRes(id = R.string.outbox_relays_not_found_examples),
+                text = stringRes(id = Res.string.outbox_relays_not_found_examples),
             )
         }
     }

@@ -50,6 +50,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_cashu_description
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_choose_type
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_description
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_description
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -68,7 +75,7 @@ fun AddWalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_add_choose_type)) },
+                title = { Text(stringRes(Res.string.wallet_add_choose_type)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -90,8 +97,8 @@ fun AddWalletScreen(
         ) {
             WalletTypeCard(
                 icon = MaterialSymbols.Bolt,
-                title = stringRes(R.string.wallet_add_nwc_title),
-                description = stringRes(R.string.wallet_add_nwc_description),
+                title = stringRes(Res.string.wallet_add_nwc_title),
+                description = stringRes(Res.string.wallet_add_nwc_description),
                 // Replace the chooser in the back stack rather than stacking
                 // the form on top: once the user picks a wallet type, the
                 // chooser has done its job. Without this, completing the
@@ -102,7 +109,7 @@ fun AddWalletScreen(
             WalletTypeCard(
                 icon = MaterialSymbols.AccountBalanceWallet,
                 title = stringRes(R.string.wallet_add_cashu_title),
-                description = stringRes(R.string.wallet_add_cashu_description),
+                description = stringRes(Res.string.wallet_add_cashu_description),
                 // Route through the find-or-create wizard, not straight to the
                 // mint manager: a portable NIP-60 wallet may already exist on
                 // relays, and creating one here would clobber it (kind:17375 is
@@ -111,8 +118,8 @@ fun AddWalletScreen(
             )
             WalletTypeCard(
                 icon = MaterialSymbols.Bolt,
-                title = stringRes(R.string.wallet_add_clink_title),
-                description = stringRes(R.string.wallet_add_clink_description),
+                title = stringRes(Res.string.wallet_add_clink_title),
+                description = stringRes(Res.string.wallet_add_clink_description),
                 onClick = { nav.popUpTo(Route.WalletAddClinkDebit(), Route.WalletAdd::class) },
             )
         }

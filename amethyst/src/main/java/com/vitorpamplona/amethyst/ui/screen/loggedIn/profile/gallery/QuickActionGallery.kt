@@ -23,9 +23,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_gallery_alert_body_v2
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_gallery_title
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -56,10 +59,10 @@ fun DeleteFromGalleryDialog(
     onDismiss: () -> Unit,
 ) {
     QuickActionAlertDialogOneButton(
-        title = stringRes(R.string.quick_action_request_deletion_gallery_title),
-        textContent = stringRes(R.string.quick_action_request_deletion_gallery_alert_body_v2),
+        title = stringRes(Res.string.quick_action_request_deletion_gallery_title),
+        textContent = stringRes(Res.string.quick_action_request_deletion_gallery_alert_body_v2),
         buttonIcon = MaterialSymbols.Delete,
-        buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
+        buttonText = stringRes(Res.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
             accountViewModel.removeFromMediaGallery(note)
             onDismiss()

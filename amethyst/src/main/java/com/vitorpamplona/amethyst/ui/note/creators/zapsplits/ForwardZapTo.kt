@@ -39,7 +39,12 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.load_from_text
+import com.vitorpamplona.amethyst.commons.resources.zap_split_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user
+import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user_placeholder
+import com.vitorpamplona.amethyst.commons.resources.zap_split_title
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
@@ -72,21 +77,21 @@ fun ForwardZapTo(
             ZapSplitIcon()
 
             Text(
-                text = stringRes(R.string.zap_split_title),
+                text = stringRes(Res.string.zap_split_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(horizontal = 10.dp).weight(1f),
             )
 
             OutlinedButton(onClick = { postViewModel.updateZapFromText() }) {
-                Text(text = stringRes(R.string.load_from_text))
+                Text(text = stringRes(Res.string.load_from_text))
             }
         }
 
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringRes(R.string.zap_split_explainer),
+            text = stringRes(Res.string.zap_split_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
@@ -129,11 +134,11 @@ fun ForwardZapTo(
             onTextChanged = postViewModel::onForwardZapTextChanged,
             inputTransformation = MentionPreservingInputTransformation,
             outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
-            label = { Text(text = stringRes(R.string.zap_split_search_and_add_user)) },
+            label = { Text(text = stringRes(Res.string.zap_split_search_and_add_user)) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.zap_split_search_and_add_user_placeholder),
+                    text = stringRes(Res.string.zap_split_search_and_add_user_placeholder),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

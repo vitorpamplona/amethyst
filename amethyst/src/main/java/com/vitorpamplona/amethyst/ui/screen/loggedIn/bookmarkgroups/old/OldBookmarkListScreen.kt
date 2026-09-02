@@ -51,8 +51,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.migrate_bookmarks_button
+import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_title
+import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
@@ -138,7 +143,7 @@ private fun RenderOldBookmarkScreen(
         isInvertedLayout = false,
         topBar = {
             Column {
-                TopBarWithBackButton(stringRes(id = R.string.old_bookmarks_title), nav)
+                TopBarWithBackButton(stringRes(id = Res.string.old_bookmarks_title), nav)
                 SecondaryTabRow(
                     containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
@@ -148,12 +153,12 @@ private fun RenderOldBookmarkScreen(
                     Tab(
                         selected = pagerState.currentPage == 0,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = stringRes(R.string.private_bookmarks)) },
+                        text = { Text(text = stringRes(Res.string.private_bookmarks)) },
                     )
                     Tab(
                         selected = pagerState.currentPage == 1,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = stringRes(R.string.public_bookmarks)) },
+                        text = { Text(text = stringRes(Res.string.public_bookmarks)) },
                     )
                 }
             }
@@ -161,11 +166,11 @@ private fun RenderOldBookmarkScreen(
         floatingButton = {
             FabBottomBarPadded(nav) {
                 ExtendedFloatingActionButton(
-                    text = { Text(stringRes(R.string.migrate_bookmarks_button)) },
+                    text = { Text(stringRes(Res.string.migrate_bookmarks_button)) },
                     icon = {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.DriveFileMove,
-                            contentDescription = stringRes(R.string.migrate_bookmarks_button),
+                            contentDescription = stringRes(Res.string.migrate_bookmarks_button),
                         )
                     },
                     onClick = {

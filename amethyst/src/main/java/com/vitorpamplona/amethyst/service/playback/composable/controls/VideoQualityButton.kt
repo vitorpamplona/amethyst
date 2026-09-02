@@ -52,9 +52,11 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_settings_video_quality
+import com.vitorpamplona.amethyst.commons.resources.video_quality_auto
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -108,7 +110,7 @@ fun VideoQualityButton(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Settings,
-                    contentDescription = stringRes(id = R.string.call_settings_video_quality),
+                    contentDescription = stringRes(id = Res.string.call_settings_video_quality),
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Size20Modifier,
                 )
@@ -192,7 +194,7 @@ private fun VideoQualityChoices(
         TextButton(colors = colors, onClick = onSelectAuto) {
             val suffix = currentShortSide?.let { " (${it}p)" } ?: ""
             Text(
-                stringRes(R.string.video_quality_auto) + suffix,
+                stringRes(Res.string.video_quality_auto) + suffix,
                 fontWeight = if (isAuto) FontWeight(1000) else FontWeight(400),
             )
         }

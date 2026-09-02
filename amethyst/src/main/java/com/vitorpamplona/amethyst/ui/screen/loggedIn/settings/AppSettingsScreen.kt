@@ -74,6 +74,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accent_color
+import com.vitorpamplona.amethyst.commons.resources.accent_color_description
+import com.vitorpamplona.amethyst.commons.resources.application_preferences
+import com.vitorpamplona.amethyst.commons.resources.language
+import com.vitorpamplona.amethyst.commons.resources.language_description
 import com.vitorpamplona.amethyst.model.AccentColorType
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
@@ -111,7 +117,7 @@ fun SettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.application_preferences), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.application_preferences), nav)
         },
     ) {
         SettingsScreen(accountViewModel.settings.uiSettingsFlow, Modifier.padding(it))
@@ -126,7 +132,7 @@ fun SettingsScreenPreview() {
     ThemeComparisonRow {
         Scaffold(
             topBar = {
-                TopBarWithBackButton(stringRes(id = R.string.application_preferences), EmptyNav())
+                TopBarWithBackButton(stringRes(id = Res.string.application_preferences), EmptyNav())
             },
         ) { padding ->
             SettingsScreen(UiSettingsFlow(), Modifier.padding(padding))
@@ -422,8 +428,8 @@ private fun AccentColorTile(sharedPrefs: UiSettingsFlow) {
 
     SettingsBlockTile(
         icon = MaterialSymbols.Circle,
-        title = stringRes(R.string.accent_color),
-        description = stringRes(R.string.accent_color_description),
+        title = stringRes(Res.string.accent_color),
+        description = stringRes(Res.string.accent_color_description),
     ) {
         // FlowRow so every swatch stays visible (wraps to a second line on narrow screens) instead
         // of scrolling the last ones off-edge with no affordance.
@@ -462,8 +468,8 @@ private fun LanguageTile(sharedPrefs: UiSettingsFlow) {
 
     SettingsControlRow(
         icon = MaterialSymbols.Language,
-        title = stringRes(R.string.language),
-        description = stringRes(R.string.language_description),
+        title = stringRes(Res.string.language),
+        description = stringRes(Res.string.language_description),
         onClick = { showPicker = true },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

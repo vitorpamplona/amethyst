@@ -34,10 +34,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accepted_by_relays
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -118,7 +119,7 @@ internal fun RenderAcceptedByRelaysGallery(
         Box(modifier = NotificationIconModifier) {
             Icon(
                 symbol = MaterialSymbols.Dns,
-                contentDescription = stringRes(id = R.string.accepted_by_relays),
+                contentDescription = stringRes(id = Res.string.accepted_by_relays),
                 modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )

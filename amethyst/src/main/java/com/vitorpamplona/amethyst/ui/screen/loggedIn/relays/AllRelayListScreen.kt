@@ -48,6 +48,11 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.default_relays
+import com.vitorpamplona.amethyst.commons.resources.export_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.export_as_text
+import com.vitorpamplona.amethyst.commons.resources.export_as_zip
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -496,7 +501,7 @@ fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringRes(R.string.default_relays))
+        Text(stringRes(Res.string.default_relays))
     }
 }
 
@@ -513,7 +518,7 @@ fun ResetIndexerRelays(postViewModel: IndexerRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringRes(R.string.default_relays))
+        Text(stringRes(Res.string.default_relays))
     }
 }
 
@@ -528,7 +533,7 @@ fun ResetDMRelays(postViewModel: DMRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringRes(R.string.default_relays))
+        Text(stringRes(Res.string.default_relays))
     }
 }
 
@@ -595,20 +600,20 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
 
     if (expanded) {
         M3ActionDialog(
-            title = stringRes(R.string.export_actions_dialog_title),
+            title = stringRes(Res.string.export_actions_dialog_title),
             onDismiss = { expanded = false },
         ) {
             M3ActionSection {
                 M3ActionRow(
                     icon = MaterialSymbols.Description,
-                    text = stringRes(R.string.export_as_text),
+                    text = stringRes(Res.string.export_as_text),
                 ) {
                     expanded = false
                     RelayExporter(context).export(collection())
                 }
                 M3ActionRow(
                     icon = MaterialSymbols.FolderZip,
-                    text = stringRes(R.string.export_as_zip),
+                    text = stringRes(Res.string.export_as_zip),
                 ) {
                     expanded = false
                     RelayZipExporter(context).export(collection())

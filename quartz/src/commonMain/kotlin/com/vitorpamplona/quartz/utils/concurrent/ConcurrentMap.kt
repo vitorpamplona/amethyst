@@ -72,6 +72,23 @@ expect class ConcurrentMap<K : Any, V : Any>() {
      */
     fun remove(key: K): V?
 
+    /**
+     * Atomically insert [value] only if [key] is absent.
+     * Returns the previous value, or null if [value] was inserted.
+     */
+    fun putIfAbsent(
+        key: K,
+        value: V,
+    ): V?
+
+    /** Atomically remove [key] only while it still maps to [value]. */
+    fun remove(
+        key: K,
+        value: V,
+    ): Boolean
+
+    fun clear()
+
     fun size(): Int
 
     /** A point-in-time copy of the entries — safe to iterate without holding a lock. */

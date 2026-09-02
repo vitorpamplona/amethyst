@@ -53,7 +53,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.VideoPostKind
+import com.vitorpamplona.amethyst.commons.model.VideoPostKind
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_caption
+import com.vitorpamplona.amethyst.commons.resources.add_caption_example
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
@@ -172,7 +181,7 @@ fun ImageVideoPost(
     }
 
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.add_caption)) },
+        label = { Text(text = stringRes(Res.string.add_caption)) },
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -183,7 +192,7 @@ fun ImageVideoPost(
         onValueChange = { postViewModel.caption = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.add_caption_example),
+                text = stringRes(Res.string.add_caption_example),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -226,12 +235,12 @@ fun ImageVideoPost(
         verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
         Text(
-            text = stringRes(R.string.media_compression_quality_label),
+            text = stringRes(Res.string.media_compression_quality_label),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = stringRes(R.string.media_compression_quality_explainer),
+            text = stringRes(Res.string.media_compression_quality_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
             maxLines = 5,
@@ -244,11 +253,11 @@ fun ImageVideoPost(
             Text(
                 text =
                     when (postViewModel.mediaQualitySlider) {
-                        0 -> stringRes(R.string.media_compression_quality_low)
-                        1 -> stringRes(R.string.media_compression_quality_medium)
-                        2 -> stringRes(R.string.media_compression_quality_high)
-                        3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                        else -> stringRes(R.string.media_compression_quality_medium)
+                        0 -> stringRes(Res.string.media_compression_quality_low)
+                        1 -> stringRes(Res.string.media_compression_quality_medium)
+                        2 -> stringRes(Res.string.media_compression_quality_high)
+                        3 -> stringRes(Res.string.media_compression_quality_uncompressed)
+                        else -> stringRes(Res.string.media_compression_quality_medium)
                     },
                 modifier = Modifier.align(Alignment.Center),
             )

@@ -52,6 +52,9 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_label
+import com.vitorpamplona.amethyst.commons.resources.cashu_redeem
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
@@ -181,7 +184,7 @@ fun CashuPreviewNew(
         }
 
         Text(
-            text = stringRes(R.string.cashu_mint_label, token.mint.removePrefix("https://")),
+            text = stringRes(Res.string.cashu_mint_label, token.mint.removePrefix("https://")),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -221,7 +224,7 @@ fun CashuPreviewNew(
                 }
                 Spacer(StdHorzSpacer)
 
-                Text(stringRes(R.string.cashu_redeem))
+                Text(stringRes(Res.string.cashu_redeem))
             }
 
             Spacer(modifier = StdHorzSpacer)

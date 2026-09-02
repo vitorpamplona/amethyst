@@ -56,12 +56,20 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.import_follow_list
+import com.vitorpamplona.amethyst.commons.resources.import_follows_tips
+import com.vitorpamplona.amethyst.commons.resources.name_search_npub1_alice_example_com
+import com.vitorpamplona.amethyst.commons.resources.profile_to_import_from
+import com.vitorpamplona.amethyst.commons.resources.skip_for_now
+import com.vitorpamplona.amethyst.commons.resources.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust
+import com.vitorpamplona.amethyst.commons.resources.supports_npub_nip_05_hex_and_namecoin_bit_d_id
+import com.vitorpamplona.amethyst.commons.resources.tip
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -157,12 +165,12 @@ private fun InputSelectUserBody(
                 viewModel.identifier = it
                 viewModel.userSuggestions.processCurrentWord(it)
             },
-            label = { Text(stringRes(R.string.profile_to_import_from)) },
-            placeholder = { Text(stringRes(R.string.name_search_npub1_alice_example_com)) },
+            label = { Text(stringRes(Res.string.profile_to_import_from)) },
+            placeholder = { Text(stringRes(Res.string.name_search_npub1_alice_example_com)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            supportingText = { Text(stringRes(R.string.supports_npub_nip_05_hex_and_namecoin_bit_d_id)) },
+            supportingText = { Text(stringRes(Res.string.supports_npub_nip_05_hex_and_namecoin_bit_d_id)) },
         )
 
         Spacer(Modifier.height(8.dp))
@@ -179,7 +187,7 @@ private fun InputSelectUserBody(
         Spacer(Modifier.height(16.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = nav::popBack) { Text(stringRes(R.string.skip_for_now)) }
+            TextButton(onClick = nav::popBack) { Text(stringRes(Res.string.skip_for_now)) }
         }
     }
 }
@@ -196,14 +204,14 @@ private fun ImportHeader() {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                stringRes(R.string.import_follow_list),
+                stringRes(Res.string.import_follow_list),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            stringRes(R.string.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust),
+            stringRes(Res.string.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -264,14 +272,14 @@ fun CustomWatchResponses(
             modifier = modifier.padding(24.dp),
         ) {
             Text(
-                stringRes(R.string.tip),
+                stringRes(Res.string.tip),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.height(5.dp))
             Text(
-                stringRes(R.string.import_follows_tips),
+                stringRes(Res.string.import_follows_tips),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

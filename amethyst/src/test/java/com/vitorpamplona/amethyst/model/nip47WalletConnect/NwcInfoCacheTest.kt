@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip47WalletConnect
 
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent

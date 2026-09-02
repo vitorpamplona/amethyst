@@ -53,11 +53,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MONTH_GRID_MAX_LANES
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MonthGridBarSegment
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_selected_suffix
+import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_today_suffix
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_month
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_month
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -127,8 +131,8 @@ fun CalendarMonthView(
         item(key = "month-nav") {
             CalendarNavigationHeader(
                 title = formatMonthYear(visibleMonth.year, visibleMonth.monthValue - 1),
-                prevContentDescription = stringRes(R.string.calendar_nav_previous_month),
-                nextContentDescription = stringRes(R.string.calendar_nav_next_month),
+                prevContentDescription = stringRes(Res.string.calendar_nav_previous_month),
+                nextContentDescription = stringRes(Res.string.calendar_nav_next_month),
                 onPrev = {
                     setVisibleMonth(visibleMonth.minusMonths(1))
                     selectedDayKey = null
@@ -266,8 +270,8 @@ private fun DayCell(
         }
 
     val baseDescription = calendarDayA11yLabel(dateLabel, totalEventCount)
-    val todaySuffix = stringRes(R.string.calendar_day_a11y_today_suffix)
-    val selectedSuffix = stringRes(R.string.calendar_day_a11y_selected_suffix)
+    val todaySuffix = stringRes(Res.string.calendar_day_a11y_today_suffix)
+    val selectedSuffix = stringRes(Res.string.calendar_day_a11y_selected_suffix)
     val a11y =
         buildString {
             append(baseDescription)

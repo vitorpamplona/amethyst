@@ -47,17 +47,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.IcsExport
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_count
+import com.vitorpamplona.amethyst.commons.resources.calendar_empty_collections_subtitle
+import com.vitorpamplona.amethyst.commons.resources.calendar_empty_collections_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_export_event
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -122,8 +124,8 @@ private fun CollectionsBody(
 @Composable
 private fun EmptyCollections() {
     CalendarEmptyState(
-        title = stringRes(R.string.calendar_empty_collections_title),
-        subtitle = stringRes(R.string.calendar_empty_collections_subtitle),
+        title = stringRes(Res.string.calendar_empty_collections_title),
+        subtitle = stringRes(Res.string.calendar_empty_collections_subtitle),
     )
 }
 
@@ -206,7 +208,7 @@ fun CalendarCollectionCard(
             }) {
                 Icon(
                     symbol = MaterialSymbols.Share,
-                    contentDescription = stringRes(R.string.calendar_export_event),
+                    contentDescription = stringRes(Res.string.calendar_export_event),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

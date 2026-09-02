@@ -43,8 +43,29 @@ import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.icons.following
+import com.vitorpamplona.amethyst.commons.icons.symbols.AmethystIconGlyph
+import com.vitorpamplona.amethyst.commons.icons.symbols.AmethystIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
+import com.vitorpamplona.amethyst.commons.resources.accessibility_play_username
+import com.vitorpamplona.amethyst.commons.resources.accessibility_pushpin
+import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.boost_or_quote_description
+import com.vitorpamplona.amethyst.commons.resources.change_reaction
+import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.enter_picture_in_picture
+import com.vitorpamplona.amethyst.commons.resources.following
+import com.vitorpamplona.amethyst.commons.resources.lightning_address
+import com.vitorpamplona.amethyst.commons.resources.like_description
+import com.vitorpamplona.amethyst.commons.resources.note_options
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_description
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_pending
+import com.vitorpamplona.amethyst.commons.resources.record_a_message
+import com.vitorpamplona.amethyst.commons.resources.reply_description
+import com.vitorpamplona.amethyst.commons.resources.search_button
+import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -59,7 +80,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleButton
 fun AmethystIcon(iconSize: Dp) {
     Icon(
         imageVector = CustomHashTagIcons.Amethyst,
-        contentDescription = stringRes(id = R.string.app_logo),
+        contentDescription = stringRes(id = Res.string.app_logo),
         modifier = Modifier.size(iconSize),
         tint = Color.Unspecified,
     )
@@ -76,7 +97,7 @@ fun FollowingIcon(modifier: Modifier) {
     val icon = remember(shield) { following(shield, Color.White) }
     Icon(
         imageVector = icon,
-        contentDescription = stringRes(id = R.string.following),
+        contentDescription = stringRes(id = Res.string.following),
         modifier = modifier,
         tint = Color.Unspecified,
     )
@@ -98,7 +119,7 @@ fun DownloadForOfflineIcon(
 ) {
     Icon(
         symbol = MaterialSymbols.DownloadForOffline,
-        contentDescription = stringRes(id = R.string.accessibility_download_for_offline),
+        contentDescription = stringRes(id = Res.string.accessibility_download_for_offline),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = tint,
     )
@@ -109,9 +130,9 @@ fun LikedIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    Icon(
-        imageVector = Liked,
-        contentDescription = stringRes(id = R.string.like_description),
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Liked,
+        contentDescription = stringRes(id = Res.string.like_description),
         modifier = modifier,
         tint = tint,
     )
@@ -124,7 +145,7 @@ fun ChangeReactionIcon(
 ) {
     Icon(
         symbol = MaterialSymbols.AddReaction,
-        contentDescription = stringRes(id = R.string.change_reaction),
+        contentDescription = stringRes(id = Res.string.change_reaction),
         modifier = modifier,
         tint = tint,
     )
@@ -135,9 +156,9 @@ fun LikeIcon(
     iconSizeModifier: Modifier,
     grayTint: Color,
 ) {
-    Icon(
-        imageVector = Like,
-        contentDescription = stringRes(id = R.string.like_description),
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Like,
+        contentDescription = stringRes(id = Res.string.like_description),
         modifier = iconSizeModifier,
         tint = grayTint,
     )
@@ -148,9 +169,9 @@ fun RepostIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    Icon(
-        imageVector = Repost,
-        contentDescription = stringRes(id = R.string.boost_or_quote_description),
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Repost,
+        contentDescription = stringRes(id = Res.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
     )
@@ -161,9 +182,9 @@ fun RepostedIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    Icon(
-        imageVector = Reposted,
-        contentDescription = stringRes(id = R.string.boost_or_quote_description),
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Reposted,
+        contentDescription = stringRes(id = Res.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
     )
@@ -176,7 +197,7 @@ fun LightningAddressIcon(
 ) {
     Icon(
         symbol = MaterialSymbols.Bolt,
-        contentDescription = stringRes(R.string.lightning_address),
+        contentDescription = stringRes(Res.string.lightning_address),
         tint = tint,
         modifier = modifier,
     )
@@ -307,7 +328,7 @@ fun VoiceReplyIcon(
 ) {
     Icon(
         symbol = MaterialSymbols.Mic,
-        contentDescription = stringRes(id = R.string.record_a_message),
+        contentDescription = stringRes(id = Res.string.record_a_message),
         tint = tint,
         modifier = iconSizeModifier,
     )
@@ -318,9 +339,9 @@ fun CommentIcon(
     iconSizeModifier: Modifier,
     tint: Color,
 ) {
-    Icon(
-        imageVector = Reply,
-        contentDescription = stringRes(id = R.string.reply_description),
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Reply,
+        contentDescription = stringRes(id = Res.string.reply_description),
         modifier = iconSizeModifier,
         tint = tint,
     )
@@ -350,9 +371,9 @@ fun SearchIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    Icon(
-        imageVector = Search,
-        contentDescription = stringRes(id = R.string.search_button),
+    AmethystIconGlyph(
+        symbol = AmethystIcons.Search,
+        contentDescription = stringRes(id = Res.string.search_button),
         modifier = modifier,
         tint = tint,
     )
@@ -365,7 +386,7 @@ fun PlayIcon(
 ) {
     Icon(
         symbol = MaterialSymbols.PlayCircle,
-        contentDescription = stringRes(id = R.string.accessibility_play_username),
+        contentDescription = stringRes(id = Res.string.accessibility_play_username),
         modifier = modifier,
         tint = tint,
     )
@@ -378,7 +399,7 @@ fun PinIcon(
 ) {
     Icon(
         symbol = MaterialSymbols.PushPin,
-        contentDescription = stringRes(id = R.string.accessibility_pushpin),
+        contentDescription = stringRes(id = Res.string.accessibility_pushpin),
         modifier = modifier,
         tint = tint,
     )
@@ -391,7 +412,7 @@ fun EnablePiP(
 ) {
     Icon(
         symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-        contentDescription = stringRes(id = R.string.enter_picture_in_picture),
+        contentDescription = stringRes(id = Res.string.enter_picture_in_picture),
         modifier = modifier,
         tint = tint,
     )
@@ -401,7 +422,7 @@ fun EnablePiP(
 fun ClearTextIcon() {
     Icon(
         symbol = MaterialSymbols.Clear,
-        contentDescription = stringRes(R.string.clear),
+        contentDescription = stringRes(Res.string.clear),
     )
 }
 
@@ -412,7 +433,7 @@ fun LinkIcon(
 ) {
     Icon(
         symbol = MaterialSymbols.Link,
-        contentDescription = stringRes(R.string.website),
+        contentDescription = stringRes(Res.string.website),
         modifier = modifier,
         tint = tint,
     )
@@ -422,7 +443,7 @@ fun LinkIcon(
 fun VerticalDotsIcon() {
     Icon(
         symbol = MaterialSymbols.MoreVert,
-        contentDescription = stringRes(id = R.string.note_options),
+        contentDescription = stringRes(id = Res.string.note_options),
         modifier = Size19Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -432,7 +453,7 @@ fun VerticalDotsIcon() {
 fun OnchainZappedIcon(modifier: Modifier) {
     Icon(
         symbol = MaterialSymbols.CurrencyBitcoin,
-        contentDescription = stringRes(R.string.onchain_zap_description),
+        contentDescription = stringRes(Res.string.onchain_zap_description),
         tint = BitcoinOrange,
         modifier = modifier,
     )
@@ -442,7 +463,7 @@ fun OnchainZappedIcon(modifier: Modifier) {
 fun PendingClockBadge(modifier: Modifier) {
     Icon(
         symbol = MaterialSymbols.Schedule,
-        contentDescription = stringRes(R.string.onchain_zap_pending),
+        contentDescription = stringRes(Res.string.onchain_zap_pending),
         tint = BitcoinOrange,
         modifier = modifier,
     )

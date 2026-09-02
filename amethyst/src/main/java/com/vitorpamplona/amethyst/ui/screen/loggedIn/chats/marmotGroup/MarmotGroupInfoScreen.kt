@@ -71,6 +71,34 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_add_member
+import com.vitorpamplona.amethyst.commons.resources.marmot_add_member_placeholder
+import com.vitorpamplona.amethyst.commons.resources.marmot_add_to_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_edit_group_info
+import com.vitorpamplona.amethyst.commons.resources.marmot_grant
+import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_confirm
+import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_privileges
+import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_info_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_required
+import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group_confirm
+import com.vitorpamplona.amethyst.commons.resources.marmot_member_suffix_admin
+import com.vitorpamplona.amethyst.commons.resources.marmot_member_suffix_you
+import com.vitorpamplona.amethyst.commons.resources.marmot_relay_last_event
+import com.vitorpamplona.amethyst.commons.resources.marmot_relay_no_events
+import com.vitorpamplona.amethyst.commons.resources.marmot_relays_header
+import com.vitorpamplona.amethyst.commons.resources.marmot_remove_member
+import com.vitorpamplona.amethyst.commons.resources.marmot_remove_member_confirm
+import com.vitorpamplona.amethyst.commons.resources.marmot_revoke
+import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_confirm
+import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_privileges
+import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_this_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_user_fallback_name
+import com.vitorpamplona.amethyst.commons.resources.members
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -145,12 +173,12 @@ fun MarmotGroupInfoScreen(
                         )
                     }
                 },
-                title = { Text(stringRes(R.string.marmot_group_info_title)) },
+                title = { Text(stringRes(Res.string.marmot_group_info_title)) },
                 actions = {
                     IconButton(onClick = { nav.nav(Route.MarmotGroupEditInfo(nostrGroupId)) }) {
                         Icon(
                             symbol = MaterialSymbols.Edit,
-                            contentDescription = stringRes(R.string.marmot_edit_group_info),
+                            contentDescription = stringRes(Res.string.marmot_edit_group_info),
                         )
                     }
                     IconButton(
@@ -159,7 +187,7 @@ fun MarmotGroupInfoScreen(
                     ) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ExitToApp,
-                            contentDescription = stringRes(R.string.marmot_leave_group),
+                            contentDescription = stringRes(Res.string.marmot_leave_group),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -187,7 +215,7 @@ fun MarmotGroupInfoScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = displayName ?: stringRes(R.string.marmot_group_fallback_name, nostrGroupId.take(8)),
+                            text = displayName ?: stringRes(Res.string.marmot_group_fallback_name, nostrGroupId.take(8)),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                         )
@@ -233,7 +261,7 @@ fun MarmotGroupInfoScreen(
 
                 item {
                     Text(
-                        text = stringRes(R.string.members),
+                        text = stringRes(Res.string.members),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -321,7 +349,7 @@ fun MarmotGroupInfoScreen(
 
     if (showLeaveDialog) {
         LeaveGroupDialog(
-            groupName = displayName ?: stringRes(R.string.marmot_this_group),
+            groupName = displayName ?: stringRes(Res.string.marmot_this_group),
             onConfirm = {
                 showLeaveDialog = false
                 isLeaving = true
@@ -447,7 +475,7 @@ private fun AddMemberInline(
     isError: Boolean,
     isAdding: Boolean,
     accountViewModel: AccountViewModel,
-    onAdd: (com.vitorpamplona.amethyst.model.User) -> Unit,
+    onAdd: (com.vitorpamplona.amethyst.commons.model.User) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         if (!isAdding && searchInput.length > 2) {
@@ -458,7 +486,7 @@ private fun AddMemberInline(
                 modifier = SuggestionListDefaultHeightChat,
                 onEmpty = {
                     Text(
-                        stringRes(R.string.marmot_keypackage_required),
+                        stringRes(Res.string.marmot_keypackage_required),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -468,7 +496,7 @@ private fun AddMemberInline(
                     IconButton(onClick = { onAdd(user) }) {
                         Icon(
                             symbol = MaterialSymbols.PersonAdd,
-                            contentDescription = stringRes(R.string.marmot_add_to_group),
+                            contentDescription = stringRes(Res.string.marmot_add_to_group),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -494,8 +522,8 @@ private fun AddMemberInline(
         OutlinedTextField(
             value = searchInput,
             onValueChange = onSearchInputChange,
-            label = { Text(stringRes(R.string.marmot_add_member)) },
-            placeholder = { Text(stringRes(R.string.marmot_add_member_placeholder)) },
+            label = { Text(stringRes(Res.string.marmot_add_member)) },
+            placeholder = { Text(stringRes(Res.string.marmot_add_member_placeholder)) },
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -537,9 +565,9 @@ fun MemberRow(
         )
         Column(modifier = Modifier.weight(1f)) {
             LoadUser(baseUserHex = member.pubkey, accountViewModel = accountViewModel) { user ->
-                val displayName = user?.toBestDisplayName() ?: stringRes(R.string.marmot_user_fallback_name, member.pubkey.take(16))
-                val youSuffix = stringRes(R.string.marmot_member_suffix_you)
-                val adminSuffix = stringRes(R.string.marmot_member_suffix_admin)
+                val displayName = user?.toBestDisplayName() ?: stringRes(Res.string.marmot_user_fallback_name, member.pubkey.take(16))
+                val youSuffix = stringRes(Res.string.marmot_member_suffix_you)
+                val adminSuffix = stringRes(Res.string.marmot_member_suffix_admin)
                 val suffix =
                     buildString {
                         if (isMe) append(youSuffix)
@@ -558,7 +586,7 @@ fun MemberRow(
             IconButton(onClick = onPromoteClick) {
                 Icon(
                     symbol = MaterialSymbols.StarBorder,
-                    contentDescription = stringRes(R.string.marmot_grant_admin_privileges),
+                    contentDescription = stringRes(Res.string.marmot_grant_admin_privileges),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -566,7 +594,7 @@ fun MemberRow(
             IconButton(onClick = onDemoteClick) {
                 Icon(
                     symbol = MaterialSymbols.Star,
-                    contentDescription = stringRes(R.string.marmot_revoke_admin_privileges),
+                    contentDescription = stringRes(Res.string.marmot_revoke_admin_privileges),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -575,7 +603,7 @@ fun MemberRow(
             IconButton(onClick = onRemoveClick) {
                 Icon(
                     symbol = MaterialSymbols.PersonRemove,
-                    contentDescription = stringRes(R.string.marmot_remove_member),
+                    contentDescription = stringRes(Res.string.marmot_remove_member),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -591,9 +619,9 @@ fun LeaveGroupDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.marmot_leave_group)) },
+        title = { Text(stringRes(Res.string.marmot_leave_group)) },
         text = {
-            Text(stringRes(R.string.marmot_leave_group_confirm, groupName))
+            Text(stringRes(Res.string.marmot_leave_group_confirm, groupName))
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
@@ -617,11 +645,11 @@ private fun ConfirmRemoveMemberDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.marmot_remove_member)) },
+        title = { Text(stringRes(Res.string.marmot_remove_member)) },
         text = {
             LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
-                val name = user?.toBestDisplayName() ?: stringRes(R.string.marmot_user_fallback_name, memberPubkey.take(16))
-                Text(stringRes(R.string.marmot_remove_member_confirm, name))
+                val name = user?.toBestDisplayName() ?: stringRes(Res.string.marmot_user_fallback_name, memberPubkey.take(16))
+                Text(stringRes(Res.string.marmot_remove_member_confirm, name))
             }
         },
         confirmButton = {
@@ -646,16 +674,16 @@ private fun ConfirmGrantAdminDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.marmot_grant_admin_title)) },
+        title = { Text(stringRes(Res.string.marmot_grant_admin_title)) },
         text = {
             LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
-                val name = user?.toBestDisplayName() ?: stringRes(R.string.marmot_user_fallback_name, memberPubkey.take(16))
-                Text(stringRes(R.string.marmot_grant_admin_confirm, name))
+                val name = user?.toBestDisplayName() ?: stringRes(Res.string.marmot_user_fallback_name, memberPubkey.take(16))
+                Text(stringRes(Res.string.marmot_grant_admin_confirm, name))
             }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(R.string.marmot_grant))
+                Text(stringRes(Res.string.marmot_grant))
             }
         },
         dismissButton = {
@@ -675,16 +703,16 @@ private fun ConfirmRevokeAdminDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.marmot_revoke_admin_title)) },
+        title = { Text(stringRes(Res.string.marmot_revoke_admin_title)) },
         text = {
             LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
-                val name = user?.toBestDisplayName() ?: stringRes(R.string.marmot_user_fallback_name, memberPubkey.take(16))
-                Text(stringRes(R.string.marmot_revoke_admin_confirm, name))
+                val name = user?.toBestDisplayName() ?: stringRes(Res.string.marmot_user_fallback_name, memberPubkey.take(16))
+                Text(stringRes(Res.string.marmot_revoke_admin_confirm, name))
             }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(R.string.marmot_revoke), color = MaterialTheme.colorScheme.error)
+                Text(stringRes(Res.string.marmot_revoke), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
@@ -823,7 +851,7 @@ fun RelayHealthSection(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = stringRes(R.string.marmot_relays_header),
+            text = stringRes(Res.string.marmot_relays_header),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -860,9 +888,9 @@ private fun RelayHealthRow(
         }
     val subtitle =
         if (lastSeen == null) {
-            stringRes(R.string.marmot_relay_no_events)
+            stringRes(Res.string.marmot_relay_no_events)
         } else {
-            stringRes(R.string.marmot_relay_last_event, timeAgo(lastSeen, context))
+            stringRes(Res.string.marmot_relay_last_event, timeAgo(lastSeen, context))
         }
     Row(
         modifier =

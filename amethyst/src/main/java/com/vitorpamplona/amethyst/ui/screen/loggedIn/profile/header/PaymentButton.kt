@@ -54,7 +54,10 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
+import com.vitorpamplona.amethyst.commons.resources.show_qr
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -165,7 +168,7 @@ fun PaymentTargetsDialog(
             if (targets.isEmpty()) {
                 M3ActionRow(
                     icon = MaterialSymbols.AccountBalanceWallet,
-                    text = stringRes(R.string.no_payment_targets_message),
+                    text = stringRes(Res.string.no_payment_targets_message),
                     enabled = false,
                     onClick = {},
                 )
@@ -241,7 +244,7 @@ private fun PaymentTargetRow(
         IconButton(onClick = onShowQr) {
             Icon(
                 symbol = MaterialSymbols.QrCode2,
-                contentDescription = stringRes(R.string.show_qr),
+                contentDescription = stringRes(Res.string.show_qr),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

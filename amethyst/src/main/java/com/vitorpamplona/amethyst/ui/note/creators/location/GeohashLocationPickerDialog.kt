@@ -86,6 +86,15 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.location_picker_area
+import com.vitorpamplona.amethyst.commons.resources.location_picker_confirm
+import com.vitorpamplona.amethyst.commons.resources.location_picker_hint
+import com.vitorpamplona.amethyst.commons.resources.location_picker_search_empty
+import com.vitorpamplona.amethyst.commons.resources.location_picker_search_hint
+import com.vitorpamplona.amethyst.commons.resources.location_picker_title
+import com.vitorpamplona.amethyst.commons.resources.location_picker_use_mine
 import com.vitorpamplona.amethyst.service.location.ForwardGeolocation
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -161,7 +170,7 @@ fun GeohashLocationPickerDialog(
                 PickerHeader(onClose = onDismiss)
                 GeohashLocationPickerContent(
                     initialGeohash = initialGeohash,
-                    confirmLabel = stringRes(R.string.location_picker_confirm),
+                    confirmLabel = stringRes(Res.string.location_picker_confirm),
                     onConfirm = onConfirm,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
@@ -443,7 +452,7 @@ private fun PickerHeader(onClose: () -> Unit) {
                 )
             }
             Text(
-                text = stringRes(R.string.location_picker_title),
+                text = stringRes(Res.string.location_picker_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 4.dp),
@@ -546,7 +555,7 @@ private fun SearchField(
             value = query,
             onValueChange = onQueryChange,
             singleLine = true,
-            placeholder = { Text(stringRes(R.string.location_picker_search_hint)) },
+            placeholder = { Text(stringRes(Res.string.location_picker_search_hint)) },
             leadingIcon = {
                 Icon(
                     symbol = MaterialSymbols.Search,
@@ -562,7 +571,7 @@ private fun SearchField(
                     IconButton(onClick = { onQueryChange("") }) {
                         Icon(
                             symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.clear),
+                            contentDescription = stringRes(Res.string.clear),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -572,7 +581,7 @@ private fun SearchField(
             isError = missed,
             supportingText =
                 if (missed) {
-                    { Text(stringRes(R.string.location_picker_search_empty)) }
+                    { Text(stringRes(Res.string.location_picker_search_empty)) }
                 } else {
                     null
                 },
@@ -613,7 +622,7 @@ private fun MyLocationButton(
         } else {
             Icon(
                 symbol = MaterialSymbols.MyLocation,
-                contentDescription = stringRes(R.string.location_picker_use_mine),
+                contentDescription = stringRes(Res.string.location_picker_use_mine),
                 modifier = Modifier.size(24.dp),
             )
         }
@@ -645,7 +654,7 @@ private fun PickerBottomBar(
                 .padding(16.dp),
         ) {
             Text(
-                text = stringRes(R.string.location_picker_area),
+                text = stringRes(Res.string.location_picker_area),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -669,7 +678,7 @@ private fun PickerBottomBar(
 
             if (cell == null) {
                 Text(
-                    text = stringRes(R.string.location_picker_hint),
+                    text = stringRes(Res.string.location_picker_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),

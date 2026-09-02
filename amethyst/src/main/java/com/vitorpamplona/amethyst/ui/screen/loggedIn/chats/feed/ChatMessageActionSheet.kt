@@ -59,10 +59,19 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
+import com.vitorpamplona.amethyst.commons.resources.edit_draft
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_message
+import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
+import com.vitorpamplona.amethyst.commons.resources.reply_description
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
@@ -144,10 +153,10 @@ fun ChatMessageActionSheet(
 
     if (deleteConfirmationShowing) {
         QuickActionAlertDialog(
-            title = stringRes(R.string.quick_action_request_deletion_alert_title),
-            textContent = stringRes(R.string.quick_action_request_deletion_alert_body),
+            title = stringRes(Res.string.quick_action_request_deletion_alert_title),
+            textContent = stringRes(Res.string.quick_action_request_deletion_alert_body),
             buttonIcon = MaterialSymbols.Delete,
-            buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
+            buttonText = stringRes(Res.string.quick_action_delete_dialog_btn),
             onClickDoOnce = {
                 performDelete()
                 onDismiss()
@@ -348,7 +357,7 @@ fun ChatMessageActionSheet(
                     if (!note.isDraft()) {
                         SectionDivider()
                         TileRow {
-                            ActionTile(MaterialSymbols.DoneAll, stringRes(R.string.chat_delivery_details_title)) {
+                            ActionTile(MaterialSymbols.DoneAll, stringRes(Res.string.chat_delivery_details_title)) {
                                 showDeliveryDialog = true
                             }
                         }
@@ -392,12 +401,12 @@ private fun RelayGroupPinTile(
     SectionDivider()
     TileRow {
         if (pinned) {
-            ActionTile(MaterialSymbols.PushPin, stringRes(R.string.relay_group_unpin_message)) {
+            ActionTile(MaterialSymbols.PushPin, stringRes(Res.string.relay_group_unpin_message)) {
                 accountViewModel.unpinRelayGroupMessage(channel, note)
                 onDismiss()
             }
         } else {
-            ActionTile(MaterialSymbols.PushPin, stringRes(R.string.relay_group_pin_message)) {
+            ActionTile(MaterialSymbols.PushPin, stringRes(Res.string.relay_group_pin_message)) {
                 accountViewModel.pinRelayGroupMessage(channel, note)
                 onDismiss()
             }
@@ -455,7 +464,7 @@ private fun ChatOnlyRow(
     if (note.isDraft() && !state.isLoggedUser) return
     if (note.isDraft() && state.isLoggedUser) {
         TileRow {
-            ActionTile(MaterialSymbols.Edit, stringRes(R.string.edit_draft)) {
+            ActionTile(MaterialSymbols.Edit, stringRes(Res.string.edit_draft)) {
                 onWantsToEditDraft(note)
                 onDismiss()
             }
@@ -464,7 +473,7 @@ private fun ChatOnlyRow(
     }
 
     TileRow {
-        ActionTile(MaterialSymbols.AutoMirrored.Chat, stringRes(R.string.reply_description)) {
+        ActionTile(MaterialSymbols.AutoMirrored.Chat, stringRes(Res.string.reply_description)) {
             onWantsToReply(note)
             onDismiss()
         }

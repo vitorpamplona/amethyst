@@ -71,8 +71,13 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_bitcoin_invoice
+import com.vitorpamplona.amethyst.commons.resources.cancel_bitcoin_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -297,8 +302,8 @@ fun EditPostView(
                                                 lud16,
                                                 user,
                                                 accountViewModel,
-                                                stringRes(id = R.string.lightning_invoice),
-                                                stringRes(id = R.string.lightning_create_and_add_invoice),
+                                                stringRes(id = Res.string.lightning_invoice),
+                                                stringRes(id = Res.string.lightning_create_and_add_invoice),
                                                 onNewInvoice = {
                                                     postViewModel.message.setTextAndPlaceCursorAtEnd(
                                                         postViewModel.message.text.toString() + "\n\n" + it,
@@ -428,14 +433,14 @@ private fun AddLnInvoiceButton(
         if (!isLnInvoiceActive) {
             Icon(
                 symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = stringRes(id = R.string.add_bitcoin_invoice),
+                contentDescription = stringRes(id = Res.string.add_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
+                contentDescription = stringRes(id = Res.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )

@@ -29,8 +29,32 @@ import androidx.compose.ui.platform.LocalClipboard
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label
+import com.vitorpamplona.amethyst.commons.resources.add_to_emoji_list
+import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist
+import com.vitorpamplona.amethyst.commons.resources.add_to_private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.article
+import com.vitorpamplona.amethyst.commons.resources.block_report
+import com.vitorpamplona.amethyst.commons.resources.broadcast
+import com.vitorpamplona.amethyst.commons.resources.concord_ban_user
+import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_body
+import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_title
+import com.vitorpamplona.amethyst.commons.resources.copy_note_id
+import com.vitorpamplona.amethyst.commons.resources.copy_raw_json
+import com.vitorpamplona.amethyst.commons.resources.copy_text
+import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
+import com.vitorpamplona.amethyst.commons.resources.edit_article
+import com.vitorpamplona.amethyst.commons.resources.edit_draft
+import com.vitorpamplona.amethyst.commons.resources.follow_set_add_author_from_note_action
+import com.vitorpamplona.amethyst.commons.resources.highlight_action
+import com.vitorpamplona.amethyst.commons.resources.manage_bookmark_label
+import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
+import com.vitorpamplona.amethyst.commons.resources.remove_from_private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.timestamp_it
+import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -124,7 +148,7 @@ fun noteActionSections(
             }
 
             add(
-                NoteAction(MaterialSymbols.AutoMirrored.PlaylistAdd, stringRes(R.string.follow_set_add_author_from_note_action)) {
+                NoteAction(MaterialSymbols.AutoMirrored.PlaylistAdd, stringRes(Res.string.follow_set_add_author_from_note_action)) {
                     note.author?.pubkeyHex?.let { nav.nav(Route.PeopleListManagement(it)) }
                     handlers.onDismiss()
                 },
@@ -144,12 +168,12 @@ fun noteActionSections(
     val copyAndShare =
         buildList {
             add(
-                NoteAction(MaterialSymbols.ContentCopy, stringRes(R.string.copy_text)) {
+                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_text)) {
                     copyNoteText(note, noteVersionToCopy)
                 },
             )
             add(
-                NoteAction(MaterialSymbols.AlternateEmail, stringRes(R.string.copy_user_pubkey)) {
+                NoteAction(MaterialSymbols.AlternateEmail, stringRes(Res.string.copy_user_pubkey)) {
                     note.author?.let {
                         scope.launch(Dispatchers.IO) {
                             clipboardManager.setText("nostr:${it.pubkeyNpub()}")
@@ -159,7 +183,7 @@ fun noteActionSections(
                 },
             )
             add(
-                NoteAction(MaterialSymbols.FormatQuote, stringRes(R.string.copy_note_id)) {
+                NoteAction(MaterialSymbols.FormatQuote, stringRes(Res.string.copy_note_id)) {
                     scope.launch(Dispatchers.IO) {
                         clipboardManager.setText(note.toNostrUri())
                         handlers.onDismiss()
@@ -167,7 +191,7 @@ fun noteActionSections(
                 },
             )
             add(
-                NoteAction(MaterialSymbols.ContentCopy, stringRes(R.string.copy_raw_json)) {
+                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_raw_json)) {
                     val event = note.event
                     if (event != null) {
                         scope.launch {
@@ -186,7 +210,7 @@ fun noteActionSections(
             // private rumor (a public highlight would e-tag the unsigned rumor onto relays).
             if (!isPrivateRumor && (note.event is TextNoteEvent || note.event is LongTextNoteEvent)) {
                 add(
-                    NoteAction(MaterialSymbols.FormatQuote, stringRes(R.string.highlight_action)) {
+                    NoteAction(MaterialSymbols.FormatQuote, stringRes(Res.string.highlight_action)) {
                         val author = note.author?.pubkeyHex
                         val route =
                             if (note is AddressableNote) {
@@ -207,7 +231,7 @@ fun noteActionSections(
     val editAndBroadcast =
         buildList {
             if (state.isLoggedUser && note.isDraft()) {
-                add(NoteAction(MaterialSymbols.Edit, stringRes(R.string.edit_draft), onClick = handlers.onEditDraft))
+                add(NoteAction(MaterialSymbols.Edit, stringRes(Res.string.edit_draft), onClick = handlers.onEditDraft))
             }
             if (!note.isDraft() && !isPrivateRumor) {
                 if (note.event is TextNoteEvent) {
@@ -220,7 +244,7 @@ fun noteActionSections(
                     )
                 } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
                     add(
-                        NoteAction(MaterialSymbols.Edit, stringRes(R.string.edit_article)) {
+                        NoteAction(MaterialSymbols.Edit, stringRes(Res.string.edit_article)) {
                             nav.nav { Route.NewLongFormPost(version = note.idHex) }
                         },
                     )
@@ -230,7 +254,7 @@ fun noteActionSections(
             // wrap is unknown (the unsigned rumor must never be published).
             if (accountViewModel.canBroadcast(note)) {
                 add(
-                    NoteAction(MaterialSymbols.CellTower, stringRes(R.string.broadcast)) {
+                    NoteAction(MaterialSymbols.CellTower, stringRes(Res.string.broadcast)) {
                         accountViewModel.broadcast(note)
                         handlers.onDismiss()
                     },
@@ -242,10 +266,10 @@ fun noteActionSections(
         buildList {
             if (!isPrivateRumor) {
                 if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-                    add(NoteAction(MaterialSymbols.Schedule, stringRes(R.string.timestamp_pending)) { handlers.onDismiss() })
+                    add(NoteAction(MaterialSymbols.Schedule, stringRes(Res.string.timestamp_pending)) { handlers.onDismiss() })
                 } else {
                     add(
-                        NoteAction(MaterialSymbols.Schedule, stringRes(R.string.timestamp_it)) {
+                        NoteAction(MaterialSymbols.Schedule, stringRes(Res.string.timestamp_it)) {
                             accountViewModel.timestamp(note)
                             handlers.onDismiss()
                         },
@@ -268,7 +292,7 @@ fun noteActionSections(
                 )
             }
             if (!isPrivateRumor) {
-                add(NoteAction(MaterialSymbols.Tag, stringRes(R.string.add_hashtag_label), onClick = handlers.onAddLabel))
+                add(NoteAction(MaterialSymbols.Tag, stringRes(Res.string.add_hashtag_label), onClick = handlers.onAddLabel))
             }
 
             // Pick exactly one curation flow per kind: music tracks go to playlists,
@@ -281,7 +305,7 @@ fun noteActionSections(
 
                 note.event is MusicTrackEvent && note is AddressableNote -> {
                     add(
-                        NoteAction(MaterialSymbols.AutoMirrored.PlaylistAdd, stringRes(R.string.add_to_music_playlist)) {
+                        NoteAction(MaterialSymbols.AutoMirrored.PlaylistAdd, stringRes(Res.string.add_to_music_playlist)) {
                             nav.nav(Route.AddToMusicPlaylist(note.address.toValue()))
                             handlers.onDismiss()
                         },
@@ -291,9 +315,9 @@ fun noteActionSections(
                 note.event is EmojiPackEvent -> {
                     val emojiText =
                         if (state.isEmojiPackInMyList) {
-                            stringRes(R.string.remove_from_emoji_list)
+                            stringRes(Res.string.remove_from_emoji_list)
                         } else {
-                            stringRes(R.string.add_to_emoji_list)
+                            stringRes(Res.string.add_to_emoji_list)
                         }
                     add(
                         NoteAction(MaterialSymbols.EmojiEmotions, emojiText) {
@@ -305,9 +329,9 @@ fun noteActionSections(
                 }
 
                 else -> {
-                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
+                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(Res.string.article) else stringRes(R.string.post)
                     add(
-                        NoteAction(MaterialSymbols.BookmarkAdd, stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
+                        NoteAction(MaterialSymbols.BookmarkAdd, stringRes(Res.string.manage_bookmark_label, noteBookmarkType)) {
                             if (note.event is LongTextNoteEvent) {
                                 nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
                             } else {
@@ -318,14 +342,14 @@ fun noteActionSections(
                     )
                     if (state.isPrivateBookmarkNote) {
                         add(
-                            NoteAction(MaterialSymbols.LockOpen, stringRes(R.string.remove_from_private_bookmarks)) {
+                            NoteAction(MaterialSymbols.LockOpen, stringRes(Res.string.remove_from_private_bookmarks)) {
                                 accountViewModel.removePrivateBookmark(note)
                                 handlers.onDismiss()
                             },
                         )
                     } else {
                         add(
-                            NoteAction(MaterialSymbols.Lock, stringRes(R.string.add_to_private_bookmarks)) {
+                            NoteAction(MaterialSymbols.Lock, stringRes(Res.string.add_to_private_bookmarks)) {
                                 accountViewModel.addPrivateBookmark(note)
                                 handlers.onDismiss()
                             },
@@ -380,7 +404,7 @@ fun noteActionSections(
             if (state.isLoggedUser) {
                 add(NoteAction(MaterialSymbols.Delete, stringRes(R.string.request_deletion), isDestructive = true, onClick = handlers.onDeleteRequest))
             } else {
-                add(NoteAction(MaterialSymbols.Report, stringRes(R.string.block_report), isDestructive = true, onClick = handlers.onReport))
+                add(NoteAction(MaterialSymbols.Report, stringRes(Res.string.block_report), isDestructive = true, onClick = handlers.onReport))
             }
 
             // Concord channel moderation, gated by this account's authority over the
@@ -401,7 +425,7 @@ fun noteActionSections(
                 )
             }
             if (handlers.onConcordBan != null && accountViewModel.account.concord.concordBanTarget(note) != null) {
-                add(NoteAction(MaterialSymbols.Gavel, stringRes(R.string.concord_ban_user), isDestructive = true, onClick = handlers.onConcordBan))
+                add(NoteAction(MaterialSymbols.Gavel, stringRes(Res.string.concord_ban_user), isDestructive = true, onClick = handlers.onConcordBan))
             }
         }
 
@@ -422,10 +446,10 @@ fun ConcordBanConfirmationDialog(
     onBanned: () -> Unit,
 ) {
     QuickActionAlertDialogOneButton(
-        title = stringRes(R.string.concord_ban_user_title),
-        textContent = stringRes(R.string.concord_ban_user_body),
+        title = stringRes(Res.string.concord_ban_user_title),
+        textContent = stringRes(Res.string.concord_ban_user_body),
         buttonIcon = MaterialSymbols.Gavel,
-        buttonText = stringRes(R.string.concord_ban_user),
+        buttonText = stringRes(Res.string.concord_ban_user),
         buttonColors =
             ButtonDefaults.buttonColors(
                 containerColor = LightRedColor,

@@ -67,11 +67,25 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_audio_failed
+import com.vitorpamplona.amethyst.commons.resources.nest_broadcast_connecting
+import com.vitorpamplona.amethyst.commons.resources.nest_broadcast_failed
+import com.vitorpamplona.amethyst.commons.resources.nest_connect
+import com.vitorpamplona.amethyst.commons.resources.nest_connecting_handshake
+import com.vitorpamplona.amethyst.commons.resources.nest_connecting_resolving
+import com.vitorpamplona.amethyst.commons.resources.nest_connecting_transport
+import com.vitorpamplona.amethyst.commons.resources.nest_leave_stage
+import com.vitorpamplona.amethyst.commons.resources.nest_mute_failed
+import com.vitorpamplona.amethyst.commons.resources.nest_open_settings
+import com.vitorpamplona.amethyst.commons.resources.nest_reactions_button
+import com.vitorpamplona.amethyst.commons.resources.nest_reconnecting
+import com.vitorpamplona.amethyst.commons.resources.nest_talk
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -219,11 +233,11 @@ private fun ActionBarStatusStrip(ui: NestUiState) {
 private fun NestUiState.statusStripText(): String? {
     val connection = connection
     if (connection is ConnectionUiState.Failed) {
-        return stringRes(R.string.nest_audio_failed, connection.reason)
+        return stringRes(Res.string.nest_audio_failed, connection.reason)
     }
     return when (val b = broadcast) {
-        is BroadcastUiState.Failed -> stringRes(R.string.nest_broadcast_failed, b.reason)
-        is BroadcastUiState.Broadcasting -> b.muteError?.let { stringRes(R.string.nest_mute_failed, it) }
+        is BroadcastUiState.Failed -> stringRes(Res.string.nest_broadcast_failed, b.reason)
+        is BroadcastUiState.Broadcasting -> b.muteError?.let { stringRes(Res.string.nest_mute_failed, it) }
         else -> null
     }
 }
@@ -250,7 +264,7 @@ private fun StartCluster(
             }
 
             is ConnectionUiState.Reconnecting -> {
-                StatusChip(label = stringRes(R.string.nest_reconnecting))
+                StatusChip(label = stringRes(Res.string.nest_reconnecting))
             }
 
             // On-stage controls live in [StageControlsBar]; audience
@@ -279,7 +293,7 @@ private fun OnStageControls(
         }
 
         BroadcastUiState.Connecting -> {
-            StatusChip(label = stringRes(R.string.nest_broadcast_connecting))
+            StatusChip(label = stringRes(Res.string.nest_broadcast_connecting))
             // stopBroadcast() cancels the in-flight speakerConnectJob,
             // so leaving mid-handshake is safe.
             LeaveStageButton(onClick = leaveStage)
@@ -297,7 +311,7 @@ private fun OnStageControls(
             // mic, then the user can unmute deliberately.
             TalkButton(
                 onClick = { viewModel.startBroadcast(speakerPubkeyHex, initialMuted = true) },
-                contentDescription = stringRes(R.string.nest_talk),
+                contentDescription = stringRes(Res.string.nest_talk),
             )
             LeaveStageButton(onClick = { viewModel.setOnStage(false) })
         }
@@ -355,14 +369,14 @@ private fun OnStageIdleControls(
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         },
-        contentDescription = stringRes(R.string.nest_talk),
+        contentDescription = stringRes(Res.string.nest_talk),
     )
     LeaveStageButton(onClick = { viewModel.setOnStage(false) })
     if (showDenialWarning) {
         // After "Don't ask again" the launcher silently returns false;
         // expose a Settings deep-link.
         OutlinedButton(onClick = { context.openAppSettings() }) {
-            Text(stringRes(R.string.nest_open_settings))
+            Text(stringRes(Res.string.nest_open_settings))
         }
     }
 }
@@ -404,7 +418,7 @@ private fun EndCluster(
         FilledTonalIconButton(onClick = { wantsToReact = true }) {
             Icon(
                 symbol = MaterialSymbols.EmojiEmotions,
-                contentDescription = stringRes(R.string.nest_reactions_button),
+                contentDescription = stringRes(Res.string.nest_reactions_button),
             )
             if (wantsToReact) {
                 RoomReactionPopup(
@@ -614,7 +628,7 @@ private fun NestZapButton(
 @Composable
 private fun ConnectButton(onClick: () -> Unit) {
     Button(onClick = onClick) {
-        Text(stringRes(R.string.nest_connect))
+        Text(stringRes(Res.string.nest_connect))
     }
 }
 
@@ -631,7 +645,7 @@ private fun StatusChip(label: String) {
 @Composable
 private fun LeaveStageButton(onClick: () -> Unit) {
     OutlinedButton(onClick = onClick) {
-        Text(stringRes(R.string.nest_leave_stage))
+        Text(stringRes(Res.string.nest_leave_stage))
     }
 }
 
@@ -721,9 +735,9 @@ private fun LeaveRoomButton(onClick: () -> Unit) {
 @Composable
 private fun connectingLabel(connection: ConnectionUiState.Connecting): String =
     when (connection.step) {
-        ConnectionUiState.Step.ResolvingRoom -> stringRes(R.string.nest_connecting_resolving)
-        ConnectionUiState.Step.OpeningTransport -> stringRes(R.string.nest_connecting_transport)
-        ConnectionUiState.Step.MoqHandshake -> stringRes(R.string.nest_connecting_handshake)
+        ConnectionUiState.Step.ResolvingRoom -> stringRes(Res.string.nest_connecting_resolving)
+        ConnectionUiState.Step.OpeningTransport -> stringRes(Res.string.nest_connecting_transport)
+        ConnectionUiState.Step.MoqHandshake -> stringRes(Res.string.nest_connecting_handshake)
     }
 
 // ── Permission helpers ──────────────────────────────────────────────────

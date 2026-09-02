@@ -61,9 +61,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_broadcast
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_delete
+import com.vitorpamplona.amethyst.commons.resources.pack_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -277,7 +282,7 @@ private fun ListActionsMenuButton(
     if (isActionListOpen.value) {
         val context = LocalContext.current
         M3ActionDialog(
-            title = stringRes(R.string.pack_actions_dialog_title),
+            title = stringRes(Res.string.pack_actions_dialog_title),
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {
@@ -305,13 +310,13 @@ private fun ListActionsMenuButton(
                     onEditList()
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.follow_pack_broadcast)) {
+                M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(Res.string.follow_pack_broadcast)) {
                     onBroadcastList()
                     isActionListOpen.value = false
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.follow_pack_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(Res.string.follow_pack_delete), isDestructive = true) {
                     onDeleteList()
                     isActionListOpen.value = false
                 }
@@ -342,7 +347,7 @@ fun FollowPackViewPreview() {
 
             var userName by remember { mutableStateOf("") }
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
+                label = { Text(text = stringRes(Res.string.search_and_add_a_user)) },
                 modifier =
                     Modifier
                         .padding(horizontal = Size10dp)

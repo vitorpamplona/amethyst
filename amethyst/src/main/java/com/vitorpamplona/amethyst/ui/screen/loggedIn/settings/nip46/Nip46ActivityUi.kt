@@ -39,13 +39,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_connected
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_decrypted
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_encrypted
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_listed_relays
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_other
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_ping
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_shared_pubkey
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_signed_kind
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_denied
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.stringRes
 
 private val LiveGreen = Color(0xFF3DDC84)
 
@@ -103,14 +112,14 @@ private fun Nip46ActivityRow(entry: Nip46ActivityEntry) {
 fun describeNip46Activity(entry: Nip46ActivityEntry): String {
     val base =
         when (entry.method) {
-            "sign_event" -> stringResource(R.string.nip46_signer_act_signed_kind, entry.kind ?: 0)
-            "nip04_encrypt", "nip44_encrypt" -> stringResource(R.string.nip46_signer_act_encrypted)
-            "nip04_decrypt", "nip44_decrypt" -> stringResource(R.string.nip46_signer_act_decrypted)
-            "get_public_key" -> stringResource(R.string.nip46_signer_act_shared_pubkey)
-            "connect" -> stringResource(R.string.nip46_signer_act_connected)
-            "ping" -> stringResource(R.string.nip46_signer_act_ping)
-            "get_relays" -> stringResource(R.string.nip46_signer_act_listed_relays)
-            else -> stringResource(R.string.nip46_signer_act_other, entry.method)
+            "sign_event" -> stringRes(Res.string.nip46_signer_act_signed_kind, entry.kind ?: 0)
+            "nip04_encrypt", "nip44_encrypt" -> stringRes(Res.string.nip46_signer_act_encrypted)
+            "nip04_decrypt", "nip44_decrypt" -> stringRes(Res.string.nip46_signer_act_decrypted)
+            "get_public_key" -> stringRes(Res.string.nip46_signer_act_shared_pubkey)
+            "connect" -> stringRes(Res.string.nip46_signer_act_connected)
+            "ping" -> stringRes(Res.string.nip46_signer_act_ping)
+            "get_relays" -> stringRes(Res.string.nip46_signer_act_listed_relays)
+            else -> stringRes(Res.string.nip46_signer_act_other, entry.method)
         }
-    return if (entry.ok) base else "$base · ${stringResource(R.string.nip46_signer_activity_denied)}"
+    return if (entry.ok) base else "$base · ${stringRes(Res.string.nip46_signer_activity_denied)}"
 }

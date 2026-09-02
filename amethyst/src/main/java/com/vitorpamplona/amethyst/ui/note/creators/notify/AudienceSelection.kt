@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.creators.notify
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf

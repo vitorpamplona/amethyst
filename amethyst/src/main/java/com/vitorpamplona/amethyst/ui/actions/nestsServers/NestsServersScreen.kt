@@ -54,6 +54,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_add_auth_field
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_add_pair_button
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_add_recommended
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_add_relay_field
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_auth_label
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_empty
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_explainer
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_relay_label
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_remove
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_use_defaults
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -137,7 +148,7 @@ private fun NestsServersScaffold(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringRes(id = R.string.nests_servers_explainer),
+                text = stringRes(id = Res.string.nests_servers_explainer),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 10.dp),
                 style = MaterialTheme.typography.bodyLarge,
@@ -168,7 +179,7 @@ private fun NestsServersBody(viewModel: NestsServersViewModel) {
         if (servers.isEmpty()) {
             item {
                 Text(
-                    text = stringRes(id = R.string.nests_servers_empty),
+                    text = stringRes(id = Res.string.nests_servers_empty),
                     modifier = DoubleVertPadding,
                 )
             }
@@ -198,7 +209,7 @@ private fun NestsServersBody(viewModel: NestsServersViewModel) {
                 OutlinedButton(
                     onClick = { viewModel.addServerList(DEFAULT_NESTS_SERVERS) },
                 ) {
-                    Text(text = stringRes(id = R.string.nests_servers_use_defaults))
+                    Text(text = stringRes(id = Res.string.nests_servers_use_defaults))
                 }
             }
         }
@@ -234,12 +245,12 @@ private fun NestsServerRow(
             )
             Spacer(modifier = StdVertSpacer)
             Text(
-                text = "${stringRes(R.string.nests_servers_relay_label)}: ${server.relay}",
+                text = "${stringRes(Res.string.nests_servers_relay_label)}: ${server.relay}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.grayText,
             )
             Text(
-                text = "${stringRes(R.string.nests_servers_auth_label)}: ${server.auth}",
+                text = "${stringRes(Res.string.nests_servers_auth_label)}: ${server.auth}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.grayText,
             )
@@ -250,9 +261,9 @@ private fun NestsServerRow(
                     symbol = if (isAmethystDefault) MaterialSymbols.Add else MaterialSymbols.Delete,
                     contentDescription =
                         if (isAmethystDefault) {
-                            stringRes(id = R.string.nests_servers_add_recommended)
+                            stringRes(id = Res.string.nests_servers_add_recommended)
                         } else {
-                            stringRes(id = R.string.nests_servers_remove)
+                            stringRes(id = Res.string.nests_servers_remove)
                         },
                 )
             }
@@ -287,7 +298,7 @@ private fun NestsServerPairEditField(onAdd: (relay: String, auth: String) -> Uni
         verticalArrangement = Arrangement.spacedBy(Size10dp),
     ) {
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.nests_servers_add_relay_field)) },
+            label = { Text(text = stringRes(Res.string.nests_servers_add_relay_field)) },
             modifier = Modifier.fillMaxWidth(),
             value = relay,
             onValueChange = { relay = it },
@@ -301,7 +312,7 @@ private fun NestsServerPairEditField(onAdd: (relay: String, auth: String) -> Uni
             singleLine = true,
         )
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.nests_servers_add_auth_field)) },
+            label = { Text(text = stringRes(Res.string.nests_servers_add_auth_field)) },
             modifier = Modifier.fillMaxWidth(),
             value = auth,
             onValueChange = { auth = it },
@@ -329,7 +340,7 @@ private fun NestsServerPairEditField(onAdd: (relay: String, auth: String) -> Uni
                 shape = ButtonBorder,
                 enabled = canSubmit,
             ) {
-                Text(stringRes(R.string.nests_servers_add_pair_button))
+                Text(stringRes(Res.string.nests_servers_add_pair_button))
             }
         }
     }

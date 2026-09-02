@@ -39,6 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_cancel
+import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_open_settings
+import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_title
 import com.vitorpamplona.amethyst.ui.stringRes
 
 fun hasPermission(
@@ -145,7 +149,7 @@ private fun CallPermissionDeniedDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.call_permission_denied_title)) },
+        title = { Text(stringRes(Res.string.call_permission_denied_title)) },
         text = {
             Text(
                 stringRes(
@@ -159,12 +163,12 @@ private fun CallPermissionDeniedDialog(
         },
         confirmButton = {
             TextButton(onClick = onOpenSettings) {
-                Text(stringRes(R.string.call_permission_denied_open_settings))
+                Text(stringRes(Res.string.call_permission_denied_open_settings))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.call_permission_denied_cancel))
+                Text(stringRes(Res.string.call_permission_denied_cancel))
             }
         },
     )

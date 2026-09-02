@@ -24,7 +24,7 @@ import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsSettings
+import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.OtsSettings
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,8 +78,9 @@ class OtsSharedPreferences(
         _settings.value = settings
         try {
             context.sharedPreferencesDataStore.edit { prefs ->
-                if (settings.customExplorerUrl != null) {
-                    prefs[KEY_CUSTOM_EXPLORER_URL] = settings.customExplorerUrl
+                val customExplorerUrl = settings.customExplorerUrl
+                if (customExplorerUrl != null) {
+                    prefs[KEY_CUSTOM_EXPLORER_URL] = customExplorerUrl
                 } else {
                     prefs.remove(KEY_CUSTOM_EXPLORER_URL)
                 }

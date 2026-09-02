@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.feeds
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 
 @Composable
 fun WatchLifecycleAndUpdateModel(model: InvalidatableContent) {

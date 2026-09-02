@@ -69,6 +69,16 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_audience_empty
+import com.vitorpamplona.amethyst.commons.resources.nest_live_chip
+import com.vitorpamplona.amethyst.commons.resources.nest_role_host
+import com.vitorpamplona.amethyst.commons.resources.nest_role_moderator
+import com.vitorpamplona.amethyst.commons.resources.nest_stage
+import com.vitorpamplona.amethyst.commons.resources.nest_stage_empty
+import com.vitorpamplona.amethyst.commons.resources.nest_state_mic_open
+import com.vitorpamplona.amethyst.commons.resources.nest_state_muted
+import com.vitorpamplona.amethyst.commons.resources.nest_state_speaking
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
@@ -191,7 +201,7 @@ internal fun StageGrid(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(R.string.nest_stage),
+                    text = stringRes(Res.string.nest_stage),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
@@ -252,7 +262,7 @@ private fun LiveChip() {
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
     ) {
         Text(
-            text = stringRes(R.string.nest_live_chip),
+            text = stringRes(Res.string.nest_live_chip),
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
         )
@@ -278,7 +288,7 @@ private fun EmptyStageHint() {
             modifier = Modifier.size(32.dp),
         )
         Text(
-            text = stringRes(R.string.nest_stage_empty),
+            text = stringRes(Res.string.nest_stage_empty),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -313,7 +323,7 @@ internal fun AudienceGrid(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = stringRes(R.string.nest_audience_empty),
+                text = stringRes(Res.string.nest_audience_empty),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -702,7 +712,7 @@ private fun RoleBadge(
                     background = scheme.primary,
                     foreground = scheme.onPrimary,
                     symbol = MaterialSymbols.MilitaryTech,
-                    label = stringRes(R.string.nest_role_host),
+                    label = stringRes(Res.string.nest_role_host),
                 )
             }
 
@@ -711,7 +721,7 @@ private fun RoleBadge(
                     background = scheme.secondary,
                     foreground = scheme.onSecondary,
                     symbol = MaterialSymbols.Shield,
-                    label = stringRes(R.string.nest_role_moderator),
+                    label = stringRes(Res.string.nest_role_moderator),
                 )
             }
 
@@ -771,9 +781,9 @@ private fun MicStateBadge(
         }
     val description =
         when {
-            isMuted -> stringRes(R.string.nest_state_muted)
-            isSpeaking -> stringRes(R.string.nest_state_speaking)
-            else -> stringRes(R.string.nest_state_mic_open)
+            isMuted -> stringRes(Res.string.nest_state_muted)
+            isSpeaking -> stringRes(Res.string.nest_state_speaking)
+            else -> stringRes(Res.string.nest_state_mic_open)
         }
     Box(
         modifier =

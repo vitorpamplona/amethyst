@@ -51,12 +51,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_selected_suffix
+import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_today_suffix
+import com.vitorpamplona.amethyst.commons.resources.calendar_empty_week_subtitle
+import com.vitorpamplona.amethyst.commons.resources.calendar_empty_week_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_week
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_week
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -120,8 +126,8 @@ fun CalendarWeekView(
         item(key = "week-nav") {
             CalendarNavigationHeader(
                 title = formatMonthYear(weekStart.year, weekStart.monthValue - 1),
-                prevContentDescription = stringRes(R.string.calendar_nav_previous_week),
-                nextContentDescription = stringRes(R.string.calendar_nav_next_week),
+                prevContentDescription = stringRes(Res.string.calendar_nav_previous_week),
+                nextContentDescription = stringRes(Res.string.calendar_nav_next_week),
                 onPrev = {
                     weekStartEpochDay = weekStart.minusWeeks(1).toEpochDay()
                     selectedDayIndex = 0
@@ -158,8 +164,8 @@ fun CalendarWeekView(
         if (dayNotes.isEmpty()) {
             item(key = "week-empty") {
                 CalendarEmptyState(
-                    title = stringRes(R.string.calendar_empty_week_title),
-                    subtitle = stringRes(R.string.calendar_empty_week_subtitle),
+                    title = stringRes(Res.string.calendar_empty_week_title),
+                    subtitle = stringRes(Res.string.calendar_empty_week_subtitle),
                 )
             }
         } else {
@@ -202,8 +208,8 @@ private fun WeekStrip(
 
             val dateLabel = formatLongDate(date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond())
             val baseA11y = calendarDayA11yLabel(dateLabel, count)
-            val todaySuffix = stringRes(R.string.calendar_day_a11y_today_suffix)
-            val selectedSuffix = stringRes(R.string.calendar_day_a11y_selected_suffix)
+            val todaySuffix = stringRes(Res.string.calendar_day_a11y_today_suffix)
+            val selectedSuffix = stringRes(Res.string.calendar_day_a11y_selected_suffix)
             val a11y =
                 buildString {
                     append(baseA11y)

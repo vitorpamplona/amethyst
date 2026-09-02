@@ -26,9 +26,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_location
+import com.vitorpamplona.amethyst.commons.resources.remove_location
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -42,14 +44,14 @@ fun AddGeoHashButton(
         if (!isActive) {
             Icon(
                 symbol = MaterialSymbols.LocationOff,
-                contentDescription = stringRes(id = R.string.add_location),
+                contentDescription = stringRes(id = Res.string.add_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 symbol = MaterialSymbols.LocationOn,
-                contentDescription = stringRes(id = R.string.remove_location),
+                contentDescription = stringRes(id = Res.string.remove_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
