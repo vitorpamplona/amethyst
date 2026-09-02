@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
 
+import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequest
+import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
