@@ -21,10 +21,15 @@
 package com.vitorpamplona.amethyst.model.zap
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.payments.PayToRailMatcher
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
+import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip57Zaps.splits.BaseZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
@@ -50,6 +55,12 @@ data class RailCapability(
     val cashuBestSingleMintSats: Long = 0L,
     /** Total cashu balance across all our mints (reachable via reload/rebalance). */
     val cashuTotalWalletSats: Long = 0L,
+    /**
+     * NIP-A3 targets the sender can hand off to: a protocol both parties publish,
+     * that no wallet rail already covers, that an installed app can open, on a note
+     * with no zap split. Empty by default so every existing caller is unchanged.
+     */
+    val payToTargets: List<PaymentTarget> = emptyList(),
 ) {
     /**
      * Classify a cashu nutzap of [amountSats] for the unified amount chip.
@@ -105,6 +116,8 @@ object RailCapabilityResolver {
     fun peek(
         baseNote: Note,
         cashuState: CashuWalletState,
+        senderPayToTargets: List<PaymentTarget> = emptyList(),
+        payToEnabled: Boolean = false,
     ): RailCapability {
         val author = baseNote.author?.pubkeyHex
         val splits = baseNote.event?.zapSplitSetup().orEmpty()
@@ -145,6 +158,32 @@ object RailCapabilityResolver {
             hasOnchain = hasOnchain,
             cashuBestSingleMintSats = cashuFunding?.bestSingleMintSats ?: 0L,
             cashuTotalWalletSats = cashuFunding?.totalWalletSats ?: 0L,
+            payToTargets = payToTargets(baseNote, splits, senderPayToTargets, payToEnabled),
         )
     }
+
+    /**
+     * Targets for the pay-to hand-off chip. Reads the note-derived inputs and hands
+     * the actual decision to [PayToRailMatcher.selectFor], which is pure and
+     * separately tested. [splits] is already computed by [peek]; don't recompute it.
+     */
+    private fun payToTargets(
+        baseNote: Note,
+        splits: List<BaseZapSplitSetup>,
+        senderTargets: List<PaymentTarget>,
+        enabled: Boolean,
+    ): List<PaymentTarget> =
+        PayToRailMatcher.selectFor(
+            enabled = enabled,
+            hasAuthor = baseNote.author != null,
+            hasZapSplit = splits.isNotEmpty(),
+            senderTargets = senderTargets,
+            recipientTargets = baseNote.author?.paymentTargets().orEmpty(),
+            // An unresolvable URI would open nothing, so the chip is not offered.
+            // Web targets always resolve; there the probe only decides the icon.
+            canOpen = {
+                PayToAppAvailability.peek(it.type)?.resolves == true ||
+                    PaymentTargetTypes.isWebTarget(it.type)
+            },
+        )
 }

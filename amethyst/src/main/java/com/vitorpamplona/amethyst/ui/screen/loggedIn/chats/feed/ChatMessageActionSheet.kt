@@ -682,6 +682,8 @@ private fun QuickZapAmountRow(
                 nav.nav(Route.UpdateZapAmount())
                 onDismiss()
             },
+            // Hands off to another app; the sheet must not stay stacked behind it.
+            onHandedOff = onDismiss,
         )
     }
 }

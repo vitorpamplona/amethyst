@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.nipA3
 
-class PaymentTarget(
+data class PaymentTarget(
     val type: String,
     val authority: String,
 )
