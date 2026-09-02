@@ -48,7 +48,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_calling
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -130,7 +131,7 @@ fun PeerVideoGrid(
             PeerAvatarCell(
                 peerPubKey = peerKey,
                 accountViewModel = accountViewModel,
-                statusText = if (isPending) stringRes(R.string.call_calling) else null,
+                statusText = if (isPending) stringRes(Res.string.call_calling) else null,
                 modifier = modifier,
             )
         }
@@ -161,7 +162,7 @@ fun PeerVideoGrid(
                             PeerAvatarCell(
                                 peerPubKey = peerKey,
                                 accountViewModel = accountViewModel,
-                                statusText = if (isPending) stringRes(R.string.call_calling) else null,
+                                statusText = if (isPending) stringRes(Res.string.call_calling) else null,
                                 modifier = cellModifier,
                             )
                         }

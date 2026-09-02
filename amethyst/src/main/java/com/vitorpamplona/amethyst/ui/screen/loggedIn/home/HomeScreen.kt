@@ -59,10 +59,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
+import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -514,9 +517,9 @@ fun HomeFeedEmpty(onRefresh: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringRes(R.string.feed_is_empty))
+        Text(stringRes(Res.string.feed_is_empty))
         Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
+        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(Res.string.refresh)) }
     }
 }
 

@@ -53,12 +53,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.loading_feed
+import com.vitorpamplona.amethyst.commons.resources.nip82_no_comments
+import com.vitorpamplona.amethyst.commons.resources.nip82_older_releases_hide
+import com.vitorpamplona.amethyst.commons.resources.nip82_older_releases_show
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_about
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_latest_release
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_links
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_platforms
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_topics
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -146,7 +155,7 @@ private fun SoftwareAppDetailScreenContent(
         if (current == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = stringRes(R.string.loading_feed),
+                    text = stringRes(Res.string.loading_feed),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             }
@@ -223,7 +232,7 @@ private fun SoftwareAppDetailBody(
         if (description.isNotBlank()) {
             item(key = "about") {
                 Spacer(Modifier.height(12.dp))
-                Section(title = stringRes(R.string.nip82_section_about)) {
+                Section(title = stringRes(Res.string.nip82_section_about)) {
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodyMedium,
@@ -235,7 +244,7 @@ private fun SoftwareAppDetailBody(
         if (platforms.isNotEmpty() || license != null) {
             item(key = "platforms") {
                 Spacer(Modifier.height(12.dp))
-                Section(title = stringRes(R.string.nip82_section_platforms)) {
+                Section(title = stringRes(Res.string.nip82_section_platforms)) {
                     PlatformLicenseRow(platforms = platforms, license = license)
                 }
             }
@@ -244,7 +253,7 @@ private fun SoftwareAppDetailBody(
         if (topics.isNotEmpty()) {
             item(key = "topics") {
                 Spacer(Modifier.height(12.dp))
-                Section(title = stringRes(R.string.nip82_section_topics)) {
+                Section(title = stringRes(Res.string.nip82_section_topics)) {
                     TopicChipFlow(topics = topics, nav = nav)
                 }
             }
@@ -253,7 +262,7 @@ private fun SoftwareAppDetailBody(
         if (website != null || repo != null) {
             item(key = "links") {
                 Spacer(Modifier.height(12.dp))
-                Section(title = stringRes(R.string.nip82_section_links)) {
+                Section(title = stringRes(Res.string.nip82_section_links)) {
                     AppLinksColumn(website = website, repository = repo)
                 }
             }
@@ -263,7 +272,7 @@ private fun SoftwareAppDetailBody(
             item(key = "latest-release") {
                 Spacer(Modifier.height(12.dp))
                 Column(PaddingHorizontal12Modifier) {
-                    SectionLabel(stringRes(R.string.nip82_section_latest_release))
+                    SectionLabel(stringRes(Res.string.nip82_section_latest_release))
                     RenderSoftwareReleaseBody(
                         event = latestRelease,
                         accountViewModel = accountViewModel,
@@ -318,7 +327,7 @@ private fun SoftwareAppDetailBody(
             item(key = "no-comments") {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = stringRes(R.string.nip82_no_comments),
+                    text = stringRes(Res.string.nip82_no_comments),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                     modifier = PaddingHorizontal12Modifier,
@@ -437,9 +446,9 @@ private fun OlderReleasesToggle(
             Text(
                 text =
                     if (expanded) {
-                        stringRes(R.string.nip82_older_releases_hide)
+                        stringRes(Res.string.nip82_older_releases_hide)
                     } else {
-                        stringRes(R.string.nip82_older_releases_show)
+                        stringRes(Res.string.nip82_older_releases_show)
                     },
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,

@@ -59,6 +59,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_dismiss
+import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_hide
+import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_icon
+import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_more_count
+import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_subtitle
+import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_who
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.types.reportTypeLabels
@@ -144,7 +151,7 @@ private fun ReportWarningBody(
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringRes(R.string.dm_sender_reported_subtitle),
+                        text = stringRes(Res.string.dm_sender_reported_subtitle),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -174,7 +181,7 @@ private fun ReportWarningBody(
                     onClick = onDismiss,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
                 ) {
-                    Text(text = stringRes(R.string.dm_sender_reported_dismiss))
+                    Text(text = stringRes(Res.string.dm_sender_reported_dismiss))
                 }
                 FilledTonalButton(
                     onClick = { expanded = !expanded },
@@ -187,9 +194,9 @@ private fun ReportWarningBody(
                     Text(
                         text =
                             if (expanded) {
-                                stringRes(R.string.dm_sender_reported_hide)
+                                stringRes(Res.string.dm_sender_reported_hide)
                             } else {
-                                stringRes(R.string.dm_sender_reported_who)
+                                stringRes(Res.string.dm_sender_reported_who)
                             },
                     )
                 }
@@ -211,7 +218,7 @@ private fun ReportBadge() {
     ) {
         Icon(
             symbol = MaterialSymbols.Report,
-            contentDescription = stringRes(R.string.dm_sender_reported_icon),
+            contentDescription = stringRes(Res.string.dm_sender_reported_icon),
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier.size(Size20dp),
         )
@@ -289,7 +296,7 @@ private fun OverflowChip(count: Int) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringRes(R.string.dm_sender_reported_more_count, count),
+            text = stringRes(Res.string.dm_sender_reported_more_count, count),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )

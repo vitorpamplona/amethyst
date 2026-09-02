@@ -42,11 +42,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_description
+import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_label
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -101,7 +103,7 @@ fun RelayGroupPinnedBar(
             ) {
                 Icon(
                     symbol = MaterialSymbols.PushPin,
-                    contentDescription = stringRes(R.string.relay_group_pinned_content_description),
+                    contentDescription = stringRes(Res.string.relay_group_pinned_content_description),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )
@@ -111,7 +113,7 @@ fun RelayGroupPinnedBar(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Text(
-                            text = stringRes(R.string.relay_group_pinned_label),
+                            text = stringRes(Res.string.relay_group_pinned_label),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -125,7 +127,7 @@ fun RelayGroupPinnedBar(
                         }
                     }
                     Text(
-                        text = pinnedPreview(liveNote) ?: stringRes(R.string.relay_group_pinned_content_description),
+                        text = pinnedPreview(liveNote) ?: stringRes(Res.string.relay_group_pinned_content_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

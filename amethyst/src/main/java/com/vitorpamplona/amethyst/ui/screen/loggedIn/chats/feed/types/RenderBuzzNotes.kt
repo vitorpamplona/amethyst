@@ -37,10 +37,24 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_diff_truncated
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_downvoted
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_upvoted
+import com.vitorpamplona.amethyst.commons.resources.buzz_huddle_ended
+import com.vitorpamplona.amethyst.commons.resources.buzz_huddle_joined
+import com.vitorpamplona.amethyst.commons.resources.buzz_huddle_left
+import com.vitorpamplona.amethyst.commons.resources.buzz_huddle_started
+import com.vitorpamplona.amethyst.commons.resources.buzz_job_accepted
+import com.vitorpamplona.amethyst.commons.resources.buzz_job_cancelled
+import com.vitorpamplona.amethyst.commons.resources.buzz_job_error
+import com.vitorpamplona.amethyst.commons.resources.buzz_job_progress
+import com.vitorpamplona.amethyst.commons.resources.buzz_job_requested
+import com.vitorpamplona.amethyst.commons.resources.buzz_job_result
+import com.vitorpamplona.amethyst.commons.resources.buzz_message_edited
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -102,7 +116,7 @@ fun RenderBuzzEditedNote(
             nav = nav,
         )
         Text(
-            text = stringRes(R.string.buzz_message_edited),
+            text = stringRes(Res.string.buzz_message_edited),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 10.sp,
@@ -172,18 +186,18 @@ fun buzzActivityLabel(
         )
 
     return when (event) {
-        is JobRequestEvent -> stringRes(R.string.buzz_job_requested, signer) + remember(event) { event.request().snippet() }
-        is JobAcceptedEvent -> stringRes(R.string.buzz_job_accepted, signer)
+        is JobRequestEvent -> stringRes(Res.string.buzz_job_requested, signer) + remember(event) { event.request().snippet() }
+        is JobAcceptedEvent -> stringRes(Res.string.buzz_job_accepted, signer)
         is JobProgressEvent ->
-            stringRes(R.string.buzz_job_progress) +
+            stringRes(Res.string.buzz_job_progress) +
                 remember(event) { (event.status()?.let { ": $it" } ?: "") + event.content.snippet() }
-        is JobResultEvent -> stringRes(R.string.buzz_job_result) + remember(event) { event.result().snippet() }
-        is JobCancelEvent -> stringRes(R.string.buzz_job_cancelled)
-        is JobErrorEvent -> stringRes(R.string.buzz_job_error) + remember(event) { event.error().snippet() }
-        is HuddleStartedEvent -> stringRes(R.string.buzz_huddle_started, signer)
-        is HuddleParticipantJoinedEvent -> stringRes(R.string.buzz_huddle_joined, participant)
-        is HuddleParticipantLeftEvent -> stringRes(R.string.buzz_huddle_left, participant)
-        is HuddleEndedEvent -> stringRes(R.string.buzz_huddle_ended)
+        is JobResultEvent -> stringRes(Res.string.buzz_job_result) + remember(event) { event.result().snippet() }
+        is JobCancelEvent -> stringRes(Res.string.buzz_job_cancelled)
+        is JobErrorEvent -> stringRes(Res.string.buzz_job_error) + remember(event) { event.error().snippet() }
+        is HuddleStartedEvent -> stringRes(Res.string.buzz_huddle_started, signer)
+        is HuddleParticipantJoinedEvent -> stringRes(Res.string.buzz_huddle_joined, participant)
+        is HuddleParticipantLeftEvent -> stringRes(Res.string.buzz_huddle_left, participant)
+        is HuddleEndedEvent -> stringRes(Res.string.buzz_huddle_ended)
         else -> null
     }
 }
@@ -257,7 +271,7 @@ fun RenderBuzzDiff(note: Note) {
             )
             if (meta?.truncated == true) {
                 Text(
-                    text = stringRes(R.string.buzz_diff_truncated),
+                    text = stringRes(Res.string.buzz_diff_truncated),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 10.sp,
@@ -281,9 +295,9 @@ fun RenderBuzzForumVote(
     ChatSystemMessage(
         text =
             if (isDownVote) {
-                stringRes(R.string.buzz_forum_downvoted, voter)
+                stringRes(Res.string.buzz_forum_downvoted, voter)
             } else {
-                stringRes(R.string.buzz_forum_upvoted, voter)
+                stringRes(Res.string.buzz_forum_upvoted, voter)
             },
     )
 }

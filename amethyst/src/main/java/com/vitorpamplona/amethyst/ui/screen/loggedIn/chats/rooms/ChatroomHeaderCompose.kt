@@ -49,22 +49,39 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreview
 import com.vitorpamplona.amethyst.commons.model.privateChats.chatPreviewOf
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.channel_created
+import com.vitorpamplona.amethyst.commons.resources.channel_image
+import com.vitorpamplona.amethyst.commons.resources.channel_information_changed_to
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_ignore
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_leave
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you_by
+import com.vitorpamplona.amethyst.commons.resources.chat_preview_decrypting
+import com.vitorpamplona.amethyst.commons.resources.chat_preview_you_prefix
+import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
+import com.vitorpamplona.amethyst.commons.resources.loading_feed
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_no_messages_yet
+import com.vitorpamplona.amethyst.commons.resources.muted_chat_content_description
+import com.vitorpamplona.amethyst.commons.resources.pinned_to_top
+import com.vitorpamplona.amethyst.commons.resources.referenced_event_not_found
+import com.vitorpamplona.amethyst.commons.resources.relay_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
-import com.vitorpamplona.amethyst.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderByParentFilterAssemblerSubscription
@@ -300,9 +317,9 @@ private fun ChannelRoomCompose(
 
     val description =
         if (noteEvent is ChannelCreateEvent) {
-            stringRes(R.string.channel_created)
+            stringRes(Res.string.channel_created)
         } else if (noteEvent is ChannelMetadataEvent) {
-            "${stringRes(R.string.channel_information_changed_to)} "
+            "${stringRes(Res.string.channel_information_changed_to)} "
         } else {
             noteEvent?.content?.take(200)
         }
@@ -329,7 +346,7 @@ private fun ChannelRoomCompose(
                 if (isMuted) MaterialSymbols.NotificationsOff else MaterialSymbols.Public,
                 R.string.public_chat,
                 modifier,
-                labelContentDescription = if (isMuted) stringRes(R.string.muted_chat_content_description) else null,
+                labelContentDescription = if (isMuted) stringRes(Res.string.muted_chat_content_description) else null,
             )
         },
         channelLastTime = lastMessage.createdAt(),
@@ -470,7 +487,7 @@ private fun MarmotGroupRoomCompose(
             val authorName by observeUserName(author, accountViewModel)
             "$authorName: ${noteEvent.content.take(200)}"
         } else {
-            stringRes(R.string.marmot_group_no_messages_yet)
+            stringRes(Res.string.marmot_group_no_messages_yet)
         }
 
     val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
@@ -518,9 +535,9 @@ private fun RelayGroupRoomCompose(
                 .relayGroupJoinedChatTail.tail.loadingMore
                 .collectAsStateWithLifecycle()
             if (stillFetching) {
-                stringRes(R.string.loading_feed)
+                stringRes(Res.string.loading_feed)
             } else {
-                stringRes(R.string.relay_group_no_messages_yet)
+                stringRes(Res.string.relay_group_no_messages_yet)
             }
         }
 
@@ -658,9 +675,9 @@ private fun ChannelInviteRoomCompose(
     val actorName = observeUserNameByHex(notice.actor, accountViewModel)
     val lastContent =
         if (notice.actor != null) {
-            stringRes(R.string.channel_invite_row_added_you_by, actorName)
+            stringRes(Res.string.channel_invite_row_added_you_by, actorName)
         } else {
-            stringRes(R.string.channel_invite_row_added_you)
+            stringRes(Res.string.channel_invite_row_added_you)
         }
 
     RelayGroupRow(
@@ -681,14 +698,14 @@ private fun ChannelInviteRoomCompose(
         // actually removes me from the channel. Keeping both means "get this off my list" never has
         // to mean "announce to the relay that I left".
         DropdownMenuItem(
-            text = { Text(stringRes(R.string.channel_invite_ignore)) },
+            text = { Text(stringRes(Res.string.channel_invite_ignore)) },
             onClick = {
                 dismiss()
                 accountViewModel.dismissChannelInvite(channel.groupId.id)
             },
         )
         DropdownMenuItem(
-            text = { Text(stringRes(R.string.channel_invite_leave), color = MaterialTheme.colorScheme.error) },
+            text = { Text(stringRes(Res.string.channel_invite_leave), color = MaterialTheme.colorScheme.error) },
             onClick = {
                 dismiss()
                 accountViewModel.leaveChannelInvite(channel)
@@ -715,7 +732,7 @@ private fun ConcordRoomCompose(
             "$authorName: ${noteEvent.content.take(200)}"
         } else {
             // Event-less placeholder row for a just-joined channel with no messages yet.
-            channel.communityName ?: stringRes(R.string.relay_group_no_messages_yet)
+            channel.communityName ?: stringRes(Res.string.relay_group_no_messages_yet)
         }
 
     // Unread dot: the newest timeline message is newer than the last time I opened this channel.
@@ -820,7 +837,7 @@ private fun RelayGroupServerRoomCompose(
             // like the in-chat row instead of printing raw payload; plain chat falls through.
             buzzTimelinePreviewSummary(noteEvent, accountViewModel) ?: "$authorName: ${noteEvent.content.take(200)}"
         } else {
-            stringRes(R.string.relay_group_no_messages_yet)
+            stringRes(Res.string.relay_group_no_messages_yet)
         }
 
     // Collapsed relay row: light the dot when ANY joined group on this relay has unread chat.
@@ -871,7 +888,7 @@ private fun ConcordServerRoomCompose(
             val authorName by observeUserName(author, accountViewModel)
             "$authorName: ${noteEvent.content.take(200)}"
         } else {
-            stringRes(R.string.relay_group_no_messages_yet)
+            stringRes(Res.string.relay_group_no_messages_yet)
         }
 
     // Collapsed community row: light the dot when ANY channel in this community has unread messages.
@@ -990,7 +1007,7 @@ private fun UserRoomCompose(
             if (room in pinnedRooms.value) {
                 Icon(
                     symbol = MaterialSymbols.PushPin,
-                    contentDescription = stringRes(R.string.pinned_to_top),
+                    contentDescription = stringRes(Res.string.pinned_to_top),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -1066,11 +1083,11 @@ private fun RowScope.LastMessagePreview(
                     // Mark my own newest message with a "You:" prefix (like other messengers) so a
                     // 1:1 room's preview shows who spoke last instead of reading like the counterpart.
                     val sentByMe = lastMessage.author?.pubkeyHex == accountViewModel.account.signer.pubKey
-                    if (sentByMe) stringRes(R.string.chat_preview_you_prefix, preview.text) else preview.text
+                    if (sentByMe) stringRes(Res.string.chat_preview_you_prefix, preview.text) else preview.text
                 }
-                ChatPreview.Decrypting -> stringRes(R.string.chat_preview_decrypting)
-                ChatPreview.Undecryptable -> stringRes(R.string.could_not_decrypt_the_message)
-                ChatPreview.Missing -> stringRes(R.string.referenced_event_not_found)
+                ChatPreview.Decrypting -> stringRes(Res.string.chat_preview_decrypting)
+                ChatPreview.Undecryptable -> stringRes(Res.string.could_not_decrypt_the_message)
+                ChatPreview.Missing -> stringRes(Res.string.referenced_event_not_found)
             }
 
         Text(
@@ -1121,7 +1138,7 @@ fun ChannelName(
             RobohashFallbackAsyncImage(
                 robot = channelIdHex,
                 model = channelPicture,
-                contentDescription = stringRes(R.string.channel_image),
+                contentDescription = stringRes(Res.string.channel_image),
                 modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture,
                 loadRobohash = loadRobohash,
@@ -1165,7 +1182,7 @@ fun ChannelName(
                 )
             } else {
                 Text(
-                    stringRes(R.string.referenced_event_not_found),
+                    stringRes(Res.string.referenced_event_not_found),
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

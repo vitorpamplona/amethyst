@@ -99,6 +99,58 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRun
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_approve_body
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_approve_open_pr
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_approve_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_approved_toast
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_by
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_cancel
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_closed_cancelled
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_closed_denied
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_closed_failed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_closed_failed_prefix
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_create_definition
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_decision_failed_toast
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_def_desc
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_def_name
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_def_name_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_def_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_def_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_def_yaml
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_denied_toast
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_deny
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_deny_body
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_deny_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_empty_desc
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_empty_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_gate_awaiting
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_gate_needs_you
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_id_prefix
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_new_definition
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_new_run
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_no_defs_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_no_description
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_picker_choose
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_picker_empty
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_picker_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_publishing
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_readonly_approver
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_runs_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_active
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_awaiting
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_task_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_this_run
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_trigger_desc
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_trigger_failed_toast
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_trigger_run
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_trigger_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_triggered_toast
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_for_approval
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_on
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -153,27 +205,27 @@ fun WorkflowRunBoardScreen(
     val scope = rememberCoroutineScope()
 
     // Resolve snackbar copy here (composable scope) so the coroutine lambdas below don't call stringRes.
-    val msgTriggered = stringRes(R.string.buzz_workflow_triggered_toast)
-    val msgTriggerFailed = stringRes(R.string.buzz_workflow_trigger_failed_toast)
-    val msgApproved = stringRes(R.string.buzz_workflow_approved_toast)
-    val msgDenied = stringRes(R.string.buzz_workflow_denied_toast)
-    val msgDecisionFailed = stringRes(R.string.buzz_workflow_decision_failed_toast)
+    val msgTriggered = stringRes(Res.string.buzz_workflow_triggered_toast)
+    val msgTriggerFailed = stringRes(Res.string.buzz_workflow_trigger_failed_toast)
+    val msgApproved = stringRes(Res.string.buzz_workflow_approved_toast)
+    val msgDenied = stringRes(Res.string.buzz_workflow_denied_toast)
+    val msgDecisionFailed = stringRes(Res.string.buzz_workflow_decision_failed_toast)
 
     // Section titles resolved here too — `section()` runs in LazyListScope, not a composable scope.
-    val titleAwaiting = stringRes(R.string.buzz_workflow_section_awaiting)
-    val titleActive = stringRes(R.string.buzz_workflow_section_active)
-    val titleShipped = stringRes(R.string.buzz_workflow_section_shipped)
-    val titleClosed = stringRes(R.string.buzz_workflow_section_closed)
+    val titleAwaiting = stringRes(Res.string.buzz_workflow_section_awaiting)
+    val titleActive = stringRes(Res.string.buzz_workflow_section_active)
+    val titleShipped = stringRes(Res.string.buzz_workflow_section_shipped)
+    val titleClosed = stringRes(Res.string.buzz_workflow_section_closed)
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_workflow_runs_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_workflow_runs_title), nav) },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             if (canWrite) {
                 ExtendedFloatingActionButton(
                     onClick = { composing = true },
                     icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
-                    text = { Text(stringRes(R.string.buzz_workflow_new_run)) },
+                    text = { Text(stringRes(Res.string.buzz_workflow_new_run)) },
                 )
             }
         },
@@ -396,7 +448,7 @@ private fun LazyItemScope.GateCard(
                         Icon(symbol = MaterialSymbols.Gavel, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
                     }
                     Text(
-                        text = if (mine) stringRes(R.string.buzz_workflow_gate_needs_you) else stringRes(R.string.buzz_workflow_gate_awaiting),
+                        text = if (mine) stringRes(Res.string.buzz_workflow_gate_needs_you) else stringRes(Res.string.buzz_workflow_gate_awaiting),
                         style = MaterialTheme.typography.titleSmall,
                         color = scheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -412,7 +464,7 @@ private fun LazyItemScope.GateCard(
             )
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Person(stringRes(R.string.buzz_workflow_by), run.requester, accountViewModel, nav)
+                Person(stringRes(Res.string.buzz_workflow_by), run.requester, accountViewModel, nav)
             }
 
             if (mine && canWrite) {
@@ -423,7 +475,7 @@ private fun LazyItemScope.GateCard(
             } else if (mine) {
                 // Named approver, but this login can't sign (read-only / remote signer w/o write).
                 Text(
-                    text = stringRes(R.string.buzz_workflow_readonly_approver),
+                    text = stringRes(Res.string.buzz_workflow_readonly_approver),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -449,7 +501,7 @@ private fun ApprovalActions(
             onClick = onDeny,
             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) {
-            Text(stringRes(R.string.buzz_workflow_deny), fontWeight = FontWeight.SemiBold)
+            Text(stringRes(Res.string.buzz_workflow_deny), fontWeight = FontWeight.SemiBold)
         }
         Button(
             onClick = onApprove,
@@ -458,7 +510,7 @@ private fun ApprovalActions(
         ) {
             Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text(stringRes(R.string.buzz_workflow_approve_open_pr), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(stringRes(Res.string.buzz_workflow_approve_open_pr), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -474,7 +526,7 @@ private fun ConfirmDecisionDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val task = decision.run.task?.takeIf { it.isNotBlank() } ?: stringRes(R.string.buzz_workflow_this_run)
+    val task = decision.run.task?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.buzz_workflow_this_run)
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
@@ -484,13 +536,13 @@ private fun ConfirmDecisionDialog(
                 tint = if (decision.grant) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             )
         },
-        title = { Text(if (decision.grant) stringRes(R.string.buzz_workflow_approve_title) else stringRes(R.string.buzz_workflow_deny_title)) },
+        title = { Text(if (decision.grant) stringRes(Res.string.buzz_workflow_approve_title) else stringRes(Res.string.buzz_workflow_deny_title)) },
         text = {
             Text(
                 if (decision.grant) {
-                    stringRes(R.string.buzz_workflow_approve_body, task)
+                    stringRes(Res.string.buzz_workflow_approve_body, task)
                 } else {
-                    stringRes(R.string.buzz_workflow_deny_body, task)
+                    stringRes(Res.string.buzz_workflow_deny_body, task)
                 },
             )
         },
@@ -499,15 +551,15 @@ private fun ConfirmDecisionDialog(
                 Button(onClick = onConfirm) {
                     Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringRes(R.string.buzz_workflow_approve_open_pr))
+                    Text(stringRes(Res.string.buzz_workflow_approve_open_pr))
                 }
             } else {
                 TextButton(onClick = onConfirm, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                    Text(stringRes(R.string.buzz_workflow_deny), fontWeight = FontWeight.SemiBold)
+                    Text(stringRes(Res.string.buzz_workflow_deny), fontWeight = FontWeight.SemiBold)
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(R.string.buzz_workflow_cancel)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.buzz_workflow_cancel)) } },
     )
 }
 
@@ -526,9 +578,9 @@ private fun WaitingPill(
         ) {
             Icon(symbol = MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
             if (approver != null) {
-                Person(stringRes(R.string.buzz_workflow_waiting_on), approver, accountViewModel, nav)
+                Person(stringRes(Res.string.buzz_workflow_waiting_on), approver, accountViewModel, nav)
             } else {
-                Text(stringRes(R.string.buzz_workflow_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
+                Text(stringRes(Res.string.buzz_workflow_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -585,7 +637,7 @@ private fun LazyItemScope.RunCard(
                     fontWeight = if (style == RunStyle.ACTIVE) FontWeight.SemiBold else FontWeight.Normal,
                 )
 
-                Person(stringRes(R.string.buzz_workflow_by), run.requester, accountViewModel, nav)
+                Person(stringRes(Res.string.buzz_workflow_by), run.requester, accountViewModel, nav)
 
                 when (style) {
                     RunStyle.ACTIVE -> {
@@ -619,9 +671,9 @@ private fun ClosedLine(
 ) {
     val text =
         when (run.state) {
-            WorkflowRunState.DENIED -> stringRes(R.string.buzz_workflow_closed_denied)
-            WorkflowRunState.CANCELLED -> stringRes(R.string.buzz_workflow_closed_cancelled)
-            else -> run.error?.let { stringRes(R.string.buzz_workflow_closed_failed_prefix, it) } ?: stringRes(R.string.buzz_workflow_closed_failed)
+            WorkflowRunState.DENIED -> stringRes(Res.string.buzz_workflow_closed_denied)
+            WorkflowRunState.CANCELLED -> stringRes(Res.string.buzz_workflow_closed_cancelled)
+            else -> run.error?.let { stringRes(Res.string.buzz_workflow_closed_failed_prefix, it) } ?: stringRes(Res.string.buzz_workflow_closed_failed)
         }
     Text(
         text,
@@ -663,7 +715,7 @@ private fun ResultLine(result: String) {
         Button(onClick = { uriHandler.openUri(url) }, shape = RoundedCornerShape(12.dp)) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(stringRes(R.string.buzz_workflow_view_pr))
+            Text(stringRes(Res.string.buzz_workflow_view_pr))
         }
     } else {
         Text(result, style = MaterialTheme.typography.bodyMedium)
@@ -711,8 +763,8 @@ private fun StatePill(
 @Composable
 private fun runHeadline(run: WorkflowRun): String =
     run.task?.takeIf { it.isNotBlank() }
-        ?: run.workflowId?.let { stringRes(R.string.buzz_workflow_id_prefix, it) }
-        ?: stringRes(R.string.buzz_workflow_no_description)
+        ?: run.workflowId?.let { stringRes(Res.string.buzz_workflow_id_prefix, it) }
+        ?: stringRes(Res.string.buzz_workflow_no_description)
 
 /**
  * Trigger a run: pick one of the channel's published **workflow definitions** (kind-30620) from the
@@ -751,9 +803,9 @@ private fun NewRunSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(stringRes(R.string.buzz_workflow_trigger_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringRes(Res.string.buzz_workflow_trigger_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                stringRes(R.string.buzz_workflow_trigger_desc),
+                stringRes(Res.string.buzz_workflow_trigger_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -779,7 +831,7 @@ private fun NewRunSheet(
                     // Don't leave a first-time user staring at a disabled Trigger button and an empty
                     // dropdown — point them at the way forward.
                     Text(
-                        stringRes(R.string.buzz_workflow_no_defs_hint),
+                        stringRes(Res.string.buzz_workflow_no_defs_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -787,7 +839,7 @@ private fun NewRunSheet(
                 OutlinedTextField(
                     value = task,
                     onValueChange = { task = it },
-                    label = { Text(stringRes(R.string.buzz_workflow_task_label)) },
+                    label = { Text(stringRes(Res.string.buzz_workflow_task_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                 )
@@ -798,7 +850,7 @@ private fun NewRunSheet(
                 ) {
                     Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringRes(R.string.buzz_workflow_trigger_run))
+                    Text(stringRes(Res.string.buzz_workflow_trigger_run))
                 }
             }
         }
@@ -820,8 +872,8 @@ private fun WorkflowPicker(
             value = selected?.label ?: "",
             onValueChange = {},
             readOnly = true,
-            label = { Text(stringRes(R.string.buzz_workflow_picker_label)) },
-            placeholder = { Text(if (definitions.isEmpty()) stringRes(R.string.buzz_workflow_picker_empty) else stringRes(R.string.buzz_workflow_picker_choose)) },
+            label = { Text(stringRes(Res.string.buzz_workflow_picker_label)) },
+            placeholder = { Text(if (definitions.isEmpty()) stringRes(Res.string.buzz_workflow_picker_empty) else stringRes(Res.string.buzz_workflow_picker_choose)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
@@ -837,7 +889,7 @@ private fun WorkflowPicker(
             }
             if (definitions.isNotEmpty()) HorizontalDivider()
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.buzz_workflow_new_definition), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) },
+                text = { Text(stringRes(Res.string.buzz_workflow_new_definition), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) },
                 leadingIcon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
                 onClick = {
                     expanded = false
@@ -862,19 +914,19 @@ private fun DefinitionEditor(
     var yaml by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    val publishFailedMsg = stringRes(R.string.buzz_workflow_def_publish_failed)
+    val publishFailedMsg = stringRes(Res.string.buzz_workflow_def_publish_failed)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringRes(R.string.buzz_workflow_def_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(stringRes(Res.string.buzz_workflow_def_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         Text(
-            stringRes(R.string.buzz_workflow_def_desc),
+            stringRes(Res.string.buzz_workflow_def_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text(stringRes(R.string.buzz_workflow_def_name)) },
-            placeholder = { Text(stringRes(R.string.buzz_workflow_def_name_hint)) },
+            label = { Text(stringRes(Res.string.buzz_workflow_def_name)) },
+            placeholder = { Text(stringRes(Res.string.buzz_workflow_def_name_hint)) },
             singleLine = true,
             enabled = !publishing,
             modifier = Modifier.fillMaxWidth(),
@@ -882,7 +934,7 @@ private fun DefinitionEditor(
         OutlinedTextField(
             value = yaml,
             onValueChange = { yaml = it },
-            label = { Text(stringRes(R.string.buzz_workflow_def_yaml)) },
+            label = { Text(stringRes(Res.string.buzz_workflow_def_yaml)) },
             enabled = !publishing,
             modifier = Modifier.fillMaxWidth(),
             minLines = 4,
@@ -891,7 +943,7 @@ private fun DefinitionEditor(
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onCancel, enabled = !publishing) { Text(stringRes(R.string.buzz_workflow_cancel)) }
+            OutlinedButton(onClick = onCancel, enabled = !publishing) { Text(stringRes(Res.string.buzz_workflow_cancel)) }
             Button(
                 onClick = {
                     error = null
@@ -906,7 +958,7 @@ private fun DefinitionEditor(
             ) {
                 Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (publishing) stringRes(R.string.buzz_workflow_publishing) else stringRes(R.string.buzz_workflow_create_definition))
+                Text(if (publishing) stringRes(Res.string.buzz_workflow_publishing) else stringRes(Res.string.buzz_workflow_create_definition))
             }
         }
     }
@@ -920,9 +972,9 @@ private fun EmptyRunBoard() {
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
     ) {
         Icon(symbol = MaterialSymbols.Gavel, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
-        Text(stringRes(R.string.buzz_workflow_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringRes(Res.string.buzz_workflow_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            stringRes(R.string.buzz_workflow_empty_desc),
+            stringRes(Res.string.buzz_workflow_empty_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

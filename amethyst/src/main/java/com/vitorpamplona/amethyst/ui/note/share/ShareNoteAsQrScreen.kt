@@ -50,8 +50,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr_code_description_nostr
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr_code_description_web
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr_hint_nostr
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr_hint_web
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr_mode_nostr
+import com.vitorpamplona.amethyst.commons.resources.share_as_qr_mode_web
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.getActivityWindow
@@ -87,7 +94,7 @@ fun ShareNoteAsQrScreen(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.share_as_qr), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.share_as_qr), nav) },
     ) { pad ->
         LoadNote(id, accountViewModel) { note ->
             if (note != null) {
@@ -105,7 +112,7 @@ fun ShareNoteAsQrScreen(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.share_as_qr), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.share_as_qr), nav) },
     ) { pad ->
         ShareNoteAsQrScreenContent(note, accountViewModel, nav, pad)
     }
@@ -149,8 +156,8 @@ private fun ShareNoteAsQrScreenContent(
 
         val qrContentDescription =
             when (mode) {
-                QrPayloadMode.Web -> stringRes(R.string.share_as_qr_code_description_web)
-                QrPayloadMode.Nostr -> stringRes(R.string.share_as_qr_code_description_nostr)
+                QrPayloadMode.Web -> stringRes(Res.string.share_as_qr_code_description_web)
+                QrPayloadMode.Nostr -> stringRes(Res.string.share_as_qr_code_description_nostr)
             }
         QrCodeDrawer(
             contents = payload,
@@ -178,8 +185,8 @@ private fun ShareNoteAsQrScreenContent(
                     Text(
                         text =
                             when (candidate) {
-                                QrPayloadMode.Web -> stringRes(R.string.share_as_qr_mode_web)
-                                QrPayloadMode.Nostr -> stringRes(R.string.share_as_qr_mode_nostr)
+                                QrPayloadMode.Web -> stringRes(Res.string.share_as_qr_mode_web)
+                                QrPayloadMode.Nostr -> stringRes(Res.string.share_as_qr_mode_nostr)
                             },
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -191,8 +198,8 @@ private fun ShareNoteAsQrScreenContent(
         Text(
             text =
                 when (mode) {
-                    QrPayloadMode.Web -> stringRes(R.string.share_as_qr_hint_web)
-                    QrPayloadMode.Nostr -> stringRes(R.string.share_as_qr_hint_nostr)
+                    QrPayloadMode.Web -> stringRes(Res.string.share_as_qr_hint_web)
+                    QrPayloadMode.Nostr -> stringRes(Res.string.share_as_qr_hint_nostr)
                 },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

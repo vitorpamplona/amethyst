@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedFlowsType
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow

@@ -61,6 +61,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_calling
+import com.vitorpamplona.amethyst.commons.resources.call_connecting
+import com.vitorpamplona.amethyst.commons.resources.call_dismiss
+import com.vitorpamplona.amethyst.commons.resources.call_ended
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -111,11 +116,11 @@ fun CallScreen(
                         state.peerPubKeys - accountViewModel.account.signer.pubKey
                     }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(Res.string.call_calling), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
                         peerPubKeys = otherMembers,
-                        statusText = stringRes(R.string.call_calling),
+                        statusText = stringRes(Res.string.call_calling),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
                     )
@@ -151,11 +156,11 @@ fun CallScreen(
                         state.peerPubKeys - accountViewModel.account.signer.pubKey
                     }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(Res.string.call_connecting), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
                         peerPubKeys = otherMembers,
-                        statusText = stringRes(R.string.call_connecting),
+                        statusText = stringRes(Res.string.call_connecting),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
                     )
@@ -191,7 +196,7 @@ fun CallScreen(
                 if (!isInPipMode) {
                     CallInProgressUI(
                         peerPubKeys = otherMembers,
-                        statusText = stringRes(R.string.call_ended),
+                        statusText = stringRes(Res.string.call_ended),
                         accountViewModel = accountViewModel,
                         onHangup = { onCallEnded() },
                     )
@@ -212,7 +217,7 @@ fun CallScreen(
                             onClick = { callSession?.clearError() },
                         ) {
                             Text(
-                                stringRes(R.string.call_dismiss),
+                                stringRes(Res.string.call_dismiss),
                                 color = MaterialTheme.colorScheme.inversePrimary,
                             )
                         }

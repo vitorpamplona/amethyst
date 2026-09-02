@@ -55,10 +55,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_restore_default
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.SimpleImage35Modifier
@@ -350,7 +351,7 @@ fun RestoreDefaultRow(onClick: () -> Unit) {
         horizontalArrangement = Arrangement.End,
     ) {
         TextButton(onClick = onClick) {
-            Text(stringRes(R.string.bottom_bar_settings_restore_default))
+            Text(stringRes(Res.string.bottom_bar_settings_restore_default))
         }
     }
 }

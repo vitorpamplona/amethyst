@@ -23,9 +23,11 @@ package com.vitorpamplona.amethyst.ui.note.creators.invoice
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_bitcoin_invoice
+import com.vitorpamplona.amethyst.commons.resources.cancel_bitcoin_invoice
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -41,14 +43,14 @@ fun AddLnInvoiceButton(
         if (!isLnInvoiceActive) {
             Icon(
                 symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = stringRes(id = R.string.add_bitcoin_invoice),
+                contentDescription = stringRes(id = Res.string.add_bitcoin_invoice),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
+                contentDescription = stringRes(id = Res.string.cancel_bitcoin_invoice),
                 modifier = Size20Modifier,
                 tint = BitcoinOrange,
             )

@@ -40,6 +40,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -64,7 +66,7 @@ fun ChannelNamePreview() {
                 channelPicture = {
                     Image(
                         painter = painterRes(R.drawable.github, 1),
-                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentDescription = stringRes(id = Res.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                     )
                 },
@@ -98,7 +100,7 @@ fun ChannelNamePreview() {
                 leadingContent = {
                     Image(
                         painter = painterRes(R.drawable.github, 2),
-                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentDescription = stringRes(id = Res.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                         modifier = Size55Modifier,
                     )
@@ -123,7 +125,7 @@ fun ChannelNamePreview() {
                 leadingContent = {
                     Image(
                         painter = painterRes(R.drawable.github, 2),
-                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentDescription = stringRes(id = Res.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                         modifier = Size55Modifier,
                     )

@@ -53,6 +53,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
+import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_invalid
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_name
+import com.vitorpamplona.amethyst.commons.resources.wallet_name_hint
+import com.vitorpamplona.amethyst.commons.resources.wallet_paste_ndebit
+import com.vitorpamplona.amethyst.commons.resources.wallet_save
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -89,7 +98,7 @@ fun AddClinkDebitWalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_add_clink_title)) },
+                title = { Text(stringRes(Res.string.wallet_add_clink_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -115,8 +124,8 @@ fun AddClinkDebitWalletScreen(
             OutlinedTextField(
                 value = walletName,
                 onValueChange = { walletName = it },
-                label = { Text(stringRes(R.string.wallet_name)) },
-                placeholder = { Text(stringRes(R.string.wallet_name_hint)) },
+                label = { Text(stringRes(Res.string.wallet_name)) },
+                placeholder = { Text(stringRes(Res.string.wallet_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -142,7 +151,7 @@ fun AddClinkDebitWalletScreen(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.ContentPaste,
-                        contentDescription = stringRes(id = R.string.paste_from_clipboard),
+                        contentDescription = stringRes(id = Res.string.paste_from_clipboard),
                         modifier = Size24Modifier,
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -152,7 +161,7 @@ fun AddClinkDebitWalletScreen(
                 IconButton(onClick = { qrScanning = true }) {
                     Icon(
                         painter = painterRes(R.drawable.ic_qrcode, 3),
-                        contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
+                        contentDescription = stringRes(id = Res.string.accessibility_scan_qr_code),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -177,7 +186,7 @@ fun AddClinkDebitWalletScreen(
                     ndebitUri = it
                     error = null
                 },
-                label = { Text(stringRes(R.string.wallet_paste_ndebit)) },
+                label = { Text(stringRes(Res.string.wallet_paste_ndebit)) },
                 placeholder = { Text("ndebit1...") },
                 minLines = 3,
                 maxLines = 5,
@@ -195,7 +204,7 @@ fun AddClinkDebitWalletScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            val invalidMessage = stringRes(R.string.wallet_add_clink_invalid)
+            val invalidMessage = stringRes(Res.string.wallet_add_clink_invalid)
             Button(
                 onClick = {
                     if (walletViewModel.addClinkDebitWallet(walletName.trim(), ndebitUri.trim())) {
@@ -207,7 +216,7 @@ fun AddClinkDebitWalletScreen(
                 enabled = ndebitUri.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.wallet_save))
+                Text(stringRes(Res.string.wallet_save))
             }
         }
     }

@@ -28,7 +28,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.pluralStringResource
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_archived
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_created
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_deleted
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_unarchived
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_dm_created
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_member_added
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_member_joined
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_member_left
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_member_removed
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_message_deleted
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_message_deleted_reason
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_purpose_changed
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_purpose_cleared
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_topic_changed
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_topic_cleared
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_ttl_cleared
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_ttl_set
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_unknown
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_visibility_open
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_visibility_other
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_visibility_private
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -103,58 +125,58 @@ fun buzzSystemMessageText(
         // actor == target. Wording them the same would credit a self-join to whoever invited.
         SystemMessagePayload.MEMBER_JOINED ->
             if (payload.target == null || payload.target == payload.actor) {
-                stringRes(R.string.buzz_system_member_joined, subject)
+                stringRes(Res.string.buzz_system_member_joined, subject)
             } else {
-                stringRes(R.string.buzz_system_member_added, target, actor)
+                stringRes(Res.string.buzz_system_member_added, target, actor)
             }
 
-        SystemMessagePayload.MEMBER_LEFT -> stringRes(R.string.buzz_system_member_left, subject)
+        SystemMessagePayload.MEMBER_LEFT -> stringRes(Res.string.buzz_system_member_left, subject)
 
         SystemMessagePayload.MEMBER_REMOVED ->
             if (payload.target == null || payload.target == payload.actor) {
-                stringRes(R.string.buzz_system_member_left, subject)
+                stringRes(Res.string.buzz_system_member_left, subject)
             } else {
-                stringRes(R.string.buzz_system_member_removed, target, actor)
+                stringRes(Res.string.buzz_system_member_removed, target, actor)
             }
 
         SystemMessagePayload.TOPIC_CHANGED ->
             payload.topic?.takeIf { it.isNotBlank() }?.let {
-                stringRes(R.string.buzz_system_topic_changed, actor, it)
-            } ?: stringRes(R.string.buzz_system_topic_cleared, actor)
+                stringRes(Res.string.buzz_system_topic_changed, actor, it)
+            } ?: stringRes(Res.string.buzz_system_topic_cleared, actor)
 
         SystemMessagePayload.PURPOSE_CHANGED ->
             payload.purpose?.takeIf { it.isNotBlank() }?.let {
-                stringRes(R.string.buzz_system_purpose_changed, actor, it)
-            } ?: stringRes(R.string.buzz_system_purpose_cleared, actor)
+                stringRes(Res.string.buzz_system_purpose_changed, actor, it)
+            } ?: stringRes(Res.string.buzz_system_purpose_cleared, actor)
 
         // Buzz has exactly two visibility modes; spell out what each one means for the reader
         // rather than echoing the relay's token, and keep a literal fallback for a third.
         SystemMessagePayload.VISIBILITY_CHANGED ->
             when (payload.visibility) {
-                SystemMessagePayload.VISIBILITY_OPEN -> stringRes(R.string.buzz_system_visibility_open, actor)
-                SystemMessagePayload.VISIBILITY_PRIVATE -> stringRes(R.string.buzz_system_visibility_private, actor)
-                else -> stringRes(R.string.buzz_system_visibility_other, actor, payload.visibility ?: "")
+                SystemMessagePayload.VISIBILITY_OPEN -> stringRes(Res.string.buzz_system_visibility_open, actor)
+                SystemMessagePayload.VISIBILITY_PRIVATE -> stringRes(Res.string.buzz_system_visibility_private, actor)
+                else -> stringRes(Res.string.buzz_system_visibility_other, actor, payload.visibility ?: "")
             }
 
         // A null ttl_seconds is the relay clearing the TTL (messages become permanent).
         SystemMessagePayload.TTL_CHANGED ->
             payload.ttlSeconds?.takeIf { it > 0 }?.let {
-                stringRes(R.string.buzz_system_ttl_set, actor, ttlDurationText(it))
-            } ?: stringRes(R.string.buzz_system_ttl_cleared, actor)
+                stringRes(Res.string.buzz_system_ttl_set, actor, ttlDurationText(it))
+            } ?: stringRes(Res.string.buzz_system_ttl_cleared, actor)
 
-        SystemMessagePayload.CHANNEL_ARCHIVED -> stringRes(R.string.buzz_system_channel_archived, actor)
-        SystemMessagePayload.CHANNEL_UNARCHIVED -> stringRes(R.string.buzz_system_channel_unarchived, actor)
-        SystemMessagePayload.CHANNEL_CREATED -> stringRes(R.string.buzz_system_channel_created, actor)
-        SystemMessagePayload.CHANNEL_DELETED -> stringRes(R.string.buzz_system_channel_deleted, actor)
+        SystemMessagePayload.CHANNEL_ARCHIVED -> stringRes(Res.string.buzz_system_channel_archived, actor)
+        SystemMessagePayload.CHANNEL_UNARCHIVED -> stringRes(Res.string.buzz_system_channel_unarchived, actor)
+        SystemMessagePayload.CHANNEL_CREATED -> stringRes(Res.string.buzz_system_channel_created, actor)
+        SystemMessagePayload.CHANNEL_DELETED -> stringRes(Res.string.buzz_system_channel_deleted, actor)
 
         SystemMessagePayload.MESSAGE_DELETED ->
             payload.publicReason?.takeIf { it.isNotBlank() }?.let {
-                stringRes(R.string.buzz_system_message_deleted_reason, actor, it)
-            } ?: stringRes(R.string.buzz_system_message_deleted, actor)
+                stringRes(Res.string.buzz_system_message_deleted_reason, actor, it)
+            } ?: stringRes(Res.string.buzz_system_message_deleted, actor)
 
-        SystemMessagePayload.DM_CREATED -> stringRes(R.string.buzz_system_dm_created, actor)
+        SystemMessagePayload.DM_CREATED -> stringRes(Res.string.buzz_system_dm_created, actor)
 
-        else -> stringRes(R.string.buzz_system_unknown, actor, payload.type.replace('_', ' '))
+        else -> stringRes(Res.string.buzz_system_unknown, actor, payload.type.replace('_', ' '))
     }
 }
 

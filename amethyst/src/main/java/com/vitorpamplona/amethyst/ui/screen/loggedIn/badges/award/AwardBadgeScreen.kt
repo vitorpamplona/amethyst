@@ -49,8 +49,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.award_badge_loading
+import com.vitorpamplona.amethyst.commons.resources.award_badge_remove_recipient
+import com.vitorpamplona.amethyst.commons.resources.award_badge_search_label
+import com.vitorpamplona.amethyst.commons.resources.award_badge_search_placeholder
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -142,8 +147,8 @@ fun AwardBadgeScreen(
                         userSuggestions.reset()
                     }
                 },
-                label = { Text(stringRes(R.string.award_badge_search_label)) },
-                placeholder = { Text(stringRes(R.string.award_badge_search_placeholder)) },
+                label = { Text(stringRes(Res.string.award_badge_search_label)) },
+                placeholder = { Text(stringRes(Res.string.award_badge_search_placeholder)) },
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -177,7 +182,7 @@ private fun BadgeSummary(vm: AwardBadgeViewModel) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         if (def == null) {
             Text(
-                text = stringRes(R.string.award_badge_loading),
+                text = stringRes(Res.string.award_badge_loading),
                 style = MaterialTheme.typography.bodyMedium,
             )
         } else {
@@ -233,7 +238,7 @@ private fun SelectedUserRow(
             Nip05OrPubkeyLine(user)
         }
         TextButton(onClick = onClear) {
-            Text(stringRes(R.string.award_badge_remove_recipient))
+            Text(stringRes(Res.string.award_badge_remove_recipient))
         }
     }
 }

@@ -63,6 +63,35 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_wallet
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_wallet_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_wallet_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_wallet_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_edit_wallet
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_edit_wallet_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_import_key
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_import_key_action
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_import_key_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_import_key_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_import_key_field
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_import_key_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_my_recommendations
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recommendations_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recreate_key
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recreate_key_action
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recreate_key_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recreate_key_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recreate_key_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_nothing_found
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_running
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_title
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -98,7 +127,7 @@ fun CashuWalletSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.cashu_settings_title)) },
+                title = { Text(stringRes(Res.string.cashu_settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -125,8 +154,8 @@ fun CashuWalletSettingsScreen(
             item {
                 SettingsRow(
                     icon = MaterialSymbols.Edit,
-                    title = stringRes(R.string.cashu_settings_edit_wallet),
-                    subtitle = stringRes(R.string.cashu_settings_edit_wallet_subtitle),
+                    title = stringRes(Res.string.cashu_settings_edit_wallet),
+                    subtitle = stringRes(Res.string.cashu_settings_edit_wallet_subtitle),
                     onClick = { nav.nav(Route.CashuWalletMints) },
                 )
             }
@@ -134,8 +163,8 @@ fun CashuWalletSettingsScreen(
             item {
                 SettingsRow(
                     icon = MaterialSymbols.ThumbUp,
-                    title = stringRes(R.string.cashu_settings_my_recommendations),
-                    subtitle = stringRes(R.string.cashu_settings_recommendations_subtitle),
+                    title = stringRes(Res.string.cashu_settings_my_recommendations),
+                    subtitle = stringRes(Res.string.cashu_settings_recommendations_subtitle),
                     onClick = { nav.nav(Route.CashuMintRecommendations) },
                 )
             }
@@ -150,12 +179,12 @@ fun CashuWalletSettingsScreen(
                 val restoreSubtitle =
                     when (val s = restoreState) {
                         is CashuWalletViewModel.RestoreFlowState.Idle ->
-                            stringRes(R.string.cashu_settings_restore_subtitle)
+                            stringRes(Res.string.cashu_settings_restore_subtitle)
                         is CashuWalletViewModel.RestoreFlowState.Running ->
-                            stringRes(R.string.cashu_settings_restore_running)
+                            stringRes(Res.string.cashu_settings_restore_running)
                         is CashuWalletViewModel.RestoreFlowState.Completed ->
                             if (s.totalSatsRecovered == 0L) {
-                                stringRes(R.string.cashu_settings_restore_nothing_found)
+                                stringRes(Res.string.cashu_settings_restore_nothing_found)
                             } else {
                                 stringRes(
                                     R.string.cashu_settings_restore_result,
@@ -167,7 +196,7 @@ fun CashuWalletSettingsScreen(
                     }
                 SettingsRow(
                     icon = MaterialSymbols.CloudDownload,
-                    title = stringRes(R.string.cashu_settings_restore_title),
+                    title = stringRes(Res.string.cashu_settings_restore_title),
                     subtitle = restoreSubtitle,
                     onClick = {
                         if (restoreState !is CashuWalletViewModel.RestoreFlowState.Running) {
@@ -191,8 +220,8 @@ fun CashuWalletSettingsScreen(
                 item {
                     SettingsRow(
                         icon = MaterialSymbols.Block,
-                        title = stringRes(R.string.cashu_settings_stop_nutzaps),
-                        subtitle = stringRes(R.string.cashu_settings_stop_nutzaps_subtitle),
+                        title = stringRes(Res.string.cashu_settings_stop_nutzaps),
+                        subtitle = stringRes(Res.string.cashu_settings_stop_nutzaps_subtitle),
                         isDanger = true,
                         onClick = { showStopNutzapsConfirm = true },
                     )
@@ -200,8 +229,8 @@ fun CashuWalletSettingsScreen(
                 item {
                     SettingsRow(
                         icon = MaterialSymbols.Refresh,
-                        title = stringRes(R.string.cashu_settings_recreate_key),
-                        subtitle = stringRes(R.string.cashu_settings_recreate_key_subtitle),
+                        title = stringRes(Res.string.cashu_settings_recreate_key),
+                        subtitle = stringRes(Res.string.cashu_settings_recreate_key_subtitle),
                         isDanger = true,
                         onClick = { showRecreateKeyConfirm = true },
                     )
@@ -209,8 +238,8 @@ fun CashuWalletSettingsScreen(
                 item {
                     SettingsRow(
                         icon = MaterialSymbols.ContentPaste,
-                        title = stringRes(R.string.cashu_settings_import_key),
-                        subtitle = stringRes(R.string.cashu_settings_import_key_subtitle),
+                        title = stringRes(Res.string.cashu_settings_import_key),
+                        subtitle = stringRes(Res.string.cashu_settings_import_key_subtitle),
                         isDanger = true,
                         onClick = { showImportKeyDialog = true },
                     )
@@ -218,8 +247,8 @@ fun CashuWalletSettingsScreen(
                 item {
                     SettingsRow(
                         icon = MaterialSymbols.DeleteForever,
-                        title = stringRes(R.string.cashu_settings_delete_wallet),
-                        subtitle = stringRes(R.string.cashu_settings_delete_wallet_subtitle),
+                        title = stringRes(Res.string.cashu_settings_delete_wallet),
+                        subtitle = stringRes(Res.string.cashu_settings_delete_wallet_subtitle),
                         isDanger = true,
                         onClick = { showDeleteWalletConfirm = true },
                     )
@@ -233,15 +262,15 @@ fun CashuWalletSettingsScreen(
     if (showStopNutzapsConfirm) {
         AlertDialog(
             onDismissRequest = { showStopNutzapsConfirm = false },
-            title = { Text(stringRes(R.string.cashu_settings_stop_nutzaps_confirm_title)) },
-            text = { Text(stringRes(R.string.cashu_settings_stop_nutzaps_confirm_body)) },
+            title = { Text(stringRes(Res.string.cashu_settings_stop_nutzaps_confirm_title)) },
+            text = { Text(stringRes(Res.string.cashu_settings_stop_nutzaps_confirm_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.stopNutzaps()
                         showStopNutzapsConfirm = false
                     },
-                ) { Text(stringRes(R.string.cashu_settings_stop_nutzaps)) }
+                ) { Text(stringRes(Res.string.cashu_settings_stop_nutzaps)) }
             },
             dismissButton = {
                 TextButton(onClick = { showStopNutzapsConfirm = false }) {
@@ -254,15 +283,15 @@ fun CashuWalletSettingsScreen(
     if (showRecreateKeyConfirm) {
         AlertDialog(
             onDismissRequest = { showRecreateKeyConfirm = false },
-            title = { Text(stringRes(R.string.cashu_settings_recreate_key_confirm_title)) },
-            text = { Text(stringRes(R.string.cashu_settings_recreate_key_confirm_body)) },
+            title = { Text(stringRes(Res.string.cashu_settings_recreate_key_confirm_title)) },
+            text = { Text(stringRes(Res.string.cashu_settings_recreate_key_confirm_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.recreateNutzapKey()
                         showRecreateKeyConfirm = false
                     },
-                ) { Text(stringRes(R.string.cashu_settings_recreate_key_action)) }
+                ) { Text(stringRes(Res.string.cashu_settings_recreate_key_action)) }
             },
             dismissButton = {
                 TextButton(onClick = { showRecreateKeyConfirm = false }) {
@@ -278,10 +307,10 @@ fun CashuWalletSettingsScreen(
         var error by remember { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = { if (!working) showImportKeyDialog = false },
-            title = { Text(stringRes(R.string.cashu_settings_import_key_confirm_title)) },
+            title = { Text(stringRes(Res.string.cashu_settings_import_key_confirm_title)) },
             text = {
                 Column {
-                    Text(stringRes(R.string.cashu_settings_import_key_confirm_body))
+                    Text(stringRes(Res.string.cashu_settings_import_key_confirm_body))
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = keyInput,
@@ -289,7 +318,7 @@ fun CashuWalletSettingsScreen(
                             keyInput = it
                             error = null
                         },
-                        label = { Text(stringRes(R.string.cashu_settings_import_key_field)) },
+                        label = { Text(stringRes(Res.string.cashu_settings_import_key_field)) },
                         placeholder = { Text("hex…") },
                         singleLine = true,
                         isError = error != null,
@@ -320,7 +349,7 @@ fun CashuWalletSettingsScreen(
                     if (working) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     } else {
-                        Text(stringRes(R.string.cashu_settings_import_key_action))
+                        Text(stringRes(Res.string.cashu_settings_import_key_action))
                     }
                 }
             },
@@ -335,8 +364,8 @@ fun CashuWalletSettingsScreen(
     if (showDeleteWalletConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteWalletConfirm = false },
-            title = { Text(stringRes(R.string.cashu_settings_delete_wallet_confirm_title)) },
-            text = { Text(stringRes(R.string.cashu_settings_delete_wallet_confirm_body)) },
+            title = { Text(stringRes(Res.string.cashu_settings_delete_wallet_confirm_title)) },
+            text = { Text(stringRes(Res.string.cashu_settings_delete_wallet_confirm_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -350,7 +379,7 @@ fun CashuWalletSettingsScreen(
                         viewModel.deleteWallet(onDone = {})
                         nav.newStack(Route.Wallet)
                     },
-                ) { Text(stringRes(R.string.cashu_settings_delete_wallet)) }
+                ) { Text(stringRes(Res.string.cashu_settings_delete_wallet)) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteWalletConfirm = false }) {

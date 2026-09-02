@@ -69,7 +69,24 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_collaborative
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_collaborative_hint
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_delete
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_delete_confirm
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_description_label
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_loading_track
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_move_track_down
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_move_track_up
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_new_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_no_tracks_hint
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_notes_label
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_private
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_private_hint
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_remove_track
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_title_label
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_unknown_track
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
@@ -165,8 +182,8 @@ fun NewMusicPlaylistScreen(
             OutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
-                label = { Text(stringRes(R.string.music_playlist_title_label)) },
-                placeholder = { Text(stringRes(R.string.music_playlist_new_title_placeholder)) },
+                label = { Text(stringRes(Res.string.music_playlist_title_label)) },
+                placeholder = { Text(stringRes(Res.string.music_playlist_new_title_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
@@ -176,7 +193,7 @@ fun NewMusicPlaylistScreen(
             OutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
-                label = { Text(stringRes(R.string.music_playlist_description_label)) },
+                label = { Text(stringRes(Res.string.music_playlist_description_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -185,7 +202,7 @@ fun NewMusicPlaylistScreen(
             OutlinedTextField(
                 value = vm.notes.value,
                 onValueChange = { vm.notes.value = it },
-                label = { Text(stringRes(R.string.music_playlist_notes_label)) },
+                label = { Text(stringRes(Res.string.music_playlist_notes_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -193,8 +210,8 @@ fun NewMusicPlaylistScreen(
 
             LabeledSwitchRow(
                 iconSymbol = if (vm.isPrivate.value) MaterialSymbols.Lock else MaterialSymbols.Public,
-                title = stringRes(R.string.music_playlist_private),
-                subtitle = stringRes(R.string.music_playlist_private_hint),
+                title = stringRes(Res.string.music_playlist_private),
+                subtitle = stringRes(Res.string.music_playlist_private_hint),
                 checked = vm.isPrivate.value,
                 enabled = !isBusy,
                 onCheckedChange = { vm.isPrivate.value = it },
@@ -202,8 +219,8 @@ fun NewMusicPlaylistScreen(
 
             LabeledSwitchRow(
                 iconSymbol = MaterialSymbols.Groups,
-                title = stringRes(R.string.music_playlist_collaborative),
-                subtitle = stringRes(R.string.music_playlist_collaborative_hint),
+                title = stringRes(Res.string.music_playlist_collaborative),
+                subtitle = stringRes(Res.string.music_playlist_collaborative_hint),
                 checked = vm.isCollaborative.value,
                 enabled = !isBusy,
                 onCheckedChange = { vm.isCollaborative.value = it },
@@ -292,7 +309,7 @@ private fun TrackManagementSection(
 
     if (tracks.isEmpty()) {
         Text(
-            text = stringRes(R.string.music_playlist_no_tracks_hint),
+            text = stringRes(Res.string.music_playlist_no_tracks_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -334,7 +351,7 @@ private fun EditableTrackRow(
     if (trackNote == null) {
         TrackRow(
             position = position,
-            title = stringRes(R.string.music_playlist_loading_track),
+            title = stringRes(Res.string.music_playlist_loading_track),
             artist = null,
             cover = null,
             isFirst = isFirst,
@@ -353,7 +370,7 @@ private fun EditableTrackRow(
     val trackEvent by observeNoteEvent<MusicTrackEvent>(trackNote, accountViewModel)
     TrackRow(
         position = position,
-        title = trackEvent?.title() ?: stringRes(R.string.music_playlist_unknown_track),
+        title = trackEvent?.title() ?: stringRes(Res.string.music_playlist_unknown_track),
         artist = trackEvent?.artist(),
         cover = trackEvent?.image(),
         isFirst = isFirst,
@@ -430,21 +447,21 @@ private fun TrackRow(
         IconButton(onClick = onMoveUp, enabled = enabled && !isFirst) {
             Icon(
                 symbol = MaterialSymbols.ArrowUpward,
-                contentDescription = stringRes(R.string.music_playlist_move_track_up),
+                contentDescription = stringRes(Res.string.music_playlist_move_track_up),
                 modifier = Modifier.size(20.dp),
             )
         }
         IconButton(onClick = onMoveDown, enabled = enabled && !isLast) {
             Icon(
                 symbol = MaterialSymbols.ArrowDownward,
-                contentDescription = stringRes(R.string.music_playlist_move_track_down),
+                contentDescription = stringRes(Res.string.music_playlist_move_track_down),
                 modifier = Modifier.size(20.dp),
             )
         }
         IconButton(onClick = onRemove, enabled = enabled) {
             Icon(
                 symbol = MaterialSymbols.Close,
-                contentDescription = stringRes(R.string.music_playlist_remove_track),
+                contentDescription = stringRes(Res.string.music_playlist_remove_track),
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(20.dp),
             )
@@ -484,14 +501,14 @@ private fun DeleteMusicPlaylistRow(
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
-        Text(text = stringRes(R.string.music_playlist_delete))
+        Text(text = stringRes(Res.string.music_playlist_delete))
     }
 
     if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },
-            title = { Text(stringRes(R.string.music_playlist_delete)) },
-            text = { Text(stringRes(R.string.music_playlist_delete_confirm)) },
+            title = { Text(stringRes(Res.string.music_playlist_delete)) },
+            text = { Text(stringRes(Res.string.music_playlist_delete_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirming = false
@@ -500,7 +517,7 @@ private fun DeleteMusicPlaylistRow(
                     }
                 }) {
                     Text(
-                        text = stringRes(R.string.music_playlist_delete),
+                        text = stringRes(Res.string.music_playlist_delete),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }

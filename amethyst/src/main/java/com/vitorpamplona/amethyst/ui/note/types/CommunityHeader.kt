@@ -58,11 +58,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.about_us
+import com.vitorpamplona.amethyst.commons.resources.community_no_descriptor
+import com.vitorpamplona.amethyst.commons.resources.guidelines
+import com.vitorpamplona.amethyst.commons.resources.join
+import com.vitorpamplona.amethyst.commons.resources.moderators
+import com.vitorpamplona.amethyst.commons.resources.owner
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
@@ -192,12 +200,12 @@ fun LongCommunityHeader(
 
             Spacer(modifier = Modifier.height(8.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Title(title = stringRes(R.string.about_us))
+            Title(title = stringRes(Res.string.about_us))
             Spacer(modifier = Modifier.height(16.dp))
 
             Column(Modifier.padding(16.dp, 0.dp, 16.dp, 0.dp)) {
                 TranslatableRichTextViewer(
-                    content = description ?: stringRes(id = R.string.community_no_descriptor),
+                    content = description ?: stringRes(id = Res.string.community_no_descriptor),
                     id = baseNote.idHex + "description",
                     accountViewModel = accountViewModel,
                 ) {
@@ -217,7 +225,7 @@ fun LongCommunityHeader(
 
             guidelines?.let {
                 Spacer(modifier = Modifier.height(24.dp))
-                Title(title = stringRes(R.string.guidelines))
+                Title(title = stringRes(Res.string.guidelines))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Column(Modifier.padding(16.dp, 0.dp, 16.dp, 0.dp)) {
@@ -253,7 +261,7 @@ fun LongCommunityHeader(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Title(title = stringRes(R.string.owner))
+            Title(title = stringRes(Res.string.owner))
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
@@ -287,7 +295,7 @@ fun LongCommunityHeader(
 
             if (participantUsers.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(24.dp))
-                Title(title = stringRes(R.string.moderators))
+                Title(title = stringRes(Res.string.moderators))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 participantUsers.forEach {
@@ -322,7 +330,7 @@ fun ShortCommunityHeader(
             RobohashFallbackAsyncImage(
                 robot = baseNote.idHex,
                 model = it.imageUrl,
-                contentDescription = stringRes(R.string.profile_image),
+                contentDescription = stringRes(Res.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
@@ -377,7 +385,7 @@ fun ShortCommunityHeaderNoActions(
             RobohashFallbackAsyncImage(
                 robot = baseNote.idHex,
                 model = it.imageUrl,
-                contentDescription = stringRes(R.string.profile_image),
+                contentDescription = stringRes(Res.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
@@ -501,7 +509,7 @@ fun JoinCommunityButton(
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.join), color = Color.White)
+        Text(text = stringRes(Res.string.join), color = Color.White)
     }
 }
 

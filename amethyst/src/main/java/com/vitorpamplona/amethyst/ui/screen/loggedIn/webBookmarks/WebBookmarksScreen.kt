@@ -66,11 +66,26 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.no
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_delete
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_delete_confirm
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_description_label
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_open_url
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_save
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_tags_label
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_tags_placeholder
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_title_label
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_url_label
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_url_placeholder
+import com.vitorpamplona.amethyst.commons.resources.yes
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -235,8 +250,8 @@ private fun WebBookmarkCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text(stringResource(R.string.web_bookmark_delete)) },
-            text = { Text(stringResource(R.string.web_bookmark_delete_confirm)) },
+            title = { Text(stringRes(Res.string.web_bookmark_delete)) },
+            text = { Text(stringRes(Res.string.web_bookmark_delete_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     accountViewModel.launchSigner {
@@ -244,12 +259,12 @@ private fun WebBookmarkCard(
                     }
                     showDeleteDialog = false
                 }) {
-                    Text(stringResource(R.string.yes))
+                    Text(stringRes(Res.string.yes))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text(stringResource(R.string.no))
+                    Text(stringRes(Res.string.no))
                 }
             },
         )
@@ -317,7 +332,7 @@ private fun WebBookmarkCard(
                 IconButton(onClick = { uriHandler.openUri(event.url()) }) {
                     Icon(
                         symbol = MaterialSymbols.OpenInBrowser,
-                        contentDescription = stringResource(R.string.web_bookmark_open_url),
+                        contentDescription = stringRes(Res.string.web_bookmark_open_url),
                     )
                 }
                 IconButton(onClick = { showEditDialog = true }) {
@@ -329,7 +344,7 @@ private fun WebBookmarkCard(
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(
                         symbol = MaterialSymbols.Delete,
-                        contentDescription = stringResource(R.string.web_bookmark_delete),
+                        contentDescription = stringRes(Res.string.web_bookmark_delete),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -425,8 +440,8 @@ fun WebBookmarkEditDialog(
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text(stringResource(R.string.web_bookmark_url_label)) },
-                    placeholder = { Text(stringResource(R.string.web_bookmark_url_placeholder)) },
+                    label = { Text(stringRes(Res.string.web_bookmark_url_label)) },
+                    placeholder = { Text(stringRes(Res.string.web_bookmark_url_placeholder)) },
                     singleLine = true,
                     modifier =
                         Modifier
@@ -451,8 +466,8 @@ fun WebBookmarkEditDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.web_bookmark_title_label)) },
-                    placeholder = { Text(stringResource(R.string.web_bookmark_title_placeholder)) },
+                    label = { Text(stringRes(Res.string.web_bookmark_title_label)) },
+                    placeholder = { Text(stringRes(Res.string.web_bookmark_title_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -462,8 +477,8 @@ fun WebBookmarkEditDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text(stringResource(R.string.web_bookmark_description_label)) },
-                    placeholder = { Text(stringResource(R.string.web_bookmark_description_placeholder)) },
+                    label = { Text(stringRes(Res.string.web_bookmark_description_label)) },
+                    placeholder = { Text(stringRes(Res.string.web_bookmark_description_placeholder)) },
                     maxLines = 3,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -473,8 +488,8 @@ fun WebBookmarkEditDialog(
                 OutlinedTextField(
                     value = tags,
                     onValueChange = { tags = it },
-                    label = { Text(stringResource(R.string.web_bookmark_tags_label)) },
-                    placeholder = { Text(stringResource(R.string.web_bookmark_tags_placeholder)) },
+                    label = { Text(stringRes(Res.string.web_bookmark_tags_label)) },
+                    placeholder = { Text(stringRes(Res.string.web_bookmark_tags_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -491,7 +506,7 @@ fun WebBookmarkEditDialog(
                 },
                 enabled = url.isNotBlank(),
             ) {
-                Text(stringResource(R.string.web_bookmark_save))
+                Text(stringRes(Res.string.web_bookmark_save))
             }
         },
         dismissButton = {

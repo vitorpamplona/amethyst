@@ -23,12 +23,15 @@ package com.vitorpamplona.amethyst
 import android.app.Application
 import android.content.ComponentCallbacks2
 import android.os.Build
+import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
+import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
+import com.vitorpamplona.amethyst.service.okhttp.isEmulator
 import com.vitorpamplona.amethyst.service.priority.WorkerThreadPriorityGovernor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 import com.vitorpamplona.quartz.utils.Log
@@ -125,6 +128,12 @@ class Amethyst : Application() {
         }
 
         Log.i("AmethystApp") { "Amethyst ${BuildConfig.VERSION_NAME} starting in main process (log level ${Log.minLevel})" }
+
+        // Both flags MUST be set before AppModules: its constructor eagerly builds the
+        // OkHttp factories, whose dispatchers read isEmulator at construction time —
+        // set afterwards, the emulator-safe limits are never applied.
+        MediaCallEventListener.verboseLogging = isDebug
+        HttpClientEnvironment.isEmulator = isEmulator()
 
         instance = AppModules(this)
 

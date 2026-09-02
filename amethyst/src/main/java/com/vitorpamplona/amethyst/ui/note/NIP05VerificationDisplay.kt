@@ -46,12 +46,16 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05VerifState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip05_checking
+import com.vitorpamplona.amethyst.commons.resources.nip05_failed
+import com.vitorpamplona.amethyst.commons.resources.nip05_verified
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
@@ -469,7 +473,7 @@ fun RenderNIP05VerifiedSymbol(
                 // badge doesn't blank-flash before the first check fires.
                 Icon(
                     symbol = MaterialSymbols.Downloading,
-                    contentDescription = stringRes(id = R.string.nip05_checking),
+                    contentDescription = stringRes(id = Res.string.nip05_checking),
                     modifier = modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -478,7 +482,7 @@ fun RenderNIP05VerifiedSymbol(
             is Nip05VerifState.Verified -> {
                 Icon(
                     painter = painterRes(R.drawable.nip_05, compositionSizeReference),
-                    contentDescription = stringRes(id = R.string.nip05_verified),
+                    contentDescription = stringRes(id = Res.string.nip05_verified),
                     modifier = modifier,
                     tint = MaterialTheme.colorScheme.nip05,
                 )
@@ -489,7 +493,7 @@ fun RenderNIP05VerifiedSymbol(
                 // timing but look the same to the user — both mean "badge isn't showing".
                 Icon(
                     symbol = MaterialSymbols.Report,
-                    contentDescription = stringRes(id = R.string.nip05_failed),
+                    contentDescription = stringRes(id = Res.string.nip05_failed),
                     modifier = modifier,
                     tint = MaterialTheme.colorScheme.error,
                 )

@@ -72,6 +72,8 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.OutgoingChallengeCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.nip64Chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.SpectatingGameCard
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -278,7 +280,7 @@ fun ErrorDisplay(chessViewModel: ChessViewModelNew) {
             ) {
                 Text(errorMsg, color = MaterialTheme.colorScheme.onErrorContainer)
                 OutlinedButton(onClick = { chessViewModel.clearError() }) {
-                    Text(stringRes(R.string.dismiss))
+                    Text(stringRes(Res.string.dismiss))
                 }
             }
         }

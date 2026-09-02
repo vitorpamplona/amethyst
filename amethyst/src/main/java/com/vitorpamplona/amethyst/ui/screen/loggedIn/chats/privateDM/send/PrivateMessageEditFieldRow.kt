@@ -51,9 +51,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.recipient_missing_dm_relays
+import com.vitorpamplona.amethyst.commons.resources.retry_without_encryption
+import com.vitorpamplona.amethyst.commons.resources.upload_without_encryption_warning
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -288,7 +292,7 @@ fun RecipientMissingRelaysWarning(
         }
 
         Text(
-            text = stringRes(R.string.recipient_missing_dm_relays),
+            text = stringRes(Res.string.recipient_missing_dm_relays),
             color = MaterialTheme.colorScheme.error,
             fontSize = Font12SP,
             maxLines = 2,
@@ -363,7 +367,7 @@ fun EncryptedUploadErrorDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(message)
                 Text(
-                    stringRes(R.string.upload_without_encryption_warning),
+                    stringRes(Res.string.upload_without_encryption_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -371,7 +375,7 @@ fun EncryptedUploadErrorDialog(
         },
         confirmButton = {
             TextButton(onClick = onRetryWithoutEncryption) {
-                Text(stringRes(R.string.retry_without_encryption))
+                Text(stringRes(Res.string.retry_without_encryption))
             }
         },
         dismissButton = {

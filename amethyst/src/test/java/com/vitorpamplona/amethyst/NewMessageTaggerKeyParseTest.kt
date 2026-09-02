@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst
 
-import com.vitorpamplona.amethyst.model.Dao
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Dao
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.LocalCache.getOrCreateAddressableNoteInternal
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
@@ -41,13 +43,9 @@ class NewMessageTaggerKeyParseTest {
         object : Dao {
             override fun getOrCreateUser(pubkey: String): User = User(pubkey) { addr -> getOrCreateAddressableNoteInternal(addr) }
 
-            override fun getOrCreateNote(hex: String) =
-                com.vitorpamplona.amethyst.model
-                    .Note(hex)
+            override fun getOrCreateNote(hex: String) = Note(hex)
 
-            override fun getOrCreateAddressableNote(address: Address) =
-                com.vitorpamplona.amethyst.model
-                    .AddressableNote(address)
+            override fun getOrCreateAddressableNote(address: Address) = AddressableNote(address)
         }
 
     @Test

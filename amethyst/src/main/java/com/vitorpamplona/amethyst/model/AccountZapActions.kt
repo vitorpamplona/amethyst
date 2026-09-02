@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage

@@ -37,8 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_title
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -67,7 +68,7 @@ fun RenderAppRecommendation(
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringRes(R.string.profile_app_recommendations_title),
+                text = stringRes(Res.string.profile_app_recommendations_title),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

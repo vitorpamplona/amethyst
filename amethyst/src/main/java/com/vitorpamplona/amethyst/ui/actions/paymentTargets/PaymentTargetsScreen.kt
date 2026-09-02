@@ -53,6 +53,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.delete_payment_target
+import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
+import com.vitorpamplona.amethyst.commons.resources.payment_target_authority
+import com.vitorpamplona.amethyst.commons.resources.payment_target_type
+import com.vitorpamplona.amethyst.commons.resources.payment_targets_explainer
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -121,7 +127,7 @@ fun PaymentTargetsScaffold(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringRes(id = R.string.payment_targets_explainer),
+                text = stringRes(id = Res.string.payment_targets_explainer),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 10.dp),
                 style = MaterialTheme.typography.bodyLarge,
@@ -153,7 +159,7 @@ fun PaymentTargetsBody(viewModel: PaymentTargetsViewModel) {
         if (targets.isEmpty()) {
             item {
                 Text(
-                    text = stringRes(id = R.string.no_payment_targets_message),
+                    text = stringRes(id = Res.string.no_payment_targets_message),
                     modifier = Modifier.padding(vertical = 16.dp),
                 )
             }
@@ -203,7 +209,7 @@ fun PaymentTargetEntry(
         IconButton(onClick = onDelete) {
             Icon(
                 symbol = MaterialSymbols.Delete,
-                contentDescription = stringRes(id = R.string.delete_payment_target),
+                contentDescription = stringRes(id = Res.string.delete_payment_target),
             )
         }
     }
@@ -221,7 +227,7 @@ fun PaymentTargetAddField(onAdd: (type: String, authority: String) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Size10dp),
         ) {
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.payment_target_type)) },
+                label = { Text(text = stringRes(Res.string.payment_target_type)) },
                 modifier = Modifier.weight(1f),
                 value = type,
                 onValueChange = { type = it },
@@ -240,7 +246,7 @@ fun PaymentTargetAddField(onAdd: (type: String, authority: String) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Size10dp),
         ) {
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.payment_target_authority)) },
+                label = { Text(text = stringRes(Res.string.payment_target_authority)) },
                 modifier = Modifier.weight(1f),
                 value = authority,
                 onValueChange = { authority = it },

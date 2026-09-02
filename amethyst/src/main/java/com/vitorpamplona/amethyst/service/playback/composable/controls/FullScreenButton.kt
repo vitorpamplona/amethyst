@@ -37,9 +37,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.enter_picture_in_picture
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
@@ -86,7 +87,7 @@ fun FullScreenButton(
             ) {
                 Icon(
                     symbol = MaterialSymbols.ZoomOutMap,
-                    contentDescription = stringRes(id = R.string.enter_picture_in_picture),
+                    contentDescription = stringRes(id = Res.string.enter_picture_in_picture),
                     modifier = modifier,
                     tint = MaterialTheme.colorScheme.onBackground,
                 )

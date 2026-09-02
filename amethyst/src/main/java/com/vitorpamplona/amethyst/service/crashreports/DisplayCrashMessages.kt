@@ -33,11 +33,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.crashreport_found
+import com.vitorpamplona.amethyst.commons.resources.crashreport_found_send
+import com.vitorpamplona.amethyst.commons.resources.would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared
+import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
@@ -64,10 +68,10 @@ fun DisplayCrashMessages(
     stackTrace.value?.let { stack ->
         AlertDialog(
             onDismissRequest = { stackTrace.value = null },
-            title = { Text(stringResource(R.string.crashreport_found)) },
+            title = { Text(stringRes(Res.string.crashreport_found)) },
             text = {
                 SelectionContainer {
-                    Text(stringResource(R.string.would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared))
+                    Text(stringRes(Res.string.would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared))
                 }
             },
             dismissButton = {
@@ -95,10 +99,10 @@ fun DisplayCrashMessages(
                     ) {
                         Icon(
                             symbol = MaterialSymbols.Done,
-                            contentDescription = stringRes(R.string.crashreport_found_send),
+                            contentDescription = stringRes(Res.string.crashreport_found_send),
                         )
                         Spacer(StdHorzSpacer)
-                        Text(stringRes(R.string.crashreport_found_send))
+                        Text(stringRes(Res.string.crashreport_found_send))
                     }
                 }
             },

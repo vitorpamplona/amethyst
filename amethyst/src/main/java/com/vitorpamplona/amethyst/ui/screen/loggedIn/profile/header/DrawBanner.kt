@@ -40,8 +40,11 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -75,7 +78,7 @@ fun DrawBanner(
 
         AsyncImage(
             model = banner,
-            contentDescription = stringRes(id = R.string.profile_image),
+            contentDescription = stringRes(id = Res.string.profile_image),
             contentScale = ContentScale.Crop,
             placeholder = painterRes(R.drawable.profile_banner, 1),
             error = painterRes(R.drawable.profile_banner, 1),
@@ -105,7 +108,7 @@ fun DrawBanner(
     } else {
         Image(
             painter = painterRes(R.drawable.profile_banner, 2),
-            contentDescription = stringRes(id = R.string.profile_banner),
+            contentDescription = stringRes(id = Res.string.profile_banner),
             contentScale = ContentScale.FillWidth,
             modifier =
                 Modifier

@@ -35,9 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.StreamSystemCard
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_zap_amount_suffix
+import com.vitorpamplona.amethyst.commons.resources.chat_zap_anonymous
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
@@ -117,13 +119,13 @@ fun RenderChatZap(
                     }
                 } else {
                     Text(
-                        text = stringRes(R.string.chat_zap_anonymous),
+                        text = stringRes(Res.string.chat_zap_anonymous),
                         fontWeight = FontWeight.Bold,
                     )
                 }
 
                 Text(
-                    text = stringRes(R.string.chat_zap_amount_suffix, amountText),
+                    text = stringRes(Res.string.chat_zap_amount_suffix, amountText),
                     color = BitcoinOrange,
                     fontWeight = if (isBigZap) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,

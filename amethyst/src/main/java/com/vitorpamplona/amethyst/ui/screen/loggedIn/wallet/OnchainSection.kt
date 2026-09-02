@@ -65,6 +65,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy
+import com.vitorpamplona.amethyst.commons.resources.quick_action_dont_show_again_button
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_copy_dialog_confirm
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_chip
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_body
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_confirm
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_title
 import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainBalanceStatus
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -202,7 +210,7 @@ private fun PublicChip() {
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = stringRes(R.string.wallet_onchain_public_chip),
+            text = stringRes(Res.string.wallet_onchain_public_chip),
             style = MaterialTheme.typography.labelSmall,
             color = onSurfaceVariant,
             fontWeight = FontWeight.Medium,
@@ -219,11 +227,11 @@ private fun PublicChip() {
                     modifier = Modifier.size(24.dp),
                 )
             },
-            title = { Text(stringRes(R.string.wallet_onchain_public_dialog_title)) },
-            text = { Text(stringRes(R.string.wallet_onchain_public_dialog_body)) },
+            title = { Text(stringRes(Res.string.wallet_onchain_public_dialog_title)) },
+            text = { Text(stringRes(Res.string.wallet_onchain_public_dialog_body)) },
             confirmButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text(stringRes(R.string.wallet_onchain_public_dialog_confirm))
+                    Text(stringRes(Res.string.wallet_onchain_public_dialog_confirm))
                 }
             },
         )
@@ -356,7 +364,7 @@ private fun ActionRow(
                 modifier = Modifier.size(14.dp),
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Text(stringRes(R.string.copy), style = MaterialTheme.typography.bodySmall)
+            Text(stringRes(Res.string.copy), style = MaterialTheme.typography.bodySmall)
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -419,8 +427,8 @@ private fun CopyPublicAddressDialog(
                 modifier = Modifier.size(24.dp),
             )
         },
-        title = { Text(stringRes(R.string.wallet_onchain_public_dialog_title)) },
-        text = { Text(stringRes(R.string.wallet_onchain_public_dialog_body)) },
+        title = { Text(stringRes(Res.string.wallet_onchain_public_dialog_title)) },
+        text = { Text(stringRes(Res.string.wallet_onchain_public_dialog_body)) },
         confirmButton = {
             Row(
                 modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
@@ -428,7 +436,7 @@ private fun CopyPublicAddressDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onDontShowAgain) {
-                    Text(stringRes(R.string.quick_action_dont_show_again_button))
+                    Text(stringRes(Res.string.quick_action_dont_show_again_button))
                 }
                 Button(
                     onClick = onConfirm,
@@ -440,7 +448,7 @@ private fun CopyPublicAddressDialog(
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(stringRes(R.string.wallet_onchain_copy_dialog_confirm))
+                    Text(stringRes(Res.string.wallet_onchain_copy_dialog_confirm))
                 }
             }
         },

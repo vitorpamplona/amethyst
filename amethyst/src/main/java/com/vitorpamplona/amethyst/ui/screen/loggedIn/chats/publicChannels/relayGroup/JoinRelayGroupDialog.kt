@@ -36,6 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_join_code_hint
+import com.vitorpamplona.amethyst.commons.resources.relay_group_join_code_label
+import com.vitorpamplona.amethyst.commons.resources.relay_group_join_confirm
+import com.vitorpamplona.amethyst.commons.resources.relay_group_join_title
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -55,15 +60,15 @@ fun JoinRelayGroupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.relay_group_join_title)) },
+        title = { Text(stringRes(Res.string.relay_group_join_title)) },
         text = {
             Column {
-                Text(stringRes(R.string.relay_group_join_code_hint))
+                Text(stringRes(Res.string.relay_group_join_code_hint))
                 OutlinedTextField(
                     value = code,
                     onValueChange = { code = it },
                     singleLine = true,
-                    label = { Text(stringRes(R.string.relay_group_join_code_label)) },
+                    label = { Text(stringRes(Res.string.relay_group_join_code_label)) },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
             }
@@ -77,7 +82,7 @@ fun JoinRelayGroupDialog(
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.relay_group_join_confirm))
+                Text(stringRes(Res.string.relay_group_join_confirm))
             }
         },
         dismissButton = {

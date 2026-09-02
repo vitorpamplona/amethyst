@@ -62,8 +62,18 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.MemorySnapshot
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectMemorySnapshot
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_explanation
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_settings_button
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_cell_of_total
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_copy_button
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_empty
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_send_button
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_send_explanation
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tor_explanation
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tor_settings_button
+import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatBytes
@@ -132,7 +142,7 @@ fun ResourceUsageScreen(
             val loaded = days
             if (loaded == null) {
                 Text(
-                    text = stringRes(R.string.resource_usage_empty),
+                    text = stringRes(Res.string.resource_usage_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -251,7 +261,7 @@ private fun SubsystemSection(week: UsageSummary) {
             rows.forEach { (subsystem, bytes) ->
                 BarRow(
                     label = subsystemLabel(subsystem),
-                    value = stringRes(R.string.resource_usage_cell_of_total, formatBytes(bytes), formatBytes(week.bytesPerSubsystem[subsystem] ?: bytes)),
+                    value = stringRes(Res.string.resource_usage_cell_of_total, formatBytes(bytes), formatBytes(week.bytesPerSubsystem[subsystem] ?: bytes)),
                     fraction = bytes.toFloat() / max.toFloat(),
                 )
             }
@@ -510,7 +520,7 @@ private fun AlwaysOnServiceSection(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = stringRes(R.string.resource_usage_alwayson_explanation),
+                text = stringRes(Res.string.resource_usage_alwayson_explanation),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -533,7 +543,7 @@ private fun AlwaysOnServiceSection(
                 onClick = { nav.nav(Route.NotificationSettings) },
                 modifier = Modifier.align(Alignment.End),
             ) {
-                Text(stringRes(R.string.resource_usage_alwayson_settings_button))
+                Text(stringRes(Res.string.resource_usage_alwayson_settings_button))
             }
         }
     }
@@ -556,7 +566,7 @@ private fun TorServiceSection(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = stringRes(R.string.resource_usage_tor_explanation),
+                text = stringRes(Res.string.resource_usage_tor_explanation),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -570,7 +580,7 @@ private fun TorServiceSection(
                 onClick = { nav.nav(Route.PrivacyOptions) },
                 modifier = Modifier.align(Alignment.End),
             ) {
-                Text(stringRes(R.string.resource_usage_tor_settings_button))
+                Text(stringRes(Res.string.resource_usage_tor_settings_button))
             }
         }
     }
@@ -602,7 +612,7 @@ private fun SendReportSection(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = stringRes(R.string.resource_usage_send_explanation),
+                text = stringRes(Res.string.resource_usage_send_explanation),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -620,7 +630,7 @@ private fun SendReportSection(
                         scope.launch { clipboard.setText(buildReport()) }
                     },
                 ) {
-                    Text(stringRes(R.string.resource_usage_copy_button))
+                    Text(stringRes(Res.string.resource_usage_copy_button))
                 }
                 TextButton(
                     onClick = {
@@ -655,7 +665,7 @@ private fun SendReportSection(
                         }
                     },
                 ) {
-                    Text(stringRes(R.string.resource_usage_send_button))
+                    Text(stringRes(Res.string.resource_usage_send_button))
                 }
             }
         }

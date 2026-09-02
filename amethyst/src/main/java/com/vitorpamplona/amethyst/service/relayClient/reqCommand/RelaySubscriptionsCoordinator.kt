@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblyGroup
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssembler
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler

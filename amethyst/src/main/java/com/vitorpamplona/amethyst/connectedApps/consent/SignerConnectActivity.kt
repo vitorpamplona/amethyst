@@ -65,6 +65,19 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_connect_block
+import com.vitorpamplona.amethyst.commons.resources.napplet_connect_button
+import com.vitorpamplona.amethyst.commons.resources.napplet_connect_how_handle
+import com.vitorpamplona.amethyst.commons.resources.napplet_connect_subtitle
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust_desc
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid_desc
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
+import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable_desc
+import com.vitorpamplona.amethyst.commons.resources.nip46_connect_requests_title
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 class SignerConnectActivity : ComponentActivity() {
@@ -164,7 +177,7 @@ private fun SignerConnectScreen(
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        stringResource(R.string.napplet_connect_subtitle),
+                        stringRes(Res.string.napplet_connect_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -193,7 +206,7 @@ private fun SignerConnectScreen(
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                stringResource(R.string.nip46_connect_requests_title),
+                                stringRes(Res.string.nip46_connect_requests_title),
                                 style = MaterialTheme.typography.labelLarge,
                             )
                             info.requestedPermissions.forEach { perm ->
@@ -216,7 +229,7 @@ private fun SignerConnectScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Text(
-                    stringResource(R.string.napplet_connect_how_handle),
+                    stringRes(Res.string.napplet_connect_how_handle),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 )
@@ -230,22 +243,22 @@ private fun SignerConnectScreen(
                     PolicyOption(
                         selected = selected == AppSignerPolicy.FULL_TRUST,
                         symbol = MaterialSymbols.LockOpen,
-                        label = stringResource(R.string.napplet_policy_full_trust),
-                        description = stringResource(R.string.napplet_policy_full_trust_desc),
+                        label = stringRes(Res.string.napplet_policy_full_trust),
+                        description = stringRes(Res.string.napplet_policy_full_trust_desc),
                         onClick = { selected = AppSignerPolicy.FULL_TRUST },
                     )
                     PolicyOption(
                         selected = selected == AppSignerPolicy.REASONABLE,
                         symbol = MaterialSymbols.Shield,
-                        label = stringResource(R.string.napplet_policy_reasonable),
-                        description = stringResource(R.string.napplet_policy_reasonable_desc),
+                        label = stringRes(Res.string.napplet_policy_reasonable),
+                        description = stringRes(Res.string.napplet_policy_reasonable_desc),
                         onClick = { selected = AppSignerPolicy.REASONABLE },
                     )
                     PolicyOption(
                         selected = selected == AppSignerPolicy.PARANOID,
                         symbol = MaterialSymbols.Lock,
-                        label = stringResource(R.string.napplet_policy_paranoid),
-                        description = stringResource(R.string.napplet_policy_paranoid_desc),
+                        label = stringRes(Res.string.napplet_policy_paranoid),
+                        description = stringRes(Res.string.napplet_policy_paranoid_desc),
                         onClick = { selected = AppSignerPolicy.PARANOID },
                     )
                 }
@@ -262,7 +275,7 @@ private fun SignerConnectScreen(
                         Text(stringResource(R.string.cancel))
                     }
                     Button(onClick = { onConnect(selected) }, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.napplet_connect_button))
+                        Text(stringRes(Res.string.napplet_connect_button))
                     }
                 }
 
@@ -272,7 +285,7 @@ private fun SignerConnectScreen(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(
-                        stringResource(R.string.napplet_connect_block, info.domain),
+                        stringRes(Res.string.napplet_connect_block, info.domain),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

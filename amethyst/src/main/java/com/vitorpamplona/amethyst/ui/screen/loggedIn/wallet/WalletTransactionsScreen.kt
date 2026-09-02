@@ -58,6 +58,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_all
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_non_zaps
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps
+import com.vitorpamplona.amethyst.commons.resources.wallet_incoming
+import com.vitorpamplona.amethyst.commons.resources.wallet_loading
+import com.vitorpamplona.amethyst.commons.resources.wallet_no_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
+import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -114,7 +124,7 @@ fun WalletTransactionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_transactions)) },
+                title = { Text(stringRes(Res.string.wallet_transactions)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -127,7 +137,7 @@ fun WalletTransactionsScreen(
                     IconButton(onClick = { walletViewModel.fetchTransactions() }) {
                         Icon(
                             symbol = MaterialSymbols.Refresh,
-                            contentDescription = stringRes(R.string.wallet_refresh),
+                            contentDescription = stringRes(Res.string.wallet_refresh),
                         )
                     }
                 },
@@ -147,7 +157,7 @@ fun WalletTransactionsScreen(
                 CircularProgressIndicator(modifier = Modifier.size(48.dp))
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    stringRes(R.string.wallet_loading),
+                    stringRes(Res.string.wallet_loading),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
@@ -159,7 +169,7 @@ fun WalletTransactionsScreen(
                 modifier = Modifier.padding(padding).padding(24.dp),
                 description = currentError,
                 onRefresh = { walletViewModel.fetchTransactions() },
-                refreshLabel = stringRes(R.string.wallet_refresh),
+                refreshLabel = stringRes(Res.string.wallet_refresh),
             )
         } else if (transactions.isEmpty()) {
             Column(
@@ -171,7 +181,7 @@ fun WalletTransactionsScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    stringRes(R.string.wallet_no_transactions),
+                    stringRes(Res.string.wallet_no_transactions),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -236,17 +246,17 @@ private fun TransactionFilterRow(
         FilterChip(
             selected = currentFilter == TransactionFilter.ALL,
             onClick = { onFilterSelected(TransactionFilter.ALL) },
-            label = { Text(stringRes(R.string.wallet_filter_all)) },
+            label = { Text(stringRes(Res.string.wallet_filter_all)) },
         )
         FilterChip(
             selected = currentFilter == TransactionFilter.ZAPS,
             onClick = { onFilterSelected(TransactionFilter.ZAPS) },
-            label = { Text(stringRes(R.string.wallet_filter_zaps)) },
+            label = { Text(stringRes(Res.string.wallet_filter_zaps)) },
         )
         FilterChip(
             selected = currentFilter == TransactionFilter.NON_ZAPS,
             onClick = { onFilterSelected(TransactionFilter.NON_ZAPS) },
-            label = { Text(stringRes(R.string.wallet_filter_non_zaps)) },
+            label = { Text(stringRes(Res.string.wallet_filter_non_zaps)) },
         )
     }
 }
@@ -272,7 +282,7 @@ private fun TransactionItem(
         }
 
     val directionLabel =
-        if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing)
+        if (isIncoming) stringRes(Res.string.wallet_incoming) else stringRes(Res.string.wallet_outgoing)
 
     val labels =
         remember(tx.metadata, tx.description, tx.type, directionLabel) {
@@ -300,9 +310,9 @@ private fun TransactionItem(
                 symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
                 contentDescription =
                     if (isIncoming) {
-                        stringRes(R.string.wallet_incoming)
+                        stringRes(Res.string.wallet_incoming)
                     } else {
-                        stringRes(R.string.wallet_outgoing)
+                        stringRes(Res.string.wallet_outgoing)
                     },
                 modifier = Modifier.size(40.dp),
                 tint =

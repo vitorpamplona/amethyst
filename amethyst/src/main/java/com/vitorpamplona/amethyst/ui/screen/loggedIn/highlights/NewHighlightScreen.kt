@@ -66,6 +66,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_highlight_note_label
+import com.vitorpamplona.amethyst.commons.resources.new_highlight_passage_placeholder
+import com.vitorpamplona.amethyst.commons.resources.new_highlight_source_label
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -173,7 +177,7 @@ fun NewHighlightScreen(
                         symbol = MaterialSymbols.Link,
                         value = postViewModel.url,
                         onValueChange = { postViewModel.url = it },
-                        label = stringRes(R.string.new_highlight_source_label),
+                        label = stringRes(Res.string.new_highlight_source_label),
                         placeholder = "https://example.com/article",
                         singleLine = true,
                     )
@@ -188,7 +192,7 @@ fun NewHighlightScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = stringRes(R.string.new_highlight_note_label),
+                        text = stringRes(Res.string.new_highlight_note_label),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -279,7 +283,7 @@ private fun HighlightEditorCard(
                         decorationBox = { inner ->
                             if (passage.isEmpty()) {
                                 Text(
-                                    text = stringRes(R.string.new_highlight_passage_placeholder),
+                                    text = stringRes(Res.string.new_highlight_passage_placeholder),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                     fontSize = 20.sp,
                                     lineHeight = 1.4.em,

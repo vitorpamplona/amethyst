@@ -52,6 +52,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.badge_untitled
+import com.vitorpamplona.amethyst.commons.resources.profile_badges_description
+import com.vitorpamplona.amethyst.commons.resources.profile_badges_empty
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -148,7 +152,7 @@ fun ProfileBadgesScreen(
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             Text(
-                text = stringRes(R.string.profile_badges_description),
+                text = stringRes(Res.string.profile_badges_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -157,7 +161,7 @@ fun ProfileBadgesScreen(
 
             if (receivedAwards.isEmpty()) {
                 Text(
-                    text = stringRes(R.string.profile_badges_empty),
+                    text = stringRes(Res.string.profile_badges_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(20.dp),
@@ -232,7 +236,7 @@ private fun AwardRow(
 @Composable
 private fun StaticAwardRow(
     definition: BadgeDefinitionEvent?,
-    defNote: com.vitorpamplona.amethyst.model.AddressableNote?,
+    defNote: com.vitorpamplona.amethyst.commons.model.AddressableNote?,
     isAccepted: Boolean,
     accountViewModel: AccountViewModel,
     award: BadgeAwardEvent,
@@ -261,7 +265,7 @@ private fun StaticAwardRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = definition?.name()?.ifBlank { null } ?: stringRes(R.string.badge_untitled),
+                text = definition?.name()?.ifBlank { null } ?: stringRes(Res.string.badge_untitled),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,

@@ -60,9 +60,19 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accept_badge
+import com.vitorpamplona.amethyst.commons.resources.award_granted_to
+import com.vitorpamplona.amethyst.commons.resources.badge_and_n_others
+import com.vitorpamplona.amethyst.commons.resources.badge_award_image
+import com.vitorpamplona.amethyst.commons.resources.badge_award_image_for
+import com.vitorpamplona.amethyst.commons.resources.badge_awardees_label
+import com.vitorpamplona.amethyst.commons.resources.badge_untitled
+import com.vitorpamplona.amethyst.commons.resources.reject_badge
+import com.vitorpamplona.amethyst.commons.resources.unaccept_badge
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -155,7 +165,7 @@ fun RenderBadgeAward(
 
     BadgeCard(
         imageUrl = definition?.thumb()?.ifBlank { null } ?: definition?.image(),
-        name = definition?.name() ?: stringRes(R.string.award_granted_to),
+        name = definition?.name() ?: stringRes(Res.string.award_granted_to),
         description = definition?.description(),
         onClick = {
             routeFor(note, accountViewModel.account)?.let { nav.nav(it) }
@@ -189,7 +199,7 @@ private fun BadgeCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = name?.ifBlank { null } ?: stringRes(R.string.badge_untitled),
+                        text = name?.ifBlank { null } ?: stringRes(Res.string.badge_untitled),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 2,
@@ -221,9 +231,9 @@ private fun BadgeThumbnail(
 ) {
     val description =
         if (name != null) {
-            stringRes(R.string.badge_award_image_for, name)
+            stringRes(Res.string.badge_award_image_for, name)
         } else {
-            stringRes(R.string.badge_award_image)
+            stringRes(Res.string.badge_award_image)
         }
 
     Box(
@@ -267,7 +277,7 @@ private fun BadgeAwardeesRow(
 ) {
     Spacer(modifier = Modifier.height(14.dp))
     Text(
-        text = stringRes(R.string.badge_awardees_label, awardees.size),
+        text = stringRes(Res.string.badge_awardees_label, awardees.size),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -286,7 +296,7 @@ private fun BadgeAwardeesRow(
         }
         if (awardees.size > 24) {
             Text(
-                text = stringRes(R.string.badge_and_n_others, awardees.size - 24),
+                text = stringRes(Res.string.badge_and_n_others, awardees.size - 24),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 2.dp),
@@ -336,7 +346,7 @@ fun AcceptBadgeControls(
                     }
                 },
             ) {
-                Text(stringRes(R.string.unaccept_badge))
+                Text(stringRes(Res.string.unaccept_badge))
             }
         } else {
             TextButton(
@@ -346,7 +356,7 @@ fun AcceptBadgeControls(
                     }
                 },
             ) {
-                Text(stringRes(R.string.reject_badge))
+                Text(stringRes(Res.string.reject_badge))
             }
             Spacer(modifier = Modifier.size(8.dp))
             FilledTonalButton(
@@ -359,7 +369,7 @@ fun AcceptBadgeControls(
                     }
                 },
             ) {
-                Text(stringRes(R.string.accept_badge))
+                Text(stringRes(Res.string.accept_badge))
             }
         }
     }

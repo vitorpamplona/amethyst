@@ -64,9 +64,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.gallery
+import com.vitorpamplona.amethyst.commons.resources.mutual
+import com.vitorpamplona.amethyst.commons.resources.notes
+import com.vitorpamplona.amethyst.commons.resources.profile_tab_apps
+import com.vitorpamplona.amethyst.commons.resources.replies
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.feeds.UserBlockedFeed
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -681,11 +686,11 @@ private fun CreateAndRenderTabs(
             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
             text = {
                 when (tab) {
-                    ProfileTab.Notes -> Text(text = stringRes(R.string.notes))
-                    ProfileTab.Replies -> Text(text = stringRes(R.string.replies))
-                    ProfileTab.Mutual -> Text(text = stringRes(R.string.mutual))
-                    ProfileTab.Gallery -> Text(text = stringRes(R.string.gallery))
-                    ProfileTab.Apps -> Text(text = stringRes(R.string.profile_tab_apps))
+                    ProfileTab.Notes -> Text(text = stringRes(Res.string.notes))
+                    ProfileTab.Replies -> Text(text = stringRes(Res.string.replies))
+                    ProfileTab.Mutual -> Text(text = stringRes(Res.string.mutual))
+                    ProfileTab.Gallery -> Text(text = stringRes(Res.string.gallery))
+                    ProfileTab.Apps -> Text(text = stringRes(Res.string.profile_tab_apps))
                     ProfileTab.Follows -> FollowTabHeader(followsFeedViewModel, accountViewModel)
                     ProfileTab.Followers -> FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel)
                     ProfileTab.Zaps -> ZapTabHeader(zapFeedViewModel, accountViewModel)

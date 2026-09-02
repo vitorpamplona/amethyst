@@ -39,9 +39,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_pr_changes_retry
+import com.vitorpamplona.amethyst.commons.resources.git_pr_loading_changes
+import com.vitorpamplona.amethyst.commons.resources.git_pr_no_changes
+import com.vitorpamplona.amethyst.commons.resources.git_pr_view_changes
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -106,7 +110,7 @@ fun GitPullRequestChanges(
                 contentPadding = CompactButtonPadding,
             ) {
                 Icon(MaterialSymbols.Code, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(R.string.git_pr_view_changes), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+                Text(stringRes(Res.string.git_pr_view_changes), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
 
         ChangesState.Loading ->
@@ -116,7 +120,7 @@ fun GitPullRequestChanges(
                 modifier = Modifier.padding(top = 12.dp),
             ) {
                 CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                Text(stringRes(R.string.git_pr_loading_changes), style = MaterialTheme.typography.bodySmall)
+                Text(stringRes(Res.string.git_pr_loading_changes), style = MaterialTheme.typography.bodySmall)
             }
 
         is ChangesState.Loaded ->
@@ -126,7 +130,7 @@ fun GitPullRequestChanges(
                 }
             } else {
                 Text(
-                    text = stringRes(R.string.git_pr_no_changes),
+                    text = stringRes(Res.string.git_pr_no_changes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 12.dp),
@@ -140,7 +144,7 @@ fun GitPullRequestChanges(
                 contentPadding = CompactButtonPadding,
             ) {
                 Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(R.string.git_pr_changes_retry), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+                Text(stringRes(Res.string.git_pr_changes_retry), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
     }
 }

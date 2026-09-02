@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.cache.mapNotNullIntoSet
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import junit.framework.TestCase.assertEquals

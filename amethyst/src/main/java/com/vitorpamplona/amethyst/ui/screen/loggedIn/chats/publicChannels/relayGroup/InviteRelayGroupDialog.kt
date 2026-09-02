@@ -37,6 +37,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy
+import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_code_label
+import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_description
+import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_preparing
+import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_title
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -88,10 +94,10 @@ fun InviteRelayGroupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.relay_group_invite_title)) },
+        title = { Text(stringRes(Res.string.relay_group_invite_title)) },
         text = {
             Column {
-                Text(stringRes(R.string.relay_group_invite_description))
+                Text(stringRes(Res.string.relay_group_invite_description))
 
                 if (nAddr != null) {
                     Text(
@@ -104,7 +110,7 @@ fun InviteRelayGroupDialog(
                 } else {
                     // Metadata (the group's pubkey, needed for the naddr) hasn't loaded yet.
                     Text(
-                        text = stringRes(R.string.relay_group_invite_preparing),
+                        text = stringRes(Res.string.relay_group_invite_preparing),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -112,7 +118,7 @@ fun InviteRelayGroupDialog(
 
                 // Closed groups additionally need a one-time code to join.
                 if (isClosed) {
-                    Text(stringRes(R.string.relay_group_invite_code_label))
+                    Text(stringRes(Res.string.relay_group_invite_code_label))
                     Text(
                         text = code,
                         fontFamily = FontFamily.Monospace,
@@ -133,7 +139,7 @@ fun InviteRelayGroupDialog(
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.copy))
+                Text(stringRes(Res.string.copy))
             }
         },
         dismissButton = {

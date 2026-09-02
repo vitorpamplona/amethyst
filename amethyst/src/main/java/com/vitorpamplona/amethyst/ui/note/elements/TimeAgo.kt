@@ -37,7 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.ui.note.timeAbsolute
 import com.vitorpamplona.amethyst.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAgo

@@ -64,6 +64,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_add_url_label
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_intro
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_manage_servers
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_no_targets
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_none_found
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_scan
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_scanning
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_source_failed
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_sources_section
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_title
+import com.vitorpamplona.amethyst.commons.resources.delete_media_server
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -108,7 +120,7 @@ fun BlossomImportScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                caption = stringRes(R.string.blossom_import_title),
+                caption = stringRes(Res.string.blossom_import_title),
                 nav = nav,
             )
         },
@@ -140,7 +152,7 @@ fun BlossomImportScreen(
         ) {
             item {
                 Text(
-                    text = stringRes(R.string.blossom_import_intro),
+                    text = stringRes(Res.string.blossom_import_intro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.grayText,
                 )
@@ -152,7 +164,7 @@ fun BlossomImportScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = stringRes(R.string.blossom_import_sources_section),
+                        text = stringRes(Res.string.blossom_import_sources_section),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -179,7 +191,7 @@ fun BlossomImportScreen(
 
             item {
                 Text(
-                    text = stringRes(R.string.blossom_import_add_url_label),
+                    text = stringRes(Res.string.blossom_import_add_url_label),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.grayText,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
@@ -197,11 +209,11 @@ fun BlossomImportScreen(
                     if (scanning) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.size(8.dp))
-                        Text(stringRes(R.string.blossom_import_scanning))
+                        Text(stringRes(Res.string.blossom_import_scanning))
                     } else {
                         Icon(symbol = MaterialSymbols.CloudSync, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(8.dp))
-                        Text(stringRes(R.string.blossom_import_scan))
+                        Text(stringRes(Res.string.blossom_import_scan))
                     }
                 }
             }
@@ -220,7 +232,7 @@ fun BlossomImportScreen(
                 if (candidates.isEmpty()) {
                     item {
                         Text(
-                            text = stringRes(R.string.blossom_import_none_found),
+                            text = stringRes(Res.string.blossom_import_none_found),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.grayText,
                             modifier = Modifier.padding(top = 8.dp),
@@ -275,13 +287,13 @@ private fun NoTargetsState(
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            text = stringRes(R.string.blossom_import_no_targets),
+            text = stringRes(Res.string.blossom_import_no_targets),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.grayText,
         )
         Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = onManageServers) {
-            Text(stringRes(R.string.blossom_import_manage_servers))
+            Text(stringRes(Res.string.blossom_import_manage_servers))
         }
     }
 }
@@ -318,7 +330,7 @@ private fun ImportSourceRow(
             IconButton(onClick = onRemove) {
                 Icon(
                     symbol = MaterialSymbols.Delete,
-                    contentDescription = stringRes(R.string.delete_media_server),
+                    contentDescription = stringRes(Res.string.delete_media_server),
                     tint = MaterialTheme.colorScheme.grayText,
                     modifier = Modifier.size(20.dp),
                 )
@@ -347,7 +359,7 @@ private fun ScanStatusLabel(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CircularProgressIndicator(modifier = Modifier.size(11.dp), strokeWidth = 1.5.dp)
                 Text(
-                    text = stringRes(R.string.blossom_import_scanning),
+                    text = stringRes(Res.string.blossom_import_scanning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
                 )
@@ -362,7 +374,7 @@ private fun ScanStatusLabel(
         }
         is SourceScanState.Failed ->
             Text(
-                text = stringRes(R.string.blossom_import_source_failed),
+                text = stringRes(Res.string.blossom_import_source_failed),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 maxLines = 1,

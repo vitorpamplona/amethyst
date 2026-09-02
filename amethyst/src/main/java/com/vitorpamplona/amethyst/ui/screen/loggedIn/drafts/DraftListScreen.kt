@@ -44,6 +44,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.delete_all
+import com.vitorpamplona.amethyst.commons.resources.delete_all_drafts_confirmation
+import com.vitorpamplona.amethyst.commons.resources.no
+import com.vitorpamplona.amethyst.commons.resources.yes
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -94,7 +99,7 @@ private fun RenderDraftListScreen(
                 Text(text = stringResource(R.string.drafts))
             },
             text = {
-                Text(text = stringResource(R.string.delete_all_drafts_confirmation))
+                Text(text = stringRes(Res.string.delete_all_drafts_confirmation))
             },
             confirmButton = {
                 TextButton(
@@ -106,7 +111,7 @@ private fun RenderDraftListScreen(
                         showDeleteDialog = false
                     },
                 ) {
-                    Text(text = stringResource(R.string.yes))
+                    Text(text = stringRes(Res.string.yes))
                 }
             },
             dismissButton = {
@@ -115,7 +120,7 @@ private fun RenderDraftListScreen(
                         showDeleteDialog = false
                     },
                 ) {
-                    Text(text = stringResource(R.string.no))
+                    Text(text = stringRes(Res.string.no))
                 }
             },
         )
@@ -141,7 +146,7 @@ private fun RenderDraftListScreen(
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
                             symbol = MaterialSymbols.Delete,
-                            contentDescription = stringResource(R.string.delete_all),
+                            contentDescription = stringRes(Res.string.delete_all),
                         )
                     }
                 },

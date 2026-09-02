@@ -42,7 +42,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.fundraiser_ends
+import com.vitorpamplona.amethyst.commons.resources.fundraiser_onchain_donation
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -127,7 +130,7 @@ fun RenderFundraiser(
                     val context = LocalContext.current
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = stringRes(R.string.fundraiser_ends, timeAheadNoDot(it, context)),
+                        text = stringRes(Res.string.fundraiser_ends, timeAheadNoDot(it, context)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
@@ -160,7 +163,7 @@ private fun OnChainDonation(
     val scope = rememberCoroutineScope()
 
     Text(
-        text = stringRes(R.string.fundraiser_onchain_donation),
+        text = stringRes(Res.string.fundraiser_onchain_donation),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.placeholderText,
     )

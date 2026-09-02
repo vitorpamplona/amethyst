@@ -59,6 +59,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_add_participant
+import com.vitorpamplona.amethyst.commons.resources.call_dismiss
+import com.vitorpamplona.amethyst.commons.resources.call_search_users
+import com.vitorpamplona.amethyst.commons.resources.call_switch_camera
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -313,7 +318,7 @@ private fun CallControls(
                             } else {
                                 MaterialSymbols.CameraFront
                             },
-                        contentDescription = stringRes(R.string.call_switch_camera),
+                        contentDescription = stringRes(Res.string.call_switch_camera),
                         tint = Color.White,
                         modifier = Modifier.size(28.dp),
                     )
@@ -347,7 +352,7 @@ private fun CallControls(
             IconButton(onClick = onAddParticipant, modifier = Modifier.size(56.dp)) {
                 Icon(
                     symbol = MaterialSymbols.PersonAdd,
-                    contentDescription = stringRes(R.string.call_add_participant),
+                    contentDescription = stringRes(Res.string.call_add_participant),
                     tint = Color.White,
                     modifier = Modifier.size(28.dp),
                 )
@@ -385,7 +390,7 @@ private fun AddParticipantDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.call_add_participant)) },
+        title = { Text(stringRes(Res.string.call_add_participant)) },
         text = {
             Column {
                 OutlinedTextField(
@@ -394,7 +399,7 @@ private fun AddParticipantDialog(
                         searchText = it
                         userSuggestions.processCurrentWord(it)
                     },
-                    label = { Text(stringRes(R.string.call_search_users)) },
+                    label = { Text(stringRes(Res.string.call_search_users)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -414,7 +419,7 @@ private fun AddParticipantDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.call_dismiss))
+                Text(stringRes(Res.string.call_dismiss))
             }
         },
     )

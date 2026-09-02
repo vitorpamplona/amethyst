@@ -39,9 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.service.podcasts.PodcastRemoteContent
+import com.vitorpamplona.amethyst.commons.podcasts.PodcastRemoteContent
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_transcript
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -69,7 +70,7 @@ fun PodcastTranscriptView(
     Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         CollapsibleHeader(
             symbol = MaterialSymbols.Description,
-            title = stringRes(R.string.podcast_transcript),
+            title = stringRes(Res.string.podcast_transcript),
             expanded = expanded,
             onToggle = { expanded = !expanded },
         )

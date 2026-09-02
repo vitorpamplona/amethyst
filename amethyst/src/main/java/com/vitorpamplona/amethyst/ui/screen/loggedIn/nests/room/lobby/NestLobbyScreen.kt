@@ -60,10 +60,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_chat_empty
+import com.vitorpamplona.amethyst.commons.resources.nest_lobby_host_label
+import com.vitorpamplona.amethyst.commons.resources.nest_lobby_listeners_count
+import com.vitorpamplona.amethyst.commons.resources.nest_lobby_no_listeners
+import com.vitorpamplona.amethyst.commons.resources.nest_lobby_open_action
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -226,7 +231,7 @@ private fun NestLobbyContent(
                 if (messages.isEmpty()) {
                     item("chat-empty") {
                         Text(
-                            text = stringRes(R.string.nest_chat_empty),
+                            text = stringRes(Res.string.nest_chat_empty),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -301,7 +306,7 @@ private fun OpenNestRoomAction(
         contentPadding = ButtonDefaults.ContentPadding,
         modifier = Modifier.padding(end = 8.dp),
     ) {
-        Text(stringRes(R.string.nest_lobby_open_action))
+        Text(stringRes(Res.string.nest_lobby_open_action))
     }
 }
 
@@ -388,7 +393,7 @@ private fun RoomHeader(
                 )
                 Spacer(StdHorzSpacer)
                 Text(
-                    text = stringRes(R.string.nest_lobby_host_label),
+                    text = stringRes(Res.string.nest_lobby_host_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -455,9 +460,9 @@ private fun CachedListenerCount(roomATag: String) {
     Text(
         text =
             if (count == 0) {
-                stringRes(R.string.nest_lobby_no_listeners)
+                stringRes(Res.string.nest_lobby_no_listeners)
             } else {
-                stringRes(R.string.nest_lobby_listeners_count, count)
+                stringRes(Res.string.nest_lobby_listeners_count, count)
             },
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,

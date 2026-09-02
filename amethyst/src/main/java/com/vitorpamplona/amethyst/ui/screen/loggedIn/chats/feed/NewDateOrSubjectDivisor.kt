@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatDivisor
 import com.vitorpamplona.amethyst.ui.stringRes

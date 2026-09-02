@@ -63,13 +63,18 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip82_by_author
+import com.vitorpamplona.amethyst.commons.resources.nip82_download
+import com.vitorpamplona.amethyst.commons.resources.nip82_repository_label
+import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -326,7 +331,7 @@ fun AppAuthorLine(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = stringRes(R.string.nip82_by_author),
+            text = stringRes(Res.string.nip82_by_author),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.grayText,
         )
@@ -437,7 +442,7 @@ fun AppLinksColumn(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
                 ClickableTextPrimary(
-                    text = stringRes(R.string.nip82_repository_label, it.removePrefix("https://").removePrefix("http://")),
+                    text = stringRes(Res.string.nip82_repository_label, it.removePrefix("https://").removePrefix("http://")),
                     onClick = { runCatching { uri.openUri(it) } },
                     modifier = Modifier.padding(start = 5.dp),
                 )
@@ -449,7 +454,7 @@ fun AppLinksColumn(
 @Composable
 fun VersionChip(version: String) {
     Chip(
-        text = stringRes(R.string.nip82_version_label, version),
+        text = stringRes(Res.string.nip82_version_label, version),
         tint = MaterialTheme.colorScheme.primaryContainer,
     )
 }
@@ -534,7 +539,7 @@ fun RenderSoftwareReleaseBody(
                 }
                 version?.let {
                     Text(
-                        text = stringRes(R.string.nip82_version_label, it),
+                        text = stringRes(Res.string.nip82_version_label, it),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -645,7 +650,7 @@ private fun SoftwareAssetRow(
                 }
                 version?.let {
                     Text(
-                        text = stringRes(R.string.nip82_version_label, it),
+                        text = stringRes(Res.string.nip82_version_label, it),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                     )
@@ -680,7 +685,7 @@ private fun SoftwareAssetRow(
         downloadUrl?.let {
             Spacer(Modifier.width(8.dp))
             ClickableTextPrimary(
-                text = stringRes(R.string.nip82_download),
+                text = stringRes(Res.string.nip82_download),
                 onClick = { runCatching { uri.openUri(it) } },
             )
         }
@@ -731,7 +736,7 @@ fun RenderSoftwareAsset(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     version?.let {
                         Text(
-                            text = stringRes(R.string.nip82_version_label, it),
+                            text = stringRes(Res.string.nip82_version_label, it),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )
@@ -748,7 +753,7 @@ fun RenderSoftwareAsset(
             }
             downloadUrl?.let {
                 ClickableTextPrimary(
-                    text = stringRes(R.string.nip82_download),
+                    text = stringRes(Res.string.nip82_download),
                     onClick = { runCatching { uri.openUri(it) } },
                 )
             }

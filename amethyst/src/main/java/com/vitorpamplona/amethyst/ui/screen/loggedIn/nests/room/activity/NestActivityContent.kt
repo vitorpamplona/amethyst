@@ -44,8 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_loading_room
+import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_back
+import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_body
+import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_title
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
@@ -163,7 +167,7 @@ private fun LoadingRoomState() {
         ) {
             CircularProgressIndicator()
             Text(
-                text = stringRes(R.string.nest_loading_room),
+                text = stringRes(Res.string.nest_loading_room),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -188,19 +192,19 @@ private fun UnjoinableRoomState(onLeave: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = stringRes(R.string.nest_unjoinable_title),
+                text = stringRes(Res.string.nest_unjoinable_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = stringRes(R.string.nest_unjoinable_body),
+                text = stringRes(Res.string.nest_unjoinable_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             OutlinedButton(onClick = onLeave) {
-                Text(stringRes(R.string.nest_unjoinable_back))
+                Text(stringRes(Res.string.nest_unjoinable_back))
             }
         }
     }

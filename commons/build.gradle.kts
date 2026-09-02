@@ -222,6 +222,16 @@ kotlin {
         getByName("iosArm64Main").dependsOn(iosMain)
         getByName("iosSimulatorArm64Main").dependsOn(iosMain)
 
+        // Skiko-backed targets (desktop JVM + iOS) share pixel-format helpers
+        // (org.jetbrains.skia.* resolves on both through Compose). Android is
+        // deliberately NOT in this set — it renders through android.graphics.
+        val skikoMain =
+            create("skikoMain") {
+                dependsOn(commonMain.get())
+            }
+        getByName("jvmMain").dependsOn(skikoMain)
+        iosMain.dependsOn(skikoMain)
+
         getByName("androidHostTest") {
             dependencies {
                 implementation(libs.junit)
@@ -277,6 +287,7 @@ val verifyKmpPurity by tasks.registering {
             "src/appleMain", "src/appleTest",
             "src/nativeMain", "src/nativeTest",
             "src/iosMain", "src/iosTest",
+            "src/skikoMain", "src/skikoTest",
             "src/iosArm64Main", "src/iosArm64Test",
             "src/iosSimulatorArm64Main", "src/iosSimulatorArm64Test",
             "src/linuxMain", "src/linuxTest",

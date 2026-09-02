@@ -71,7 +71,24 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_available
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_awaiting_payment
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_copy_invoice
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_funded
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_lightning_desc
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_needs_more
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_not_enough
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_pay_lightning
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_recipient_fallback
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_retry
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_section_from
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_section_to
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_summary_funded
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_title
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_topup_label
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -144,7 +161,7 @@ fun ReloadMintScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.reload_mint_title)) },
+                title = { Text(stringRes(Res.string.reload_mint_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -187,7 +204,7 @@ fun ReloadMintScreen(
                 Spacer(Modifier.width(6.dp))
                 // The amount we're about to zap, shown along the flow.
                 Text(
-                    text = stringRes(R.string.reload_mint_sats_amount, sats(ui.sendSats)),
+                    text = stringRes(Res.string.reload_mint_sats_amount, sats(ui.sendSats)),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -210,7 +227,7 @@ fun ReloadMintScreen(
 
             // ── Top-up amount (editable; only when the target is short) ────
             if (ui.shortfallSats > 0L) {
-                SectionHeader(stringRes(R.string.reload_mint_topup_label))
+                SectionHeader(stringRes(Res.string.reload_mint_topup_label))
                 OutlinedTextField(
                     value = topUpText,
                     onValueChange = { input ->
@@ -226,7 +243,7 @@ fun ReloadMintScreen(
             }
 
             // ── Destination ───────────────────────────────────────────────
-            SectionHeader(stringRes(R.string.reload_mint_section_to))
+            SectionHeader(stringRes(Res.string.reload_mint_section_to))
             if (ui.targetOptions.size > 1) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ui.targetOptions.forEach { mint ->
@@ -253,7 +270,7 @@ fun ReloadMintScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = stringRes(R.string.reload_mint_available, sats(targetBalance)),
+                            text = stringRes(Res.string.reload_mint_available, sats(targetBalance)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
@@ -261,9 +278,9 @@ fun ReloadMintScreen(
                     Text(
                         text =
                             if (ui.shortfallSats > 0) {
-                                stringRes(R.string.reload_mint_needs_more, sats(ui.shortfallSats))
+                                stringRes(Res.string.reload_mint_needs_more, sats(ui.shortfallSats))
                             } else {
-                                stringRes(R.string.reload_mint_funded)
+                                stringRes(Res.string.reload_mint_funded)
                             },
                         color =
                             if (ui.shortfallSats > 0) {
@@ -278,7 +295,7 @@ fun ReloadMintScreen(
 
             // ── Funds from (only when a top-up is actually needed) ─────────
             if (ui.shortfallSats > 0) {
-                SectionHeader(stringRes(R.string.reload_mint_section_from))
+                SectionHeader(stringRes(Res.string.reload_mint_section_from))
                 ui.sources.forEach { source ->
                     SourceRow(
                         source = source,
@@ -291,7 +308,7 @@ fun ReloadMintScreen(
             Spacer(Modifier.height(4.dp))
 
             // ── Summary: what we top up and who we zap ─────────────────────
-            val recipientName = ui.recipientName.ifBlank { stringRes(R.string.reload_mint_recipient_fallback) }
+            val recipientName = ui.recipientName.ifBlank { stringRes(Res.string.reload_mint_recipient_fallback) }
             Text(
                 text =
                     if (ui.shortfallSats > 0) {
@@ -304,7 +321,7 @@ fun ReloadMintScreen(
                             sats(ui.estFeeSats),
                         )
                     } else {
-                        stringRes(R.string.reload_mint_summary_funded, recipientName, sats(ui.sendSats), shortMint(ui.selectedTarget))
+                        stringRes(Res.string.reload_mint_summary_funded, recipientName, sats(ui.sendSats), shortMint(ui.selectedTarget))
                     },
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -318,20 +335,20 @@ fun ReloadMintScreen(
                 is ReloadStatus.AwaitingInvoice -> {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         CircularProgressIndicator(modifier = Modifier.height(20.dp))
-                        Text(stringRes(R.string.reload_mint_awaiting_payment), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringRes(Res.string.reload_mint_awaiting_payment), style = MaterialTheme.typography.bodyMedium)
                     }
                     OutlinedButton(
                         onClick = { scope.launch { clipboard.setText(status.invoice) } },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringRes(R.string.reload_mint_copy_invoice))
+                        Text(stringRes(Res.string.reload_mint_copy_invoice))
                     }
                 }
 
                 is ReloadStatus.Failed -> {
                     Text(status.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
                     Button(onClick = { viewModel.confirm() }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringRes(R.string.reload_mint_retry))
+                        Text(stringRes(Res.string.reload_mint_retry))
                     }
                 }
 
@@ -383,7 +400,7 @@ internal fun SourceRow(
         when (source) {
             is ReloadSource.Mint -> shortMint(source.mintUrl)
             is ReloadSource.LightningWallet -> source.name
-            ReloadSource.LightningExternal -> stringRes(R.string.reload_mint_pay_lightning)
+            ReloadSource.LightningExternal -> stringRes(Res.string.reload_mint_pay_lightning)
         }
     // Description / balance lives on its own row under the title so longer text
     // (e.g. the Lightning explanation) wraps instead of clipping.
@@ -391,12 +408,12 @@ internal fun SourceRow(
         when (source) {
             is ReloadSource.Mint ->
                 if (source.canCover) {
-                    stringRes(R.string.reload_mint_available, sats(source.balanceSats))
+                    stringRes(Res.string.reload_mint_available, sats(source.balanceSats))
                 } else {
-                    stringRes(R.string.reload_mint_not_enough)
+                    stringRes(Res.string.reload_mint_not_enough)
                 }
-            is ReloadSource.LightningWallet -> stringRes(R.string.reload_mint_lightning_desc)
-            ReloadSource.LightningExternal -> stringRes(R.string.reload_mint_lightning_desc)
+            is ReloadSource.LightningWallet -> stringRes(Res.string.reload_mint_lightning_desc)
+            ReloadSource.LightningExternal -> stringRes(Res.string.reload_mint_lightning_desc)
         }
 
     Card(

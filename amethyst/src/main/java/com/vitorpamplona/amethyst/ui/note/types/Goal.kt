@@ -44,7 +44,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.goal_closed
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -128,7 +130,7 @@ fun GoalHeader(
             if (isClosed) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringRes(R.string.goal_closed),
+                    text = stringRes(Res.string.goal_closed),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                 )

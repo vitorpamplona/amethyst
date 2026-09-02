@@ -39,6 +39,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_max
+import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_min
+import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_min_max_explainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -69,7 +73,7 @@ fun ZapPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
             colors = if (pollViewModel.isValidValueMinimum.value) colorValid else colorInValid,
             label = {
                 Text(
-                    text = stringRes(R.string.poll_zap_value_min),
+                    text = stringRes(Res.string.poll_zap_value_min),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -91,7 +95,7 @@ fun ZapPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
             colors = if (pollViewModel.isValidValueMaximum.value) colorValid else colorInValid,
             label = {
                 Text(
-                    text = stringRes(R.string.poll_zap_value_max),
+                    text = stringRes(Res.string.poll_zap_value_max),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -109,7 +113,7 @@ fun ZapPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringRes(R.string.poll_zap_value_min_max_explainer),
+            text = stringRes(Res.string.poll_zap_value_min_max_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )

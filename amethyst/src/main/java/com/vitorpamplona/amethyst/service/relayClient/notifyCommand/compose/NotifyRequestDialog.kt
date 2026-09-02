@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
@@ -96,7 +98,7 @@ fun NotifyRequestDialog(
                         contentDescription = null,
                     )
                     Spacer(StdHorzSpacer)
-                    Text(stringRes(R.string.error_dialog_button_ok))
+                    Text(stringRes(Res.string.error_dialog_button_ok))
                 }
             }
         },

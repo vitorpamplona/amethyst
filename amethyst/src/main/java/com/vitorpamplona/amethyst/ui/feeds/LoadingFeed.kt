@@ -28,7 +28,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -38,6 +39,6 @@ fun LoadingFeed() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringRes(R.string.loading_feed))
+        Text(stringRes(Res.string.loading_feed))
     }
 }

@@ -68,7 +68,7 @@ import java.util.concurrent.TimeUnit
  * returning, so a wrong server can never substitute the blob.
  *
  * Network goes through the app-wide [OkHttpClient] supplied by [httpClient] (the shared
- * [com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager]). Reusing it — rather than
+ * [com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager]). Reusing it — rather than
  * standing up a private client — means napplet blob fetches inherit the same passive
  * `Onion-Location` discovery + `.onion` rewriting, local Blossom cache redirect, connection pool
  * and DNS as every other HTTP role. Tor-or-clearnet is chosen per request from the calling

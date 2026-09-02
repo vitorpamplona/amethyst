@@ -45,8 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.donate_now
+import com.vitorpamplona.amethyst.commons.resources.thank_you
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -291,9 +294,9 @@ fun ReusableZapButton(
 
         val displayText =
             when {
-                hasZapped -> config.thankYouText ?: stringRes(id = R.string.thank_you)
+                hasZapped -> config.thankYouText ?: stringRes(id = Res.string.thank_you)
                 config.buttonText != null -> config.buttonText
-                else -> stringRes(id = R.string.donate_now)
+                else -> stringRes(id = Res.string.donate_now)
             }
 
         Text(text = displayText)

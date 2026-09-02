@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.nip02FollowLists
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxRelayLoader
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
-import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope

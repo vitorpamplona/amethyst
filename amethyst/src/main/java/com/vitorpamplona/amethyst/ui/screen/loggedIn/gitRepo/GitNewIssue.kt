@@ -41,9 +41,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_new_issue_body
+import com.vitorpamplona.amethyst.commons.resources.git_new_issue_create
+import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels
+import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels_hint
+import com.vitorpamplona.amethyst.commons.resources.git_new_issue_subject
+import com.vitorpamplona.amethyst.commons.resources.git_new_issue_title
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
@@ -87,7 +93,7 @@ private fun GitNewIssueForm(
         isInvertedLayout = false,
         topBar = {
             ShorterTopAppBar(
-                title = { Text(stringRes(R.string.git_new_issue_title)) },
+                title = { Text(stringRes(Res.string.git_new_issue_title)) },
                 navigationIcon = {
                     Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = nav::popBack) { ArrowBackIcon() }
@@ -101,7 +107,7 @@ private fun GitNewIssueForm(
                             nav.popBack()
                         },
                     ) {
-                        Text(stringRes(R.string.git_new_issue_create))
+                        Text(stringRes(Res.string.git_new_issue_create))
                     }
                 },
             )
@@ -120,22 +126,22 @@ private fun GitNewIssueForm(
             OutlinedTextField(
                 value = subject,
                 onValueChange = { subject = it },
-                label = { Text(stringRes(R.string.git_new_issue_subject)) },
+                label = { Text(stringRes(Res.string.git_new_issue_subject)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = body,
                 onValueChange = { body = it },
-                label = { Text(stringRes(R.string.git_new_issue_body)) },
+                label = { Text(stringRes(Res.string.git_new_issue_body)) },
                 minLines = 6,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = labels,
                 onValueChange = { labels = it },
-                label = { Text(stringRes(R.string.git_new_issue_labels)) },
-                placeholder = { Text(stringRes(R.string.git_new_issue_labels_hint)) },
+                label = { Text(stringRes(Res.string.git_new_issue_labels)) },
+                placeholder = { Text(stringRes(Res.string.git_new_issue_labels_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )

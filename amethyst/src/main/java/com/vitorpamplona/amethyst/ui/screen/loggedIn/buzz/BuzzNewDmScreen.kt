@@ -59,10 +59,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_new
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_opening
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_recipients
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_remove
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_start
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_workspace
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -102,7 +109,7 @@ fun BuzzNewDmScreen(
     val sending = status is BuzzNewDmViewModel.Status.Sending
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_dm_new), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_dm_new), nav) },
     ) { padding ->
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
@@ -111,7 +118,7 @@ fun BuzzNewDmScreen(
             // Workspace relay — a DM lives on exactly one Buzz relay (its tenant).
             if (relays.isNotEmpty()) {
                 Text(
-                    text = stringRes(R.string.buzz_dm_workspace),
+                    text = stringRes(Res.string.buzz_dm_workspace),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                 )
@@ -128,7 +135,7 @@ fun BuzzNewDmScreen(
 
             // Recipients
             Text(
-                text = stringRes(R.string.buzz_dm_recipients),
+                text = stringRes(Res.string.buzz_dm_recipients),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -146,7 +153,7 @@ fun BuzzNewDmScreen(
                     inputError = null
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringRes(R.string.buzz_dm_add_hint)) },
+                label = { Text(stringRes(Res.string.buzz_dm_add_hint)) },
                 leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
                 singleLine = true,
                 isError = inputError != null,
@@ -193,11 +200,11 @@ fun BuzzNewDmScreen(
                 if (sending) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(10.dp))
-                    Text(stringRes(R.string.buzz_dm_opening))
+                    Text(stringRes(Res.string.buzz_dm_opening))
                 } else {
                     Icon(symbol = MaterialSymbols.AutoMirrored.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(stringRes(R.string.buzz_dm_start))
+                    Text(stringRes(Res.string.buzz_dm_start))
                 }
             }
         }
@@ -247,7 +254,7 @@ private fun ParticipantChip(
         label = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         avatar = { UserPicture(hex, 22.dp, accountViewModel = accountViewModel, nav = nav) },
         trailingIcon = {
-            Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.buzz_dm_remove), modifier = Modifier.size(16.dp))
+            Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.buzz_dm_remove), modifier = Modifier.size(16.dp))
         },
     )
 }

@@ -34,8 +34,13 @@ import androidx.compose.ui.res.pluralStringResource
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectMemorySnapshot
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_not_now
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_opt_out
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_send
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_title
+import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -102,7 +107,7 @@ fun DisplayResourceUsageAlert(
     alert.value?.let { found ->
         AlertDialog(
             onDismissRequest = dismiss,
-            title = { Text(stringRes(R.string.resource_usage_alert_title)) },
+            title = { Text(stringRes(Res.string.resource_usage_alert_title)) },
             text = {
                 Text(
                     stringRes(
@@ -119,10 +124,10 @@ fun DisplayResourceUsageAlert(
                         }
                         dismiss()
                     }) {
-                        Text(stringRes(R.string.resource_usage_alert_opt_out))
+                        Text(stringRes(Res.string.resource_usage_alert_opt_out))
                     }
                     TextButton(onClick = dismiss) {
-                        Text(stringRes(R.string.resource_usage_alert_not_now))
+                        Text(stringRes(Res.string.resource_usage_alert_not_now))
                     }
                 }
             },
@@ -146,7 +151,7 @@ fun DisplayResourceUsageAlert(
                     }
                     dismiss()
                 }) {
-                    Text(stringRes(R.string.resource_usage_alert_send))
+                    Text(stringRes(Res.string.resource_usage_alert_send))
                 }
             },
         )

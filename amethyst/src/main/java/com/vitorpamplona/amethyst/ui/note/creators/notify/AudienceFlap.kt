@@ -72,7 +72,12 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.audience_group_chip
+import com.vitorpamplona.amethyst.commons.resources.audience_group_remove
+import com.vitorpamplona.amethyst.commons.resources.audience_manage
+import com.vitorpamplona.amethyst.commons.resources.audience_summary_two
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -237,7 +242,7 @@ private fun ManageButton(onManage: () -> Unit) {
     ) {
         Icon(
             symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(R.string.audience_manage),
+            contentDescription = stringRes(Res.string.audience_manage),
             modifier = Modifier.size(17.dp),
             tint = MaterialTheme.colorScheme.onBackground,
         )
@@ -368,7 +373,7 @@ private fun AudienceSummary(
     val text =
         when {
             second == null -> first
-            users.size == 2 -> stringRes(R.string.audience_summary_two, first, second)
+            users.size == 2 -> stringRes(Res.string.audience_summary_two, first, second)
             else -> {
                 val others = users.size - AudienceSelection.SUMMARY_NAMES
                 pluralStringResource(R.plurals.audience_summary_others, others, first, second, others)
@@ -432,7 +437,7 @@ private fun AudienceGroupChipView(
 ) {
     AssistChip(
         onClick = onRemove,
-        label = { Text(text = stringRes(R.string.audience_group_chip, group.title, group.count.toString())) },
+        label = { Text(text = stringRes(Res.string.audience_group_chip, group.title, group.count.toString())) },
         leadingIcon = {
             Icon(
                 symbol = MaterialSymbols.Groups,
@@ -444,7 +449,7 @@ private fun AudienceGroupChipView(
         trailingIcon = {
             Icon(
                 symbol = MaterialSymbols.Close,
-                contentDescription = stringRes(R.string.audience_group_remove, group.title),
+                contentDescription = stringRes(Res.string.audience_group_remove, group.title),
                 modifier = Modifier.size(AssistChipDefaults.IconSize),
             )
         },

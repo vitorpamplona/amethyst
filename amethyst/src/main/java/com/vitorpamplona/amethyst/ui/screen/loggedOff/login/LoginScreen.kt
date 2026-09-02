@@ -71,6 +71,12 @@ import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.don_t_have_an_account
+import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
+import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.resources.temporary_account
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
@@ -137,7 +143,7 @@ fun LoginPage(
     ) {
         Image(
             imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringRes(R.string.app_logo),
+            contentDescription = stringRes(Res.string.app_logo),
             modifier = Modifier.size(150.dp),
             contentScale = ContentScale.Inside,
         )
@@ -221,7 +227,7 @@ fun LoginPage(
 
         Spacer(modifier = Modifier.height(Size40dp))
 
-        Text(text = stringRes(R.string.don_t_have_an_account))
+        Text(text = stringRes(Res.string.don_t_have_an_account))
 
         Spacer(modifier = Modifier.height(Size20dp))
 
@@ -247,7 +253,7 @@ fun OfferTemporaryAccount(
             onCheckedChange = onCheckedChange,
         )
 
-        Text(stringRes(R.string.temporary_account))
+        Text(stringRes(Res.string.temporary_account))
     }
 }
 
@@ -295,7 +301,7 @@ fun PasswordField(
             ),
         placeholder = {
             Text(
-                text = stringRes(R.string.ncryptsec_password),
+                text = stringRes(Res.string.ncryptsec_password),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -306,7 +312,7 @@ fun PasswordField(
                         symbol = if (showCharsPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
                         contentDescription =
                             if (showCharsPassword) {
-                                stringRes(R.string.show_password)
+                                stringRes(Res.string.show_password)
                             } else {
                                 stringRes(
                                     R.string.hide_password,

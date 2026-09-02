@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

@@ -54,10 +54,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_definition_handles
+import com.vitorpamplona.amethyst.commons.resources.app_definition_no_supported_kinds
+import com.vitorpamplona.amethyst.commons.resources.app_definition_untitled
+import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_description
+import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_empty
+import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_filter_empty
+import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_search
+import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_search_empty
+import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
@@ -223,7 +232,7 @@ fun ProfileAppRecommendationsScreen(
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             Text(
-                text = stringRes(R.string.profile_app_recommendations_description),
+                text = stringRes(Res.string.profile_app_recommendations_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -239,7 +248,7 @@ fun ProfileAppRecommendationsScreen(
                             .padding(horizontal = 20.dp, vertical = 4.dp),
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.profile_app_recommendations_search),
+                            text = stringRes(Res.string.profile_app_recommendations_search),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -262,9 +271,9 @@ fun ProfileAppRecommendationsScreen(
                 // nothing discovered yet.
                 val emptyMessage =
                     if (apps.isNotEmpty()) {
-                        stringRes(R.string.profile_app_recommendations_filter_empty)
+                        stringRes(Res.string.profile_app_recommendations_filter_empty)
                     } else {
-                        stringRes(R.string.profile_app_recommendations_empty)
+                        stringRes(Res.string.profile_app_recommendations_empty)
                     }
                 Text(
                     text = emptyMessage,
@@ -274,7 +283,7 @@ fun ProfileAppRecommendationsScreen(
                 )
             } else if (visibleApps.isEmpty()) {
                 Text(
-                    text = stringRes(R.string.profile_app_recommendations_search_empty),
+                    text = stringRes(Res.string.profile_app_recommendations_search_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(20.dp),
@@ -322,7 +331,7 @@ private fun AppRecommendationsTopBar(
 
             FeedFilterSpinner(
                 placeholderCode = listName,
-                explainer = stringRes(R.string.select_list_to_filter),
+                explainer = stringRes(Res.string.select_list_to_filter),
                 options = options,
                 onSelect = accountViewModel.account.settings::changeDefaultAppRecommendationsFollowList,
                 accountViewModel = accountViewModel,
@@ -365,7 +374,7 @@ private fun AppRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = metadata?.anyName()?.ifBlank { null } ?: stringRes(R.string.app_definition_untitled),
+                text = metadata?.anyName()?.ifBlank { null } ?: stringRes(Res.string.app_definition_untitled),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -385,7 +394,7 @@ private fun AppRow(
             }
             if (definition != null && supportedKinds.isEmpty()) {
                 Text(
-                    text = stringRes(R.string.app_definition_no_supported_kinds),
+                    text = stringRes(Res.string.app_definition_no_supported_kinds),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -432,7 +441,7 @@ private fun supportedKindsLabel(kinds: List<Int>): String {
         }
     val overflow = kinds.size - VISIBLE_KIND_NAMES
     val suffix = if (overflow > 0) " +$overflow" else ""
-    return stringRes(R.string.app_definition_handles) + ": " + names.joinToString(" · ") + suffix
+    return stringRes(Res.string.app_definition_handles) + ": " + names.joinToString(" · ") + suffix
 }
 
 @Composable

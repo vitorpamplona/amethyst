@@ -58,6 +58,17 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_agent_work_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
+import com.vitorpamplona.amethyst.commons.resources.join
+import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_menu_edit
+import com.vitorpamplona.amethyst.commons.resources.relay_group_menu_members
+import com.vitorpamplona.amethyst.commons.resources.relay_group_pending
+import com.vitorpamplona.amethyst.commons.resources.relay_group_role_admin
+import com.vitorpamplona.amethyst.commons.resources.relay_group_role_moderator
+import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_title
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -199,7 +210,7 @@ fun RelayGroupTopBar(
                 IconButton(onClick = { nav.nav(Route.BuzzCanvas(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
                     Icon(
                         symbol = MaterialSymbols.Dashboard,
-                        contentDescription = stringRes(R.string.buzz_canvas_title),
+                        contentDescription = stringRes(Res.string.buzz_canvas_title),
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -211,7 +222,7 @@ fun RelayGroupTopBar(
 
             if (displayMembership == RelayGroupMembership.PENDING) {
                 Text(
-                    text = stringRes(R.string.relay_group_pending),
+                    text = stringRes(Res.string.relay_group_pending),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -225,7 +236,7 @@ fun RelayGroupTopBar(
                         accountViewModel.joinRelayGroup(channel)
                     }
                 }) {
-                    Text(stringRes(R.string.join))
+                    Text(stringRes(Res.string.join))
                 }
             }
 
@@ -281,7 +292,7 @@ fun RelayGroupTopBar(
                     }
                     if (!isDm) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.relay_group_threads_title)) },
+                            text = { Text(stringRes(Res.string.relay_group_threads_title)) },
                             onClick = {
                                 menuOpen = false
                                 nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
@@ -295,7 +306,7 @@ fun RelayGroupTopBar(
                     // the channel name and relay the title row is there to show.
                     if (isBuzzRelay && !isDm) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.buzz_agent_work_title)) },
+                            text = { Text(stringRes(Res.string.buzz_agent_work_title)) },
                             onClick = {
                                 menuOpen = false
                                 nav.nav(Route.BuzzAgentWork(channel.groupId.id, channel.groupId.relayUrl.url))
@@ -314,7 +325,7 @@ fun RelayGroupTopBar(
                     }
                     if (showMembershipActions) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.relay_group_menu_members)) },
+                            text = { Text(stringRes(Res.string.relay_group_menu_members)) },
                             onClick = {
                                 menuOpen = false
                                 nav.nav(Route.RelayGroupMembers(channel.groupId.id, channel.groupId.relayUrl.url))
@@ -322,7 +333,7 @@ fun RelayGroupTopBar(
                         )
                         if (displayMembership == RelayGroupMembership.ADMIN) {
                             DropdownMenuItem(
-                                text = { Text(stringRes(R.string.relay_group_menu_edit)) },
+                                text = { Text(stringRes(Res.string.relay_group_menu_edit)) },
                                 onClick = {
                                     menuOpen = false
                                     nav.nav(Route.RelayGroupEdit(channel.groupId.id, channel.groupId.relayUrl.url))
@@ -331,7 +342,7 @@ fun RelayGroupTopBar(
                         }
                         if (displayMembership.canModerate()) {
                             DropdownMenuItem(
-                                text = { Text(stringRes(R.string.relay_group_invite_title)) },
+                                text = { Text(stringRes(Res.string.relay_group_invite_title)) },
                                 onClick = {
                                     menuOpen = false
                                     showInvite = true
@@ -491,9 +502,9 @@ private fun shareRelayGroup(
 private fun RoleBadge(membership: RelayGroupMembership) {
     val label =
         when (membership) {
-            RelayGroupMembership.ADMIN -> stringRes(R.string.relay_group_role_admin)
-            RelayGroupMembership.MODERATOR -> stringRes(R.string.relay_group_role_moderator)
-            RelayGroupMembership.PENDING -> stringRes(R.string.relay_group_pending)
+            RelayGroupMembership.ADMIN -> stringRes(Res.string.relay_group_role_admin)
+            RelayGroupMembership.MODERATOR -> stringRes(Res.string.relay_group_role_moderator)
+            RelayGroupMembership.PENDING -> stringRes(Res.string.relay_group_pending)
             // A plain member needs no badge; the lack of a Join button already says it.
             RelayGroupMembership.MEMBER, RelayGroupMembership.NONE -> return
         }

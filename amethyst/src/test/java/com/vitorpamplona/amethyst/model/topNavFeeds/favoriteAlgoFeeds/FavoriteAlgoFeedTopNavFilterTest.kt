@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
