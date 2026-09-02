@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,10 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -72,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @Composable
@@ -153,6 +151,7 @@ fun PaymentTargetsDialog(
     payInApp: ((PaymentTarget) -> Boolean)? = null,
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -188,15 +187,13 @@ fun PaymentTargetsDialog(
                         },
                         onPay = {
                             if (payInApp?.invoke(target) != true) {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                    onDismiss()
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    errorMessage = stringRes(context, R.string.no_payment_app_found)
-                                }
+                                // Same handoff the profile chip does: the type's own
+                                // scheme when it has one (payto:// only as the
+                                // fallback), and no task flags — CLEAR_TASK used to
+                                // wipe whatever the wallet app already had open.
+                                runCatching { uriHandler.openUri(paymentTargetUri(target)) }
+                                    .onSuccess { onDismiss() }
+                                    .onFailure { errorMessage = stringRes(context, R.string.no_payment_app_found) }
                             }
                         },
                     )
@@ -233,8 +230,10 @@ private fun PaymentTargetRow(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         // Same pill the profile page renders for this target: type icon,
-        // tinted type label and the shortened authority, instead of the
-        // raw wallet id spelled out over two lines.
+        // tinted type label and the shortened authority, instead of the raw
+        // wallet id spelled out over two lines. Tapping it pays and long-press
+        // copies, exactly like on the profile, so the row carries no separate
+        // pay button — three icon buttons left the address 0dp of width.
         Box(modifier = Modifier.weight(1f)) {
             PaymentTargetPill(target = target, onClick = onPay)
         }
@@ -251,14 +250,6 @@ private fun PaymentTargetRow(
             Icon(
                 symbol = MaterialSymbols.ContentCopy,
                 contentDescription = stringRes(R.string.copy_to_clipboard),
-                modifier = Size20Modifier,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onPay) {
-            Icon(
-                symbol = MaterialSymbols.Bolt,
-                contentDescription = stringRes(R.string.payment_targets),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

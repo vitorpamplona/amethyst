@@ -74,6 +74,15 @@ fun inAppPaymentRouteFor(
 }
 
 /**
+ * The URI an external wallet app should receive for [target]: the type's own
+ * scheme (`bitcoin:`, `lightning:`, `https://cash.app/…`) and RFC 8905
+ * `payto://` for types Amethyst has no dedicated scheme for. Shared with the
+ * payment-target dialog so the same pill hands off to the same app wherever
+ * it is tapped.
+ */
+fun paymentTargetUri(target: PaymentTarget): String = paymentTargetStyleFor(target.type).uriFor(target.authority)
+
+/**
  * Chip for a NIP-A3 payment target. Rendered inside [DisplayPaymentRailChips]'s
  * FlowRow alongside the wallet-rail chips so all payment chips share one
  * wrapping row and spacing.

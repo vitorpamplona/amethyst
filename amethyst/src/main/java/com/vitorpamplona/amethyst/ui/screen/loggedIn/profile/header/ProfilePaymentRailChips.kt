@@ -290,6 +290,10 @@ fun ProfilePaymentChip(
                 color = color,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
+                // Narrow hosts (the payment-target dialog's row) would otherwise
+                // wrap a long type label into a two-line pill.
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             if (detail != null) {
                 Text(
