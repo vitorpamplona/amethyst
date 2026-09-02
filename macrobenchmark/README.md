@@ -114,3 +114,35 @@ network still up, before cutting the radios — see `WARMUP_SCROLLS`.
 name across depths double-counts), texture/atlas uploads, and the children of the
 `animation` slice. Prefer this to parsing `atrace` text — text parsing is what
 previously credited macrobenchmark's own `reportMetricsWithPresentTime` to the app.
+
+## Use the uniform corpus (`tools/feed-bench-corpus/seed-uniform.sh`)
+
+The real-event corpus cannot give comparable arms. The app persists no events, so every
+launch re-downloads and renders a *different subset* in a different order; two cold
+launches shared only half their visible notes, and a longer settle made it worse. Combined
+with notes of wildly different heights (only 28 of 105 real notes are text-only, spanning
+11-510 chars), a fixed-distance scroll crosses a different number of cards every arm.
+
+`seed-uniform.sh` serves notes that are all the *same height*, so the scroll crosses the
+same number of cards no matter which notes loaded. Measured effect on two arms of
+identical code:
+
+| | real corpus | uniform corpus |
+|---|---|---|
+| NoteCardSumCount | 14 vs 17 | **18 vs 18** |
+| frameDurationCpuMs P90 drift | 10.1% | **1.4%** |
+| frameOverrunMs P90 drift | 20.0% | **2.8%** |
+
+Requirements, each learned the hard way — see the script's comments:
+
+- Bodies must be unique but the same length; byte-identical content is collapsed by the
+  app's duplicate/spam filter (60 identical notes rendered as ONE card).
+- Every note needs nonzero reactions, or the animation under test never constructs.
+- No kind-6 reposts: they are their own card shape and, without the reposted event inline
+  (NIP-18), render "Event is loading or can't be found in your relay list".
+- All authors share one `picture` URL. Warm it once with the network up, then run offline:
+  one cached bitmap, identical avatar path per card, and the real image path still runs.
+
+Run the app **offline** (the benchmark cuts the radios before launch; the corpus arrives
+over `adb reverse`, which is USB and unaffected), and set the bench account's Tor engine
+to **Off** or a blocking "Tor isn't connecting" dialog swallows every swipe.

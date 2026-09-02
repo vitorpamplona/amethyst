@@ -141,6 +141,18 @@ class FeedScrollBenchmark {
                 iterations = ITERATIONS,
                 setupBlock = {
                     if (!prepared) {
+                        // Cut the radios BEFORE the app launches, not after the feed loads.
+                        //
+                        // The corpus relay is reached over `adb reverse` (USB loopback), which
+                        // is unaffected by wifi/data, so the app still ingests the fixed corpus
+                        // -- and *only* the corpus. Cutting the network after the settle, as
+                        // this used to, left the app free to pull live notes from ~190 real
+                        // relays while the feed was being built. Those differ on every launch,
+                        // which is why each arm was internally deterministic (identical card
+                        // counts across all 10 iterations) yet landed on a different constant
+                        // from its neighbours -- 8 vs 12 vs 13 NoteCards -- making three A/B
+                        // runs unreadable.
+                        if (quiet) setNetworkEnabled(false)
                         pressHome()
                         startActivityAndWait()
                         // Let relays connect and fill the feed. Everything measured afterwards
@@ -164,7 +176,6 @@ class FeedScrollBenchmark {
                         device.waitForIdle()
                         Thread.sleep(IMAGE_SETTLE_MS)
 
-                        if (quiet) setNetworkEnabled(false)
                         prepared = true
                     }
                     // Every iteration starts from the same place in the feed, so each one
