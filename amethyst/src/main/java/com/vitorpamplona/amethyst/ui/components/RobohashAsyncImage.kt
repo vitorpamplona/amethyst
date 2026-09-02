@@ -42,9 +42,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.asDrawable
 import coil3.compose.AsyncImagePainter
+import coil3.compose.LocalPlatformContext
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import coil3.request.ImageRequest
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.richtext.bridgeProfilePictureUrl
@@ -237,9 +242,24 @@ fun GifProfilePicture(
             )
         }
 
+    // Probe: bake the circle into the bitmap once instead of clipping every frame.
+    val platformContext = LocalPlatformContext.current
+    val avatarModel: Any? =
+        if (BuildConfig.PROBE_CIRCLE_CROP && userPicture != null) {
+            remember(userPicture) {
+                ImageRequest
+                    .Builder(platformContext)
+                    .data(userPicture)
+                    .transformations(CircleCropTransformation())
+                    .build()
+            }
+        } else {
+            userPicture
+        }
+
     Box(modifier = modifier) {
         SubcomposeAsyncImage(
-            model = userPicture,
+            model = avatarModel,
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),

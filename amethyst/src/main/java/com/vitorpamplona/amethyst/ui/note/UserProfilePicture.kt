@@ -104,7 +104,7 @@ fun DisplayBlankAuthor(
 ) {
     val nullModifier =
         remember {
-            if (BuildConfig.PROBE_NO_AVATAR_CLIP) {
+            if (BuildConfig.PROBE_NO_AVATAR_CLIP || BuildConfig.PROBE_CIRCLE_CROP) {
                 modifier.size(size)
             } else {
                 modifier.size(size).clip(shape = CircleShape)
@@ -626,7 +626,7 @@ fun InnerUserPicture(
 ) {
     val myImageModifier =
         remember {
-            if (BuildConfig.PROBE_NO_AVATAR_CLIP) {
+            if (BuildConfig.PROBE_NO_AVATAR_CLIP || BuildConfig.PROBE_CIRCLE_CROP) {
                 modifier.size(size)
             } else {
                 modifier.size(size).clip(shape = CircleShape)

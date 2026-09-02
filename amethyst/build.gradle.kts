@@ -182,6 +182,19 @@ android {
             (project.findProperty("probeNoRxGlyphIcons")?.toString() ?: "false"),
         )
 
+        // Measurement probe: bakes the circle into the decoded bitmap with Coil's
+        // CircleCropTransformation and drops the per-frame outline clip. This is the
+        // *shippable* form of the PROBE_NO_AVATAR_CLIP win (frame P90 -6.2%): the circle
+        // is applied once at decode and cached, rather than clipped on every frame.
+        // Risk being measured: Coil cannot transform hardware bitmaps, so this may force
+        // software bitmaps and cost more in drawing than the clip saved.
+        // -PprobeCircleCrop=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_CIRCLE_CROP",
+            (project.findProperty("probeCircleCrop")?.toString() ?: "false"),
+        )
+
         // Measurement probe: drops the circular clip from feed avatars, so the RenderThread cost of
         // the per-avatar graphics layer + outline clip can be separated from decoding and drawing
         // the image itself. Probe builds show square avatars. -PprobeNoAvatarClip=true.
