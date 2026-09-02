@@ -10,8 +10,15 @@
     <!-- Accessibility -->
     <!-- Relay history paging (shared feed markers + status card) -->
     <!-- Notes & Replies -->
+    <string name="replying_to">respondiendo a </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">Permisos:</string>
+    <string name="nsite_root_site">Sitio raíz</string>
+    <string name="nsite_source">Fuente:</string>
+    <string name="nsite_servers">Servidores:</string>
+    <string name="nsite_open">Abrir</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Usar URL directa</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Abierto</string>
     <string name="git_status_merged">Fusionado</string>
@@ -69,7 +76,6 @@
     <string name="post_was_hidden">Esta publicación se ocultó porque menciona tus usuarios o palabras ocultas</string>
     <string name="post_was_flagged_as_inappropriate_by">La publicación fue reportada por</string>
     <string name="post_not_found">El evento se está cargando o no se puede encontrar en la lista de relés</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Imagen del canal</string>
     <string name="referenced_event_not_found">No se encontró el evento referenciado</string>
     <string name="could_not_decrypt_the_message">No se pudo desencriptar el mensaje</string>
@@ -94,17 +100,14 @@
     <string name="report_impersonation">Reportar suplantación de identidad</string>
     <string name="report_illegal_behaviour">Reportar comportamiento ilegal</string>
     <string name="report_malware">Reportar malware</string>
-    <string name="malware">Malware</string>
     <string name="chat_zap_amount_suffix">zapeó %1$s sats</string>
     <string name="chat_zap_anonymous">Anónimo</string>
     <string name="chat_raid_is_raiding">está en una incursión</string>
     <string name="chat_clip_created_a_clip">creó un clip</string>
     <string name="edited">editada</string>
-    <string name="original">original</string>
     <string name="quote">Cita</string>
     <string name="fork">Bifurcar</string>
     <string name="new_amount_in_sats">Nueva cantidad en sats</string>
-    <string name="replying_to">respondiendo a </string>
     <string name="and"> y </string>
     <string name="following"> Siguiendo</string>
     <string name="followers"> Seguidores</string>
@@ -136,10 +139,8 @@
     <string name="send_payment_source_external">Otra app de billetera</string>
     <string name="send_payment_source_onchain_wallet">Billetera en cadena</string>
     <string name="send_payment_source_cashu_wallet">Billetera Cashu</string>
-    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">Oferta CLINK</string>
     <string name="send_payment_method_onchain">En cadena</string>
-    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Cantidad</string>
     <string name="send_payment_fixed_price">Precio fijado por la oferta</string>
     <string name="send_payment_receipt_section">Recibo de zap</string>
@@ -172,7 +173,6 @@
     <string name="secret_note_to_receiver">Nota secreta al destinatario</string>
     <string name="secret_note_to_receiver_placeholder">Mi mensaje oculto</string>
     <string name="secret_visible_text">Prefijo visible</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Agregar a publicación</string>
     <string name="article">Artículo</string>
     <string name="channel_name">Nombre del canal</string>
@@ -286,7 +286,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">Cifrar y copiar mi clave secreta</string>
     <string name="badge_award_image_for">Imagen de premio de insignia por %1$s</string>
-    <string name="badge_award_image">"Imagen de premio de insignia</string>
+    <string name="badge_award_image">\"Imagen de premio de insignia</string>
     <string name="new_badge_award_notif">Recibiste un nuevo premio de insignia</string>
     <string name="award_granted_to">Premio de insignia otorgado a</string>
     <string name="account_switch_add_account_dialog_title">Agregar cuenta nueva</string>
@@ -314,7 +314,7 @@
     <string name="report_dialog_impersonation">Suplantación de identidad malintencionada</string>
     <string name="report_dialog_nudity">Desnudez o contenido gráfico</string>
     <string name="report_dialog_illegal">Comportamiento ilegal</string>
-    <string name="report_dialog_blocking_a_user">Si bloqueas a un usuario, se ocultará su contenido en tu app. Tus notas todavía son visibles públicamente, incluso para las personas que bloquees. Los usuarios bloqueados aparecen en la pantalla "Filtros de seguridad".</string>
+    <string name="report_dialog_blocking_a_user">Si bloqueas a un usuario, se ocultará su contenido en tu app. Tus notas todavía son visibles públicamente, incluso para las personas que bloquees. Los usuarios bloqueados aparecen en la pantalla \"Filtros de seguridad\".</string>
     <string name="report_dialog_report_btn">Reportar abuso</string>
     <string name="report_dialog_reminder_public">Todos los reportes publicados serán visibles públicamente.</string>
     <string name="report_dialog_additional_reason_placeholder">Si quieres puedes agregar más contexto al reporte…</string>
@@ -395,8 +395,6 @@
     <string name="profile_badges_header">Insignias · %1$d</string>
     <string name="profile_badges_description">Elige cuál de las insignias que has recibido aparecen en tu perfil.</string>
     <string name="profile_badges_empty">Aún no has recibido ninguna insignia.</string>
-    <string name="profile_apps_header">Apps · %1$d</string>
-    <string name="profile_apps_header_empty">Apps</string>
     <string name="profile_apps_empty_hint">Recomendar las apps de Nostr que usas para que otros puedan descubrirlas.</string>
     <string name="profile_app_recommendations_title">Apps recomendadas</string>
     <string name="profile_app_recommendations_description">Elige las apps de Nostr que recomiendas públicamente. Las recomendaciones aparecen en tu perfil y ayudan a otros a descubrir apps para el contenido que este cliente no puede abrir.</string>
@@ -411,9 +409,6 @@
     <string name="app_definition_handles">Gestiona</string>
     <string name="app_definition_by">por</string>
     <string name="app_definition_available_on">Disponible en</string>
-    <string name="platform_web">Web</string>
-    <string name="platform_android">Android</string>
-    <string name="platform_ios">iOS</string>
     <string name="workout">Entrenamiento</string>
     <string name="workout_title">Título</string>
     <string name="workout_duration">Duración</string>
@@ -426,7 +421,6 @@
     <string name="workout_steps">Pasos</string>
     <string name="workout_heart_rate">Frecuencia cardiaca</string>
     <string name="workout_max_heart_rate">Frecuencia cardiaca máxima</string>
-    <string name="workout_sets">Sets</string>
     <string name="workout_reps">Repeticiones</string>
     <string name="workout_weight">Peso</string>
     <string name="workout_exercises">Ejercicios</string>
@@ -462,7 +456,6 @@
     <string name="napplet_consent_deny_always">No permitir nunca</string>
     <string name="napplet_consent_not_now">Ahora no</string>
     <string name="nip82_repository_label">Fuente: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Descargar</string>
     <string name="nip82_section_about">Acerca de</string>
     <string name="nip82_section_platforms">Plataformas</string>
@@ -509,7 +502,6 @@
     <string name="nest_leave_host_close">Cerrar sala</string>
     <string name="nest_leave_host_just_leave">Solo salir</string>
     <string name="nest_live_chip">EN VIVO</string>
-    <string name="nest_tab_chat">Chat</string>
     <string name="nest_tab_audience">Público</string>
     <string name="nest_tab_hands">Manos</string>
     <string name="nest_audience_empty">Todavía no hay nadie en el público.</string>
@@ -602,7 +594,6 @@
     <string name="add_hashtag_label">Añadir hashtag</string>
     <string name="add_hashtag_label_title">Añadir un hashtag</string>
     <string name="add_hashtag_label_explainer">Etiqueta públicamente esta publicación con un hashtag (etiqueta NIP-32). Las personas que te siguen lo verán en el feed de ese hashtag.</string>
-    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Añadir</string>
     <string name="hashtag_label_added_by">añadido por</string>
     <string name="pinned_notes">Notas fijadas</string>
@@ -623,7 +614,6 @@
     <string name="interest_set_name_placeholder">Mis intereses</string>
     <string name="interest_set_hashtag_add_placeholder">Añadir hashtag</string>
     <string name="interest_set_hashtag_private_toggle">Privado</string>
-    <string name="interest_set_hashtag_count">%1$d hashtag(s)</string>
     <string name="interest_set_actions_dialog_title">Acciones del conjunto de intereses</string>
     <string name="interest_set_clone">Clonar</string>
     <string name="interest_set_add_hashtag">Añadir hashtag</string>
@@ -651,7 +641,6 @@
     <string name="quick_zap_amounts_explainer">Aparece al presionar el botón de zap. Toca una cantidad para eliminarla. Si la dejas vacía, se abrirá el cuadro de diálogo para introducir una cantidad cada vez.</string>
     <string name="send_onchain_instead">Enviar en cadena en su lugar</string>
     <string name="reload_mint_title">Recargar mint</string>
-    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Importe de recarga</string>
     <string name="reload_mint_section_to">Mint a recargar</string>
     <string name="reload_mint_section_from">Fondos de</string>
@@ -728,11 +717,9 @@
     <string name="uploading_state_downloading">Descargando</string>
     <string name="uploading_state_hashing">Cifrando</string>
     <string name="uploading_state_finished">Listo</string>
-    <string name="uploading_state_error">Error</string>
     <string name="connect_via_tor1">Ajustar</string>
     <string name="connect_via_tor2">Configuración de Tor</string>
     <string name="yes">Sí</string>
-    <string name="no">No</string>
     <string name="follow_sets">Conjuntos de seguimiento</string>
     <string name="follow_sets_explainer">Estas son listas de seguidos diseñadas para tu propio uso. Puedes seguir a usuarios de forma privada o pública</string>
     <string name="follow_set_create_btn_label">Nuevo</string>
@@ -802,7 +789,6 @@
     <string name="show_sensitive_content_explainer">Muestra un mensaje de advertencia cuando el autor de la publicación la marca como contenido delicado.</string>
     <string name="max_hashtag_limit_title">Máximo de hashtags por publicación</string>
     <string name="max_hashtag_limit_explainer">Oculta publicaciones con más hashtags que este límite. Establece 0 para desactivar</string>
-    <string name="security_unlimited">∞</string>
     <string name="new_reaction_symbol">Nuevo símbolo de reacción</string>
     <string name="zapraiser">Recaudación de zaps</string>
     <string name="zapraiser_explainer">Agrega una meta de sats para recaudar por esta publicación. Los clientes compatibles pueden mostrarla como una barra de progreso para incentivar las donaciones.</string>
@@ -813,7 +799,6 @@
     <string name="used_by">Usado por</string>
     <string name="self">Clave de servicio</string>
     <string name="version">Versión</string>
-    <string name="software">Software</string>
     <string name="contact">Contacto</string>
     <string name="supports">NIP compatibles</string>
     <string name="supported_grasps">Grasps compatibles</string>
@@ -840,7 +825,6 @@
     <string name="relay_count_subscriptions">Suscripciones COUNT (%1$d)</string>
     <string name="relay_outbox_events">Eventos de salida (%1$d)</string>
     <string name="relay_filter_authors">%1$d autores</string>
-    <string name="relay_filter_ids">%1$d ids</string>
     <string name="relay_filter_since">desde %1$s</string>
     <string name="relay_filter_until">hasta %1$s</string>
     <string name="relay_filter_limit">límite %1$d</string>
@@ -851,7 +835,6 @@
     <string name="accepts_up_to">Acepta hasta</string>
     <string name="time_in_the_future">%1$s en el futuro</string>
     <string name="time_in_the_past">hace %1$s</string>
-    <string name="amount_in_bits">%1$s bits</string>
     <string name="event_retention">Retención de eventos</string>
     <string name="content_size">Tamaño de contenido</string>
     <string name="connectivity">Conectividad</string>
@@ -864,7 +847,6 @@
     <string name="max_filters_per_sub">Filtros máximos por suscripción</string>
     <string name="max_limit_events_returning">Límite máximo (devolución de eventos)</string>
     <string name="max_subid_length">Longitud máxima de subID</string>
-    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Canjear</string>
     <string name="cashu_copy_token">Copiar token</string>
     <string name="quick_actions_open_in_another_app">Abrir en otra app</string>
@@ -888,7 +870,7 @@
     <string name="community_no_descriptor">Esta comunidad no tiene descripción. Habla con el propietario para agregar una.</string>
     <string name="user_preferences">Preferencias de usuario</string>
     <string name="settings_search_placeholder">Buscar ajustes</string>
-    <string name="settings_search_no_results">No se encontraron ajustes para "%1$s"</string>
+    <string name="settings_search_no_results">No se encontraron ajustes para \"%1$s\"</string>
     <string name="reset_marmot_confirm_title">¿Restablecer el estado de Marmot?</string>
     <string name="reset_marmot_confirm_body">Esta acción eliminará permanentemente todos los chats de grupo, el historial de mensajes y las claves MLS de Marmot en este dispositivo para la cuenta actual. Los demás participantes no serán notificados y puede que aún te vean en los grupos hasta su próximo commit. Esta acción no se puede deshacer. Se publicará un nuevo KeyPackage la próxima vez que la aplicación se sincronice.</string>
     <string name="reset_marmot_confirm_action">Restablecer</string>
@@ -922,7 +904,7 @@
     <string name="music_playlist_collaborative_hint">Permite que otros añadan pistas a esta lista de reproducción.</string>
     <string name="music_playlist_delete">Eliminar esta lista de reproducción</string>
     <string name="music_playlist_delete_confirm">¿Publicar una eliminación NIP-09 para esta lista de reproducción?</string>
-    <string name="music_playlist_no_tracks_hint">Aún no hay pistas. Añade pistas desde el menú de una canción usando "Añadir a la lista de reproducción".</string>
+    <string name="music_playlist_no_tracks_hint">Aún no hay pistas. Añade pistas desde el menú de una canción usando \"Añadir a la lista de reproducción\".</string>
     <string name="music_playlist_move_track_up">Mover pista arriba</string>
     <string name="music_playlist_move_track_down">Mover pista abajo</string>
     <string name="music_playlist_remove_track">Eliminar pista de la lista de reproducción</string>
@@ -933,7 +915,7 @@
     <string name="messages_create_public_private_chat_description">Nuevo grupo público o privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject_caption">Tema de la conversación</string>
-    <string name="messages_new_message_to_caption">@Usuario1, @Usuario2, @Usuario3</string>
+    <string name="messages_new_message_to_caption">\@Usuario1, @Usuario2, @Usuario3</string>
     <string name="messages_group_descriptor">Miembros de este grupo</string>
     <string name="messages_new_subject_message">Explicación para los miembros</string>
     <string name="messages_new_subject_message_placeholder">Cambio de nombre para los nuevos objetivos.</string>
@@ -955,7 +937,6 @@
     <string name="poll_zap_value_min_max_explainer">Los votos se calculan según la cantidad de zaps. Puedes establecer una cantidad mínima para evitar spammers y una máxima para que los zappers grandes no puedan dominar la encuesta. Usa la misma cantidad en ambos campos para asegurarte de que cada voto tenga el mismo valor. Déjalos vacíos para aceptar cualquier cantidad.</string>
     <string name="error_dialog_talk_to_user">Mensaje para el usuario</string>
     <string name="error_dialog_talk_to_user_name">Mensaje %1$s</string>
-    <string name="error_dialog_button_ok">OK</string>
     <string name="zap_split_title">Dividir y reenviar zaps</string>
     <string name="zap_split_explainer">Los clientes compatibles dividirán y reenviarán los zaps a los usuarios que se agreguen aquí en lugar de a ti.</string>
     <string name="zap_split_search_and_add_user">Buscar y agregar usuario</string>
@@ -987,7 +968,6 @@
     <string name="send_the_seller_a_message">Envía un mensaje al vendedor</string>
     <string name="hi_there_is_this_still_available">Hola, ¿esto todavía está disponible?</string>
     <string name="classifieds_title">Título</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Estado</string>
     <string name="classifieds_category">Categoría</string>
     <string name="classifieds_price">Precio (en sats)</string>
@@ -1016,7 +996,6 @@
     <string name="wallet_send">Enviar</string>
     <string name="wallet_receive">Recibir</string>
     <string name="wallet_transactions">Transacciones</string>
-    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Pegar una factura BOLT-11</string>
     <string name="wallet_pay">Pagar</string>
     <string name="wallet_payment_success">Pago realizado correctamente</string>
@@ -1033,7 +1012,6 @@
     <string name="wallet_outgoing">Enviado</string>
     <string name="wallet_refresh">Actualizar</string>
     <string name="wallet_filter_all">Todos</string>
-    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">No-Zaps</string>
     <string name="wallet_add">Añadir cartera</string>
     <string name="wallet_default">Predeterminada</string>
@@ -1056,7 +1034,6 @@
     <string name="cashu_discovering">Buscando tu monedero…</string>
     <string name="cashu_discovering_description">Los monederos NIP-60 se sincronizan entre clientes. Si creaste uno en otra aplicación con esta clave Nostr, debería aparecer en unos segundos.</string>
     <string name="cashu_balance">Saldo</string>
-    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">URL del mint</string>
     <string name="cashu_remove_mint">Eliminar mint</string>
     <string name="cashu_add_mint">Añadir mint</string>
@@ -1114,9 +1091,7 @@
     <string name="cashu_getting_quote">Solicitando presupuesto al mint…</string>
     <string name="cashu_verify">Verificar</string>
     <string name="cashu_mint_reachable">✓ El mint es accesible</string>
-    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">No se pudo alcanzar el mint: %1$s</string>
-    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Crear token</string>
     <string name="cashu_redeem_button">Canjear</string>
     <string name="cashu_done">Hecho</string>
@@ -1151,11 +1126,9 @@
     <string name="onchain_send_recipient_placeholder">nombre, NIP-05 o npub</string>
     <string name="onchain_send_change_recipient">Cambiar destinatario</string>
     <string name="onchain_send_amount">Cantidad</string>
-    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">El zap onchain mínimo es %1$s sats — las cantidades menores son consumidas por las comisiones de minería. Usa un zap Lightning en su lugar.</string>
     <string name="onchain_send_comment_label">Comentario (opcional)</string>
     <string name="onchain_send_priority">Prioridad</string>
-    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Cargando estimaciones de comisión…</string>
     <string name="onchain_send_button_amount">Enviar %1$s sats</string>
     <string name="onchain_send_dont_split">No dividir — pagar a un solo destinatario</string>
@@ -1164,7 +1137,6 @@
     <string name="onchain_send_result_transaction">Transacción</string>
     <string name="onchain_send_result_fee">Comisión</string>
     <string name="onchain_send_result_change">Cambio</string>
-    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Hecho</string>
     <string name="onchain_send_failed_at">Error en: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">El pago se difundió (tx %1$s) pero el recibo no se publicó.</string>
@@ -1216,7 +1188,7 @@
     <string name="calendar_untitled">(sin título)</string>
     <string name="calendar_all_day">Todo el día</string>
     <string name="calendar_rsvp_going_prefixed">✓ Asistiré</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Tal vez</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Tal vez</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ No puedo ir</string>
     <string name="calendar_collection_title">Título</string>
     <string name="calendar_collection_description">Descripción</string>
@@ -1280,7 +1252,6 @@
     <string name="reactions_settings_boost_description">Volver a publicar o citar esta nota</string>
     <string name="reactions_settings_like">Me gusta</string>
     <string name="reactions_settings_like_description">Reaccionar a esta nota con un emoji</string>
-    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Enviar un pago de Lightning al autor</string>
     <string name="reactions_settings_share">Compartir</string>
     <string name="reactions_settings_share_description">Compartir esta nota externamente</string>
@@ -1405,7 +1376,7 @@
     <string name="remove_dvm_from_favorites">Eliminar de favoritos</string>
     <string name="favorite_dvms_explainer">Los algoritmos de feed que marques con estrella aparecerán aquí y como filtros en el feed de inicio.</string>
     <string name="favorite_dvms_empty_headline">Fija tus algoritmos favoritos</string>
-    <string name="favorite_dvms_empty_step1">Pulsa "%1$s" abajo para explorar algoritmos.</string>
+    <string name="favorite_dvms_empty_step1">Pulsa \"%1$s\" abajo para explorar algoritmos.</string>
     <string name="favorite_dvms_empty_step2">Pulsa %1$s junto a un feed para guardarlo aquí.</string>
     <string name="favorite_dvms_empty_cta">Añadir algunos feeds</string>
     <string name="favorite_dvms_add_more">Añadir más…</string>
@@ -1423,19 +1394,16 @@
     <string name="search_scope_all">Todo</string>
     <string name="search_scope_people">Personas</string>
     <string name="search_scope_notes">Notas</string>
-    <string name="search_source_local">Local</string>
     <string name="search_source_relays">Relés</string>
     <string name="search_follows_only">Solo seguidos</string>
     <string name="search_sort_newest">Más recientes</string>
     <string name="search_sort_oldest">Más antiguos</string>
     <string name="search_sort_relevance">Relevancia</string>
-    <string name="search_sort_popular">Popular</string>
     <string name="search_filters_title">Filtros</string>
     <string name="search_filters_reset">Restablecer</string>
     <string name="search_filters_section_source">Fuente</string>
     <string name="search_filters_section_sort">Ordenar por</string>
     <string name="search_filters_open">Filtros</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Buscar idiomas</string>
     <string name="add_language">Añadir idioma</string>
     <string name="add_language_pair">Añadir par de idiomas</string>
@@ -1482,7 +1450,6 @@
     <string name="timeout">Tiempo de espera agotado</string>
     <string name="retrying">Reintentando…</string>
     <string name="dismiss">Descartar</string>
-    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Difundiendo</string>
     <string name="broadcasting_name">Difundiendo %1$s</string>
     <string name="broadcasting_number_events">Difundiendo %1$d eventos…</string>
@@ -1523,7 +1490,7 @@
     <string name="skip_for_now">Omitir por ahora</string>
     <string name="fetching_follow_list">Obteniendo lista de seguidos…</string>
     <string name="no_follows_found">No se encontraron seguidos</string>
-    <string name="import_follows_tips">"Introduce el perfil de un amigo o líder de comunidad. Puedes usar su npub, dirección NIP-05 o un nombre Namecoin como alice@example.bit o id/alice para identidades verificadas en blockchain."</string>
+    <string name="import_follows_tips">Introduce el perfil de un amigo o líder de comunidad. Puedes usar su npub, dirección NIP-05 o un nombre Namecoin como alice@example.bit o id/alice para identidades verificadas en blockchain.</string>
     <string name="select_all">Seleccionar todo</string>
     <string name="namecoin_test_connection">Probar conexión</string>
     <string name="namecoin_testing">Probando servidores…</string>
@@ -1762,8 +1729,8 @@
     <string name="emoji_add_dialog_title">Añadir emoji personalizado</string>
     <string name="emoji_remove_dialog_title">¿Eliminar :%1$s:?</string>
     <string name="emoji_long_press_hint">Mantén pulsado un emoji para eliminarlo</string>
-    <string name="emoji_pack_is_in_list">"%1$s" está en tu lista de emojis</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" no está en tu lista de emojis</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" está en tu lista de emojis</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" no está en tu lista de emojis</string>
     <string name="emoji_pack_actions_dialog_title">Acciones del paquete de emojis</string>
     <string name="emoji_private_toggle">Privado</string>
     <string name="emoji_private_badge">Emoji privado</string>
@@ -1799,7 +1766,7 @@
     <string name="marmot_edit_group_info">Editar información del grupo</string>
     <string name="marmot_leave_group">Salir del grupo</string>
     <string name="marmot_this_group">este grupo</string>
-    <string name="marmot_leave_group_confirm">¿Seguro que quieres salir de "%1$s"? Ya no recibirás mensajes de este grupo.</string>
+    <string name="marmot_leave_group_confirm">¿Seguro que quieres salir de \"%1$s\"? Ya no recibirás mensajes de este grupo.</string>
     <string name="marmot_keypackage_required">Deben haber publicado un KeyPackage (kind:30443) para poder ser añadidos.</string>
     <string name="marmot_add_to_group">Añadir al grupo</string>
     <string name="marmot_add_member">Añadir miembro</string>
@@ -1808,15 +1775,15 @@
     <string name="marmot_member_suffix_you"> (tú)</string>
     <string name="marmot_member_suffix_admin"> - administrador</string>
     <string name="marmot_remove_member">Eliminar miembro</string>
-    <string name="marmot_remove_member_confirm">¿Seguro que quieres eliminar a "%1$s" de este grupo?</string>
+    <string name="marmot_remove_member_confirm">¿Seguro que quieres eliminar a \"%1$s\" de este grupo?</string>
     <string name="marmot_grant">Conceder</string>
     <string name="marmot_grant_admin_privileges">Conceder privilegios de administrador</string>
     <string name="marmot_grant_admin_title">Conceder privilegios de administrador</string>
-    <string name="marmot_grant_admin_confirm">¿Hacer a "%1$s" administrador de este grupo? Los administradores pueden añadir o eliminar miembros, cambiar la información del grupo y conceder privilegios de administrador a otros miembros.</string>
+    <string name="marmot_grant_admin_confirm">¿Hacer a \"%1$s\" administrador de este grupo? Los administradores pueden añadir o eliminar miembros, cambiar la información del grupo y conceder privilegios de administrador a otros miembros.</string>
     <string name="marmot_revoke">Revocar</string>
     <string name="marmot_revoke_admin_privileges">Revocar privilegios de administrador</string>
     <string name="marmot_revoke_admin_title">Revocar privilegios de administrador</string>
-    <string name="marmot_revoke_admin_confirm">¿Revocar los privilegios de administrador de "%1$s"? Seguirá siendo miembro del grupo.</string>
+    <string name="marmot_revoke_admin_confirm">¿Revocar los privilegios de administrador de \"%1$s\"? Seguirá siendo miembro del grupo.</string>
     <string name="marmot_relay_no_events">aún no hay eventos</string>
     <string name="marmot_relay_last_event">último evento%1$s</string>
     <string name="copy">Copiar</string>
@@ -1824,12 +1791,4 @@
     <string name="ots_explorer_api_label">URL base de la API del explorador</string>
     <string name="dvm_pay_invoice_from_dvm">Pagar factura del DVM</string>
     <string name="dvm_pay_amount_to_dvm">Pagar %1$s sats al DVM</string>
-    <string name="use_direct_url">Usar URL directa</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">Permisos:</string>
-    <string name="nsite_root_site">Sitio raíz</string>
-    <string name="nsite_source">Fuente:</string>
-    <string name="nsite_servers">Servidores:</string>
-    <string name="nsite_open">Abrir</string>
 </resources>

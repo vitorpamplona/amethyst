@@ -10,8 +10,15 @@
     <!-- Accessibility -->
     <!-- Relay history paging (shared feed markers + status card) -->
     <!-- Notes & Replies -->
+    <string name="replying_to">у відповідь </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">Дозволи:</string>
+    <string name="nsite_root_site">Кореневий сайт</string>
+    <string name="nsite_source">Джерело:</string>
+    <string name="nsite_servers">Сервери:</string>
+    <string name="nsite_open">Відкрити</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Використовувати пряме посилання</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">Відкрито</string>
     <string name="git_status_merged">Злито</string>
@@ -77,7 +84,7 @@
     <string name="post_was_flagged_as_inappropriate_by">Допис було відмічено як недоречний</string>
     <string name="post_not_found">допис не знайдено</string>
     <string name="channel_image">Фото каналу</string>
-    <string name="referenced_event_not_found">Пов'язану подію не знайдено</string>
+    <string name="referenced_event_not_found">Пов\'язану подію не знайдено</string>
     <string name="could_not_decrypt_the_message">Не вдалося розшифрувати повідомлення</string>
     <string name="group_picture">Фото групи</string>
     <string name="explicit_content">Відвертий вміст</string>
@@ -109,7 +116,6 @@
     <string name="quote">Цитувати</string>
     <string name="fork">Форк</string>
     <string name="new_amount_in_sats">Нова сума в sat</string>
-    <string name="replying_to">у відповідь </string>
     <string name="and"> та </string>
     <string name="following"> Підписок</string>
     <string name="followers"> Підписників</string>
@@ -176,13 +182,13 @@
     <string name="channel_name">Назва каналу</string>
     <string name="my_awesome_group">Моя нова група</string>
     <string name="picture_url">URL фотографії</string>
-    <string name="optional_picture_url">URL зображення (необов'язково)</string>
+    <string name="optional_picture_url">URL зображення (необов\'язково)</string>
     <string name="about_us">Про нас.. </string>
     <string name="search_and_add_a_user">Знайти та додати користувача</string>
     <string name="add_a_relay">Додати релей</string>
-    <string name="my_name">Моє ім'я з @тегом</string>
-    <string name="display_name">Видиме ім'я</string>
-    <string name="my_display_name">Моє видиме ім'я</string>
+    <string name="my_name">Моє ім\'я з @тегом</string>
+    <string name="display_name">Видиме ім\'я</string>
+    <string name="my_display_name">Моє видиме ім\'я</string>
     <string name="welcome">Ласкаво просимо, Ostrich!</string>
     <string name="username">Нікнейм</string>
     <string name="about_me">Про мене</string>
@@ -283,7 +289,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">Зашифрувати та скопіювати мій секретний ключ</string>
     <string name="badge_award_image_for">Картинка значка-нагороди %1$s</string>
-    <string name="badge_award_image">"Зображення нагороди значком</string>
+    <string name="badge_award_image">\"Зображення нагороди значком</string>
     <string name="new_badge_award_notif">Ви отримали в нагороду новий значок</string>
     <string name="award_granted_to">Значок-нагороду видано</string>
     <string name="account_switch_add_account_dialog_title">Додати акаунт</string>
@@ -345,12 +351,12 @@
     <string name="scheduled_posts_empty_hint">Напишіть нотатку і натисніть іконку годинника, щоб запланувати її на пізніше.</string>
     <string name="new_community_name">Назва спільноти</string>
     <string name="new_community_description">Опис</string>
-    <string name="new_community_rules">Правила (необов'язково)</string>
+    <string name="new_community_rules">Правила (необов\'язково)</string>
     <string name="new_community_pick_cover">Додати обкладинку</string>
     <string name="new_community_pick_cover_hint">Торкніться, щоб вибрати фото — його буде завантажено на ваш медіасервер.</string>
     <string name="new_community_moderators_hint">Модератори можуть схвалювати дописи. Ви завжди є модератором.</string>
     <string name="new_community_add_moderator">Додати модератора</string>
-    <string name="new_community_add_moderator_placeholder">Ім'я, npub або NIP-05</string>
+    <string name="new_community_add_moderator_placeholder">Ім\'я, npub або NIP-05</string>
     <string name="new_community_owner">Власник</string>
     <string name="new_community_relays_hint">Виберіть relay, які розміщуватимуть запити, схвалення або метадані автора спільноти.</string>
     <string name="new_community_relay_marker_none">Будь-який</string>
@@ -368,7 +374,7 @@
     <string name="new_community_rules_limits_save">Зберегти обмеження</string>
     <string name="new_community_rules_banned_hint">Ці pubkey не можуть публікувати дописи у спільноті.</string>
     <string name="new_community_rules_banned_add">Додати заблокованого користувача</string>
-    <string name="new_community_rules_banned_placeholder">Ім'я, npub або NIP-05</string>
+    <string name="new_community_rules_banned_placeholder">Ім\'я, npub або NIP-05</string>
     <string name="new_community_rules_wot_hint">Дозволяти лише авторів, досяжних від кореневого pubkey у межах N переходів. Кілька фільтрів проходять, якщо хоча б один із них задовільнено.</string>
     <string name="new_community_rules_wot_root">Кореневий npub або hex pubkey</string>
     <string name="new_community_rules_wot_depth">Глибина</string>
@@ -385,7 +391,7 @@
     <string name="badge_upload_image_hint">Виберіть квадратне зображення для значка.</string>
     <string name="award_badge_loading">Завантаження значка…</string>
     <string name="award_badge_search_label">Пошук користувачів</string>
-    <string name="award_badge_search_placeholder">Ім'я, npub або NIP-05</string>
+    <string name="award_badge_search_placeholder">Ім\'я, npub або NIP-05</string>
     <string name="award_badge_remove_recipient">Видалити</string>
     <string name="badge_untitled">Значок без назви</string>
     <string name="badge_awardees_label">Присвоєно %1$d</string>
@@ -396,8 +402,8 @@
     <string name="profile_apps_header_empty">Застосунки</string>
     <string name="profile_apps_empty_hint">Рекомендуйте застосунки Nostr, якими ви користуєтесь, щоб інші могли їх відкрити для себе.</string>
     <string name="profile_app_recommendations_title">Рекомендовані застосунки</string>
-    <string name="profile_app_recommendations_description">Виберіть, які застосунки Nostr ви публічно рекомендуєте. Рекомендації з'являються у вашому профілі та допомагають іншим знаходити застосунки для контенту, який цей клієнт не може відкрити.</string>
-    <string name="profile_app_recommendations_empty">Застосунків ще не знайдено. Вони з'являться тут у міру виявлення на ваших relay.</string>
+    <string name="profile_app_recommendations_description">Виберіть, які застосунки Nostr ви публічно рекомендуєте. Рекомендації з\'являються у вашому профілі та допомагають іншим знаходити застосунки для контенту, який цей клієнт не може відкрити.</string>
+    <string name="profile_app_recommendations_empty">Застосунків ще не знайдено. Вони з\'являться тут у міру виявлення на ваших relay.</string>
     <string name="profile_app_recommendations_search">Пошук застосунків за назвою</string>
     <string name="profile_app_recommendations_search_empty">Жодного застосунку не відповідає вашому пошуку.</string>
     <string name="profile_app_recommendations_filter_empty">Жодного рекомендованого застосунку не відповідає цьому фільтру.</string>
@@ -425,7 +431,7 @@
     <string name="workout_reps">Повторення</string>
     <string name="workout_weight">Вага</string>
     <string name="workout_exercises">Вправи</string>
-    <string name="workout_volume">Об'єм</string>
+    <string name="workout_volume">Об\'єм</string>
     <string name="workout_notes">Нотатки</string>
     <string name="workout_hours">Години</string>
     <string name="workout_minutes">Хвилини</string>
@@ -555,7 +561,7 @@
     <string name="nest_create_field_service_hint">Auth sidecar — за замовчуванням nostrnests.com</string>
     <string name="nest_create_field_endpoint">Кінцева точка MoQ relay</string>
     <string name="nest_create_field_endpoint_hint">URL WebTransport — зазвичай той самий хост</string>
-    <string name="nest_create_field_image">URL обкладинки (необов'язково)</string>
+    <string name="nest_create_field_image">URL обкладинки (необов\'язково)</string>
     <string name="nest_create_cancel">Скасувати</string>
     <string name="nest_create_submit">Запустити простір</string>
     <string name="nest_create_schedule_toggle">Запланувати на пізніше</string>
@@ -574,10 +580,10 @@
     <string name="music_track_title_label">Назва</string>
     <string name="music_track_title_placeholder">Назва треку</string>
     <string name="music_track_artist_label">Виконавець</string>
-    <string name="music_track_artist_placeholder">Ім'я виконавця</string>
-    <string name="music_track_album_label">Альбом (необов'язково)</string>
-    <string name="music_track_duration_label">Тривалість у секундах (необов'язково)</string>
-    <string name="music_track_description_label">Текст або подяки (необов'язково)</string>
+    <string name="music_track_artist_placeholder">Ім\'я виконавця</string>
+    <string name="music_track_album_label">Альбом (необов\'язково)</string>
+    <string name="music_track_duration_label">Тривалість у секундах (необов\'язково)</string>
+    <string name="music_track_description_label">Текст або подяки (необов\'язково)</string>
     <string name="music_track_delete">Видалити цей трек</string>
     <string name="music_track_delete_confirm">Опублікувати NIP-09 видалення для цього музичного треку?</string>
     <string name="add_to_music_playlist">Додати до плейлиста</string>
@@ -744,7 +750,7 @@
     <string name="follow_set_copy_indicator_description">Вкажіть нову назву/опис для клонованого списку нижче.</string>
     <string name="follow_set_creation_name_label">Назва списку</string>
     <string name="follow_set_copy_name_label">Нова назва списку</string>
-    <string name="follow_set_creation_desc_label">Опис списку (необов'язково)</string>
+    <string name="follow_set_creation_desc_label">Опис списку (необов\'язково)</string>
     <string name="follow_set_copy_desc_label">Новий опис списку</string>
     <string name="follow_set_creation_action_btn_label">Створити список</string>
     <string name="follow_set_copy_action_btn_label">Копіювати/клонувати список</string>
@@ -754,7 +760,7 @@
     <string name="follow_set_rename_dialog_indicator_second_part"> на..</string>
     <string name="invalid_port_number">Невірний номер порту</string>
     <string name="call_calling">Виклик…</string>
-    <string name="call_connecting">З'єднання…</string>
+    <string name="call_connecting">З\'єднання…</string>
     <string name="call_ended">Дзвінок завершено</string>
     <string name="call_dismiss">Закрити</string>
     <string name="call_switch_camera">Перемкнути камеру</string>
@@ -777,12 +783,12 @@
     <string name="call_settings_add_turn">Додати TURN сервер</string>
     <string name="call_settings_remove_turn">Видалити</string>
     <string name="call_settings_turn_url">URL сервера</string>
-    <string name="call_settings_turn_username">Ім'я користувача</string>
+    <string name="call_settings_turn_username">Ім\'я користувача</string>
     <string name="call_settings_turn_credential">Облікові дані</string>
     <string name="notification_tab_following">Стежу</string>
     <string name="notification_tab_everyone">Усі</string>
     <string name="battery_optimization_title">Оптимізація батареї активна</string>
-    <string name="battery_optimization_description">Android може обмежувати з'єднання з relay у фоновому режимі. Вимкніть оптимізацію батареї для Amethyst, щоб забезпечити надійні сповіщення.</string>
+    <string name="battery_optimization_description">Android може обмежувати з\'єднання з relay у фоновому режимі. Вимкніть оптимізацію батареї для Amethyst, щоб забезпечити надійні сповіщення.</string>
     <string name="battery_optimization_fix_now">Виправити зараз</string>
     <string name="content_warning">Попередження про контент</string>
     <string name="content_warning_with_reason">Попередження: %1$s</string>
@@ -876,7 +882,7 @@
     <string name="community_no_descriptor">Ця спільнота не має опису або правил. Зверніться до автора, щоб додати один</string>
     <string name="user_preferences">Параметри користувача</string>
     <string name="settings_search_placeholder">Пошук налаштувань</string>
-    <string name="settings_search_no_results">Налаштувань для "%1$s" не знайдено</string>
+    <string name="settings_search_no_results">Налаштувань для \"%1$s\" не знайдено</string>
     <string name="reset_marmot_confirm_title">Скинути стан Marmot?</string>
     <string name="reset_marmot_confirm_body">Це назавжди видалить усі групові чати Marmot, історію повідомлень та MLS ключі на цьому пристрої для поточного акаунту. Учасники не будуть сповіщені та можуть бачити вас у групах до наступного commit. Це не можна скасувати. Новий KeyPackage буде опубліковано під час наступної синхронізації додатку.</string>
     <string name="reset_marmot_confirm_action">Скинути</string>
@@ -903,8 +909,8 @@
     <string name="music_track_audio_picked">Аудіофайл готовий до завантаження</string>
     <string name="music_playlist_edit_action">Редагувати плейлист</string>
     <string name="music_playlist_title_label">Назва</string>
-    <string name="music_playlist_description_label">Опис (необов'язково)</string>
-    <string name="music_playlist_notes_label">Нотатки (необов'язково)</string>
+    <string name="music_playlist_description_label">Опис (необов\'язково)</string>
+    <string name="music_playlist_notes_label">Нотатки (необов\'язково)</string>
     <string name="music_playlist_private_hint">Приховати цей плейлист з вашого публічного профілю.</string>
     <string name="music_playlist_collaborative_hint">Дозволити іншим додавати треки до цього плейлисту.</string>
     <string name="music_playlist_delete">Видалити цей плейлист</string>
@@ -916,11 +922,10 @@
     <string name="loading_location">Завантаження розташування</string>
     <string name="lack_location_permissions">Немає дозволу на розташування</string>
     <string name="add_sensitive_content_explainer">Додає попередження про чутливий контент перед показом вашого вмісту. Це ідеально підходить для будь-якого вмісту NSFW або вмісту, який деякі люди можуть вважати образливим або тривожним</string>
-    <string name="add_sensitive_content_description_placeholder">Причина (необов'язково)</string>
+    <string name="add_sensitive_content_description_placeholder">Причина (необов\'язково)</string>
     <string name="messages_create_public_private_chat_description">Нова публічна або приватна група</string>
     <string name="messages_new_message_to">Кому</string>
     <string name="messages_new_message_subject_caption">Тема бесіди</string>
-    <string name="messages_new_message_to_caption">@User1, @User2, @User3</string>
     <string name="messages_group_descriptor">Учасники цієї групи</string>
     <string name="messages_new_subject_message">Пояснення для учасників</string>
     <string name="messages_new_subject_message_placeholder">Зміна назви нових цілей.</string>
@@ -946,14 +951,14 @@
     <string name="zap_split_title">Розподіл та пересилання зап</string>
     <string name="zap_split_explainer">Підтримуючі клієнти розподілятимуть і пересилатимуть зап до доданих тут користувачів замість вас</string>
     <string name="zap_split_search_and_add_user">Знайти та додати користувача</string>
-    <string name="zap_split_search_and_add_user_placeholder">Ім'я користувача або ім'я для відображення</string>
+    <string name="zap_split_search_and_add_user_placeholder">Ім\'я користувача або ім\'я для відображення</string>
     <string name="paid">Сплачено</string>
     <string name="wallet_number">Гаманець: %1$s</string>
     <string name="hide_new_word_label">Приховати нове слово або речення</string>
     <string name="settings_muted_threads_unknown">Невідома тема · %1$s</string>
     <string name="select_an_option">Вибрати опцію</string>
     <string name="tor_connection_failed_title">Tor не підключається</string>
-    <string name="tor_connection_failed_body">Amethyst не зміг завершити завантаження Tor. Використати звичайне (без Tor) підключення, щоб завантажити стрічку? Ми запам'ятаємо цей вибір на наступну годину і спробуємо Tor знову після цього.</string>
+    <string name="tor_connection_failed_body">Amethyst не зміг завершити завантаження Tor. Використати звичайне (без Tor) підключення, щоб завантажити стрічку? Ми запам\'ятаємо цей вибір на наступну годину і спробуємо Tor знову після цього.</string>
     <string name="tor_continue_without_for_session">Використати звичайне підключення</string>
     <string name="tor_keep_waiting">Продовжити очікування</string>
     <string name="notification_settings_categories_explainer">Торкніться категорії, щоб відкрити налаштування сповіщень Android для неї — звук, важливість, значки та режим «Не турбувати» знаходяться там.</string>
@@ -1007,7 +1012,7 @@
     <string name="wallet_payment_success">Оплату виконано успішно</string>
     <string name="wallet_payment_sending">Надсилання платежу…</string>
     <string name="wallet_amount_sats">Сума (sats)</string>
-    <string name="wallet_description">Опис (необов'язково)</string>
+    <string name="wallet_description">Опис (необов\'язково)</string>
     <string name="wallet_create_invoice">Створити інвойс</string>
     <string name="wallet_creating_invoice">Створення інвойсу…</string>
     <string name="wallet_copy_invoice">Копіювати інвойс</string>
@@ -1038,7 +1043,7 @@
     <string name="cashu_no_wallet">Cashu гаманця ще немає</string>
     <string name="cashu_no_wallet_description">Створіть Cashu гаманець для зберігання ecash токенів та отримання nutzap.</string>
     <string name="cashu_discovering">Пошук вашого гаманця…</string>
-    <string name="cashu_discovering_description">NIP-60 гаманці синхронізуються між клієнтами. Якщо ви створили гаманець в іншому додатку з цим Nostr ключем, він має з'явитися за кілька секунд.</string>
+    <string name="cashu_discovering_description">NIP-60 гаманці синхронізуються між клієнтами. Якщо ви створили гаманець в іншому додатку з цим Nostr ключем, він має з\'явитися за кілька секунд.</string>
     <string name="cashu_balance">Баланс</string>
     <string name="cashu_mint_url">URL mint</string>
     <string name="cashu_remove_mint">Видалити mint</string>
@@ -1052,7 +1057,7 @@
     <string name="cashu_action_redeem">Обміняти</string>
     <string name="cashu_amount_sats">Сума (sats)</string>
     <string name="cashu_pick_mint">Оберіть mint</string>
-    <string name="cashu_memo_optional">Нотатка (необов'язково)</string>
+    <string name="cashu_memo_optional">Нотатка (необов\'язково)</string>
     <string name="cashu_invoice_bolt11">Lightning інвойс (bolt11)</string>
     <string name="cashu_token_label">Cashu токен</string>
     <string name="cashu_copy_invoice">Копіювати інвойс</string>
@@ -1095,7 +1100,7 @@
     <string name="cashu_getting_quote">Запит котирування у mint…</string>
     <string name="cashu_verify">Перевірити</string>
     <string name="cashu_mint_reachable">✓ Mint доступний</string>
-    <string name="cashu_mint_unreachable">Не вдалося зв'язатися з mint: %1$s</string>
+    <string name="cashu_mint_unreachable">Не вдалося зв\'язатися з mint: %1$s</string>
     <string name="cashu_create_token">Створити токен</string>
     <string name="cashu_redeem_button">Обміняти</string>
     <string name="cashu_done">Готово</string>
@@ -1127,11 +1132,11 @@
     <string name="onchain_send_to">Кому</string>
     <string name="onchain_send_post_author">Автор дописа</string>
     <string name="onchain_send_recipient">Отримувач</string>
-    <string name="onchain_send_recipient_placeholder">ім'я, NIP-05 або npub</string>
+    <string name="onchain_send_recipient_placeholder">ім\'я, NIP-05 або npub</string>
     <string name="onchain_send_change_recipient">Змінити отримувача</string>
     <string name="onchain_send_amount">Сума</string>
     <string name="onchain_send_min_warning">Мінімальний onchain zap становить %1$s sats — менші суми поглинаються комісіями майнерів. Натомість використайте Lightning zap.</string>
-    <string name="onchain_send_comment_label">Коментар (необов'язково)</string>
+    <string name="onchain_send_comment_label">Коментар (необов\'язково)</string>
     <string name="onchain_send_priority">Пріоритет</string>
     <string name="onchain_send_loading_fees">Завантаження оцінок комісій…</string>
     <string name="onchain_send_button_amount">Надіслати %1$s sats</string>
@@ -1154,7 +1159,7 @@
     <string name="calendar_section_upcoming">Майбутні</string>
     <string name="calendar_section_past">Минулі</string>
     <string name="calendar_empty_feed_title">Ваш календар порожній</string>
-    <string name="calendar_empty_feed_subtitle">Тут з'являтимуться події, якими діляться люди, на яких ви підписані. Натисніть кнопку +, щоб створити власну.</string>
+    <string name="calendar_empty_feed_subtitle">Тут з\'являтимуться події, якими діляться люди, на яких ви підписані. Натисніть кнопку +, щоб створити власну.</string>
     <string name="calendar_empty_collections_title">Колекцій ще немає</string>
     <string name="calendar_empty_collections_subtitle">Групуйте події разом — серія зустрічей, конференційний трек, дорожня карта вашої команди. Натисніть +, щоб створити.</string>
     <string name="calendar_empty_day_title">Нічого не заплановано</string>
@@ -1171,7 +1176,7 @@
     <string name="calendar_event_hashtags">Хештеги (через кому)</string>
     <string name="calendar_event_pick_date">Вибрати дату</string>
     <string name="calendar_event_pick_time">Вибрати час</string>
-    <string name="calendar_event_invalid">Назва та час початку є обов'язковими.</string>
+    <string name="calendar_event_invalid">Назва та час початку є обов\'язковими.</string>
     <string name="calendar_event_end_before_start">Кінець має бути після початку.</string>
     <string name="calendar_nav_previous_month">Попередній місяць</string>
     <string name="calendar_nav_next_month">Наступний місяць</string>
@@ -1192,11 +1197,11 @@
     <string name="calendar_untitled">(без назви)</string>
     <string name="calendar_all_day">Весь день</string>
     <string name="calendar_rsvp_going_prefixed">✓ Піду</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Можливо</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Можливо</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Не зможу</string>
     <string name="calendar_collection_title">Назва</string>
     <string name="calendar_collection_description">Опис</string>
-    <string name="calendar_collection_invalid">Назва є обов'язковою.</string>
+    <string name="calendar_collection_invalid">Назва є обов\'язковою.</string>
     <string name="calendar_collection_empty_members">У цьому календарі ще немає подій.</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Відповідей ще немає.</string>
@@ -1213,7 +1218,7 @@
     <string name="calendar_collection_delete_confirm_message">Список календаря буде видалено. Події всередині не видаляються.</string>
     <string name="calendar_event_pick_image">Вибрати зображення</string>
     <string name="calendar_event_participants_section">Учасники (%1$d)</string>
-    <string name="calendar_event_participant_input">Пошук за ім'ям, npub або nip-05</string>
+    <string name="calendar_event_participant_input">Пошук за ім\'ям, npub або nip-05</string>
     <string name="calendar_event_participant_remove">Видалити учасника</string>
     <string name="calendar_reminder_settings_lead_title">Час до нагадування</string>
     <string name="calendar_reminder_settings_lead_subtitle">За скільки хвилин до події ви хочете отримати сповіщення.</string>
@@ -1225,7 +1230,7 @@
     <string name="route_calendar_event_detail">Деталі події</string>
     <string name="new_short_video">Нове коротке відео</string>
     <string name="new_long_video">Нове довге відео</string>
-    <string name="article_summary">Резюме (необов'язково)</string>
+    <string name="article_summary">Резюме (необов\'язково)</string>
     <string name="markdown_preview">Попередній перегляд</string>
     <string name="markdown_edit">Редагувати</string>
     <string name="add_header_image">Додати заголовне зображення</string>
@@ -1261,7 +1266,7 @@
     <string name="reactions_settings_share_description">Поділитися цією нотаткою зовні</string>
     <string name="reactions_settings_pay">Оплатити</string>
     <string name="reactions_settings_pay_description">Надіслати платіж автору через його платіжні реквізити</string>
-    <string name="video_player_settings_description">Виберіть, які кнопки з'являються у відеоплеєрі, а які — у меню додаткових параметрів. Перетягніть для зміни порядку.</string>
+    <string name="video_player_settings_description">Виберіть, які кнопки з\'являються у відеоплеєрі, а які — у меню додаткових параметрів. Перетягніть для зміни порядку.</string>
     <string name="video_player_settings_reorder">Змінити порядок</string>
     <string name="video_player_settings_location_top_bar">Верхня панель</string>
     <string name="video_player_settings_location_overflow">Меню додаткових параметрів</string>
@@ -1352,7 +1357,7 @@
     <string name="enter_picture_in_picture">Запустити відео у спливаючому вікні</string>
     <string name="accessibility_download_for_offline">Завантажити</string>
     <string name="accessibility_send">Надіслати</string>
-    <string name="accessibility_play_username">Відтворити ім'я користувача як аудіо</string>
+    <string name="accessibility_play_username">Відтворити ім\'я користувача як аудіо</string>
     <string name="accessibility_pushpin">Шпилька</string>
     <string name="accessibility_scan_qr_code">Сканувати QR-код</string>
     <string name="accessibility_select_date">Вибрати дату</string>
@@ -1368,7 +1373,7 @@
     <string name="select_list_to_filter">Оберіть параметр для фільтрації стрічки</string>
     <string name="add_dvm_to_favorites">Додати алгоритм стрічки до улюблених</string>
     <string name="remove_dvm_from_favorites">Видалити з улюблених</string>
-    <string name="favorite_dvms_explainer">Алгоритми стрічки, які ви відзначаєте зіркою, з'являються тут і як чіпи фільтра на головній стрічці.</string>
+    <string name="favorite_dvms_explainer">Алгоритми стрічки, які ви відзначаєте зіркою, з\'являються тут і як чіпи фільтра на головній стрічці.</string>
     <string name="favorite_dvms_empty_headline">Закріпіть свої улюблені алгоритми</string>
     <string name="favorite_dvms_empty_step1">Натисніть «%1$s» нижче, щоб переглянути алгоритми.</string>
     <string name="favorite_dvms_empty_step2">Натисніть %1$s поруч зі стрічкою, щоб закріпити її тут.</string>
@@ -1483,9 +1488,9 @@
     <string name="skip_for_now">Пропустити зараз</string>
     <string name="fetching_follow_list">Завантаження списку підписок…</string>
     <string name="no_follows_found">Підписки не знайдено</string>
-    <string name="import_follows_tips">«Введіть профіль друга або лідера спільноти. Ви можете використати їхній npub, NIP-05-адресу або ім'я Namecoin на кшталт alice@example.bit або id/alice для ідентифікаторів, підтверджених блокчейном.»</string>
+    <string name="import_follows_tips">«Введіть профіль друга або лідера спільноти. Ви можете використати їхній npub, NIP-05-адресу або ім\'я Namecoin на кшталт alice@example.bit або id/alice для ідентифікаторів, підтверджених блокчейном.»</string>
     <string name="select_all">Вибрати все</string>
-    <string name="namecoin_test_connection">Перевірити з'єднання</string>
+    <string name="namecoin_test_connection">Перевірити з\'єднання</string>
     <string name="namecoin_testing">Тестування серверів…</string>
     <string name="namecoin_test_success">Підключено</string>
     <string name="namecoin_test_results">Результати тестування</string>
@@ -1495,7 +1500,7 @@
     <string name="namecoin_tls_info">Інформація TLS</string>
     <string name="namecoin_no_test_yet">Тест ще не виконувався</string>
     <string name="namecoin_pin_cert_title">Довіряти сертифікату сервера?</string>
-    <string name="namecoin_pin_cert_body">Сервер %1$s надав сертифікат, якого ще немає у вашому сховищі довіри. Перевірте, чи відбиток нижче збігається з тим, що опублікував оператор сервера, а потім вирішіть, чи довіряти йому для майбутніх з'єднань.</string>
+    <string name="namecoin_pin_cert_body">Сервер %1$s надав сертифікат, якого ще немає у вашому сховищі довіри. Перевірте, чи відбиток нижче збігається з тим, що опублікував оператор сервера, а потім вирішіть, чи довіряти йому для майбутніх з\'єднань.</string>
     <string name="namecoin_pin_cert_accept">Довіряти</string>
     <string name="namecoin_pin_cert_reject">Відхилити</string>
     <string name="event_sync_what_happens_title">Що це робить</string>
@@ -1503,7 +1508,7 @@
     <string name="event_sync_step1">Завантажити всі події, що ви створили, і надіслати їх до ваших outbox-relay.</string>
     <string name="event_sync_step2">Завантажити всі події, що згадують вас, і надіслати їх до ваших inbox-relay.</string>
     <string name="event_sync_step3">Завантажити всі прямі повідомлення, адресовані вам, і надіслати їх до ваших DM relay.</string>
-    <string name="event_sync_wifi_warning">⚠ Схоже, ви підключені до платного або мобільного з'єднання. Ця операція може передати дуже великий обсяг даних. Підключіться до Wi-Fi перед початком.</string>
+    <string name="event_sync_wifi_warning">⚠ Схоже, ви підключені до платного або мобільного з\'єднання. Ця операція може передати дуже великий обсяг даних. Підключіться до Wi-Fi перед початком.</string>
     <string name="event_sync_mobile_data_dialog_title">Використовувати мобільні дані?</string>
     <string name="event_sync_start">Почати синхронізацію</string>
     <string name="event_sync_start_anyway">Почати все одно (мобільні дані)</string>
@@ -1548,13 +1553,13 @@
     <string name="cast_to_device_dialog_title">Транслювати на…</string>
     <string name="cast_searching_for_devices">Пошук пристроїв у вашій мережі Wi-Fi…</string>
     <string name="hls_pick_video_primary">Виберіть відео</string>
-    <string name="hls_pick_video_helper">Ваше відео буде перекодовано в кілька роздільних здатностей, щоб глядачі отримали плавне відтворення за будь-якого з'єднання.</string>
+    <string name="hls_pick_video_helper">Ваше відео буде перекодовано в кілька роздільних здатностей, щоб глядачі отримали плавне відтворення за будь-якого з\'єднання.</string>
     <string name="hls_change_video">Змінити</string>
     <string name="hls_title_label">Заголовок</string>
     <string name="hls_title_placeholder">Дайте своєму відео заголовок</string>
     <string name="hls_description_label">Опис</string>
     <string name="hls_description_placeholder">Про що це відео?</string>
-    <string name="hls_content_warning_reason_placeholder">Причина (необов'язково)</string>
+    <string name="hls_content_warning_reason_placeholder">Причина (необов\'язково)</string>
     <string name="hls_codec_label">Кодек</string>
     <string name="hls_codec_h265">H.265 (краще стиснення)</string>
     <string name="hls_codec_fallback_notice">H.265 недоступний на цьому пристрої — використовується H.264.</string>
@@ -1611,16 +1616,16 @@
     <string name="goal_description_placeholder">На що ви збираєте кошти?</string>
     <string name="goal_summary_label">Короткий підсумок</string>
     <string name="goal_summary_placeholder">Стислий опис, що відображається у попередньому перегляді</string>
-    <string name="goal_image_label">URL зображення (необов'язково)</string>
-    <string name="goal_website_label">URL сайту (необов'язково)</string>
+    <string name="goal_image_label">URL зображення (необов\'язково)</string>
+    <string name="goal_website_label">URL сайту (необов\'язково)</string>
     <string name="goal_set_deadline">Встановити кінцевий термін</string>
-    <string name="request_to_vanish_description">Запросіть relay видалити всі ваші дані до вибраної дати назавжди. Ця дія ґрунтується на NIP-62 та є юридично обов'язковою в деяких юрисдикціях.</string>
+    <string name="request_to_vanish_description">Запросіть relay видалити всі ваші дані до вибраної дати назавжди. Ця дія ґрунтується на NIP-62 та є юридично обов\'язковою в деяких юрисдикціях.</string>
     <string name="vanish_target_relay">Цільові relay</string>
     <string name="vanish_all_relays">ВСІ RELAY</string>
-    <string name="vanish_all_relays_warning">Це надішле запит до ВСІХ relay видалити все, пов'язане з вашим ключем, до вибраної дати. Ця подія буде розповсюджена якнайширше. Цю дію неможливо скасувати.</string>
+    <string name="vanish_all_relays_warning">Це надішле запит до ВСІХ relay видалити все, пов\'язане з вашим ключем, до вибраної дати. Ця подія буде розповсюджена якнайширше. Цю дію неможливо скасувати.</string>
     <string name="vanish_date_label">Видалити дані до</string>
     <string name="vanish_date_explainer">Усі ваші події, створені до цієї дати, будуть запитані на видалення з вибраного relay.</string>
-    <string name="vanish_reason_label">Причина (необов'язково)</string>
+    <string name="vanish_reason_label">Причина (необов\'язково)</string>
     <string name="vanish_reason_placeholder">Причина або юридичне повідомлення для оператора relay</string>
     <string name="vanish_send_request">Надіслати запит на зникнення</string>
     <string name="vanish_confirm_title">Підтвердіть запит на зникнення</string>
@@ -1667,7 +1672,7 @@
     <string name="relay_management_event_id_hex">ID події (hex)</string>
     <string name="relay_management_kind_number">Номер kind</string>
     <string name="relay_management_ip_address">IP-адреса</string>
-    <string name="relay_management_reason_optional">Причина (необов'язково)</string>
+    <string name="relay_management_reason_optional">Причина (необов\'язково)</string>
     <string name="relay_management_confirm">Підтвердити</string>
     <string name="relay_management_cancel">Скасувати</string>
     <string name="relay_management_apply">Застосувати</string>
@@ -1708,10 +1713,10 @@
     <string name="emoji_shortcode_label">Короткий код (напр. :smile:)</string>
     <string name="emoji_shortcode_invalid">Лише літери, цифри, дефіси та підкреслення</string>
     <string name="emoji_url_label">URL зображення</string>
-    <string name="emoji_pack_address_label">Адреса пакету (необов'язково)</string>
+    <string name="emoji_pack_address_label">Адреса пакету (необов\'язково)</string>
     <string name="emoji_pack_name_label">Назва пакету</string>
-    <string name="emoji_pack_description_label">Опис (необов'язково)</string>
-    <string name="emoji_pack_image_label">URL обкладинки (необов'язково)</string>
+    <string name="emoji_pack_description_label">Опис (необов\'язково)</string>
+    <string name="emoji_pack_image_label">URL обкладинки (необов\'язково)</string>
     <string name="emoji_pack_upload_image_cta">Завантажити обкладинку</string>
     <string name="emoji_pack_upload_image_hint">Оберіть квадратне зображення для представлення цього пакету емодзі.</string>
     <string name="no_emoji_packs">У вас ще немає жодного пакету емодзі</string>
@@ -1724,8 +1729,8 @@
     <string name="emoji_add_dialog_title">Додати власний емодзі</string>
     <string name="emoji_remove_dialog_title">Видалити :%1$s:?</string>
     <string name="emoji_long_press_hint">Довге натискання на емодзі для видалення</string>
-    <string name="emoji_pack_is_in_list">"%1$s" є у вашому списку емодзі</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" відсутній у вашому списку емодзі</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" є у вашому списку емодзі</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" відсутній у вашому списку емодзі</string>
     <string name="emoji_pack_actions_dialog_title">Дії з пакетом емодзі</string>
     <string name="emoji_private_toggle">Приватний</string>
     <string name="emoji_private_badge">Приватний емодзі</string>
@@ -1747,11 +1752,11 @@
     <string name="marmot_no_groups">Груп ще немає</string>
     <string name="marmot_no_groups_desc">Створіть групу або прийміть запрошення.</string>
     <string name="marmot_no_invitations">Немає запрошень</string>
-    <string name="marmot_no_invitations_desc">Коли хтось додасть вас до групи, це з'явиться тут, доки ви не відповісте.</string>
+    <string name="marmot_no_invitations_desc">Коли хтось додасть вас до групи, це з\'явиться тут, доки ви не відповісте.</string>
     <string name="marmot_no_messages_yet">Повідомлень ще немає</string>
     <string name="marmot_group_name">Назва групи</string>
     <string name="marmot_group_name_placeholder">Введіть назву групи</string>
-    <string name="marmot_group_description_placeholder">Введіть опис групи (необов'язково)</string>
+    <string name="marmot_group_description_placeholder">Введіть опис групи (необов\'язково)</string>
     <string name="marmot_edit_info_footer">Зміни буде збережено в групі через MLS та поширено для всіх учасників.</string>
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relays не налаштовано</string>
     <string name="marmot_keypackage_relays_not_set_message">У вас ще немає списку KeyPackage Relay (MIP-00). Цей список повідомляє іншим людям, де опубліковано ваш KeyPackage, щоб вони могли запросити вас до групових чатів.\n\nВикористати поточні вихідні relay для цього?</string>
@@ -1761,24 +1766,24 @@
     <string name="marmot_edit_group_info">Редагувати інформацію про групу</string>
     <string name="marmot_leave_group">Покинути групу</string>
     <string name="marmot_this_group">цю групу</string>
-    <string name="marmot_leave_group_confirm">Ви впевнені, що хочете покинути "%1$s"? Ви більше не отримуватимете повідомлення від цієї групи.</string>
+    <string name="marmot_leave_group_confirm">Ви впевнені, що хочете покинути \"%1$s\"? Ви більше не отримуватимете повідомлення від цієї групи.</string>
     <string name="marmot_keypackage_required">Вони повинні опублікувати KeyPackage (kind:30443), щоб їх можна було додати.</string>
     <string name="marmot_add_to_group">Додати до групи</string>
     <string name="marmot_add_member">Додати учасника</string>
     <string name="marmot_add_member_action">Додати учасника</string>
-    <string name="marmot_add_member_placeholder">Ім'я, npub або NIP-05</string>
+    <string name="marmot_add_member_placeholder">Ім\'я, npub або NIP-05</string>
     <string name="marmot_member_suffix_you"> (ви)</string>
     <string name="marmot_member_suffix_admin"> - адміністратор</string>
     <string name="marmot_remove_member">Видалити учасника</string>
-    <string name="marmot_remove_member_confirm">Ви впевнені, що хочете видалити "%1$s" з цієї групи?</string>
+    <string name="marmot_remove_member_confirm">Ви впевнені, що хочете видалити \"%1$s\" з цієї групи?</string>
     <string name="marmot_grant">Надати</string>
     <string name="marmot_grant_admin_privileges">Надати права адміністратора</string>
     <string name="marmot_grant_admin_title">Надати права адміністратора</string>
-    <string name="marmot_grant_admin_confirm">Зробити "%1$s" адміністратором цієї групи? Адміністратори можуть додавати або видаляти учасників, змінювати інформацію про групу та надавати права адміністратора іншим учасникам.</string>
+    <string name="marmot_grant_admin_confirm">Зробити \"%1$s\" адміністратором цієї групи? Адміністратори можуть додавати або видаляти учасників, змінювати інформацію про групу та надавати права адміністратора іншим учасникам.</string>
     <string name="marmot_revoke">Відкликати</string>
     <string name="marmot_revoke_admin_privileges">Відкликати права адміністратора</string>
     <string name="marmot_revoke_admin_title">Відкликати права адміністратора</string>
-    <string name="marmot_revoke_admin_confirm">Відкликати права адміністратора у "%1$s"? Вони залишаться учасником групи.</string>
+    <string name="marmot_revoke_admin_confirm">Відкликати права адміністратора у \"%1$s\"? Вони залишаться учасником групи.</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">подій ще немає</string>
     <string name="marmot_relay_last_event">остання подія%1$s</string>
@@ -1787,10 +1792,4 @@
     <string name="ots_explorer_api_label">Базова URL-адреса Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Оплатити рахунок від DVM</string>
     <string name="dvm_pay_amount_to_dvm">Сплатити %1$s sats DVM</string>
-    <string name="use_direct_url">Використовувати пряме посилання</string>
-    <string name="napplet_card_permissions">Дозволи:</string>
-    <string name="nsite_root_site">Кореневий сайт</string>
-    <string name="nsite_source">Джерело:</string>
-    <string name="nsite_servers">Сервери:</string>
-    <string name="nsite_open">Відкрити</string>
 </resources>

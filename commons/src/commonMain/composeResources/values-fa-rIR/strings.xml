@@ -10,8 +10,15 @@
     <!-- Accessibility -->
     <!-- Relay history paging (shared feed markers + status card) -->
     <!-- Notes & Replies -->
+    <string name="replying_to"> پاسخ به</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">مجوزها:</string>
+    <string name="nsite_root_site">سایت اصلی</string>
+    <string name="nsite_source">منبع:</string>
+    <string name="nsite_servers">سرورها:</string>
+    <string name="nsite_open">باز کردن</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">استفاده از آدرس مستقیم اینترنتی</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">باز</string>
     <string name="git_status_merged">ادغام شده</string>
@@ -69,7 +76,6 @@
     <string name="post_was_hidden">این پست پنهان شده چون به کلمات یا کاربران پنهان شده شما اشاره دارد</string>
     <string name="post_was_flagged_as_inappropriate_by">این یادداشت توسط این افراد گزارش شده:</string>
     <string name="post_not_found">این یادداشت یافت نشد</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">تصویر کانال</string>
     <string name="referenced_event_not_found">رویداد مورد نظر یافت نشد</string>
     <string name="could_not_decrypt_the_message">پیام رمزگشایی نشد</string>
@@ -104,7 +110,6 @@
     <string name="quote">نقل قول</string>
     <string name="fork">فورک</string>
     <string name="new_amount_in_sats">مبلغ جدید به ساتوشی</string>
-    <string name="replying_to"> پاسخ به</string>
     <string name="and"> و </string>
     <string name="following">دنبال شونده</string>
     <string name="followers">دنبال کننده</string>
@@ -170,7 +175,6 @@
     <string name="secret_note_to_receiver">پیام مخفی به گیرنده</string>
     <string name="secret_note_to_receiver_placeholder">پیام پنهان من</string>
     <string name="secret_visible_text">پیشوند نمایان</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">افزودن به یادداشت</string>
     <string name="article">مقاله</string>
     <string name="channel_name">نام کانال</string>
@@ -875,7 +879,7 @@
     <string name="community_no_descriptor">این انجمن هیچ توضیح و قوانینی ندارد. با مالک گروه برای افزودن آن صحبت کنید.</string>
     <string name="user_preferences">تنظیمات کاربر</string>
     <string name="settings_search_placeholder">جستجو در تنظیمات</string>
-    <string name="settings_search_no_results">تنظیماتی برای "%1$s" یافت نشد</string>
+    <string name="settings_search_no_results">تنظیماتی برای \"%1$s\" یافت نشد</string>
     <string name="reset_marmot_confirm_title">بازنشانی وضعیت Marmot؟</string>
     <string name="reset_marmot_confirm_body">این عمل به طور دائمی تمام گفتگوهای گروهی Marmot، تاریخچه پیام‌ها، و کلیدهای MLS روی این دستگاه برای حساب فعلی را حذف خواهد کرد. همتایان اطلاع‌رسانی نخواهند شد و ممکن است شما را تا تأیید بعدی در گروه‌ها ببینند. این عمل قابل بازگشت نیست. یک KeyPackage جدید دفعه بعدی که برنامه همگام‌سازی می‌کند منتشر خواهد شد.</string>
     <string name="reset_marmot_confirm_action">بازنشانی</string>
@@ -919,7 +923,7 @@
     <string name="messages_create_public_private_chat_description">گروه خصوصی یا عمومی جدید</string>
     <string name="messages_new_message_to">به</string>
     <string name="messages_new_message_subject_caption">موضوع گفتگو</string>
-    <string name="messages_new_message_to_caption">@کاربر1, @کاربر2, @کاربر3</string>
+    <string name="messages_new_message_to_caption">\@کاربر1, @کاربر2, @کاربر3</string>
     <string name="messages_group_descriptor">اعضای گروه</string>
     <string name="messages_new_subject_message">توضیحات برای اعضا</string>
     <string name="messages_new_subject_message_placeholder">تعویض نام به خاطر اهداف جدید.</string>
@@ -1192,7 +1196,7 @@
     <string name="calendar_untitled">(بدون عنوان)</string>
     <string name="calendar_all_day">تمام روز</string>
     <string name="calendar_rsvp_going_prefixed">✓ می‌آیم</string>
-    <string name="calendar_rsvp_maybe_prefixed">? شاید</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? شاید</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ نمی‌توانم بیایم</string>
     <string name="calendar_collection_title">عنوان</string>
     <string name="calendar_collection_description">توضیحات</string>
@@ -1359,7 +1363,6 @@
     <string name="accessibility_download_for_offline">بارگيری</string>
     <string name="accessibility_send">ارسال</string>
     <string name="accessibility_play_username">نام کاربری را به شکل صوتی بخوان.</string>
-    <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">کد QR را اسکن کنید</string>
     <string name="accessibility_select_date">انتخاب تاریخ</string>
     <string name="load_from_text">از پیام</string>
@@ -1735,8 +1738,8 @@
     <string name="emoji_add_dialog_title">افزودن ایموجی سفارشی</string>
     <string name="emoji_remove_dialog_title">حذف :%1$s:؟</string>
     <string name="emoji_long_press_hint">برای حذف ایموجی، روی آن ضربه بلند بزنید</string>
-    <string name="emoji_pack_is_in_list">"%1$s" در فهرست ایموجی شما است</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" در فهرست ایموجی شما نیست</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" در فهرست ایموجی شما است</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" در فهرست ایموجی شما نیست</string>
     <string name="emoji_pack_actions_dialog_title">اقدامات بسته ایموجی</string>
     <string name="emoji_private_toggle">خصوصی</string>
     <string name="emoji_private_badge">ایموجی خصوصی</string>
@@ -1772,7 +1775,7 @@
     <string name="marmot_edit_group_info">ویرایش اطلاعات گروه</string>
     <string name="marmot_leave_group">خروج از گروه</string>
     <string name="marmot_this_group">این گروه</string>
-    <string name="marmot_leave_group_confirm">آیا مطمئن هستید که می‌خواهید از "%1$s" خارج شوید؟ دیگر پیامی از این گروه دریافت نخواهید کرد.</string>
+    <string name="marmot_leave_group_confirm">آیا مطمئن هستید که می‌خواهید از \"%1$s\" خارج شوید؟ دیگر پیامی از این گروه دریافت نخواهید کرد.</string>
     <string name="marmot_keypackage_required">برای افزودن، باید یک KeyPackage (kind:30443) منتشر کرده باشند.</string>
     <string name="marmot_add_to_group">افزودن به گروه</string>
     <string name="marmot_add_member">افزودن عضو</string>
@@ -1781,15 +1784,15 @@
     <string name="marmot_member_suffix_you"> (شما)</string>
     <string name="marmot_member_suffix_admin"> - مدیر</string>
     <string name="marmot_remove_member">حذف عضو</string>
-    <string name="marmot_remove_member_confirm">آیا مطمئن هستید که می‌خواهید "%1$s" را از این گروه حذف کنید؟</string>
+    <string name="marmot_remove_member_confirm">آیا مطمئن هستید که می‌خواهید \"%1$s\" را از این گروه حذف کنید؟</string>
     <string name="marmot_grant">اعطا</string>
     <string name="marmot_grant_admin_privileges">اعطای دسترسی مدیریت</string>
     <string name="marmot_grant_admin_title">اعطای دسترسی مدیریت</string>
-    <string name="marmot_grant_admin_confirm">آیا "%1$s" را مدیر این گروه کنید؟ مدیران می‌توانند اعضا را اضافه یا حذف کنند، اطلاعات گروه را تغییر دهند و دسترسی مدیریت را به اعضای دیگر اعطا کنند.</string>
+    <string name="marmot_grant_admin_confirm">آیا \"%1$s\" را مدیر این گروه کنید؟ مدیران می‌توانند اعضا را اضافه یا حذف کنند، اطلاعات گروه را تغییر دهند و دسترسی مدیریت را به اعضای دیگر اعطا کنند.</string>
     <string name="marmot_revoke">لغو</string>
     <string name="marmot_revoke_admin_privileges">لغو دسترسی مدیریت</string>
     <string name="marmot_revoke_admin_title">لغو دسترسی مدیریت</string>
-    <string name="marmot_revoke_admin_confirm">دسترسی مدیریت "%1$s" لغو شود؟ آن‌ها همچنان عضو گروه باقی خواهند ماند.</string>
+    <string name="marmot_revoke_admin_confirm">دسترسی مدیریت \"%1$s\" لغو شود؟ آن‌ها همچنان عضو گروه باقی خواهند ماند.</string>
     <string name="marmot_relays_header">relay‌ها</string>
     <string name="marmot_relay_no_events">هنوز رویدادی وجود ندارد</string>
     <string name="marmot_relay_last_event">آخرین رویداد%1$s</string>
@@ -1798,10 +1801,4 @@
     <string name="ots_explorer_api_label">آدرس پایه API کاوشگر</string>
     <string name="dvm_pay_invoice_from_dvm">پرداخت فاکتور از DVM</string>
     <string name="dvm_pay_amount_to_dvm">پرداخت %1$s sat به DVM</string>
-    <string name="use_direct_url">استفاده از آدرس مستقیم اینترنتی</string>
-    <string name="napplet_card_permissions">مجوزها:</string>
-    <string name="nsite_root_site">سایت اصلی</string>
-    <string name="nsite_source">منبع:</string>
-    <string name="nsite_servers">سرورها:</string>
-    <string name="nsite_open">باز کردن</string>
 </resources>

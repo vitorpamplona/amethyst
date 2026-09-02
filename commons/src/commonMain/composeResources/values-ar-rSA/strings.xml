@@ -10,8 +10,15 @@
     <!-- Accessibility -->
     <!-- Relay history paging (shared feed markers + status card) -->
     <!-- Notes & Replies -->
+    <string name="replying_to">الرد على</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="napplet_card_permissions">الصلاحيات:</string>
+    <string name="nsite_root_site">الموقع الجذر</string>
+    <string name="nsite_source">المصدر:</string>
+    <string name="nsite_servers">الخوادم:</string>
+    <string name="nsite_open">فتح</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">استخدام الرابط المباشر</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">مفتوح</string>
     <string name="git_status_merged">مدمج</string>
@@ -116,7 +123,6 @@
     <string name="quote">إقتباس</string>
     <string name="fork">أشتقاق</string>
     <string name="new_amount_in_sats">مبلغ جديد في Sats</string>
-    <string name="replying_to">الرد على</string>
     <string name="and"> و </string>
     <string name="following">المتابعون</string>
     <string name="followers">متابِعاً</string>
@@ -294,7 +300,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">تشفير و نسخ المفتاح الخاص</string>
     <string name="badge_award_image_for">صورة شارة مكافئة ل %1$s</string>
-    <string name="badge_award_image">"صورة منح الشارة</string>
+    <string name="badge_award_image">\"صورة منح الشارة</string>
     <string name="new_badge_award_notif">لقد حصلت على شارة جائزة جديدة</string>
     <string name="award_granted_to">شارة الجائزة منحت إلى</string>
     <string name="account_switch_add_account_dialog_title">إضافة حساب جديد</string>
@@ -508,7 +514,7 @@
     <string name="nest_state_speaking">يتحدث الآن</string>
     <string name="nest_state_mic_open">الميكروفون مفتوح</string>
     <string name="nest_leave_host_title">إنهاء هذا nest؟</string>
-    <string name="nest_leave_host_body">أنت المضيف. سيؤدي إغلاق الغرفة إلى قطع اتصال الجميع. اختر "مغادرة فقط" إذا أردت العودة لاحقًا — ستُغلق الغرفة تلقائيًا بعد 8 ساعات من عدم النشاط.</string>
+    <string name="nest_leave_host_body">أنت المضيف. سيؤدي إغلاق الغرفة إلى قطع اتصال الجميع. اختر \"مغادرة فقط\" إذا أردت العودة لاحقًا — ستُغلق الغرفة تلقائيًا بعد 8 ساعات من عدم النشاط.</string>
     <string name="nest_leave_host_close">إغلاق الغرفة</string>
     <string name="nest_leave_host_just_leave">مغادرة فقط</string>
     <string name="nest_live_chip">مباشر</string>
@@ -890,7 +896,7 @@
  تحدث إلى المالك لإضافة مستخدم جديد</string>
     <string name="user_preferences">تفضيلات المستخدم</string>
     <string name="settings_search_placeholder">البحث في الإعدادات</string>
-    <string name="settings_search_no_results">لا توجد إعدادات لـ "%1$s"</string>
+    <string name="settings_search_no_results">لا توجد إعدادات لـ \"%1$s\"</string>
     <string name="reset_marmot_confirm_title">إعادة تعيين حالة Marmot؟</string>
     <string name="reset_marmot_confirm_body">سيؤدي هذا إلى حذف كل محادثات مجموعة Marmot وسجل الرسائل ومفاتيح MLS على هذا الجهاز للحساب الحالي نهائيًا. لن يتم إشعار الأطراف الأخرى وقد يظلون يرونك في المجموعات حتى تتم عملية الالتزام التالية. لا يمكن التراجع عن هذا الإجراء. سيتم نشر KeyPackage جديد في المرة القادمة التي تتزامن فيها التطبيق.</string>
     <string name="reset_marmot_confirm_action">إعادة تعيين</string>
@@ -923,7 +929,7 @@
     <string name="music_playlist_collaborative_hint">السماح للآخرين بإضافة مقاطع إلى قائمة التشغيل هذه.</string>
     <string name="music_playlist_delete">حذف قائمة التشغيل هذه</string>
     <string name="music_playlist_delete_confirm">نشر طلب حذف NIP-09 لهذه القائمة الموسيقية؟</string>
-    <string name="music_playlist_no_tracks_hint">لا توجد مقاطع بعد. أضف مقاطع من قائمة أغنية باستخدام "إضافة إلى قائمة التشغيل".</string>
+    <string name="music_playlist_no_tracks_hint">لا توجد مقاطع بعد. أضف مقاطع من قائمة أغنية باستخدام \"إضافة إلى قائمة التشغيل\".</string>
     <string name="music_playlist_move_track_up">تحريك المقطع للأعلى</string>
     <string name="music_playlist_move_track_down">تحريك المقطع للأسفل</string>
     <string name="music_playlist_remove_track">إزالة المقطع من قائمة التشغيل</string>
@@ -934,7 +940,6 @@
     <string name="messages_create_public_private_chat_description">مجموعة عامة أو خاصة جديدة</string>
     <string name="messages_new_message_to">إلى</string>
     <string name="messages_new_message_subject_caption">موضوع المحادثة</string>
-    <string name="messages_new_message_to_caption">@User1, @User2, @User3</string>
     <string name="messages_group_descriptor">أعضاء هذه المجموعة</string>
     <string name="messages_new_subject_message">التوضيح للأعضاء</string>
     <string name="messages_new_subject_message_placeholder">تغيير اسم الأهداف الجديدة.</string>
@@ -1495,7 +1500,7 @@
     <string name="skip_for_now">تخطي في الوقت الحالي</string>
     <string name="fetching_follow_list">جارٍ جلب قائمة المتابَعين…</string>
     <string name="no_follows_found">لم يُعثر على متابَعين</string>
-    <string name="import_follows_tips">"أدخل الملف الشخصي لصديق أو قائد مجتمع. يمكنك استخدام npub الخاص به أو عنوان NIP-05 أو اسم Namecoin مثل alice@example.bit أو id/alice للهويات الموثقة على البلوكشين."</string>
+    <string name="import_follows_tips">أدخل الملف الشخصي لصديق أو قائد مجتمع. يمكنك استخدام npub الخاص به أو عنوان NIP-05 أو اسم Namecoin مثل alice@example.bit أو id/alice للهويات الموثقة على البلوكشين.</string>
     <string name="select_all">تحديد الكل</string>
     <string name="namecoin_test_connection">اختبار الاتصال</string>
     <string name="namecoin_testing">جارٍ اختبار الخوادم…</string>
@@ -1575,7 +1580,7 @@
     <string name="hls_renditions_label">الدقات</string>
     <string name="hls_renditions_source_format">دقة المصدر: %1$d×%2$d</string>
     <string name="hls_publish_button">نشر فيديو بدقة عالية</string>
-    <string name="hls_publishing_header_format">جارٍ نشر "%1$s"…</string>
+    <string name="hls_publishing_header_format">جارٍ نشر \"%1$s\"…</string>
     <string name="hls_state_transcoding_format">جارٍ الترميز %1$s</string>
     <string name="hls_state_uploading_idle">رفع</string>
     <string name="hls_state_uploading_format">جارٍ رفع %1$d من %2$d</string>
@@ -1738,8 +1743,8 @@
     <string name="emoji_add_dialog_title">إضافة إيموجي مخصص</string>
     <string name="emoji_remove_dialog_title">إزالة :%1$s:؟</string>
     <string name="emoji_long_press_hint">اضغط مطولاً على الإيموجي لإزالته</string>
-    <string name="emoji_pack_is_in_list">"%1$s" موجود في قائمة الإيموجي الخاصة بك</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" غير موجود في قائمة الإيموجي الخاصة بك</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" موجود في قائمة الإيموجي الخاصة بك</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" غير موجود في قائمة الإيموجي الخاصة بك</string>
     <string name="emoji_pack_actions_dialog_title">إجراءات حزمة الإيموجي</string>
     <string name="emoji_private_toggle">خاص</string>
     <string name="emoji_private_badge">إيموجي خاص</string>
@@ -1775,7 +1780,7 @@
     <string name="marmot_edit_group_info">تعديل معلومات المجموعة</string>
     <string name="marmot_leave_group">مغادرة المجموعة</string>
     <string name="marmot_this_group">هذه المجموعة</string>
-    <string name="marmot_leave_group_confirm">هل أنت متأكد أنك تريد مغادرة "%1$s"؟ لن تتلقى رسائل من هذه المجموعة بعد الآن.</string>
+    <string name="marmot_leave_group_confirm">هل أنت متأكد أنك تريد مغادرة \"%1$s\"؟ لن تتلقى رسائل من هذه المجموعة بعد الآن.</string>
     <string name="marmot_keypackage_required">يجب أن يكون قد نشر KeyPackage (kind:30443) لإمكانية الإضافة.</string>
     <string name="marmot_add_to_group">إضافة إلى المجموعة</string>
     <string name="marmot_add_member">إضافة عضو</string>
@@ -1784,15 +1789,15 @@
     <string name="marmot_member_suffix_you"> (أنت)</string>
     <string name="marmot_member_suffix_admin"> - مسؤول</string>
     <string name="marmot_remove_member">إزالة عضو</string>
-    <string name="marmot_remove_member_confirm">هل أنت متأكد أنك تريد إزالة "%1$s" من هذه المجموعة؟</string>
+    <string name="marmot_remove_member_confirm">هل أنت متأكد أنك تريد إزالة \"%1$s\" من هذه المجموعة؟</string>
     <string name="marmot_grant">منح</string>
     <string name="marmot_grant_admin_privileges">منح صلاحيات المسؤول</string>
     <string name="marmot_grant_admin_title">منح صلاحيات المسؤول</string>
-    <string name="marmot_grant_admin_confirm">هل تريد جعل "%1$s" مسؤولاً في هذه المجموعة؟ يمكن للمسؤولين إضافة الأعضاء أو إزالتهم، وتغيير معلومات المجموعة، ومنح صلاحيات المسؤول لأعضاء آخرين.</string>
+    <string name="marmot_grant_admin_confirm">هل تريد جعل \"%1$s\" مسؤولاً في هذه المجموعة؟ يمكن للمسؤولين إضافة الأعضاء أو إزالتهم، وتغيير معلومات المجموعة، ومنح صلاحيات المسؤول لأعضاء آخرين.</string>
     <string name="marmot_revoke">سحب</string>
     <string name="marmot_revoke_admin_privileges">سحب صلاحيات المسؤول</string>
     <string name="marmot_revoke_admin_title">سحب صلاحيات المسؤول</string>
-    <string name="marmot_revoke_admin_confirm">هل تريد سحب صلاحيات المسؤول من "%1$s"؟ سيبقى عضواً في المجموعة.</string>
+    <string name="marmot_revoke_admin_confirm">هل تريد سحب صلاحيات المسؤول من \"%1$s\"؟ سيبقى عضواً في المجموعة.</string>
     <string name="marmot_relay_no_events">لا توجد أحداث بعد</string>
     <string name="marmot_relay_last_event">آخر حدث%1$s</string>
     <string name="copy">نسخ</string>
@@ -1800,10 +1805,4 @@
     <string name="ots_explorer_api_label">رابط الـ URL الأساسي لـ Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">دفع الفاتورة من DVM</string>
     <string name="dvm_pay_amount_to_dvm">دفع %1$s sats إلى DVM</string>
-    <string name="use_direct_url">استخدام الرابط المباشر</string>
-    <string name="napplet_card_permissions">الصلاحيات:</string>
-    <string name="nsite_root_site">الموقع الجذر</string>
-    <string name="nsite_source">المصدر:</string>
-    <string name="nsite_servers">الخوادم:</string>
-    <string name="nsite_open">فتح</string>
 </resources>

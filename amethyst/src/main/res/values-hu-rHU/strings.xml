@@ -568,6 +568,14 @@
         <item quantity="other">Visszatart továbbá %1$d másik dolgot is.</item>
     </plurals>
     <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">Mindig jelentkezzen be</string>
+    <string name="relay_auth_never">Soha</string>
+    <string name="relay_auth_always_allow_everywhere">Mindig, összes átjátszó</string>
+    <string name="relay_auth_never_allow_everywhere">Soha, összes átjátszó</string>
+    <string name="relay_auth_always_everywhere_title">Bejelentkezik az összes átjátszóba?</string>
+    <string name="relay_auth_always_everywhere_body">Az Amethyst %1$s felhasználóként jelentkezik be minden olyan átjátszóra, amely ezt kéri, és a jövőben nem fogja többször megkérdezni. A letiltott átjátszók, valamint azok, amelyeknél beállította, hogy soha ne jelentkezzen be, változatlanok maradnak. Ezt az „Átjátszó bejelentkezés” menüpontban módosíthatja.</string>
+    <string name="relay_auth_never_everywhere_title">Soha nem jelentkezik be egyetlen átjátszóba sem?</string>
+    <string name="relay_auth_never_everywhere_body">Az Amethyst többé nem közli az átjátszókkal, hogy Ön %1$s, és a jövőben nem fogja megkérdezni többé. Bizonyos átjátszók meg fogják tagadni a kiszolgálást: előfordulhat, hogy az üzenetek, válaszok és értesítések nem mennek át. Azok az átjátszók, amelyeknél beállította, hogy mindig jelentkezzen be, változatlanok maradnak. Ezt az „Átjátszó bejelentkezés” menüpontban módosíthatja.</string>
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Mindig, Ön által beállítva</string>
@@ -926,11 +934,22 @@
     <string name="app_notification_articles_summary">Új cikkek</string>
     <!-- Code &amp; git -->
     <string name="app_notification_code_channel_name">Kód és Git</string>
-    <string name="app_notification_code_channel_description">Értesítés a hibákról, javításokról és beolvasztási kérésekről</string>
+    <string name="app_notification_code_channel_description">Értesítés a hibajegyekről, foltokról, beolvasztási kérésekről, megjegyzésekről, beolvasztásokról és lezárásokról</string>
     <string name="app_notification_code_channel_message_issue">%1$s nyitott egy hibajegyet</string>
     <string name="app_notification_code_channel_message_patch">%1$s küldött egy javítást</string>
     <string name="app_notification_code_channel_message_pr">%1$s nyitott egy beolvasztási kérést</string>
     <string name="app_notification_code_channel_message_pr_update">%1$s frissített egy beolvasztási kérést</string>
+    <string name="app_notification_code_channel_message_reply">%1$s hozzászólt</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s újranyitott egy szálat</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s beolvasztott egy beolvasztási kérést</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s elfogadott egy foltot</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s megoldott egy hibajegyet</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s beolvasztott/megoldott egy szálat</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s lezárt egy beolvasztási kérést</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s lezárt egy foltot</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s lezárt egy hibajegyet</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s lezárt egy szálat</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s megjelölt egy szálat piszkozatként</string>
     <string name="app_notification_code_summary">Új kódtevékenység</string>
     <!-- Badges -->
     <string name="app_notification_badges_channel_name">Kitűzők</string>
@@ -1450,6 +1469,7 @@
     <string name="notification_settings_section_display">Alkalmazáson belüli megjelenítés</string>
     <string name="notification_settings_section_categories">Kategóriák</string>
     <string name="payment_required_title">Üzenet tőle: %1$s</string>
+    <string name="notify_block_relay">Átjátszó blokkolása</string>
     <string name="hi_seller_is_this_still_available">Tisztelt %1$s! Ez még aktuális?</string>
     <string name="classifieds_category_clothing">Ruházat</string>
     <string name="classifieds_category_accessories">Tartozékok</string>
@@ -1496,6 +1516,7 @@
     <string name="route_notifications">Értesítések</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
+    <string name="route_media">Média</string>
     <string name="route_calendars">Naptárak</string>
     <string name="route_calendar_collections">Naptárlisták</string>
     <string name="route_chess">Sakk</string>
@@ -2020,6 +2041,10 @@
     <string name="kind_git_reply">Git válasz</string>
     <string name="kind_git_pr">Beolvasztási kérés</string>
     <string name="kind_git_pr_update">Beolvasztási kérés frissítése</string>
+    <string name="kind_git_status_open">Git-állapot: Nyitott</string>
+    <string name="kind_git_status_applied">Git-állapot: Elfogadva</string>
+    <string name="kind_git_status_closed">Git-állapot: Lezárva</string>
+    <string name="kind_git_status_draft">Git-állapot: Piszkozat</string>
     <string name="kind_zap_goals">Zapcélok</string>
     <string name="kind_hashtag_follows">Kulcsszókövetések</string>
     <string name="kind_highlights">Kiemelések</string>
@@ -2330,4 +2355,5 @@
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="podcast_value_for_value">Értéket az értékért</string>
 </resources>
