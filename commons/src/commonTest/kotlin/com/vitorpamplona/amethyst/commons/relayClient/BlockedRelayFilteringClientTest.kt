@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 class BlockedRelayFilteringClientTest {
     private val good = NormalizedRelayUrl("wss://good.example/")
@@ -131,6 +132,24 @@ class BlockedRelayFilteringClientTest {
 
         assertEquals(emptySet(), inner.subscribedFilters?.keys)
         assertEquals(emptySet(), inner.publishedRelays)
+    }
+
+    @Test
+    fun aBlockListThatTouchesNothingHereIsPassedThroughWithoutCopying() {
+        val inner = RecordingClient()
+        // Non-empty block list, but none of it is aimed at on this call — the common case once the
+        // user has blocked anything at all.
+        val client = BlockedRelayFilteringClient(inner) { setOf(blocked) }
+
+        val filters = mapOf(good to listOf(Filter()), alsoGood to listOf(Filter()))
+        val relays = setOf(good, alsoGood)
+        client.subscribe("sub", filters, null)
+        client.publish(event(), relays)
+
+        // Identity, not just equality: reproducing an unchanged map/set costs an allocation and a
+        // full copy on a path that runs on every REQ and publish.
+        assertSame(filters, inner.subscribedFilters)
+        assertSame(relays, inner.publishedRelays)
     }
 
     @Test

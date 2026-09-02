@@ -73,12 +73,25 @@ class BlockedRelayFilteringClient(
         relayList: Set<NormalizedRelayUrl>,
     ) {
         val blocked = blockedRelays()
-        delegate.publish(event, if (blocked.isEmpty()) relayList else relayList - blocked)
+        delegate.publish(event, if (blocked.hitsNoneOf(relayList)) relayList else relayList - blocked)
     }
 
     private fun Map<NormalizedRelayUrl, List<Filter>>.withoutBlocked(): Map<NormalizedRelayUrl, List<Filter>> {
         val blocked = blockedRelays()
-        if (blocked.isEmpty()) return this
+        if (blocked.hitsNoneOf(keys)) return this
         return filterKeys { it !in blocked }
     }
+
+    /**
+     * Whether none of the blocked relays appear in [targets] — i.e. whether the caller can be
+     * handed its own collection back untouched.
+     *
+     * Worth the extra scan because this runs on every REQ, COUNT and publish (filter assemblers
+     * rebuild their per-relay targets constantly) while a blocked relay is, by definition, one the
+     * app has stopped aiming at — so "the block list is non-empty but irrelevant to this call" is
+     * the overwhelmingly common case. Without the check, `filterKeys` / `minus` allocate and copy
+     * the whole collection every time just to reproduce it unchanged. A hash lookup per target and
+     * no allocation beats an allocation plus a full copy.
+     */
+    private fun Set<NormalizedRelayUrl>.hitsNoneOf(targets: Collection<NormalizedRelayUrl>): Boolean = isEmpty() || targets.none { it in this }
 }

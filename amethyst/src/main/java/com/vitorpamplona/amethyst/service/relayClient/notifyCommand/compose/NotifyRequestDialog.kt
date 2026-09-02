@@ -30,6 +30,7 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +56,11 @@ fun NotifyRequestDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
+    /**
+     * Adds the relay that sent this message to the NIP-51 kind:10006 blocked list. Null hides the
+     * button — there is nothing to block for a read-only account, which cannot sign the list.
+     */
+    onBlockRelay: (() -> Unit)? = null,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -94,5 +100,29 @@ fun NotifyRequestDialog(
                 }
             }
         },
+        dismissButton =
+            onBlockRelay?.let {
+                {
+                    TextButton(
+                        onClick = it,
+                        contentPadding = PaddingValues(horizontal = Size16dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.Block,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(StdHorzSpacer)
+                            Text(
+                                text = stringRes(R.string.notify_block_relay),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                }
+            },
     )
 }

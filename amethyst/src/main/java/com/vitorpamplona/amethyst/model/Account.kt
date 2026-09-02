@@ -3547,6 +3547,15 @@ class Account(
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 
     /**
+     * Blocks a single relay, leaving the rest of the kind-10006 list alone.
+     *
+     * Once published, [com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient]
+     * strips the relay from every REQ, COUNT and publish, so the pool drops the socket as soon as
+     * the subscriptions that wanted it are recomputed.
+     */
+    suspend fun blockRelay(relay: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(blockedRelayList.addRelay(relay))
+
+    /**
      * Returns all known signed replaceable events that configure this account
      * (profile, contact list, relay lists, mute list, bookmarks, etc.). Events
      * that have never been created or downloaded are omitted.

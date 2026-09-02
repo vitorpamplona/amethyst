@@ -43,8 +43,11 @@ import androidx.compose.ui.unit.LayoutDirection
 fun rememberMaterialSymbolPainter(
     symbol: MaterialSymbol,
     tint: Color = LocalContentColor.current,
+    // Lets a caller draw from a different glyph font (e.g. Amethyst's own icon font) while
+    // reusing this painter, its shared TextMeasurer and its caching.
+    family: FontFamily? = null,
 ): Painter {
-    val fontFamily = materialSymbolsFontFamily()
+    val fontFamily = family ?: materialSymbolsFontFamily()
     val textMeasurer = materialSymbolsTextMeasurer()
     val density = LocalDensity.current
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl

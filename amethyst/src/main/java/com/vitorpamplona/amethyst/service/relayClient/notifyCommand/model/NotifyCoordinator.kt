@@ -101,8 +101,15 @@ class NotifyCoordinator(
         // Consume the correlation so a later, unrelated NOTIFY can't reuse a stale attribution.
         // An unattributable NOTIFY (none of our auths were rejected here) is dropped rather than
         // risk surfacing it under the wrong account.
-        val account = billedPubkeyAt.remove(relay)?.let(accountForPubkey)
-        account?.relayNotifications?.addPaymentRequestIfNew(message, relay)
+        val account = billedPubkeyAt.remove(relay)?.let(accountForPubkey) ?: return
+
+        // A relay the user has already blocked doesn't get to keep prompting. The pool drops the
+        // socket once the subscriptions that wanted this relay are recomputed, but frames already
+        // in flight can still arrive in that window — and the whole point of the dialog's "Block
+        // Relay" button is that the dialog stops coming back.
+        if (relay in account.blockedRelayList.flow.value) return
+
+        account.relayNotifications.addPaymentRequestIfNew(message, relay)
     }
 
     init {

@@ -20,48 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
-import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
-import kotlinx.coroutines.launch
 
 /** Lightning-family target types Amethyst can pay in-app through the Send Payment screen. */
 private val LIGHTNING_TARGET_TYPES = setOf("lightning", "ln", "lnurl")
@@ -98,6 +74,15 @@ fun inAppPaymentRouteFor(
 }
 
 /**
+ * The URI an external wallet app should receive for [target]: the type's own
+ * scheme (`bitcoin:`, `lightning:`, `https://cash.app/…`) and RFC 8905
+ * `payto://` for types Amethyst has no dedicated scheme for. Shared with the
+ * payment-target dialog so the same pill hands off to the same app wherever
+ * it is tapped.
+ */
+fun paymentTargetUri(target: PaymentTarget): String = paymentTargetStyleFor(target.type).uriFor(target.authority)
+
+/**
  * Chip for a NIP-A3 payment target. Rendered inside [DisplayPaymentRailChips]'s
  * FlowRow alongside the wallet-rail chips so all payment chips share one
  * wrapping row and spacing.
@@ -111,72 +96,57 @@ fun PaymentTargetChip(
 ) {
     val style = remember(target.type) { paymentTargetStyleFor(target.type) }
     val uriHandler = LocalUriHandler.current
-    val context = LocalContext.current
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
-    val copyLabel = stringRes(R.string.copy_to_clipboard)
-    val copiedMessage = stringRes(R.string.copied_to_clipboard)
 
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = style.color.copy(alpha = 0.10f),
-        border = BorderStroke(1.dp, style.color.copy(alpha = 0.35f)),
-        modifier =
-            Modifier.combinedClickable(
-                onClick = {
-                    // Targets one of the user's in-app wallets can pay (lightning,
-                    // bitcoin) go to the Send Payment screen, which collects the
-                    // amount and pays this exact target; everything else hands off
-                    // to an external wallet app via its payment URI.
-                    val inAppRoute = inAppPaymentRouteFor(baseUser.pubkeyHex, target)
-                    if (inAppRoute != null) {
-                        nav.nav(inAppRoute)
-                    } else {
-                        runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
-                            .onFailure {
-                                accountViewModel.toastManager.toast(
-                                    R.string.error_dialog_payment_error,
-                                    R.string.no_payment_app_found_for_type,
-                                    style.label,
-                                )
-                            }
+    PaymentTargetPill(
+        target = target,
+        onClick = {
+            // Targets one of the user's in-app wallets can pay (lightning,
+            // bitcoin) go to the Send Payment screen, which collects the
+            // amount and pays this exact target; everything else hands off
+            // to an external wallet app via its payment URI.
+            val inAppRoute = inAppPaymentRouteFor(baseUser.pubkeyHex, target)
+            if (inAppRoute != null) {
+                nav.nav(inAppRoute)
+            } else {
+                runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
+                    .onFailure {
+                        accountViewModel.toastManager.toast(
+                            R.string.error_dialog_payment_error,
+                            R.string.no_payment_app_found_for_type,
+                            style.label,
+                        )
                     }
-                },
-                onLongClick = {
-                    scope.launch {
-                        clipboard.setText(target.authority)
-                        Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
-                    }
-                },
-                onLongClickLabel = copyLabel,
-            ),
+            }
+        },
+    )
+}
+
+/**
+ * The pill for a single NIP-A3 payment target: the type's icon and tinted
+ * label followed by the shortened authority, with a long-press copy of the
+ * full authority. Shared by the profile's payment rail and the payment-target
+ * dialog so a target looks the same wherever it shows up.
+ */
+@Composable
+fun PaymentTargetPill(
+    target: PaymentTarget,
+    onClick: () -> Unit,
+) {
+    val style = remember(target.type) { paymentTargetStyleFor(target.type) }
+
+    ProfilePaymentChip(
+        color = style.color,
+        label = style.label,
+        detail = remember(target.authority) { shortAddress(target.authority) },
+        copyValue = target.authority,
+        onClick = onClick,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-        ) {
-            Icon(
-                symbol = style.symbol,
-                contentDescription = style.label,
-                tint = style.color,
-                modifier = Size16Modifier,
-            )
-            Text(
-                text = style.label,
-                color = style.color,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = shortAddress(target.authority),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 180.dp),
-            )
-        }
+        Icon(
+            symbol = style.symbol,
+            contentDescription = null,
+            tint = style.color,
+            modifier = Size16Modifier,
+        )
     }
 }
 
