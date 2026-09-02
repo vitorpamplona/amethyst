@@ -151,14 +151,20 @@ class ChannelFeedContentState(
         }
     }
 
+    /**
+     * Always refreshes -- the screen only calls this because something the filter depends on
+     * changed -- and gates only the scroll-to-top on the feed key. See
+     * [com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState.checkKeysInvalidateDataAndSendToTop]
+     * for why the "key unchanged" guard used to drop the refresh that carries a top-nav
+     * filter's late resolution (a decrypted people list, loaded outbox relays).
+     */
     fun checkKeysInvalidateDataAndSendToTop() {
-        if (lastFeedKey != localFilter.feedKey()) {
-            bundler.invalidate(false) {
-                // adds the time to perform the refresh into this delay
-                // holding off new updates in case of heavy refresh routines.
-                refreshSuspended()
-                sendToTop()
-            }
+        val shouldSendToTop = lastFeedKey != localFilter.feedKey()
+        bundler.invalidate(false) {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            refreshSuspended()
+            if (shouldSendToTop) sendToTop()
         }
     }
 

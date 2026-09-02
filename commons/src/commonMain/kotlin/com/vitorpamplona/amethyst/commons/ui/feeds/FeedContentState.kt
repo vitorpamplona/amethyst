@@ -214,14 +214,30 @@ class FeedContentState(
         }
     }
 
+    /**
+     * Called from the screen when anything the feed filters by has changed: the top-nav
+     * selection itself, the author/relay set that selection resolves to, or the hidden-user
+     * lists.
+     *
+     * Only the *selection* is in [IFeedFilter.feedKey] and it flips synchronously; what it
+     * resolves to lands later (a NIP-51 list has to be decrypted, outbox relays have to be
+     * loaded). A note bundle arriving inside that window rebuilds the feed against the
+     * not-yet-resolved filter and stamps [lastFeedKey] with the new key, so gating the
+     * catch-up on "key changed" swallowed the only refresh that carried the resolved set --
+     * which is why the private members of a people list were missing from the feed until the
+     * user navigated away and back (a re-entry runs an unconditional invalidate).
+     *
+     * So always refresh -- the caller only invokes this because something changed -- and gate
+     * just the scroll-to-top on the key, so a late resolution doesn't yank the reader back to
+     * the top of a feed they were already reading.
+     */
     fun checkKeysInvalidateDataAndSendToTop() {
-        if (lastFeedKey != localFilter.feedKey()) {
-            bundler.invalidate(false) {
-                // adds the time to perform the refresh into this delay
-                // holding off new updates in case of heavy refresh routines.
-                refreshSuspended()
-                sendToTop()
-            }
+        val shouldSendToTop = lastFeedKey != localFilter.feedKey()
+        bundler.invalidate(false) {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            refreshSuspended()
+            if (shouldSendToTop) sendToTop()
         }
     }
 

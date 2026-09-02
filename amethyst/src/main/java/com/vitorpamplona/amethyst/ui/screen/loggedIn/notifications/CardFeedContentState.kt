@@ -517,16 +517,24 @@ class CardFeedContentState(
         }
     }
 
+    /**
+     * Always rebuilds -- the screen only calls this because something the filter depends on
+     * changed, and [refreshSuspended] diffs against [lastNotes], so the memo has to be dropped
+     * or a narrowed filter would keep the cards it no longer matches. Only the scroll-to-top is
+     * gated on the feed key. See
+     * [com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState.checkKeysInvalidateDataAndSendToTop]
+     * for why the "key unchanged" guard used to drop the refresh that carries a top-nav
+     * filter's late resolution (a decrypted people list, loaded outbox relays).
+     */
     fun checkKeysInvalidateDataAndSendToTop() {
-        if (lastFeedKey != localFilter.feedKey()) {
-            clear()
-            bundler.invalidate(false) {
-                // adds the time to perform the refresh into this delay
-                // holding off new updates in case of heavy refresh routines.
-                logTime("${this.javaClass.simpleName} Card update: checkKeysInvalidateDataAndSendToTop") {
-                    refreshSuspended()
-                    sendToTop()
-                }
+        val shouldSendToTop = lastFeedKey != localFilter.feedKey()
+        clear()
+        bundler.invalidate(false) {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            logTime("${this.javaClass.simpleName} Card update: checkKeysInvalidateDataAndSendToTop") {
+                refreshSuspended()
+                if (shouldSendToTop) sendToTop()
             }
         }
     }
