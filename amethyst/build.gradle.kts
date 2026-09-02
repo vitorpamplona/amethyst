@@ -160,6 +160,29 @@ android {
             (project.findProperty("probeNoRxIcons")?.toString() ?: "false"),
         )
 
+        // Measurement probe: draws the three reaction icons from Amethyst's OWN artwork
+        // converted to a font by tools/icon-font/build_icon_font.py. Same pixels as today,
+        // but blitted from the text atlas instead of rasterised per card.
+        // -PprobeRxCustomFont=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_RX_CUSTOM_FONT",
+            (project.findProperty("probeRxCustomFont")?.toString() ?: "false"),
+        )
+
+        // Measurement probe: draws the three reaction icons (Like/Reply/Reposted) as
+        // MaterialSymbols font glyphs instead of ImageVector paths, to price the conversion.
+        // The ablation says vector rasterisation is the reaction row's cost (frame P90 -12.7%
+        // for 3 icons) while the whole glyph set costs -1.6%; this measures what is actually
+        // recovered by swapping, since a glyph is not free. Uses the closest available glyphs
+        // (Chat / Sync / Favorite) -- appearance differs, so this prices the change, it does
+        // not propose it. -PprobeRxGlyphSwap=true.
+        buildConfigField(
+            "boolean",
+            "PROBE_RX_GLYPH_SWAP",
+            (project.findProperty("probeRxGlyphSwap")?.toString() ?: "false"),
+        )
+
         // Candidate fix under measurement: shares one VectorPainter per reaction icon across every
         // card in the feed instead of one per card. -PfixSharedIcons=true.
         buildConfigField(

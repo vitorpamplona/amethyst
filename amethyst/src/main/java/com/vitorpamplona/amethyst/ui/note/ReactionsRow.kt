@@ -114,8 +114,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.icons.symbols.AmethystIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.amethystIconsFontFamily
+import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
@@ -912,6 +915,24 @@ private fun FeedCommentIcon(
     iconSizeModifier: Modifier,
     tint: Color,
 ) {
+    if (BuildConfig.PROBE_RX_CUSTOM_FONT) {
+        Material3Icon(
+            painter = rememberMaterialSymbolPainter(AmethystIcons.Reply, tint, amethystIconsFontFamily()),
+            contentDescription = null,
+            modifier = iconSizeModifier,
+            tint = Color.Unspecified,
+        )
+        return
+    }
+    if (BuildConfig.PROBE_RX_GLYPH_SWAP) {
+        Icon(
+            symbol = MaterialSymbols.Chat,
+            contentDescription = stringRes(id = R.string.reply_description),
+            modifier = iconSizeModifier,
+            tint = tint,
+        )
+        return
+    }
     val shared = LocalFeedReactionPainters.current
     if (BuildConfig.FIX_SHARED_ICONS && shared != null) {
         TracedComposition(NoteTrace.SHARED_PAINTER) {
@@ -932,6 +953,24 @@ private fun FeedRepostedIcon(
     iconSizeModifier: Modifier,
     tint: Color,
 ) {
+    if (BuildConfig.PROBE_RX_CUSTOM_FONT) {
+        Material3Icon(
+            painter = rememberMaterialSymbolPainter(AmethystIcons.Reposted, tint, amethystIconsFontFamily()),
+            contentDescription = null,
+            modifier = iconSizeModifier,
+            tint = Color.Unspecified,
+        )
+        return
+    }
+    if (BuildConfig.PROBE_RX_GLYPH_SWAP) {
+        Icon(
+            symbol = MaterialSymbols.Sync,
+            contentDescription = stringRes(id = R.string.boost_or_quote_description),
+            modifier = iconSizeModifier,
+            tint = tint,
+        )
+        return
+    }
     val shared = LocalFeedReactionPainters.current
     if (BuildConfig.FIX_SHARED_ICONS && shared != null) {
         TracedComposition(NoteTrace.SHARED_PAINTER) {
@@ -952,6 +991,24 @@ private fun FeedLikeIcon(
     iconSizeModifier: Modifier,
     tint: Color,
 ) {
+    if (BuildConfig.PROBE_RX_CUSTOM_FONT) {
+        Material3Icon(
+            painter = rememberMaterialSymbolPainter(AmethystIcons.Like, tint, amethystIconsFontFamily()),
+            contentDescription = null,
+            modifier = iconSizeModifier,
+            tint = Color.Unspecified,
+        )
+        return
+    }
+    if (BuildConfig.PROBE_RX_GLYPH_SWAP) {
+        Icon(
+            symbol = MaterialSymbols.Favorite,
+            contentDescription = stringRes(id = R.string.like_description),
+            modifier = iconSizeModifier,
+            tint = tint,
+        )
+        return
+    }
     val shared = LocalFeedReactionPainters.current
     if (BuildConfig.FIX_SHARED_ICONS && shared != null) {
         TracedComposition(NoteTrace.SHARED_PAINTER) {
