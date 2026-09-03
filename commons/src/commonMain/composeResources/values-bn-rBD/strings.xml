@@ -285,7 +285,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">এনক্রিপ্ট এবং আমার গোপন কী অনুলিপি</string>
     <string name="badge_award_image_for">%1$s -এর জন্য ব্যাজ পুরষ্কারের ছবি</string>
-    <string name="badge_award_image">"ব্যাজ পুরস্কার চিত্র</string>
+    <string name="badge_award_image">\"ব্যাজ পুরস্কার চিত্র</string>
     <string name="new_badge_award_notif">আপনি একটি নতুন ব্যাজ পুরষ্কার পেয়েছেন</string>
     <string name="award_granted_to">ব্যাজ পুরস্কারটি পাচ্ছে</string>
     <string name="account_switch_add_account_dialog_title">নতুন অ্যাকাউন্ট যুক্ত করুন</string>
@@ -500,7 +500,7 @@
     <string name="nest_state_speaking">এখন কথা বলছে</string>
     <string name="nest_state_mic_open">মাইক্রোফোন খোলা আছে</string>
     <string name="nest_leave_host_title">এই নেস্ট শেষ করবেন?</string>
-    <string name="nest_leave_host_body">আপনি হোস্ট। রুম বন্ধ করলে সবাই সংযোগ বিচ্ছিন্ন হবে। পরে ফিরে আসতে চাইলে "শুধু ছেড়ে যান" বেছে নিন — ৮ ঘণ্টা নিষ্ক্রিয় থাকার পর রুম স্বয়ংক্রিয়ভাবে বন্ধ হবে।</string>
+    <string name="nest_leave_host_body">আপনি হোস্ট। রুম বন্ধ করলে সবাই সংযোগ বিচ্ছিন্ন হবে। পরে ফিরে আসতে চাইলে \"শুধু ছেড়ে যান\" বেছে নিন — ৮ ঘণ্টা নিষ্ক্রিয় থাকার পর রুম স্বয়ংক্রিয়ভাবে বন্ধ হবে।</string>
     <string name="nest_leave_host_close">রুম বন্ধ করুন</string>
     <string name="nest_leave_host_just_leave">শুধু ছেড়ে যান</string>
     <string name="nest_tab_chat">চ্যাট</string>
@@ -873,7 +873,7 @@
     <string name="community_no_descriptor">এই গোষ্ঠীর কোনো বিবরণ কিংবা নীতিমালা নেই। এগুলো যুক্ত করতে এর মালিকের সাথে কথা বলুন</string>
     <string name="user_preferences">ব্যবহারকারীর পছন্দ</string>
     <string name="settings_search_placeholder">সেটিংস খুঁজুন</string>
-    <string name="settings_search_no_results">"%1$s" এর জন্য কোনো সেটিংস পাওয়া যায়নি</string>
+    <string name="settings_search_no_results">\"%1$s\" এর জন্য কোনো সেটিংস পাওয়া যায়নি</string>
     <string name="reset_marmot_confirm_title">Marmot স্টেট রিসেট করবেন?</string>
     <string name="reset_marmot_confirm_body">এটি বর্তমান অ্যাকাউন্টের জন্য এই ডিভাইসে প্রতিটি Marmot গ্রুপ চ্যাট, বার্তার ইতিহাস এবং MLS কী স্থায়ীভাবে মুছে দেবে। পিয়ারদের জানানো হবে না এবং তাদের পরবর্তী কমিট পর্যন্ত তারা আপনাকে গ্রুপে দেখতে পাবে। এটি পূর্বাবস্থায় ফেরানো যাবে না। অ্যাপটি পরবর্তীবার সিঙ্ক করলে নতুন KeyPackage প্রকাশিত হবে।</string>
     <string name="reset_marmot_confirm_action">রিসেট</string>
@@ -906,7 +906,7 @@
     <string name="music_playlist_collaborative_hint">অন্যদের এই প্লেলিস্টে ট্র্যাক যোগ করতে দিন।</string>
     <string name="music_playlist_delete">এই প্লেলিস্ট মুছে দিন</string>
     <string name="music_playlist_delete_confirm">এই প্লেলিস্টের জন্য NIP-09 ডিলিশন প্রকাশ করবেন?</string>
-    <string name="music_playlist_no_tracks_hint">এখনো কোনো ট্র্যাক নেই। "প্লেলিস্টে যোগ করুন" ব্যবহার করে গানের মেনু থেকে ট্র্যাক যোগ করুন।</string>
+    <string name="music_playlist_no_tracks_hint">এখনো কোনো ট্র্যাক নেই। \"প্লেলিস্টে যোগ করুন\" ব্যবহার করে গানের মেনু থেকে ট্র্যাক যোগ করুন।</string>
     <string name="music_playlist_move_track_up">ট্র্যাক উপরে সরান</string>
     <string name="music_playlist_move_track_down">ট্র্যাক নিচে সরান</string>
     <string name="music_playlist_remove_track">প্লেলিস্ট থেকে ট্র্যাক সরান</string>
@@ -1186,7 +1186,7 @@
     <string name="calendar_untitled">(শিরোনামহীন)</string>
     <string name="calendar_all_day">সারাদিন</string>
     <string name="calendar_rsvp_going_prefixed">✓ যাচ্ছি</string>
-    <string name="calendar_rsvp_maybe_prefixed">? হয়তো</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? হয়তো</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ যেতে পারব না</string>
     <string name="calendar_collection_title">শিরোনাম</string>
     <string name="calendar_collection_description">বিবরণ</string>
@@ -1363,7 +1363,7 @@
     <string name="remove_dvm_from_favorites">পছন্দ থেকে সরান</string>
     <string name="favorite_dvms_explainer">আপনি স্টার দেওয়া ফিড অ্যালগরিদমগুলি এখানে এবং হোম ফিডের ফিল্টার চিপ হিসেবে দেখা যাবে।</string>
     <string name="favorite_dvms_empty_headline">আপনার পছন্দের অ্যালগরিদম পিন করুন</string>
-    <string name="favorite_dvms_empty_step1">অ্যালগরিদম ব্রাউজ করতে নিচে "%1$s" ট্যাপ করুন।</string>
+    <string name="favorite_dvms_empty_step1">অ্যালগরিদম ব্রাউজ করতে নিচে \"%1$s\" ট্যাপ করুন।</string>
     <string name="favorite_dvms_empty_step2">এটি এখানে রাখতে একটি ফিডের পাশে %1$s ট্যাপ করুন।</string>
     <string name="favorite_dvms_empty_cta">কিছু ফিড যোগ করুন</string>
     <string name="favorite_dvms_add_more">আরো যোগ করুন…</string>
@@ -1559,7 +1559,7 @@
     <string name="hls_renditions_label">রেন্ডিশন</string>
     <string name="hls_renditions_source_format">সোর্স রেজোলিউশন: %1$d×%2$d</string>
     <string name="hls_publish_button">HD ভিডিও প্রকাশ করুন</string>
-    <string name="hls_publishing_header_format">"%1$s" প্রকাশ করা হচ্ছে…</string>
+    <string name="hls_publishing_header_format">\"%1$s\" প্রকাশ করা হচ্ছে…</string>
     <string name="hls_state_transcoding_format">ট্রান্সকোড করা হচ্ছে %1$s</string>
     <string name="hls_state_uploading_idle">আপলোড</string>
     <string name="hls_state_uploading_format">%2$d এর মধ্যে %1$d আপলোড হচ্ছে</string>
@@ -1722,8 +1722,8 @@
     <string name="emoji_add_dialog_title">কাস্টম ইমোজি যোগ করুন</string>
     <string name="emoji_remove_dialog_title">:%1$s: সরাবেন?</string>
     <string name="emoji_long_press_hint">ইমোজি সরাতে দীর্ঘ চাপ দিন</string>
-    <string name="emoji_pack_is_in_list">"%1$s" আপনার ইমোজি তালিকায় আছে</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" আপনার ইমোজি তালিকায় নেই</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" আপনার ইমোজি তালিকায় আছে</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" আপনার ইমোজি তালিকায় নেই</string>
     <string name="emoji_pack_actions_dialog_title">ইমোজি প্যাকের ক্রিয়া</string>
     <string name="emoji_private_toggle">ব্যক্তিগত</string>
     <string name="emoji_private_badge">ব্যক্তিগত ইমোজি</string>
@@ -1759,7 +1759,7 @@
     <string name="marmot_edit_group_info">গ্রুপের তথ্য সম্পাদনা করুন</string>
     <string name="marmot_leave_group">গ্রুপ ছেড়ে যান</string>
     <string name="marmot_this_group">এই গ্রুপ</string>
-    <string name="marmot_leave_group_confirm">আপনি কি সত্যিই "%1$s" ছেড়ে যেতে চান? আপনি আর এই গ্রুপ থেকে বার্তা পাবেন না।</string>
+    <string name="marmot_leave_group_confirm">আপনি কি সত্যিই \"%1$s\" ছেড়ে যেতে চান? আপনি আর এই গ্রুপ থেকে বার্তা পাবেন না।</string>
     <string name="marmot_keypackage_required">তাদের অবশ্যই একটি KeyPackage (kind:30443) প্রকাশ করতে হবে যোগ করার জন্য।</string>
     <string name="marmot_add_to_group">গ্রুপে যোগ করুন</string>
     <string name="marmot_add_member">সদস্য যোগ করুন</string>
@@ -1768,15 +1768,15 @@
     <string name="marmot_member_suffix_you"> (আপনি)</string>
     <string name="marmot_member_suffix_admin"> - অ্যাডমিন</string>
     <string name="marmot_remove_member">সদস্য সরান</string>
-    <string name="marmot_remove_member_confirm">আপনি কি সত্যিই এই গ্রুপ থেকে "%1$s" সরাতে চান?</string>
+    <string name="marmot_remove_member_confirm">আপনি কি সত্যিই এই গ্রুপ থেকে \"%1$s\" সরাতে চান?</string>
     <string name="marmot_grant">প্রদান করুন</string>
     <string name="marmot_grant_admin_privileges">অ্যাডমিন সুবিধা প্রদান করুন</string>
     <string name="marmot_grant_admin_title">অ্যাডমিন সুবিধা প্রদান করুন</string>
-    <string name="marmot_grant_admin_confirm">"%1$s"-কে এই গ্রুপের অ্যাডমিন করবেন? অ্যাডমিনরা সদস্য যোগ বা সরাতে, গ্রুপের তথ্য পরিবর্তন করতে এবং অন্য সদস্যদের অ্যাডমিন সুবিধা দিতে পারেন।</string>
+    <string name="marmot_grant_admin_confirm">\"%1$s\"-কে এই গ্রুপের অ্যাডমিন করবেন? অ্যাডমিনরা সদস্য যোগ বা সরাতে, গ্রুপের তথ্য পরিবর্তন করতে এবং অন্য সদস্যদের অ্যাডমিন সুবিধা দিতে পারেন।</string>
     <string name="marmot_revoke">প্রত্যাহার করুন</string>
     <string name="marmot_revoke_admin_privileges">অ্যাডমিন সুবিধা প্রত্যাহার করুন</string>
     <string name="marmot_revoke_admin_title">অ্যাডমিন সুবিধা প্রত্যাহার করুন</string>
-    <string name="marmot_revoke_admin_confirm">"%1$s"-এর অ্যাডমিন সুবিধা প্রত্যাহার করবেন? তারা গ্রুপের সদস্য থাকবেন।</string>
+    <string name="marmot_revoke_admin_confirm">\"%1$s\"-এর অ্যাডমিন সুবিধা প্রত্যাহার করবেন? তারা গ্রুপের সদস্য থাকবেন।</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">এখনো কোনো ইভেন্ট নেই</string>
     <string name="marmot_relay_last_event">শেষ ইভেন্ট%1$s</string>

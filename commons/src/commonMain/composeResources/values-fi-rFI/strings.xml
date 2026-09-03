@@ -179,7 +179,7 @@
     <string name="about_us">Tietoa meistä…</string>
     <string name="search_and_add_a_user">Etsi ja lisää käyttäjä</string>
     <string name="add_a_relay">Lisää rele</string>
-    <string name="my_name">@-tunnukseni</string>
+    <string name="my_name">\@-tunnukseni</string>
     <string name="display_name">Näyttönimi</string>
     <string name="my_display_name">Oma näyttönimeni</string>
     <string name="welcome">Tervetuloa, Ostrich!</string>
@@ -282,7 +282,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">Salaa ja kopioi salainen avaimeni</string>
     <string name="badge_award_image_for">Merkki kohteelle %1$s</string>
-    <string name="badge_award_image">"Merkkipalkinnon kuva</string>
+    <string name="badge_award_image">\"Merkkipalkinnon kuva</string>
     <string name="new_badge_award_notif">Olet saanut uuden merkin</string>
     <string name="award_granted_to">Merkki myönnetty kohteelle</string>
     <string name="account_switch_add_account_dialog_title">Lisää uusi tili</string>
@@ -495,7 +495,7 @@
     <string name="nest_state_speaking">Puhuu nyt</string>
     <string name="nest_state_mic_open">Mikrofoni auki</string>
     <string name="nest_leave_host_title">Lopetetaanko tämä nest?</string>
-    <string name="nest_leave_host_body">Olet isäntä. Huoneen sulkeminen katkaisee kaikkien yhteyden. Valitse "Poistu vain" jos haluat palata myöhemmin — huone sulkeutuu automaattisesti 8 tunnin käyttämättömyyden jälkeen.</string>
+    <string name="nest_leave_host_body">Olet isäntä. Huoneen sulkeminen katkaisee kaikkien yhteyden. Valitse \"Poistu vain\" jos haluat palata myöhemmin — huone sulkeutuu automaattisesti 8 tunnin käyttämättömyyden jälkeen.</string>
     <string name="nest_leave_host_close">Sulje huone</string>
     <string name="nest_leave_host_just_leave">Poistu vain</string>
     <string name="nest_tab_chat">Keskustelu</string>
@@ -868,7 +868,7 @@
     <string name="community_no_descriptor">Tällä yhteisöllä ei ole kuvausta. Keskustele omistajan kanssa sen lisäämiseksi</string>
     <string name="user_preferences">Käyttäjäasetukset</string>
     <string name="settings_search_placeholder">Etsi asetuksia</string>
-    <string name="settings_search_no_results">Asetuksia ei löytynyt haulle "%1$s"</string>
+    <string name="settings_search_no_results">Asetuksia ei löytynyt haulle \"%1$s\"</string>
     <string name="reset_marmot_confirm_title">Nollatanko Marmot-tila?</string>
     <string name="reset_marmot_confirm_body">Tämä poistaa pysyvästi kaikki Marmot-ryhmäkeskustelut, viestihistorian ja MLS-avaimet tältä laitteelta nykyiselle tilille. Vertaisille ei ilmoiteta, ja he saattavat silti nähdä sinut ryhmissä seuraavaan vahvistukseen asti. Tätä ei voi kumota. Uusi KeyPackage julkaistaan, kun sovellus synkronoituu seuraavan kerran.</string>
     <string name="reset_marmot_confirm_action">Nollaa</string>
@@ -901,7 +901,7 @@
     <string name="music_playlist_collaborative_hint">Anna muiden lisätä kappaleita tähän soittolistaan.</string>
     <string name="music_playlist_delete">Poista tämä soittolista</string>
     <string name="music_playlist_delete_confirm">Julkaistaanko NIP-09-poisto tälle soittolistalle?</string>
-    <string name="music_playlist_no_tracks_hint">Ei kappaleita vielä. Lisää kappaleita kappaleen valikosta valitsemalla "Lisää soittolistalle".</string>
+    <string name="music_playlist_no_tracks_hint">Ei kappaleita vielä. Lisää kappaleita kappaleen valikosta valitsemalla \"Lisää soittolistalle\".</string>
     <string name="music_playlist_move_track_up">Siirrä kappale ylöspäin</string>
     <string name="music_playlist_move_track_down">Siirrä kappale alaspäin</string>
     <string name="music_playlist_remove_track">Poista kappale soittolistalta</string>
@@ -912,7 +912,7 @@
     <string name="messages_create_public_private_chat_description">Uusi julkinen tai yksityinen ryhmä</string>
     <string name="messages_new_message_to">Vastaanottaja</string>
     <string name="messages_new_message_subject_caption">Keskustelun aihe</string>
-    <string name="messages_new_message_to_caption">@Käyttäjä1, @Käyttäjä2, @Käyttäjä3</string>
+    <string name="messages_new_message_to_caption">\@Käyttäjä1, @Käyttäjä2, @Käyttäjä3</string>
     <string name="messages_group_descriptor">Tämän ryhmän jäsenet</string>
     <string name="messages_new_subject_message">Selitys jäsenille</string>
     <string name="messages_new_subject_message_placeholder">Muuta nimi uusille tavoitteille.</string>
@@ -1185,7 +1185,7 @@
     <string name="calendar_untitled">(nimetön)</string>
     <string name="calendar_all_day">Koko päivä</string>
     <string name="calendar_rsvp_going_prefixed">✓ Osallistun</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Ehkä</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Ehkä</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ En pääse</string>
     <string name="calendar_collection_title">Otsikko</string>
     <string name="calendar_collection_description">Kuvaus</string>
@@ -1364,7 +1364,7 @@
     <string name="remove_dvm_from_favorites">Poista suosikeista</string>
     <string name="favorite_dvms_explainer">Tähdittämäsi feedialgoritimit näkyvät täällä ja suodatinsiruina Koti-feedissä.</string>
     <string name="favorite_dvms_empty_headline">Kiinnitä suosikkialgoritmisi</string>
-    <string name="favorite_dvms_empty_step1">Napauta alla olevaa "%1$s" selataksesi algoritmeja.</string>
+    <string name="favorite_dvms_empty_step1">Napauta alla olevaa \"%1$s\" selataksesi algoritmeja.</string>
     <string name="favorite_dvms_empty_step2">Napauta %1$s feedin vieressä säilyttääksesi sen täällä.</string>
     <string name="favorite_dvms_empty_cta">Lisää feedejä</string>
     <string name="favorite_dvms_add_more">Lisää enemmän…</string>
@@ -1558,7 +1558,7 @@
     <string name="hls_renditions_label">Versiot</string>
     <string name="hls_renditions_source_format">Lähderesoluutio: %1$d×%2$d</string>
     <string name="hls_publish_button">Julkaise HD-video</string>
-    <string name="hls_publishing_header_format">Julkaistaan "%1$s"…</string>
+    <string name="hls_publishing_header_format">Julkaistaan \"%1$s\"…</string>
     <string name="hls_state_transcoding_format">Koodataan %1$s</string>
     <string name="hls_state_uploading_idle">Lataa</string>
     <string name="hls_state_uploading_format">Ladataan %1$d / %2$d</string>
@@ -1720,8 +1720,8 @@
     <string name="emoji_add_dialog_title">Lisää mukautettu emoji</string>
     <string name="emoji_remove_dialog_title">Poistetaanko :%1$s:?</string>
     <string name="emoji_long_press_hint">Poista emoji painamalla pitkään</string>
-    <string name="emoji_pack_is_in_list">"%1$s" on emoji-listassasi</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" ei ole emoji-listassasi</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" on emoji-listassasi</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" ei ole emoji-listassasi</string>
     <string name="emoji_pack_actions_dialog_title">Emoji-paketin toiminnot</string>
     <string name="emoji_private_toggle">Yksityinen</string>
     <string name="emoji_private_badge">Yksityinen emoji</string>
@@ -1757,7 +1757,7 @@
     <string name="marmot_edit_group_info">Muokkaa ryhmän tietoja</string>
     <string name="marmot_leave_group">Poistu ryhmästä</string>
     <string name="marmot_this_group">tästä ryhmästä</string>
-    <string name="marmot_leave_group_confirm">Haluatko varmasti poistua ryhmästä "%1$s"? Et enää saa viestejä tästä ryhmästä.</string>
+    <string name="marmot_leave_group_confirm">Haluatko varmasti poistua ryhmästä \"%1$s\"? Et enää saa viestejä tästä ryhmästä.</string>
     <string name="marmot_keypackage_required">Heidän täytyy olla julkaissut KeyPackage (kind:30443) voidakseen lisätä heidät.</string>
     <string name="marmot_add_to_group">Lisää ryhmään</string>
     <string name="marmot_add_member">Lisää jäsen</string>
@@ -1766,15 +1766,15 @@
     <string name="marmot_member_suffix_you"> (sinä)</string>
     <string name="marmot_member_suffix_admin"> - ylläpitäjä</string>
     <string name="marmot_remove_member">Poista jäsen</string>
-    <string name="marmot_remove_member_confirm">Haluatko varmasti poistaa "%1$s" tästä ryhmästä?</string>
+    <string name="marmot_remove_member_confirm">Haluatko varmasti poistaa \"%1$s\" tästä ryhmästä?</string>
     <string name="marmot_grant">Myönnä</string>
     <string name="marmot_grant_admin_privileges">Myönnä ylläpitäjäoikeudet</string>
     <string name="marmot_grant_admin_title">Myönnä ylläpitäjäoikeudet</string>
-    <string name="marmot_grant_admin_confirm">Tehdäänkö "%1$s" tämän ryhmän ylläpitäjä? Ylläpitäjät voivat lisätä tai poistaa jäseniä, muuttaa ryhmän tietoja ja myöntää ylläpitäjäoikeuksia muille jäsenille.</string>
+    <string name="marmot_grant_admin_confirm">Tehdäänkö \"%1$s\" tämän ryhmän ylläpitäjä? Ylläpitäjät voivat lisätä tai poistaa jäseniä, muuttaa ryhmän tietoja ja myöntää ylläpitäjäoikeuksia muille jäsenille.</string>
     <string name="marmot_revoke">Peruuta</string>
     <string name="marmot_revoke_admin_privileges">Peruuta ylläpitäjäoikeudet</string>
     <string name="marmot_revoke_admin_title">Peruuta ylläpitäjäoikeudet</string>
-    <string name="marmot_revoke_admin_confirm">Peruutetaanko ylläpitäjäoikeudet käyttäjältä "%1$s"? He pysyvät ryhmän jäsenenä.</string>
+    <string name="marmot_revoke_admin_confirm">Peruutetaanko ylläpitäjäoikeudet käyttäjältä \"%1$s\"? He pysyvät ryhmän jäsenenä.</string>
     <string name="marmot_relays_header">Relayit</string>
     <string name="marmot_relay_no_events">ei tapahtumia vielä</string>
     <string name="marmot_relay_last_event">viimeisin tapahtuma%1$s</string>

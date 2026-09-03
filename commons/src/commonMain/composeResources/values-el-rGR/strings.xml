@@ -155,7 +155,7 @@
     <string name="send_payment_sent_to_wallet">Το τιμολόγιο παραδόθηκε στην εφαρμογή πορτοφολιού σου για ολοκλήρωση της πληρωμής.</string>
     <string name="send_payment_success">Η πληρωμή εστάλη!</string>
     <string name="send_payment_try_again">Δοκίμασε ξανά</string>
-    <string name="send_payment_message_recipient">Στείλε μήνυμα στον παραλήπτη γι' αυτό</string>
+    <string name="send_payment_message_recipient">Στείλε μήνυμα στον παραλήπτη γι\' αυτό</string>
     <string name="send_payment_done">Τέλος</string>
     <string name="send_payment_pay_button">Πληρωμή %1$s sats</string>
     <string name="send_payment_pay_button_empty">Πληρωμή</string>
@@ -219,14 +219,14 @@
     <string name="relays"> Διαμοιραστές</string>
     <string name="website">Ιστοσελίδα</string>
     <string name="lightning_address">Διεύθυνση Lightning</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Αντιγράφει το "Μυστικό Κλειδί" σας (Nsec ID ή αλλιώς ο μυστικός κωδικός πρόσβασής σας) στο πρόχειρο για δημιουργία αντιγράφου ασφαλείας</string>
+    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Αντιγράφει το \"Μυστικό Κλειδί\" σας (Nsec ID ή αλλιώς ο μυστικός κωδικός πρόσβασής σας) στο πρόχειρο για δημιουργία αντιγράφου ασφαλείας</string>
     <string name="send_a_direct_message">Αποστολή Άμεσου Μηνύματος</string>
     <string name="edits_the_user_s_metadata">Επεξεργασία των Μεταδεδομένων του Χρήστη</string>
     <string name="unblock">Άρση Αποκλεισμού</string>
     <string name="copy_user_id">Αντιγραφή ID Χρήστη</string>
     <string name="unblock_user">Άρση Αποκλεισμού Χρήστη</string>
     <string name="user_is_blocked_hidden">Αυτός ο χρήστης έχει αποκλειστεί/σιγαστεί. Οι αναρτήσεις του είναι κρυφές.</string>
-    <string name="npub_hex_username">"Δημόσιο Κλειδί" (npub), Όνομα Χρήστη, Κείμενο</string>
+    <string name="npub_hex_username">\"Δημόσιο Κλειδί\" (npub), Όνομα Χρήστη, Κείμενο</string>
     <string name="clear">Εκκαθάριση</string>
     <string name="app_logo">Λογότυπο Εφαρμογής</string>
     <string name="nsec_npub_hex_private_key">nsec.. ή npub..</string>
@@ -285,7 +285,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">Κρυπτογράφηση και αντιγραφή του μυστικού μου κλειδιού</string>
     <string name="badge_award_image_for">Σήμα βράβευσης για %1$s</string>
-    <string name="badge_award_image">"Εικόνα βραβείου παρασήμου</string>
+    <string name="badge_award_image">\"Εικόνα βραβείου παρασήμου</string>
     <string name="new_badge_award_notif">Λάβατε ένα νέο Σήμα Βράβευσης</string>
     <string name="award_granted_to">Απονομή σήματος βράβευσης σε</string>
     <string name="account_switch_add_account_dialog_title">Προσθήκη Νέου Λογαριασμού</string>
@@ -864,7 +864,7 @@
     <string name="meeting_space_closed_tag">ΚΛΕΙΣΤΗ</string>
     <string name="meeting_space_planned_tag">ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΗ</string>
     <string name="meeting_space_planned_starts_at">Έναρξη %1$s</string>
-    <string name="are_you_sure_you_want_to_log_out">Η Αποσύνδεση διαγράφει όλες τις τοπικές πληροφορίες σας. Βεβαιωθείτε ότι έχετε Αντίγραφο Ασφαλείας από το "Μυστικό Κλειδί" σας για να αποφύγετε απώλεια του λογαριασμού σας. Θέλετε να συνεχίσετε?</string>
+    <string name="are_you_sure_you_want_to_log_out">Η Αποσύνδεση διαγράφει όλες τις τοπικές πληροφορίες σας. Βεβαιωθείτε ότι έχετε Αντίγραφο Ασφαλείας από το \"Μυστικό Κλειδί\" σας για να αποφύγετε απώλεια του λογαριασμού σας. Θέλετε να συνεχίσετε?</string>
     <string name="followed_tags">Ετικέτες που Ακολουθώ</string>
     <string name="discover_follows_explainer">Αυτές είναι λίστες χρηστών που προτείνετε σε άλλους. Επιτρέπονται μόνο δημόσιοι χρήστες.</string>
     <string name="community_approved_posts">Εγκεκριμένες Δημοσιεύσεις</string>
@@ -952,7 +952,7 @@
     <string name="tor_connection_failed_body">Το Amethyst δεν μπόρεσε να ολοκληρώσει την εκκίνηση του Tor. Να χρησιμοποιηθεί κανονική σύνδεση (χωρίς Tor) για τη φόρτωση της ροής; Θα θυμόμαστε αυτή την επιλογή για την επόμενη ώρα και θα επαναδοκιμάσουμε το Tor μετά.</string>
     <string name="tor_continue_without_for_session">Χρήση κανονικής σύνδεσης</string>
     <string name="tor_keep_waiting">Συνέχιση αναμονής</string>
-    <string name="notification_settings_categories_explainer">Πατήστε μια κατηγορία για να ανοίξετε τις ρυθμίσεις ειδοποιήσεων Android γι' αυτήν — ήχος, σπουδαιότητα, σήματα και Μη ενόχλησε βρίσκονται εκεί.</string>
+    <string name="notification_settings_categories_explainer">Πατήστε μια κατηγορία για να ανοίξετε τις ρυθμίσεις ειδοποιήσεων Android γι\' αυτήν — ήχος, σπουδαιότητα, σήματα και Μη ενόχλησε βρίσκονται εκεί.</string>
     <string name="notification_channel_status_on">Ενεργό</string>
     <string name="notification_channel_status_silent">Σιωπηλό</string>
     <string name="notification_channel_status_off">Ανενεργό</string>
@@ -1059,7 +1059,7 @@
     <string name="cashu_settings_edit_wallet_subtitle">Προσθήκη ή αφαίρεση των mint που χρησιμοποιεί το πορτοφόλι σας.</string>
     <string name="cashu_settings_my_recommendations">Οι συστάσεις mint μου</string>
     <string name="cashu_settings_recommendations_subtitle">Εγγυηθείτε δημόσια για mint που εμπιστεύεστε και αποσύρετε συστάσεις.</string>
-    <string name="cashu_settings_no_recommendations">Δεν έχετε συστήσει κανένα mint ακόμα. Πατήστε το "μου αρέσει" δίπλα σε ένα mint για να το εγγυηθείτε δημόσια.</string>
+    <string name="cashu_settings_no_recommendations">Δεν έχετε συστήσει κανένα mint ακόμα. Πατήστε το \"μου αρέσει\" δίπλα σε ένα mint για να το εγγυηθείτε δημόσια.</string>
     <string name="cashu_settings_delete_recommendation">Διαγραφή σύστασης</string>
     <string name="cashu_settings_delete_confirm_title">Απόσυρση σύστασης;</string>
     <string name="cashu_settings_add_recommendation">Σύσταση mint</string>
@@ -1126,7 +1126,7 @@
     <string name="onchain_send_recipient_placeholder">όνομα, NIP-05 ή npub</string>
     <string name="onchain_send_change_recipient">Αλλαγή παραλήπτη</string>
     <string name="onchain_send_amount">Ποσό</string>
-    <string name="onchain_send_min_warning">Ελάχιστο on-chain zap είναι %1$s sats — μικρότερα ποσά καταναλώνονται από χρεώσεις miners. Χρησιμοποιήστε αντ' αυτού zap μέσω Lightning.</string>
+    <string name="onchain_send_min_warning">Ελάχιστο on-chain zap είναι %1$s sats — μικρότερα ποσά καταναλώνονται από χρεώσεις miners. Χρησιμοποιήστε αντ\' αυτού zap μέσω Lightning.</string>
     <string name="onchain_send_comment_label">Σχόλιο (προαιρετικό)</string>
     <string name="onchain_send_priority">Προτεραιότητα</string>
     <string name="onchain_send_loading_fees">Φόρτωση εκτιμήσεων χρεώσεων…</string>
@@ -1188,7 +1188,7 @@
     <string name="calendar_untitled">(χωρίς τίτλο)</string>
     <string name="calendar_all_day">Όλη η ημέρα</string>
     <string name="calendar_rsvp_going_prefixed">✓ Πηγαίνω</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Ίσως</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Ίσως</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Δεν μπορώ να πάω</string>
     <string name="calendar_collection_title">Τίτλος</string>
     <string name="calendar_collection_description">Περιγραφή</string>
@@ -1715,8 +1715,8 @@
     <string name="emoji_add_dialog_title">Προσθήκη προσαρμοσμένου emoji</string>
     <string name="emoji_remove_dialog_title">Αφαίρεση :%1$s:;</string>
     <string name="emoji_long_press_hint">Πατήστε παρατεταμένα σε ένα emoji για να το αφαιρέσετε</string>
-    <string name="emoji_pack_is_in_list">"%1$s" είναι στη λίστα emoji σας</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" δεν είναι στη λίστα emoji σας</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" είναι στη λίστα emoji σας</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" δεν είναι στη λίστα emoji σας</string>
     <string name="emoji_pack_actions_dialog_title">Ενέργειες πακέτου emoji</string>
     <string name="emoji_private_toggle">Ιδιωτικό</string>
     <string name="emoji_private_badge">Ιδιωτικό emoji</string>
@@ -1752,7 +1752,7 @@
     <string name="marmot_edit_group_info">Επεξεργασία Πληροφοριών Ομάδας</string>
     <string name="marmot_leave_group">Αποχώρηση από Ομάδα</string>
     <string name="marmot_this_group">αυτή την ομάδα</string>
-    <string name="marmot_leave_group_confirm">Είστε σίγουροι ότι θέλετε να αποχωρήσετε από την ομάδα "%1$s"; Δεν θα λαμβάνετε πλέον μηνύματα από αυτή την ομάδα.</string>
+    <string name="marmot_leave_group_confirm">Είστε σίγουροι ότι θέλετε να αποχωρήσετε από την ομάδα \"%1$s\"; Δεν θα λαμβάνετε πλέον μηνύματα από αυτή την ομάδα.</string>
     <string name="marmot_keypackage_required">Πρέπει να έχουν δημοσιεύσει ένα KeyPackage (kind:30443) για να προστεθούν.</string>
     <string name="marmot_add_to_group">Προσθήκη στην ομάδα</string>
     <string name="marmot_add_member">Προσθήκη μέλους</string>
@@ -1761,15 +1761,15 @@
     <string name="marmot_member_suffix_you"> (εσείς)</string>
     <string name="marmot_member_suffix_admin"> - διαχειριστής</string>
     <string name="marmot_remove_member">Αφαίρεση Μέλους</string>
-    <string name="marmot_remove_member_confirm">Είστε σίγουροι ότι θέλετε να αφαιρέσετε τον/την "%1$s" από αυτή την ομάδα;</string>
+    <string name="marmot_remove_member_confirm">Είστε σίγουροι ότι θέλετε να αφαιρέσετε τον/την \"%1$s\" από αυτή την ομάδα;</string>
     <string name="marmot_grant">Παραχώρηση</string>
     <string name="marmot_grant_admin_privileges">Παραχώρηση δικαιωμάτων διαχειριστή</string>
     <string name="marmot_grant_admin_title">Παραχώρηση Δικαιωμάτων Διαχειριστή</string>
-    <string name="marmot_grant_admin_confirm">Να γίνει ο/η "%1$s" διαχειριστής αυτής της ομάδας; Οι διαχειριστές μπορούν να προσθέτουν ή να αφαιρούν μέλη, να αλλάζουν πληροφορίες ομάδας και να παραχωρούν δικαιώματα διαχειριστή σε άλλα μέλη.</string>
+    <string name="marmot_grant_admin_confirm">Να γίνει ο/η \"%1$s\" διαχειριστής αυτής της ομάδας; Οι διαχειριστές μπορούν να προσθέτουν ή να αφαιρούν μέλη, να αλλάζουν πληροφορίες ομάδας και να παραχωρούν δικαιώματα διαχειριστή σε άλλα μέλη.</string>
     <string name="marmot_revoke">Ανάκληση</string>
     <string name="marmot_revoke_admin_privileges">Ανάκληση δικαιωμάτων διαχειριστή</string>
     <string name="marmot_revoke_admin_title">Ανάκληση Δικαιωμάτων Διαχειριστή</string>
-    <string name="marmot_revoke_admin_confirm">Να ανακληθούν τα δικαιώματα διαχειριστή από τον/την "%1$s"; Θα παραμείνουν μέλος της ομάδας.</string>
+    <string name="marmot_revoke_admin_confirm">Να ανακληθούν τα δικαιώματα διαχειριστή από τον/την \"%1$s\"; Θα παραμείνουν μέλος της ομάδας.</string>
     <string name="marmot_relay_no_events">δεν υπάρχουν ακόμα συμβάντα</string>
     <string name="marmot_relay_last_event">τελευταίο συμβάν%1$s</string>
     <string name="copy">Αντιγραφή</string>
