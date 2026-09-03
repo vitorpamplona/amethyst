@@ -119,30 +119,36 @@ class Nav(
                 launchSingleTop = true
                 restoreState = true
             }
+            // saveState/restoreState are keyed by DESTINATION, and one destination covers every route
+            // that differs only in its arguments: all web apps are `Route.WebApp/{url}`, all pinned chats
+            // their own one pattern, and `Route.Notification?scrollToEventId={scrollToEventId}` is both the
+            // tab (no id) and the deep link a tapped push notification lands on (the id to scroll to). So
+            // the restore above can hand back an entry carrying *another* route's arguments — with two web
+            // apps pinned, tapping the second one landed on the first one's URL; after a push notification,
+            // tapping the Notifications tab restored the entry that scrolls to that one event.
+            //
+            // When what we landed on isn't the route that was asked for, take the tab fresh (no
+            // restoreState, and no launchSingleTop — the top is the entry we do not want to reuse). Its
+            // saved scroll/ViewModel state is not recoverable in that case, but the user lands on the tab
+            // they tapped. Tabs the restore reproduces argument-for-argument still restore normally, which
+            // is what this is here for.
+            //
+            // Read back what we landed on instead of looking the requested route up with
+            // `getBackStackEntry(route)`: that lookup matches on arguments too and *throws* when they
+            // differ, which is how this mismatch used to surface — `No destination with route
+            // …Notification?scrollToEventId=null is on the NavController's back stack`.
+            if (getRouteWithArguments(route::class, controller) != route) {
+                controller.navigate(route) {
+                    popUpTo(Route.Home) {
+                        inclusive = false
+                        saveState = true
+                    }
+                }
+            }
+
             // Mark this entry as a tab root: hides the back arrow in canPop
             // and skips the horizontal slide in composableFromEnd.
-            // saveState/restoreState are keyed by DESTINATION, and every pinned tab of one kind shares a
-            // single destination — all web apps are `Route.WebApp/{url}`, all pinned chats their own one
-            // pattern. So the restore above can hand back a *sibling* tab's saved entry: with two web apps
-            // pinned, tapping the second one landed on the first one's URL, and the lookup below then threw
-            // `No destination with route …WebApp/<url> is on the NavController's back stack`.
-            //
-            // When the entry we asked for isn't there, take the tab fresh (no restoreState, and no
-            // launchSingleTop — the top is the sibling we do not want to reuse). Its saved scroll/ViewModel
-            // state is not recoverable in that case, but the user lands on the tab they tapped. Tabs whose
-            // destination nothing else shares still restore normally, which is what this is here for.
-            val entry =
-                runCatching { controller.getBackStackEntry(route) }.getOrNull()
-                    ?: run {
-                        controller.navigate(route) {
-                            popUpTo(Route.Home) {
-                                inclusive = false
-                                saveState = true
-                            }
-                        }
-                        runCatching { controller.getBackStackEntry(route) }.getOrNull()
-                    }
-            entry?.savedStateHandle?.set(BOTTOM_NAV_ROOT_KEY, true)
+            controller.currentBackStackEntry?.savedStateHandle?.set(BOTTOM_NAV_ROOT_KEY, true)
         }
     }
 

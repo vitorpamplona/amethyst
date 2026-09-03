@@ -25,14 +25,18 @@ import androidx.navigation.NavOptionsBuilder
 import com.vitorpamplona.amethyst.ui.navigation.navs.ImeSettler
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.reflect.KClass
 
 /**
  * Leaving a screen while the soft keyboard is still animating strands `imePadding()` at keyboard
@@ -77,10 +81,20 @@ class NavImeSettleTest {
             // The search tab focuses its field on arrival, so the keyboard is already up when the
             // user taps another tab — the exit that has no BackHandler and no top bar to guard it.
             val order = mutableListOf<String>()
-            val nav = Nav(controllerRecording(order), this, ImeSettler { order.add("settle") })
+            val controller = controllerRecording(order)
 
-            nav.navBottomBar(Route.Home)
-            advanceUntilIdle()
+            // navBottomBar reads back where the navigate landed and re-takes the tab when that isn't
+            // the route it asked for (see NavBottomBarTabRestoreTest). A relaxed mock lands nowhere,
+            // so answer that it landed on the tab and keep this test about the keyboard.
+            mockkStatic("com.vitorpamplona.amethyst.ui.navigation.routes.RoutesKt")
+            every { getRouteWithArguments(any<KClass<Route>>(), controller) } returns Route.Home
+
+            try {
+                Nav(controller, this, ImeSettler { order.add("settle") }).navBottomBar(Route.Home)
+                advanceUntilIdle()
+            } finally {
+                unmockkStatic("com.vitorpamplona.amethyst.ui.navigation.routes.RoutesKt")
+            }
 
             assertEquals(listOf("settle", "navigate"), order)
         }
