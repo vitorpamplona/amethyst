@@ -205,6 +205,7 @@
     <string name="post_was_hidden">Ten post został ukryty, ponieważ dotyczy ukrytych użytkowników lub słów</string>
     <string name="post_was_flagged_as_inappropriate_by">Wpis został ukryty lub zgłoszony przez</string>
     <string name="post_not_found">Wydarzenie jest wczytywane lub nie można go znaleźć na liście transmiterów</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Zdjęcie kanału</string>
     <string name="referenced_event_not_found">Przywołane zdarzenie nie zostało znalezione</string>
     <string name="could_not_decrypt_the_message">Nie można odszyfrować wiadomości</string>
@@ -275,7 +276,10 @@
     <string name="send_payment_source_external">Inna aplikacja portfela</string>
     <string name="send_payment_source_onchain_wallet">Portfel on-chain</string>
     <string name="send_payment_source_cashu_wallet">Portfel Cashu</string>
+    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">Oferta CLINK</string>
+    <string name="send_payment_method_onchain">On-chain</string>
+    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Kwota</string>
     <string name="send_payment_fixed_price">Cena ustalona w ofercie</string>
     <string name="send_payment_receipt_section">Paragon zap</string>
@@ -308,6 +312,7 @@
     <string name="secret_note_to_receiver">Tajna notatka dla odbiorcy</string>
     <string name="secret_note_to_receiver_placeholder">Treść tajnej notatki</string>
     <string name="secret_visible_text">Widoczny prefiks</string>
+    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Dodaj do wpisu</string>
     <string name="article">Artykuł</string>
     <string name="channel_name">Nazwa</string>
@@ -416,11 +421,13 @@
     <string name="concord_members_roles_out_of_reach">Nie masz wyższej rangi od tego członka</string>
     <string name="concord_members_roles_none_assignable">Brak ról, które można przydzielić</string>
     <string name="concord_role_owner">Właściciel</string>
+    <string name="concord_role_admin">Admin</string>
     <string name="concord_role_banned">Zbanowany</string>
     <string name="concord_invite_card_join">Dołącz do społeczności</string>
     <string name="concord_invite_card_subtitle">Zaproszenie dla społeczności Concord</string>
     <string name="concord_invite_naddr_label">Zaproszenie do Concord (kliknij link, aby wyświetlić pełną treść zaproszenia i dołączyć)</string>
     <string name="concord_view_mode_title">Pokaż społeczność Concord</string>
+    <string name="concord_view_inline">Inline</string>
     <string name="concord_view_grouped">Wg społeczności</string>
     <string name="concord_view_inline_desc">Wyświetlaj każdy kanał jako osobną rozmowę, umieszczoną wśród Twoich czatów.</string>
     <string name="concord_view_grouped_desc">Zwiń kanały każdej społeczności do jednego wiersza, umieszczając je przy najnowszej wiadomości.</string>
@@ -436,6 +443,7 @@
     <string name="dm_sender_reported_hide">Ukryj</string>
     <string name="dm_sender_reported_subtitle">Ktoś, kogo obserwujesz, zgłosił to konto</string>
     <string name="dm_sender_reported_icon">Zgłoszono</string>
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">Błąd wczytywania odpowiedzi: </string>
     <string name="try_again">Spróbuj ponownie</string>
     <string name="notification_feed_is_empty">Brak powiadomień.</string>
@@ -491,6 +499,7 @@
     <string name="share_as_image_watermark">Udostępnione przez Ametyst</string>
     <string name="share_as_qr">Udostępnij jako QR</string>
     <string name="share_as_qr_mode_web">Link do strony internetowej</string>
+    <string name="share_as_qr_mode_nostr">Nostr link</string>
     <string name="share_as_qr_hint_web">Skanuj za pomocą dowolnej kamery telefonu</string>
     <string name="share_as_qr_hint_nostr">Zeskanuj za pomocą aplikacji Nostr</string>
     <string name="share_as_qr_kind_picture">Zdjęcie</string>
@@ -618,8 +627,11 @@
     <string name="app_definition_implements">Wdrażane</string>
     <string name="app_definition_supported_nips">Obsługiwane Nipy</string>
     <string name="app_definition_via">za pomocą %1$s</string>
+    <string name="app_definition_nip">NIP-%1$s</string>
     <string name="app_definition_kind_app">Aplikacja</string>
     <string name="platform_web">Aplikacja webowa</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
     <string name="workout">Trening</string>
     <string name="workout_title">Tytuł</string>
     <string name="workout_duration">Czas trwania</string>
@@ -644,6 +656,7 @@
     <string name="workout_suggestion_connect_title">Współdziel treningi</string>
     <string name="workout_suggestion_connect_message">Niech aplikacja Amethyst odczytuje zakończone treningi z serwisu Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) i proponuje wpis.</string>
     <string name="workout_suggestion_connect_button">Połącz</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Z Health Connect</string>
     <string name="nsite_none_found">Nie znaleziono żadnych witryn nSite.</string>
     <string name="browser_reload">Odśwież</string>
@@ -733,6 +746,7 @@
     <string name="nip46_signer_act_connected">Podłączony</string>
     <string name="nip46_signer_act_ping">PIng</string>
     <string name="nip46_signer_act_listed_relays">Wymienione transmitery</string>
+    <string name="nip46_signer_act_other">%1$s</string>
     <string name="nip46_signer_scan_caption">Zeskanuj aby połączyć aplikację z Twoim kluczem</string>
     <string name="nip46_signer_scan_connect">Zeskanuj kod</string>
     <string name="nip46_signer_paste_link">Zamiast tego wklej link</string>
@@ -780,6 +794,7 @@
     <string name="relay_auth_no_recent">Żaden transmiter nie poprosił Cię o zalogowanie się.</string>
     <string name="relay_auth_ago">%1$s temu</string>
     <string name="nip82_repository_label">Źródło: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Pobierz</string>
     <string name="nip82_section_about">O NIP-ie</string>
     <string name="nip82_section_platforms">Platformy</string>
@@ -817,6 +832,7 @@
     <string name="nest_lobby_no_listeners">Nikogo nie ma w pokoju.</string>
     <string name="nest_lobby_listeners_count">%1$d słucha</string>
     <string name="nest_role_host">Kreator</string>
+    <string name="nest_role_moderator">Moderator</string>
     <string name="nest_state_muted">Mikrofon wyciszony</string>
     <string name="nest_state_speaking">Mówi teraz</string>
     <string name="nest_state_mic_open">Włączony mikrofon</string>
@@ -901,6 +917,8 @@
     <string name="podcast_completed">Zakończone</string>
     <string name="podcast_support_show">Wesprzyj program</string>
     <string name="podcast_by_author">przez %1$s</string>
+    <string name="podcast_season_episode">S%1$d · E%2$d</string>
+    <string name="podcast_episode_number">Ep %1$d</string>
     <string name="podcast_season">Sezon %1$d</string>
     <string name="podcast_video">Wideo</string>
     <string name="podcast_transcript">Transkrypcja</string>
@@ -925,12 +943,14 @@
     <string name="podcast_episode_topics_label">Tematy</string>
     <string name="podcast_episode_topics_placeholder">przecinkami, oddzielone, tagi</string>
     <string name="podcast_episode_audio_url_label">Adres URL audio</string>
+    <string name="podcast_episode_audio_url_placeholder">https://…/episod.mp3</string>
     <string name="podcast_episode_audio_picked">Plik audio gotowy do przesłania</string>
     <string name="podcast_episode_delete">Usuń odcinek</string>
     <string name="podcast_episode_delete_confirm">Usunąć ten odcinek? Tej operacji nie można cofnąć.</string>
     <string name="podcast_show_description_label">Opis</string>
     <string name="podcast_show_type_label">Typ programu</string>
     <string name="podcast_show_type_episodic">Epizodyczny</string>
+    <string name="podcast_show_type_serial">Serial</string>
     <string name="podcast_show_explicit">Treści gorszące</string>
     <string name="podcast_show_complete">Pokaż całość (brak kolejnych odcinków)</string>
     <string name="podcast_show_locked">Zablokowane (premium)</string>
@@ -949,6 +969,7 @@
     <string name="podcast_value_remove_recipient">Usuń odbiorcę</string>
     <string name="podcast_value_recipient_name">Imię (opcjonalnie)</string>
     <string name="podcast_value_type_lnaddress">Lightning Adres</string>
+    <string name="podcast_value_type_node">Node (keysend)</string>
     <string name="podcast_value_lnaddress">Lightning Adres</string>
     <string name="podcast_value_lnaddress_hint">nazwa@przyklad.com</string>
     <string name="podcast_value_node_pubkey">Klucz publiczny Node</string>
@@ -1023,6 +1044,7 @@
     <string name="private_rumor_mark">Prywatny — widoczny tylko dla oznaczonych uczestników</string>
     <string name="audience_manage">Zdecyduj, kto może to zobaczyć</string>
     <string name="audience_summary_two">%1$s i %2$s</string>
+    <string name="audience_group_chip">%1$s \u00b7 %2$s</string>
     <string name="audience_group_remove">Usuń wszystkich dodanych z %1$s</string>
     <string name="audience_sheet_title">Dodaj osoby</string>
     <string name="audience_sheet_search">Wyszukaj osoby i listy</string>
@@ -1252,7 +1274,9 @@
     <string name="show_sensitive_content_explainer">Pokazuje komunikat ostrzegawczy, gdy autor oznaczył wpis jako wrażliwy</string>
     <string name="max_hashtag_limit_title">Maks ilość hashtagów na post</string>
     <string name="max_hashtag_limit_explainer">Ukrywa posty zawierające więcej hashtagów niż ten limit. Ustaw wartość 0, aby wyłączyć tę funkcję</string>
+    <string name="security_unlimited">∞</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
+    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Dodaje docelową liczbę satoszy do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
     <string name="zapraiser_target_amount_in_sats">Docelowa kwota w Satoszach</string>
     <string name="sats_to_complete">Zapraiser przy: %1$s. %2$s satoszach do celu</string>
@@ -1291,6 +1315,7 @@
     <string name="relay_filter_ids">%1$d id</string>
     <string name="relay_filter_since">od %1$s</string>
     <string name="relay_filter_until">do %1$s</string>
+    <string name="relay_filter_limit">limit %1$d</string>
     <string name="minimum_prefix">Minimalny prefiks</string>
     <string name="maximum_event_tags">Maksymalna ilość tagów wydarzeń</string>
     <string name="max_content_length">Maks. długość treści</string>
@@ -1311,10 +1336,12 @@
     <string name="max_filters_per_sub">Maks. liczba filtrów na Suba</string>
     <string name="max_limit_events_returning">Maksymalny limit (Powracające zdarzenia)</string>
     <string name="max_subid_length">Maks. długość SubID</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Wykup</string>
     <string name="cashu_copy_token">Skopiuj token</string>
     <string name="quick_actions_open_in_another_app">Otwórz w innej aplikacji</string>
     <string name="live_stream_live_tag">NA ŻYWO</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">Zakończono</string>
     <string name="live_stream_planned_tag">ZAPLANOWANE</string>
     <string name="live_stream_private_tag">PRYWATNA</string>
@@ -1333,7 +1360,7 @@
     <string name="community_no_descriptor">Ta społeczność nie ma opisu. Zwróć się do właściciela, aby go dodać</string>
     <string name="user_preferences">Preferencje użytkownika</string>
     <string name="settings_search_placeholder">Ustawienia wyszukiwania</string>
-    <string name="settings_search_no_results">Nie znaleziono ustawień dla "%1$s"</string>
+    <string name="settings_search_no_results">Nie znaleziono ustawień dla \"%1$s\"</string>
     <string name="reset_marmot_confirm_title">Zresetować stan Marmota?</string>
     <string name="reset_marmot_confirm_body">Spowoduje to trwałe usunięcie każdego czatu grupowego Marmot, historii wiadomości i klucza MLS na tym urządzeniu dla bieżącego konta. Uczestnicy nie będą powiadamiani i mogą widzieć Cię w grupach do czasu następnej aktualizacji. Tej operacji nie można cofnąć. Nowy pakiet kluczowy zostanie opublikowany przy następnej synchronizacji aplikacji.</string>
     <string name="reset_marmot_confirm_action">Zresetuj</string>
@@ -1385,6 +1412,7 @@
     <string name="new_conversation_best_for">Najlepsza dla</string>
     <string name="new_conversation_pros">Dobra</string>
     <string name="new_conversation_cons">Kompromisy</string>
+    <string name="relay_group_view_inline">Inline</string>
     <string name="relay_group_view_grouped">Wg transmitera</string>
     <string name="relay_group_view_inline_desc">Wyświetlaj każdą grupę jako osobną rozmowę, umieszczoną wśród Twoich czatów.</string>
     <string name="relay_group_view_grouped_desc">Zwiń grupy poszczególnych transmiterów do jednego wiersza, umieszczając je przy najnowszej wiadomości.</string>
@@ -1401,6 +1429,8 @@
     <string name="relay_group_join_code_hint">Ta grupa jest dostępna wyłącznie z zaproszeniem. Wpisz otrzymany kod.</string>
     <string name="relay_group_join_confirm">Dołącz</string>
     <string name="relay_group_pending">Wysłano prośbę</string>
+    <string name="relay_group_role_admin">Admin</string>
+    <string name="relay_group_role_moderator">Moderator</string>
     <string name="relay_group_role_member">Członek</string>
     <string name="relay_group_members_title">Członkowie</string>
     <string name="relay_group_make_admin">Stwórz administratora</string>
@@ -1424,6 +1454,7 @@
     <string name="relay_group_badge_private">Prywatna</string>
     <string name="relay_group_badge_invite_only">Tylko na zaproszenie</string>
     <string name="relay_group_badge_live">NA ŻYWO</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Wprowadź poprawny adres URL transmitera (wss://…).</string>
     <string name="relay_group_field_name">Nazwa</string>
     <string name="relay_group_field_about">Opis</string>
@@ -1490,7 +1521,7 @@
     <string name="relay_group_invite_only_to_post">Ta grupa jest dostępna wyłącznie dla zaproszonych osób — aby móc publikować posty, potrzebujesz zaproszenia.</string>
     <string name="messages_new_message_to">Do</string>
     <string name="messages_new_message_subject_caption">Temat dyskusji</string>
-    <string name="messages_new_message_to_caption">@Użytkownik1, @Użytkownik2</string>
+    <string name="messages_new_message_to_caption">\@Użytkownik1, @Użytkownik2</string>
     <string name="messages_group_descriptor">Członkowie tej grupy</string>
     <string name="messages_new_subject_message">Wyjaśnienie dla członków</string>
     <string name="messages_new_subject_message_placeholder">Zmiana nazwy dla nowych celów.</string>
@@ -1516,6 +1547,7 @@
     <string name="poll_zap_value_min_max_explainer">Głosy są oceniane na podstawie ilości zapperów. Możesz ustawić minimalną kwotę, aby uniknąć spamerów i maksymalną kwotę, aby uniknąć przejęcia ankiety przez dużych zapperów. Użyj tej samej kwoty w obu polach, aby upewnić się, że każdy głos ma taką samą wartość. Pozostaw to pole puste, aby zaakceptować dowolną kwotę.</string>
     <string name="error_dialog_talk_to_user">Wyślij wiadomość użytkownikowi</string>
     <string name="error_dialog_talk_to_user_name">Wiadomość %1$s</string>
+    <string name="error_dialog_button_ok">OK</string>
     <string name="zap_split_title">Podziel i przekaż Zapy</string>
     <string name="zap_split_explainer">Wspierający klient podzieli i przekaże zapy do dodanego tutaj użytkownika, a nie do Ciebie</string>
     <string name="zap_split_search_and_add_user">Szukaj i dodaj użytkownika</string>
@@ -1549,6 +1581,7 @@
     <string name="send_the_seller_a_message">Wyślij sprzedawcy wiadomość</string>
     <string name="hi_there_is_this_still_available">Cześć, czy to jest nadal dostępne?</string>
     <string name="classifieds_title">Tytuł</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Stan</string>
     <string name="classifieds_category">Kategoria</string>
     <string name="classifieds_price">Cena (w Satoszach)</string>
@@ -1706,7 +1739,9 @@
     <string name="cashu_getting_quote">Proszę Minta o wycenę…</string>
     <string name="cashu_verify">Zweryfikuj</string>
     <string name="cashu_mint_reachable">✓ Mint jest dostępny</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Nie udało się połączyć z mint: %1$s</string>
+    <string name="nutzap">Nutzap</string>
     <string name="cashu_create_token">Utwórz token</string>
     <string name="cashu_redeem_button">Zrealizuj</string>
     <string name="cashu_done">Gotowe</string>
@@ -1745,6 +1780,7 @@
     <string name="onchain_send_min_warning">Minimalny zap on-chain to %1$s satoszy — mniejsze ilości pochłaniają opłaty górnika. Zamiast tego dokonaj transakcji Lightning.</string>
     <string name="onchain_send_comment_label">Komentarz (opcjonalnie)</string>
     <string name="onchain_send_priority">Priorytet</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
     <string name="onchain_send_loading_fees">Ładowanie szacowanych opłat…</string>
     <string name="onchain_send_button_amount">Wyślij %1$s satoszy</string>
     <string name="onchain_send_dont_split">Nie dziel płatności — zapłać jednemu odbiorcy</string>
@@ -1758,6 +1794,7 @@
     <string name="onchain_send_failed_at">Niepowodzenie: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Płatność została wysłana (tx %1$s), ale paragon nie został opublikowany.</string>
     <string name="new_post">Nowy post</string>
+    <string name="new_media">Nowe multimedia: obraz lub wideo</string>
     <string name="new_community_note">Nowy wpis w społeczności</string>
     <string name="new_poll">Nowa ankieta</string>
     <string name="new_picture">Nowe zdjęcie</string>
@@ -1805,7 +1842,7 @@
     <string name="calendar_untitled">(bez tytułu)</string>
     <string name="calendar_all_day">Cały dzień</string>
     <string name="calendar_rsvp_going_prefixed">✓ Będę</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Może</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Może</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Nie mogę iść</string>
     <string name="calendar_collection_title">Tytuł</string>
     <string name="calendar_collection_description">Opis</string>
@@ -1844,6 +1881,7 @@
     <string name="add_header_image">Dodaj zdjęcie w nagłówku</string>
     <string name="your_article_title">Tytuł artykułu\u2026</string>
     <string name="article_description_placeholder">Krótki opis artykułu\u2026</string>
+    <string name="url_slug">Skrót adresu URL</string>
     <string name="url_slug_placeholder">url-slug-artykułu</string>
     <string name="tags_label"># Tagi</string>
     <string name="add_a_tag">Dodaj tag\u2026</string>
@@ -1878,6 +1916,7 @@
     <string name="reactions_settings_boost_description">Udostępnij lub zacytuj ten wpis</string>
     <string name="reactions_settings_like">Lubię</string>
     <string name="reactions_settings_like_description">Zareaguj na ten wpis, używając emotikon</string>
+    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Wyślij płatność Lightning do autora</string>
     <string name="reactions_settings_share">Prześlij dalej</string>
     <string name="reactions_settings_share_description">Prześlij ten wpis na zewnątrz</string>
@@ -1906,6 +1945,7 @@
     <string name="audio_visualizer_bars">Spektrogram</string>
     <string name="audio_visualizer_waves">Barwa fali</string>
     <string name="audio_visualizer_radial">Pierścień promieniowy</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
     <string name="audio_visualizer_classic">Fala klasyczna</string>
     <string name="audio_visualizer_static">Obraz statyczny</string>
     <string name="profile_image_of_user">Zdjęcie profilowe %1$s</string>
@@ -1917,6 +1957,7 @@
     <string name="disable_poll">Wyłącz Ankietę</string>
     <string name="add_bitcoin_invoice">Faktura Bitcoin</string>
     <string name="cancel_bitcoin_invoice">Anuluj fakturę Bitcoin</string>
+    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">Anuluj Zapraiser</string>
     <string name="add_location">Lokalizacja</string>
     <string name="remove_location">Usuń lokalizację</string>
@@ -1931,9 +1972,9 @@
     <string name="buzz_system_member_added">%1$s został(a) dodany(a) przez %2$s</string>
     <string name="buzz_system_member_left">%1$s zostało</string>
     <string name="buzz_system_member_removed">%1$s został usunięty przez %2$s</string>
-    <string name="buzz_system_topic_changed">%1$s ustawił(a) temat na "%2$s"</string>
+    <string name="buzz_system_topic_changed">%1$s ustawił(a) temat na \"%2$s\"</string>
     <string name="buzz_system_topic_cleared">%1$s wyczyszczono temat</string>
-    <string name="buzz_system_purpose_changed">%1$s ustawił cel na "%2$s"</string>
+    <string name="buzz_system_purpose_changed">%1$s ustawił cel na \"%2$s\"</string>
     <string name="buzz_system_purpose_cleared">%1$s doprecyzował cel</string>
     <string name="buzz_system_visibility_open">%1$s otworzył ten kanał — każdy może go znaleźć i dołączyć do niego</string>
     <string name="buzz_system_visibility_private">%1$s ustawił ten kanał jako prywatny — dostępny tylko dla zaproszonych osób</string>
@@ -1947,6 +1988,7 @@
     <string name="buzz_system_message_deleted">%1$s usunął wiadomość</string>
     <string name="buzz_system_message_deleted_reason">%1$s usunął wiadomość: %2$s</string>
     <string name="buzz_system_dm_created">%1$s rozpoczął tę rozmowę</string>
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <string name="buzz_huddle_started">🔊 %1$s rozpoczął/a naradę</string>
     <string name="buzz_huddle_joined">🔊 %1$s dołączył do zgromadzenia</string>
     <string name="buzz_huddle_left">🔊 %1$s opuścił zgromadzenie</string>
@@ -2015,6 +2057,7 @@
     <string name="buzz_invite_share">Udostępnij</string>
     <string name="buzz_invite_copy">Kopiuj</string>
     <string name="buzz_invite_error_title">Nie udało się utworzyć zaproszenia</string>
+    <string name="buzz_invite_dismiss">OK</string>
     <string name="buzz_dm_section_empty">Brak konwersacji</string>
     <string name="chat_delivery_details_title">Dostarczenie wiadomości</string>
     <string name="close">Zamknij</string>
@@ -2041,7 +2084,7 @@
     <string name="outbox_relays_not_found_examples">Dobre opcje to:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="inbox_relays_not_found">Skonfiguruj swoje publiczne transmitery skrzynki odbiorczej, aby otrzymywać powiadomienia</string>
     <string name="inbox_relays_not_found_description">Stworzenie listy transmiterów specjalnie zaprojektowanej do odbierania powiadomień ma kluczowe znaczenie dla korzystania z protokołu Nostr. </string>
-    <string name="inbox_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą odbierać powiadomienia. Upewnij się, że nie wymagają one płatności ani statusu "web of trust" od nadawcy, w przeciwnym razie będziesz otrzymywać powiadomienia tylko od płatników lub stałych użytkowników</string>
+    <string name="inbox_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą odbierać powiadomienia. Upewnij się, że nie wymagają one płatności ani statusu \"web of trust\" od nadawcy, w przeciwnym razie będziesz otrzymywać powiadomienia tylko od płatników lub stałych użytkowników</string>
     <string name="inbox_relays_not_found_examples">Dobre opcje to:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="relay_reorder">Zmień kolejność transmiterów</string>
     <string name="trusted_relays_title">Zaufane Transmitery</string>
@@ -2063,6 +2106,7 @@
     <string name="forked_from">Sklonowany z</string>
     <string name="git_clone_address">Klonuj:</string>
     <string name="git_branch">Gałąź</string>
+    <string name="git_commit">Commit</string>
     <string name="git_merge_base">Scal gałąź główną</string>
     <string name="git_pr_update_description">Zaktualizowano pull request, uwzględniając nowy commit.</string>
     <string name="git_repo_tab_issues">Problemy</string>
@@ -2089,6 +2133,7 @@
     <string name="git_repo_file_load_error">Nie można załadować tego pliku.</string>
     <string name="git_repo_binary_file">Plik binarny (%1$s) — podgląd niedostępny.</string>
     <string name="git_repo_empty_folder">Ten folder jest pusty.</string>
+    <string name="git_repo_root">root</string>
     <string name="git_repo_retry">Ponów</string>
     <string name="git_repo_default_branch">domyślny</string>
     <string name="git_repo_branches">Oddziały</string>
@@ -2151,7 +2196,7 @@
     <string name="remove_dvm_from_favorites">Usuń z ulubionych</string>
     <string name="favorite_dvms_explainer">Algorytmy kanałów, które tutaj oznaczyłeś gwiazdką, pojawiają się jako ikony filtrów na stronie głównej. Otwórz sekcję Odkryj, aby dodać kolejne.</string>
     <string name="favorite_dvms_empty_headline">Przypnij swoje ulubione algorytmy</string>
-    <string name="favorite_dvms_empty_step1">Kliknij "%1$s" poniżej, aby przeglądać algorytmy.</string>
+    <string name="favorite_dvms_empty_step1">Kliknij \"%1$s\" poniżej, aby przeglądać algorytmy.</string>
     <string name="favorite_dvms_empty_step2">Kliknij %1$s obok kanału, aby go tu zachować.</string>
     <string name="favorite_dvms_empty_cta">Dodaj kilka kanałów</string>
     <string name="favorite_dvms_add_more">Dodaj więcej…</string>
@@ -2241,6 +2286,7 @@
     <string name="timeout">Czas się skończył</string>
     <string name="retrying">Ponawiam próbę…</string>
     <string name="dismiss">Ignoruj</string>
+    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Przekaz</string>
     <string name="broadcasting_name">Przekaz %1$s</string>
     <string name="broadcasting_number_events">Liczba przesłań: %1$d…</string>
@@ -2251,7 +2297,7 @@
     <string name="closing_time">Czas zakończenia głosowania</string>
     <string name="confirm">Potwierdź</string>
     <string name="next">Dalej</string>
-    <string name="add_poll_option_button">Przycisk "Dodaj opcję ankiety"</string>
+    <string name="add_poll_option_button">Przycisk \"Dodaj opcję ankiety\"</string>
     <string name="go_back">Wstecz</string>
     <string name="approve">Zatwierdź</string>
     <string name="connected">Połączony</string>
@@ -2325,6 +2371,7 @@
     <string name="event_sync_sending_to">Wysyłanie do</string>
     <string name="event_sync_outbox_relays">Skrzynka nadawcza</string>
     <string name="event_sync_inbox_relays">Skrzynka odbiorcza</string>
+    <string name="event_sync_dm_relays">DMs</string>
     <string name="event_sync_activity_log">Trwa sprawdzanie (%1$d transmiterów)</string>
     <string name="event_sync_activity_log_finished">Ukończono (%1$d transmiterów)</string>
     <string name="event_sync_log_sent">wysłano %1$s</string>
@@ -2344,6 +2391,7 @@
     <string name="cashu_move_coins_withdraw_ln">Wypłać przez sieć Lightning…</string>
     <string name="cashu_move_coins_export_token">Eksportuj jako token Cashu…</string>
     <string name="cashu_move_coins_working">Przenoszenie monet…</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Łączenie</string>
     <string name="event_sync_status_downloading">Pobieranie</string>
     <string name="event_sync_status_error">Błąd</string>
@@ -2368,6 +2416,7 @@
     <string name="hls_content_warning_reason_placeholder">Powód (Opcjonalne)</string>
     <string name="hls_codec_label">Kodek</string>
     <string name="hls_codec_h265">H.265 (lepsza kompresja)</string>
+    <string name="hls_codec_h264"></string>
     <string name="hls_codec_fallback_notice">H.265 nie jest dostępny na tym urządzeniu – wróć do H.264.</string>
     <string name="hls_renditions_label">Wersje</string>
     <string name="hls_renditions_source_format">Rozdzielczość źródłowa: %1$d×%2$d</string>
@@ -2421,6 +2470,7 @@
     <string name="fundraiser_ends">Kończy się %1$s</string>
     <string name="fundraiser_onchain_donation">Darowizna on-chain</string>
     <string name="goal_amount_label">Kwota zbiorki (w satoszach)</string>
+    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Opisz cel zbiórki</string>
     <string name="goal_description_placeholder">Na co zbierasz fundusze?</string>
     <string name="goal_summary_label">Krótkie podsumowanie</string>
@@ -2449,7 +2499,8 @@
     <string name="vanish_events_empty">Nie znaleziono wniosków o usunięcie</string>
     <string name="vanish_events_empty_hint">Nie wysłano jeszcze żadnych żądań do usunięcia wydarzeń.</string>
     <string name="vanish_target_relays_label">Transmitery docelowe</string>
-    <string name="vanish_all_relays_compliance_hint">To żądanie dotyczy wszystkich transmiterów. Aby sprawdzić zgodność poszczególnych transmiterów, skorzystaj z opcji "Prośba o usunięcie".</string>
+    <string name="vanish_all_relays_compliance_hint">To żądanie dotyczy wszystkich transmiterów. Aby sprawdzić zgodność poszczególnych transmiterów, skorzystaj z opcji \"Prośba o usunięcie\".</string>
+    <string name="vanish_test_button">Test</string>
     <string name="vanish_compliant">Zgodny</string>
     <string name="vanish_non_compliant">Niezgodny</string>
     <string name="vanish_test_error">Błąd</string>
@@ -2532,6 +2583,7 @@
     <string name="ai_tone_elaborate">Rozwiń</string>
     <string name="ai_tone_friendly">Przyjazny</string>
     <string name="ai_tone_professional">Profesjonalny</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
     <string name="emoji_packs_title">Pakiety emotikonów</string>
     <string name="emoji_pack_management_title">Dodaj do listy emotikonów</string>
     <string name="add_to_emoji_list">Dodaj do mojej listy emotikonów</string>
@@ -2555,11 +2607,12 @@
     <string name="emoji_add_dialog_title">Dodaj własne emotikony</string>
     <string name="emoji_remove_dialog_title">Usunąć: %1$s:?</string>
     <string name="emoji_long_press_hint">Naciśnij i przytrzymaj emotikonę, aby usunąć</string>
-    <string name="emoji_pack_is_in_list">"%1$s" jest na liście emotikon</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" nie jest na liście emotikon</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" jest na liście emotikon</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" nie jest na liście emotikon</string>
     <string name="emoji_pack_actions_dialog_title">Opcje pakietu emotikon</string>
     <string name="emoji_private_toggle">Prywatna</string>
     <string name="emoji_private_badge">Prywatna emotikona</string>
+    <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Naruszenie Zasad Społeczności</string>
     <string name="community_rules_violation_author_denied">Jesteś na czarnej liście tej społeczności. Posty nie zostaną zaakceptowane.</string>
     <string name="community_rules_violation_kind_not_allowed">Ta społeczność nie akceptuje zdarzeń typu %1$d.</string>
@@ -2571,6 +2624,7 @@
     <string name="marmot_create_group_footer">Zostanie utworzona nowa grupa MLS. Następnie możesz dodać członków.</string>
     <string name="marmot_group_default_name">Grupy Marmot</string>
     <string name="marmot_group_fallback_name">Grupa %1$s…</string>
+    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Znane</string>
     <string name="marmot_tab_known_count">Znane (%1$d)</string>
     <string name="marmot_tab_new_requests">Nowe żądania</string>
@@ -2603,11 +2657,11 @@
     <string name="marmot_member_suffix_you"> (Ty)</string>
     <string name="marmot_member_suffix_admin"> - administrator</string>
     <string name="marmot_remove_member">Usuń Członka</string>
-    <string name="marmot_remove_member_confirm">Czy na pewno chcesz usunąć "%1$s" z tej grupy?</string>
+    <string name="marmot_remove_member_confirm">Czy na pewno chcesz usunąć \"%1$s\" z tej grupy?</string>
     <string name="marmot_grant">Przyznaj</string>
     <string name="marmot_grant_admin_privileges">Przyznaj uprawnienia admina</string>
     <string name="marmot_grant_admin_title">Przyznaj uprawnienia administratora</string>
-    <string name="marmot_grant_admin_confirm">Zrób "%1$s" administratorem tej grupy? Administratorzy mogą dodawać lub usuwać członków, zmieniać informacje o grupie i przyznawać uprawnienia administratora innym członkom.</string>
+    <string name="marmot_grant_admin_confirm">Zrób \"%1$s\" administratorem tej grupy? Administratorzy mogą dodawać lub usuwać członków, zmieniać informacje o grupie i przyznawać uprawnienia administratora innym członkom.</string>
     <string name="marmot_revoke">Wycofaj</string>
     <string name="marmot_revoke_admin_privileges">Cofnij uprawnienia administratora</string>
     <string name="marmot_revoke_admin_title">Cofnij uprawnienia administratora</string>
@@ -2632,6 +2686,7 @@
     <string name="buzz_workflow_gate_needs_you">Wymaga zatwierdzenia</string>
     <string name="buzz_workflow_gate_awaiting">Oczekiwanie na zatwierdzenie</string>
     <string name="buzz_workflow_no_description">(brak opisu)</string>
+    <string name="buzz_workflow_id_prefix">Workflow: %1$s</string>
     <string name="buzz_workflow_by">przez</string>
     <string name="buzz_workflow_waiting_on">oczekiwanie na</string>
     <string name="buzz_workflow_readonly_approver">To Ty jesteś osobą zatwierdzającą, ale to konto nie ma uprawnień do podejmowania decyzji.</string>
@@ -2640,7 +2695,7 @@
     <string name="buzz_workflow_approve_title">Zatwierdzić to działanie?</string>
     <string name="buzz_workflow_deny_title">Zabronić to działanie?</string>
     <string name="buzz_workflow_approve_body">Runner wypchnie swoją gałąź i otworzy pull request dla „%1$s”. Zatwierdzanie nigdy nie łączy się ani nie wdraża-to nadal dzieje się na GitHubie.</string>
-    <string name="buzz_workflow_deny_body">Praca agenta dla "%1$s" zostanie odrzucona. Tej operacji nie można cofnąć.</string>
+    <string name="buzz_workflow_deny_body">Praca agenta dla \"%1$s\" zostanie odrzucona. Tej operacji nie można cofnąć.</string>
     <string name="buzz_workflow_this_run">ten bieg</string>
     <string name="buzz_workflow_cancel">Anuluj</string>
     <string name="buzz_workflow_waiting_for_approval">Oczekiwanie na zatwierdzenie</string>
@@ -2698,7 +2753,8 @@
     <string name="buzz_attest_warning">⚠ Dokument ten należy przekazać wyłącznie operatorowi agenta. Dopóki dokument ten jest ważny, a użytkownik pozostaje członkiem przestrzeni roboczej, upoważnienie to pozwala agentowi na publikowanie postów jako członek zgodnie z powyższymi warunkami.</string>
     <string name="buzz_persona_new_title">Nowa persona</string>
     <string name="buzz_persona_edit_title">Edytuj persona</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, '-' lub '_'. Nie można zmienić po utworzeniu.</string>
+    <string name="buzz_persona_slug">Slug (persona id)</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' lub \'_\'. Nie można zmienić po utworzeniu.</string>
     <string name="buzz_persona_display_name">Nazwa wyświetlana</string>
     <string name="buzz_persona_system_prompt">Komunikat systemowy</string>
     <string name="buzz_persona_model">Model (opcjonalnie)</string>
@@ -2708,4 +2764,5 @@
     <string name="buzz_persona_publishing">Publikowanie…</string>
     <string name="buzz_persona_publish">Publikuj persona</string>
     <string name="profile_card_follows_you">Obserwuje cię</string>
+    <string name="profile_card_bot">Bot</string>
 </resources>

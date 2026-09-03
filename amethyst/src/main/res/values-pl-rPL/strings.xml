@@ -901,6 +901,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="payment_targets_section_explainer">Dodaj adresy płatności dla różnych sieci (np. bitcoin, lightning, ethereum).</string>
     <string name="no_payment_app_found">Nie znaleziono aplikacji do obsługi tej płatności. Zainstaluj kompatybilny portfel.</string>
     <string name="no_payment_app_found_for_type">Nie zainstalowano aplikacji do obsługi płatności %1$s . Zainstaluj kompatybilny portfel.</string>
+    <string name="payto_amount_set_in_app">Zapłać %1$s — wybierasz tam kwotę</string>
+    <string name="zap_payto_section">Płatność za przekazanie</string>
+    <string name="zap_payto_section_explainer">Gdy autor opublikuje metodę płatności, którą można otworzyć w aplikacji na tym telefonie (Venmo, Monero, numer IBAN…), selektor zapów może ją zaproponować. Kliknięcie tej opcji otwiera odpowiednią aplikację, która prosi o podanie kwoty — żadne dane nie są przekazywane do transmiterów, więc liczba zapów we wpisie nie ulega zmianie.</string>
+    <string name="zap_payto_toggle">Oferowane przez autora metody płatności</string>
     <string name="error_dialog_payment_error">Nie można otworzyć płatności</string>
     <string name="bolt12_offers">Oferty BOLT12</string>
     <string name="bolt12_offers_section_explainer">Dodaj jedną lub więcej ofert BOLT12 (lno1…). Są one udostępniane publicznie, aby każdy mógł Ci zapłacić.</string>
