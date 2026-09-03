@@ -64,7 +64,7 @@ data class UiSettings(
     // and recipient share a payment protocol. Defaults to false: those targets can
     // be bank or Venmo handles carrying legal names, and this puts them one tap
     // from every note in the feed.
-    val showPayToZapChip: Boolean = false,
+    val showPayToZapChip: Boolean = true,
 )
 
 enum class ThemeType(

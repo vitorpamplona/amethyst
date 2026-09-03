@@ -2142,19 +2142,18 @@ fun observeZapRailCapability(
     // round-trip and only says *when* to re-run the resolver.
     val showPayToChip by accountViewModel.settings.uiSettingsFlow.showPayToZapChip
         .collectAsStateWithLifecycle()
-    val myPayToTargets by accountViewModel.account.paymentTargetsState.flow
-        .collectAsStateWithLifecycle()
     val recipientPayTo = author?.let { observeNoteEvent<PaymentTargetsEvent>(it.paymentTargetsNote, accountViewModel).value }
     val payToApps by PayToAppAvailability.flow.collectAsStateWithLifecycle()
 
-    // The probe set is the *sender's* target list, so this is bounded by how many
-    // ways the user says they can be paid — not by anything that grows with the
-    // feed. It runs when the picker opens, never while scrolling.
+    // The probe set is this one author's target list — a handful of entries, and
+    // only for the author whose picker is open. It runs when the picker opens,
+    // never while scrolling.
     val context = LocalContext.current
     val iconPx = with(LocalDensity.current) { PayToIconSize.roundToPx() }
-    LaunchedEffect(myPayToTargets, showPayToChip) {
-        if (showPayToChip && myPayToTargets.isNotEmpty()) {
-            withContext(Dispatchers.IO) { PayToAppAvailability.warm(context, myPayToTargets, iconPx) }
+    LaunchedEffect(recipientPayTo, showPayToChip) {
+        val targets = recipientPayTo?.paymentTargets().orEmpty()
+        if (showPayToChip && targets.isNotEmpty()) {
+            withContext(Dispatchers.IO) { PayToAppAvailability.warm(context, targets, iconPx) }
         }
     }
 
@@ -2178,11 +2177,10 @@ fun observeZapRailCapability(
         recipientInfo,
         nutzapInfo,
         showPayToChip,
-        myPayToTargets,
         recipientPayTo,
         payToApps,
     ) {
-        val rc = RailCapabilityResolver.peek(baseNote, cashuState, myPayToTargets, showPayToChip)
+        val rc = RailCapabilityResolver.peek(baseNote, cashuState, showPayToChip)
         if (onchainEnabled) {
             rc.copy(onchainMaxSpendableSats = onchainFunds?.maxSpendableSats)
         } else {

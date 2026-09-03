@@ -2,9 +2,16 @@
 
 **Status:** proposal
 **Modules:** `quartz`, `commons`, `amethyst`
-**Scope:** when the sender and recipient both publish a NIP-A3 payment target
-of the same protocol, **an installed app can handle it**, and the note carries
-no NIP-57 zap split — show one amount-less chip that hands off to that app.
+**Scope:** when a note's author publishes a NIP-A3 payment target, **an
+installed app can handle it**, and the note carries no NIP-57 zap split — show
+one amount-less chip per such target that hands off to that app.
+
+> **Revised after the first implementation.** This document originally gated the
+> chip on *symmetry* — both parties publishing the same protocol — and capped the
+> row at two chips. Both are gone: the gate is capability alone (can anything on
+> this phone open the URI), there is no cap, and the setting now defaults **on**.
+> Sections below that argue for symmetry are kept for the reasoning, but §5 is
+> the current rule.
 
 Deliberately excluded from v1: amounts, in-app payment, receipts, fiat
 conversion, desktop.
@@ -92,8 +99,8 @@ everything resolves, which is a strict superset of the gated behaviour.
 `cashapp` / `venmo` / `paypal` map to `https://…`, which a browser always
 resolves — discovery would be a tautology. **Skip discovery for https
 targets and always show them**: opening `venmo.com/<handle>` in a browser is a
-legitimate way to pay, so nothing is broken. The sender-symmetry gate (§5) is
-the real filter there.
+legitimate way to pay, so nothing is broken. For these three types the chip is
+therefore gated only on the author having published one.
 
 **But §4.2 still needs the control probe here.** To tell a real app handler
 from a browser, resolve a control `https://<nonexistent-host>/` and treat the
@@ -102,22 +109,22 @@ control set. It never gates the chip — it decides whether the chip wears the
 app's icon or the brand-colour glyph, and a Chrome icon on a Venmo chip is
 worse than no icon at all.
 
-### 3.3 The cache — keyed by scheme+host, warmed from the sender
+### 3.3 The cache — keyed by scheme+host, warmed from the open picker
 
-The naive cache is per-post and lazy. The better one falls out of the
-symmetry gate:
+The naive cache is per-post and lazy. With symmetry gone the probe set is the
+author's target list, so:
 
-> **Only protocols the sender themself declares can ever be shown.** So the
-> probe set is the *sender's own* target list — typically 1–5 entries — not
-> anything derived from posts.
+> **Probe the targets of the one author whose picker is open** — typically 1–5
+> entries — and **merge** the answers into the cache. Merging matters: replacing
+> would evict what was learned about every other author the moment a second
+> picker opened. Feed rendering still never triggers a probe.
 
 - **Key:** `"<scheme>://<host>"`, e.g. `payto://iban`, `bitcoin://`. Scheme
   alone is too coarse — an app may declare `android:scheme="payto"
   android:host="iban"`, so a scheme-only hit would wrongly claim `payto://upi`
   is handled.
-- **Warm:** collect `account.paymentTargetsState.flow` (already an eagerly
-  started `StateFlow`, `Account.kt:902`); on each emission, probe the handful
-  of keys off the main thread. Feed rendering never triggers a probe.
+- **Warm:** a `LaunchedEffect` keyed on the author's observed kind:10133 probes
+  that handful of keys off the main thread when the picker opens.
 - **Read:** synchronous map lookup — required, because
   `RailCapabilityResolver.peek` is called from inside `remember {}`.
 - **Recomposition:** the map must be a `MutableStateFlow<Map<String, Boolean>>`,
@@ -222,18 +229,19 @@ its resolver set contains a package outside that control set) to decide
 
 ## 5. Gates (all must hold)
 
-1. Setting `showPayToZapRail` — **default off**, opt-in. Fiat handles carry
-   legal names; this puts them one tap from every feed note. Mirrors
-   `showOnchainWallet` (`UiSettings.kt:62` → `UiSettingsFlow.kt:58` →
-   `UISharedPreferences.kt:190`).
+1. Setting `showPayToZapChip` — **default on**. The chip only ever shows a
+   target its author chose to publish, to a device that can already open it,
+   so the discovery gate is doing the real narrowing (`UiSettings.kt:67` →
+   `UiSettingsFlow.kt:59` → `UISharedPreferences.kt:192`).
 2. Note has **no** zap split: `zapSplitSetup().isNullOrEmpty()`. payto can't
    fan out and returns no receipt. `RailCapabilityResolver.peek` **already
    computes `splits`** — one-line reuse.
 3. Recipient (note author) publishes ≥1 handoff-class target.
-4. Sender publishes a target of the **same canonical type**.
-5. §3 says an app can handle it (or it's https).
-6. Cap at **2 chips**; with discovery filtering, 0–1 is the normal case, so v1
-   needs no overflow picker.
+4. §3 says an app can handle it (or it's https). **This is the substantive
+   gate**; everything else is a precondition.
+
+No cap: every openable target is offered. Discovery is what bounds the row —
+a target with nothing to open it never reaches the picker.
 
 **Handoff-class** excludes the wallet-covered types — `lightning`/`ln`/`lnurl`
 and `bitcoin`/`btc`/`onchain` *are* the existing LIGHTNING and ONCHAIN rails.
@@ -330,7 +338,8 @@ new strings; changelog.
    tinted, so the chip will be the one full-colour thing in the popup.
    Recommend **accepting** it as the "this leaves the app" signal — but it is a
    visible break from the rail iconography and worth an explicit yes.
-6. **Symmetry heuristic** — right for closed loops (Venmo, Cash App, UPI),
+6. ~~**Symmetry heuristic**~~ — *removed; see the note at the top.* It was
+   right for closed loops (Venmo, Cash App, UPI),
    arguably too strict for open ones (Monero: a sender needs a wallet, not a
    published address). Ship strict; relaxing later is additive. Note that
    intent discovery already covers much of what symmetry was proxying for, so

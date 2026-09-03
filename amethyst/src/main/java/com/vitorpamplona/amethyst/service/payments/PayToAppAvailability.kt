@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import java.util.concurrent.ConcurrentHashMap
 
 /** What the device can do with one `payto` target type. */
@@ -58,11 +59,10 @@ data class PayToAppInfo(
  * scheme. The declarations are deliberately `<intent>` filters rather than
  * `QUERY_ALL_PACKAGES`, which is policy-restricted on Play.
  *
- * **Why this is not a per-post lookup.** The chip only ever appears for
- * protocols the *sender themself* publishes, so [warm] probes the sender's own
- * target list — a handful of entries, refreshed when that list changes or the
- * app returns to the foreground. Feed rendering never triggers a probe; it only
- * reads [peek].
+ * **Why this is not a per-post lookup.** [warm] probes the targets of the one
+ * author whose zap picker is open — a handful of entries — and merges the answers
+ * into a cache keyed by scheme+host, so a type already probed for someone else is
+ * simply refreshed. Feed rendering never triggers a probe; it only reads [peek].
  *
  * The result is a [StateFlow] rather than a plain map because a bare map write
  * is invisible to Compose: the chip would stay missing until some unrelated
@@ -89,7 +89,12 @@ object PayToAppAvailability {
     fun peek(rawType: String): PayToAppInfo? = state.value[PaymentTargetTypes.probeKeyFor(rawType)]
 
     /**
-     * Probes every distinct type in [myTargets] and replaces the cache.
+     * Probes every distinct type in [targets] and merges the answers into the cache.
+     *
+     * Merging rather than replacing: the probe set is one author's target list, so
+     * replacing would evict what was learned about every other author the moment a
+     * second picker opened. Re-probing an already-known type is the point — that is
+     * how a newly installed app becomes visible — and the merge just overwrites it.
      *
      * Blocking: `loadIcon` reads the target APK's resources. Call from `Dispatchers.IO`.
      * [iconPx] is the size the chip draws at — decoding once here is what keeps
@@ -97,29 +102,27 @@ object PayToAppAvailability {
      */
     fun warm(
         context: Context,
-        myTargets: List<PaymentTarget>,
+        targets: List<PaymentTarget>,
         iconPx: Int,
     ) {
         val pm = context.packageManager
         val keys =
-            myTargets
+            targets
                 .asSequence()
                 .map { it.type }
                 .filterNot { PaymentTargetTypes.isWalletCovered(it) }
                 .distinctBy { PaymentTargetTypes.probeKeyFor(it) }
                 .toList()
 
-        if (keys.isEmpty()) {
-            state.value = emptyMap()
-            return
-        }
+        if (keys.isEmpty()) return
 
         // Only https targets need the control probe; skip the extra query otherwise.
         val browsers = if (keys.any(PaymentTargetTypes::isWebTarget)) browserPackages(pm) else emptySet()
-        state.value =
+        val probed =
             keys.associate { type ->
                 PaymentTargetTypes.probeKeyFor(type) to probe(pm, type, browsers, iconPx)
             }
+        state.update { it + probed }
     }
 
     private fun probe(

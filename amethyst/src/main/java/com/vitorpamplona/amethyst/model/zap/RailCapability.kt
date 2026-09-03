@@ -63,9 +63,9 @@ data class RailCapability(
      */
     val onchainMaxSpendableSats: Long? = null,
     /**
-     * NIP-A3 targets the sender can hand off to: a protocol both parties publish,
-     * that no wallet rail already covers, that an installed app can open, on a note
-     * with no zap split. Empty by default so every existing caller is unchanged.
+     * NIP-A3 targets the sender can hand off to: the author's published targets
+     * that no wallet rail already covers and that an installed app can open, on a
+     * note with no zap split. Empty by default so every existing caller is unchanged.
      */
     val payToTargets: List<PaymentTarget> = emptyList(),
 ) {
@@ -142,7 +142,6 @@ object RailCapabilityResolver {
     fun peek(
         baseNote: Note,
         cashuState: CashuWalletState,
-        senderPayToTargets: List<PaymentTarget> = emptyList(),
         payToEnabled: Boolean = false,
     ): RailCapability {
         val author = baseNote.author?.pubkeyHex
@@ -184,7 +183,7 @@ object RailCapabilityResolver {
             hasOnchain = hasOnchain,
             cashuBestSingleMintSats = cashuFunding?.bestSingleMintSats ?: 0L,
             cashuTotalWalletSats = cashuFunding?.totalWalletSats ?: 0L,
-            payToTargets = payToTargets(baseNote, splits, senderPayToTargets, payToEnabled),
+            payToTargets = payToTargets(baseNote, splits, payToEnabled),
         )
     }
 
@@ -196,14 +195,12 @@ object RailCapabilityResolver {
     private fun payToTargets(
         baseNote: Note,
         splits: List<BaseZapSplitSetup>,
-        senderTargets: List<PaymentTarget>,
         enabled: Boolean,
     ): List<PaymentTarget> =
         PayToRailMatcher.selectFor(
             enabled = enabled,
             hasAuthor = baseNote.author != null,
             hasZapSplit = splits.isNotEmpty(),
-            senderTargets = senderTargets,
             // An unresolvable URI would open nothing, so the chip is not offered.
             // Web targets always resolve; there the probe only decides the icon.
             canOpen = {

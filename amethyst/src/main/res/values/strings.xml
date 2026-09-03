@@ -879,8 +879,8 @@
     <string name="no_payment_app_found_for_type">No app installed to handle %1$s payments. Please install a compatible wallet.</string>
     <string name="payto_amount_set_in_app">Pay in %1$s — you choose the amount there</string>
     <string name="zap_payto_section">Pay-to hand-off</string>
-    <string name="zap_payto_section_explainer">When you and the author both publish the same payment method (Venmo, Monero, an IBAN…), the zap picker can offer it. Tapping opens that app, which asks for the amount — nothing is published to relays, so the note\'s zap count does not change.</string>
-    <string name="zap_payto_toggle">Offer shared payment methods</string>
+    <string name="zap_payto_section_explainer">When the author publishes a payment method an app on this phone can open (Venmo, Monero, an IBAN…), the zap picker can offer it. Tapping opens that app, which asks for the amount — nothing is published to relays, so the note\'s zap count does not change.</string>
+    <string name="zap_payto_toggle">Offer the author\'s payment methods</string>
     <string name="error_dialog_payment_error">Unable to open payment</string>
 
     <string name="bolt12_offers">BOLT12 Offers</string>

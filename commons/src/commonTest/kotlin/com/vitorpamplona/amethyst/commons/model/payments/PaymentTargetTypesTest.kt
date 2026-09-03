@@ -101,57 +101,53 @@ class PayToRailMatcherTest {
     ) = PaymentTarget(type, authority)
 
     @Test
-    fun noSenderTargetsMeansNoChips() {
-        assertEquals(emptyList(), PayToRailMatcher.match(emptyList(), listOf(t("venmo"))))
-    }
-
-    @Test
     fun noRecipientTargetsMeansNoChips() {
-        assertEquals(emptyList(), PayToRailMatcher.match(listOf(t("venmo")), emptyList()))
+        assertEquals(emptyList(), PayToRailMatcher.match(emptyList()))
     }
 
     @Test
-    fun noSharedProtocolMeansNoChips() {
-        assertEquals(emptyList(), PayToRailMatcher.match(listOf(t("venmo")), listOf(t("paypal"))))
-    }
-
-    @Test
-    fun sharedProtocolMatchesAcrossCaseAndWhitespace() {
-        val out = PayToRailMatcher.match(listOf(t(" VENMO ")), listOf(t("venmo", "vitor")))
-        assertEquals(listOf(t("venmo", "vitor")), out)
+    fun aTargetIsOfferedRegardlessOfWhatTheSenderPublishes() {
+        // Capability, not symmetry: paying a Monero address needs a wallet, not a
+        // published address of one, so the sender's own list is never consulted.
+        val out = PayToRailMatcher.match(listOf(t("monero", "theirs")))
+        assertEquals(listOf(t("monero", "theirs")), out)
     }
 
     @Test
     fun walletCoveredTypesNeverProduceAChip() {
-        // Both sides publish lightning and bitcoin, but those ARE the existing
-        // rails — matching them would draw a second bolt beside the first.
-        val both = listOf(t("lightning", "a@b.c"), t("btc", "bc1q"), t("ln", "x@y.z"))
-        assertEquals(emptyList(), PayToRailMatcher.match(both, both))
+        // Those ARE the existing rails — matching them would draw a second bolt
+        // beside the first.
+        val wallets = listOf(t("lightning", "a@b.c"), t("btc", "bc1q"), t("ln", "x@y.z"))
+        assertEquals(emptyList(), PayToRailMatcher.match(wallets))
     }
 
     @Test
-    fun aliasesOnEitherSideStillMatch() {
-        val out = PayToRailMatcher.match(listOf(t("xmr", "mine")), listOf(t("monero", "theirs")))
-        assertEquals(listOf(t("monero", "theirs")), out)
+    fun aliasesCollapseToOneChip() {
+        val out = PayToRailMatcher.match(listOf(t("xmr", "first"), t("monero", "second")))
+        assertEquals(listOf(t("xmr", "first")), out)
     }
 
     @Test
     fun oneChipPerProtocolKeepingTheFirst() {
         val recipient = listOf(t("venmo", "first"), t("venmo", "second"), t("monero", "xmr1"))
-        val out = PayToRailMatcher.match(listOf(t("venmo"), t("monero")), recipient)
-        assertEquals(listOf(t("venmo", "first"), t("monero", "xmr1")), out)
+        assertEquals(listOf(t("venmo", "first"), t("monero", "xmr1")), PayToRailMatcher.match(recipient))
     }
 
     @Test
     fun blankAuthoritiesAreSkipped() {
-        assertEquals(emptyList(), PayToRailMatcher.match(listOf(t("venmo")), listOf(t("venmo", "   "))))
+        assertEquals(emptyList(), PayToRailMatcher.match(listOf(t("venmo", "   "))))
     }
 
     @Test
     fun recipientOrderIsPreserved() {
         val recipient = listOf(t("monero", "m"), t("venmo", "v"))
-        val out = PayToRailMatcher.match(listOf(t("venmo"), t("monero")), recipient)
-        assertEquals(listOf("monero", "venmo"), out.map { it.type })
+        assertEquals(listOf("monero", "venmo"), PayToRailMatcher.match(recipient).map { it.type })
+    }
+
+    @Test
+    fun typesAreNormalisedBeforeDeduping() {
+        val out = PayToRailMatcher.match(listOf(t(" VENMO ", "first"), t("venmo", "second")))
+        assertEquals(listOf(t(" VENMO ", "first")), out)
     }
 }
 
@@ -162,7 +158,6 @@ class PayToRailGateTest {
         authority: String = "handle",
     ) = PaymentTarget(type, authority)
 
-    private val mine = listOf(t("venmo", "me"), t("monero", "myxmr"))
     private val theirs = listOf(t("venmo", "them"), t("monero", "theirxmr"))
     private val anyAppOpens: (PaymentTarget) -> Boolean = { true }
 
@@ -170,10 +165,9 @@ class PayToRailGateTest {
         enabled: Boolean = true,
         hasAuthor: Boolean = true,
         hasZapSplit: Boolean = false,
-        sender: List<PaymentTarget> = mine,
         recipient: List<PaymentTarget> = theirs,
         canOpen: (PaymentTarget) -> Boolean = anyAppOpens,
-    ) = PayToRailMatcher.selectFor(enabled, hasAuthor, hasZapSplit, sender, canOpen) { recipient }
+    ) = PayToRailMatcher.selectFor(enabled, hasAuthor, hasZapSplit, canOpen) { recipient }
 
     @Test
     fun offeredWhenEveryGatePasses() {
@@ -209,9 +203,9 @@ class PayToRailGateTest {
     }
 
     @Test
-    fun cappedSoThePopupCannotGrowWithoutBound() {
+    fun everyOpenableTargetIsOfferedWithNoCap() {
         val many = listOf(t("venmo"), t("monero"), t("pix"), t("upi"), t("iban"))
-        assertEquals(PayToRailMatcher.MAX_CHIPS, select(sender = many, recipient = many).size)
+        assertEquals(many.size, select(recipient = many).size)
     }
 
     @Test
@@ -224,19 +218,17 @@ class PayToRailGateTest {
             theirs
         }
 
-        PayToRailMatcher.selectFor(false, true, false, mine, anyAppOpens, counted)
-        PayToRailMatcher.selectFor(true, false, false, mine, anyAppOpens, counted)
-        PayToRailMatcher.selectFor(true, true, true, mine, anyAppOpens, counted)
-        PayToRailMatcher.selectFor(true, true, false, emptyList(), anyAppOpens, counted)
+        PayToRailMatcher.selectFor(false, true, false, anyAppOpens, counted)
+        PayToRailMatcher.selectFor(true, false, false, anyAppOpens, counted)
+        PayToRailMatcher.selectFor(true, true, true, anyAppOpens, counted)
         assertEquals(0, reads)
 
-        PayToRailMatcher.selectFor(true, true, false, mine, anyAppOpens, counted)
+        PayToRailMatcher.selectFor(true, true, false, anyAppOpens, counted)
         assertEquals(1, reads)
     }
 
     @Test
     fun lightningAndBitcoinStayWithTheirOwnRails() {
-        val wallets = listOf(t("lightning", "a@b.c"), t("btc", "bc1q"))
-        assertEquals(emptyList(), select(sender = wallets, recipient = wallets))
+        assertEquals(emptyList(), select(recipient = listOf(t("lightning", "a@b.c"), t("btc", "bc1q"))))
     }
 }

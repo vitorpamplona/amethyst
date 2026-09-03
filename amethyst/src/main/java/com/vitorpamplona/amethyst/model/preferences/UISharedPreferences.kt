@@ -189,7 +189,7 @@ class UiSharedPreferences(
                     fontSize = preferences[UI_FONT_SIZE]?.let { FontSizeType.valueOf(it) } ?: FontSizeType.NORMAL,
                     composeSignature = preferences[UI_COMPOSE_SIGNATURE] ?: "",
                     showOnchainWallet = preferences[UI_SHOW_ONCHAIN_WALLET] ?: true,
-                    showPayToZapChip = preferences[UI_SHOW_PAYTO_ZAP_CHIP] ?: false,
+                    showPayToZapChip = preferences[UI_SHOW_PAYTO_ZAP_CHIP] ?: true,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

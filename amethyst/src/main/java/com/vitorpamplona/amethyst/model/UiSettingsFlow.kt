@@ -56,7 +56,7 @@ class UiSettingsFlow(
     val fontSize: MutableStateFlow<FontSizeType> = MutableStateFlow(FontSizeType.NORMAL),
     val composeSignature: MutableStateFlow<String> = MutableStateFlow(""),
     val showOnchainWallet: MutableStateFlow<Boolean> = MutableStateFlow(true),
-    val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
