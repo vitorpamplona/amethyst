@@ -8,4 +8,8 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="transparent">#00FFFFFF</color>
+
+    <!-- Launch splash / window background. Tracks MaterialTheme's background so the
+         first composed frame does not step to a different colour. See values-night. -->
+    <color name="splash_background">#FFFDFDFD</color>
 </resources>
