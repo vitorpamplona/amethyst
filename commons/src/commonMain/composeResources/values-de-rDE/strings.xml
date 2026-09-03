@@ -497,7 +497,7 @@
     <string name="report_dialog_impersonation">Bösartige Nachahmung</string>
     <string name="report_dialog_nudity">Nacktheit oder explizite Inhalte</string>
     <string name="report_dialog_illegal">Illegales Verhalten</string>
-    <string name="report_dialog_blocking_a_user">Durch das Blockieren eines Nutzers werden dessen Inhalte in deiner App ausgeblendet. Deine Beiträge sind weiterhin öffentlich sichtbar, auch für Personen, die du blockiert hast. Blockierte Nutzer werden auf dem Bildschirm \"Sicherheitsfilter\" aufgelistet.</string>
+    <string name="report_dialog_blocking_a_user">Durch das Blockieren eines Nutzers werden dessen Inhalte in deiner App ausgeblendet. Deine Beiträge sind weiterhin öffentlich sichtbar, auch für Personen, die du blockiert hast. Blockierte Nutzer werden auf dem Bildschirm "Sicherheitsfilter" aufgelistet.</string>
     <string name="report_dialog_report_btn">Missbrauch melden</string>
     <string name="report_dialog_reminder_public">Alle gemeldeten Beiträge werden öffentlich sichtbar sein.</string>
     <string name="report_dialog_additional_reason_placeholder">Optional weitere Informationen zu deiner Meldung angeben…</string>
@@ -794,7 +794,7 @@
     <string name="nest_state_speaking">Spricht gerade</string>
     <string name="nest_state_mic_open">Mikrofon offen</string>
     <string name="nest_leave_host_title">Dieses Nest beenden?</string>
-    <string name="nest_leave_host_body">Du bist der Gastgeber. Wenn du den Raum schließt, werden alle getrennt. Wähle \"Nur verlassen\", wenn du später zurückkehren möchtest — der Raum wird nach 8 Stunden Inaktivität automatisch geschlossen.</string>
+    <string name="nest_leave_host_body">Du bist der Gastgeber. Wenn du den Raum schließt, werden alle getrennt. Wähle "Nur verlassen", wenn du später zurückkehren möchtest — der Raum wird nach 8 Stunden Inaktivität automatisch geschlossen.</string>
     <string name="nest_leave_host_close">Raum schließen</string>
     <string name="nest_leave_host_just_leave">Nur verlassen</string>
     <string name="nest_tab_audience">Publikum</string>
@@ -1340,7 +1340,7 @@
     <string name="music_playlist_collaborative_hint">Anderen erlauben, Titel zu dieser Playlist hinzuzufügen.</string>
     <string name="music_playlist_delete">Diese Playlist löschen</string>
     <string name="music_playlist_delete_confirm">Eine NIP-09-Löschung für diese Playlist veröffentlichen?</string>
-    <string name="music_playlist_no_tracks_hint">Noch keine Titel. Füge Titel über das Menü eines Songs mit „Zur Playlist hinzufügen\" hinzu.</string>
+    <string name="music_playlist_no_tracks_hint">Noch keine Titel. Füge Titel über das Menü eines Songs mit „Zur Playlist hinzufügen" hinzu.</string>
     <string name="music_playlist_move_track_up">Titel nach oben verschieben</string>
     <string name="music_playlist_move_track_down">Titel nach unten verschieben</string>
     <string name="music_playlist_remove_track">Titel aus Playlist entfernen</string>
@@ -1456,7 +1456,7 @@
     <string name="relay_group_invite_only_to_post">Diese Gruppe ist nur mit Einladung — du brauchst eine Einladung, um zu posten.</string>
     <string name="messages_new_message_to">An</string>
     <string name="messages_new_message_subject_caption">Gesprächsthema</string>
-    <string name="messages_new_message_to_caption">\@Benutzer1, @Benutzer2, @Benutzer3</string>
+    <string name="messages_new_message_to_caption">@Benutzer1, @Benutzer2, @Benutzer3</string>
     <string name="messages_group_descriptor">Mitglieder dieser Gruppe</string>
     <string name="messages_new_subject_message">Erklärung an Mitglieder</string>
     <string name="messages_new_subject_message_placeholder">Ändern des Namens für die neuen Ziele.</string>
@@ -1497,7 +1497,7 @@
     <string name="tor_connection_failed_body">Amethyst konnte den Tor-Start nicht abschließen. Eine reguläre (Nicht-Tor-)Verbindung verwenden, damit der Feed laden kann? Wir merken uns diese Auswahl für die nächste Stunde und versuchen Tor danach erneut.</string>
     <string name="tor_continue_without_for_session">Verbindung ohne Tor verwenden</string>
     <string name="tor_keep_waiting">Weiter warten</string>
-    <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören\" findest du dort.</string>
+    <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören" findest du dort.</string>
     <string name="notification_channel_status_on">An</string>
     <string name="notification_channel_status_silent">Lautlos</string>
     <string name="notification_channel_status_off">Aus</string>
@@ -1531,7 +1531,7 @@
     <string name="retry_without_encryption">Ohne Verschlüsselung wiederholen</string>
     <string name="upload_without_encryption_warning">Warnung: Ohne Verschlüsselung kann jeder mit dem Dateilink den Inhalt sehen.</string>
     <string name="media_compression_quality_label">Medienqualität</string>
-    <string name="media_compression_quality_explainer">Wähle \"Niedrige Qualität\", um deine Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, \"Hohe Qualität\" für eine größere Datei mit besserer Qualität, oder \"Unkomprimiert\", um die Medien ohne Komprimierung hochzuladen.</string>
+    <string name="media_compression_quality_explainer">Wähle "Niedrige Qualität", um deine Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, "Hohe Qualität" für eine größere Datei mit besserer Qualität, oder "Unkomprimiert", um die Medien ohne Komprimierung hochzuladen.</string>
     <string name="media_compression_quality_low">Niedrig</string>
     <string name="media_compression_quality_medium">Mittel</string>
     <string name="media_compression_quality_high">Hoch</string>
@@ -1766,7 +1766,7 @@
     <string name="calendar_untitled">(ohne Titel)</string>
     <string name="calendar_all_day">Ganztägig</string>
     <string name="calendar_rsvp_going_prefixed">✓ Komme</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Vielleicht</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Vielleicht</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Komme nicht</string>
     <string name="calendar_collection_title">Titel</string>
     <string name="calendar_collection_description">Beschreibung</string>
@@ -2096,7 +2096,7 @@
     <string name="remove_dvm_from_favorites">Aus Favoriten entfernen</string>
     <string name="favorite_dvms_explainer">Feed-Algorithmen, die du mit einem Stern markierst, erscheinen als Filter-Chips im Home-Feed. Öffne Entdecken, um weitere hinzuzufügen.</string>
     <string name="favorite_dvms_empty_headline">Lieblingsalgorithmen anheften</string>
-    <string name="favorite_dvms_empty_step1">Tippe unten auf \"%1$s\", um Algorithmen zu durchsuchen.</string>
+    <string name="favorite_dvms_empty_step1">Tippe unten auf "%1$s", um Algorithmen zu durchsuchen.</string>
     <string name="favorite_dvms_empty_step2">Tippe auf den %1$s neben einem Feed, um ihn hier zu behalten.</string>
     <string name="favorite_dvms_empty_cta">Feeds hinzufügen</string>
     <string name="favorite_dvms_add_more">Weitere hinzufügen…</string>
@@ -2491,8 +2491,8 @@
     <string name="emoji_add_dialog_title">Eigenes Emoji hinzufügen</string>
     <string name="emoji_remove_dialog_title">:%1$s: entfernen?</string>
     <string name="emoji_long_press_hint">Lange auf ein Emoji drücken, um es zu entfernen</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" ist in deiner Emoji-Liste</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" ist nicht in deiner Emoji-Liste</string>
+    <string name="emoji_pack_is_in_list">"%1$s" ist in deiner Emoji-Liste</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" ist nicht in deiner Emoji-Liste</string>
     <string name="emoji_pack_actions_dialog_title">Aktionen für Emoji-Paket</string>
     <string name="emoji_private_toggle">Privat</string>
     <string name="emoji_private_badge">Privates Emoji</string>
@@ -2530,7 +2530,7 @@
     <string name="marmot_edit_group_info">Gruppeninfo bearbeiten</string>
     <string name="marmot_leave_group">Gruppe verlassen</string>
     <string name="marmot_this_group">diese Gruppe</string>
-    <string name="marmot_leave_group_confirm">Möchten Sie \"%1$s\" wirklich verlassen? Sie erhalten keine Nachrichten mehr von dieser Gruppe.</string>
+    <string name="marmot_leave_group_confirm">Möchten Sie "%1$s" wirklich verlassen? Sie erhalten keine Nachrichten mehr von dieser Gruppe.</string>
     <string name="marmot_keypackage_required">Diese Person muss ein KeyPackage (kind:30443) veröffentlicht haben, um hinzugefügt werden zu können.</string>
     <string name="marmot_add_to_group">Zur Gruppe hinzufügen</string>
     <string name="marmot_add_member">Mitglied hinzufügen</string>
@@ -2539,15 +2539,15 @@
     <string name="marmot_member_suffix_you"> (du)</string>
     <string name="marmot_member_suffix_admin"> - Administrator</string>
     <string name="marmot_remove_member">Mitglied entfernen</string>
-    <string name="marmot_remove_member_confirm">Möchten Sie \"%1$s\" wirklich aus dieser Gruppe entfernen?</string>
+    <string name="marmot_remove_member_confirm">Möchten Sie "%1$s" wirklich aus dieser Gruppe entfernen?</string>
     <string name="marmot_grant">Erteilen</string>
     <string name="marmot_grant_admin_privileges">Administratorrechte erteilen</string>
     <string name="marmot_grant_admin_title">Administratorrechte erteilen</string>
-    <string name="marmot_grant_admin_confirm">\"%1$s\" zum Administrator dieser Gruppe machen? Administratoren können Mitglieder hinzufügen oder entfernen, Gruppeninfo ändern und anderen Mitgliedern Administratorrechte erteilen.</string>
+    <string name="marmot_grant_admin_confirm">"%1$s" zum Administrator dieser Gruppe machen? Administratoren können Mitglieder hinzufügen oder entfernen, Gruppeninfo ändern und anderen Mitgliedern Administratorrechte erteilen.</string>
     <string name="marmot_revoke">Widerrufen</string>
     <string name="marmot_revoke_admin_privileges">Administratorrechte widerrufen</string>
     <string name="marmot_revoke_admin_title">Administratorrechte widerrufen</string>
-    <string name="marmot_revoke_admin_confirm">Administratorrechte von \"%1$s\" widerrufen? Diese Person bleibt Mitglied der Gruppe.</string>
+    <string name="marmot_revoke_admin_confirm">Administratorrechte von "%1$s" widerrufen? Diese Person bleibt Mitglied der Gruppe.</string>
     <string name="marmot_relay_no_events">noch keine Ereignisse</string>
     <string name="marmot_relay_last_event">letztes Ereignis%1$s</string>
     <string name="copy">Kopieren</string>
@@ -2631,7 +2631,7 @@
     <string name="buzz_persona_new_title">Neue Persona</string>
     <string name="buzz_persona_edit_title">Persona bearbeiten</string>
     <string name="buzz_persona_slug">Slug (Persona-ID)</string>
-    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' oder \'_\'. Nach dem Erstellen nicht mehr änderbar.</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, '-' oder '_'. Nach dem Erstellen nicht mehr änderbar.</string>
     <string name="buzz_persona_display_name">Anzeigename</string>
     <string name="buzz_persona_system_prompt">System-Prompt</string>
     <string name="buzz_persona_model">Modell (optional)</string>
