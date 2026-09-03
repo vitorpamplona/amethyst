@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
@@ -78,27 +77,23 @@ class Nav(
      * that is not in the back stack` when the two disagree. The throw lands on the UI dispatcher
      * with no handler above it, so it takes the app down.
      *
-     * Every transition here runs on that same dispatcher, so a pop of ours that commits inside
-     * that gap is exactly the disagreement it crashes on. Two things keep us out of it:
+     * A pop of ours committing inside that gap is exactly the disagreement it crashes on, and the
+     * gap a person can actually hit is the keyboard settle: tapping the back arrow with a text
+     * field focused parks the pop here for up to [IME_SETTLE_TIMEOUT_MS], which looks like nothing
+     * happened, and the natural next move is to swipe back. [isNavigating] publishes that stretch
+     * so the shell can hand the gesture to a no-op handler instead of letting `NavHost` start one
+     * against a stack that is about to move. Only the settle is counted — [nav]'s `computeRoute`
+     * can go to the network, and back must not be dead for that long.
      *
-     *  - [start]: [popBack] runs undispatched, so a back that has nothing to wait for commits on
-     *    the caller's own message instead of the next one. Back is the one transition that
-     *    competes with the gesture for the same entry, and it is only ever called from an event
-     *    callback, so running it inline is safe. The rest stay dispatched — some, like the share
-     *    intent handling in `NavigateIfIntentRequested`, are invoked straight from a composable
-     *    body, where touching the back stack (and `ComposeNavigator.isPop`, which is snapshot
-     *    state the NavHost reads) during composition is its own bug.
-     *  - [isNavigating]: while [ImeSettler.settle] holds a transition back — up to
-     *    [IME_SETTLE_TIMEOUT_MS], long enough for a user to give up on the tap and swipe instead —
-     *    the shell hands the system back gesture to a no-op handler so `NavHost` never starts one
-     *    against a stack that is about to move. Only the settle is counted: [nav]'s
-     *    `computeRoute` can go to the network, and back must not be dead for that long.
+     * The body deliberately stays on [navigationScope]'s dispatcher rather than starting inline on
+     * the caller's: closing the tail of the gap that way would also drag the NavController onto
+     * whatever thread asked. Plenty of screens pop from inside `AccountViewModel.launchSigner`,
+     * which is `Dispatchers.IO`, and a `NavBackStackEntry`'s `LifecycleRegistry` is main-thread
+     * enforced — so an inline start trades this crash for `Method setCurrentState must be called
+     * on the main thread`. It also keeps every [settling] read-modify-write on one thread.
      */
-    private fun transition(
-        start: CoroutineStart = CoroutineStart.DEFAULT,
-        block: suspend () -> Unit,
-    ) {
-        navigationScope.launch(start = start) {
+    private fun transition(block: suspend () -> Unit) {
+        navigationScope.launch {
             settling++
             try {
                 ime.settle()
@@ -228,10 +223,7 @@ class Nav(
     }
 
     override fun popBack() {
-        // Undispatched so a back with a settled keyboard commits on the caller's own message —
-        // see [transition]. Every call site is an event callback (top bar, BackHandler, dialog
-        // dismissal), never a composable body, so there is no composition to run inside.
-        transition(CoroutineStart.UNDISPATCHED) {
+        transition {
             controller.navigateUp()
         }
     }

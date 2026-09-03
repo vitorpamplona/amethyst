@@ -27,12 +27,16 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -44,13 +48,17 @@ import org.junit.Test
  * `IllegalStateException: Cannot transition entry that is not in the back stack` when they
  * disagree.
  *
- * [Nav] queues its work on that same dispatcher, so a `launch`ed pop could land inside that gap:
- * tap the back arrow, see nothing happen, swipe back, and the tap's pop commits between the
- * gesture's start and the handler reading the stack. These pin the two halves of the fix — the
- * transition runs on the caller's own message when there is nothing to wait for, and the shell is
- * told when there *is* something to wait for so it can hold the gesture off.
+ * [Nav] queues its work on that same dispatcher, so a pop of its own can land inside that gap. The
+ * stretch a person can actually hit is the keyboard settle — tap the back arrow with a text field
+ * focused, see nothing happen, swipe back — so [Nav] publishes it as `isNavigating` and the shell
+ * hands the gesture to a no-op handler for its duration.
  *
- * [NavImeSettleTest] covers the ordering (keyboard first, then navigate) that must survive both.
+ * The obvious way to shrink the gap further — starting the transition inline on the caller instead
+ * of on the nav dispatcher — is the thing these also rule out: it drags the NavController onto
+ * whatever thread asked, and `popBack` is routinely called from `Dispatchers.IO`.
+ *
+ * [NavImeSettleTest] covers the ordering (keyboard first, then navigate) that must survive all of
+ * this.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NavBackStackRaceTest {
@@ -69,35 +77,36 @@ class NavBackStackRaceTest {
     private val settledKeyboard = ImeSettler { }
 
     @Test
-    fun popBackMovesTheBackStackOnTheCallersOwnMessage() =
+    fun everyTransitionRunsOnTheNavDispatcherNotTheCallers() =
         runTest {
-            val order = mutableListOf<String>()
-            val nav = Nav(controllerRecording(order), this, settledKeyboard)
+            // Screens pop from inside AccountViewModel.launchSigner — viewModelScope.launch(IO) —
+            // e.g. NewProductScreen's onPost. A NavBackStackEntry's LifecycleRegistry is
+            // main-thread enforced, so a transition that ran inline on the caller would trade the
+            // crash this class is about for "Method setCurrentState must be called on the main
+            // thread".
+            // Thread identity, not name: coroutines' debug mode rewrites the name with the
+            // running coroutine's, so two dispatches on one thread read as different names.
+            val navThreads = mutableListOf<Thread>()
+            val controller =
+                mockk<NavHostController>(relaxed = true) {
+                    every { navigateUp() } answers {
+                        navThreads.add(Thread.currentThread())
+                        true
+                    }
+                }
+            val nav = Nav(controller, this, settledKeyboard)
+            lateinit var callerThread: Thread
 
-            nav.popBack()
-
-            // No advanceUntilIdle: a pop that only lands on a later dispatch is a pop that can
-            // land inside a back gesture that has already started.
-            assertEquals(listOf("navigate"), order)
-        }
-
-    @Test
-    fun theOtherTransitionsStayOnTheDispatcher() =
-        runTest {
-            // Only back runs inline. The rest keep the hop on purpose: NavigateIfIntentRequested
-            // calls newStack straight from a composable body, and moving the back stack during
-            // composition writes ComposeNavigator.isPop while the NavHost is reading it.
-            val order = mutableListOf<String>()
-            val nav = Nav(controllerRecording(order), this, settledKeyboard)
-
-            nav.nav(Route.Home)
-            nav.newStack(Route.Home)
-            nav.navBottomBar(Route.Home)
-            nav.popUpTo(Route.Home, Route.Home::class)
-            assertEquals(emptyList<String>(), order)
-
+            withContext(Dispatchers.IO) {
+                callerThread = Thread.currentThread()
+                nav.popBack()
+            }
             advanceUntilIdle()
-            assertEquals(listOf("navigate", "navigate", "navigate", "navigate"), order)
+
+            // advanceUntilIdle drives the nav scope's dispatcher on this thread, so this is the
+            // thread the transition was supposed to land on.
+            assertEquals(listOf(Thread.currentThread()), navThreads)
+            assertNotEquals(callerThread, Thread.currentThread())
         }
 
     @Test
@@ -106,6 +115,7 @@ class NavBackStackRaceTest {
             val nav = Nav(controllerRecording(mutableListOf()), this, settledKeyboard)
 
             nav.popBack()
+            runCurrent()
 
             assertFalse(nav.isNavigating)
         }
@@ -125,6 +135,7 @@ class NavBackStackRaceTest {
                 )
 
             nav.popBack()
+            runCurrent()
             assertTrue(nav.isNavigating)
             assertEquals(emptyList<String>(), order)
 
