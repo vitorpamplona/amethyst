@@ -97,6 +97,28 @@ class ConcordInviteClassifyTest {
         }
 
     @Test
+    fun remintAtTheSameCoordinateWinsOverAStaleCopy() =
+        runTest {
+            // The Refounding path (CORD-05 §1): every live link is re-minted at its own coordinate
+            // carrying the new epoch's root. A relay that still serves the pre-Refounding bundle
+            // must not be able to hand a joiner the epoch the community just left.
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val before = inviteFor(community).copy(communityRoot = "aa".repeat(32), rootEpoch = 1L)
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", before, createdAt = 1000L)
+
+            val after = before.copy(communityRoot = "bb".repeat(32), rootEpoch = 2L)
+            val remint = ConcordInviteBundle.build(minted.linkSignerPrivKey, minted.token, after, createdAt = 2000L)
+
+            // Both fetch orders must resolve to the re-mint — `fetchAll` gives no ordering guarantee.
+            listOf(listOf(minted.bundleEvent, remint), listOf(remint, minted.bundleEvent)).forEach { wraps ->
+                val status = ConcordInviteBundle.classify(wraps, minted.token)
+                assertTrue(status is InviteBundleStatus.Live)
+                assertEquals("bb".repeat(32), status.invite.communityRoot)
+                assertEquals(2L, status.invite.rootEpoch)
+            }
+        }
+
+    @Test
     fun unknownSubKindIsUnreadable() =
         runTest {
             // A mis-posted registry (vsk=8) at the bundle coordinate — the exact shape of the

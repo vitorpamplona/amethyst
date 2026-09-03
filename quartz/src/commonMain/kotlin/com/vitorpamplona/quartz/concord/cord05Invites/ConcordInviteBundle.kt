@@ -144,7 +144,7 @@ object ConcordInviteBundle {
      * [InviteBundleStatus] under CORD-05 §2 replaceable semantics. The newest event
      * wins: a `vsk=9` revocation tombstone marks the link [InviteBundleStatus.Revoked]
      * even when an older, still-openable bundle is also present (so a stale relay copy
-     * can't resurrect a retired link). Otherwise the first `vsk=6` bundle that opens +
+     * can't resurrect a retired link). Otherwise the **newest** `vsk=6` bundle that opens +
      * validates with [token] is [InviteBundleStatus.Live]; anything else present is
      * [InviteBundleStatus.Unreadable], and an empty set is [InviteBundleStatus.Absent].
      *
@@ -160,7 +160,14 @@ object ConcordInviteBundle {
     ): InviteBundleStatus {
         val newest = wraps.maxByOrNull { it.createdAt } ?: return InviteBundleStatus.Absent
         if (newest.tags.vsk() == ControlEntityKind.INVITE_REVOKED) return InviteBundleStatus.Revoked
-        val invite = wraps.firstNotNullOfOrNull { parse(it, token)?.takeIf { i -> validate(i) } }
+        // Newest-first, not fetch order. [wraps] arrives straight off `fetchAll`, i.e. in relay
+        // arrival order, so opening whichever copy decrypts first is a coin flip between editions.
+        // That matters because a Refounding re-mints every live link at its OWN coordinate with the
+        // new epoch's root: a relay still serving the pre-Refounding bundle would otherwise hand the
+        // joiner the root of the epoch the community just left, and they would join, see planes
+        // nobody reads, and get no error saying why. The revocation branch above already resolves
+        // newest-wins; the live branch has to agree with it.
+        val invite = wraps.sortedByDescending { it.createdAt }.firstNotNullOfOrNull { parse(it, token)?.takeIf { i -> validate(i) } }
         return when {
             invite == null -> InviteBundleStatus.Unreadable
             isExpired(invite, nowMs) -> InviteBundleStatus.Expired(invite)

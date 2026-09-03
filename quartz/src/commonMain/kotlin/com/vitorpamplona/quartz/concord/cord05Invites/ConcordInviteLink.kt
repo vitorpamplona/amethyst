@@ -53,15 +53,14 @@ class ParsedInviteLink(
  * `(33301, link_signer_pubkey, d="")`. The `#fragment` is **never sent to any
  * server**: it is base64url of `[version=4][flags][relays?][token:16]`, carrying
  * the 16-byte unlock token (→ [com.vitorpamplona.quartz.concord.crypto
- * .ConcordKeyDerivation.inviteBundleKey]) and, when flag `0x01` is unset, up to
- * three bootstrap relays encoded against [InviteRelayDictionary].
+ * .ConcordKeyDerivation.inviteBundleKey]) and, when flag `0x01` is unset, the
+ * bootstrap relays encoded against [InviteRelayDictionary].
  *
  * Pinned to the Concord v2 reference client for interop.
  */
 object ConcordInviteLink {
     const val VERSION = 4
     const val FLAG_STOCK_RELAYS = 0x01
-    const val MAX_RELAYS = 3
 
     private const val MARKER_WSS_HOST = 0
     private const val MARKER_FULL_URL = 255
@@ -70,8 +69,13 @@ object ConcordInviteLink {
 
     /**
      * Encodes the fragment for [token] and optional [relays]. Passing null or the
-     * exact stock set uses flag `0x01` and emits no relay bytes; otherwise up to
-     * [MAX_RELAYS] relays are encoded (dictionary id, `wss://` host, or full URL).
+     * exact stock set uses flag `0x01` and emits no relay bytes; otherwise every
+     * relay is encoded (dictionary id, `wss://` host, or full URL).
+     *
+     * The only ceiling is the format's own: the relay count is a single byte, so at
+     * most 255 relays fit. Each carries its own byte cost, so a long list makes a long
+     * link — pick relays that can actually serve the bundle rather than pasting a
+     * whole relay list in.
      */
     @OptIn(ExperimentalEncodingApi::class)
     fun encodeFragment(
@@ -86,7 +90,7 @@ object ConcordInviteLink {
         if (useStock) {
             out.add(FLAG_STOCK_RELAYS.toByte())
         } else {
-            require(relays.size <= MAX_RELAYS) { "at most $MAX_RELAYS relays, was ${relays.size}" }
+            require(relays.size <= 255) { "relay count must fit in one byte, was ${relays.size}" }
             out.add(0)
             out.add(relays.size.toByte())
             for (r in relays) {
@@ -157,7 +161,10 @@ object ConcordInviteLink {
         return InviteFragment(bytes.copyOfRange(pos, pos + TOKEN_LEN), relays, usedStock)
     }
 
-    /** Builds a full shareable invite URL under [base]. */
+    /**
+     * Builds a full shareable invite URL under [base], carrying every relay in [relays]
+     * as the bootstrap set (or the stock flag when null / exactly the stock set).
+     */
     fun buildUrl(
         base: String,
         linkSignerPubKey: String,

@@ -67,6 +67,46 @@ class ConcordInviteLinkTest {
     }
 
     @Test
+    fun buildUrlCarriesEveryRelayOfAnOversizedList() {
+        // A community with five relays used to crash the mint ("at most 3 relays, was 5").
+        // There is no cap below the format's own, so all five make the round trip.
+        val relays =
+            listOf(
+                "wss://one.example",
+                "wss://two.example",
+                "wss://three.example",
+                "wss://four.example",
+                "wss://five.example",
+            )
+        val parsed = ConcordInviteLink.parseUrl(ConcordInviteLink.buildUrl("https://vector.chat", signer, token, relays))
+        assertNotNull(parsed)
+        assertEquals(relays, parsed.fragment.relays)
+        assertContentEquals(token, parsed.fragment.token)
+    }
+
+    @Test
+    fun buildUrlKeepsTheFourStockRelaysAsTheStockFlag() {
+        // The stock set still collapses to flag 0x01 and zero relay bytes rather than
+        // being spelled out as four dictionary ids.
+        val parsed = ConcordInviteLink.parseUrl(ConcordInviteLink.buildUrl("https://vector.chat", signer, token, InviteRelayDictionary.STOCK))
+        assertNotNull(parsed)
+        assertTrue(parsed.fragment.usedStockRelays)
+        assertEquals(InviteRelayDictionary.STOCK, parsed.fragment.relays)
+    }
+
+    @Test
+    fun encodesTheLargestRelayListTheCountByteCanHold() {
+        // 255 is the format ceiling, not a policy one: the relay count is a single byte.
+        val relays = List(255) { "wss://relay$it.example" }
+        val frag = ConcordInviteLink.decodeFragment(ConcordInviteLink.encodeFragment(token, relays))
+        assertEquals(relays, frag.relays)
+        assertContentEquals(token, frag.token)
+
+        // One more would silently wrap the count byte to 0 and strand every relay, so it throws.
+        assertFailsWith<IllegalArgumentException> { ConcordInviteLink.encodeFragment(token, relays + "wss://overflow.example") }
+    }
+
+    @Test
     @OptIn(ExperimentalEncodingApi::class)
     fun rejectsWrongVersion() {
         // craft a version-3 fragment: [3, 0x01, token...]
