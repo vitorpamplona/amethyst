@@ -250,9 +250,15 @@ class UserSuggestionState(
     ) {
         val wordToInsert = mentionInsertion(word, item)
         state.edit {
-            val lastWordStart = selection.end - word.length
+            // [word] comes from a debounced flow, so by the time the author taps a
+            // suggestion the field may already be shorter than the word we searched
+            // for. `replace` coerces its own bounds, but the cursor we compute from
+            // them does not get coerced -- an out-of-range `selection` throws
+            // IllegalArgumentException out of the setter's requireValidRange.
+            val lastWordStart = (selection.end - word.length).coerceIn(0, length)
             replace(lastWordStart, selection.end, wordToInsert)
-            selection = TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
+            val cursor = (lastWordStart + wordToInsert.length).coerceIn(0, length)
+            selection = TextRange(cursor, cursor)
         }
     }
 

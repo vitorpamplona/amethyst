@@ -125,53 +125,55 @@ fun OutlinedThinPaddingTextField(
             TextFieldLineLimits.MultiLine(minLines, maxLines)
         }
 
-    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
-        BasicTextField(
-            state = state,
-            modifier =
-                modifier
-                    .defaultMinSize(
-                        minWidth = TextFieldDefaults.MinWidth,
-                        minHeight = 36.dp,
-                    ),
-            enabled = enabled,
-            readOnly = readOnly,
-            textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = keyboardOptions,
-            lineLimits = lineLimits,
-            interactionSource = interactionSource,
-            inputTransformation = inputTransformation,
-            outputTransformation = outputTransformation,
-            decorator = { innerTextField ->
-                OutlinedTextFieldDefaults.DecorationBox(
-                    value = state.text.toString(),
-                    visualTransformation = VisualTransformation.None,
-                    innerTextField = innerTextField,
-                    placeholder = placeholder,
-                    label = label,
-                    leadingIcon = leadingIcon,
-                    trailingIcon = trailingIcon,
-                    prefix = prefix,
-                    suffix = suffix,
-                    supportingText = supportingText,
-                    singleLine = singleLine,
-                    enabled = enabled,
-                    isError = isError,
-                    interactionSource = interactionSource,
-                    colors = colors,
-                    contentPadding = contentPadding,
-                    container = {
-                        OutlinedTextFieldDefaults.Container(
-                            enabled = enabled,
-                            isError = isError,
-                            interactionSource = interactionSource,
-                            colors = colors,
-                            shape = shape,
-                        )
-                    },
-                )
-            },
-        )
+    GuardAgainstStaleImeCommands {
+        CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
+            BasicTextField(
+                state = state,
+                modifier =
+                    modifier
+                        .defaultMinSize(
+                            minWidth = TextFieldDefaults.MinWidth,
+                            minHeight = 36.dp,
+                        ),
+                enabled = enabled,
+                readOnly = readOnly,
+                textStyle = mergedTextStyle,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = keyboardOptions,
+                lineLimits = lineLimits,
+                interactionSource = interactionSource,
+                inputTransformation = inputTransformation,
+                outputTransformation = outputTransformation,
+                decorator = { innerTextField ->
+                    OutlinedTextFieldDefaults.DecorationBox(
+                        value = state.text.toString(),
+                        visualTransformation = VisualTransformation.None,
+                        innerTextField = innerTextField,
+                        placeholder = placeholder,
+                        label = label,
+                        leadingIcon = leadingIcon,
+                        trailingIcon = trailingIcon,
+                        prefix = prefix,
+                        suffix = suffix,
+                        supportingText = supportingText,
+                        singleLine = singleLine,
+                        enabled = enabled,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = colors,
+                        contentPadding = contentPadding,
+                        container = {
+                            OutlinedTextFieldDefaults.Container(
+                                enabled = enabled,
+                                isError = isError,
+                                interactionSource = interactionSource,
+                                colors = colors,
+                                shape = shape,
+                            )
+                        },
+                    )
+                },
+            )
+        }
     }
 }

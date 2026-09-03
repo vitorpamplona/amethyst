@@ -170,46 +170,48 @@ fun ThinPaddingTextField(
             modifier
         }
 
-    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
-        BasicTextField(
-            state = state,
-            modifier =
-                contentModifier
-                    .defaultMinSize(
-                        minWidth = TextFieldDefaults.MinWidth,
-                        minHeight = 36.dp,
-                    ),
-            enabled = enabled,
-            readOnly = readOnly,
-            textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = keyboardOptions,
-            lineLimits = lineLimits,
-            interactionSource = interactionSource,
-            inputTransformation = inputTransformation,
-            outputTransformation = outputTransformation,
-            decorator = { innerTextField ->
-                TextFieldDefaults.DecorationBox(
-                    value = state.text.toString(),
-                    visualTransformation = VisualTransformation.None,
-                    innerTextField = innerTextField,
-                    placeholder = placeholder,
-                    label = label,
-                    leadingIcon = leadingIcon,
-                    trailingIcon = trailingIcon,
-                    prefix = prefix,
-                    suffix = suffix,
-                    supportingText = supportingText,
-                    shape = shape,
-                    singleLine = singleLine,
-                    enabled = enabled,
-                    isError = isError,
-                    interactionSource = interactionSource,
-                    colors = colors,
-                    contentPadding = contentPadding,
-                )
-            },
-        )
+    GuardAgainstStaleImeCommands {
+        CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
+            BasicTextField(
+                state = state,
+                modifier =
+                    contentModifier
+                        .defaultMinSize(
+                            minWidth = TextFieldDefaults.MinWidth,
+                            minHeight = 36.dp,
+                        ),
+                enabled = enabled,
+                readOnly = readOnly,
+                textStyle = mergedTextStyle,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = keyboardOptions,
+                lineLimits = lineLimits,
+                interactionSource = interactionSource,
+                inputTransformation = inputTransformation,
+                outputTransformation = outputTransformation,
+                decorator = { innerTextField ->
+                    TextFieldDefaults.DecorationBox(
+                        value = state.text.toString(),
+                        visualTransformation = VisualTransformation.None,
+                        innerTextField = innerTextField,
+                        placeholder = placeholder,
+                        label = label,
+                        leadingIcon = leadingIcon,
+                        trailingIcon = trailingIcon,
+                        prefix = prefix,
+                        suffix = suffix,
+                        supportingText = supportingText,
+                        shape = shape,
+                        singleLine = singleLine,
+                        enabled = enabled,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = colors,
+                        contentPadding = contentPadding,
+                    )
+                },
+            )
+        }
     }
 }
 
