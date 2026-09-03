@@ -284,7 +284,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">加密並複製我的密鑰</string>
     <string name="badge_award_image_for">頒發給 %1$s 的徽章圖片</string>
-    <string name="badge_award_image">"徽章獎勵圖片</string>
+    <string name="badge_award_image">\"徽章獎勵圖片</string>
     <string name="new_badge_award_notif">您收到了新的徽章獎勵</string>
     <string name="award_granted_to">徽章獎勵授予</string>
     <string name="account_switch_add_account_dialog_title">添加新帳戶</string>
@@ -920,7 +920,7 @@
     <string name="messages_create_public_private_chat_description">新建公開或私人群組</string>
     <string name="messages_new_message_to">至</string>
     <string name="messages_new_message_subject_caption">對話主題</string>
-    <string name="messages_new_message_to_caption">@User1、@User2、@User3</string>
+    <string name="messages_new_message_to_caption">\@User1、@User2、@User3</string>
     <string name="messages_group_descriptor">此群組成員</string>
     <string name="messages_new_subject_message">對成員的解釋</string>
     <string name="messages_new_subject_message_placeholder">為新目標更改名稱。</string>
@@ -1191,7 +1191,7 @@
     <string name="calendar_untitled">（無標題）</string>
     <string name="calendar_all_day">全天</string>
     <string name="calendar_rsvp_going_prefixed">✓ 出席</string>
-    <string name="calendar_rsvp_maybe_prefixed">? 也許</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? 也許</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ 無法出席</string>
     <string name="calendar_collection_title">標題</string>
     <string name="calendar_collection_description">描述</string>
