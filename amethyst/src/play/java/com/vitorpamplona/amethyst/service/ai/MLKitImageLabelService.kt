@@ -29,14 +29,15 @@ import com.google.mlkit.genai.imagedescription.ImageDescriber
 import com.google.mlkit.genai.imagedescription.ImageDescriberOptions
 import com.google.mlkit.genai.imagedescription.ImageDescription
 import com.google.mlkit.genai.imagedescription.ImageDescriptionRequest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Unified alt-text suggestion service.
+ * Alt-text suggestion service backed by Gemini Nano through AICore.
  *
- * Prefers Gemini-Nano-backed `genai-image-description` for full descriptive sentences when
- * the device supports AICore; falls back to the legacy keyword `image-labeling` model otherwise.
+ * Produces a full descriptive sentence via `genai-image-description`, or null when the device
+ * cannot run the model.
  */
 class MLKitImageLabelService(
     private val context: Context,
@@ -63,17 +64,26 @@ class MLKitImageLabelService(
         withContext(Dispatchers.IO) {
             val client = ensureDescriber() ?: return@withContext null
             try {
+                // awaitDetached rather than ListenableFuture.get(): describing an image takes
+                // seconds, and get() would hold an IO thread for all of it — uninterruptibly,
+                // so backing out of the composer would leave the thread pinned until AICore
+                // answered. Detaching also keeps us off the cancellation path that crashes
+                // these clients; see GenAiFutures.
                 val status =
-                    cachedGenAiStatus ?: client.checkFeatureStatus().get().also { cachedGenAiStatus = it }
+                    cachedGenAiStatus ?: client.checkFeatureStatus().awaitDetached().also { cachedGenAiStatus = it }
                 if (status != FeatureStatus.AVAILABLE) return@withContext null
                 val bitmap = loadDownscaledBitmap(uri) ?: return@withContext null
                 val request = ImageDescriptionRequest.builder(bitmap).build()
                 client
                     .runInference(request)
-                    .get()
+                    .awaitDetached()
                     .description
                     .trim()
                     .takeIf { it.isNotEmpty() }
+            } catch (e: CancellationException) {
+                // Now that the awaits suspend, cancelling the caller lands here: it must not
+                // be swallowed as "no suggestion", or the coroutine would keep running.
+                throw e
             } catch (_: Exception) {
                 null
             }
@@ -113,8 +123,6 @@ class MLKitImageLabelService(
     }
 
     companion object {
-        private const val MIN_CONFIDENCE = 0.6f
-        private const val MAX_LABELS = 5
         private const val TARGET_DIM_PX = 1024
     }
 }
