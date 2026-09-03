@@ -52,6 +52,11 @@ const val ROUTE_TEXT_ARG_TRUNCATION_MARKER = "\n\n(truncated)"
  */
 private const val UNRESERVED = "_-!.~'()*"
 
+/** The widest a single `Char` can encode to: a 3-byte UTF-8 code point that fits in one Char. */
+private const val MAX_ENCODED_LENGTH_PER_CHAR = 9
+
+private val TRUNCATION_MARKER_ENCODED_LENGTH = encodedRouteArgLength(ROUTE_TEXT_ARG_TRUNCATION_MARKER)
+
 /**
  * Cuts [this] down so that its percent-encoded form fits in [maxEncodedLength] characters,
  * appending [ROUTE_TEXT_ARG_TRUNCATION_MARKER] when anything was dropped. Values that already fit
@@ -59,32 +64,31 @@ private const val UNRESERVED = "_-!.~'()*"
  *
  * Call this on any unbounded text — a shared payload from another app, a crash or resource-usage
  * report, an error message — before it becomes a navigation argument. See
- * [MAX_ROUTE_TEXT_ARG_ENCODED_LENGTH] for what happens when it isn't.
+ * [MAX_ROUTE_TEXT_ARG_ENCODED_LENGTH] for what happens when it isn't. The scan stops as soon as the
+ * budget is blown, so a megabyte-sized share costs no more than a value at the limit does.
  */
 fun String.limitToRouteTextArg(maxEncodedLength: Int = MAX_ROUTE_TEXT_ARG_ENCODED_LENGTH): String {
-    // Cheap exit for the common case: nothing can encode to more than 12 chars per char, and most
-    // messages are far shorter than the budget to begin with.
-    if (length <= maxEncodedLength / 12) return this
-    if (encodedRouteArgLength(this) <= maxEncodedLength) return this
+    // Nothing this short can encode past the budget, so it doesn't need measuring at all.
+    if (length <= maxEncodedLength / MAX_ENCODED_LENGTH_PER_CHAR) return this
 
-    val budget = maxEncodedLength - encodedRouteArgLength(ROUTE_TEXT_ARG_TRUNCATION_MARKER)
+    val budget = maxEncodedLength - TRUNCATION_MARKER_ENCODED_LENGTH
     var spent = 0
     var index = 0
+    var cutAt = 0
     while (index < length) {
         // Steps over whole code points so a surrogate pair is never cut in half.
         val codePoint = codePointAt(index)
-        val charCount = Character.charCount(codePoint)
-        val cost = encodedCodePointLength(codePoint)
-        if (spent + cost > budget) break
-        spent += cost
-        index += charCount
+        spent += encodedCodePointLength(codePoint)
+        if (spent > maxEncodedLength) {
+            // Only here is truncation certain. [cutAt] is the last position whose prefix still
+            // leaves room for the marker; a budget too small to hold even that yields nothing.
+            return if (budget >= 0) substring(0, cutAt) + ROUTE_TEXT_ARG_TRUNCATION_MARKER else ""
+        }
+        index += Character.charCount(codePoint)
+        if (spent <= budget) cutAt = index
     }
-
-    return substring(0, index) + ROUTE_TEXT_ARG_TRUNCATION_MARKER
+    return this
 }
-
-/** Same as [limitToRouteTextArg], for the nullable values routes actually carry. */
-fun String?.limitToRouteTextArgOrNull(maxEncodedLength: Int = MAX_ROUTE_TEXT_ARG_ENCODED_LENGTH): String? = this?.limitToRouteTextArg(maxEncodedLength)
 
 /** How many characters [text] takes up in a route once `Uri.encode` has run over it. */
 fun encodedRouteArgLength(text: String): Int {
@@ -104,7 +108,7 @@ private fun encodedCodePointLength(codePoint: Int): Int =
         codePoint < 0x80 -> 3 // one UTF-8 byte as %XX
         codePoint < 0x800 -> 6
         codePoint < 0x10000 -> 9
-        else -> 12
+        else -> 12 // four UTF-8 bytes, spread over a surrogate pair
     }
 
 private fun isUnreserved(char: Char): Boolean = char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in UNRESERVED

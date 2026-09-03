@@ -24,9 +24,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.MAX_ROUTE_TEXT_ARG_ENCODE
 import com.vitorpamplona.amethyst.ui.navigation.routes.ROUTE_TEXT_ARG_TRUNCATION_MARKER
 import com.vitorpamplona.amethyst.ui.navigation.routes.encodedRouteArgLength
 import com.vitorpamplona.amethyst.ui.navigation.routes.limitToRouteTextArg
-import com.vitorpamplona.amethyst.ui.navigation.routes.limitToRouteTextArgOrNull
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -52,8 +50,6 @@ class RouteTextArgsTest {
 
         val justUnder = "a".repeat(MAX_ROUTE_TEXT_ARG_ENCODED_LENGTH)
         assertSame(justUnder, justUnder.limitToRouteTextArg())
-
-        assertNull(null.limitToRouteTextArgOrNull())
     }
 
     @Test
@@ -68,6 +64,23 @@ class RouteTextArgsTest {
         assertTrue(encodedRouteArgLength(limited) <= MAX_ROUTE_TEXT_ARG_ENCODED_LENGTH)
         assertTrue(limited.endsWith(ROUTE_TEXT_ARG_TRUNCATION_MARKER))
         assertTrue(report.startsWith(limited.removeSuffix(ROUTE_TEXT_ARG_TRUNCATION_MARKER)))
+    }
+
+    @Test
+    fun cutsAHugeSharedPayloadWithoutScanningAllOfIt() {
+        // What another app can hand us through a share: bounded only by Binder. The scan has to
+        // stop at the budget, not walk the megabyte.
+        val payload = "| a = 1 |\n".repeat(100_000)
+
+        val limited = payload.limitToRouteTextArg()
+
+        assertTrue(encodedRouteArgLength(limited) <= MAX_ROUTE_TEXT_ARG_ENCODED_LENGTH)
+        assertTrue(limited.endsWith(ROUTE_TEXT_ARG_TRUNCATION_MARKER))
+    }
+
+    @Test
+    fun returnsNothingWhenTheBudgetCannotEvenHoldTheMarker() {
+        assertEquals("", "a".repeat(100).limitToRouteTextArg(4))
     }
 
     @Test

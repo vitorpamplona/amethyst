@@ -323,7 +323,7 @@ fun routeToMessage(
     // string makes the destination unmatchable — see [limitToRouteTextArg].
     return Route.Room(
         room,
-        message = draftMessage.limitToRouteTextArgOrNull(),
+        message = draftMessage?.limitToRouteTextArg(),
         replyId = replyId,
         draftId = draftId,
         expiresDays = expiresDays,
