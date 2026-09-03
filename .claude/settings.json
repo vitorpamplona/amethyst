@@ -13,6 +13,11 @@
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-orphan-strings.sh",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-compose-escaping.sh",
+            "timeout": 30
           }
         ]
       }
