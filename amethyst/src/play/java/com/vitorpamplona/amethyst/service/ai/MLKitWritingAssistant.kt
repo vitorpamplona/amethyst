@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.ai
 
 import android.content.Context
 import com.google.android.gms.tasks.Tasks
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.genai.common.DownloadCallback
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.common.GenAiException
@@ -42,15 +41,10 @@ import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executor
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * On-device writing assistance backed by ML Kit GenAI (Gemini Nano through AICore).
@@ -146,12 +140,12 @@ class MLKitWritingAssistant(
                     val rewriter = getRewriter(RewriterOptions.OutputType.REPHRASE, WritingLanguage.ENGLISH)
                     if (!downloadRequested) {
                         downloadRequested = true
-                        rewriter.downloadFeature(SilentDownloadCallback).await()
+                        rewriter.downloadFeature(SilentDownloadCallback).awaitDetached()
                         // The proofreader ships as its own feature: fetch it too, or the
                         // CORRECT tone would stay missing forever. A failure here is not
                         // fatal — the rewriting tones still work.
                         try {
-                            getProofreader(WritingLanguage.ENGLISH).downloadFeature(SilentDownloadCallback).await()
+                            getProofreader(WritingLanguage.ENGLISH).downloadFeature(SilentDownloadCallback).awaitDetached()
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -169,7 +163,7 @@ class MLKitWritingAssistant(
         }
 
     private suspend fun statusOf(rewriter: Rewriter): WritingAssistantStatus =
-        when (rewriter.checkFeatureStatus().await()) {
+        when (rewriter.checkFeatureStatus().awaitDetached()) {
             FeatureStatus.AVAILABLE -> WritingAssistantStatus.Available
             FeatureStatus.DOWNLOADING -> WritingAssistantStatus.Downloading
             FeatureStatus.DOWNLOADABLE -> WritingAssistantStatus.Downloadable
@@ -231,7 +225,7 @@ class MLKitWritingAssistant(
     ): String {
         // Building a client touches disk and another process; awaiting the inference does not.
         val rewriter = withContext(Dispatchers.IO) { getRewriter(outputType, language) }
-        val result = rewriter.runInference(RewritingRequest.builder(text).build()).await()
+        val result = rewriter.runInference(RewritingRequest.builder(text).build()).awaitDetached()
         return result.results.firstOrNull()?.text ?: text
     }
 
@@ -240,7 +234,7 @@ class MLKitWritingAssistant(
         language: WritingLanguage,
     ): String {
         val proofreader = withContext(Dispatchers.IO) { getProofreader(language) }
-        val result = proofreader.runInference(ProofreadingRequest.builder(text).build()).await()
+        val result = proofreader.runInference(ProofreadingRequest.builder(text).build()).awaitDetached()
         return result.results.firstOrNull()?.text ?: text
     }
 
@@ -249,29 +243,6 @@ class MLKitWritingAssistant(
         rewriters.keys.toList().forEach { rewriters.remove(it)?.close() }
         proofreaders.keys.toList().forEach { proofreaders.remove(it)?.close() }
     }
-
-    /**
-     * Bridges a [ListenableFuture] into a cancellable suspend call: cancelling the caller
-     * cancels the inference instead of leaving it running on a thread nobody waits for.
-     */
-    private suspend fun <T> ListenableFuture<T>.await(): T =
-        suspendCancellableCoroutine { continuation ->
-            addListener(
-                {
-                    try {
-                        continuation.resume(get())
-                    } catch (e: CancellationException) {
-                        continuation.cancel(e)
-                    } catch (e: ExecutionException) {
-                        continuation.resumeWithException(e.cause ?: e)
-                    } catch (e: Exception) {
-                        continuation.resumeWithException(e)
-                    }
-                },
-                DIRECT_EXECUTOR,
-            )
-            continuation.invokeOnCancellation { cancel(true) }
-        }
 
     /**
      * The two ML Kit APIs declare their own language constants. They happen to share the
@@ -313,8 +284,5 @@ class MLKitWritingAssistant(
 
     companion object {
         private const val TAG = "MLKitWritingAssistant"
-
-        /** Completes the continuation on whichever thread finished the future. */
-        private val DIRECT_EXECUTOR = Executor { it.run() }
     }
 }
