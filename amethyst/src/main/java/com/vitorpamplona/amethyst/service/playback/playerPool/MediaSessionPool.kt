@@ -25,10 +25,12 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSourceBitmapLoader
@@ -38,6 +40,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,8 +79,7 @@ class MediaSessionPool(
 ) {
     private val exceptionHandler =
         CoroutineExceptionHandler { _, throwable ->
-            com.vitorpamplona.quartz.utils.Log
-                .e("MediaSessionPool", "Caught exception: ${throwable.message}", throwable)
+            Log.e("MediaSessionPool", "Caught exception: ${throwable.message}", throwable)
         }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
@@ -96,23 +98,41 @@ class MediaSessionPool(
     private val sharedBitmapLoader by lazy { buildSharedBitmapLoader() }
 
     @OptIn(UnstableApi::class)
-    private fun buildSharedBitmapLoader(): DataSourceBitmapLoader =
-        DataSourceBitmapLoader
-            .Builder(appContext)
-            .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
-            .setDataSourceFactory(dataSourceFactory)
-            // Cap decoded artwork to the platform's own metadata bitmap limit so the legacy
-            // MediaSession path never has to re-scale it. media3 would otherwise size-limit the
-            // bitmap using Resources.getSystem()'s config_mediaMetadataBitmapMaxSize, which on
-            // several OEM ROMs (e.g. LineageOS/peridot) is unresolvable and falls back to the full
-            // screen width. That over-sized bitmap then gets re-scaled by the framework inside
-            // android.media.session.MediaSession.setMetadata(), and some of those ROMs recycle the
-            // *source* bitmap during MediaMetadata.Builder.scaleBitmap(). media3's CacheBitmapLoader
-            // caches that now-recycled bitmap and hands it back on the next metadata update, which
-            // crashes with "cannot use a recycled source in createBitmap". Pre-sizing to the same
-            // limit the framework uses keeps build() from ever calling scaleBitmap().
-            .setMaximumOutputDimension(mediaMetadataBitmapMaxSize())
-            .build()
+    private fun buildSharedBitmapLoader(): BitmapLoader {
+        val decoder =
+            DataSourceBitmapLoader
+                .Builder(appContext)
+                .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
+                .setDataSourceFactory(dataSourceFactory)
+                // Subsampling only halves, so decoding straight to the ceiling can land at half the
+                // size the session would have accepted (a 1080px image under a 900px ceiling decodes
+                // to 540px). Decoding to just under 2x and letting MetadataArtworkBitmapLoader scale
+                // precisely is the same recipe media3 uses for its own default loader.
+                .setMaximumOutputDimension((mediaMetadataBitmapMaxSize() * 2 - 1).coerceAtLeast(1))
+                .build()
+
+        // Artwork comes from arbitrary nostr imeta URLs, so it routinely arrives far larger than the
+        // platform's metadata bitmap ceiling, and android.media.session.MediaSession.setMetadata()
+        // then re-scales it inside MediaMetadata.Builder.build(). media3 stores the *same* Bitmap
+        // instance under both METADATA_KEY_DISPLAY_ICON and METADATA_KEY_ALBUM_ART
+        // (LegacyConversions.convertToMediaMetadataCompat), so build() scales that one instance
+        // twice. AOSP leaves the source alone, but on ROMs that recycle it while scaling the second
+        // pass throws "cannot use a recycled source in createBitmap" on the main thread, inside a
+        // Guava callback the app cannot intercept.
+        //
+        // media3 does size-limit artwork (SizeLimitedBitmapLoader), but it reads the ceiling from
+        // Resources.getSystem() and falls back to the full display width when
+        // config_mediaMetadataBitmapMaxSize can't be resolved by name, while the framework itself
+        // reads it from the context that created the session. Capping it here, the same way the
+        // framework measures it, keeps build() from scaling at all.
+        return MetadataArtworkBitmapLoader(decoder, ::mediaMetadataBitmapMaxSize)
+    }
+
+    // getIdentifier() is a by-name lookup, so it is resolved once; the dimension itself is re-read
+    // per load because it is a dp value and the app survives display-size changes without a restart.
+    private val metadataBitmapMaxSizeResId by lazy {
+        appContext.resources.getIdentifier("config_mediaMetadataBitmapMaxSize", "dimen", "android")
+    }
 
     /**
      * Mirrors how android.media.session.MediaSession derives its metadata bitmap ceiling: the
@@ -122,8 +142,17 @@ class MediaSessionPool(
      */
     private fun mediaMetadataBitmapMaxSize(): Int {
         val resources = appContext.resources
-        val id = resources.getIdentifier("config_mediaMetadataBitmapMaxSize", "dimen", "android")
-        val resolved = if (id != 0) resources.getDimensionPixelSize(id) else 0
+        val resolved =
+            if (metadataBitmapMaxSizeResId != 0) {
+                try {
+                    resources.getDimensionPixelSize(metadataBitmapMaxSizeResId)
+                } catch (e: Resources.NotFoundException) {
+                    Log.w("MediaSessionPool", "config_mediaMetadataBitmapMaxSize could not be read", e)
+                    0
+                }
+            } else {
+                0
+            }
         return if (resolved > 0) resolved else (DEFAULT_METADATA_BITMAP_DP * resources.displayMetrics.density).toInt()
     }
 
