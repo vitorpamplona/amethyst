@@ -23,6 +23,25 @@ package com.vitorpamplona.amethyst.service.crashreports
 import android.os.Build
 import com.vitorpamplona.amethyst.BuildConfig
 
+/**
+ * Longest headline (`ClassName: message`) a report will carry for the throwable or its cause.
+ *
+ * An exception message is usually one line, but it doesn't have to be: a failed navigation quotes
+ * the entire route it could not match, and that route may itself hold a whole previous report.
+ * Without a cap each crash report would embed the last one, tripling in size every round (the route
+ * re-encodes `%` as `%25`) until the report is too big to send — which is a crash of its own. The
+ * stack trace below the headline is what makes a report useful, and it stays whole.
+ */
+private const val MAX_HEADLINE_LENGTH = 1_000
+
+private fun Throwable.headline(): String {
+    val full = toString()
+    if (full.length <= MAX_HEADLINE_LENGTH) return full
+    // Never cut between the halves of a surrogate pair.
+    val cut = if (Character.isHighSurrogate(full[MAX_HEADLINE_LENGTH - 1])) MAX_HEADLINE_LENGTH - 1 else MAX_HEADLINE_LENGTH
+    return full.take(cut) + "… (${full.length} chars)"
+}
+
 class ReportAssembler {
     fun buildReport(
         e: Throwable,
@@ -81,7 +100,7 @@ class ReportAssembler {
             appendLine("```")
             append("Thread: ")
             appendLine(threadName)
-            appendLine(e.toString())
+            appendLine(e.headline())
             e.stackTrace.forEach {
                 append("    ")
                 appendLine(it.toString())
@@ -90,7 +109,7 @@ class ReportAssembler {
             if (cause != null) {
                 appendLine("\n\nCause:")
                 append("    ")
-                appendLine(cause.toString())
+                appendLine(cause.headline())
                 cause.stackTrace.forEach {
                     append("        ")
                     appendLine(it.toString())

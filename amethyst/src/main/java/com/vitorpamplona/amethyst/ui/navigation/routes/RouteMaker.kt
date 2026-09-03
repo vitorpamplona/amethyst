@@ -318,7 +318,16 @@ fun routeToMessage(
 ): Route {
     account.chatroomList.getOrCreatePrivateChatroom(room)
 
-    return Route.Room(room, message = draftMessage, replyId = replyId, draftId = draftId, expiresDays = expiresDays)
+    // Every prefilled chat draft funnels through here, including the unbounded ones: crash and
+    // resource-usage reports, error toasts, shared payloads. A draft too big to fit in the route
+    // string makes the destination unmatchable — see [limitToRouteTextArg].
+    return Route.Room(
+        room,
+        message = draftMessage?.limitToRouteTextArg(),
+        replyId = replyId,
+        draftId = draftId,
+        expiresDays = expiresDays,
+    )
 }
 
 fun routeToMessage(
