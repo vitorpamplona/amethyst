@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.consumesSharesInPlace
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
+import com.vitorpamplona.amethyst.ui.navigation.routes.limitToRouteTextArg
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
@@ -1010,8 +1011,13 @@ fun BuildNavigation(
 /** True for both share flavors: a single file/text (SEND) and a multi-file selection (SEND_MULTIPLE). */
 private fun Intent.isShareAction(): Boolean = action == Intent.ACTION_SEND || action == Intent.ACTION_SEND_MULTIPLE
 
-/** The text Android sent with the share — a caption, a URL, or the whole payload of a text-only share. */
-private fun Intent.sharedText(): String? = getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }
+/**
+ * The text Android sent with the share — a caption, a URL, or the whole payload of a text-only
+ * share. Capped on the way in: a share carries whatever the other app put in it (Binder allows
+ * hundreds of kilobytes), and every share target below hands this straight to a route argument,
+ * where an oversized value makes the destination unmatchable. See [limitToRouteTextArg].
+ */
+private fun Intent.sharedText(): String? = getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }?.limitToRouteTextArg()
 
 /**
  * Every content URI the share carries, in the order the sending app listed them. SEND_MULTIPLE
