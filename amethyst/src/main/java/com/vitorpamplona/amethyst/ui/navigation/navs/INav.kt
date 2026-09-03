@@ -40,6 +40,18 @@ interface INav {
      */
     val isDrawerDocked: Boolean get() = false
 
+    /**
+     * True while a navigation this object accepted is parked waiting for the soft keyboard to
+     * retract, i.e. between the tap and the back-stack actually moving. The shell holds the system
+     * back gesture off for that stretch: `NavHost` starts its predictive-back animation against a
+     * one-frame-old copy of the back stack, so a pop landing mid-gesture makes it call
+     * `prepareForTransition` on an entry that is already gone and throw
+     * `Cannot transition entry that is not in the back stack`.
+     *
+     * Implementations that navigate synchronously have no such window and leave this `false`.
+     */
+    val isNavigating: Boolean get() = false
+
     fun closeDrawer()
 
     fun openDrawer()

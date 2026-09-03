@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.navigation
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -366,6 +367,10 @@ fun AppNavigation(
         AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
             Box(Modifier.fillMaxSize()) {
                 BuildNavigation(accountViewModel, nav)
+                // Holds the system back gesture off while a tap-driven navigation is still
+                // waiting for the keyboard to retract. Composed after BuildNavigation so it
+                // outranks the NavHost's own handler (the last composed enabled handler wins).
+                HoldBackWhileNavigating(nav)
                 // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
                 // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
                 // preloader below and the full-screen launcher both need. Not API-gated: every device's
@@ -402,6 +407,34 @@ fun AppNavigation(
         DisplayBlossomSyncProgress()
 
         ObserveIncomingCalls(accountViewModel)
+    }
+}
+
+/**
+ * Swallows the system back gesture for as long as [Nav] has a transition parked in the
+ * [com.vitorpamplona.amethyst.ui.navigation.navs.ImeSettler].
+ *
+ * `NavHost` starts its predictive-back animation against a copy of the back stack that it reads a
+ * main-thread message after the gesture begins, then calls `prepareForTransition` on the top two
+ * entries of that copy. A pop committing in between makes it transition an entry the NavController
+ * has already dropped, and the `IllegalStateException("Cannot transition entry that is not in the
+ * back stack")` that follows lands on the UI dispatcher with nothing to catch it.
+ *
+ * The window that a person can actually hit is the keyboard settle: tapping the back arrow with a
+ * text field focused parks the pop for up to
+ * [IME_SETTLE_TIMEOUT_MS][com.vitorpamplona.amethyst.ui.navigation.navs.IME_SETTLE_TIMEOUT_MS],
+ * which looks like nothing happened, and the natural next move is to swipe back. The press isn't
+ * lost work — the navigation the tap asked for is already on its way and lands at the end of the
+ * settle.
+ *
+ * Own composable rather than an inline `BackHandler` so that reading the state doesn't put the
+ * whole shell — the NavHost included — in the recomposition scope of a flag that flips on every
+ * navigation.
+ */
+@Composable
+private fun HoldBackWhileNavigating(nav: Nav) {
+    BackHandler(enabled = nav.isNavigating) {
+        // Deliberately empty: the transition the user already asked for is what happens next.
     }
 }
 

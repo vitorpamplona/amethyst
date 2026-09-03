@@ -26,6 +26,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -37,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
@@ -57,6 +59,56 @@ class Nav(
     /** Set by the shell when the layout tier docks the drawer permanently. */
     override var isDrawerDocked: Boolean by mutableStateOf(false)
 
+    /** Number of [transition] blocks parked inside [ImeSettler.settle]. Drives [isNavigating]. */
+    private var settling by mutableIntStateOf(0)
+
+    override val isNavigating: Boolean get() = settling > 0
+
+    /**
+     * Runs [block] — the only code in the app that moves the NavController's back stack — once the
+     * keyboard has settled.
+     *
+     * ### The window this is guarding
+     *
+     * `NavHost` does not read the back stack when a predictive back gesture starts. The system's
+     * `onBackStarted` only *launches* a coroutine on the composition scope; its body runs a
+     * main-thread message later, reads a `collectAsState` mirror of `ComposeNavigator.backStack`,
+     * and calls `prepareForTransition` on the top two entries — which validates against the
+     * NavController's live back queue and throws `IllegalStateException: Cannot transition entry
+     * that is not in the back stack` when the two disagree. The throw lands on the UI dispatcher
+     * with no handler above it, so it takes the app down.
+     *
+     * Every transition here runs on that same dispatcher, so a pop of ours that commits inside
+     * that gap is exactly the disagreement it crashes on. Two things keep us out of it:
+     *
+     *  - [start]: [popBack] runs undispatched, so a back that has nothing to wait for commits on
+     *    the caller's own message instead of the next one. Back is the one transition that
+     *    competes with the gesture for the same entry, and it is only ever called from an event
+     *    callback, so running it inline is safe. The rest stay dispatched — some, like the share
+     *    intent handling in `NavigateIfIntentRequested`, are invoked straight from a composable
+     *    body, where touching the back stack (and `ComposeNavigator.isPop`, which is snapshot
+     *    state the NavHost reads) during composition is its own bug.
+     *  - [isNavigating]: while [ImeSettler.settle] holds a transition back — up to
+     *    [IME_SETTLE_TIMEOUT_MS], long enough for a user to give up on the tap and swipe instead —
+     *    the shell hands the system back gesture to a no-op handler so `NavHost` never starts one
+     *    against a stack that is about to move. Only the settle is counted: [nav]'s
+     *    `computeRoute` can go to the network, and back must not be dead for that long.
+     */
+    private fun transition(
+        start: CoroutineStart = CoroutineStart.DEFAULT,
+        block: suspend () -> Unit,
+    ) {
+        navigationScope.launch(start = start) {
+            settling++
+            try {
+                ime.settle()
+            } finally {
+                settling--
+            }
+            block()
+        }
+    }
+
     override fun closeDrawer() {
         navigationScope.launch { drawerState.close() }
     }
@@ -69,8 +121,7 @@ class Nav(
     }
 
     override fun nav(route: Route) {
-        navigationScope.launch {
-            ime.settle()
+        transition {
             if (getRouteWithArguments(route::class, controller) != route) {
                 controller.navigate(route)
             }
@@ -78,8 +129,7 @@ class Nav(
     }
 
     override fun nav(computeRoute: suspend () -> Route?) {
-        navigationScope.launch {
-            ime.settle()
+        transition {
             val route = computeRoute()
             if (route != null && getRouteWithArguments(route::class, controller) != route) {
                 controller.navigate(route)
@@ -88,8 +138,7 @@ class Nav(
     }
 
     override fun newStack(route: Route) {
-        navigationScope.launch {
-            ime.settle()
+        transition {
             controller.navigate(route) {
                 popUpTo(route) {
                     inclusive = true
@@ -100,8 +149,7 @@ class Nav(
     }
 
     override fun navBottomBar(route: Route) {
-        navigationScope.launch {
-            ime.settle()
+        transition {
             controller.navigate(route) {
                 // Clear sibling bottom-nav entries but keep Home (the start
                 // destination) below, so back-swipe from any tab returns to
@@ -180,8 +228,10 @@ class Nav(
     }
 
     override fun popBack() {
-        navigationScope.launch {
-            ime.settle()
+        // Undispatched so a back with a settled keyboard commits on the caller's own message —
+        // see [transition]. Every call site is an event callback (top bar, BackHandler, dialog
+        // dismissal), never a composable body, so there is no composition to run inside.
+        transition(CoroutineStart.UNDISPATCHED) {
             controller.navigateUp()
         }
     }
@@ -191,8 +241,7 @@ class Nav(
         route: Route,
         klass: KClass<T>,
     ) {
-        navigationScope.launch {
-            ime.settle()
+        transition {
             controller.navigate(route) {
                 popUpTo(klass) { inclusive = true }
             }
