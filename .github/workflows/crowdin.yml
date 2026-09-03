@@ -50,6 +50,35 @@ jobs:
       - name: Fix ownership after Crowdin Docker action
         run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
 
+      # Both files in crowdin.yml are declared `type: android`, so Crowdin's Android
+      # serializer escapes apostrophes on the way down: `l'URL` comes back as `l\'URL`.
+      # That is correct for amethyst/src/main/res/, which aapt un-escapes at build time,
+      # and WRONG for commons/.../composeResources/, where Compose resolves only \uXXXX,
+      # \n and \t and leaves \' \" \? \@ alone -- so the backslash reaches the screen.
+      #
+      # Without this step every sync reopens the same regression and CI's
+      # compose_escaping_check.py fails on the bot's own PR. It happened three times
+      # (f9baab0e, 1685d7c0, e223d505 -- 2,888 occurrences across 40 locales the last
+      # time) before this step existed. Convert on the way in, so the PR is born clean.
+      #
+      # Only the Compose catalog is passed in; the Android res tree keeps its escaping.
+      # --no-unwrap-quotes is mandatory here: escape conversion is idempotent but
+      # quote-unwrapping is not, and a second unwrap would strip the real display quotes
+      # from values like import_follows_tips.
+      - name: Convert Android escaping to Compose escaping in the shared catalog
+        run: |
+          python3 tools/strings-migrate/fix_escapes.py --no-unwrap-quotes \
+              commons/src/commonMain/composeResources
+
+      # Assert the conversion actually satisfied the check that guards main, so a case
+      # the converter cannot repair fails the sync loudly here instead of opening a red
+      # PR. Known gap if this ever trips: fix_escapes.py only rewrites text inside
+      # <string>/<item> elements, while the check scans the whole file -- an escape in an
+      # XML comment (comments do propagate into the locale files) has to be fixed at the
+      # source string in commons/.../composeResources/values/strings.xml by hand.
+      - name: Verify the shared catalog is free of Android-only escaping
+        run: .claude/hooks/compose_escaping_check.py
+
       # Keep docs/changelog/translators.json seeded with everyone who has translated
       # recently, so the per-release `## Translations` credits (scripts/translators.sh)
       # can resolve them to npubs. Only adds rows when a genuinely new contributor
