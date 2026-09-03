@@ -60,6 +60,11 @@ data class UiSettings(
     // on-chain rail in the Send Payment screen. Defaults to true (shown) so the
     // behavior is unchanged for everyone who doesn't turn it off.
     val showOnchainWallet: Boolean = true,
+    // Whether the zap picker offers a NIP-A3 pay-to hand-off chip when the sender
+    // and recipient share a payment protocol. Defaults to false: those targets can
+    // be bank or Venmo handles carrying legal names, and this puts them one tap
+    // from every note in the feed.
+    val showPayToZapChip: Boolean = true,
 )
 
 enum class ThemeType(

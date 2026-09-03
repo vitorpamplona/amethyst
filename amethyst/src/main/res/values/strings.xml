@@ -877,6 +877,10 @@
     <string name="payment_targets_section_explainer">Add payment addresses for different networks (e.g. bitcoin, lightning, ethereum).</string>
     <string name="no_payment_app_found">No app found to handle this payment. Please install a compatible wallet.</string>
     <string name="no_payment_app_found_for_type">No app installed to handle %1$s payments. Please install a compatible wallet.</string>
+    <string name="payto_amount_set_in_app">Pay in %1$s — you choose the amount there</string>
+    <string name="zap_payto_section">Pay-to hand-off</string>
+    <string name="zap_payto_section_explainer">When the author publishes a payment method an app on this phone can open (Venmo, Monero, an IBAN…), the zap picker can offer it. Tapping opens that app, which asks for the amount — nothing is published to relays, so the note\'s zap count does not change.</string>
+    <string name="zap_payto_toggle">Offer the author\'s payment methods</string>
     <string name="error_dialog_payment_error">Unable to open payment</string>
 
     <string name="bolt12_offers">BOLT12 Offers</string>
@@ -1306,7 +1310,7 @@
     <string name="ui_preferences_search_keywords" translatable="false">dark mode, light mode, theme, font size, language, appearance</string>
     <string name="notification_settings_search_keywords" translatable="false">push, alerts, sounds, vibration</string>
     <string name="security_filters_search_keywords" translatable="false">spam, block, mute, filter, warnings</string>
-    <string name="zaps_search_keywords" translatable="false">lightning, sats, tips, wallet, amount</string>
+    <string name="zaps_search_keywords" translatable="false">lightning, sats, tips, wallet, amount, payto, pay-to, venmo, paypal, cash app, monero, iban, hand-off</string>
     <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage</string>
     <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
     <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>

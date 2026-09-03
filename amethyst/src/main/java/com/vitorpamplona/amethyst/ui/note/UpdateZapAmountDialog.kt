@@ -33,6 +33,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -55,6 +56,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -338,6 +340,38 @@ fun UpdateZapAmountContent(
                 options = zapOptions,
                 onSelect = { postViewModel.selectedZapType = zapTypes[it].first },
                 modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        // ── Section 3: Pay-to hand-off ───────────────────────────────────────
+
+        Text(
+            text = stringRes(R.string.zap_payto_section),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = SettingsCategorySpacingModifier,
+        )
+        Text(
+            text = stringRes(R.string.zap_payto_section_explainer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { postViewModel.showPayToChip = !postViewModel.showPayToChip },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringRes(R.string.zap_payto_toggle),
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = postViewModel.showPayToChip,
+                onCheckedChange = { postViewModel.showPayToChip = it },
             )
         }
 

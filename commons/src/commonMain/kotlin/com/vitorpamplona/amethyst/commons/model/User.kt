@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserCards
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
@@ -80,6 +82,8 @@ class User(
 
     val bolt12OfferListNote: Note = context.addressableNote(Bolt12OfferListEvent.createAddress(pubkeyHex))
 
+    val paymentTargetsNote: Note = context.addressableNote(PaymentTargetsEvent.createAddress(pubkeyHex))
+
     // These objects are designed to keep the cache
     // while this user obj is being used anywhere.
     //
@@ -115,6 +119,12 @@ class User(
     fun authorRelayList() = nip65RelayListNote.event as? AdvertisedRelayListEvent
 
     fun nutzapInfo() = nutzapInfoNote.event as? NutzapInfoEvent
+
+    /** This user's published NIP-A3 payment targets (kind:10133), or null if none seen. */
+    fun paymentTargetsEvent() = paymentTargetsNote.event as? PaymentTargetsEvent
+
+    /** The `payto` targets this user publishes, empty when none. */
+    fun paymentTargets(): List<PaymentTarget> = paymentTargetsEvent()?.paymentTargets().orEmpty()
 
     /** This user's published BOLT12 offer list (NIP-B1 kind 10058), or null if none seen. */
     fun bolt12OfferList() = bolt12OfferListNote.event as? Bolt12OfferListEvent

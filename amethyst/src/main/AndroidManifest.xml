@@ -16,6 +16,69 @@
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
+
+        <!-- NIP-A3 payment targets. Android 11+ package visibility means
+             queryIntentActivities returns NOTHING for a scheme not declared here,
+             so without these the zap picker's pay-to chip is invisible on every
+             modern device. Specific <intent> filters rather than
+             QUERY_ALL_PACKAGES, which is policy-restricted on Play.
+             Unknown target types all fall back to payto://<type>/<authority>,
+             so the single payto entry covers the open-ended tail.
+             No <category>: a category here narrows visibility the same way it
+             narrows an intent match, and would hide any app whose filter declares
+             only DEFAULT - which is what our ACTION_VIEW hand-off actually uses. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="payto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="bitcoin" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="lightning" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="liquidnetwork" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="ethereum" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="monero" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="dash" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="zcash" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="bitcoincash" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="litecoin" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="dogecoin" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="solana" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="tron" />
+        </intent>
     </queries>
 
 

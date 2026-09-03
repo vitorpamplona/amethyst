@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
@@ -42,6 +43,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -59,6 +61,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -93,8 +96,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -118,6 +123,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.fork
 import com.vitorpamplona.amethyst.commons.resources.nutzap
@@ -134,6 +140,7 @@ import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
 import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
@@ -153,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
@@ -160,6 +168,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.paymentTargetStyleFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -197,6 +206,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -216,6 +226,7 @@ import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlin.math.roundToInt
 import kotlin.uuid.ExperimentalUuidApi
@@ -2125,6 +2136,27 @@ fun observeZapRailCapability(
     val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
         .collectAsStateWithLifecycle()
 
+    // Pay-to hand-off inputs. Same "read only to drive the recompute" contract as
+    // the four above: the recipient's kind:10133 already rides in
+    // UserMetadataForKeyKinds beside kind:0, so observing it here costs no extra
+    // round-trip and only says *when* to re-run the resolver.
+    val showPayToChip by accountViewModel.settings.uiSettingsFlow.showPayToZapChip
+        .collectAsStateWithLifecycle()
+    val recipientPayTo = author?.let { observeNoteEvent<PaymentTargetsEvent>(it.paymentTargetsNote, accountViewModel).value }
+    val payToApps by PayToAppAvailability.flow.collectAsStateWithLifecycle()
+
+    // The probe set is this one author's target list — a handful of entries, and
+    // only for the author whose picker is open. It runs when the picker opens,
+    // never while scrolling.
+    val context = LocalContext.current
+    val iconPx = with(LocalDensity.current) { PayToIconSize.roundToPx() }
+    LaunchedEffect(recipientPayTo, showPayToChip) {
+        val targets = recipientPayTo?.paymentTargets().orEmpty()
+        if (showPayToChip && targets.isNotEmpty()) {
+            withContext(Dispatchers.IO) { PayToAppAvailability.warm(context, targets, iconPx) }
+        }
+    }
+
     // Our own on-chain balance, so an amount we can't fund isn't offered at all.
     // Cached account-wide and refreshed at most once a minute, so opening the
     // picker again is instant; while it is still unknown (first open, explorer
@@ -2136,8 +2168,19 @@ fun observeZapRailCapability(
     }
     val onchainFunds by onchainWallet.funds.collectAsStateWithLifecycle()
 
-    return remember(baseNote, onchainEnabled, onchainFunds, cashuMints, cashuEntries, recipientInfo, nutzapInfo) {
-        val rc = RailCapabilityResolver.peek(baseNote, cashuState)
+    return remember(
+        baseNote,
+        onchainEnabled,
+        onchainFunds,
+        cashuMints,
+        cashuEntries,
+        recipientInfo,
+        nutzapInfo,
+        showPayToChip,
+        recipientPayTo,
+        payToApps,
+    ) {
+        val rc = RailCapabilityResolver.peek(baseNote, cashuState, showPayToChip)
         if (onchainEnabled) {
             rc.copy(onchainMaxSpendableSats = onchainFunds?.maxSpendableSats)
         } else {
@@ -2274,6 +2317,9 @@ fun ZapAmountChoicePopup(
                     visibilityState.targetState = false
                 },
                 onChangeAmount = onChangeAmount,
+                // The hand-off sends the user to another app; leaving the popup
+                // stacked behind it would be waiting for a tap that never comes.
+                onHandedOff = { visibilityState.targetState = false },
             )
         }
     }
@@ -2289,6 +2335,7 @@ fun ZapAmountChoicePopupContent(
     onOnchainAmount: (Long?) -> Unit,
     onChangeAmount: () -> Unit,
     onReloadNutzap: (Long) -> Unit = {},
+    onHandedOff: () -> Unit = {},
 ) {
     Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
@@ -2304,6 +2351,7 @@ fun ZapAmountChoicePopupContent(
                 onOnchainAmount = onOnchainAmount,
                 onChangeAmount = onChangeAmount,
                 onReloadNutzap = onReloadNutzap,
+                onHandedOff = onHandedOff,
             )
         }
     }
@@ -2324,6 +2372,7 @@ fun ZapAmountChoiceGrid(
     onOnchainAmount: (Long?) -> Unit,
     onChangeAmount: () -> Unit,
     onReloadNutzap: (Long) -> Unit = {},
+    onHandedOff: () -> Unit = {},
 ) {
     FlowRow(
         modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
@@ -2342,6 +2391,14 @@ fun ZapAmountChoiceGrid(
                 onChangeAmount = onChangeAmount,
             )
         }
+        // Rendered once, beside the amount pills rather than inside each one's rail
+        // toggle: it carries no amount, so repeating it per preset would say the
+        // same thing four times — and keeping it out of the toggle leaves ZapRail a
+        // plain enum instead of a data-carrying sealed interface.
+        railCapability.payToTargets.forEach { target ->
+            PayToHandoffChip(target = target, onHandedOff = onHandedOff)
+        }
+
         ClickableBox(
             modifier =
                 Modifier
@@ -2356,6 +2413,122 @@ fun ZapAmountChoiceGrid(
                 modifier = Size18Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
+        }
+    }
+}
+
+/** The size the hand-off mark draws at, and the size its bitmap is decoded to. */
+internal val PayToIconSize = 18.dp
+
+/**
+ * The NIP-A3 hand-off chip: pay this person through a protocol you both publish,
+ * in the app that owns it.
+ *
+ * Three things deliberately set it apart from the amount pills beside it, because
+ * it is not a zap and must not read as one:
+ *  - **No amount.** Presets are sats and there is no rate to turn them into a
+ *    Venmo or IBAN figure, so no number is shown and no RFC-8905 `amount=` is
+ *    emitted — the receiving app asks.
+ *  - **[MaterialSymbols.OpenInNew], not the send arrow** every amount segment
+ *    ends in. This leaves Amethyst.
+ *  - **No zap receipt.** Nothing is published, so the note's zap counter will not
+ *    move. Nothing here touches the zap progress state.
+ *
+ * The mark is the installed app's own icon when one app owns the URI — the same
+ * `ResolveInfo` the availability probe already keeps — masked round the way a
+ * launcher draws it. It falls back to the brand-coloured glyph
+ * [paymentTargetStyleFor] already assigns when the hand-off would open a chooser
+ * or merely a browser.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PayToHandoffChip(
+    target: PaymentTarget,
+    onHandedOff: () -> Unit,
+) {
+    val style = remember(target.type) { paymentTargetStyleFor(target.type) }
+    val uri = remember(target) { PaymentTargetTypes.uriFor(target.type, target.authority) }
+
+    // Collected, not peeked once: a web target is offered before the probe has run
+    // (any browser opens https), so a snapshot taken at first composition would pin
+    // the fallback glyph and the real app icon would never arrive until the picker
+    // was closed and reopened.
+    val apps by PayToAppAvailability.flow.collectAsStateWithLifecycle()
+    val app = remember(apps, target.type) { apps[PaymentTargetTypes.probeKeyFor(target.type)] }
+
+    val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val copiedMessage = stringRes(R.string.copied_to_clipboard)
+    val noAppMessage = stringRes(R.string.no_payment_app_found_for_type, style.label)
+    val amountElsewhere = stringRes(R.string.payto_amount_set_in_app, app?.label ?: style.label)
+
+    Surface(
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(3.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            Row(
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .combinedClickable(
+                            onClickLabel = amountElsewhere,
+                            onClick = {
+                                // The probe can go stale between warming and this tap
+                                // (the app was uninstalled), so keep the catch.
+                                runCatching { uriHandler.openUri(uri) }
+                                    .onSuccess { onHandedOff() }
+                                    .onFailure { Toast.makeText(context, noAppMessage, Toast.LENGTH_SHORT).show() }
+                            },
+                            // NOT onChangeAmount: a sat-preset editor means nothing
+                            // here. Copies the authority, like the profile chip does.
+                            onLongClick = {
+                                scope.launch {
+                                    clipboard.setText(target.authority)
+                                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                        ).padding(horizontal = 8.dp, vertical = 5.dp),
+                verticalAlignment = CenterVertically,
+            ) {
+                val icon = app?.icon
+                if (icon != null) {
+                    Image(
+                        bitmap = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(PayToIconSize).clip(CircleShape),
+                    )
+                } else {
+                    Icon(
+                        symbol = style.symbol,
+                        contentDescription = null,
+                        tint = style.color,
+                        modifier = Modifier.size(PayToIconSize),
+                    )
+                }
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = style.label,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.width(3.dp))
+                Icon(
+                    symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
         }
     }
 }
@@ -2624,6 +2797,24 @@ fun ZapAmountChoicePopupPreview() {
             ZapChipPreviewRow(
                 "Reload (funds split across mints)",
                 RailCapability(hasCashu = true, hasLightning = true, hasOnchain = true, cashuBestSingleMintSats = 10L, cashuTotalWalletSats = 1_000_000L),
+                amounts,
+            )
+            // The pay-to hand-off sits beside the amount pills, not inside them, so
+            // it renders once however many presets there are. No app is installed in
+            // a preview, so this also shows the brand-coloured glyph fallback the
+            // chip uses when no single app owns the URI.
+            ZapChipPreviewRow(
+                "Lightning + two pay-to hand-offs",
+                RailCapability(
+                    hasCashu = false,
+                    hasLightning = true,
+                    hasOnchain = false,
+                    payToTargets =
+                        listOf(
+                            PaymentTarget("venmo", "vitorpamplona"),
+                            PaymentTarget("monero", "4AdUndXHHZ6cfufTMvppY6JwXNouMBzSkbLYfpAV5Usx3skxNgYeYTRJ5AmD9"),
+                        ),
+                ),
                 amounts,
             )
         }

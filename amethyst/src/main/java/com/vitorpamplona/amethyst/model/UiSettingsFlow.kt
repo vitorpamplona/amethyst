@@ -56,6 +56,7 @@ class UiSettingsFlow(
     val fontSize: MutableStateFlow<FontSizeType> = MutableStateFlow(FontSizeType.NORMAL),
     val composeSignature: MutableStateFlow<String> = MutableStateFlow(""),
     val showOnchainWallet: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -88,6 +89,7 @@ class UiSettingsFlow(
             fontSize,
             composeSignature,
             showOnchainWallet,
+            showPayToZapChip,
         )
 
     // emits at every change in any of the propertyes.
@@ -124,6 +126,7 @@ class UiSettingsFlow(
                 flows[26] as FontSizeType,
                 flows[27] as String,
                 flows[28] as Boolean,
+                flows[29] as Boolean,
             )
         }
 
@@ -158,6 +161,7 @@ class UiSettingsFlow(
             fontSize.value,
             composeSignature.value,
             showOnchainWallet.value,
+            showPayToZapChip.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -279,6 +283,10 @@ class UiSettingsFlow(
             showOnchainWallet.tryEmit(torSettings.showOnchainWallet)
             any = true
         }
+        if (showPayToZapChip.value != torSettings.showPayToZapChip) {
+            showPayToZapChip.tryEmit(torSettings.showPayToZapChip)
+            any = true
+        }
 
         return any
     }
@@ -333,6 +341,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.fontSize),
                 MutableStateFlow(uiSettings.composeSignature),
                 MutableStateFlow(uiSettings.showOnchainWallet),
+                MutableStateFlow(uiSettings.showPayToZapChip),
             )
     }
 }

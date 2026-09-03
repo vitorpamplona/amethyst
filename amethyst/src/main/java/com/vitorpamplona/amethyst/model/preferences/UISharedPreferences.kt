@@ -147,6 +147,7 @@ class UiSharedPreferences(
         val UI_FONT_SIZE = stringPreferencesKey("ui.font_size")
         val UI_COMPOSE_SIGNATURE = stringPreferencesKey("ui.compose_signature")
         val UI_SHOW_ONCHAIN_WALLET = booleanPreferencesKey("ui.show_onchain_wallet")
+        val UI_SHOW_PAYTO_ZAP_CHIP = booleanPreferencesKey("ui.show_payto_zap_chip")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -188,6 +189,7 @@ class UiSharedPreferences(
                     fontSize = preferences[UI_FONT_SIZE]?.let { FontSizeType.valueOf(it) } ?: FontSizeType.NORMAL,
                     composeSignature = preferences[UI_COMPOSE_SIGNATURE] ?: "",
                     showOnchainWallet = preferences[UI_SHOW_ONCHAIN_WALLET] ?: true,
+                    showPayToZapChip = preferences[UI_SHOW_PAYTO_ZAP_CHIP] ?: true,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -241,6 +243,7 @@ class UiSharedPreferences(
                     preferences[UI_FONT_SIZE] = sharedSettings.fontSize.name
                     preferences[UI_COMPOSE_SIGNATURE] = sharedSettings.composeSignature
                     preferences[UI_SHOW_ONCHAIN_WALLET] = sharedSettings.showOnchainWallet
+                    preferences[UI_SHOW_PAYTO_ZAP_CHIP] = sharedSettings.showPayToZapChip
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

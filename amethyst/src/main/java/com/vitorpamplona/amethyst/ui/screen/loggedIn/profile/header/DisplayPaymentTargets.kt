@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -39,13 +40,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 
-/** Lightning-family target types Amethyst can pay in-app through the Send Payment screen. */
-private val LIGHTNING_TARGET_TYPES = setOf("lightning", "ln", "lnurl")
-
-/** Bitcoin-family target types the in-app on-chain wallet can pay directly. */
-private val BITCOIN_TARGET_TYPES = setOf("bitcoin", "btc", "onchain")
-
-fun isLightningPaymentTarget(rawType: String): Boolean = rawType.trim().lowercase() in LIGHTNING_TARGET_TYPES
+fun isLightningPaymentTarget(rawType: String): Boolean = rawType.trim().lowercase() in PaymentTargetTypes.LIGHTNING_TYPES
 
 /**
  * Route into the in-app Send Payment screen when one of the user's wallets can
@@ -61,10 +56,10 @@ fun inAppPaymentRouteFor(
 ): Route.SendPayment? {
     val type = target.type.trim().lowercase()
     return when {
-        type in LIGHTNING_TARGET_TYPES ->
+        type in PaymentTargetTypes.LIGHTNING_TYPES ->
             Route.SendPayment(userHex, ProfilePaymentMethod.LIGHTNING.routeKey, lnAddressOverride = target.authority)
 
-        type in BITCOIN_TARGET_TYPES &&
+        type in PaymentTargetTypes.BITCOIN_TYPES &&
             LocalCache.onchainBackend != null &&
             SegwitAddress.isPayableMainnetAddress(target.authority.trim()) ->
             Route.SendPayment(userHex, ProfilePaymentMethod.ONCHAIN.routeKey, btcAddressOverride = target.authority.trim())
@@ -80,7 +75,7 @@ fun inAppPaymentRouteFor(
  * payment-target dialog so the same pill hands off to the same app wherever
  * it is tapped.
  */
-fun paymentTargetUri(target: PaymentTarget): String = paymentTargetStyleFor(target.type).uriFor(target.authority)
+fun paymentTargetUri(target: PaymentTarget): String = PaymentTargetTypes.uriFor(target.type, target.authority)
 
 /**
  * Chip for a NIP-A3 payment target. Rendered inside [DisplayPaymentRailChips]'s
@@ -108,7 +103,7 @@ fun PaymentTargetChip(
             if (inAppRoute != null) {
                 nav.nav(inAppRoute)
             } else {
-                runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
+                runCatching { uriHandler.openUri(paymentTargetUri(target)) }
                     .onFailure {
                         accountViewModel.toastManager.toast(
                             R.string.error_dialog_payment_error,
@@ -150,52 +145,51 @@ fun PaymentTargetPill(
     }
 }
 
-private data class PaymentTargetStyle(
+data class PaymentTargetStyle(
     val symbol: MaterialSymbol,
     val color: Color,
     val label: String,
-    val uriFor: (String) -> String,
 )
 
-private fun paymentTargetStyleFor(rawType: String): PaymentTargetStyle {
+fun paymentTargetStyleFor(rawType: String): PaymentTargetStyle {
     val type = rawType.trim().lowercase()
     val walletIcon = MaterialSymbols.AccountBalanceWallet
     return when (type) {
         "bitcoin", "btc", "onchain" ->
-            PaymentTargetStyle(MaterialSymbols.CurrencyBitcoin, BitcoinOrange, "BITCOIN") { "bitcoin:$it" }
+            PaymentTargetStyle(MaterialSymbols.CurrencyBitcoin, BitcoinOrange, "BITCOIN")
         "lightning", "ln" ->
-            PaymentTargetStyle(MaterialSymbols.Bolt, BitcoinOrange, "LIGHTNING") { "lightning:$it" }
+            PaymentTargetStyle(MaterialSymbols.Bolt, BitcoinOrange, "LIGHTNING")
         "lnurl" ->
-            PaymentTargetStyle(MaterialSymbols.Bolt, BitcoinOrange, "LNURL") { "lightning:$it" }
+            PaymentTargetStyle(MaterialSymbols.Bolt, BitcoinOrange, "LNURL")
         "liquid" ->
-            PaymentTargetStyle(MaterialSymbols.CurrencyBitcoin, BitcoinOrange, "LIQUID") { "liquidnetwork:$it" }
+            PaymentTargetStyle(MaterialSymbols.CurrencyBitcoin, BitcoinOrange, "LIQUID")
         "ethereum", "eth" ->
-            PaymentTargetStyle(walletIcon, ETHEREUM_PURPLE, "ETHEREUM") { "ethereum:$it" }
+            PaymentTargetStyle(walletIcon, ETHEREUM_PURPLE, "ETHEREUM")
         "monero", "xmr" ->
-            PaymentTargetStyle(walletIcon, MONERO_ORANGE, "MONERO") { "monero:$it" }
+            PaymentTargetStyle(walletIcon, MONERO_ORANGE, "MONERO")
         "dash" ->
-            PaymentTargetStyle(walletIcon, DASH_BLUE, "DASH") { "dash:$it" }
+            PaymentTargetStyle(walletIcon, DASH_BLUE, "DASH")
         "zcash", "zec" ->
-            PaymentTargetStyle(walletIcon, ZCASH_YELLOW, "ZCASH") { "zcash:$it" }
+            PaymentTargetStyle(walletIcon, ZCASH_YELLOW, "ZCASH")
         "bitcoincash", "bch" ->
-            PaymentTargetStyle(walletIcon, BITCOINCASH_GREEN, "BITCOINCASH") { "bitcoincash:$it" }
+            PaymentTargetStyle(walletIcon, BITCOINCASH_GREEN, "BITCOINCASH")
         "litecoin", "ltc" ->
-            PaymentTargetStyle(walletIcon, LITECOIN_STEEL_BLUE, "LITECOIN") { "litecoin:$it" }
+            PaymentTargetStyle(walletIcon, LITECOIN_STEEL_BLUE, "LITECOIN")
         "dogecoin", "doge" ->
-            PaymentTargetStyle(walletIcon, DOGECOIN_SAND, "DOGECOIN") { "dogecoin:$it" }
+            PaymentTargetStyle(walletIcon, DOGECOIN_SAND, "DOGECOIN")
         "solana", "sol" ->
-            PaymentTargetStyle(walletIcon, SOLANA_PURPLE, "SOLANA") { "solana:$it" }
+            PaymentTargetStyle(walletIcon, SOLANA_PURPLE, "SOLANA")
         "tron", "trx" ->
-            PaymentTargetStyle(walletIcon, TRON_RED, "TRON") { "tron:$it" }
+            PaymentTargetStyle(walletIcon, TRON_RED, "TRON")
         "cashapp" ->
-            PaymentTargetStyle(walletIcon, CASHAPP_LIME, "CASHAPP") { "https://cash.app/$it" }
+            PaymentTargetStyle(walletIcon, CASHAPP_LIME, "CASHAPP")
         "venmo" ->
-            PaymentTargetStyle(walletIcon, VENMO_BLUE, "VENMO") { "https://venmo.com/$it" }
+            PaymentTargetStyle(walletIcon, VENMO_BLUE, "VENMO")
         "paypal" ->
-            PaymentTargetStyle(walletIcon, PAYPAL_DEEP_BLUE, "PAYPAL") { "https://paypal.me/$it" }
+            PaymentTargetStyle(walletIcon, PAYPAL_DEEP_BLUE, "PAYPAL")
         else -> {
             val label = rawType.trim().ifEmpty { "PAY" }.uppercase()
-            PaymentTargetStyle(walletIcon, GENERIC_TARGET_COLOR, label) { "payto://$type/$it" }
+            PaymentTargetStyle(walletIcon, GENERIC_TARGET_COLOR, label)
         }
     }
 }
