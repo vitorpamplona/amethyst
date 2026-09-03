@@ -445,6 +445,12 @@ open class ShortNotePostViewModel :
     private var lastComputedText: String = ""
     private var lastStatusCheckAt: Long = 0
 
+    /** True once a batch is past its debounce and its inferences have reached the model. */
+    private var aiInferenceRunning = false
+
+    /** Newest draft text seen while a batch was running, picked up when that batch ends. */
+    private var aiPendingText: String? = null
+
     /**
      * Whether there is anything to show. The user's preference is watched by the screen so
      * that turning the setting off hides the panel right away.
@@ -505,11 +511,22 @@ open class ShortNotePostViewModel :
         }
         if (text == lastComputedText) return
 
-        val assistant = writingAssistant ?: return
+        if (writingAssistant == null) return
         if (!isAiEnabledInSettings()) return
 
         if (aiStatus !is WritingAssistantStatus.Available) {
             refreshAiStatus()
+            return
+        }
+
+        // An inference that has reached the model cannot be recalled — cancelling its future
+        // is what used to crash the app, so the bridge detaches instead (see GenAiFutures).
+        // Abandoning a running batch would therefore leave seven rewrites burning on-device
+        // compute for text the user has already moved past, and every later keystroke would
+        // stack seven more on top. So only the debounce window is cancellable: once a batch
+        // is under way it is left to finish, and the newest text is picked up when it ends.
+        if (aiInferenceRunning) {
+            aiPendingText = text
             return
         }
 
@@ -521,33 +538,49 @@ open class ShortNotePostViewModel :
             viewModelScope.launch {
                 delay(AI_DEBOUNCE_MS)
 
-                val results =
-                    coroutineScope {
-                        WritingTone.entries
-                            .map { tone ->
-                                async {
-                                    try {
-                                        assistant.transform(text, tone)
-                                    } catch (e: CancellationException) {
-                                        throw e
-                                    } catch (e: Exception) {
-                                        Log.w("ShortNotePostViewModel", "Could not run the $tone rewrite", e)
-                                        null
-                                    }
-                                }
-                            }.awaitAll()
-                            .filterNotNull()
-                            // A model that hands back the input unchanged has nothing to offer.
-                            .filter { it.transformedText.isNotBlank() && it.transformedText != it.originalText }
-                            .associateBy { it.tone }
-                            .toImmutableMap()
-                    }
+                aiInferenceRunning = true
+                try {
+                    runAiBatch(text)
+                } finally {
+                    aiInferenceRunning = false
+                }
 
-                aiResults = results
-                // Only now: a run that was cancelled must not mark this text as done, or
-                // coming back to it would show nothing.
-                lastComputedText = text
+                // The draft moved on while this batch ran: start the next one now.
+                val pending = aiPendingText
+                aiPendingText = null
+                if (pending != null && pending != text) precomputeAiResults()
             }
+    }
+
+    private suspend fun runAiBatch(text: String) {
+        val assistant = writingAssistant ?: return
+
+        val results =
+            coroutineScope {
+                WritingTone.entries
+                    .map { tone ->
+                        async {
+                            try {
+                                assistant.transform(text, tone)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                Log.w("ShortNotePostViewModel", "Could not run the $tone rewrite", e)
+                                null
+                            }
+                        }
+                    }.awaitAll()
+                    .filterNotNull()
+                    // A model that hands back the input unchanged has nothing to offer.
+                    .filter { it.transformedText.isNotBlank() && it.transformedText != it.originalText }
+                    .associateBy { it.tone }
+                    .toImmutableMap()
+            }
+
+        aiResults = results
+        // Only now: a run that was cancelled must not mark this text as done, or
+        // coming back to it would show nothing.
+        lastComputedText = text
     }
 
     fun selectAiResult(tone: WritingTone) {
@@ -574,6 +607,7 @@ open class ShortNotePostViewModel :
     private fun resetAiState() {
         aiComputeJob?.cancel()
         aiComputeJob = null
+        aiPendingText = null
         aiResults = persistentMapOf()
         aiSelectedResult = null
         lastComputedText = ""
