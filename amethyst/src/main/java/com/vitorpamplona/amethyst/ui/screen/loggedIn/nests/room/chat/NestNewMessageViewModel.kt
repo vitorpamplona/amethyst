@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestio
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -242,7 +243,7 @@ open class NestNewMessageViewModel :
                         draftTag.set(oldTag)
                         draftNote = account.getOrCreateDraftNote(oldTag)
                     }
-                    loadFromDraft(innerNote)
+                    onUiThread { loadFromDraft(innerNote) }
                 }
             }
         }
@@ -311,7 +312,7 @@ open class NestNewMessageViewModel :
         val template = createTemplate() ?: return
 
         val draftToDelete = draftNote
-        cancel()
+        onUiThread { cancel() }
 
         // Broadcast to the user's default relays — the nest has no
         // dedicated relay set the way a public-chat channel does, so
@@ -397,7 +398,7 @@ open class NestNewMessageViewModel :
                         }
                     }
 
-                message.insertUrlAtCursor(urls.joinToString(" "))
+                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
                 urlPreview = findUrlInMessage()
 
                 uploadState.reset()

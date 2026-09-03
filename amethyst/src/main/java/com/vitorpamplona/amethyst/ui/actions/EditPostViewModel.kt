@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
@@ -150,7 +151,7 @@ open class EditPostViewModel : ViewModel() {
             extraNotesToBroadcast,
         )
 
-        cancel()
+        onUiThread { cancel() }
     }
 
     open fun updateSubject(it: TextFieldValue) {
@@ -250,7 +251,7 @@ open class EditPostViewModel : ViewModel() {
                             }
                         }
 
-                    message.insertUrlAtCursor(urls.joinToString(" "))
+                    onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
                     urlPreview = findUrlInMessage()
 
                     this@EditPostViewModel.multiOrchestrator = null

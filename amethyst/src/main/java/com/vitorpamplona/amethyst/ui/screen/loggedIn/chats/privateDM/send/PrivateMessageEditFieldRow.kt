@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.recipient_missing_dm_relays
 import com.vitorpamplona.amethyst.commons.resources.retry_without_encryption
 import com.vitorpamplona.amethyst.commons.resources.upload_without_encryption_warning
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -122,7 +123,7 @@ fun PrivateMessageEditFieldRow(
                 // synchronously here (before launchSigner runs) would make sendDraftSync
                 // persist under a freshly-rotated tag, duplicating the draft. See the
                 // matching order in NewGroupDMScreen.
-                channelScreenModel.cancel()
+                onUiThread { channelScreenModel.cancel() }
             }
         } else {
             channelScreenModel.cancel()

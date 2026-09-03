@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_caption
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -143,7 +144,7 @@ fun NewPublicMessageScreen(
     BackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
-            postViewModel.cancel()
+            onUiThread { postViewModel.cancel() }
         }
         nav.popBack()
     }
@@ -158,7 +159,7 @@ fun NewPublicMessageScreen(
                     // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
-                        postViewModel.cancel()
+                        onUiThread { postViewModel.cancel() }
                     }
                     nav.popBack()
                 },

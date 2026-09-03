@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
@@ -140,7 +141,7 @@ open class MarmotNewMessageViewModel : ViewModel() {
             replyToInnerAuthorPubKey = parentEvent?.pubKey,
         )
 
-        message.clearText()
+        onUiThread { message.clearText() }
         replyTo.value = null
         userSuggestions?.reset()
     }
