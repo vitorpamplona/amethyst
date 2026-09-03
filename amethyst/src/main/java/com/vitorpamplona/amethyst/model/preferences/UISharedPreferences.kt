@@ -31,7 +31,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -112,12 +111,18 @@ class UiSharedPreferences(
      * than YES/NO onto `Configuration.UI_MODE_NIGHT_UNDEFINED`, which clears the override and lets
      * the app fall back to the device configuration.
      *
-     * Deduplicated against the last mode this app successfully applied, because the call is a
-     * Binder round trip that pushes a configuration change into every running activity of the
-     * package. The applied value is recorded only after the call returns, so a failure is retried
-     * on the next launch rather than being remembered as done. MainActivity declares `uiMode` in
-     * its `configChanges`, so the resulting change is delivered to `onConfigurationChanged` and
-     * does not recreate the activity.
+     * Not deduplicated, deliberately. There is no public getter for the per-application override,
+     * so the only way to skip a repeat call would be to shadow it in our own store -- a cache of
+     * state we do not own, which goes stale silently and takes the splash with it. Re-sending the
+     * value on every launch is self-healing instead, and the platform already no-ops the expensive
+     * half: PackageConfigPersister.updateFromImpl returns early without writing when the mode is
+     * unchanged, and ActivityRecord.applyAppSpecificConfig gates the activity reconfiguration on
+     * having actually changed. What remains is one Binder round trip per launch, off the main
+     * thread. (This is why the deduplication in applyLanguage below does not generalise here: it
+     * compares against getApplicationLocales(), the authoritative value, not a private copy.)
+     *
+     * MainActivity declares `uiMode` in its `configChanges`, so any change that does result is
+     * delivered to `onConfigurationChanged` rather than recreating the activity.
      */
     private suspend fun applyNightMode(theme: ThemeType) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
@@ -129,11 +134,8 @@ class UiSharedPreferences(
                 ThemeType.SYSTEM -> UiModeManager.MODE_NIGHT_AUTO
             }
 
-        if (context.sharedPreferencesDataStore.data.first()[UI_APPLIED_NIGHT_MODE] == mode) return
-
         try {
             context.getSystemService<UiModeManager>()?.setApplicationNightMode(mode)
-            context.sharedPreferencesDataStore.edit { it[UI_APPLIED_NIGHT_MODE] = mode }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -212,14 +214,6 @@ class UiSharedPreferences(
         val UI_FONT_SIZE = stringPreferencesKey("ui.font_size")
         val UI_COMPOSE_SIGNATURE = stringPreferencesKey("ui.compose_signature")
         val UI_SHOW_ONCHAIN_WALLET = booleanPreferencesKey("ui.show_onchain_wallet")
-
-        /**
-         * Bookkeeping for [applyNightMode], not a user setting: the per-application night mode
-         * this app last handed to UiModeManager. The system persists its own copy until the app
-         * is uninstalled or its data cleared -- which also clears this store, so the two stay in
-         * step. Deliberately kept out of [UiSettings] so it is not part of the settings model.
-         */
-        val UI_APPLIED_NIGHT_MODE = intPreferencesKey("ui.applied_night_mode")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
