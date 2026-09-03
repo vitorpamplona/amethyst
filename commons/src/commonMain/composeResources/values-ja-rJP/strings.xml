@@ -874,7 +874,7 @@
     <string name="community_no_descriptor">このコミュニティには説明がありません。追加するには管理者に相談してください</string>
     <string name="user_preferences">ユーザー設定</string>
     <string name="settings_search_placeholder">設定を検索</string>
-    <string name="settings_search_no_results">\"%1$s\" に一致する設定は見つかりませんでした</string>
+    <string name="settings_search_no_results">"%1$s" に一致する設定は見つかりませんでした</string>
     <string name="reset_marmot_confirm_title">Marmot 状態をリセットしますか？</string>
     <string name="reset_marmot_confirm_body">これにより、現在のアカウントのこのデバイス上のすべての Marmot グループチャット、メッセージ履歴、および MLS キーが完全に削除されます。ピアには通知されず、次のコミットまであなたをグループ内で確認できる場合があります。この操作は元に戻せません。アプリが次回同期するときに新しい KeyPackage が公開されます。</string>
     <string name="reset_marmot_confirm_action">リセット</string>
@@ -1188,7 +1188,7 @@
     <string name="calendar_untitled">（タイトルなし）</string>
     <string name="calendar_all_day">終日</string>
     <string name="calendar_rsvp_going_prefixed">✓ 参加する</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? 未定</string>
+    <string name="calendar_rsvp_maybe_prefixed">? 未定</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ 参加できない</string>
     <string name="calendar_collection_title">タイトル</string>
     <string name="calendar_collection_description">説明</string>
@@ -1724,8 +1724,8 @@
     <string name="emoji_add_dialog_title">カスタム絵文字を追加する</string>
     <string name="emoji_remove_dialog_title">:%1$s: を削除しますか？</string>
     <string name="emoji_long_press_hint">絵文字を長押しすると削除できます</string>
-    <string name="emoji_pack_is_in_list">\"%1$s\" はあなたの絵文字リストに含まれています</string>
-    <string name="emoji_pack_is_not_in_list">\"%1$s\" はあなたの絵文字リストに含まれていません</string>
+    <string name="emoji_pack_is_in_list">"%1$s" はあなたの絵文字リストに含まれています</string>
+    <string name="emoji_pack_is_not_in_list">"%1$s" はあなたの絵文字リストに含まれていません</string>
     <string name="emoji_pack_actions_dialog_title">絵文字パックの操作</string>
     <string name="emoji_private_toggle">プライベート</string>
     <string name="emoji_private_badge">プライベート絵文字</string>
@@ -1761,7 +1761,7 @@
     <string name="marmot_edit_group_info">グループ情報を編集する</string>
     <string name="marmot_leave_group">グループを退出する</string>
     <string name="marmot_this_group">このグループ</string>
-    <string name="marmot_leave_group_confirm">\"%1$s\" を退出してもよろしいですか？このグループからのメッセージは届かなくなります。</string>
+    <string name="marmot_leave_group_confirm">"%1$s" を退出してもよろしいですか？このグループからのメッセージは届かなくなります。</string>
     <string name="marmot_keypackage_required">追加するには、KeyPackage（kind:30443）を公開している必要があります。</string>
     <string name="marmot_add_to_group">グループに追加する</string>
     <string name="marmot_add_member">メンバーを追加する</string>
@@ -1770,15 +1770,15 @@
     <string name="marmot_member_suffix_you">（あなた）</string>
     <string name="marmot_member_suffix_admin"> - 管理者</string>
     <string name="marmot_remove_member">メンバーを削除する</string>
-    <string name="marmot_remove_member_confirm">\"%1$s\" をこのグループから削除してもよろしいですか？</string>
+    <string name="marmot_remove_member_confirm">"%1$s" をこのグループから削除してもよろしいですか？</string>
     <string name="marmot_grant">付与する</string>
     <string name="marmot_grant_admin_privileges">管理者権限を付与する</string>
     <string name="marmot_grant_admin_title">管理者権限を付与する</string>
-    <string name="marmot_grant_admin_confirm">\"%1$s\" をこのグループの管理者にしますか？管理者はメンバーの追加・削除、グループ情報の変更、他のメンバーへの管理者権限の付与が可能です。</string>
+    <string name="marmot_grant_admin_confirm">"%1$s" をこのグループの管理者にしますか？管理者はメンバーの追加・削除、グループ情報の変更、他のメンバーへの管理者権限の付与が可能です。</string>
     <string name="marmot_revoke">取り消す</string>
     <string name="marmot_revoke_admin_privileges">管理者権限を取り消す</string>
     <string name="marmot_revoke_admin_title">管理者権限を取り消す</string>
-    <string name="marmot_revoke_admin_confirm">\"%1$s\" の管理者権限を取り消しますか？グループのメンバーとしては残ります。</string>
+    <string name="marmot_revoke_admin_confirm">"%1$s" の管理者権限を取り消しますか？グループのメンバーとしては残ります。</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">イベントはまだありません</string>
     <string name="marmot_relay_last_event">最後のイベント%1$s</string>

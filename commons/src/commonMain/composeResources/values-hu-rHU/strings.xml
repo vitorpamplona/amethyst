@@ -827,7 +827,7 @@
     <string name="nest_state_speaking">Most beszéljen</string>
     <string name="nest_state_mic_open">Mikrofon megnyitva</string>
     <string name="nest_leave_host_title">Befejezi ezt a hangszobát?</string>
-    <string name="nest_leave_host_body">Ön a házigazda. A szoba bezárása mindenkit le fog választani. Válassza a \"Csak elhagyás\" lehetőséget, ha később vissza szeretne térni — a szoba 8 óra inaktivitás után automatikusan bezár.</string>
+    <string name="nest_leave_host_body">Ön a házigazda. A szoba bezárása mindenkit le fog választani. Válassza a "Csak elhagyás" lehetőséget, ha később vissza szeretne térni — a szoba 8 óra inaktivitás után automatikusan bezár.</string>
     <string name="nest_leave_host_close">Szoba bezárása</string>
     <string name="nest_leave_host_just_leave">Csak elhagyás</string>
     <string name="nest_live_chip">ÉLŐ</string>
@@ -1511,7 +1511,7 @@
     <string name="relay_group_invite_only_to_post">Ez a csoport csak meghívóval érhető el. Meghívóra van szüksége a közzétételhez.</string>
     <string name="messages_new_message_to">Neki:</string>
     <string name="messages_new_message_subject_caption">A beszélgetés tárgya</string>
-    <string name="messages_new_message_to_caption">\@Felhasználó1, @Felhasználó2, @Felhasználó3</string>
+    <string name="messages_new_message_to_caption">@Felhasználó1, @Felhasználó2, @Felhasználó3</string>
     <string name="messages_group_descriptor">A csoport tagjai</string>
     <string name="messages_new_subject_message">Kifejtés a csoport tagjai számára</string>
     <string name="messages_new_subject_message_placeholder">Név megváltoztatása az új célok érdekében.</string>
@@ -1832,7 +1832,7 @@
     <string name="calendar_untitled">(cím nélküli)</string>
     <string name="calendar_all_day">Egész nap</string>
     <string name="calendar_rsvp_going_prefixed">✓ Ott leszek</string>
-    <string name="calendar_rsvp_maybe_prefixed">\? Talán</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Talán</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Nem leszek ott</string>
     <string name="calendar_collection_title">Cím</string>
     <string name="calendar_collection_description">Leírás</string>
