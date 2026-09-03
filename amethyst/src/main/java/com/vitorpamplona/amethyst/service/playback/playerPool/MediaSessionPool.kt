@@ -215,7 +215,14 @@ class MediaSessionPool(
         try {
             val mediaSession =
                 MediaSession
-                    .Builder(context, player)
+                    // appContext, not the caller's: the platform MediaSession reads its metadata
+                    // bitmap ceiling off the resources of whatever context builds it, and
+                    // mediaMetadataBitmapMaxSize() below caps artwork using the app context's. A
+                    // context on a different configuration (a resized window, a secondary display)
+                    // would set a smaller ceiling than the cap, putting the framework back into
+                    // scaling artwork it was handed. It also keeps a pooled, long-lived session
+                    // from holding on to an Activity.
+                    .Builder(appContext, player)
                     .apply {
                         setBitmapLoader(sharedBitmapLoader)
                         setId(id)

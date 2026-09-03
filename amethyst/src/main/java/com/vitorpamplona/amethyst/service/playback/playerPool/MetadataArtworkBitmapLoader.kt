@@ -50,6 +50,10 @@ import com.google.common.util.concurrent.MoreExecutors
  * [maxDimensionPx] is a lambda rather than a constant because the limit is a dp value: it changes
  * with the display density, and the app survives density changes without restarting.
  *
+ * [delegate] must decode a fresh bitmap per request and keep no reference to it — caps free the
+ * pre-scale original. media3's own caching wrapper sits above this loader, not below it, so the
+ * bitmap handed out here is the only one that outlives the call.
+ *
  * loadBitmapFromMetadata is deliberately not overridden — [BitmapLoader]'s default implementation
  * routes back through [decodeBitmap]/[loadBitmap] here, while delegating it would call the same two
  * methods on the delegate and skip the cap.
@@ -78,7 +82,14 @@ class MetadataArtworkBitmapLoader(
 
 private fun Bitmap.capTo(maxDimension: Int): Bitmap {
     val target = fitArtworkWithin(width, height, maxDimension) ?: return this
-    return scale(target.width, target.height)
+    val scaled = scale(target.width, target.height)
+    // The pre-scale bitmap is ours alone (see the delegate contract above) and, because the decoder
+    // is allowed to overshoot the cap to keep the subsampling close to it, holds up to 4x the pixels
+    // of the copy. Freeing it here rather than waiting for the collector keeps that overshoot from
+    // stacking up on the decoder thread. Bitmap.scale hands back the source when nothing changed, so
+    // only a real copy makes the original garbage.
+    if (scaled !== this) recycle()
+    return scaled
 }
 
 /** The size a [width] x [height] bitmap is scaled to, or null when it already fits. */
