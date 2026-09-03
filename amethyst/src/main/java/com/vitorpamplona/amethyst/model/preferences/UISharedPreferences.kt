@@ -20,14 +20,18 @@
  */
 package com.vitorpamplona.amethyst.model.preferences
 
+import android.app.UiModeManager
 import android.content.Context
+import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Stable
+import androidx.core.content.getSystemService
 import androidx.core.os.LocaleListCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -75,6 +79,67 @@ class UiSharedPreferences(
                 SharingStarted.Eagerly,
                 value.toSettings(),
             )
+
+    val nightModeUpdate =
+        value.theme
+            .onEach { theme -> applyNightMode(theme) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                prefs.theme,
+            )
+
+    /**
+     * Mirrors the in-app theme choice into the system's *per-application* night mode, so the
+     * launch splash agrees with a theme that is pinned against the phone's own light/dark setting.
+     *
+     * The system composites the splash from the manifest theme before the process starts, resolving
+     * it against this app's configuration -- so day/night resource qualifiers alone can only ever
+     * follow the phone. [UiModeManager.setApplicationNightMode] commits a *persisted per-package
+     * configuration override* (UiModeManagerService hands it to
+     * ActivityTaskManagerInternal.PackageConfigurationUpdater), which the system then applies when
+     * it launches the app. That is what carries a pinned LIGHT/DARK choice into the splash, from
+     * the next cold start onwards -- the current launch is already painted.
+     *
+     * This is deliberately [UiModeManager.setApplicationNightMode] and not
+     * [UiModeManager.setNightMode]: the latter changes the night mode for every app on the device
+     * and is gated behind MODIFY_DAY_NIGHT_MODE, which this app does not hold -- that call was a
+     * silent no-op and was removed. The per-application setter is the documented app-local
+     * alternative and is not permission-checked; UiModeManagerService only validates the argument.
+     *
+     * MODE_NIGHT_AUTO is how [ThemeType.SYSTEM] is expressed: the service maps everything other
+     * than YES/NO onto `Configuration.UI_MODE_NIGHT_UNDEFINED`, which clears the override and lets
+     * the app fall back to the device configuration.
+     *
+     * Deduplicated against the last mode this app successfully applied, because the call is a
+     * Binder round trip that pushes a configuration change into every running activity of the
+     * package. The applied value is recorded only after the call returns, so a failure is retried
+     * on the next launch rather than being remembered as done. MainActivity declares `uiMode` in
+     * its `configChanges`, so the resulting change is delivered to `onConfigurationChanged` and
+     * does not recreate the activity.
+     */
+    private suspend fun applyNightMode(theme: ThemeType) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+
+        val mode =
+            when (theme) {
+                ThemeType.DARK -> UiModeManager.MODE_NIGHT_YES
+                ThemeType.LIGHT -> UiModeManager.MODE_NIGHT_NO
+                ThemeType.SYSTEM -> UiModeManager.MODE_NIGHT_AUTO
+            }
+
+        if (context.sharedPreferencesDataStore.data.first()[UI_APPLIED_NIGHT_MODE] == mode) return
+
+        try {
+            context.getSystemService<UiModeManager>()?.setApplicationNightMode(mode)
+            context.sharedPreferencesDataStore.edit { it[UI_APPLIED_NIGHT_MODE] = mode }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("UiSharedPreferences", "Could not apply the per-application night mode", e)
+        }
+    }
 
     /**
      * Pushes the preferred language into AppCompat, skipping the call when the app already
@@ -147,6 +212,14 @@ class UiSharedPreferences(
         val UI_FONT_SIZE = stringPreferencesKey("ui.font_size")
         val UI_COMPOSE_SIGNATURE = stringPreferencesKey("ui.compose_signature")
         val UI_SHOW_ONCHAIN_WALLET = booleanPreferencesKey("ui.show_onchain_wallet")
+
+        /**
+         * Bookkeeping for [applyNightMode], not a user setting: the per-application night mode
+         * this app last handed to UiModeManager. The system persists its own copy until the app
+         * is uninstalled or its data cleared -- which also clears this store, so the two stay in
+         * step. Deliberately kept out of [UiSettings] so it is not part of the settings model.
+         */
+        val UI_APPLIED_NIGHT_MODE = intPreferencesKey("ui.applied_night_mode")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
