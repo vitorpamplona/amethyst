@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -335,7 +336,7 @@ class ChatNewMessageViewModel :
                         draftTag.set(oldTag)
                         draftNote = account.getOrCreateDraftNote(oldTag)
                     }
-                    loadFromDraft(innerNote)
+                    onUiThread { loadFromDraft(innerNote) }
                 }
             }
         }
@@ -428,7 +429,7 @@ class ChatNewMessageViewModel :
     suspend fun sendPostSync() {
         val draftToDelete = draftNote
         innerSendPost(null)
-        cancel()
+        onUiThread { cancel() }
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }

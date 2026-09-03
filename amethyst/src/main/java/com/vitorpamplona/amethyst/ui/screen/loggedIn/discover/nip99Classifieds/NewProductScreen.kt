@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -148,7 +149,7 @@ fun NewProductScreen(
     BackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
-            postViewModel.cancel()
+            onUiThread { postViewModel.cancel() }
         }
         nav.popBack()
     }
@@ -163,7 +164,7 @@ fun NewProductScreen(
                     // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
-                        postViewModel.cancel()
+                        onUiThread { postViewModel.cancel() }
                     }
                     nav.popBack()
                 },

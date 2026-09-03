@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -251,7 +252,7 @@ class LongFormPostViewModel :
                         draftTag.set(oldTag)
                         draftNote = account.getOrCreateDraftNote(oldTag)
                     }
-                    loadFromDraft(innerNote)
+                    onUiThread { loadFromDraft(innerNote) }
                 }
             }
         } else {
@@ -352,7 +353,7 @@ class LongFormPostViewModel :
         val template = createTemplate() ?: return
 
         val draftToDelete = draftNote
-        cancel()
+        onUiThread { cancel() }
 
         // Draft deletion runs INSIDE the publish continuation: when the
         // article is mined first, the draft must survive until the mined event
@@ -596,7 +597,7 @@ class LongFormPostViewModel :
                         }
                     }
 
-                message.insertUrlAtCursor(urls.joinToString(" "))
+                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
 
                 multiOrchestrator = null
             } else {

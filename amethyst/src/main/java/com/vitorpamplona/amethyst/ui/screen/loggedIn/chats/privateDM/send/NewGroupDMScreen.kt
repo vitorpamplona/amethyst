@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -180,7 +181,7 @@ fun NewGroupDMScreen(
     BackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
-            postViewModel.cancel()
+            onUiThread { postViewModel.cancel() }
         }
         nav.popBack()
     }
@@ -195,7 +196,7 @@ fun NewGroupDMScreen(
                     // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
-                        postViewModel.cancel()
+                        onUiThread { postViewModel.cancel() }
                     }
                     nav.popBack()
                 },

@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prom
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_open_settings
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_title
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
@@ -266,7 +267,7 @@ internal fun NewPostScreenInner(
     BackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
-            postViewModel.cancel()
+            onUiThread { postViewModel.cancel() }
         }
         nav.popBack()
     }
@@ -289,7 +290,7 @@ internal fun NewPostScreenInner(
                     // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
-                        postViewModel.cancel()
+                        onUiThread { postViewModel.cancel() }
                     }
                     nav.popBack()
                 },

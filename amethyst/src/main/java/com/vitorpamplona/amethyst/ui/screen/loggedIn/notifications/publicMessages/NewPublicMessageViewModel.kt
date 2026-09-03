@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -270,7 +271,7 @@ class NewPublicMessageViewModel :
                         draftTag.set(oldTag)
                         draftNote = account.getOrCreateDraftNote(oldTag)
                     }
-                    loadFromDraft(innerNote)
+                    onUiThread { loadFromDraft(innerNote) }
                 }
             }
         }
@@ -349,7 +350,7 @@ class NewPublicMessageViewModel :
         }
 
         val draftToDelete = draftNote
-        cancel()
+        onUiThread { cancel() }
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
@@ -502,7 +503,7 @@ class NewPublicMessageViewModel :
                         }
                     }
 
-                message.insertUrlAtCursor(urls.joinToString(" "))
+                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
                 urlPreviews.update(message.text.toString())
 
                 multiOrchestrator = null

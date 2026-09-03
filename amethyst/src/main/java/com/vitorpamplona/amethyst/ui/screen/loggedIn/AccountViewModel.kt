@@ -2920,7 +2920,10 @@ class AccountViewModel(
                         context = context,
                     )
 
-                onNewInvoice(invoice)
+                // Delivered on Main: every composer's onNewInvoice writes the invoice into
+                // its message TextFieldState, which is UI-thread confined (see the KDoc on
+                // commons' `onUiThread`). This whole block runs on Dispatchers.IO.
+                withContext(Dispatchers.Main) { onNewInvoice(invoice) }
             } catch (e: LightningAddressResolver.LightningAddressError) {
                 onError(e.title, e.msg)
             } catch (e: Exception) {

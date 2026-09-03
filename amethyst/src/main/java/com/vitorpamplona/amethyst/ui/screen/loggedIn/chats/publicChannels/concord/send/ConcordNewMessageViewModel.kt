@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -211,7 +212,7 @@ open class ConcordNewMessageViewModel : ViewModel() {
             account.concord.sendConcordChannelMessage(community, channel, text, parent, replyMode.value)
         }
 
-        message.clearText()
+        onUiThread { message.clearText() }
         clearReply()
         userSuggestions?.reset()
     }

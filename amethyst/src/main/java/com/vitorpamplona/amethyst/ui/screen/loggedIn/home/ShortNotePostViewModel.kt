@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
@@ -674,7 +675,7 @@ open class ShortNotePostViewModel :
                         draftTag.set(oldTag)
                         draftNote = account.getOrCreateDraftNote(oldTag)
                     }
-                    loadFromDraft(innerNote)
+                    onUiThread { loadFromDraft(innerNote) }
                 }
             }
         } else {
@@ -1137,7 +1138,7 @@ open class ShortNotePostViewModel :
         val threadTarget = groupThreadTarget
         // captured before cancel() resets the chip
         val chosenPow = powOverride
-        cancel()
+        onUiThread { cancel() }
 
         // Draft deletion lives INSIDE each publish continuation: when the post
         // is mined first, the draft must survive until the mined event is
@@ -1631,7 +1632,7 @@ open class ShortNotePostViewModel :
                         }
                     }
 
-                message.insertUrlAtCursor(urls.joinToString(" "))
+                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
                 urlPreviews.update(message.text.toString())
 
                 multiOrchestrator = null
@@ -1653,8 +1654,14 @@ open class ShortNotePostViewModel :
 
         multiOrchestrator = null
         mediaUploadTracker.finishUpload()
-        voiceAnonymization.clear()
-        deleteVoiceLocalFile()
+        // cancel() is UI-thread confined -- the TextFieldState writes below require it -- and
+        // this cleanup deletes files, so the disk work goes to IO. The path is captured here
+        // because voiceLocalFile is cleared on the next lines, before the coroutine runs.
+        val staleVoiceFile = voiceLocalFile
+        viewModelScope.launch(Dispatchers.IO) {
+            voiceAnonymization.clear()
+            deleteVoiceLocalFile(staleVoiceFile)
+        }
         voiceRecording = null
         voiceLocalFile = null
         isUploadingVoice = false
@@ -1872,8 +1879,8 @@ open class ShortNotePostViewModel :
         voiceOrchestrator = null
     }
 
-    private fun deleteVoiceLocalFile() {
-        voiceLocalFile?.let { file ->
+    private fun deleteVoiceLocalFile(toDelete: java.io.File? = voiceLocalFile) {
+        toDelete?.let { file ->
             try {
                 if (file.delete()) {
                     Log.d("ShortNotePostViewModel") { "Deleted voice file: ${file.absolutePath}" }

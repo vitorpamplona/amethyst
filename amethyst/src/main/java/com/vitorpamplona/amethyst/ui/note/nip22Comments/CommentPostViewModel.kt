@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
@@ -333,7 +334,7 @@ open class CommentPostViewModel :
                         draftTag.set(oldTag)
                         draftNote = account.getOrCreateDraftNote(oldTag)
                     }
-                    loadFromDraft(innerNote)
+                    onUiThread { loadFromDraft(innerNote) }
                 }
             }
         }
@@ -584,7 +585,7 @@ open class CommentPostViewModel :
         val anonymous = wantsAnonymousPost
         // captured before cancel() resets the chip
         val chosenPow = powOverride
-        cancel()
+        onUiThread { cancel() }
 
         // Draft deletion lives INSIDE each publish continuation: when the post
         // is mined first, the draft must survive until the mined event is
@@ -846,7 +847,7 @@ open class CommentPostViewModel :
                         }
                     }
 
-                message.insertUrlAtCursor(urls.joinToString(" "))
+                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
                 urlPreviews.update(message.text.toString())
 
                 multiOrchestrator = null

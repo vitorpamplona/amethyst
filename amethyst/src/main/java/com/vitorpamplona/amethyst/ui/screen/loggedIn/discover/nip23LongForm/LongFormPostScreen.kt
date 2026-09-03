@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.url_slug
 import com.vitorpamplona.amethyst.commons.resources.url_slug_placeholder
 import com.vitorpamplona.amethyst.commons.resources.your_article_title
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -168,7 +169,7 @@ fun LongFormPostScreen(
     BackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
-            postViewModel.cancel()
+            onUiThread { postViewModel.cancel() }
         }
         nav.popBack()
     }
@@ -187,7 +188,7 @@ fun LongFormPostScreen(
                 onCancel = {
                     accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
-                        postViewModel.cancel()
+                        onUiThread { postViewModel.cancel() }
                     }
                     nav.popBack()
                 },

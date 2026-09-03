@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.model.Account
@@ -316,7 +317,7 @@ open class ChannelNewMessageViewModel :
                         draftTag.set(oldTag)
                         draftNote = account.getOrCreateDraftNote(oldTag)
                     }
-                    loadFromDraft(innerNote)
+                    onUiThread { loadFromDraft(innerNote) }
                 }
             }
         }
@@ -400,7 +401,7 @@ open class ChannelNewMessageViewModel :
         if (channel is GeohashChatChannel && channelRelays.isEmpty()) return
 
         val draftToDelete = draftNote
-        cancel()
+        onUiThread { cancel() }
 
         val currentChannel = channel
         if (currentChannel is GeohashChatChannel) {
@@ -529,7 +530,7 @@ open class ChannelNewMessageViewModel :
                         }
                     }
 
-                message.insertUrlAtCursor(urls.joinToString(" "))
+                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
                 urlPreview = findUrlInMessage()
 
                 uploadState.reset()
