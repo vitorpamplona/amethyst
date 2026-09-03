@@ -1620,8 +1620,14 @@ open class ShortNotePostViewModel :
 
         multiOrchestrator = null
         mediaUploadTracker.finishUpload()
-        voiceAnonymization.clear()
-        deleteVoiceLocalFile()
+        // cancel() is UI-thread confined -- the TextFieldState writes below require it -- and
+        // this cleanup deletes files, so the disk work goes to IO. The path is captured here
+        // because voiceLocalFile is cleared on the next lines, before the coroutine runs.
+        val staleVoiceFile = voiceLocalFile
+        viewModelScope.launch(Dispatchers.IO) {
+            voiceAnonymization.clear()
+            deleteVoiceLocalFile(staleVoiceFile)
+        }
         voiceRecording = null
         voiceLocalFile = null
         isUploadingVoice = false
@@ -1839,8 +1845,8 @@ open class ShortNotePostViewModel :
         voiceOrchestrator = null
     }
 
-    private fun deleteVoiceLocalFile() {
-        voiceLocalFile?.let { file ->
+    private fun deleteVoiceLocalFile(toDelete: java.io.File? = voiceLocalFile) {
+        toDelete?.let { file ->
             try {
                 if (file.delete()) {
                     Log.d("ShortNotePostViewModel") { "Deleted voice file: ${file.absolutePath}" }

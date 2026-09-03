@@ -441,8 +441,8 @@ private fun SendPaymentLoaded(
             }
 
             null ->
-                // Hop to the Main scope: this branch can be reached from
-                // sendSats' IO callback, and startActivity belongs on Main.
+                // startActivity belongs on Main. sendSats now delivers onNewInvoice
+                // there already; the hop also covers any other caller of payBolt11.
                 scope.launch {
                     payViaIntent(
                         invoice,
