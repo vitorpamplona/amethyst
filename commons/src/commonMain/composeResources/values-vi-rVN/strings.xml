@@ -280,7 +280,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">Mã hóa và sao chép khóa bí mật của tôi</string>
     <string name="badge_award_image_for">Hình ảnh huy hiệu được trao cho %1$s</string>
-    <string name="badge_award_image">"Hình ảnh huy hiệu được trao</string>
+    <string name="badge_award_image">\"Hình ảnh huy hiệu được trao</string>
     <string name="new_badge_award_notif">Bạn đã nhận được huy hiệu mới</string>
     <string name="award_granted_to">Huy hiệu được trao cho</string>
     <string name="account_switch_add_account_dialog_title">Thêm tài khoản mới</string>
@@ -493,7 +493,7 @@
     <string name="nest_state_speaking">Đang phát biểu</string>
     <string name="nest_state_mic_open">Microphone đang mở</string>
     <string name="nest_leave_host_title">Kết thúc nest này?</string>
-    <string name="nest_leave_host_body">Bạn là chủ phòng. Đóng phòng sẽ ngắt kết nối tất cả mọi người. Chọn "Chỉ rời" nếu bạn muốn quay lại sau — phòng sẽ tự đóng sau 8 giờ không hoạt động.</string>
+    <string name="nest_leave_host_body">Bạn là chủ phòng. Đóng phòng sẽ ngắt kết nối tất cả mọi người. Chọn \"Chỉ rời\" nếu bạn muốn quay lại sau — phòng sẽ tự đóng sau 8 giờ không hoạt động.</string>
     <string name="nest_leave_host_close">Đóng phòng</string>
     <string name="nest_leave_host_just_leave">Chỉ rời</string>
     <string name="nest_live_chip">TRỰC TIẾP</string>
@@ -863,7 +863,7 @@
     <string name="community_no_descriptor">Cộng đồng này không có mô tả. Hãy liên hệ chủ sở hữu để thêm vào</string>
     <string name="user_preferences">Tùy chỉnh người dùng</string>
     <string name="settings_search_placeholder">Tìm kiếm cài đặt</string>
-    <string name="settings_search_no_results">Không tìm thấy cài đặt nào cho "%1$s"</string>
+    <string name="settings_search_no_results">Không tìm thấy cài đặt nào cho \"%1$s\"</string>
     <string name="reset_marmot_confirm_title">Đặt lại trạng thái Marmot?</string>
     <string name="reset_marmot_confirm_body">Thao tác này sẽ xóa vĩnh viễn mọi cuộc trò chuyện nhóm Marmot, lịch sử tin nhắn và khóa MLS trên thiết bị này cho tài khoản hiện tại. Các thành viên khác sẽ không được thông báo và có thể vẫn thấy bạn trong nhóm cho đến lần commit tiếp theo. Không thể hoàn tác thao tác này. Một KeyPackage mới sẽ được xuất bản vào lần tiếp theo ứng dụng đồng bộ.</string>
     <string name="reset_marmot_confirm_action">Đặt lại</string>
@@ -896,7 +896,7 @@
     <string name="music_playlist_collaborative_hint">Cho phép người khác thêm bài hát vào danh sách phát này.</string>
     <string name="music_playlist_delete">Xóa danh sách phát này</string>
     <string name="music_playlist_delete_confirm">Xuất bản yêu cầu xóa NIP-09 cho danh sách phát này?</string>
-    <string name="music_playlist_no_tracks_hint">Chưa có bài hát nào. Thêm bài hát từ menu của bài hát bằng cách chọn "Thêm vào danh sách phát".</string>
+    <string name="music_playlist_no_tracks_hint">Chưa có bài hát nào. Thêm bài hát từ menu của bài hát bằng cách chọn \"Thêm vào danh sách phát\".</string>
     <string name="music_playlist_move_track_up">Di chuyển bài hát lên</string>
     <string name="music_playlist_move_track_down">Di chuyển bài hát xuống</string>
     <string name="music_playlist_remove_track">Xóa bài hát khỏi danh sách phát</string>
@@ -907,7 +907,7 @@
     <string name="messages_create_public_private_chat_description">Nhóm công khai hoặc riêng tư mới</string>
     <string name="messages_new_message_to">Đến</string>
     <string name="messages_new_message_subject_caption">Chủ đề của cuộc trò chuyện</string>
-    <string name="messages_new_message_to_caption">@Người1, @Người2, @Người3</string>
+    <string name="messages_new_message_to_caption">\@Người1, @Người2, @Người3</string>
     <string name="messages_group_descriptor">Thành viên của nhóm này</string>
     <string name="messages_new_subject_message">Giải thích cho các thành viên</string>
     <string name="messages_new_subject_message_placeholder">Đổi tên cho mục tiêu mới.</string>
@@ -1180,7 +1180,7 @@
     <string name="calendar_untitled">(chưa đặt tên)</string>
     <string name="calendar_all_day">Cả ngày</string>
     <string name="calendar_rsvp_going_prefixed">✓ Sẽ tham dự</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Có thể</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Có thể</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Không thể đến</string>
     <string name="calendar_collection_title">Tiêu đề</string>
     <string name="calendar_collection_description">Mô tả</string>
@@ -1353,7 +1353,7 @@
     <string name="remove_dvm_from_favorites">Xóa khỏi yêu thích</string>
     <string name="favorite_dvms_explainer">Các thuật toán feed bạn đánh dấu sao xuất hiện ở đây và là các chip lọc trên feed Trang chủ.</string>
     <string name="favorite_dvms_empty_headline">Ghim các thuật toán yêu thích của bạn</string>
-    <string name="favorite_dvms_empty_step1">Nhấn "%1$s" bên dưới để duyệt các thuật toán.</string>
+    <string name="favorite_dvms_empty_step1">Nhấn \"%1$s\" bên dưới để duyệt các thuật toán.</string>
     <string name="favorite_dvms_empty_step2">Nhấn %1$s bên cạnh một feed để lưu nó ở đây.</string>
     <string name="favorite_dvms_empty_cta">Thêm một số feed</string>
     <string name="favorite_dvms_add_more">Thêm nữa…</string>
@@ -1547,7 +1547,7 @@
     <string name="hls_renditions_label">Phiên bản</string>
     <string name="hls_renditions_source_format">Độ phân giải nguồn: %1$d×%2$d</string>
     <string name="hls_publish_button">Đăng video HD</string>
-    <string name="hls_publishing_header_format">Đang đăng "%1$s"…</string>
+    <string name="hls_publishing_header_format">Đang đăng \"%1$s\"…</string>
     <string name="hls_state_transcoding_format">Đang chuyển mã %1$s</string>
     <string name="hls_state_uploading_idle">Tải lên</string>
     <string name="hls_state_uploading_format">Đang tải lên %1$d / %2$d</string>
@@ -1709,8 +1709,8 @@
     <string name="emoji_add_dialog_title">Thêm emoji tùy chỉnh</string>
     <string name="emoji_remove_dialog_title">Xóa :%1$s:?</string>
     <string name="emoji_long_press_hint">Nhấn giữ emoji để xóa</string>
-    <string name="emoji_pack_is_in_list">"%1$s" có trong danh sách emoji của bạn</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" không có trong danh sách emoji của bạn</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" có trong danh sách emoji của bạn</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" không có trong danh sách emoji của bạn</string>
     <string name="emoji_pack_actions_dialog_title">Tùy chọn gói emoji</string>
     <string name="emoji_private_toggle">Riêng tư</string>
     <string name="emoji_private_badge">Emoji riêng tư</string>
@@ -1746,7 +1746,7 @@
     <string name="marmot_edit_group_info">Chỉnh sửa thông tin nhóm</string>
     <string name="marmot_leave_group">Rời nhóm</string>
     <string name="marmot_this_group">nhóm này</string>
-    <string name="marmot_leave_group_confirm">Bạn có chắc muốn rời "%1$s"? Bạn sẽ không còn nhận tin nhắn từ nhóm này nữa.</string>
+    <string name="marmot_leave_group_confirm">Bạn có chắc muốn rời \"%1$s\"? Bạn sẽ không còn nhận tin nhắn từ nhóm này nữa.</string>
     <string name="marmot_keypackage_required">Họ phải đã công bố KeyPackage (kind:30443) để có thể được thêm vào.</string>
     <string name="marmot_add_to_group">Thêm vào nhóm</string>
     <string name="marmot_add_member">Thêm thành viên</string>
@@ -1755,15 +1755,15 @@
     <string name="marmot_member_suffix_you"> (bạn)</string>
     <string name="marmot_member_suffix_admin"> - quản trị viên</string>
     <string name="marmot_remove_member">Xóa thành viên</string>
-    <string name="marmot_remove_member_confirm">Bạn có chắc muốn xóa "%1$s" khỏi nhóm này?</string>
+    <string name="marmot_remove_member_confirm">Bạn có chắc muốn xóa \"%1$s\" khỏi nhóm này?</string>
     <string name="marmot_grant">Cấp</string>
     <string name="marmot_grant_admin_privileges">Cấp quyền quản trị viên</string>
     <string name="marmot_grant_admin_title">Cấp quyền quản trị viên</string>
-    <string name="marmot_grant_admin_confirm">Đặt "%1$s" làm quản trị viên của nhóm này? Quản trị viên có thể thêm hoặc xóa thành viên, thay đổi thông tin nhóm và cấp quyền quản trị viên cho các thành viên khác.</string>
+    <string name="marmot_grant_admin_confirm">Đặt \"%1$s\" làm quản trị viên của nhóm này? Quản trị viên có thể thêm hoặc xóa thành viên, thay đổi thông tin nhóm và cấp quyền quản trị viên cho các thành viên khác.</string>
     <string name="marmot_revoke">Thu hồi</string>
     <string name="marmot_revoke_admin_privileges">Thu hồi quyền quản trị viên</string>
     <string name="marmot_revoke_admin_title">Thu hồi quyền quản trị viên</string>
-    <string name="marmot_revoke_admin_confirm">Thu hồi quyền quản trị viên của "%1$s"? Họ vẫn sẽ là thành viên của nhóm.</string>
+    <string name="marmot_revoke_admin_confirm">Thu hồi quyền quản trị viên của \"%1$s\"? Họ vẫn sẽ là thành viên của nhóm.</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">chưa có sự kiện nào</string>
     <string name="marmot_relay_last_event">sự kiện cuối cùng%1$s</string>

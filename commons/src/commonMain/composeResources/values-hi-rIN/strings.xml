@@ -476,7 +476,7 @@
     <string name="backup_keys_nudge_dismiss">हटाएँ</string>
     <string name="encrypt_and_copy_my_secret_key">मेरी गुप्त कुंचिका का रहस्यीकरण तथा अनुकृति करें</string>
     <string name="badge_award_image_for">पदक पुरस्कार चित्र %1$s के लिए</string>
-    <string name="badge_award_image">"पदक पुरस्कार चित्र</string>
+    <string name="badge_award_image">\"पदक पुरस्कार चित्र</string>
     <string name="new_badge_award_notif">आपको नया पदक पुरस्कार प्राप्त हुआ</string>
     <string name="award_granted_to">पदक पुरस्कार इनको दिया गया</string>
     <string name="account_switch_add_account_dialog_title">नयी लेखा जोडें</string>
@@ -826,7 +826,7 @@
     <string name="nest_state_speaking">वक्ता अभी</string>
     <string name="nest_state_mic_open">ध्वनिग्राहक चालू</string>
     <string name="nest_leave_host_title">कया इस निलय को अवरुद्ध करें।</string>
-    <string name="nest_leave_host_body">आप निमन्त्रक हैं। शाला आवृत करने से सभी वियोजित हो जाएँगे। "केवल निर्गमन" का चयन करें यदि आप लौटना चाहते हें कुछ समय पश्चात। शाला स्वतः आवृत होगी ८ घण्टों की निष्क्रियता पश्चात।</string>
+    <string name="nest_leave_host_body">आप निमन्त्रक हैं। शाला आवृत करने से सभी वियोजित हो जाएँगे। \"केवल निर्गमन\" का चयन करें यदि आप लौटना चाहते हें कुछ समय पश्चात। शाला स्वतः आवृत होगी ८ घण्टों की निष्क्रियता पश्चात।</string>
     <string name="nest_leave_host_close">शाला आवृत करें</string>
     <string name="nest_leave_host_just_leave">केवल निर्गमन</string>
     <string name="nest_live_chip">वर्तमान</string>
@@ -1349,7 +1349,7 @@
     <string name="community_no_descriptor">इस समुदाय का कोई विवरण नहीं। इसके स्वत्वधारी से बात करें इसे जोडने के लिए</string>
     <string name="user_preferences">उपयोगकर्ता आद्यताएँ</string>
     <string name="settings_search_placeholder">खोज स्थापना विकल्प</string>
-    <string name="settings_search_no_results">"%1$s" के लिए कोई स्थापना विकल्प प्राप्त नहीं</string>
+    <string name="settings_search_no_results">\"%1$s\" के लिए कोई स्थापना विकल्प प्राप्त नहीं</string>
     <string name="reset_marmot_confirm_title">क्या मार्मोट॰ स्थिति पुनःस्थापित करें।</string>
     <string name="reset_marmot_confirm_body">यह स्थायी रूप से सभी मार्मोट॰ समूह चर्चा तथा सन्देश इतिहास तथा एमएलएस॰ कुंचिका मिटा देगा इस यन्त्र पर वर्तमान लेखा के लिए। समकक्षजन को सूचित नहीं किया जाएगा तथा सम्भाव्यतः आपको समूहों मे देखते रहेंगे उनके अगले स्थायी अभिलेखन तक। इसे पूर्ववत नहीं किया जा सकता। एक नयी कुंचिकापोटली प्रकाशित की जाएगी अगली बार जब क्रमक समचरणीकरण किया जाएगा।</string>
     <string name="reset_marmot_confirm_action">पुनःस्थापन</string>
@@ -1388,7 +1388,7 @@
     <string name="music_playlist_collaborative_hint">अन्यों को इस संगीतसूची में अभिलेखों को जोडने की अनुमति दें।</string>
     <string name="music_playlist_delete">इस संगीतसूची को मिटाएँ</string>
     <string name="music_playlist_delete_confirm">क्या इस संगीतसूची के लिए एक निप॰०९ विलोपन प्रकाशित करें।</string>
-    <string name="music_playlist_no_tracks_hint">कोई अभिलेख नहीं अब तक। अभिलेखों को जोडें गाने के विकल्पसूची में "संगीतसूची में जोडें' का उपयोग करके।</string>
+    <string name="music_playlist_no_tracks_hint">कोई अभिलेख नहीं अब तक। अभिलेखों को जोडें गाने के विकल्पसूची में \"संगीतसूची में जोडें\' का उपयोग करके।</string>
     <string name="music_playlist_move_track_up">अभिलेख को ऊपर करें</string>
     <string name="music_playlist_move_track_down">अभिलेख को नीचे करें</string>
     <string name="music_playlist_remove_track">संगीतसूची से अभिलेख हटाएँ</string>
@@ -1510,7 +1510,7 @@
     <string name="relay_group_invite_only_to_post">यह समूह आमन्त्रण सीमित है। आपके पास एक आमन्त्रण होना चाहिए पत्र प्रकाशन के लिए।</string>
     <string name="messages_new_message_to">के लिए</string>
     <string name="messages_new_message_subject_caption">संवाद का विषय</string>
-    <string name="messages_new_message_to_caption">@प्रयोक्ता१, @प्रयोक्ता२, @प्रयोक्ता३</string>
+    <string name="messages_new_message_to_caption">\@प्रयोक्ता१, @प्रयोक्ता२, @प्रयोक्ता३</string>
     <string name="messages_group_descriptor">इस झुण्ड के सदस्य</string>
     <string name="messages_new_subject_message">सदस्यों के लिए व्याख्यान</string>
     <string name="messages_new_subject_message_placeholder">नाम का परिवर्तन नये लक्ष्य के लिए।</string>
@@ -2185,7 +2185,7 @@
     <string name="remove_dvm_from_favorites">इष्टसूची में से हटाएँ</string>
     <string name="favorite_dvms_explainer">सूचनावली कलनविधियाँ जिन्हें आप ताराचिह्नित किए यहाँ दिखेंगे तथा मुख्य सूचनावली पर छलनी खण्डों के रूप में दिखेंगे।</string>
     <string name="favorite_dvms_empty_headline">आपके इष्ट कलनविधियाँ अटकाएँ</string>
-    <string name="favorite_dvms_empty_step1">नीचे "%1$s" दबाएँ कलनविधियों का वीक्षण करने के लिए।</string>
+    <string name="favorite_dvms_empty_step1">नीचे \"%1$s\" दबाएँ कलनविधियों का वीक्षण करने के लिए।</string>
     <string name="favorite_dvms_empty_step2">सूचनावली का पास %1$s दबाएँ यहाँ रखने के लिए।</string>
     <string name="favorite_dvms_empty_cta">सूचनावलियाँ जोडें</string>
     <string name="favorite_dvms_add_more">अधिक जोडें…</string>
@@ -2410,7 +2410,7 @@
     <string name="hls_renditions_label">अभिव्यक्तियाँ</string>
     <string name="hls_renditions_source_format">स्रोत सुलझाव : %1$dघ्न%2$d</string>
     <string name="hls_publish_button">उच्छनिरूपण दृश्याभिलेख प्रकाशित करें</string>
-    <string name="hls_publishing_header_format">प्रकाशन चालू "%1$s"…</string>
+    <string name="hls_publishing_header_format">प्रकाशन चालू \"%1$s\"…</string>
     <string name="hls_state_transcoding_format">संकुचनान्तरण चालू %1$s</string>
     <string name="hls_state_uploading_idle">आरोहण</string>
     <string name="hls_state_uploading_format">आरोहण चालू %2$d में से %1$d</string>
@@ -2596,8 +2596,8 @@
     <string name="emoji_add_dialog_title">विशिष्ट भावचिह्न जोडें</string>
     <string name="emoji_remove_dialog_title">क्या इसे हटाएँ :%1$s:।</string>
     <string name="emoji_long_press_hint">भावचिह्न हटाने के लिए उसे दीर्घतः दबाएँ</string>
-    <string name="emoji_pack_is_in_list">"%1$s" आपकी भावचिह्न सूची में है</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s" आपकी भावचिह्न सूची में नहीं है</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" आपकी भावचिह्न सूची में है</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" आपकी भावचिह्न सूची में नहीं है</string>
     <string name="emoji_pack_actions_dialog_title">भावचिह्न पोटली क्रियाएँ</string>
     <string name="emoji_private_toggle">निजी</string>
     <string name="emoji_private_badge">निजी भावचिह्न</string>
@@ -2743,7 +2743,7 @@
     <string name="buzz_persona_new_title">नयी व्यक्तिशैली</string>
     <string name="buzz_persona_edit_title">व्यक्तिशैली सम्पादन</string>
     <string name="buzz_persona_slug">सूचकाम्श (व्यक्तिशैली सूचक)</string>
-    <string name="buzz_persona_slug_help">a-z तथा 0-9 तथा '-' तथा '_'। परिवर्तनीय नहीं बनाने के पश्चात।</string>
+    <string name="buzz_persona_slug_help">a-z तथा 0-9 तथा \'-\' तथा \'_\'। परिवर्तनीय नहीं बनाने के पश्चात।</string>
     <string name="buzz_persona_display_name">प्रदर्शन नाम</string>
     <string name="buzz_persona_system_prompt">यन्त्र प्रेरण</string>
     <string name="buzz_persona_model">प्रतिरूप (विकल्पात्मक)</string>

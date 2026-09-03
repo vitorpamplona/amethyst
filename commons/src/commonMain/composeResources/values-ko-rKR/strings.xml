@@ -279,7 +279,7 @@
     </string>
     <string name="encrypt_and_copy_my_secret_key">내 비밀 키 암호화 및 복사</string>
     <string name="badge_award_image_for">%1$s의 배지 수상 이미지</string>
-    <string name="badge_award_image">"배지 수상 이미지</string>
+    <string name="badge_award_image">\"배지 수상 이미지</string>
     <string name="new_badge_award_notif">새 배지를 수여받았습니다</string>
     <string name="award_granted_to">배지 수여 대상</string>
     <string name="account_switch_add_account_dialog_title">새 계정 추가</string>
@@ -492,7 +492,7 @@
     <string name="nest_state_speaking">현재 발언 중</string>
     <string name="nest_state_mic_open">마이크 열림</string>
     <string name="nest_leave_host_title">이 Nest를 종료하시겠습니까?</string>
-    <string name="nest_leave_host_body">귀하는 호스트입니다. 방을 닫으면 모든 참가자의 연결이 끊깁니다. 나중에 돌아오고 싶다면 "그냥 나가기"를 선택하세요 — 비활성 상태가 8시간 지속되면 방이 자동으로 닫힙니다.</string>
+    <string name="nest_leave_host_body">귀하는 호스트입니다. 방을 닫으면 모든 참가자의 연결이 끊깁니다. 나중에 돌아오고 싶다면 \"그냥 나가기\"를 선택하세요 — 비활성 상태가 8시간 지속되면 방이 자동으로 닫힙니다.</string>
     <string name="nest_leave_host_close">방 닫기</string>
     <string name="nest_leave_host_just_leave">그냥 나가기</string>
     <string name="nest_live_chip">라이브</string>
@@ -867,7 +867,7 @@
     <string name="community_no_descriptor">이 커뮤니티에는 설명이 없습니다. 추가하려면 소유자에게 문의하세요</string>
     <string name="user_preferences">사용자 설정</string>
     <string name="settings_search_placeholder">설정 검색</string>
-    <string name="settings_search_no_results">"%1$s"에 대한 설정을 찾을 수 없습니다</string>
+    <string name="settings_search_no_results">\"%1$s\"에 대한 설정을 찾을 수 없습니다</string>
     <string name="reset_marmot_confirm_title">Marmot 상태를 초기화하시겠습니까?</string>
     <string name="reset_marmot_confirm_body">현재 계정의 모든 Marmot 그룹 채팅, 메시지 기록 및 이 기기의 MLS 키가 영구적으로 삭제됩니다. 피어에게는 알림이 전송되지 않으며, 다음 커밋 전까지 그룹에서 계속 표시될 수 있습니다. 이 작업은 되돌릴 수 없습니다. 앱이 다음에 동기화될 때 새 KeyPackage가 게시됩니다.</string>
     <string name="reset_marmot_confirm_action">초기화</string>
@@ -900,7 +900,7 @@
     <string name="music_playlist_collaborative_hint">다른 사람이 이 플레이리스트에 트랙을 추가할 수 있습니다.</string>
     <string name="music_playlist_delete">이 플레이리스트 삭제</string>
     <string name="music_playlist_delete_confirm">이 플레이리스트에 대한 NIP-09 삭제를 게시하시겠습니까?</string>
-    <string name="music_playlist_no_tracks_hint">아직 트랙이 없습니다. 노래 메뉴에서 "플레이리스트에 추가"를 사용하여 트랙을 추가하세요.</string>
+    <string name="music_playlist_no_tracks_hint">아직 트랙이 없습니다. 노래 메뉴에서 \"플레이리스트에 추가\"를 사용하여 트랙을 추가하세요.</string>
     <string name="music_playlist_move_track_up">트랙 위로 이동</string>
     <string name="music_playlist_move_track_down">트랙 아래로 이동</string>
     <string name="music_playlist_remove_track">플레이리스트에서 트랙 제거</string>
@@ -1180,7 +1180,7 @@
     <string name="calendar_untitled">(제목 없음)</string>
     <string name="calendar_all_day">종일</string>
     <string name="calendar_rsvp_going_prefixed">✓ 참석</string>
-    <string name="calendar_rsvp_maybe_prefixed">? 미정</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? 미정</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ 불참</string>
     <string name="calendar_collection_title">제목</string>
     <string name="calendar_collection_description">설명</string>
@@ -1356,7 +1356,7 @@
     <string name="remove_dvm_from_favorites">즐겨찾기에서 제거</string>
     <string name="favorite_dvms_explainer">별표 표시한 피드 알고리즘이 여기에 표시되며 홈 피드의 필터 칩으로도 나타납니다.</string>
     <string name="favorite_dvms_empty_headline">좋아하는 알고리즘 고정하기</string>
-    <string name="favorite_dvms_empty_step1">아래 "%1$s"를 탭하여 알고리즘을 탐색하세요.</string>
+    <string name="favorite_dvms_empty_step1">아래 \"%1$s\"를 탭하여 알고리즘을 탐색하세요.</string>
     <string name="favorite_dvms_empty_step2">피드 옆의 %1$s를 탭하여 여기에 저장하세요.</string>
     <string name="favorite_dvms_empty_cta">피드 추가하기</string>
     <string name="favorite_dvms_add_more">더 추가…</string>
@@ -1551,7 +1551,7 @@
     <string name="hls_renditions_label">렌디션</string>
     <string name="hls_renditions_source_format">원본 해상도: %1$d×%2$d</string>
     <string name="hls_publish_button">HD 동영상 게시</string>
-    <string name="hls_publishing_header_format">"%1$s" 게시 중…</string>
+    <string name="hls_publishing_header_format">\"%1$s\" 게시 중…</string>
     <string name="hls_state_transcoding_format">%1$s 트랜스코딩 중</string>
     <string name="hls_state_uploading_idle">업로드</string>
     <string name="hls_state_uploading_format">%2$d 중 %1$d 업로드 중</string>
@@ -1713,8 +1713,8 @@
     <string name="emoji_add_dialog_title">커스텀 emoji 추가</string>
     <string name="emoji_remove_dialog_title">:%1$s:을(를) 제거할까요?</string>
     <string name="emoji_long_press_hint">Emoji를 길게 눌러 제거하세요</string>
-    <string name="emoji_pack_is_in_list">"%1$s"이(가) emoji 목록에 있습니다</string>
-    <string name="emoji_pack_is_not_in_list">"%1$s"이(가) emoji 목록에 없습니다</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\"이(가) emoji 목록에 있습니다</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\"이(가) emoji 목록에 없습니다</string>
     <string name="emoji_pack_actions_dialog_title">Emoji 팩 작업</string>
     <string name="emoji_private_toggle">비공개</string>
     <string name="emoji_private_badge">비공개 emoji</string>
@@ -1750,7 +1750,7 @@
     <string name="marmot_edit_group_info">그룹 정보 편집</string>
     <string name="marmot_leave_group">그룹 나가기</string>
     <string name="marmot_this_group">이 그룹</string>
-    <string name="marmot_leave_group_confirm">"%1$s"을(를) 나가시겠습니까? 이 그룹에서 더 이상 메시지를 받을 수 없습니다.</string>
+    <string name="marmot_leave_group_confirm">\"%1$s\"을(를) 나가시겠습니까? 이 그룹에서 더 이상 메시지를 받을 수 없습니다.</string>
     <string name="marmot_keypackage_required">추가하려면 KeyPackage (kind:30443)를 게시했어야 합니다.</string>
     <string name="marmot_add_to_group">그룹에 추가</string>
     <string name="marmot_add_member">멤버 추가</string>
@@ -1759,15 +1759,15 @@
     <string name="marmot_member_suffix_you"> (나)</string>
     <string name="marmot_member_suffix_admin"> - 관리자</string>
     <string name="marmot_remove_member">멤버 제거</string>
-    <string name="marmot_remove_member_confirm">이 그룹에서 "%1$s"을(를) 제거하시겠습니까?</string>
+    <string name="marmot_remove_member_confirm">이 그룹에서 \"%1$s\"을(를) 제거하시겠습니까?</string>
     <string name="marmot_grant">부여</string>
     <string name="marmot_grant_admin_privileges">관리자 권한 부여</string>
     <string name="marmot_grant_admin_title">관리자 권한 부여</string>
-    <string name="marmot_grant_admin_confirm">"%1$s"을(를) 이 그룹의 관리자로 만드시겠습니까? 관리자는 멤버를 추가하거나 제거하고, 그룹 정보를 변경하고, 다른 멤버에게 관리자 권한을 부여할 수 있습니다.</string>
+    <string name="marmot_grant_admin_confirm">\"%1$s\"을(를) 이 그룹의 관리자로 만드시겠습니까? 관리자는 멤버를 추가하거나 제거하고, 그룹 정보를 변경하고, 다른 멤버에게 관리자 권한을 부여할 수 있습니다.</string>
     <string name="marmot_revoke">취소</string>
     <string name="marmot_revoke_admin_privileges">관리자 권한 취소</string>
     <string name="marmot_revoke_admin_title">관리자 권한 취소</string>
-    <string name="marmot_revoke_admin_confirm">"%1$s"의 관리자 권한을 취소하시겠습니까? 해당 사용자는 그룹 멤버로 남게 됩니다.</string>
+    <string name="marmot_revoke_admin_confirm">\"%1$s\"의 관리자 권한을 취소하시겠습니까? 해당 사용자는 그룹 멤버로 남게 됩니다.</string>
     <string name="marmot_relays_header">Relay</string>
     <string name="marmot_relay_no_events">아직 이벤트 없음</string>
     <string name="marmot_relay_last_event">마지막 이벤트%1$s</string>
