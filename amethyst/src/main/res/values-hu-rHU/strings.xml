@@ -807,6 +807,10 @@
     <string name="payment_targets_section_explainer">Adjon meg fizetési címeket a különböző hálózatokhoz (például: bitcoin, lightning, ethereum).</string>
     <string name="no_payment_app_found">Nem található alkalmazás a fizetés kezeléséhez. Telepítsen egy kompatibilis pénztárcát.</string>
     <string name="no_payment_app_found_for_type">Nem található alkalmazás a(z) %1$s fizetések kezeléséhez. Telepítsen egy kompatibilis pénztárcát.</string>
+    <string name="payto_amount_set_in_app">Fizetés ezzel: %1$s, az összeget az alkalmazásban adhatja meg</string>
+    <string name="zap_payto_section">Utánvétes fizetés</string>
+    <string name="zap_payto_section_explainer">Amikor a szerző közzétesz egy fizetési módot, amelyet a telefonján lévő alkalmazás meg tud nyitni (Venmo, Monero, egy IBAN…), a zap-választó ezt felajánlhatja. A megérintésével megnyílik az adott alkalmazás, amely megkérdezi az összeget – semmi sem lesz közzétéve az átjátszókon, így a bejegyzés zap-számlálója nem változik.</string>
+    <string name="zap_payto_toggle">Szerző fizetési módjainak felajánlása</string>
     <string name="error_dialog_payment_error">Nem sikerült megnyitni a fizetést</string>
     <string name="bolt12_offers">BOLT12 Ajánlatok</string>
     <string name="bolt12_offers_section_explainer">Adjon hozzá egy vagy több BOLT12 ajánlatot (lno1…). Ezek nyilvánosan megosztásra kerülnek, így bárki tud Önnek fizetni.</string>
