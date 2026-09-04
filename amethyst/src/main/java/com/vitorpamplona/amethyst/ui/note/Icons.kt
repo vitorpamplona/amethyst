@@ -68,6 +68,8 @@ import com.vitorpamplona.amethyst.commons.resources.search_button
 import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.LikedColor
+import com.vitorpamplona.amethyst.ui.theme.RepostedColor
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -128,7 +130,7 @@ fun DownloadForOfflineIcon(
 @Composable
 fun LikedIcon(
     modifier: Modifier,
-    tint: Color = Color.Unspecified,
+    tint: Color = LikedColor,
 ) {
     AmethystIconGlyph(
         symbol = AmethystIcons.Liked,
@@ -180,7 +182,7 @@ fun RepostIcon(
 @Composable
 fun RepostedIcon(
     modifier: Modifier,
-    tint: Color = Color.Unspecified,
+    tint: Color = RepostedColor,
 ) {
     AmethystIconGlyph(
         symbol = AmethystIcons.Reposted,

@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -119,7 +118,6 @@ private fun UserReactionModel(model: NotificationSummaryState) {
 private fun UserBoostModel(model: NotificationSummaryState) {
     RepostedIcon(
         modifier = Size24Modifier,
-        tint = Color.Unspecified,
     )
 
     Spacer(modifier = StdHorzSpacer)

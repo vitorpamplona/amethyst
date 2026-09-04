@@ -999,7 +999,11 @@ fun BoostReaction(
         },
     ) {
         ObserveBoostIcon(baseNote, accountViewModel) { hasBoosted ->
-            RepostedIcon(iconSizeModifier, if (hasBoosted) Color.Unspecified else grayTint)
+            if (hasBoosted) {
+                RepostedIcon(iconSizeModifier)
+            } else {
+                RepostIcon(iconSizeModifier)
+            }
         }
 
         if (wantsToBoost) {
@@ -2724,7 +2728,7 @@ internal fun ZapRailIcon(
     val mono = MaterialTheme.colorScheme.onSurface
     val cashuSize = size * 0.86f
     when (rail) {
-        ZapRail.CASHU ->
+        ZapRail.CASHU -> {
             Material3Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(Res.string.nutzap),
@@ -2733,7 +2737,9 @@ internal fun ZapRailIcon(
                 // same brand orange as the other rails when selected, else mono.
                 tint = if (colored) BitcoinOrange else mono,
             )
-        ZapRail.RELOAD ->
+        }
+
+        ZapRail.RELOAD -> {
             // Funds exist but in the wrong mint — a dimmed cashu logo with a
             // small "+" badge; tapping it opens the top-up screen.
             Box(contentAlignment = Alignment.BottomEnd) {
@@ -2750,20 +2756,25 @@ internal fun ZapRailIcon(
                     tint = if (colored) BitcoinOrange else mono,
                 )
             }
-        ZapRail.LIGHTNING ->
+        }
+
+        ZapRail.LIGHTNING -> {
             Icon(
                 symbol = MaterialSymbols.Bolt,
                 contentDescription = null,
                 modifier = Modifier.size(size),
                 tint = if (colored) BitcoinOrange else mono,
             )
-        ZapRail.ONCHAIN ->
+        }
+
+        ZapRail.ONCHAIN -> {
             Icon(
                 symbol = MaterialSymbols.CurrencyBitcoin,
                 contentDescription = null,
                 modifier = Modifier.size(size),
                 tint = if (colored) BitcoinOrange else mono,
             )
+        }
     }
 }
 

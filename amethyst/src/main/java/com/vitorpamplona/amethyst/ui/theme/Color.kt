@@ -43,6 +43,9 @@ val AccentPinkLight = Color(0xFFAD1457)
 val BitcoinOrange = Color(0xFFF7931A)
 val RoyalBlue = Color(0xFF4169E1)
 
+val LikedColor = Color(0xFFCA395f)
+val RepostedColor = Color(0xFF59bc6d)
+
 val BitcoinDark = Color(0xFFF7931A)
 val BitcoinLight = Color(0xFFB66605)
 
