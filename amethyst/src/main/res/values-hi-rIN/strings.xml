@@ -807,6 +807,10 @@
     <string name="payment_targets_section_explainer">भुगतान पताएँ जोडें भिन्न जालों के लिए (उ॰ द्व्यंकरूप्य लैटनिंग एथिरियम)।</string>
     <string name="no_payment_app_found">कोई क्रमक प्राप्त नहीं जो इस भुगतान को सम्भाल सके। कृपया अनुकूल धनकोष स्थापित करें।</string>
     <string name="no_payment_app_found_for_type">कोई क्रमक स्थापित नहीं जो %1$s भुगतान को सम्भाल सके। कृपया अनुकूल धनकोष स्थापित करें।</string>
+    <string name="payto_amount_set_in_app">भुगतान करें %1$s में। आप वहाँ मात्रा का चयन करेंगे</string>
+    <string name="zap_payto_section">भुगतान इनको हस्थान्तरण</string>
+    <string name="zap_payto_section_explainer">जब कर्ता एक भुगतान विधि का प्रकाशन करता है जिसे इस संचारयन्त्र में उपलब्ध एक क्रमक खोल सकता है (वेन्मो मोनेरो अथवा एक आईबान॰…) तब ज्साप चयनकर्ता उसका प्रस्ताव कर सकेगा। दबाने से वह क्रमक खोलेगा तथा मात्रा पूछेगा। पुनःप्रसारकों पर कुछ भी प्रकाशित नहीं होगा। जिससे टीका की ज्साप संख्या में परिवर्तन नहीं होगा।</string>
+    <string name="zap_payto_toggle">कर्ता के भुगतान विधियों का प्रस्ताव करें</string>
     <string name="error_dialog_payment_error">भुगतान खोलने में असमर्थ</string>
     <string name="bolt12_offers">बोल्ट१२ प्रस्ताव सूची</string>
     <string name="bolt12_offers_section_explainer">एक अथवा अनेक बोल्ट१२ प्रस्ताव जोडें (lno1…)। वे सार्वजनिक रूप से बाँटे जाते हैं जिससे कि कोई भी आपको भुगतान कर सके।</string>
