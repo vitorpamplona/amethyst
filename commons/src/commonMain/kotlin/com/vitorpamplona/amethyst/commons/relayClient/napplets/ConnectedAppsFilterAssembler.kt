@@ -24,7 +24,6 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.commons.relayClient.napplets.NappletsFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -44,8 +43,8 @@ class ConnectedAppsQueryState(
 ) : AccountScopedQuery
 
 /**
- * Live subscription for NIP-5D napplet manifests (kinds 15129/35129) while
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppsScreen] is open.
+ * Live subscription for NIP-5D napplet manifests (kinds 15129/35129) while the connected-apps
+ * screen is open.
  * Unlike [NappletsFilterAssembler] (which follows the global follow list), this assembler
  * only fetches manifests for the specific authors that have entries in the permission ledger.
  */

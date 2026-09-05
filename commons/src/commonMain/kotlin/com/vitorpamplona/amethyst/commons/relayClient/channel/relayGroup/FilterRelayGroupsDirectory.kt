@@ -33,8 +33,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
  * the people dimension (relay-key follow / follow-is-admin / follow-is-member) can't be expressed
  * as an `authors` REQ. For Global and the people filters we therefore pull the whole directory
  * (metadata + rosters) for each relay in the resolved set and let
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.RelayGroupDiscoveryFeedFilter]
- * narrow it locally. Only the topic/geo filters ([filterRelayGroupsByHashtag]/[filterRelayGroupsByGeohashes])
+ * the app's `RelayGroupDiscoveryFeedFilter` narrow it locally. Only the topic/geo filters ([filterRelayGroupsByHashtag]/[filterRelayGroupsByGeohashes])
  * carry a real relay-side constraint.
  */
 val RELAY_GROUP_DISCOVERY_KINDS =
