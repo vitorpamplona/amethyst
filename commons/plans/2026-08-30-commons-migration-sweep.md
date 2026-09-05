@@ -662,6 +662,37 @@ recommendations, nest room, follow-pack feed, onchain zaps, NIP-66 relay
 info). Many are import-clean and can follow mechanically; the `Account`-typed
 ones wait on Wave 4.
 
+### Import-clean non-top-nav datasource families landed (2026-09-05)
+
+The families whose keys are a `User`, an `AddressableNote`, a string, or an
+`IAccount`-compatible account moved wholesale into `commons/relayClient/`:
+chess, relay feed, NIP-66 relay info, url, geohash, the channel assembler,
+communities, git repo, profile (all 14 files), one/my podcast, onchain zaps,
+poll responses, plus the pure `filterEventsInThreadForRoot` /
+`filterMissingEventsForThread` functions and `FilterPostsByScopes.kt`
+(`CommentKinds`), which those filters and the home feed share. The URL filter
+test came along onto `kotlin.test`. Three Subscription composables that never
+touched `AccountViewModel` (community, repository, profile) moved too.
+
+The only seam was `LocalCache`, read for `relayHints` and
+`checkGetOrCreateUser` — both already on `ICacheProvider` — so the affected
+assemblers take `cache: ICacheProvider` as their first constructor parameter,
+thread it into their sub-assemblers, and the filter functions that need it
+take it as their first parameter. `RelaySubscriptionsCoordinator` passes the
+cache it already holds.
+
+Still in the app, with the reason: `hashtag/` (`FilterHashtagLabels` reads
+`Account.followsPerRelay`, a per-outbox follow resolution `IAccount` lacks);
+`threadview/datasources/` assembler + sub-assemblers and `apps/recommendations`,
+`badges/profile`, `napplets/ConnectedApps*` (each reads one relay-list state
+off `Account` — `followPlusAllMineWithSearch`, `outboxRelays` /
+`defaultGlobalRelays`, `notificationRelays`, `homeRelays`; the
+`SearchQueryState` recipe of carrying the flow on the key applies, one small
+change each); `followPacks/feed` (dispatches to the app-side home filters);
+`chats/*` (DM plumbing: `DmRelayLog`, `GeohashRelays`,
+`launchChatFeedToggleObserver`); `nests/NestRoom*`, `relayGroup/*`, `concord/*`
+and `home/` (`Account` + `LocalCache` live streams + `AccountViewModel`).
+
 ### Desktop `subscriptions/FilterBuilders.kt` — investigated, not migrated (2026-09-05)
 
 The audit listed this 742-line file as a hand-rolled copy of ~34

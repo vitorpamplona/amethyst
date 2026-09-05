@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.sub
 
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.thread.filterMissingEventsForThread
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadQueryState
@@ -48,7 +49,7 @@ class ThreadEventLoaderSubAssembler(
     ): List<RelayBasedFilter>? {
         val branches = ThreadAssembler(LocalCache).findThreadFor(key.eventId) ?: return null
         val defaultRelays = key.account.followPlusAllMineWithSearch.flow.value
-        return filterMissingEventsForThread(branches, defaultRelays)
+        return filterMissingEventsForThread(LocalCache, branches, defaultRelays)
     }
 
     override fun id(key: ThreadQueryState) = key.eventId
