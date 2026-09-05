@@ -25,15 +25,13 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.nsites.filterNsitesByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.nsites.filterNsitesByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.nsites.filterNsitesByMutedAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.nsites.filterNsitesGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.subassemblies.filterNsitesByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.subassemblies.filterNsitesByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.subassemblies.filterNsitesByMutedAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.subassemblies.filterNsitesGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-
-const val NSITE_PAGE_LIMIT = 200
 
 /**
  * Maps the top-nav selection (already resolved to a per-relay filter set) to the relay REQs for the

@@ -24,12 +24,12 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.relayGroupChannelsByRelay
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.relayGroupChannelsByRelay
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -56,7 +56,7 @@ class RelayGroupsDiscoverySubAssembler(
         val feedSettings = key.followsPerRelay()
         val defaultSince = key.feedStates.relayGroupsDiscoveryFeed.lastNoteCreatedAtIfFilled()
 
-        val base = filterRelayGroupsDiscovery(feedSettings, since, defaultSince)
+        val base = filterRelayGroupsDiscovery(LocalCache, feedSettings, since, defaultSince)
 
         // The follow-list filter sets resolve their relays via the outbox model (a follow's own
         // publish relays), but a NIP-29 roster (39001/39002) lives ONLY on the group's host relay.
@@ -78,7 +78,7 @@ class RelayGroupsDiscoverySubAssembler(
         val hostRelays = key.groupHostRelays() - alreadyQueried
         if (hostRelays.isEmpty()) return base
 
-        val channelsByRelay = relayGroupChannelsByRelay()
+        val channelsByRelay = relayGroupChannelsByRelay(LocalCache)
         val extra =
             hostRelays.flatMap { relay ->
                 filterRelayGroupsByAuthors(

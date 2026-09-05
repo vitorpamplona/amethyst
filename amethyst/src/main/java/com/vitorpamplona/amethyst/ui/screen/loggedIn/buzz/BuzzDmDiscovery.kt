@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.buzz.buzzChannelTypes
@@ -32,7 +33,6 @@ import com.vitorpamplona.amethyst.model.buzz.classifyBuzzChannel
 import com.vitorpamplona.amethyst.model.buzz.membershipNoticeFilter
 import com.vitorpamplona.amethyst.model.buzz.membershipNotices
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

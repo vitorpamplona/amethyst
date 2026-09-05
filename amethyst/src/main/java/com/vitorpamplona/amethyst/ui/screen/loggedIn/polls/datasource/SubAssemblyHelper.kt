@@ -29,16 +29,16 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.polls.filterPollsByAllCommunities
+import com.vitorpamplona.amethyst.commons.relayClient.polls.filterPollsByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.polls.filterPollsByCommunity
+import com.vitorpamplona.amethyst.commons.relayClient.polls.filterPollsByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.polls.filterPollsByGeohashes
+import com.vitorpamplona.amethyst.commons.relayClient.polls.filterPollsByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.polls.filterPollsByMutedAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.polls.filterPollsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByAllCommunities
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByCommunity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByGeohashes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByMutedAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun makePollsFilter(

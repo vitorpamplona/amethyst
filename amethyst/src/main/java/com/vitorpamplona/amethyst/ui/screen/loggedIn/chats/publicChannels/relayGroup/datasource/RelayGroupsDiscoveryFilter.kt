@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
@@ -30,32 +31,33 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByAllCommunities
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByCommunity
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByGeohashes
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByMutedAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByRelay
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByAllCommunities
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByCommunity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByGeohashes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByMutedAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByRelay
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun filterRelayGroupsDiscovery(
+    cache: ICacheProvider,
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
         is AllCommunitiesTopNavPerRelayFilterSet -> filterRelayGroupsByAllCommunities(feedSettings, since, defaultSince)
-        is AllFollowsTopNavPerRelayFilterSet -> filterRelayGroupsByFollows(feedSettings, since, defaultSince)
-        is AuthorsTopNavPerRelayFilterSet -> filterRelayGroupsByAuthors(feedSettings, since, defaultSince)
+        is AllFollowsTopNavPerRelayFilterSet -> filterRelayGroupsByFollows(cache, feedSettings, since, defaultSince)
+        is AuthorsTopNavPerRelayFilterSet -> filterRelayGroupsByAuthors(cache, feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterRelayGroupsGlobal(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterRelayGroupsByHashtag(feedSettings, since, defaultSince)
         is LocationTopNavPerRelayFilterSet -> filterRelayGroupsByGeohashes(feedSettings, since, defaultSince)
-        is MutedAuthorsTopNavPerRelayFilterSet -> filterRelayGroupsByMutedAuthors(feedSettings, since, defaultSince)
+        is MutedAuthorsTopNavPerRelayFilterSet -> filterRelayGroupsByMutedAuthors(cache, feedSettings, since, defaultSince)
         is RelayTopNavPerRelayFilterSet -> filterRelayGroupsByRelay(feedSettings, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterRelayGroupsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()

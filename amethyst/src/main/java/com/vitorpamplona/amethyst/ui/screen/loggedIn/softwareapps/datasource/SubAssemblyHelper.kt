@@ -26,13 +26,13 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavP
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.filterSoftwareAppsByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.filterSoftwareAppsByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.filterSoftwareAppsByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.filterSoftwareAppsByMutedAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.filterSoftwareAppsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsByMutedAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 

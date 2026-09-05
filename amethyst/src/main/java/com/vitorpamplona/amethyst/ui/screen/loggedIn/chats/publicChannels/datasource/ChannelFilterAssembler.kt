@@ -20,18 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource
 
-import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelFromUserFilterSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelPublicFilterSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.ChannelFromUserFilterSubAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.ChannelPublicFilterSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-
-// This allows multiple screen to be listening to tags, even the same tag
-class ChannelQueryState(
-    var channel: Channel,
-    var account: Account,
-)
 
 class ChannelFilterAssembler(
     client: INostrClient,

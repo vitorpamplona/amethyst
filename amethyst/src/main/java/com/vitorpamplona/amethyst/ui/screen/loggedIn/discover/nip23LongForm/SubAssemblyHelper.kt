@@ -29,15 +29,15 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip23LongForm.filterLongFormByAllCommunities
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip23LongForm.filterLongFormByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip23LongForm.filterLongFormByCommunity
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip23LongForm.filterLongFormByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip23LongForm.filterLongFormByGeohash
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip23LongForm.filterLongFormByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip23LongForm.filterLongFormGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies.filterLongFormByAllCommunities
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies.filterLongFormByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies.filterLongFormByCommunity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies.filterLongFormByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies.filterLongFormByGeohash
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies.filterLongFormByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies.filterLongFormGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun makeLongFormFilter(

@@ -743,7 +743,9 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     fun getRelayGroupChannelIfExists(key: GroupId): RelayGroupChannel? = relayGroupChannels.get(key)
 
     /** Every relay group we know of that is hosted on [relay] (its channel directory). */
-    fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = relayGroupChannels.filter { key, _ -> key.relayUrl == relay }
+    override fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = relayGroupChannels.filter { key, _ -> key.relayUrl == relay }
+
+    override fun allRelayGroupChannels(): List<RelayGroupChannel> = relayGroupChannels.filter { _, _ -> true }
 
     /**
      * The [RelayGroupChannel] a group-scoped content [note] belongs to, resolved the same way
@@ -3300,7 +3302,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         wasVerified: Boolean,
     ): Boolean = !event.isDeleted() && consumeBaseReplaceable(event, relay, wasVerified)
 
-    fun consume(nip19: Entity) {
+    override fun consume(nip19: Entity) {
         when (nip19) {
             is NSec -> {
                 getOrCreateUser(nip19.toPubKeyHex())

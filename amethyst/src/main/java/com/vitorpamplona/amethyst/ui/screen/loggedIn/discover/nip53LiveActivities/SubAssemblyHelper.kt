@@ -29,15 +29,15 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip53LiveActivities.filterLiveActivitiesByAllCommunities
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip53LiveActivities.filterLiveActivitiesByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip53LiveActivities.filterLiveActivitiesByCommunity
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip53LiveActivities.filterLiveActivitiesByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip53LiveActivities.filterLiveActivitiesByGeohash
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip53LiveActivities.filterLiveActivitiesByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip53LiveActivities.filterLiveActivitiesGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies.filterLiveActivitiesByAllCommunities
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies.filterLiveActivitiesByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies.filterLiveActivitiesByCommunity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies.filterLiveActivitiesByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies.filterLiveActivitiesByGeohash
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies.filterLiveActivitiesByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies.filterLiveActivitiesGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun makeLiveActivitiesFilter(

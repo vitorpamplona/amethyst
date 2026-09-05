@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 
 /**
  * Minimal [ICacheProvider] for the pure reply-resolution tests in this package: a fixed set of
@@ -67,6 +68,8 @@ internal class StubCache(
     override fun hasBeenDeleted(event: Any): Boolean = false
 
     override fun getOrCreateUser(pubkey: HexKey): User? = users[pubkey]
+
+    override fun consume(nip19: Entity) = Unit
 
     override fun justConsumeMyOwnEvent(event: Event): Boolean = false
 }

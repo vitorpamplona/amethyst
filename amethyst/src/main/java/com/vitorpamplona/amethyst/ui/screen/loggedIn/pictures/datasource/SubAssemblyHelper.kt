@@ -29,16 +29,16 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.filterPicturesByAllCommunities
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.filterPicturesByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.filterPicturesByCommunity
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.filterPicturesByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.filterPicturesByGeohashes
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.filterPicturesByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.filterPicturesByMutedAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.filterPicturesGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByAllCommunities
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByCommunity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByGeohashes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByMutedAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun makePicturesFilter(

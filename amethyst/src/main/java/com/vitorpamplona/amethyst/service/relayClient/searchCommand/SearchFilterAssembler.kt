@@ -21,32 +21,19 @@
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
-import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchPostWatcherSubAssembler
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchUserWatcherSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.search.SearchPostWatcherSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.search.SearchUserWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-
-@Stable
-class SearchQueryState(
-    val searchQuery: MutableStateFlow<String>,
-    override val account: Account,
-) : MutableQueryState,
-    AccountScopedQuery {
-    override fun flow(): Flow<String> = searchQuery
-}
 
 @Stable
 class SearchFilterAssembler(
     client: INostrClient,
     scope: CoroutineScope,
-    val cache: LocalCache,
+    val cache: ICacheProvider,
 ) : MutableComposeSubscriptionManager<SearchQueryState>(scope) {
     val group =
         listOf(

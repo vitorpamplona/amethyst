@@ -353,7 +353,8 @@ formatters).
    shims; land Batches 1-5 above (~350 files) — no refactoring required.
 2. **Wave 1 (three small edits, huge fan-out):** finish `EOSE.kt`;
    `IFeedTopNavFilter` → `ICacheProvider`; add KMP `LruCache` expect.
-   Unlocks subassemblies (145), topNavFeeds (23), caches (5).
+   Unlocks subassemblies (145 — **landed 2026-09-05**, see the handoff
+   below), topNavFeeds (23), caches (5).
 3. **Wave 2 (ports):** extract `TopFilter` + `ListBackupStore` from
    `AccountSettings`; move `LocalCache` behind its 3 tiny expects.
    Unlocks nip51Lists, the nipNN state packages, serverList/userMetadata,
@@ -557,6 +558,57 @@ Original findings, for reference:
 6. **`PlatformImage.toSkiaBitmap()` duplicated** verbatim in
    `CoilImageBridge.jvm.kt` and `.ios.kt` — hoist to a shared Skiko source
    set.
+
+### Batch 2 landed — subassemblies are in `commons/relayClient` (2026-09-05)
+
+The audit's Batch 2 (the `ui/screen/**/subassemblies/` filter functions) was
+never executed by the earlier waves; it is done now on branch
+`claude/amethyst-commons-migration-ua8ma8`. What moved and where:
+
+- All 161 subassembly files → `commons/relayClient/<feature>/…`, with the
+  `subassemblies` path segment dropped to match how Batch 1 landed
+  (`relayClient/account/metadata/FilterBasicAccountInfoFromKeys.kt`). Mapping:
+  `searchCommand/subassemblies` → `relayClient/search`,
+  `chats/publicChannels/datasource/subassemblies` → `relayClient/channel`,
+  `…/relayGroup/datasource/subassemblies` → `relayClient/channel/relayGroup`,
+  `discover/<nip>/subassemblies` → `relayClient/discover/<nip>`, and
+  `<feature>/datasource/subassemblies[/<sub>]` → `relayClient/<feature>[/<sub>]`.
+  The misnamed `shorts/…/FilterPollsByAllCommunities.kt` became
+  `FilterShortsByAllCommunities.kt` on the way.
+- Pure companions the 161 needed, moved alongside: `video/datasource/FeedBasis.kt`
+  (the picture/video kind lists) → `relayClient/video`, and
+  `relayGroup/datasource/RelayGroupFilterBuilders.kt` (+ its test) →
+  `relayClient/channel/relayGroup`. The two `*_PAGE_LIMIT` consts went to
+  `relayClient/nsites` / `relayClient/napplets`.
+- The three query-state keys the sub-assemblers are typed on now live in commons
+  on `IAccount`: `ChannelQueryState` (unchanged shape),
+  `SearchQueryState` (carries the search / indexer / follow-plus-mine relay
+  sets as `StateFlow`s instead of reaching into `Account`), and
+  `VideoQueryState` (carries `listName`, `followsPerRelay` and
+  `lastNoteCreatedAtWhenFullyLoaded` flows instead of `Account` +
+  `AccountFeedContentStates`). The app constructs them in
+  `SearchBarViewModel`, `UserSuggestionState` and
+  `VideoFilterAssemblerSubscription`; the `*FilterAssembler` classes stayed in
+  the app (they are now import-clean and can follow with the datasource batch).
+- `ICacheProvider` grew the seams the six `LocalCache`-coupled files needed:
+  `consume(nip19: Entity)` (hint + placeholder seeding for a search query),
+  `allRelayGroupChannels()` and `getRelayGroupChannelsOnRelay(relay)`.
+  `DesktopLocalCache` implements them (relay groups: empty, desktop has no
+  NIP-29 cache yet). `filterByAuthor/Event/Address` and the set-level
+  `filterRelayGroupsBy{Authors,MutedAuthors,Follows}` +
+  `filterRelayGroupsDiscovery` take `cache: ICacheProvider` as their first
+  parameter; the per-relay `filterRelayGroupsByAuthors` lost its `LocalCache`
+  default for `cachedChannels` (the test always passed it explicitly).
+- The four tests moved to `commons/src/commonTest` on `kotlin.test` (JUnit's
+  message-first asserts were reordered).
+
+Not done on purpose: the `SubAssemblyHelper.kt` / `*Filter.kt` dispatchers and
+the `*FilterAssembler` / `*Subscription` classes in each `datasource` package —
+they are the datasource batch (333 files, 102 of them `Account`/
+`AccountViewModel`-coupled) and belong with Wave 4. Desktop's
+`subscriptions/FilterBuilders.kt` (742 lines of hand-rolled copies of these
+filters) is now deletable in favour of the commons functions — a desktop
+follow-up, not part of this batch.
 
 ### Next work, in recommended order (needs maintainer go-ahead per item)
 

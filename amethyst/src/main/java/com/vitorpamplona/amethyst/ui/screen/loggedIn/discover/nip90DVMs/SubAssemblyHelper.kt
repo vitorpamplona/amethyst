@@ -29,15 +29,15 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByAllCommunities
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByCommunity
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByGeohash
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsByAllCommunities
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsByCommunity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsByGeohash
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun makeContentDVMsFilter(

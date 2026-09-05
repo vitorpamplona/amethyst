@@ -29,15 +29,15 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip51FollowSets.filterFollowSetsByAllCommunities
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip51FollowSets.filterFollowSetsByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip51FollowSets.filterFollowSetsByCommunity
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip51FollowSets.filterFollowSetsByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip51FollowSets.filterFollowSetsByGeohash
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip51FollowSets.filterFollowSetsByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip51FollowSets.filterFollowSetsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies.filterFollowSetsByAllCommunities
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies.filterFollowSetsByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies.filterFollowSetsByCommunity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies.filterFollowSetsByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies.filterFollowSetsByGeohash
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies.filterFollowSetsByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies.filterFollowSetsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun makeFollowSetsFilter(

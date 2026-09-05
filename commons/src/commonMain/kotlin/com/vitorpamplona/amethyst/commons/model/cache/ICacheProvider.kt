@@ -24,10 +24,13 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -167,4 +170,21 @@ interface ICacheProvider {
     fun checkGetOrCreateUser(key: HexKey): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Seeds the cache from a parsed NIP-19 entity: records its relay hints and creates the
+     * placeholder User / Note / AddressableNote, so a REQ built for it has something to
+     * attach to. Used by the search sub-assemblers when the query is an npub/nevent/naddr.
+     */
+    fun consume(nip19: Entity)
+
+    /**
+     * Every NIP-29 relay group (kind 39000 metadata + rosters) this cache holds. The discovery
+     * filters read it to back-fill metadata for groups whose roster names a follow. Defaults to
+     * empty for a cache with no relay-group support (Desktop today, test stubs).
+     */
+    fun allRelayGroupChannels(): List<RelayGroupChannel> = emptyList()
+
+    /** The subset of [allRelayGroupChannels] hosted on [relay]. */
+    fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = allRelayGroupChannels().filter { it.groupId.relayUrl == relay }
 }

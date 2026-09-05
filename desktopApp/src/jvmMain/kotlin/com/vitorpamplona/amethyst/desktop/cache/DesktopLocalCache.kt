@@ -50,6 +50,14 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuotes
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -1028,6 +1036,33 @@ class DesktopLocalCache : ICacheProvider {
         addressableNotes.getOrCreate(address.toValue()) {
             AddressableNote(address)
         }
+
+    /** Same seeding as the Android cache: relay hints + a placeholder for whatever the entity names. */
+    override fun consume(nip19: Entity) {
+        when (nip19) {
+            is NSec -> getOrCreateUser(nip19.toPubKeyHex())
+            is NPub -> getOrCreateUser(nip19.hex)
+            is NProfile -> {
+                nip19.relay.forEach { relayHints.addKey(nip19.hex, it) }
+                getOrCreateUser(nip19.hex)
+            }
+            is NNote -> getOrCreateNote(nip19.hex)
+            is NEvent -> {
+                nip19.relay.forEach { relayHints.addEvent(nip19.hex, it) }
+                val note = getOrCreateNote(nip19.hex)
+                if (note.author == null) {
+                    nip19.author?.let { note.author = checkGetOrCreateUser(it) }
+                }
+            }
+            is NEmbed -> consume(nip19.event, null)
+            is NAddress -> {
+                val aTag = nip19.aTag()
+                nip19.relay.forEach { relayHints.addAddress(aTag, it) }
+                getOrCreateAddressableNote(nip19.address())
+            }
+            else -> {}
+        }
+    }
 
     // ----- Channel operations -----
 

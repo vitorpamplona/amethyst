@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
@@ -98,6 +99,8 @@ class ConcordListLateArrivalTest {
         override fun hasBeenDeleted(event: Any): Boolean = false
 
         override fun getOrCreateUser(pubkey: HexKey): User? = null
+
+        override fun consume(nip19: Entity) = Unit
 
         override fun justConsumeMyOwnEvent(event: Event): Boolean = false
     }

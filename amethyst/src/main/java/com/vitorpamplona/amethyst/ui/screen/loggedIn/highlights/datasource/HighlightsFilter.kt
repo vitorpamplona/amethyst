@@ -27,14 +27,14 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavP
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.highlights.filterHighlightsByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.highlights.filterHighlightsByFollows
+import com.vitorpamplona.amethyst.commons.relayClient.highlights.filterHighlightsByGeohashes
+import com.vitorpamplona.amethyst.commons.relayClient.highlights.filterHighlightsByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.highlights.filterHighlightsByMutedAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.highlights.filterHighlightsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.subassemblies.filterHighlightsByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.subassemblies.filterHighlightsByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.subassemblies.filterHighlightsByGeohashes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.subassemblies.filterHighlightsByHashtag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.subassemblies.filterHighlightsByMutedAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.subassemblies.filterHighlightsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 /**
