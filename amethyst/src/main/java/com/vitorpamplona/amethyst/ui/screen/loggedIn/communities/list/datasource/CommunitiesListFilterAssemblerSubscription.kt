@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasourc
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.communities.list.CommunitiesListFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun CommunitiesListFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -41,7 +42,12 @@ fun CommunitiesListFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            CommunitiesListQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultCommunitiesFollowList,
+                account.liveCommunitiesFollowListsPerRelay,
+                accountViewModel.feedStates.communitiesList,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

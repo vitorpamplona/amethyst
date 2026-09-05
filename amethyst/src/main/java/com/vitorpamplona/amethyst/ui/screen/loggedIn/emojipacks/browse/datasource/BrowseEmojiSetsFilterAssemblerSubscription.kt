@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasour
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun BrowseEmojiSetsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -41,7 +42,12 @@ fun BrowseEmojiSetsFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            BrowseEmojiSetsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultBrowseEmojiSetsFollowList,
+                account.liveBrowseEmojiSetsFollowListsPerRelay,
+                accountViewModel.feedStates.browseEmojiSetsFeed,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

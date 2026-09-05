@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.longs.LongsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun LongsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -41,7 +42,12 @@ fun LongsFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            LongsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultLongsFollowList,
+                account.liveLongsFollowListsPerRelay,
+                accountViewModel.feedStates.longsFeed,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

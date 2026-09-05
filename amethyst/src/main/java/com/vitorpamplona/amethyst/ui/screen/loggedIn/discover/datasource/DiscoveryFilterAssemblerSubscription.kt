@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -43,7 +45,21 @@ fun DiscoveryFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(accountViewModel.account) {
-            DiscoveryQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            val feeds = accountViewModel.feedStates
+            DiscoveryQueryState(
+                account = account,
+                listName = account.settings.defaultDiscoveryFollowList,
+                followsPerRelay = account.liveDiscoveryFollowListsPerRelay,
+                scope = accountViewModel.viewModelScope,
+                reads = feeds.discoverReads,
+                marketplace = feeds.discoverMarketplace,
+                dvms = feeds.discoverDVMs,
+                followSets = feeds.discoverFollowSets,
+                live = feeds.discoverLive,
+                publicChats = feeds.discoverPublicChats,
+                communities = feeds.discoverCommunities,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

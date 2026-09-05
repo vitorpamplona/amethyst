@@ -610,6 +610,107 @@ they are the datasource batch (333 files, 102 of them `Account`/
 filters) is now deletable in favour of the commons functions — a desktop
 follow-up, not part of this batch.
 
+### Top-nav feed datasource layer landed in `commons/relayClient` (2026-09-05)
+
+The family that dispatches to the Batch-2 filters — 26 `XFilterAssembler` +
+`XSubAssembler` + `XQueryState` triples, one per top-nav feed (polls,
+pictures, longs, badges, nests, podcasts ×2, music ×2, discover, …) — was 26
+copies of the same ~90 lines differing only in the `makeXFilter` dispatcher and
+which `FeedContentState` floor bounds `since`. Moving the copies would have
+relocated the duplication, so they collapsed onto three shared classes in
+`commons/relayClient/topNavFeeds/`:
+
+- `TopNavFeedQueryState(account: IAccount, listName, followsPerRelay, scope,
+  feeds)` — the one key type for all of them (open; `DiscoveryQueryState`
+  adds its seven named tabs, `SoftwareAppsQueryState` adds the blocked-relay
+  set).
+- `TopNavFeedSubAssembler<K>` — the abstract EOSE manager carrying the shared
+  job wiring (list-name watcher, per-relay follows sampled at 500 ms, feed
+  floors combined and sampled at 5 s, plus `onListChanged` /
+  `extraInvalidators` hooks). `SingleTopNavFeedSubAssembler(client, keys,
+  ::makeXFilter, resetEoseOnListChange)` is the concrete one every
+  single-dispatcher feed uses; Discovery's three and SoftwareApps' one are
+  subclasses.
+- `TopNavFeedFilterAssembler<K>` — the `ComposeSubscriptionManager` that owns
+  the sub-assemblers. Each feature keeps a one-line
+  `commons/relayClient/<feature>/XFilterAssembler.kt` naming its dispatcher,
+  so `RelaySubscriptionsCoordinator` and the `*Subscription` composables kept
+  their types and names.
+
+The pure `makeXFilter` dispatchers (`SubAssemblyHelper.kt`, `XFilter.kt`,
+`FilterBadges.kt`, the seven `discover/<nip>/SubAssemblyHelper.kt`) moved next
+to their filters. What stays in the app is exactly the Compose glue: each
+`XFilterAssemblerSubscription.kt` now builds the key with
+`AccountViewModel.topNavFeedQueryState(listName, followsPerRelay, feed…)`
+(`ui/screen/loggedIn/TopNavFeedQueryStates.kt`), reading the `Account` /
+`AccountSettings` / `AccountFeedContentStates` fields there.
+
+Deliberate behaviour deltas, all small: every watcher now runs on the key's
+(screen) scope — the floor watcher used to run on `account.scope`; the
+per-relay-follows sampler is 500 ms everywhere (Discovery tab 2 and Video had
+1000 ms); Video gained the list-name watcher the others always had, and its
+inline `when` became `makePictureAndVideoFilter`. `VideoQueryState` from the
+previous batch is gone in favour of the shared key.
+
+**Not in this batch** — the datasource files with other key shapes:
+`RelayGroupsDiscovery*` (reads `LocalCache.live.newEventBundles` and the
+relay-group server lists), `home/` (its filters are still app-side and
+`HomeOutboxEventsEoseManager` is a different animal), and the non-top-nav
+families (profile, thread, chatroom(s), hashtag, geohash, url, relay feed,
+community, gitRepo, chess, one/my podcast, connectedApps, profile badges, app
+recommendations, nest room, follow-pack feed, onchain zaps, NIP-66 relay
+info). Many are import-clean and can follow mechanically; the `Account`-typed
+ones wait on Wave 4.
+
+### Desktop `subscriptions/FilterBuilders.kt` — investigated, not migrated (2026-09-05)
+
+The audit listed this 742-line file as a hand-rolled copy of ~34
+subassemblies that the Batch-2 move would make deletable. That premise is
+wrong, and the two sides do not share a model:
+
+- **Desktop** builds plain quartz `Filter`s and broadcasts the same list to a
+  whole relay set (`RelayConnectionManager.subscribe` does
+  `relays.associateWith { filters }`; relay choice is "all connected/configured
+  relays"). No per-relay `since`, no EOSE bookkeeping, no `SubPurpose`.
+- **Commons** builds `List<RelayBasedFilter>` — one `ExplainedFilter` per relay
+  — from an `IFeedTopNavPerRelayFilterSet` the outbox model derives from
+  follow lists + each author's NIP-65 write relays, with `since` per relay
+  from the EOSE managers, driven by `ComposeSubscriptionManager`.
+- Both end in the same quartz call, `NostrClient.subscribe(subId,
+  Map<relay, List<Filter>>)`; the mismatch is one layer up (who picks the
+  relay per filter, where `since` lives).
+
+What the file actually is: 27 functions, 6 with no callers at all
+(`nip04DmsToUser/FromUser`, `giftWrapsToUser`, `dmRelayList`,
+`chessChallengesToUser`, `chessAllEvents`); a 90-line `buildFilter` DSL used
+only by its own 525-line test; most of the rest are one-line named-argument
+wrappers over the `Filter` constructor with hard-coded kind integers
+(`listOf(0)`, `9735`, `30023`, `30064`…). The genuine overlaps with commons are
+the search kind groups (`SearchFilterFactory` says "ported from Android
+SearchPostsByText"; commons now exports `SearchPostsByTextKinds1..3`), the
+chess filters (commons `nip64Chess/subscription/ChessFilterBuilder` has
+`challengesFilter`/`userGamesFilter`/`userTaggedFilter`), and
+`notificationsForUser`, which already delegates to commons.
+
+Options, for the maintainer to pick:
+
+1. **Adapter, partial match** — teach `SubscriptionConfig` /
+   `RelayConnectionManager` to accept `List<RelayBasedFilter>` (group by relay
+   into the map) so desktop can call commons functions with a uniform set,
+   e.g. `GlobalTopNavPerRelayFilterSet(relays.associateWith {
+   GlobalTopNavPerRelayFilter })` or an `AuthorsTopNavPerRelayFilterSet` from
+   the follow list. Reuses the shared filter shapes and deletes most of
+   `FilterBuilders`; keeps desktop's broadcast relay policy and `since = null`.
+   Prerequisite for (2). **Recommended next step.**
+2. **Adopt the outbox model, full match** — desktop builds filter sets via
+   commons `OutboxLoaderState` (needs the users' NIP-65 lists in its cache) and
+   drives subscriptions through the commons EOSE + subscription managers. This
+   is the Wave-2/`DesktopLocalCache` direction; a project, not a cleanup.
+3. **No model change** — inline the trivial wrappers as `Filter(...)` with
+   quartz kind constants, delete the dead functions and the test-only DSL,
+   switch search/chess to the commons functions. Removes the file, gains no
+   routing parity.
+
 ### Next work, in recommended order (needs maintainer go-ahead per item)
 
 - **Tier 4 unlocks** (small, mechanical): `NappletProtocolJson`

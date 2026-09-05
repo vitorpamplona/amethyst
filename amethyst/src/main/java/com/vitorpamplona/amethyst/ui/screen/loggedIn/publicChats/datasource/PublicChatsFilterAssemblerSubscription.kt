@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.publicChats.PublicChatsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun PublicChatsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -41,7 +42,12 @@ fun PublicChatsFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            PublicChatsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultPublicChatsFollowList,
+                account.livePublicChatsFollowListsPerRelay,
+                accountViewModel.feedStates.publicChatsFeed,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

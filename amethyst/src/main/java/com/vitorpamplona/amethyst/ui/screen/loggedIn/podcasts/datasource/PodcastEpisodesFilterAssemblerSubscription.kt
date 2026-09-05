@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.podcasts.PodcastEpisodesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun PodcastEpisodesFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -41,7 +42,12 @@ fun PodcastEpisodesFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            PodcastEpisodesQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultPodcastEpisodesFollowList,
+                account.livePodcastEpisodesFollowListsPerRelay,
+                accountViewModel.feedStates.podcastEpisodesFeed,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

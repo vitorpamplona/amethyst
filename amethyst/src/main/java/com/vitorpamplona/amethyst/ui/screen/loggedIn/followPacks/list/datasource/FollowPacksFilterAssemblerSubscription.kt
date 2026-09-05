@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasourc
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.followPacks.FollowPacksFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun FollowPacksFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -41,7 +42,12 @@ fun FollowPacksFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            FollowPacksQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultFollowPacksFollowList,
+                account.liveFollowPacksFollowListsPerRelay,
+                accountViewModel.feedStates.followPacksFeed,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

@@ -22,15 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun NsitesFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
     val state =
         remember(accountViewModel.account) {
-            NsitesQueryState(accountViewModel.account, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultNsitesFollowList,
+                account.liveNsitesFollowListsPerRelay,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().nsites)
