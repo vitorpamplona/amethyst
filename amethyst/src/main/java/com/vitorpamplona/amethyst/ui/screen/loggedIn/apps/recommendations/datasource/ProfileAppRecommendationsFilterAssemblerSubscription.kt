@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datas
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.relayClient.apps.recommendations.ProfileAppRecommendationsQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -29,7 +30,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun ProfileAppRecommendationsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
     val state =
         remember(accountViewModel.account) {
-            ProfileAppRecommendationsQueryState(accountViewModel.account)
+            val account = accountViewModel.account
+            ProfileAppRecommendationsQueryState(
+                account = account,
+                outboxRelays = account.outboxRelays.flow,
+                defaultGlobalRelays = account.defaultGlobalRelays.flow,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().profileAppRecommendations)

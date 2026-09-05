@@ -18,21 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource
+package com.vitorpamplona.amethyst.commons.relayClient.badges.profile
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.badges.profile.ProfileBadgesQueryState
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-@Composable
-fun ProfileBadgesFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
-    val state =
-        remember(accountViewModel.account) {
-            val account = accountViewModel.account
-            ProfileBadgesQueryState(account, account.notificationRelays.flow)
-        }
+class ProfileBadgesSubAssembler(
+    client: INostrClient,
+    allKeys: () -> Set<ProfileBadgesQueryState>,
+) : PerUserEoseManager<ProfileBadgesQueryState>(client, allKeys) {
+    override fun user(key: ProfileBadgesQueryState) = key.account.userProfile()
 
-    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().profileBadges)
+    override fun updateFilter(
+        key: ProfileBadgesQueryState,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> =
+        filterReceivedBadgeAwards(
+            pubkey = user(key).pubkeyHex,
+            relays = key.notificationRelays.value,
+        )
 }

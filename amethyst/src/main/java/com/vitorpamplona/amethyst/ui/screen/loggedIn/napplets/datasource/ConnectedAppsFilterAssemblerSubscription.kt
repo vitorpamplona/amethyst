@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.relayClient.napplets.ConnectedAppsQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -33,7 +34,8 @@ fun ConnectedAppsFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account, authors) {
-            ConnectedAppsQueryState(accountViewModel.account, authors)
+            val account = accountViewModel.account
+            ConnectedAppsQueryState(account, authors, account.homeRelays.flow)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().connectedApps)
