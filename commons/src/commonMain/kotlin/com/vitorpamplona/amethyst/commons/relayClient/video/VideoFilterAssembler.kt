@@ -27,4 +27,4 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 class VideoFilterAssembler(
     client: INostrClient,
-) : TopNavFeedFilterAssembler<TopNavFeedQueryState>({ keys -> listOf(SingleTopNavFeedSubAssembler(client, keys, ::makePictureAndVideoFilter)) })
+) : TopNavFeedFilterAssembler<TopNavFeedQueryState>({ keys -> listOf(SingleTopNavFeedSubAssembler(client, keys, ::makePictureAndVideoFilter, floorSampleMs = 1000)) })

@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -193,7 +192,7 @@ class ThreadAssemblerTest {
 
         override fun getOrCreateUser(pubkey: HexKey): User? = null
 
-        override fun consume(nip19: Entity) = Unit
+        override fun consumeEmbedded(event: Event) = Unit
 
         override fun justConsumeMyOwnEvent(event: Event): Boolean = false
     }

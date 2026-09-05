@@ -36,8 +36,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 // also fan out as separate subscriptions — keeping them split avoids cross-kind over-fetching
 // and lets `makeMusicTracksFilter` / `makeMusicPlaylistsFilter` reuse the same parameterized
 // `filterMusicEventsByX` helpers below.
-val MUSIC_TRACK_KINDS = listOf(MusicTrackEvent.KIND)
-val MUSIC_PLAYLIST_KINDS = listOf(MusicPlaylistEvent.KIND)
+internal val MUSIC_TRACK_KINDS = listOf(MusicTrackEvent.KIND)
+internal val MUSIC_PLAYLIST_KINDS = listOf(MusicPlaylistEvent.KIND)
 
 fun filterMusicEventsByAuthors(
     relay: NormalizedRelayUrl,

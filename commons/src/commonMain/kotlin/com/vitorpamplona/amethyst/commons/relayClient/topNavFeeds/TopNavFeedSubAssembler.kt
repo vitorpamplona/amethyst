@@ -63,6 +63,9 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
     /** Runs when the key's top-nav selection changes, right before the filters are re-issued. */
     protected open fun onListChanged(key: K) {}
 
+    /** How often (ms) a moving feed floor may re-issue the REQ; the video swipe feed wants a tighter cadence. */
+    protected open val floorSampleMs: Long = 5000
+
     /** The feed floors that re-issue the REQ (sampled) when they move. Defaults to every feed on the key. */
     protected open fun floors(key: K): List<StateFlow<Long?>> = key.feeds.map { it.lastNoteCreatedAtWhenFullyLoaded }
 
@@ -96,7 +99,7 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
                 if (floors.isNotEmpty()) {
                     add(
                         key.scope.launch(Dispatchers.IO) {
-                            combine(floors) { }.sample(5000).collectLatest {
+                            combine(floors) { }.sample(floorSampleMs).collectLatest {
                                 invalidateFilters()
                             }
                         },
@@ -121,7 +124,7 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
         subId: String,
     ) {
         super.endSub(key, subId)
-        userJobMap[key]?.forEach { it.cancel() }
+        userJobMap.remove(key)?.forEach { it.cancel() }
     }
 }
 
@@ -139,6 +142,7 @@ open class SingleTopNavFeedSubAssembler(
     allKeys: () -> Set<TopNavFeedQueryState>,
     private val makeFilter: TopNavFeedFilterMaker,
     private val resetEoseOnListChange: Boolean = false,
+    override val floorSampleMs: Long = 5000,
 ) : TopNavFeedSubAssembler<TopNavFeedQueryState>(client, allKeys) {
     override fun updateFilter(
         key: TopNavFeedQueryState,

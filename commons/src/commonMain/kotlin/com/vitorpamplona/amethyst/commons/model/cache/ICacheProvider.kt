@@ -31,6 +31,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -176,7 +183,37 @@ interface ICacheProvider {
      * placeholder User / Note / AddressableNote, so a REQ built for it has something to
      * attach to. Used by the search sub-assemblers when the query is an npub/nevent/naddr.
      */
-    fun consume(nip19: Entity)
+    fun consume(nip19: Entity) {
+        when (nip19) {
+            is NSec -> getOrCreateUser(nip19.toPubKeyHex())
+            is NPub -> getOrCreateUser(nip19.hex)
+            is NProfile -> {
+                nip19.relay.forEach { relayHints.addKey(nip19.hex, it) }
+                getOrCreateUser(nip19.hex)
+            }
+            is NNote -> checkGetOrCreateNote(nip19.hex)
+            is NEvent -> {
+                nip19.relay.forEach { relayHints.addEvent(nip19.hex, it) }
+                val note = checkGetOrCreateNote(nip19.hex)
+                if (note != null && note.author == null) {
+                    nip19.author?.let { note.author = checkGetOrCreateUser(it) }
+                }
+            }
+            is NEmbed -> consumeEmbedded(nip19.event)
+            is NAddress -> {
+                val aTag = nip19.aTag()
+                nip19.relay.forEach { relayHints.addAddress(aTag, it) }
+                getOrCreateAddressableNote(nip19.address())
+            }
+            else -> {}
+        }
+    }
+
+    /**
+     * Ingests an event carried inline in an `nembed`. Unlike [justConsumeMyOwnEvent] the event
+     * did not come from this user, so implementations verify its signature like a relay event.
+     */
+    fun consumeEmbedded(event: Event)
 
     /**
      * Every NIP-29 relay group (kind 39000 metadata + rosters) this cache holds. The discovery

@@ -39,15 +39,15 @@ import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMe
 // Episodes span both podcast drafts: NIP-F4 kind 54 (podcast-is-a-keypair) and Podcasting-2.0
 // kind 30054 (creator-is-a-keypair). Both are authored by the followed pubkey, so the same
 // author-scoped REQ pulls them into one merged feed.
-val PODCAST_EPISODE_KINDS = listOf(PodcastEpisodeEvent.KIND, Podcasting20EpisodeEvent.KIND)
-val PODCAST_KINDS = listOf(PodcastMetadataEvent.KIND)
+internal val PODCAST_EPISODE_KINDS = listOf(PodcastEpisodeEvent.KIND, Podcasting20EpisodeEvent.KIND)
+internal val PODCAST_KINDS = listOf(PodcastMetadataEvent.KIND)
 
 // Podcasting-2.0 stores show metadata as a kind:30078 NIP-78 app-data event. That kind is
 // heavily overloaded, so this REQ MUST be constrained by `#d=["podcast-metadata"]` (see
 // [PODCAST_METADATA_D_FILTER]) or it would pull every client's app-data. Kept separate from
 // [PODCAST_KINDS] because the NIP-F4 kind:10154 metadata must NOT carry the `#d` constraint.
-val PODCASTING20_METADATA_KINDS = listOf(AppSpecificDataEvent.KIND)
-val PODCAST_METADATA_D_FILTER = mapOf("d" to listOf(Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG))
+internal val PODCASTING20_METADATA_KINDS = listOf(AppSpecificDataEvent.KIND)
+internal val PODCAST_METADATA_D_FILTER = mapOf("d" to listOf(Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG))
 
 /**
  * Merges two relay-filter tag maps, unioning the value lists per key. Used to layer an extra
