@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_ALL_TIMELINE_KINDS
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_TIMELINE_KINDS
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupJoinedChatTailFilter
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupOpenChatTailFilter
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareAppsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareAppsQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -41,7 +43,15 @@ fun SoftwareAppsFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            SoftwareAppsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            SoftwareAppsQueryState(
+                account = account,
+                listName = account.settings.defaultSoftwareAppsFollowList,
+                followsPerRelay = account.liveSoftwareAppsFollowListsPerRelay,
+                scope = accountViewModel.viewModelScope,
+                feed = accountViewModel.feedStates.softwareAppsFeed,
+                blockedRelays = account.blockedRelayList.flow,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

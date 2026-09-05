@@ -221,15 +221,6 @@ import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
-import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
-import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
-import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.isATag
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -743,7 +734,9 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     fun getRelayGroupChannelIfExists(key: GroupId): RelayGroupChannel? = relayGroupChannels.get(key)
 
     /** Every relay group we know of that is hosted on [relay] (its channel directory). */
-    fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = relayGroupChannels.filter { key, _ -> key.relayUrl == relay }
+    override fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = relayGroupChannels.filter { key, _ -> key.relayUrl == relay }
+
+    override fun allRelayGroupChannels(): List<RelayGroupChannel> = relayGroupChannels.values().toList()
 
     /**
      * The [RelayGroupChannel] a group-scoped content [note] belongs to, resolved the same way
@@ -3300,53 +3293,8 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         wasVerified: Boolean,
     ): Boolean = !event.isDeleted() && consumeBaseReplaceable(event, relay, wasVerified)
 
-    fun consume(nip19: Entity) {
-        when (nip19) {
-            is NSec -> {
-                getOrCreateUser(nip19.toPubKeyHex())
-            }
-
-            is NPub -> {
-                getOrCreateUser(nip19.hex)
-            }
-
-            is NProfile -> {
-                nip19.relay.forEach { relayHint ->
-                    relayHints.addKey(nip19.hex, relayHint)
-                }
-                getOrCreateUser(nip19.hex)
-            }
-
-            is NNote -> {
-                getOrCreateNote(nip19.hex)
-            }
-
-            is NEvent -> {
-                nip19.relay.forEach { relayHint ->
-                    relayHints.addEvent(nip19.hex, relayHint)
-                }
-                val note = getOrCreateNote(nip19.hex)
-                if (note.author == null) {
-                    nip19.author?.let { note.author = checkGetOrCreateUser(it) }
-                }
-            }
-
-            is NEmbed -> {
-                justConsume(nip19.event, null, false)
-            }
-
-            is NRelay -> {}
-
-            is NAddress -> {
-                val aTag = nip19.aTag()
-                nip19.relay.forEach { relayHint ->
-                    relayHints.addAddress(aTag, relayHint)
-                }
-                getOrCreateAddressableNote(nip19.address())
-            }
-
-            else -> { }
-        }
+    override fun consumeEmbedded(event: Event) {
+        justConsume(event, null, false)
     }
 
     override fun justConsumeMyOwnEvent(event: Event) = justConsumeAndUpdateIndexes(event, null, true)

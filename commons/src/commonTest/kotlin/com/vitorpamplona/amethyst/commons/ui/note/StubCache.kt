@@ -68,5 +68,7 @@ internal class StubCache(
 
     override fun getOrCreateUser(pubkey: HexKey): User? = users[pubkey]
 
+    override fun consumeEmbedded(event: Event) = Unit
+
     override fun justConsumeMyOwnEvent(event: Event): Boolean = false
 }

@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.gitRepositories.GitRepositoriesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun GitRepositoriesFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -41,7 +42,12 @@ fun GitRepositoriesFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            GitRepositoriesQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultGitRepositoriesFollowList,
+                account.liveGitRepositoriesFollowListsPerRelay,
+                accountViewModel.feedStates.gitRepositoriesFeed,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

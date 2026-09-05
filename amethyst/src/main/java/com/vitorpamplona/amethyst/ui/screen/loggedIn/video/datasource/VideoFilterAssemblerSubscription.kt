@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.video.VideoFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun VideoFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -43,7 +44,12 @@ fun VideoFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(accountViewModel.account) {
-            VideoQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.settings.defaultStoriesFollowList,
+                account.liveStoriesFollowListsPerRelay,
+                accountViewModel.feedStates.videoFeed,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)

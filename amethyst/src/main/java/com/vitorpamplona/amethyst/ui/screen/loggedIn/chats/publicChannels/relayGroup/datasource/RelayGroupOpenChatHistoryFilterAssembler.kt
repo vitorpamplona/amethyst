@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupHistoryFilters
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager

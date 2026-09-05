@@ -99,6 +99,8 @@ class ConcordListLateArrivalTest {
 
         override fun getOrCreateUser(pubkey: HexKey): User? = null
 
+        override fun consumeEmbedded(event: Event) = Unit
+
         override fun justConsumeMyOwnEvent(event: Event): Boolean = false
     }
 

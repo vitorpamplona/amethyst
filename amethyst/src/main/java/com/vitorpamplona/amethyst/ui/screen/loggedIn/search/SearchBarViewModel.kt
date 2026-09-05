@@ -32,13 +32,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -104,7 +104,14 @@ class SearchBarViewModel(
             .onEach(::updateDataSource)
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
-    val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
+    val searchDataSourceState =
+        SearchQueryState(
+            searchQuery = MutableStateFlow(searchValue),
+            account = account,
+            searchRelays = account.searchRelayList.flow,
+            indexerRelays = account.indexerRelayList.flow,
+            followPlusAllMineWithSearchRelays = account.followPlusAllMineWithSearch.flow,
+        )
 
     @Suppress("unused")
     val sourceWatcher =

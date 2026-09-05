@@ -24,10 +24,20 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -167,4 +177,51 @@ interface ICacheProvider {
     fun checkGetOrCreateUser(key: HexKey): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Seeds the cache from a parsed NIP-19 entity: records its relay hints and creates the
+     * placeholder User / Note / AddressableNote, so a REQ built for it has something to
+     * attach to. Used by the search sub-assemblers when the query is an npub/nevent/naddr.
+     */
+    fun consume(nip19: Entity) {
+        when (nip19) {
+            is NSec -> getOrCreateUser(nip19.toPubKeyHex())
+            is NPub -> getOrCreateUser(nip19.hex)
+            is NProfile -> {
+                nip19.relay.forEach { relayHints.addKey(nip19.hex, it) }
+                getOrCreateUser(nip19.hex)
+            }
+            is NNote -> checkGetOrCreateNote(nip19.hex)
+            is NEvent -> {
+                nip19.relay.forEach { relayHints.addEvent(nip19.hex, it) }
+                val note = checkGetOrCreateNote(nip19.hex)
+                if (note != null && note.author == null) {
+                    nip19.author?.let { note.author = checkGetOrCreateUser(it) }
+                }
+            }
+            is NEmbed -> consumeEmbedded(nip19.event)
+            is NAddress -> {
+                val aTag = nip19.aTag()
+                nip19.relay.forEach { relayHints.addAddress(aTag, it) }
+                getOrCreateAddressableNote(nip19.address())
+            }
+            else -> {}
+        }
+    }
+
+    /**
+     * Ingests an event carried inline in an `nembed`. Unlike [justConsumeMyOwnEvent] the event
+     * did not come from this user, so implementations verify its signature like a relay event.
+     */
+    fun consumeEmbedded(event: Event)
+
+    /**
+     * Every NIP-29 relay group (kind 39000 metadata + rosters) this cache holds. The discovery
+     * filters read it to back-fill metadata for groups whose roster names a follow. Defaults to
+     * empty for a cache with no relay-group support (Desktop today, test stubs).
+     */
+    fun allRelayGroupChannels(): List<RelayGroupChannel> = emptyList()
+
+    /** The subset of [allRelayGroupChannels] hosted on [relay]. */
+    fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = allRelayGroupChannels().filter { it.groupId.relayUrl == relay }
 }

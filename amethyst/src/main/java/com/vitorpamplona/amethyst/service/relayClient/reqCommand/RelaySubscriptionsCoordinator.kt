@@ -20,24 +20,59 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
+import com.vitorpamplona.amethyst.commons.relayClient.articles.ArticlesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.badges.BadgesFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.calendars.CalendarsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.communities.list.CommunitiesListFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.followPacks.FollowPacksFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.geohash.GeoHashFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.RepositoryFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.gitRepositories.GitRepositoriesFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.highlights.HighlightsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.livestreams.LiveStreamsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.longs.LongsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.music.MusicPlaylistsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.music.MusicTracksFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.napplets.NappletsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.nests.NestsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.nsites.NsitesFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.pictures.PicturesFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.podcasts.MyPodcastFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.podcasts.OnePodcastFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.podcasts.PodcastEpisodesFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.podcasts.PodcastsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.polls.PollsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.polls.results.PollResponsesFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.products.ProductsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.profile.UserProfileFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.publicChats.PublicChatsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.relay.RelayFeedFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.relays.RelayInfoNip66FilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.shorts.ShortsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareAppsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.url.UrlFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.video.VideoFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.wallet.OnchainZapsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.workouts.WorkoutsFilterAssembler
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblyGroup
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistoryFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailFilterAssembler
@@ -49,48 +84,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelayFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource.CommunitiesListFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasource.FollowPacksFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.datasource.RepositoryFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.GitRepositoriesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.HighlightsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.MusicPlaylistsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.MusicTracksFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.ConnectedAppsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomLivenessAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.MyPodcastFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.OnePodcastFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.datasources.PollResponsesFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource.RelayFeedFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.datasource.UrlFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
@@ -154,10 +154,10 @@ class RelaySubscriptionsCoordinator(
     val concordChannelHistory = ConcordChannelHistoryFilterAssembler(client)
 
     val chatroom = ChatroomFilterAssembler(client)
-    val community = CommunityFilterAssembler(client)
-    val gitRepository = RepositoryFilterAssembler(client)
+    val community = CommunityFilterAssembler(cache, client)
+    val gitRepository = RepositoryFilterAssembler(cache, client)
     val thread = ThreadFilterAssembler(client)
-    val profile = UserProfileFilterAssembler(client)
+    val profile = UserProfileFilterAssembler(cache, client)
     val hashtags = HashtagFilterAssembler(client)
     val geohashes = GeoHashFilterAssembler(client)
     val urls = UrlFilterAssembler(client)
@@ -170,7 +170,7 @@ class RelaySubscriptionsCoordinator(
     val polls = PollsFilterAssembler(client)
 
     // Votes for the poll whose results screen is open.
-    val pollResponses = PollResponsesFilterAssembler(client)
+    val pollResponses = PollResponsesFilterAssembler(cache, client)
     val pictures = PicturesFilterAssembler(client)
     val workouts = WorkoutsFilterAssembler(client)
     val gitRepositories = GitRepositoriesFilterAssembler(client)
@@ -189,8 +189,8 @@ class RelaySubscriptionsCoordinator(
     val musicPlaylists = MusicPlaylistsFilterAssembler(client)
     val podcastEpisodes = PodcastEpisodesFilterAssembler(client)
     val podcasts = PodcastsFilterAssembler(client)
-    val onePodcast = OnePodcastFilterAssembler(client)
-    val myPodcast = MyPodcastFilterAssembler(client)
+    val onePodcast = OnePodcastFilterAssembler(cache, client)
+    val myPodcast = MyPodcastFilterAssembler(cache, client)
     val softwareApps = SoftwareAppsFilterAssembler(client)
     val napplets = NappletsFilterAssembler(client)
     val connectedApps = ConnectedAppsFilterAssembler(client)
@@ -205,7 +205,7 @@ class RelaySubscriptionsCoordinator(
     val nwc = NWCPaymentFilterAssembler(client)
 
     // active when the wallet's on-chain transactions screen is on top.
-    val onchainZaps = OnchainZapsFilterAssembler(client)
+    val onchainZaps = OnchainZapsFilterAssembler(cache, client)
 
     // active while the user is browsing the NIP-87 mint picker. Subscribes to
     // kind:38172 cashu mint announcements + kind:38000 cashu-scoped

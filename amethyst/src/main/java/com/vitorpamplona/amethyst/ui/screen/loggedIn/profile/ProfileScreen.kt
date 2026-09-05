@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.profile.UserProfileFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.gallery
 import com.vitorpamplona.amethyst.commons.resources.mutual
@@ -86,7 +87,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.TabBookma
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal.UserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.conversations.TabNotesConversations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.conversations.dal.UserProfileConversationsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.FollowersTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.TabFollowers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.dal.UserProfileFollowersUserFeedViewModel

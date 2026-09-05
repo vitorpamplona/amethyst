@@ -24,6 +24,7 @@ import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.url.UrlQueryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @SuppressLint("StateFlowValueCalledInComposition")

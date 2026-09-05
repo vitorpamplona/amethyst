@@ -1029,6 +1029,10 @@ class DesktopLocalCache : ICacheProvider {
             AddressableNote(address)
         }
 
+    override fun consumeEmbedded(event: Event) {
+        consume(event, null)
+    }
+
     // ----- Channel operations -----
 
     override fun getAnyChannel(note: Note): Channel? {
