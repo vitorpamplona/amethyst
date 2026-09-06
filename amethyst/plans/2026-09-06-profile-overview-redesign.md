@@ -92,9 +92,12 @@ Each row opens its own screen (`Route.ProfileNotes(pubkey)`,
 `Route.ProfileMutual`, `Route.ProfileBookmarks`, `Route.ProfileTags`,
 `Route.ProfileBadges` (exists), `Route.ProfileApps`, `Route.ProfileRelays`,
 `Route.ProfileReports`, `Route.ProfileFollows`, `Route.ProfileFollowers`).
-Layout: a compact top bar (back, 32dp avatar, screen title, `name · count`
-subtitle, search, `⋮`), a chip row to jump between sibling screens without
-popping back, then the existing feed composable for that tab.
+Each is a **separate, standalone screen**: there is no shared tabbed
+container and no chip row linking siblings. A screen is a compact top bar
+(back, 32dp avatar, screen title, `name · count` subtitle, search where the
+list is long, `⋮`) over the existing feed composable for that former tab, and
+it owns its own `FeedViewModel` and filter-assembler subscription, created
+when the screen opens and torn down when it pops.
 
 ### 2. Desktop
 
@@ -157,8 +160,9 @@ screen is open.
    `commons/.../ui/profile/` (shared by Android and Desktop).
 2. **Android**: new `ProfileOverviewScreen` replacing the body of
    `ProfileScreen`; `ProfileHeader` rewritten to the header above; each
-   `Tab*` composable wrapped in a `ProfileFeedScreen(title, chips, feed)`
-   scaffold with its own route; `UserProfileFilterAssembler` split.
+   `Tab*` composable becomes its own screen (one route, one file, one
+   ViewModel, one subscription) under a shared `ProfileFeedScaffold(title,
+   subtitle, feed)`; `UserProfileFilterAssembler` split per screen.
 3. **Desktop**: `UserProfileScreen` split into `ProfileIdentityColumn` +
    `ProfileActivityGrid` + per-feed content; delete the 11-tab row.
 4. **Cleanup**: remove `Bolt12PayButton`, `PaymentButton` and `ListButton`
