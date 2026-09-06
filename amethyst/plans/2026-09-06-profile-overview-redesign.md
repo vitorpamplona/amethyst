@@ -206,7 +206,7 @@ IAccount-equivalent, cache: ICacheProvider)`. Exposes one
 - pinned notes: the `PinListEvent` addressable note flow
   (`UserProfilePinnedNotesFeedFilter` logic, moves to commons as-is),
 - latest thread / latest reply: `observeLatestEvent(Filter(authors))`, which
-  today lives on Android's `LocalCache` only (§14, blocker B1),
+  today lives on Android's `LocalCache` only (§12, blocker B1),
 - media: `UserProfileGalleryFeedFilter` `take(4)`,
 - zaps: `LiveActivityTopZappersAggregator.aggregate` (commons, already tested)
   over the receipts `UserProfileZapsViewModel.sumAmountsByUser` collects,
@@ -322,7 +322,7 @@ metadata subscription) and Between you two (the account's own notes, already
 local).
 
 Desktop gets the same managers through `LifecycleAwareKeyDataSourceSubscription`
-once it adopts `ComposeSubscriptionManager` (§14); `BackwardRelayPager` is a
+once it adopts `ComposeSubscriptionManager` (§12); `BackwardRelayPager` is a
 `jvmAndroid` source set, so both apps can use it today.
 
 ## 7. Android navigation and screens
@@ -419,11 +419,11 @@ management screens.
 
 1. **Commons state**: add `observeEvents<T>(Filter)` /
    `observeLatestEvent<T>(Filter)` to `ICacheProvider` (implemented by
-   `LocalCache` and `DesktopLocalCache`; §14 B1), `ProfileSection` enum,
+   `LocalCache` and `DesktopLocalCache`; §12 B1), `ProfileSection` enum,
    `ProfileOverview` + `ProfileOverviewViewModel`, `UserProfileZapsViewModel`
    moved to commons with private-zap decryption behind a lambda and its
    top-N taken from `LiveActivityTopZappersAggregator`, `ProfilePaymentRails`
-   resolver (§14 B3), `FilterUserProfilePreview` + sub-assembler, assembler
+   resolver (§12 B3), `FilterUserProfilePreview` + sub-assembler, assembler
    split into
    `UserProfileOverviewFilterAssembler` + per-screen assemblers (Android's
    `RelaySubscriptionsCoordinator` wires all of them; the old combined
@@ -451,7 +451,7 @@ management screens.
    first), `./gradlew spotlessApply`, update this plan's status and move it
    to `archive/`.
 
-## 14. Reuse map (survey of the rest of the app)
+## 12. Reuse map (survey of the rest of the app)
 
 Everything the plan called "new" was checked against `amethyst/`, `commons/`
 and `desktopApp/`. Legend: **reuse** = call as-is; **promote** = exists but
@@ -542,7 +542,7 @@ files, `ProfileFeedScaffold` (a ~30-line composition of `DisappearingScaffold`
 / `ProfileActivityGrid` / `ProfileSectionScreen` layouts. Everything else in
 §4–§8 maps to an existing symbol.
 
-## 12. Risks
+## 13. Risks
 
 - **Counts without NIP-45.** Most relays do not implement COUNT; the copy
   must read well without numbers ("last note 2h ago"). Never show a local
@@ -562,7 +562,7 @@ files, `ProfileFeedScaffold` (a ~30-line composition of `DisappearingScaffold`
   only applies to the focused / reading-width presentation, the narrow column
   gets the stacked layout.
 
-## 13. Open questions
+## 14. Open questions
 
 - Should "Between you two" also surface DM threads (needs the chatroom
   lookup), or stay notes-only as the current Mutual filter?
