@@ -147,10 +147,15 @@ Top to bottom, inside `ProfileHeader`:
    - Meta `FlowRow(horizontalArrangement = spacedBy(16.dp), verticalArrangement = spacedBy(6.dp))`:
      website (Link icon, `LongPressCopyText`), one item per NIP-39 identity
      (existing icon + `identity.identity`). No separate rows.
-   - Key chip: 32dp `surfaceContainer` pill, monospace
-     `baseUser.pubkeyDisplayHex()`, then 28dp copy (npub) and QR
-     (`Route.QRDisplay`) icon buttons. The hex and nprofile rows are gone;
-     `Copy hex` / `Copy nprofile` join the `⋮` menu.
+   - Key row, `FlowRow(spacedBy(6.dp))` of two 32dp `surfaceContainer`
+     pills plus a QR button. Both identifiers stay one tap away because they
+     serve different jobs: **npub** (`pubkeyDisplayHex()` + copy of
+     `pubkeyNpub()`) is what friends paste into apps and sites that only take
+     an npub when setting up an account; **nprofile** (`toNProfile()`
+     shortened with `toShortDisplay(6)` + copy of the full value) carries the
+     relay hints, so it is the better one to share and the one the QR
+     (`Route.QRDisplay`) encodes. Only the raw **hex** leaves the header and
+     joins the `⋮` menu as `Copy hex`.
 4. **Stats row**: three `TextButton`-like tappable groups, 16sp bold number +
    13sp label: Following (`UserProfileFollowsUserFeedViewModel.followCount`)
    → `Route.ProfileFollows`; Followers (`observeUserContactCardsFollowerCount`,
@@ -159,7 +164,7 @@ Top to bottom, inside `ProfileHeader`:
    `Route.ProfileRelays`. Gated rows hide their stat.
 5. `HorizontalDivider`.
 
-Removed from the header entirely: nprofile row, hex row, per-identity rows,
+Removed from the header entirely: the hex row, per-identity rows,
 payment chip `FlowRow`, Badges section, Apps section, the wallet / Bolt12 /
 List buttons.
 
@@ -312,8 +317,8 @@ them up): `profile_row_notes`, `profile_row_notes_summary`,
 `profile_row_payments_summary_more`, `profile_row_reports`,
 `profile_row_reports_summary`, `profile_stat_following`,
 `profile_stat_followers`, `profile_stat_relays`, `profile_section_activity`,
-`profile_edit`, `profile_copy_hex`, `profile_copy_nprofile`,
-`profile_add_to_list`. `mutual` ("Yours") is retired once the Android
+`profile_edit`, `profile_copy_hex`, `profile_add_to_list`
+(`copy_npub_to_clipboard` and `copy_nprofile_to_clipboard` already exist). `mutual` ("Yours") is retired once the Android
 tab is gone; `profile_badges_header` / `profile_apps_header` stay for the
 management screens.
 
