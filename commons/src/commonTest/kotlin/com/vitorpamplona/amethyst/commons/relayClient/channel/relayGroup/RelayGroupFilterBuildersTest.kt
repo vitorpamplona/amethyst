@@ -73,7 +73,7 @@ class RelayGroupFilterBuildersTest {
     // --- State (always-on): one #d filter per host relay, batching that relay's group ids ---
 
     @Test
-    fun `state batches d-filters per host relay, metadata and pins kept apart`() {
+    fun `state batches d-filters per host relay with metadata and pins kept apart`() {
         val filters = buildRelayGroupStateFilters(joined) { null }
         // two relays x (metadata + pins)
         assertEquals(4, filters.size)
@@ -225,7 +225,7 @@ class RelayGroupFilterBuildersTest {
     // --- Open chat history (backward pager): only armed relays, each at its own until, all authors ---
 
     @Test
-    fun `history emits only armed relays at their until, all authors`() {
+    fun `history emits only armed relays at their until for all authors`() {
         val untilByRelay = mapOf(relayA to 200L) // relayB not armed → no cursor
         val filters = buildRelayGroupHistoryFilters(g1OnA, listOf(relayA, relayB), { untilByRelay[it] }, 50)
 
