@@ -29,7 +29,6 @@ import coil3.annotation.DelicateCoilApi
 import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
 import coil3.fetch.Fetcher
-import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
@@ -61,7 +60,9 @@ class ImageLoaderSetup {
     companion object {
         val gifFactory =
             if (Build.VERSION.SDK_INT >= 28) {
-                AnimatedImageDecoder.Factory()
+                // Not Coil's AnimatedImageDecoder.Factory: see [AnimatedImageDecoderFactory] for
+                // why decoding straight from the disk-cache file matters here.
+                AnimatedImageDecoderFactory()
             } else {
                 GifDecoder.Factory()
             }
