@@ -89,7 +89,9 @@ class BlossomFetcher(
                         connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
                         concurrentRequestStrategy = concurrentRequestStrategyLazy,
                     )
-                }
+                    // Keyed on the resolved server url, which is what the NetworkFetcher above
+                    // caches under -- not on the `blossom:` uri the request came in as.
+                }.onSystemFileSystem(options.diskCacheKey ?: url)
             }
         }
 

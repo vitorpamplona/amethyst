@@ -170,6 +170,9 @@ class OkHttpFactory(
 
         val url = data.toString()
 
+        // onSystemFileSystem keeps the platform ImageDecoder reachable for whatever comes back
+        // -- see [SystemFileSystemFetcher]. The key it carries is the one NetworkFetcher derives
+        // for the same request (`options.diskCacheKey ?: url`).
         return readAuthAware(url, readAuth) { authHeader ->
             NetworkFetcher(
                 url = url,
@@ -180,7 +183,7 @@ class OkHttpFactory(
                 connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
                 concurrentRequestStrategy = concurrentRequestStrategyLazy,
             )
-        }
+        }.onSystemFileSystem(options.diskCacheKey ?: url)
     }
 
     private fun isApplicable(data: Uri): Boolean = data.scheme == "http" || data.scheme == "https"

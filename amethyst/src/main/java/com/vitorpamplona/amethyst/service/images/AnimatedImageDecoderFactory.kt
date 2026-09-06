@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.service.images
 import android.os.Build.VERSION.SDK_INT
 import androidx.annotation.RequiresApi
 import coil3.ImageLoader
-import coil3.decode.DecodeResult
 import coil3.decode.DecodeUtils
 import coil3.decode.Decoder
 import coil3.decode.ImageSource
@@ -37,21 +36,16 @@ import okio.BufferedSource
 import okio.buffer
 
 /**
- * Drop-in replacement for Coil's `AnimatedImageDecoder.Factory` that keeps the platform
- * `ImageDecoder` reading straight from the disk-cache file instead of a RAM copy of it.
+ * Drop-in replacement for Coil's `AnimatedImageDecoder.Factory` that stops asking for the GIF
+ * frame-delay rewrite when the file does not need it.
  *
- * The sniffing is identical to Coil's. Two things differ, both about *how the bytes reach*
- * `ImageDecoder`:
- *
- * 1. The source is re-homed onto `FileSystem.SYSTEM` — see [onSystemFileSystem] for why
- *    Amethyst's disk cache otherwise forfeits the file fast path on every network image.
- * 2. The GIF frame-delay rewrite Coil applies on API < 34 is asked for only when the file
- *    actually contains a sub-threshold delay — see [hasSubThresholdGifFrameDelay]. The
- *    rewrite is stream-backed, so requesting it unconditionally undoes (1) for every GIF.
- *
- * Together those keep a large GIF off the heap entirely: a 69.8 MB / 201-frame GIF cost
- * 66 MB of heap plus a 66 MB direct `ByteBuffer` per decode before this, and animated results
- * are never memory-cached, so that repeated on every scroll back into view.
+ * The sniffing is identical to Coil's. The one difference: below API 34 Coil wraps every GIF in a
+ * stream-backed `FrameDelayRewritingSource` to clamp sub-threshold frame delays, and a
+ * stream-backed source has no file for `ImageDecoder` to read, so the decode falls back to
+ * squashing the whole encoded animation into RAM (see [SystemFileSystemFetcher] for what that
+ * costs). Nearly every GIF comes out of that rewriter byte-for-byte identical, so
+ * [hasSubThresholdGifFrameDelay] checks first and the rewrite is requested only for the files
+ * that would actually change.
  */
 @RequiresApi(28)
 class AnimatedImageDecoderFactory : Decoder.Factory {
@@ -71,29 +65,23 @@ class AnimatedImageDecoderFactory : Decoder.Factory {
 }
 
 /**
- * Builds Coil's [AnimatedImageDecoder] over the cheapest source we can give it.
+ * Builds Coil's [AnimatedImageDecoder], asking for the frame-delay rewrite only when it is both
+ * possible and needed.
  *
- * [mayNeedFrameDelayRewrite] should be true only for GIFs: Coil's rewriter no-ops on every
- * other format, so scanning one would be pure IO for a decision already made.
+ * [mayNeedFrameDelayRewrite] should be true only for GIFs: Coil's rewriter no-ops on every other
+ * format, so scanning one would be pure IO for a decision already made.
  */
 @RequiresApi(28)
 fun newAnimatedImageDecoder(
     source: ImageSource,
     options: Options,
     mayNeedFrameDelayRewrite: Boolean,
-): Decoder {
-    val onSystem = source.onSystemFileSystem()
-    val decoder = AnimatedImageDecoder(onSystem, options, enforceMinimumFrameDelay(onSystem, mayNeedFrameDelayRewrite))
-
-    // A re-homed source is ours, so nobody else will close it: Coil's engine closes the
-    // source it handed us, and AnimatedImageDecoder only closes the frame-delay wrapper.
-    return if (onSystem === source) decoder else ClosingDecoder(onSystem, decoder)
-}
+): Decoder = AnimatedImageDecoder(source, options, enforceMinimumFrameDelay(source, mayNeedFrameDelayRewrite))
 
 /**
- * Whether to ask Coil to clamp this GIF's sub-threshold frame delays. From API 34 the
- * platform decoder does it itself, which is why Coil's own default turns the rewrite off
- * there; below that we pay for it only when the file really has a delay to clamp.
+ * Whether to ask Coil to clamp this GIF's sub-threshold frame delays. From API 34 the platform
+ * decoder does it itself, which is why Coil's own default turns the rewrite off there; below that
+ * we pay for it only when the file really has a delay to clamp.
  */
 private fun enforceMinimumFrameDelay(
     source: ImageSource,
@@ -101,28 +89,12 @@ private fun enforceMinimumFrameDelay(
 ): Boolean {
     if (!mayNeedFrameDelayRewrite || SDK_INT >= 34) return false
 
-    // Not file-backed: the decode squashes the stream into RAM either way, so there is no
-    // fast path to protect and no reason to deviate from Coil's default.
+    // Not file-backed: the decode squashes the stream into RAM either way, so there is no fast
+    // path to protect and no reason to deviate from Coil's default.
     val file = source.fileOrNull() ?: return true
 
     return source.fileSystem
         .source(file)
         .buffer()
         .use { it.hasSubThresholdGifFrameDelay() }
-}
-
-/** Closes [source] once [delegate] is done with it. */
-private class ClosingDecoder(
-    private val source: ImageSource,
-    private val delegate: Decoder,
-) : Decoder {
-    override suspend fun decode(): DecodeResult? =
-        try {
-            delegate.decode()
-        } finally {
-            try {
-                source.close()
-            } catch (_: Exception) {
-            }
-        }
 }
