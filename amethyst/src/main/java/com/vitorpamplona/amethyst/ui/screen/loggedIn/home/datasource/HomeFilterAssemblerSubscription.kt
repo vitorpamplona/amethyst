@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.home.HomeFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.home.HomeQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -43,10 +45,15 @@ fun HomeFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(accountViewModel.account) {
+            val account = accountViewModel.account
             HomeQueryState(
-                accountViewModel.account,
-                accountViewModel.feedStates,
-                accountViewModel.viewModelScope,
+                account = account,
+                listName = account.settings.defaultHomeFollowList,
+                followsPerRelay = account.liveHomeFollowListsPerRelay,
+                scope = accountViewModel.viewModelScope,
+                newThreads = accountViewModel.feedStates.homeNewThreads,
+                replies = accountViewModel.feedStates.homeReplies,
+                enabledHomeFeedTypes = account.settings.enabledHomeFeedTypes,
             )
         }
 

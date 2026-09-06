@@ -346,7 +346,7 @@ fun buildRelayGroupJoinedChatTailFilter(
  *
  * Every other roster-driven protocol on that screen already bounds by count for exactly this reason:
  * NIP-28 asks `limit = 1` per followed channel
- * ([com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.filterLastMessageFollowingPublicChats]),
+ * (the app's `filterLastMessageFollowingPublicChats`),
  * Concord asks `limit = 10` per channel with no floor (`ConcordSubscriptionPlanner.channelPreviewFilters`).
  * They can, because their row set comes from a list event — unlike NIP-17/NIP-04, whose *rooms* are
  * discovered from the messages themselves and therefore need the backward pagers on the Messages list.

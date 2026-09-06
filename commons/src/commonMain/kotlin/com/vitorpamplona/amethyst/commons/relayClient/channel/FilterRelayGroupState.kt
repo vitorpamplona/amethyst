@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
  * The 39000-39003 metadata block and the 39005 pin list go out as **two separate filters**: relay29-family
  * relays (0xchat's included) reject a filter that mixes them and drop the whole REQ, which would leave the
  * group with no name, no roster and no membership. See
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_PIN_KINDS].
+ * [RELAY_GROUP_PIN_KINDS].
  */
 fun filterRelayGroupState(
     channel: RelayGroupChannel,

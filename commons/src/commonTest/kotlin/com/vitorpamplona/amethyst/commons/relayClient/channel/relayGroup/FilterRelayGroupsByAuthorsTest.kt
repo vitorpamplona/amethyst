@@ -52,7 +52,7 @@ class FilterRelayGroupsByAuthorsTest {
     }
 
     @Test
-    fun `builds the author-signed and p-tagged roster filters, authors sorted`() {
+    fun `builds the author-signed and p-tagged roster filters with authors sorted`() {
         val filters = filterRelayGroupsByAuthors(relayA, setOf(f2, f1), since = 7L, cachedChannels = emptyList())
         assertEquals(2, filters.size)
 

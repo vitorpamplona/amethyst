@@ -693,6 +693,33 @@ change each); `followPacks/feed` (dispatches to the app-side home filters);
 `launchChatFeedToggleObserver`); `nests/NestRoom*`, `relayGroup/*`, `concord/*`
 and `home/` (`Account` + `LocalCache` live streams + `AccountViewModel`).
 
+### Single-relay-read families and the home feed landed (2026-09-05, after #4059)
+
+The four families that read one relay-set state off `Account` now carry that
+set as a `StateFlow` on their key, the way `SearchQueryState` does:
+`ProfileAppRecommendationsQueryState(outboxRelays, defaultGlobalRelays)`,
+`ProfileBadgesQueryState(notificationRelays)`,
+`ConnectedAppsQueryState(homeRelays)` and `ThreadQueryState(defaultRelays)`.
+Thread also takes the cache (`ThreadFilterAssembler(cache, client)`; its two
+sub-assemblers run `ThreadAssembler(cache)`). All live under
+`commons/relayClient/{apps/recommendations,badges/profile,napplets,thread}`.
+
+The home feed moved whole: the `FilterHomePosts*` dispatchers under
+`commons/relayClient/home/<nip>/`, and `HomeOutboxEventsEoseManager` is now a
+`TopNavFeedSubAssembler<HomeQueryState>` whose key carries the new-threads and
+replies floors plus `enabledHomeFeedTypes`; the Settings › Home toggle is an
+`extraInvalidators` entry (still `drop(1)`), and the disabled-kinds stripping
+is unchanged. Deltas as for the other feeds: watchers on the screen scope,
+follows sampler 500 ms (was 1000). The commented-out alternative
+sub-assemblers in `HomeFilterAssembler` were dropped.
+
+What remains in `ui/screen/**/datasource*/` (92 files) is the Compose glue —
+one `*Subscription.kt` per feature, which builds the key from
+`AccountViewModel` — plus the families that need Wave 4: `hashtag/`
+(`Account.followsPerRelay`), `followPacks/feed` (`Account.proxyRelayList`,
+`blockedRelayList`, `cache`), `chats/*`, `nests/NestRoom*`, `relayGroup/*`,
+`concord/*`, and `wallet`'s and `polls/results`' composables.
+
 ### Desktop `subscriptions/FilterBuilders.kt` — investigated, not migrated (2026-09-05)
 
 The audit listed this 742-line file as a hand-rolled copy of ~34

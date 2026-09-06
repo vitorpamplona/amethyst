@@ -18,44 +18,38 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup
+package com.vitorpamplona.amethyst.commons.relayClient.badges.profile
 
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 
 /**
- * A group's kind-39000 is relay-signed, so — unlike git repositories, whose author IS a follow —
- * the people dimension (relay-key follow / follow-is-admin / follow-is-member) can't be expressed
- * as an `authors` REQ. For Global and the people filters we therefore pull the whole directory
- * (metadata + rosters) for each relay in the resolved set and let
- * the app's `RelayGroupDiscoveryFeedFilter` narrow it locally. Only the topic/geo filters ([filterRelayGroupsByHashtag]/[filterRelayGroupsByGeohashes])
- * carry a real relay-side constraint.
+ * Pulls every badge award (kind 8) tagging this pubkey, from the user's
+ * notification relays. Used by the "Profile badges" management screen to
+ * back-fill the full history of awards (the always-on notifications
+ * subscription is bounded by `since`, so older awards may not be in
+ * cache yet).
  */
-val RELAY_GROUP_DISCOVERY_KINDS =
-    listOf(
-        GroupMetadataEvent.KIND,
-        GroupAdminsEvent.KIND,
-        GroupMembersEvent.KIND,
-    )
-
-fun filterRelayGroupsDirectory(
-    relay: NormalizedRelayUrl,
-    since: Long? = null,
-): List<RelayBasedFilter> =
-    listOf(
+fun filterReceivedBadgeAwards(
+    pubkey: HexKey,
+    relays: Set<NormalizedRelayUrl>,
+): List<RelayBasedFilter> {
+    if (pubkey.isEmpty() || relays.isEmpty()) return emptyList()
+    val pTags = listOf(pubkey)
+    return relays.map { relay ->
         RelayBasedFilter(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.RELAY_GROUPS,
-                    kinds = RELAY_GROUP_DISCOVERY_KINDS,
+                    purpose = SubPurpose.ADD_ONS,
+                    kinds = listOf(BadgeAwardEvent.KIND),
+                    tags = mapOf("p" to pTags),
                     limit = 500,
-                    since = since,
                 ),
-        ),
-    )
+        )
+    }
+}

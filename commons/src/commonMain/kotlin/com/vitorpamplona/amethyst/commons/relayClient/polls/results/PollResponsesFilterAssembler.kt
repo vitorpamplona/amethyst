@@ -44,7 +44,7 @@ class PollResponsesQueryState(
  * The screen already gets the poll's own engagement through the shared event watcher; this adds the
  * one thing that watcher cannot give it — a page of votes big enough to be worth calling "every
  * voter", drawn from the poll's declared relays. Structured like every other current-screen data
- * source ([com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler]
+ * source ([com.vitorpamplona.amethyst.commons.relayClient.thread.ThreadFilterAssembler]
  * is the closest sibling) so it is lifecycle-aware, deduplicated across screens, and EOSE-tracked
  * without any of that being written twice.
  */
