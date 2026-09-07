@@ -1397,6 +1397,7 @@
     <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Fundraisers</string>
     <string name="home_content_type_ratings">Ratings and reviews</string>
+    <string name="rating_stars_out_of_five">Rated %1$s out of 5</string>
     <string name="settings_section_reminders">Reminders</string>
     <string name="wallet_connect">Wallet Connect</string>
     <string name="theme">Theme</string>

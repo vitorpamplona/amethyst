@@ -160,6 +160,7 @@ object MaterialSymbols {
     val MilitaryTech = MaterialSymbol("\uEA3F")
     val MoreVert = MaterialSymbol("\uE5D4")
     val MoveToInbox = MaterialSymbol("\uE168")
+    val Movie = MaterialSymbol("\uE404")
     val MusicNote = MaterialSymbol("\uE405")
     val MyLocation = MaterialSymbol("\uE55C")
     val News = MaterialSymbol("\uE032")
