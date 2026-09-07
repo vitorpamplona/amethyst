@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.connectedApps.signers
 
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -244,6 +246,8 @@ class NostrSignerPermissionLedger(
                 WikiNoteEvent.KIND, // 30818 — NIP-54 wiki articles (addressable content)
                 VideoHorizontalEvent.KIND, // 34235 — legacy addressable horizontal video (NIP-71)
                 VideoVerticalEvent.KIND, // 34236 — legacy addressable vertical video (NIP-71)
+                PublicationIndexEvent.KIND, // 30040 — NKBIP-01 publication index (addressable content)
+                EntityRatingEvent.KIND, // 34259 — entity ratings (addressable, one per author per target)
             )
     }
 }

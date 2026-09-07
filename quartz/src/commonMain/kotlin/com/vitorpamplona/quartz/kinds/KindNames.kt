@@ -55,6 +55,8 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
@@ -483,6 +485,8 @@ object KindNames {
             WakeUpEvent.KIND to KindName("WakeUp", null),
             WebBookmarkEvent.KIND to KindName("Web Bookmark", "B0"),
             WikiNoteEvent.KIND to KindName("Wiki", "54"),
+            EntityRatingEvent.KIND to KindName("Rating", null),
+            PublicationIndexEvent.KIND to KindName("Publication", null),
             ChatEvent.KIND to KindName("Relay Chat", "C7"),
             ThreadEvent.KIND to KindName("Thread", "7D"),
             AppDataEvent.KIND to KindName("App Data", "78"),

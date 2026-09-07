@@ -1396,6 +1396,7 @@
     <string name="home_content_type_music">Music &amp; audio</string>
     <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Fundraisers</string>
+    <string name="home_content_type_ratings">Ratings and reviews</string>
     <string name="settings_section_reminders">Reminders</string>
     <string name="wallet_connect">Wallet Connect</string>
     <string name="theme">Theme</string>

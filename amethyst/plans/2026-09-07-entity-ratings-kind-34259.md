@@ -1,6 +1,6 @@
 # Entity Ratings (kind 34259) — parse, ingest, render, feed
 
-**Status:** proposal
+**Status:** implemented — see §11 for what shipped and where this document was wrong
 **Modules:** `quartz`, `commons`, `amethyst`
 **Scope:** parse kind-34259 entity ratings, ingest them into `LocalCache`, render
 them as a star + review card, and make them appear in the Home feed behind a
@@ -361,3 +361,91 @@ inspectable) and can merge before the UI lands.
 3. **Is 30040 worth it here**, or should ratings wait until publications are a
    real feature? §7(a) makes v1 standalone, but a feed of star-ratings pointing
    at books Amethyst cannot open is arguably not worth shipping alone.
+
+---
+
+## 11. What shipped, and where this plan was wrong
+
+Implemented on `claude/event-kind-34259-parsers-jocu9w`. Three things came out
+differently once the code was written; the sections above are left as they were
+so the reasoning is still legible, and this section is what is true.
+
+### 11.1 The star-icon claim in §6 was wrong
+
+§6 says `MaterialSymbols.Star` and `StarBorder` sharing `\uF09A` is a bug. **It
+is not.** Material Symbols expresses fill through the **FILL variable axis**, not
+through separate codepoints, so the upstream codepoint table maps `star`,
+`star_border`, `star_outline` *and* `grade` all to `f09a`. The duplicate in
+`MaterialSymbols.kt` is correct, and the toggles in `FavoriteAlgoFeedToggle.kt`
+and `RelayGroupDiscoveryScreen.kt` distinguish their states by tint, not glyph —
+also correct. Nothing there needed fixing.
+
+What is true: `star_half` **is** its own glyph (`e839`), and it was not in the
+subset. So the font change that actually shipped is one added symbol:
+
+```kotlin
+val StarHalf = MaterialSymbol("\uE839")
+```
+
+plus the regenerated `material_symbols_outlined.ttf` (241 codepoints, was 240).
+Filled vs empty stars are the same glyph at two tints — `primary` and
+`onSurfaceVariant`.
+
+`MaterialSymbolPainter` draws the glyph as tinted text and exposes no variable
+axis, so tint is the only lever available; that is why the row is built this way
+rather than with a FILL=1 star.
+
+### 11.2 Gate 1 is one list, not five
+
+§5 says to add the kind to five parallel REQ kind lists. Only one was right:
+`HomePostsNewThreadKinds2`, which the Follows, Global and Relay top-nav
+strategies all share.
+
+The hashtag, geohash and community lists select by `t` / `g` / community-`a`
+tags. A rating carries none of those, so adding the kind there would widen every
+such REQ for zero possible matches. If ratings ever start carrying topics it is a
+one-line addition to each.
+
+### 11.3 §7 shipped as option (b)
+
+`PublicationIndexEvent` (kind 30040, NKBIP-01) is implemented — title, author,
+summary, image, type, version, topics and the ordered `a`-tag table of contents —
+so the rated publication resolves to a real title instead of a slug. The reader
+is **not** implemented, and kind 30041 sections are still unparsed, exactly as
+§7 said they should be.
+
+`titleOrIdentifier()` keeps the slug fallback from option (a) anyway, because the
+spec's mandatory `title` tag is missing from events in the wild.
+
+### 11.4 Everything else went as planned
+
+| Area | Where |
+| --- | --- |
+| Event classes | `quartz/…/experimental/ratings/`, `quartz/…/experimental/publications/` |
+| Registries | `EventFactory`, `KindNames`, `NostrSignerPermissionLedger` |
+| Ingest | `LocalCache.kt` addressable group (no `computeReplyTo` branch, per §4) |
+| Feed gates | `HomePostsNewThreadKinds2`, `HomeFeedType.RATINGS`, `HomeNewThreadFeedFilter` |
+| Settings | `home_content_type_ratings`, `HomeTabsSettingsScreen` |
+| Rendering | `amethyst/…/ui/note/types/EntityRating.kt` + `NoteCompose` branch |
+
+Tests: 44 new (27 in `quartz`, 7 ingest + 10 existing-suite in `amethyst`),
+covering all four branches of the `stars()` ladder, the `"1"` ambiguity, the
+`d`-prefix strip, `a`-over-`d` preference, addressable supersession in both
+directions, and the `isNewThread()` tripwire that guards §4's decision. Full
+suites green: quartz 4491, commons 1788, amethyst 1415.
+
+`stars()` gained one branch the plan did not anticipate: an `s` tag outside
+1..5 falls **through** to `rating` rather than winning, so a bogus `s` cannot
+shadow a usable score.
+
+### 11.5 Still open
+
+§10's three questions are unanswered and the code takes the defaults:
+
+1. Unknown marks render generically (stars + review + target link).
+2. `RATINGS` is **default-on**, because `HomeFeedType.ALL` enables everything and
+   opting one entry out of that would be a special case. One line in
+   `HomeFeedType.ALL` changes it.
+3. Publishing, aggregate rollups, and the 30041 reader remain unbuilt. The
+   `EntityRatingEvent.build()` DSL exists and is tested, so publishing is UI-only
+   work whenever a "rate this" entry point exists.

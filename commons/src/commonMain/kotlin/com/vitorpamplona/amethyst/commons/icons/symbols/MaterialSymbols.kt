@@ -232,6 +232,7 @@ object MaterialSymbols {
     val SportsEsports = MaterialSymbol("\uEA28")
     val Star = MaterialSymbol("\uF09A")
     val StarBorder = MaterialSymbol("\uF09A")
+    val StarHalf = MaterialSymbol("\uE839")
     val Stop = MaterialSymbol("\uE047")
     val Storage = MaterialSymbol("\uE1DB")
     val Storefront = MaterialSymbol("\uEA12")
