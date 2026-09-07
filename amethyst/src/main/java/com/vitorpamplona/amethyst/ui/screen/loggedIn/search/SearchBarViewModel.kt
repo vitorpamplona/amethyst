@@ -74,7 +74,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -390,22 +389,6 @@ class SearchBarViewModel(
                 emptyList()
             }
         }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
-
-    /**
-     * What a half-written `from:`/`to:` token is asking about — the partial after the colon, not
-     * the whole box. The two are different questions: the query is "notes matching this", the
-     * picker is "who is this the start of", and feeding the picker the whole query would offer
-     * people who match `from:ali #bitcoin` rather than people called `ali`.
-     */
-    val mentionQuery = MutableStateFlow("")
-
-    val mentionResults =
-        mentionQuery
-            .debounce(150)
-            .map { partial ->
-                if (partial.isBlank()) emptyList() else LocalCache.search.findUsersStartingWith(partial, account).take(8)
-            }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }

@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.search.DateUtils
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
+import com.vitorpamplona.amethyst.commons.search.calendar.DateField
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -307,7 +308,7 @@ private fun DateRangeFields(
                 value = untilText,
                 onValueChange = {
                     untilText = it
-                    val ts = QueryParser.parseDateToTimestamp(it)
+                    val ts = QueryParser.parseDateToTimestamp(it, DateField.UNTIL)
                     if (ts != null || it.isBlank()) {
                         lastUntil = ts
                         onChanged(since, ts)

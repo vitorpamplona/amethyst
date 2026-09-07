@@ -64,9 +64,10 @@ import kotlinx.collections.immutable.persistentListOf
  * While a picker is up it owns the arrow keys and Enter: those keys are walking the offered rows,
  * not the text. When no picker is up they fall through to the field and to [onSubmit].
  *
- * [people] and [groups] are supplied by the caller because resolving a name to a key is an
- * account-scoped, relay-backed question that `commons` has no business answering; this component
- * only says *when* to ask, via [onPeopleQuery] and [onGroupQuery].
+ * The rows are supplied by the caller — as [people]/[groups], or as a whole [peoplePicker] slot —
+ * because resolving a name to a key is an account-scoped, relay-backed question that `commons`
+ * has no business answering. This component only says *when* to ask, via [onPeopleQuery] and
+ * [onGroupQuery], and what a pick splices into the text.
  */
 @Composable
 fun TokenizedSearchField(
@@ -75,6 +76,17 @@ fun TokenizedSearchField(
     placeholder: String = "Search",
     people: ImmutableList<PersonCandidate> = persistentListOf(),
     groups: ImmutableList<GroupCandidate> = persistentListOf(),
+    /**
+     * The people picker's rows, when the caller has a richer list of its own — Android hands in
+     * the composer's `ShowUserSuggestionList`, which already resolves NIP-05, asks the search
+     * relays and ranks follows first, and which `commons` cannot reach because it is built on
+     * app-module types.
+     *
+     * A slot owns its own selection affordance, so the arrow keys stay with the caret while one
+     * is up; the built-in [people] list is the keyboard-walkable path. Either way this component
+     * still owns *when* the picker opens and what a pick splices into the text.
+     */
+    peoplePicker: (@Composable (ActivePicker.People, onPick: (String) -> Unit) -> Unit)? = null,
     displayName: (String) -> String? = { null },
     onPeopleQuery: (String) -> Unit = {},
     onGroupQuery: (String) -> Unit = {},
@@ -98,7 +110,8 @@ fun TokenizedSearchField(
 
     val rows =
         when (picker) {
-            is ActivePicker.People -> people.size
+            // A slot's rows are not this component's to walk.
+            is ActivePicker.People -> if (peoplePicker != null) 0 else people.size
             is ActivePicker.Group -> groups.size
             else -> 0
         }
@@ -152,7 +165,11 @@ fun TokenizedSearchField(
                 }
 
             is ActivePicker.People ->
-                if (people.isNotEmpty()) {
+                if (peoplePicker != null) {
+                    SearchPickerSurface(Modifier.padding(top = 4.dp).fillMaxWidth()) {
+                        peoplePicker(picker) { state.pickPerson(picker, it) }
+                    }
+                } else if (people.isNotEmpty()) {
                     SearchPickerSurface(Modifier.padding(top = 4.dp).fillMaxWidth()) {
                         SearchPeoplePicker(people, highlighted, onPick = { state.pickPerson(picker, it.pubkeyHex) })
                     }

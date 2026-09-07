@@ -26,6 +26,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -99,7 +100,6 @@ import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.commons.ui.search.PersonCandidate
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
 import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -116,6 +116,8 @@ import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
@@ -125,7 +127,6 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.filterNotNull
@@ -228,7 +229,7 @@ private fun SearchBar(
                 // window (Waydroid/DeX freeform) is respected too.
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
     ) {
-        SearchTextField(searchBarViewModel, Modifier)
+        SearchTextField(searchBarViewModel, accountViewModel, Modifier)
         // Inline Namecoin lookup feedback for the global search field.
         // Mirrors the wiring in OnchainZapSendDialog: the local prefix
         // search can race ahead of the on-chain resolution and show a
@@ -487,6 +488,7 @@ private fun sortLabel(opt: SearchSortOrder): String =
 @Composable
 private fun SearchTextField(
     searchBarViewModel: SearchBarViewModel,
+    accountViewModel: AccountViewModel,
     modifier: Modifier,
 ) {
     Row(
@@ -500,19 +502,15 @@ private fun SearchTextField(
         // be copied out and pasted back.
         val fieldState = remember { SearchFieldState(searchBarViewModel.searchValue) }
         val interactionSource = remember { MutableInteractionSource() }
-        val mentionHits by searchBarViewModel.mentionResults.collectAsStateWithLifecycle()
-        val people =
-            remember(mentionHits) {
-                mentionHits
-                    .map {
-                        PersonCandidate(
-                            pubkeyHex = it.pubkeyHex,
-                            name = it.toBestDisplayName(),
-                            pictureUrl = it.profilePicture(),
-                        )
-                    }.toImmutableList()
+
+        // The composer's own mention picker, reused verbatim: it already resolves NIP-05, asks
+        // the search and indexer relays through SearchQueryState, and ranks follows first. A
+        // second, thinner people search living only in the search field would answer `from:` with
+        // less than `@` answers in a post.
+        val userSuggestions =
+            remember(accountViewModel) {
+                UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
             }
-        val chipNames = remember(mentionHits) { mentionHits.associate { it.pubkeyHex to it.toBestDisplayName() } }
 
         LaunchedEffect(fieldState.text) { searchBarViewModel.updateSearchValue(fieldState.text) }
         // The one direction that is not the field's own: a clear, or a query loaded from elsewhere.
@@ -527,9 +525,18 @@ private fun SearchTextField(
                 Modifier
                     .defaultMinSize(minHeight = 20.dp)
                     .focusRequester(searchBarViewModel.focusRequester),
-            people = people,
-            displayName = { chipNames[it] },
-            onPeopleQuery = { searchBarViewModel.mentionQuery.tryEmit(it) },
+            // A key already in the cache draws as its owner's name; one that has not arrived yet
+            // stays a short npub rather than being given an invented name.
+            displayName = { LocalCache.getUserIfExists(it)?.toBestDisplayName() },
+            onPeopleQuery = { userSuggestions.processCurrentWord(it) },
+            peoplePicker = { _, onPick ->
+                ShowUserSuggestionList(
+                    userSuggestions = userSuggestions,
+                    onSelect = { onPick(it.pubkeyHex) },
+                    accountViewModel = accountViewModel,
+                    contentPadding = PaddingValues(0.dp),
+                )
+            },
             textStyle = LocalTextStyle.current,
             decorationBox = { innerTextField ->
                 TextFieldDefaults.DecorationBox(
