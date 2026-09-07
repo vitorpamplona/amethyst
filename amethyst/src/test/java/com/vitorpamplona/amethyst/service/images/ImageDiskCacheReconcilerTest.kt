@@ -266,32 +266,53 @@ class ImageDiskCacheReconcilerTest {
             // Even a directory well over budget is left alone until the next pass is due — the
             // point of the gate is that the common start does no work at all.
             repeat(40) { i -> writeEntry(diskCache, "key$i", 1024) }
-            val overBudget = bytesOnDisk()
 
             val skipped = ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now + 1000, minSlackBytes = 0)
 
             assertNull("within the interval the pass must not run", skipped)
-            assertEquals(overBudget, bytesOnDisk())
+            // Coil's size, not the directory's bytes: eviction runs asynchronously on its own scope
+            // and the drainer unlinks behind it, so comparing byte totals across the call races
+            // both. A wipe is what this needs to rule out, and clear() takes the size to zero.
+            assertTrue("a skipped pass must not have cleared the cache", diskCache.size > 0)
         } finally {
             diskCache.shutdown()
         }
     }
 
     @Test
-    fun aStartAfterTheIntervalIsDueAgain() {
+    fun theIntervalIsMeasuredFromTheRecordedPass() {
         val fs = DeferredDeleteFileSystem(FileSystem.SYSTEM, scope)
         val diskCache = newCache(fs, 1024L * 1024)
         try {
-            val now = System.currentTimeMillis()
             val interval = 24L * 60 * 60 * 1000
-            ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now, intervalMs = interval)
+            ImageDiskCacheReconciler.reconcileIfDue(diskCache, intervalMs = interval)
 
-            assertNull(ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now + interval - 1, intervalMs = interval))
-            assertNotNull(ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now + interval, intervalMs = interval))
+            // Pin the recorded pass to a whole second before measuring from it. isDue() compares
+            // against the marker's mtime, and a file system that keeps mtime at whole-second
+            // resolution reads it back up to a second before the write that made it — so a boundary
+            // measured from our own clock instead lands a second early there. That is what made the
+            // first version of this test pass on a dev box and fail on CI.
+            val lastPass = (System.currentTimeMillis() / 1000) * 1000
+            assertTrue("could not set the marker's mtime", File(markerPath.toString()).setLastModified(lastPass))
+            assertEquals("the file system must keep the timestamp we set", lastPass, recordedPassAt())
+
+            assertNull(
+                "a millisecond before the interval is up, the pass must not run",
+                ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = lastPass + interval - 1, intervalMs = interval),
+            )
+            assertNotNull(
+                "one interval after the recorded pass, it is due again",
+                ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = lastPass + interval, intervalMs = interval),
+            )
         } finally {
             diskCache.shutdown()
         }
     }
+
+    private fun recordedPassAt(): Long =
+        requireNotNull(FileSystem.SYSTEM.metadataOrNull(markerPath)?.lastModifiedAtMillis) {
+            "a pass must record a timestamp"
+        }
 
     @Test
     fun aMarkerDatedInTheFutureDoesNotParkTheCheck() {
