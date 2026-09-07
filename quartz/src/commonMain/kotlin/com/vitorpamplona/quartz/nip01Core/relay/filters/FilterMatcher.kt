@@ -22,6 +22,19 @@ package com.vitorpamplona.quartz.nip01Core.relay.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
+/**
+ * Whether one event satisfies one filter's NIP-01 fields.
+ *
+ * This runs once per event per candidate filter, which on a full-cache scan means tens of
+ * thousands of times per keystroke — so it allocates nothing. That is the whole design
+ * constraint here and the reason for the hand-rolled loops: `tags.forEach { it.toSet() }` built
+ * a `Set` per event per tag key, `tagsAll` built one more plus a full tag walk, and the stdlib
+ * `any` allocated an iterator over the tag array each time. All three are gone; the loops below
+ * read the same data in place.
+ *
+ * The tag lists a filter carries are short — a handful of values per key — so a linear `contains`
+ * over them beats hashing, and needs no allocation to do it.
+ */
 object FilterMatcher {
     fun match(
         event: Event,
@@ -33,31 +46,57 @@ object FilterMatcher {
         since: Long? = null,
         until: Long? = null,
     ): Boolean {
-        if (ids?.contains(event.id) == false) return false
-        if (kinds?.contains(event.kind) == false) return false
-        if (authors?.contains(event.pubKey) == false) return false
-        tags?.forEach { tag ->
-            val valueSet = tag.value.toSet()
-            // AND between keys, OR between values
-            if (!event.tags.any { it.size > 1 && it[0] == tag.key && it[1] in valueSet }) return false
-        }
-        tagsAll?.forEach { tag ->
-            val eventTagValueSet =
-                event.tags.mapNotNullTo(mutableSetOf()) {
-                    if (it.size > 1 && it[0] == tag.key) {
-                        it[1]
-                    } else {
-                        null
-                    }
-                }
-            // AND between keys, AND between values
-            for (tagValue in tag.value) {
-                if (tagValue !in eventTagValueSet) return false
+        if (ids != null && !ids.contains(event.id)) return false
+        if (kinds != null && !kinds.contains(event.kind)) return false
+        if (authors != null && !authors.contains(event.pubKey)) return false
+
+        // AND between keys, OR between values: the event must carry at least one of each key's values.
+        if (tags != null) {
+            for ((name, values) in tags) {
+                if (!hasAnyTagValue(event, name, values)) return false
             }
         }
-        if (event.createdAt !in (since ?: Long.MIN_VALUE)..(until ?: Long.MAX_VALUE)) {
-            return false
+
+        // AND between keys, AND between values: the event must carry every one of each key's values.
+        if (tagsAll != null) {
+            for ((name, values) in tagsAll) {
+                for (i in values.indices) {
+                    if (!hasTagValue(event, name, values[i])) return false
+                }
+            }
         }
+
+        if (since != null && event.createdAt < since) return false
+        if (until != null && event.createdAt > until) return false
+
         return true
+    }
+
+    /** Does the event carry `name` with any of `values`? Walks the tag array in place. */
+    private fun hasAnyTagValue(
+        event: Event,
+        name: String,
+        values: List<String>,
+    ): Boolean {
+        val tags = event.tags
+        for (i in tags.indices) {
+            val tag = tags[i]
+            if (tag.size > 1 && tag[0] == name && values.contains(tag[1])) return true
+        }
+        return false
+    }
+
+    /** Does the event carry `name` with exactly `value`? */
+    private fun hasTagValue(
+        event: Event,
+        name: String,
+        value: String,
+    ): Boolean {
+        val tags = event.tags
+        for (i in tags.indices) {
+            val tag = tags[i]
+            if (tag.size > 1 && tag[0] == name && tag[1] == value) return true
+        }
+        return false
     }
 }
