@@ -1141,11 +1141,14 @@ class AppModules(
         // queued unlinks — Coil cannot see them, so without this the directory keeps every killed
         // process's residue and drifts past its own cap forever. See ImageDiskCacheReconciler.
         //
+        // Rate-limited to once a day: drift accrues over process deaths, not over startups, and this
+        // runs on every one of them — including the WorkManager wake-ups that cold-start the graph.
+        //
         // Also the one place that forces the `diskCache` lazy, so its build (a statvfs for the size
-        // budget) and this walk both land on IO rather than on whichever thread loads an image first.
+        // budget) and the check both land on IO rather than on whichever thread loads an image first.
         applicationIOScope.launch {
-            val result = ImageDiskCacheReconciler.reconcile(diskCache)
-            if (result.wasOverBudget) {
+            val result = ImageDiskCacheReconciler.reconcileIfDue(diskCache)
+            if (result != null && result.wasOverBudget) {
                 Log.i("AppModules") { "Image cache was over budget: wiped ${result.reclaimedFiles} files (${result.bytesOnDisk} bytes on disk, ${result.budgetBytes} budget)" }
             }
         }

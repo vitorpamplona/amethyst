@@ -33,6 +33,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -233,5 +234,113 @@ class ImageDiskCacheReconcilerTest {
         // ...but never less than the 4 MiB floor, so a small budget on a full disk is not wiped
         // over the journal plus a couple of in-flight writes.
         assertEquals(1024L * 1024 + 4L * 1024 * 1024, ImageDiskCacheReconciler.ceilingBytes(1024L * 1024))
+    }
+
+    // ---- cadence ----------------------------------------------------------------------------
+    // The healthy pass is a readdir plus a stat per file, and AppModules.initiate() runs on every
+    // process start — including the WorkManager wake-ups that cold-start the whole graph. Drift
+    // accrues over process deaths, not startups, so the check is rate-limited.
+
+    private val markerPath get() = cacheDir / ".reconciled"
+
+    @Test
+    fun aCacheWithNoRecordedPassIsDue() {
+        val diskCache = newCache(DeferredDeleteFileSystem(FileSystem.SYSTEM, scope), 1024L * 1024)
+        try {
+            assertNotNull(ImageDiskCacheReconciler.reconcileIfDue(diskCache))
+            assertNotNull("the pass must record itself", FileSystem.SYSTEM.metadataOrNull(markerPath))
+        } finally {
+            diskCache.shutdown()
+        }
+    }
+
+    @Test
+    fun aSecondStartWithinTheIntervalSkipsTheWalk() {
+        val fs = DeferredDeleteFileSystem(FileSystem.SYSTEM, scope)
+        val budget = 16L * 1024
+        val diskCache = newCache(fs, budget)
+        try {
+            val now = System.currentTimeMillis()
+            assertNotNull(ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now))
+
+            // Even a directory well over budget is left alone until the next pass is due — the
+            // point of the gate is that the common start does no work at all.
+            repeat(40) { i -> writeEntry(diskCache, "key$i", 1024) }
+            val overBudget = bytesOnDisk()
+
+            val skipped = ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now + 1000, minSlackBytes = 0)
+
+            assertNull("within the interval the pass must not run", skipped)
+            assertEquals(overBudget, bytesOnDisk())
+        } finally {
+            diskCache.shutdown()
+        }
+    }
+
+    @Test
+    fun aStartAfterTheIntervalIsDueAgain() {
+        val fs = DeferredDeleteFileSystem(FileSystem.SYSTEM, scope)
+        val diskCache = newCache(fs, 1024L * 1024)
+        try {
+            val now = System.currentTimeMillis()
+            val interval = 24L * 60 * 60 * 1000
+            ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now, intervalMs = interval)
+
+            assertNull(ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now + interval - 1, intervalMs = interval))
+            assertNotNull(ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now + interval, intervalMs = interval))
+        } finally {
+            diskCache.shutdown()
+        }
+    }
+
+    @Test
+    fun aMarkerDatedInTheFutureDoesNotParkTheCheck() {
+        // A clock that jumped back, or a restored backup, would otherwise strand the check until
+        // real time caught up with the marker.
+        val fs = DeferredDeleteFileSystem(FileSystem.SYSTEM, scope)
+        val diskCache = newCache(fs, 1024L * 1024)
+        try {
+            val now = System.currentTimeMillis()
+            ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now)
+
+            assertNotNull(ImageDiskCacheReconciler.reconcileIfDue(diskCache, now = now - 365L * 24 * 60 * 60 * 1000))
+        } finally {
+            diskCache.shutdown()
+        }
+    }
+
+    @Test
+    fun theMarkerSurvivesAWipe() {
+        // The marker is a plain file in the cache directory, so the sweep would take it unless it is
+        // preserved explicitly — and a wipe that erases its own record makes every later start look
+        // due and walk again. Drives reconcile() rather than reconcileIfDue(), because the latter
+        // rewrites the marker afterwards and would mask the deletion.
+        val deadProcessFs = DeferredDeleteFileSystem(FileSystem.SYSTEM, scope)
+        scope.cancel("inert drainer")
+
+        val budget = 16L * 1024
+        val first = newCache(deadProcessFs, budget)
+        repeat(40) { i -> writeEntry(first, "key$i", 1024) }
+        val deadline = System.currentTimeMillis() + 5_000
+        while (first.size > budget && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        first.shutdown()
+
+        val liveScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val liveFs = DeferredDeleteFileSystem(FileSystem.SYSTEM, liveScope)
+        val second = newCache(liveFs, budget)
+        try {
+            // Lay down a marker the way a previous pass would have.
+            FileSystem.SYSTEM.write(markerPath) {}
+
+            val result = ImageDiskCacheReconciler.reconcile(second, minSlackBytes = 0)
+            assertTrue("expected a wipe", result.wasOverBudget)
+
+            liveFs.drainNow()
+
+            assertNotNull("the marker must outlive the wipe", FileSystem.SYSTEM.metadataOrNull(markerPath))
+        } finally {
+            second.shutdown()
+            liveScope.cancel()
+        }
     }
 }

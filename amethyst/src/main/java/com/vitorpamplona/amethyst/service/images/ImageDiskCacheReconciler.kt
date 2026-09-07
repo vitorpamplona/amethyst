@@ -55,9 +55,15 @@ data class ImageCacheReconciliation(
  * empty the journal, then unlink whatever is still sitting in the directory.
  *
  * This is deliberately blunt. It costs the whole cache, so it only fires once the directory has
- * drifted past [ceilingBytes] — well beyond the slack normal operation needs — and on a healthy
- * cache it is one directory walk and nothing else. It does not read the journal, so it stays
- * independent of Coil's on-disk format.
+ * drifted past [ceilingBytes] — well beyond the slack normal operation needs. It does not read the
+ * journal, so it stays independent of Coil's on-disk format.
+ *
+ * Drift accrues only when a process dies with unlinks still queued, which is slow, so
+ * [reconcileIfDue] rate-limits the check to [DEFAULT_INTERVAL_MS]. Even the healthy pass is a
+ * `readdir` plus a `stat` per file — on a full 1 GB cache, tens of thousands of syscalls — and
+ * `AppModules.initiate()` runs on every process start, including the WorkManager wake-ups that
+ * cold-start the whole graph. Gating it on a marker file's mtime costs one `stat` on the starts
+ * that skip.
  */
 object ImageDiskCacheReconciler {
     /**
@@ -72,8 +78,21 @@ object ImageDiskCacheReconciler {
      */
     private const val DEFAULT_MIN_SLACK_BYTES = 4L * 1024 * 1024
 
+    /** How long one pass is good for. Drift accrues over days, so checking daily is ample. */
+    private const val DEFAULT_INTERVAL_MS = 24L * 60 * 60 * 1000
+
+    /**
+     * Empty file whose mtime is the last pass. It lives inside the cache directory so it travels
+     * with the thing it describes: clearing the app's cache from Settings takes the marker with it,
+     * and the next start reconciles a directory whose history we no longer know.
+     */
+    private const val MARKER_FILE = ".reconciled"
+
     /** Coil's own bookkeeping, which is not entry data and must survive a wipe. */
     private val JOURNAL_FILES = setOf("journal", "journal.tmp", "journal.bkp")
+
+    /** Files in the cache directory that are not entry data and must survive a wipe. */
+    private val PRESERVED_FILES = JOURNAL_FILES + MARKER_FILE
 
     /** Bytes the directory may hold before [reconcile] wipes it. */
     fun ceilingBytes(
@@ -83,14 +102,66 @@ object ImageDiskCacheReconciler {
     ): Long = budgetBytes + maxOf((budgetBytes * slackFraction).toLong(), minSlackBytes)
 
     /**
-     * Walks the cache directory and, if it holds more than [ceilingBytes], empties it.
+     * Runs [reconcile] if the last pass is older than [intervalMs], else returns null having done
+     * one `stat`.
      *
      * Blocking IO — call it from a background dispatcher.
+     */
+    fun reconcileIfDue(
+        diskCache: DiskCache,
+        now: Long = System.currentTimeMillis(),
+        intervalMs: Long = DEFAULT_INTERVAL_MS,
+        slackFraction: Double = DEFAULT_SLACK_FRACTION,
+        minSlackBytes: Long = DEFAULT_MIN_SLACK_BYTES,
+    ): ImageCacheReconciliation? {
+        if (!isDue(diskCache, now, intervalMs)) return null
+
+        return reconcile(diskCache, slackFraction, minSlackBytes).also { markPass(diskCache) }
+    }
+
+    /**
+     * True when no pass is recorded, or the recorded one is [intervalMs] old.
+     *
+     * A marker dated in the future — a clock that jumped back, or a restored backup — would
+     * otherwise park the check until real time caught up, so that also counts as due.
+     */
+    private fun isDue(
+        diskCache: DiskCache,
+        now: Long,
+        intervalMs: Long,
+    ): Boolean {
+        val lastPass =
+            try {
+                diskCache.fileSystem.metadataOrNull(diskCache.directory / MARKER_FILE)?.lastModifiedAtMillis
+            } catch (e: IOException) {
+                Log.d("ImageDiskCache") { "could not stat the marker: ${e.message}" }
+                null
+            } ?: return true
+
+        return now - lastPass >= intervalMs || lastPass > now
+    }
+
+    /** Records that a pass just happened, by writing the marker's mtime to now. */
+    private fun markPass(diskCache: DiskCache) {
+        try {
+            diskCache.fileSystem.createDirectories(diskCache.directory)
+            diskCache.fileSystem.write(diskCache.directory / MARKER_FILE) {}
+        } catch (e: IOException) {
+            // Losing the marker only costs a redundant walk on the next start.
+            Log.d("ImageDiskCache") { "could not write the marker: ${e.message}" }
+        }
+    }
+
+    /**
+     * Walks the cache directory and, if it holds more than [ceilingBytes], empties it.
+     *
+     * Blocking IO — call it from a background dispatcher. Prefer [reconcileIfDue]; this is the
+     * unconditional pass.
      *
      * Deliberately does not read `DiskCache.size`: that would force the journal parse on the happy
      * path, and the decision does not need it. A request racing the wipe can lose the entry it was
      * writing; Coil treats that as a cache miss and re-fetches, which is why this runs at startup
-     * rather than on a timer.
+     * rather than while the feed is scrolling.
      */
     fun reconcile(
         diskCache: DiskCache,
@@ -118,7 +189,7 @@ object ImageDiskCacheReconciler {
 
         var reclaimed = 0
         regularFiles(diskCache).forEach { path ->
-            if (path.name in JOURNAL_FILES) return@forEach
+            if (path.name in PRESERVED_FILES) return@forEach
             try {
                 diskCache.fileSystem.delete(path, mustExist = false)
                 reclaimed++
