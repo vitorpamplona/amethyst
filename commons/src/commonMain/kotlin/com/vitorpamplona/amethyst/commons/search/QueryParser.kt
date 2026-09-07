@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.amethyst.commons.search.calendar.DateField
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
@@ -45,20 +48,57 @@ sealed interface Token {
     data class Negation(
         val term: String,
     ) : Token
-
-    data class Hashtag(
-        val tag: String,
-    ) : Token
 }
 
+/**
+ * The typed string as a [SearchQuery], in two passes.
+ *
+ * [SearchTokenizer] runs first and lifts out everything that has a hard shape — a key, a NIP-19
+ * pointer, an ISO day, a hashtag, a label, a scope, a group. Those are the tokens the field draws
+ * as chips, so parsing them here rather than a second time is what keeps the chip and the filter
+ * from ever disagreeing.
+ *
+ * What is left is plain text, and this second pass reads the looser operators out of it:
+ * `kind:`, `lang:`, `domain:`, the `OR` chain, `-exclusions`, `"quoted phrases"`, and the
+ * spellings of `from:`/`since:`/`until:` the tokenizer deliberately refuses (a hex key, a bare
+ * year) because they have no single unambiguous rendering as a chip.
+ */
 object QueryParser {
-    private val KNOWN_OPERATORS = setOf("from", "kind", "since", "until", "lang", "domain")
+    private val KNOWN_OPERATORS = setOf("from", "to", "kind", "since", "until", "lang", "domain")
 
     fun parse(input: String): SearchQuery {
         if (input.isBlank()) return SearchQuery.EMPTY
-        val tokens = tokenize(input)
-        return buildQuery(tokens)
+
+        val segments = SearchTokenizer.tokenize(input)
+        val builder = QueryBuilder()
+        val leftover = StringBuilder()
+
+        segments.forEach { seg ->
+            when (seg) {
+                is SearchSegment.Text -> leftover.append(seg.text)
+                is SearchSegment.Hashtag -> builder.hashtags.addDistinct(seg.tag)
+                is SearchSegment.Label -> builder.labels.addDistinct(seg.value)
+                is SearchSegment.Group -> builder.groups.addDistinct(seg.id)
+                is SearchSegment.Scope -> builder.scopes.addDistinct(ExternalScope(seg.field, seg.value))
+                is SearchSegment.Pointer ->
+                    if (seg.tag == "e") builder.cites.addDistinct(seg.value) else builder.addrs.addDistinct(seg.value)
+
+                is SearchSegment.DateBound -> builder.narrow(seg.field, seg.at)
+                is SearchSegment.Key ->
+                    when (seg.field) {
+                        KeyField.FROM -> builder.authors.addDistinct(seg.pubkey)
+                        KeyField.TO -> builder.mentions.addDistinct(seg.pubkey)
+                        // A bare npub names nobody in particular; it stays a search term.
+                        null -> leftover.append(seg.raw)
+                    }
+            }
+        }
+
+        readWords(tokenize(leftover.toString()), builder)
+        return builder.build()
     }
+
+    // ---- the second pass: the looser operators inside the leftover text --------------------
 
     internal fun tokenize(input: String): List<Token> {
         val tokens = mutableListOf<Token>()
@@ -66,7 +106,6 @@ object QueryParser {
         val len = input.length
 
         while (i < len) {
-            // Skip whitespace
             if (input[i].isWhitespace()) {
                 i++
                 continue
@@ -82,8 +121,7 @@ object QueryParser {
                     i++
                 }
                 if (i < len) i++ // skip closing quote
-                val value = sb.toString()
-                tokens.add(Token.Quoted(value, input.substring(start, i)))
+                tokens.add(Token.Quoted(sb.toString(), input.substring(start, i)))
                 continue
             }
 
@@ -92,24 +130,10 @@ object QueryParser {
                 i++ // skip -
                 val word = readWord(input, i)
                 i += word.length
-                if (word.isNotEmpty()) {
-                    tokens.add(Token.Negation(word))
-                }
+                if (word.isNotEmpty()) tokens.add(Token.Negation(word))
                 continue
             }
 
-            // Hashtag
-            if (input[i] == '#' && i + 1 < len && !input[i + 1].isWhitespace()) {
-                i++ // skip #
-                val tag = readWord(input, i)
-                i += tag.length
-                if (tag.isNotEmpty()) {
-                    tokens.add(Token.Hashtag(tag))
-                }
-                continue
-            }
-
-            // Read a word (may be operator:value, OR, or plain text)
             val word = readWord(input, i)
             i += word.length
 
@@ -118,13 +142,11 @@ object QueryParser {
                 continue
             }
 
-            // Check for OR keyword
             if (word == "OR") {
                 tokens.add(Token.Or)
                 continue
             }
 
-            // Check for operator pattern (word:value)
             val colonIdx = word.indexOf(':')
             if (colonIdx > 0) {
                 val opName = word.substring(0, colonIdx).lowercase()
@@ -147,17 +169,87 @@ object QueryParser {
         start: Int,
     ): String {
         var i = start
-        while (i < input.length && !input[i].isWhitespace()) {
-            i++
-        }
+        while (i < input.length && !input[i].isWhitespace()) i++
         return input.substring(start, i)
     }
 
-    private fun buildQuery(tokens: List<Token>): SearchQuery {
+    private fun readWords(
+        tokens: List<Token>,
+        builder: QueryBuilder,
+    ) {
+        var i = 0
+        while (i < tokens.size) {
+            when (val token = tokens[i]) {
+                is Token.Operator -> builder.readOperator(token)
+
+                is Token.Text -> {
+                    // An OR chain: `a OR b OR c`, which becomes one NIP-50 alternation.
+                    if (i + 2 < tokens.size && tokens[i + 1] is Token.Or && tokens[i + 2] is Token.Text) {
+                        builder.orTerms.add(token.value)
+                        i++ // step onto the OR
+                        while (i < tokens.size && tokens[i] is Token.Or && i + 1 < tokens.size && tokens[i + 1] is Token.Text) {
+                            i++ // skip OR
+                            builder.orTerms.add((tokens[i] as Token.Text).value)
+                            i++ // skip text
+                        }
+                        continue
+                    }
+                    builder.textParts.add(token.value)
+                }
+
+                is Token.Quoted -> builder.textParts.add(token.raw)
+                is Token.Negation -> builder.excludeTerms.addDistinct(token.term)
+                // An orphaned OR, with no text on one side of it, is just a word.
+                is Token.Or -> builder.textParts.add("OR")
+            }
+            i++
+        }
+    }
+
+    /**
+     * `YYYY`, `YYYY-MM` or `YYYY-MM-DD` as the unix second that bound means, in the reader's own
+     * timezone: `since` is the first instant of the span and `until` its last, so `until:2026`
+     * includes all of December.
+     *
+     * The tokenizer already took the full ISO day, so what reaches here is the partial spellings
+     * that name a span rather than a day.
+     */
+    fun parseDateToTimestamp(
+        dateStr: String,
+        field: DateField = DateField.SINCE,
+    ): Long? {
+        val parts = dateStr.split("-")
+        if (parts.size > 3) return null
+        val year = parts.getOrNull(0)?.toIntOrNull() ?: return null
+        if (year < 1970 || year > 2100) return null
+        val month = if (parts.size > 1) parts[1].toIntOrNull() ?: return null else null
+        if (month != null && (month < 1 || month > 12)) return null
+        val day = if (parts.size > 2) parts[2].toIntOrNull() ?: return null else null
+
+        return if (field == DateField.SINCE) {
+            LocalClock.startOfDay(SearchDate.of(year, month ?: 1, day ?: 1) ?: return null)
+        } else {
+            val m = month ?: 12
+            val d = day ?: SearchDate.lastDayOfMonth(year, m)
+            LocalClock.endOfDay(SearchDate.of(year, m, d) ?: return null)
+        }
+    }
+
+    private fun <T> MutableList<T>.addDistinct(value: T) {
+        if (value !in this) add(value)
+    }
+
+    private class QueryBuilder {
         val authors = mutableListOf<String>()
         val authorNames = mutableListOf<String>()
+        val mentions = mutableListOf<String>()
+        val cites = mutableListOf<String>()
+        val addrs = mutableListOf<String>()
         val kinds = mutableListOf<Int>()
         val hashtags = mutableListOf<String>()
+        val labels = mutableListOf<String>()
+        val groups = mutableListOf<String>()
+        val scopes = mutableListOf<ExternalScope>()
         val excludeTerms = mutableListOf<String>()
         val pseudoKinds = mutableListOf<String>()
         val textParts = mutableListOf<String>()
@@ -167,157 +259,80 @@ object QueryParser {
         var language: String? = null
         var domain: String? = null
 
-        // Collect OR groups: text terms separated by OR
-        var i = 0
-        while (i < tokens.size) {
-            when (val token = tokens[i]) {
-                is Token.Operator -> {
-                    when (token.name) {
-                        "from" -> {
-                            val hex = decodePublicKeyAsHexOrNull(token.value)
-                            if (hex != null) {
-                                authors.add(hex)
-                            } else {
-                                authorNames.add(token.value)
-                            }
-                        }
+        /** Two of one date prefix keep the narrower bound, so a window can only ever shrink. */
+        fun narrow(
+            field: DateField,
+            at: Long,
+        ) {
+            if (field == DateField.SINCE) {
+                since = since?.let { maxOf(it, at) } ?: at
+            } else {
+                until = until?.let { minOf(it, at) } ?: at
+            }
+        }
 
-                        "kind" -> {
-                            if (KindRegistry.isPseudoKind(token.value)) {
-                                pseudoKinds.add(token.value.lowercase())
-                            } else {
-                                val resolved = KindRegistry.resolve(token.value)
-                                if (resolved != null) {
-                                    kinds.addAll(resolved)
-                                } else {
-                                    token.value.toIntOrNull()?.let { kinds.add(it) }
-                                        ?: textParts.add(token.raw)
-                                }
-                            }
-                        }
-
-                        "since" -> {
-                            val ts = parseDateToTimestamp(token.value)
-                            if (ts != null) {
-                                since = ts
-                            } else {
-                                textParts.add(token.raw)
-                            }
-                        }
-
-                        "until" -> {
-                            val ts = parseDateToTimestamp(token.value)
-                            if (ts != null) {
-                                until = ts
-                            } else {
-                                textParts.add(token.raw)
-                            }
-                        }
-
-                        "lang" -> {
-                            language = token.value.lowercase()
-                        }
-
-                        "domain" -> {
-                            domain = token.value.lowercase()
-                        }
-                    }
-                }
-
-                is Token.Text -> {
-                    // Check if this is part of an OR chain
-                    if (i + 2 < tokens.size && tokens[i + 1] is Token.Or && tokens[i + 2] is Token.Text) {
-                        // Start of OR chain: collect all terms
-                        orTerms.add(token.value)
-                        i++ // skip to OR
-                        while (i < tokens.size && tokens[i] is Token.Or && i + 1 < tokens.size && tokens[i + 1] is Token.Text) {
-                            i++ // skip OR
-                            orTerms.add((tokens[i] as Token.Text).value)
-                            i++ // skip text
-                        }
-                        continue
+        fun readOperator(token: Token.Operator) {
+            when (token.name) {
+                "from", "to" -> {
+                    val hex = decodePublicKeyAsHexOrNull(token.value)
+                    val into = if (token.name == "from") authors else mentions
+                    if (hex != null) {
+                        into.addDistinct(hex)
+                    } else if (token.name == "from") {
+                        // A NIP-05 or a display name; the picker resolves it to a key later.
+                        authorNames.addDistinct(token.value)
                     } else {
-                        textParts.add(token.value)
+                        textParts.add(token.raw)
                     }
                 }
 
-                is Token.Quoted -> {
-                    textParts.add(token.raw)
+                "kind" -> {
+                    if (KindRegistry.isPseudoKind(token.value)) {
+                        pseudoKinds.addDistinct(token.value.lowercase())
+                    } else {
+                        val resolved = KindRegistry.resolve(token.value)
+                        if (resolved != null) {
+                            resolved.forEach { kinds.addDistinct(it) }
+                        } else {
+                            token.value.toIntOrNull()?.let { kinds.addDistinct(it) } ?: textParts.add(token.raw)
+                        }
+                    }
                 }
 
-                is Token.Negation -> {
-                    excludeTerms.add(token.term)
-                }
+                "since" ->
+                    parseDateToTimestamp(token.value, DateField.SINCE)?.let { narrow(DateField.SINCE, it) }
+                        ?: textParts.add(token.raw)
 
-                is Token.Hashtag -> {
-                    hashtags.add(token.tag)
-                }
+                "until" ->
+                    parseDateToTimestamp(token.value, DateField.UNTIL)?.let { narrow(DateField.UNTIL, it) }
+                        ?: textParts.add(token.raw)
 
-                is Token.Or -> {
-                    // Orphaned OR (no adjacent text terms) → treat as text
-                    textParts.add("OR")
-                }
+                "lang" -> language = token.value.lowercase()
+                "domain" -> domain = token.value.lowercase()
             }
-            i++
         }
 
-        // Cap OR terms at 3
-        val cappedOrTerms = orTerms.take(3)
-
-        return SearchQuery(
-            text = textParts.joinToString(" "),
-            authors = authors.distinct().toImmutableList(),
-            authorNames = authorNames.distinct().toImmutableList(),
-            kinds = kinds.distinct().toImmutableList(),
-            since = since,
-            until = until,
-            hashtags = hashtags.distinct().toImmutableList(),
-            excludeTerms = excludeTerms.distinct().toImmutableList(),
-            language = language,
-            domain = domain,
-            orTerms = cappedOrTerms.toPersistentList(),
-            pseudoKinds = pseudoKinds.distinct().toImmutableList(),
-        )
+        fun build() =
+            SearchQuery(
+                text = SearchTokenizer.tidyTerms(textParts.joinToString(" ")),
+                authors = authors.toImmutableList(),
+                authorNames = authorNames.toImmutableList(),
+                kinds = kinds.toImmutableList(),
+                since = since,
+                until = until,
+                hashtags = hashtags.toImmutableList(),
+                excludeTerms = excludeTerms.toImmutableList(),
+                language = language,
+                domain = domain,
+                // More than three alternations is a query no relay ranks usefully.
+                orTerms = orTerms.take(3).toPersistentList(),
+                pseudoKinds = pseudoKinds.toImmutableList(),
+                mentions = mentions.toImmutableList(),
+                cites = cites.toImmutableList(),
+                addrs = addrs.toImmutableList(),
+                labels = labels.toImmutableList(),
+                scopes = scopes.toImmutableList(),
+                groups = groups.toImmutableList(),
+            )
     }
-
-    fun parseDateToTimestamp(dateStr: String): Long? {
-        // ISO 8601 formats: YYYY, YYYY-MM, YYYY-MM-DD
-        return try {
-            val parts = dateStr.split("-")
-            when (parts.size) {
-                1 -> {
-                    val year = parts[0].toIntOrNull() ?: return null
-                    if (year < 1970 || year > 2100) return null
-                    dateToUnix(year, 1, 1)
-                }
-
-                2 -> {
-                    val year = parts[0].toIntOrNull() ?: return null
-                    val month = parts[1].toIntOrNull() ?: return null
-                    if (year < 1970 || year > 2100 || month < 1 || month > 12) return null
-                    dateToUnix(year, month, 1)
-                }
-
-                3 -> {
-                    val year = parts[0].toIntOrNull() ?: return null
-                    val month = parts[1].toIntOrNull() ?: return null
-                    val day = parts[2].toIntOrNull() ?: return null
-                    if (year < 1970 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return null
-                    dateToUnix(year, month, day)
-                }
-
-                else -> {
-                    null
-                }
-            }
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun dateToUnix(
-        year: Int,
-        month: Int,
-        day: Int,
-    ): Long = DateUtils.dateToUnix(year, month, day)
 }

@@ -24,6 +24,25 @@ import androidx.compose.runtime.Immutable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
+/** One NIP-73 external scope a `site:`/`isbn:`/`geo:`/`isan:`/`doi:`/`podcast:*` token names. */
+@Immutable
+data class ExternalScope(
+    val field: String,
+    val value: String,
+) {
+    /** The spellings of this scope worth asking an `#i`/`#I` filter for, canonical first. */
+    fun ids(): List<String> = ScopeIds.scopeIds(field, value)
+
+    /** The token this scope is written as inside the field. */
+    fun token(): String = "$field:$value"
+}
+
+/**
+ * What the relay is asked, from what the reader typed. Every field here becomes a NIP-01 filter
+ * field rather than a NIP-50 extension — see [SearchFilterBuilder] — so a query composes with a
+ * relay's own ranking instead of competing with it. [text] is what is left over for NIP-50 once
+ * every token has been lifted out.
+ */
 @Immutable
 data class SearchQuery(
     val text: String = "",
@@ -38,6 +57,18 @@ data class SearchQuery(
     val domain: String? = null,
     val orTerms: ImmutableList<String> = persistentListOf(),
     val pseudoKinds: ImmutableList<String> = persistentListOf(),
+    /** `to:<npub>` — people the event mentions, asked with `#p`. */
+    val mentions: ImmutableList<String> = persistentListOf(),
+    /** `to:<note|nevent>` — events the event cites, asked with `#e`. */
+    val cites: ImmutableList<String> = persistentListOf(),
+    /** `to:<naddr>` — addressable events the event cites, asked with `#a`. */
+    val addrs: ImmutableList<String> = persistentListOf(),
+    /** `label:<mark>` — NIP-32 marks, asked with `#l` on kind 1985. */
+    val labels: ImmutableList<String> = persistentListOf(),
+    /** NIP-73 external scopes, asked with `#i`/`#I` on NIP-22 comments. */
+    val scopes: ImmutableList<ExternalScope> = persistentListOf(),
+    /** `group:<id>` — NIP-29 groups, asked with `#h`. */
+    val groups: ImmutableList<String> = persistentListOf(),
 ) {
     val isEmpty
         get() =
@@ -52,7 +83,13 @@ data class SearchQuery(
                 excludeTerms.isEmpty() &&
                 pseudoKinds.isEmpty() &&
                 language == null &&
-                domain == null
+                domain == null &&
+                mentions.isEmpty() &&
+                cites.isEmpty() &&
+                addrs.isEmpty() &&
+                labels.isEmpty() &&
+                scopes.isEmpty() &&
+                groups.isEmpty()
 
     companion object {
         val EMPTY = SearchQuery()

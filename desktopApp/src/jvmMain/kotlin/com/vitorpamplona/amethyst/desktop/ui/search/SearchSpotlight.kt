@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,7 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -59,13 +57,13 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
+import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
+import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.ui.theme.hoverHighlight
 
@@ -79,12 +77,12 @@ fun SearchSpotlight(
 ) {
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+    val fieldState = remember { SearchFieldState() }
 
     val history by SearchHistoryStore.history.collectAsState()
     val savedSearches by SearchHistoryStore.savedSearches.collectAsState()
 
-    val hasQuery = textFieldValue.text.isNotBlank()
+    val hasQuery = fieldState.text.isNotBlank()
 
     Dialog(onDismissRequest = onDismiss) {
         // Full-screen scrim + centered card
@@ -142,30 +140,16 @@ fun SearchSpotlight(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.width(12.dp))
-                        BasicTextField(
-                            value = textFieldValue,
-                            onValueChange = { textFieldValue = it },
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .focusRequester(focusRequester),
-                            textStyle =
-                                MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                ),
-                            singleLine = true,
-                            decorationBox = { innerTextField ->
-                                Box {
-                                    if (textFieldValue.text.isEmpty()) {
-                                        Text(
-                                            "Search notes, profiles, hashtags...",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            },
+                        // The tokenized field: `from:`/`to:`, `since:`/`until:`, `#tag`,
+                        // `group:` and the NIP-73 scopes draw as chips here and become filter
+                        // fields downstream, so what the box shows is what the REQ asks for.
+                        TokenizedSearchField(
+                            state = fieldState,
+                            modifier = Modifier.weight(1f),
+                            fieldModifier = Modifier.focusRequester(focusRequester),
+                            placeholder = "Search notes, profiles, hashtags...",
+                            textStyle = MaterialTheme.typography.bodyLarge,
+                            onSubmit = { onOpenFullSearch(fieldState.text) },
                         )
                     }
 
@@ -192,7 +176,7 @@ fun SearchSpotlight(
                                         icon = { Icon(MaterialSymbols.History, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                         text = text,
                                         onClick = {
-                                            textFieldValue = TextFieldValue(text, TextRange(text.length))
+                                            fieldState.setText(text)
                                         },
                                     )
                                 }
@@ -232,16 +216,16 @@ fun SearchSpotlight(
                             item {
                                 SpotlightRow(
                                     icon = { Icon(MaterialSymbols.Search, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    text = "Search for \"${textFieldValue.text}\"",
-                                    onClick = { onOpenFullSearch(textFieldValue.text) },
+                                    text = "Search for \"${fieldState.text}\"",
+                                    onClick = { onOpenFullSearch(fieldState.text) },
                                 )
                             }
 
                             item {
                                 SpotlightRow(
                                     icon = { Icon(MaterialSymbols.Tag, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    text = "#${textFieldValue.text.removePrefix("#")}",
-                                    onClick = { onSelectHashtag(textFieldValue.text.removePrefix("#")) },
+                                    text = "#${fieldState.text.removePrefix("#")}",
+                                    onClick = { onSelectHashtag(fieldState.text.removePrefix("#")) },
                                 )
                             }
 
@@ -262,7 +246,7 @@ fun SearchSpotlight(
                                     },
                                     text = "Open full search",
                                     textColor = MaterialTheme.colorScheme.primary,
-                                    onClick = { onOpenFullSearch(textFieldValue.text) },
+                                    onClick = { onOpenFullSearch(fieldState.text) },
                                 )
                             }
                         }

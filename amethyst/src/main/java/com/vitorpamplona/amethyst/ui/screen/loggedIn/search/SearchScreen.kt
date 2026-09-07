@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,10 +43,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
@@ -55,7 +56,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -69,7 +69,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -99,6 +99,9 @@ import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.search.PersonCandidate
+import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
+import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
@@ -122,6 +125,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.filterNotNull
@@ -490,45 +494,73 @@ private fun SearchTextField(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextField(
-            value = searchBarViewModel.searchValue,
-            onValueChange = {
-                searchBarViewModel.updateSearchValue(it)
-            },
-            shape = RoundedCornerShape(25.dp),
-            keyboardOptions =
-                KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Sentences,
-                ),
-            leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
-            modifier =
+        // The tokenized field: `from:`/`to:`, `since:`/`until:`, `#tag`, `label:`, `group:` and
+        // the NIP-73 scopes settle into chips as the caret leaves them, and become NIP-01 filter
+        // fields rather than search terms. The value stays the plain text, so a query can still
+        // be copied out and pasted back.
+        val fieldState = remember { SearchFieldState(searchBarViewModel.searchValue) }
+        val interactionSource = remember { MutableInteractionSource() }
+        val mentionHits by searchBarViewModel.mentionResults.collectAsStateWithLifecycle()
+        val people =
+            remember(mentionHits) {
+                mentionHits
+                    .map {
+                        PersonCandidate(
+                            pubkeyHex = it.pubkeyHex,
+                            name = it.toBestDisplayName(),
+                            pictureUrl = it.profilePicture(),
+                        )
+                    }.toImmutableList()
+            }
+        val chipNames = remember(mentionHits) { mentionHits.associate { it.pubkeyHex to it.toBestDisplayName() } }
+
+        LaunchedEffect(fieldState.text) { searchBarViewModel.updateSearchValue(fieldState.text) }
+        // The one direction that is not the field's own: a clear, or a query loaded from elsewhere.
+        LaunchedEffect(searchBarViewModel.searchValue) {
+            if (fieldState.text != searchBarViewModel.searchValue) fieldState.setText(searchBarViewModel.searchValue)
+        }
+
+        TokenizedSearchField(
+            state = fieldState,
+            modifier = Modifier.weight(1f, true),
+            fieldModifier =
                 Modifier
-                    .weight(1f, true)
                     .defaultMinSize(minHeight = 20.dp)
                     .focusRequester(searchBarViewModel.focusRequester),
-            placeholder = {
-                Text(
-                    text = stringRes(Res.string.npub_hex_username),
-                    color = MaterialTheme.colorScheme.placeholderText,
+            people = people,
+            displayName = { chipNames[it] },
+            onPeopleQuery = { searchBarViewModel.mentionQuery.tryEmit(it) },
+            textStyle = LocalTextStyle.current,
+            decorationBox = { innerTextField ->
+                TextFieldDefaults.DecorationBox(
+                    value = fieldState.text,
+                    innerTextField = innerTextField,
+                    enabled = true,
+                    singleLine = true,
+                    visualTransformation = VisualTransformation.None,
+                    interactionSource = interactionSource,
+                    shape = RoundedCornerShape(25.dp),
+                    leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
+                    placeholder = {
+                        Text(
+                            text = stringRes(Res.string.npub_hex_username),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchBarViewModel.isRefreshing.value) {
+                            IconButton(onClick = { searchBarViewModel.clear() }) {
+                                ClearTextIcon()
+                            }
+                        }
+                    },
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
                 )
             },
-            trailingIcon = {
-                if (searchBarViewModel.isRefreshing.value) {
-                    IconButton(
-                        onClick = {
-                            searchBarViewModel.clear()
-                        },
-                    ) {
-                        ClearTextIcon()
-                    }
-                }
-            },
-            singleLine = true,
-            colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
         )
     }
 }

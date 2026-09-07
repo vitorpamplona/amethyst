@@ -20,7 +20,38 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.amethyst.commons.search.calendar.DateField
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+
 object DateUtils {
+    /**
+     * The local day a `since:`/`until:` bound falls on — the inverse of what the tokenizer did to
+     * the day the reader picked.
+     *
+     * An `until` is the last second of its day, so the naive "divide by 86,400" would land on the
+     * same day only by luck of the timezone. Both ends are walked back through [LocalClock]
+     * instead, and the guard below corrects the one-day slip a zone west or east of UTC causes.
+     */
+    fun localDay(
+        timestamp: Long,
+        field: DateField,
+    ): SearchDate {
+        val guess = SearchDate.civilFromDays(timestamp.floorDiv(86400L))
+        val bound = { d: SearchDate -> if (field == DateField.SINCE) LocalClock.startOfDay(d) else LocalClock.endOfDay(d) }
+        // At most one day out either way: no timezone offset exceeds 26 hours.
+        for (shift in intArrayOf(0, -1, 1)) {
+            val candidate = guess.plusDays(shift)
+            if (bound(candidate) == timestamp) return candidate
+        }
+        // Not a day boundary at all (a bound set by something other than the calendar): the day
+        // the instant falls inside is the honest answer.
+        return listOf(-1, 0, 1)
+            .map { guess.plusDays(it) }
+            .firstOrNull { timestamp >= LocalClock.startOfDay(it) && timestamp <= LocalClock.endOfDay(it) }
+            ?: guess
+    }
+
     fun isLeapYear(year: Int): Boolean = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 
     fun dateToUnix(

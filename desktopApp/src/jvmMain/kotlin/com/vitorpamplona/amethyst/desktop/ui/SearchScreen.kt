@@ -26,6 +26,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -70,9 +71,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.feeds.custom.canBecomeFeed
 import com.vitorpamplona.amethyst.commons.feeds.custom.toFeedDefinition
@@ -86,11 +85,17 @@ import com.vitorpamplona.amethyst.commons.search.SavedSearch
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
+import com.vitorpamplona.amethyst.commons.search.UserSearchEngine
 import com.vitorpamplona.amethyst.commons.search.parseSearchInput
+import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
+import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
+import com.vitorpamplona.amethyst.commons.ui.search.rememberChipNames
+import com.vitorpamplona.amethyst.commons.ui.search.rememberPersonCandidates
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.search.DesktopRelayUserSearchDelegate
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -130,10 +135,15 @@ fun SearchScreen(
     val focusRequester = remember { FocusRequester() }
     var showRelayPicker by remember { mutableStateOf(false) }
 
+    // The field's own editing state — the text, the caret, and which picker that position calls
+    // for. The query below is derived from it; the field is the one place the text lives.
+    val fieldState = remember { SearchFieldState(initialQuery) }
+    val searchInteraction = remember { MutableInteractionSource() }
+
     // Pre-fill initial query
     LaunchedEffect(initialQuery) {
         if (initialQuery.isNotBlank()) {
-            state.updateFromText(initialQuery)
+            fieldState.setText(initialQuery)
         }
     }
 
@@ -143,14 +153,23 @@ fun SearchScreen(
     val relayCategories = LocalRelayCategories.current
     val searchRelays by relayCategories.searchRelays.collectAsState()
     val displayText by state.displayText.collectAsState()
-    // Track TextFieldValue locally to preserve cursor position
-    var textFieldValue by remember { mutableStateOf(TextFieldValue(displayText)) }
-    // Sync from flow only when text changes externally (form-driven updates)
+
+    // The field drives the query. The reverse direction only fires for a form-driven change (the
+    // advanced panel, a loaded saved search), and the guard is what keeps the two from looping.
+    LaunchedEffect(fieldState.text) { state.updateFromText(fieldState.text) }
     LaunchedEffect(displayText) {
-        if (textFieldValue.text != displayText) {
-            textFieldValue = TextFieldValue(text = displayText, selection = TextRange(displayText.length))
-        }
+        if (fieldState.text != displayText) fieldState.setText(displayText)
     }
+
+    // The people a half-written `from:`/`to:` token offers. Cache first, then the search relays.
+    val userSearch =
+        remember(relayManager, localCache) {
+            UserSearchEngine(localCache, scope).apply {
+                relayDelegate = DesktopRelayUserSearchDelegate(relayManager, localCache, { searchRelays }, scope)
+            }
+        }
+    val personCandidates = rememberPersonCandidates(userSearch)
+    val chipNames = rememberChipNames(userSearch)
     val query by state.query.collectAsState()
     val debouncedQuery by state.debouncedQuery.collectAsState()
     val panelExpanded by state.panelExpanded.collectAsState()
@@ -467,24 +486,18 @@ fun SearchScreen(
                         androidx.compose.foundation.interaction
                             .MutableInteractionSource()
                     }
-                androidx.compose.foundation.text.BasicTextField(
-                    value = textFieldValue,
-                    onValueChange = {
-                        textFieldValue = it
-                        state.updateFromText(it.text)
-                    },
-                    modifier = Modifier.weight(1f).height(40.dp).focusRequester(focusRequester),
-                    textStyle =
-                        MaterialTheme.typography.bodyMedium
-                            .copy(color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush =
-                        androidx.compose.ui.graphics
-                            .SolidColor(MaterialTheme.colorScheme.primary),
-                    singleLine = true,
-                    interactionSource = searchInteraction,
+                TokenizedSearchField(
+                    state = fieldState,
+                    modifier = Modifier.weight(1f),
+                    fieldModifier = Modifier.height(40.dp).focusRequester(focusRequester),
+                    people = personCandidates,
+                    displayName = chipNames,
+                    onPeopleQuery = { userSearch.search(it) },
+                    onSubmit = { },
+                    textStyle = MaterialTheme.typography.bodyMedium,
                     decorationBox = { innerTextField ->
                         androidx.compose.material3.OutlinedTextFieldDefaults.DecorationBox(
-                            value = textFieldValue.text,
+                            value = fieldState.text,
                             innerTextField = innerTextField,
                             enabled = true,
                             singleLine = true,
@@ -492,7 +505,7 @@ fun SearchScreen(
                             interactionSource = searchInteraction,
                             placeholder = {
                                 Text(
-                                    "Search people, tags, notes…",
+                                    "Search people, tags, notes\u2026",
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             },
@@ -505,8 +518,8 @@ fun SearchScreen(
                                 )
                             },
                             trailingIcon = {
-                                if (displayText.isNotEmpty()) {
-                                    IconButton(onClick = { state.clearSearch() }, modifier = Modifier.size(28.dp)) {
+                                if (fieldState.text.isNotEmpty()) {
+                                    IconButton(onClick = { fieldState.clear() }, modifier = Modifier.size(28.dp)) {
                                         Icon(
                                             MaterialSymbols.Clear,
                                             contentDescription = "Clear",
