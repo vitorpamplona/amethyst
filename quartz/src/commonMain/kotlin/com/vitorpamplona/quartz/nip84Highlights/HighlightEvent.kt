@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip84Highlights.tags.CommentTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
@@ -70,6 +71,14 @@ class HighlightEvent(
     PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(comment(), context(), content).joinToString("\n")
+
+    // The read path: hands over the same fields indexableContent() joins, without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(comment())) return
+        if (!visitor.visit(context())) return
+        visitor.visit(content)
+    }
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(ETag::parseAsHint)
