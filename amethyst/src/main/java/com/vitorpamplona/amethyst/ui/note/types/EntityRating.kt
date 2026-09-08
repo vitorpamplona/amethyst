@@ -160,9 +160,11 @@ fun RenderEntityRating(
 /**
  * The score, as a row of five stars.
  *
- * Filled and empty stars are the **same glyph** at two tints: Material Symbols expresses fill
- * through the FILL variable axis rather than through separate codepoints, so `star`, `star_border`
- * and `star_outline` all resolve to U+F09A. Only `star_half` is a glyph of its own.
+ * Filled and empty stars are the **same codepoint**: Material Symbols carries fill on a variable
+ * axis rather than in separate glyphs, so `star`, `star_border` and `star_outline` all resolve to
+ * U+F09A. An earned star is therefore drawn by asking the painter for FILL=1 (`filled = true`),
+ * not by tinting — tint alone leaves five hollow outlines that read as an empty row. Only
+ * `star_half` is a glyph of its own.
  *
  * The numeral is shown only when the score is fractional — next to five filled stars, a "5" is
  * noise. The whole row carries one merged content description, because five undescribed icons

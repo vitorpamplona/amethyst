@@ -391,9 +391,13 @@ plus the regenerated `material_symbols_outlined.ttf` (241 codepoints, was 240).
 Filled vs empty stars are the same glyph at two tints — `primary` and
 `onSurfaceVariant`.
 
-`MaterialSymbolPainter` draws the glyph as tinted text and exposes no variable
-axis, so tint is the only lever available; that is why the row is built this way
-rather than with a FILL=1 star.
+**Corrected after review.** `MaterialSymbolPainter` originally drew the glyph as
+tinted text with no variable-axis control, so the first pass tinted an outline
+star and called it "filled" — five hollow outlines that read as an empty row.
+`87a44b97` added FILL-axis support to the painter and `aa54508e` switched the row
+to `filled = isOn`, which is the correct fix: an earned star is FILL=1, not a
+tint. Tint now only distinguishes earned from unearned, which is what it is
+good for.
 
 ### 11.2 Gate 1 is one list, not five
 
