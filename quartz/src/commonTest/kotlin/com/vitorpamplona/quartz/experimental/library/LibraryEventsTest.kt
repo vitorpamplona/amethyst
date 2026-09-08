@@ -230,6 +230,42 @@ class LibraryEventsTest {
     }
 
     @Test
+    fun aLearningResourceReadsTheAttachedPdf() {
+        // Shape taken from a real Edufeed event (`a192fee3…`, the Caesar-Scheibe worksheet). The
+        // material is a PDF hanging off `encoding:*` and named nowhere in the body, so a reader
+        // who cannot see it cannot get at the thing the event is about.
+        val event =
+            LearningResourceEvent(
+                "id",
+                author,
+                0L,
+                arrayOf(
+                    arrayOf("d", "17xu8qb7"),
+                    arrayOf("type", "LearningResource"),
+                    arrayOf("name", "Caesar-Scheibe"),
+                    arrayOf("datePublished", "2026-09-03"),
+                    arrayOf("dateCreated", "2026-09-03"),
+                    arrayOf("image", "https://blossom.edufeed.org/5b8a701b.jpeg"),
+                    arrayOf("encoding:contentUrl", "https://blossom.edufeed.org/b84841a0.pdf"),
+                    arrayOf("encoding:encodingFormat", "application/pdf"),
+                    arrayOf("encoding:sha256", "b84841a0d6b44d25120ab166fd5689c342b763f0a24c4aab54354912c6fcb6d7"),
+                    arrayOf("encoding:contentSize", "54137"),
+                ),
+                "Eine Anleitung.",
+                "sig",
+            )
+
+        assertEquals("https://blossom.edufeed.org/b84841a0.pdf", event.contentUrl())
+        assertEquals("application/pdf", event.contentFormat())
+        assertEquals("b84841a0d6b44d25120ab166fd5689c342b763f0a24c4aab54354912c6fcb6d7", event.contentHash())
+        assertEquals(54137L, event.contentSize())
+        // `datePublished` is a fourth spelling of the same fact; without it the byline was empty.
+        assertEquals("2026-09-03", event.published())
+        // The `image` is the cover, not the material — they must not be confused for each other.
+        assertEquals("https://blossom.edufeed.org/5b8a701b.jpeg", event.image())
+    }
+
+    @Test
     fun aLearningResourceReadsTheFileItShipsAs() {
         val event =
             LearningResourceEvent(

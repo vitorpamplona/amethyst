@@ -56,10 +56,16 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
-import com.vitorpamplona.amethyst.ui.components.ClickableUrl
+import com.vitorpamplona.amethyst.ui.components.FileAttachmentCard
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -112,7 +118,6 @@ fun RenderLearningResource(
     val author = remember(noteEvent) { noteEvent.author()?.ifBlank { null } }
     val published = remember(noteEvent) { noteEvent.published()?.ifBlank { null } }
     val facets = remember(noteEvent) { noteEvent.facetLabels().toImmutableList() }
-    val fileUrl = remember(noteEvent) { noteEvent.contentUrl()?.ifBlank { null } }
 
     Column(Modifier.fillMaxWidth()) {
         LibraryHeader(
@@ -149,15 +154,60 @@ fun RenderLearningResource(
             )
         }
 
-        // Some of these resources *are* a file — a PDF, a webxdc bundle — named nowhere in the
-        // body. Without the link the card describes something the reader cannot open.
-        fileUrl?.let {
-            Box(Modifier.padding(top = 6.dp)) {
-                ClickableUrl(urlText = it, url = it)
+        LearningResourceFile(note, noteEvent, accountViewModel)
+
+        DisplayUncitedHashtags(noteEvent, note.toNostrUri(), accountViewModel, nav)
+    }
+}
+
+/**
+ * The file a learning resource *is*, when it ships as one.
+ *
+ * These events attach the material through an `encoding:*` group — a Blossom URL, its MIME type,
+ * its size and its hash — and name it nowhere in the body, so a card without this describes
+ * something the reader cannot open. Most of them are PDFs (worksheets, instructions), which
+ * Amethyst can render: the same classify-then-view path kind 1063 uses gives a PDF its inline
+ * first page and a tap-to-read viewer, an image its picture, and a webxdc bundle or an archive —
+ * anything no viewer can show — the attachment card rather than a URL to squint at.
+ */
+@Composable
+private fun LearningResourceFile(
+    note: Note,
+    noteEvent: LearningResourceEvent,
+    accountViewModel: AccountViewModel,
+) {
+    val url = remember(noteEvent) { noteEvent.contentUrl()?.ifBlank { null } } ?: return
+    val mimeType = remember(noteEvent) { noteEvent.contentFormat()?.ifBlank { null } }
+    val content =
+        remember(noteEvent) {
+            val description = noteEvent.title()
+            val uri = note.toNostrUri()
+            val hash = noteEvent.contentHash()
+
+            when (RichTextParser.classifyMedia(url, mimeType)) {
+                MediaContentKind.IMAGE -> MediaUrlImage(url = url, description = description, hash = hash, uri = uri, mimeType = mimeType)
+                MediaContentKind.VIDEO -> MediaUrlVideo(url = url, description = description, hash = hash, uri = uri, mimeType = mimeType)
+                MediaContentKind.PDF -> MediaUrlPdf(url = url, description = description, hash = hash, uri = uri, mimeType = mimeType)
+                null -> null
             }
         }
 
-        DisplayUncitedHashtags(noteEvent, note.toNostrUri(), accountViewModel, nav)
+    Box(Modifier.padding(top = 6.dp)) {
+        if (content != null) {
+            ZoomableContentView(
+                content = content,
+                roundedCorner = true,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+            )
+        } else {
+            FileAttachmentCard(
+                url = url,
+                description = remember(noteEvent) { noteEvent.title() },
+                mimeType = mimeType,
+                sizeInBytes = remember(noteEvent) { noteEvent.contentSize() },
+            )
+        }
     }
 }
 

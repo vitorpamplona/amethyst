@@ -84,8 +84,8 @@ class LearningResourceEvent(
      */
     fun author() = tags.firstTagValueFor(AUTHOR, ARTIST) ?: tags.firstTagValue(CREATOR_NAME)
 
-    /** A year or a date. Three spellings are in the wild and none of them is normalised. */
-    fun published() = tags.firstTagValueFor(PUBLISHED, PUBLISHED_ON, RELEASE_DATE)
+    /** A year or a date. Four spellings are in the wild and none of them is normalised. */
+    fun published() = tags.firstTagValueFor(PUBLISHED, PUBLISHED_ON, DATE_PUBLISHED, RELEASE_DATE)
 
     /** BCP-47-ish, e.g. `de`. Note this is `inLanguage`, not NIP-32's `l`, which is a label. */
     fun language() = tags.firstTagValue(IN_LANGUAGE)
@@ -101,6 +101,9 @@ class LearningResourceEvent(
     fun contentFormat() = tags.firstTagValue(ENCODING_FORMAT)
 
     fun contentSize() = tags.firstTagValueAsLong(ENCODING_SIZE)
+
+    /** The Blossom hash of that file, which is also how the viewer verifies what it downloaded. */
+    fun contentHash() = tags.firstTagValue(ENCODING_SHA256)
 
     /** School subjects: "Biologie", "Informatik". */
     fun subjects(preferredLanguage: String? = null) = facetLabelsFor(ABOUT, preferredLanguage)
@@ -167,6 +170,7 @@ class LearningResourceEvent(
         private const val CREATOR_NAME = "creator:name"
         private const val PUBLISHED = "published"
         private const val PUBLISHED_ON = "published_on"
+        private const val DATE_PUBLISHED = "datePublished"
         private const val RELEASE_DATE = "release_date"
         private const val IN_LANGUAGE = "inLanguage"
         private const val LICENSE_ID = "license:id"
@@ -174,6 +178,7 @@ class LearningResourceEvent(
         private const val ENCODING_CONTENT_URL = "encoding:contentUrl"
         private const val ENCODING_FORMAT = "encoding:encodingFormat"
         private const val ENCODING_SIZE = "encoding:contentSize"
+        private const val ENCODING_SHA256 = "encoding:sha256"
         private const val PREF_LABEL = "prefLabel"
         private const val ABOUT = "about"
         private const val LEARNING_RESOURCE_TYPE = "learningResourceType"
