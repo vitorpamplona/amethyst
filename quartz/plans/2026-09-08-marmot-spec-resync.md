@@ -438,10 +438,23 @@ Things worth knowing about the implementation:
 - Witnesses count DISTINCT sender accounts per branch epoch, capped at the quorum size, and
   epochs at or before `fork_epoch` do not count at all.
 
-**Still open:** the bounded pass scheduler (quiescence/deadline timers, the frozen batch,
-`pass_base_epoch`) and the candidate-graph builder that replays MLS bytes against retained
-states. `CommitOrdering`'s transport-metadata tiebreak therefore still stands — it is only safe
-to delete once something replaces it end to end, and selection alone does not.
+`ConvergencePass` implements the bounded window: `pass_base_epoch` snapshot, the quiescence
+and absolute deadlines, the frozen batch, and the forced `Stable -> Recovering` transitions for
+a fork or an admitted disband candidate. Driven by an injected monotonic clock so the timing
+rules are tested deterministically rather than flakily.
+
+Two asymmetries there are deliberate and tested: only SELECTION-RELEVANT input restarts
+quiescence (ordinary chat must not hold a pass open, because outbound work is gated on
+settling), and neither a fork nor a disband restarts anything — a pass that becomes a recovery
+is the same pass, and restarting would let a trickle of forks hold it open forever. Deferred
+commit expiry tracks the LIVE canonical tip while branch eligibility uses the FROZEN
+`pass_base_epoch`; using one epoch for both would let an open pass move its own horizon.
+
+**Still open:** the candidate-graph builder that replays MLS bytes against retained states, and
+wiring the pass + selector into `MarmotInboundProcessor` so inbound commits actually flow
+through them. `CommitOrdering`'s transport-metadata tiebreak therefore still stands — it is only
+safe to delete once something replaces it end to end, and a selector with no graph feeding it
+does not.
 
 **Stage 7 — durability/restart conformance, app payload kinds (1009/1210), encrypted-media
 v2, push owner proof.**
