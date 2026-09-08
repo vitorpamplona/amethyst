@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.publications
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.publications.tags.WikilinkTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
@@ -66,15 +67,33 @@ class PublicationContentEvent(
     /** A display name for the section, falling back to the `d` identifier when `title` is absent. */
     fun titleOrIdentifier(): String = title()?.takeIf { it.isNotBlank() } ?: PublicationIndexEvent.humanizeIdentifier(dTag())
 
+    /** The `[[wikilink]]` references this section declares, in event order. */
+    fun wikilinks(): List<WikilinkTag> = tags.mapNotNull(WikilinkTag::parse)
+
     /** The `[[wikilink]]` targets this section references, in event order. */
-    fun wikilinkTargets(): List<String> =
-        tags.mapNotNull { tag ->
-            if (tag.size > 1 && tag[0] == WIKILINK_TAG && tag[1].isNotEmpty()) tag[1] else null
-        }
+    fun wikilinkTargets(): List<String> = wikilinks().map { it.target }
+
+    /**
+     * Looks up one `[[target]]` from the body. Matching is case-insensitive and ignores the
+     * separator style, because the body writes prose ("the Farmer") where the tag carries a slug
+     * ("the-farmer").
+     */
+    fun wikilinkFor(target: String): WikilinkTag? {
+        val needle = normalizeWikilink(target)
+        return wikilinks().firstOrNull { normalizeWikilink(it.target) == needle }
+    }
 
     companion object {
         const val KIND = 30041
-        const val WIKILINK_TAG = "wikilink"
+        const val WIKILINK_TAG = WikilinkTag.TAG_NAME
+
+        /** Case- and separator-insensitive key for matching a body reference to a `wikilink` tag. */
+        fun normalizeWikilink(target: String): String =
+            target
+                .trim()
+                .lowercase()
+                .replace(' ', '-')
+                .replace('_', '-')
 
         fun build(
             title: String,

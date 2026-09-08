@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,26 +31,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.experimental.publications.AsciiDocToMarkdown
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 
 /**
  * Renders a kind-30041 NKBIP-01 publication section — a chapter, zettel or episode.
  *
- * Unlike the kind-30040 index this one *is* prose, so it renders as a titled body rather than as
- * a card. Two deliberate limits:
+ * Unlike the kind-30040 index this one *is* prose, so it renders as a titled body.
  *
- * - NKBIP-01 allows the body to be **AsciiDoc**, and Amethyst has no AsciiDoc renderer. The body
- *   goes through the normal rich-text viewer, which handles the links, mentions and media that
- *   dominate real sections; the sparse AsciiDoc markup that survives reads as plain text rather
- *   than being mangled. Rendering it properly needs a parser, not a tweak here.
- * - `[[wikilink]]` targets are parsed ([PublicationContentEvent.wikilinkTargets]) but not
- *   resolved to events — that belongs to the reader, which does not exist yet.
+ * NKBIP-01 says the body may be **AsciiDoc**, and for this kind the reference implementation
+ * treats it as AsciiDoc unconditionally rather than sniffing — so we do the same. The body goes
+ * through [AsciiDocToMarkdown] and then the same CommonMark renderer that draws kind-30023
+ * long-form, which brings media, imeta and `nostr:` link handling with it for free. See that
+ * converter for what it does and does not cover; anything it does not recognize is passed
+ * through as the plain text it already was.
  */
 @Composable
 fun RenderPublicationSection(
@@ -67,6 +68,10 @@ fun RenderPublicationSection(
 
     val title = remember(noteEvent) { noteEvent.titleOrIdentifier() }
 
+    // Converting is a pure string pass over the whole body, so it is remembered per event
+    // rather than redone on every recomposition of a scrolling feed.
+    val markdown = remember(noteEvent) { AsciiDocToMarkdown.convert(noteEvent.content, wikilinkResolver(noteEvent)) }
+
     Column(Modifier.fillMaxWidth()) {
         Text(
             text = title,
@@ -76,17 +81,15 @@ fun RenderPublicationSection(
             overflow = TextOverflow.Ellipsis,
         )
 
-        if (noteEvent.content.isNotBlank()) {
+        if (markdown.isNotBlank()) {
             val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
 
-            TranslatableRichTextViewer(
-                content = noteEvent.content,
+            RenderContentAsMarkdown(
+                content = markdown,
+                tags = tags,
                 canPreview = canPreview && !makeItShort,
                 quotesLeft = quotesLeft,
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                tags = tags,
                 backgroundColor = backgroundColor,
-                id = note.idHex,
                 callbackUri = note.toNostrUri(),
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -94,3 +97,36 @@ fun RenderPublicationSection(
         }
     }
 }
+
+/**
+ * Turns a `[[target]]` into a `nostr:` URI using the section's `wikilink` tags, so a reference
+ * opens the page inside Amethyst instead of leaving for someone's web wiki.
+ *
+ * Preference order matters: an event id addresses one exact revision, whereas a coordinate
+ * addresses "whatever that author's page says now". The tag tells us which it meant.
+ *
+ * A target with no usable tag returns null, and the converter falls back to the bare label —
+ * better than a dead link to a page we cannot name.
+ */
+private fun wikilinkResolver(event: PublicationContentEvent): (String) -> String? =
+    { target ->
+        val link = event.wikilinkFor(target)
+
+        when {
+            link == null -> null
+
+            link.eventId != null ->
+                "nostr:" + NEvent.create(link.eventId!!, link.pubKey, WikiNoteEvent.KIND, link.relay)
+
+            link.pubKey != null ->
+                "nostr:" +
+                    NAddress.create(
+                        WikiNoteEvent.KIND,
+                        link.pubKey!!,
+                        PublicationContentEvent.normalizeWikilink(link.target),
+                        link.relay,
+                    )
+
+            else -> null
+        }
+    }
