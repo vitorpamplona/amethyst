@@ -137,8 +137,9 @@ fun filterMissingEvents(
 /**
  * One filter per relay carrying every id it might hold, chunked at [MAX_VALUES_PER_FILTER].
  *
- * Relays cap how many values they accept in a filter, and a filter quietly truncated loses the
- * tail of a thread with no error to notice. Splitting asks for all of them.
+ * Split for the same reason as the addressable groups: a relay that clamps `limit` returns only
+ * part of a large batch. This path sets no `limit`, so it is exposed only through a relay's
+ * `defaultLimit`, but the failure is the same shape and silent either way.
  */
 fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): List<RelayBasedFilter> {
     if (missingEventIds.isEmpty()) return emptyList()
@@ -159,6 +160,9 @@ fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): 
 /**
  * How many ids or `d` values go in one filter before it is split.
  *
- * Matches the chunk size the other bulk filter builders in this module already use.
+ * Matches the chunk size `OutboxDispatcher` and `FeedMetadataCoordinator` already use for bulk
+ * author queries. Note that no relay is known to reject a filter for carrying too many values --
+ * neither NIP-11 nor [com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits] has
+ * such a cap. The limit clamp above is the observed mechanism; this size is convention.
  */
 internal const val MAX_VALUES_PER_FILTER = 100

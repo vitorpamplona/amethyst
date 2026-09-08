@@ -109,11 +109,13 @@ fun filterMissingAddressables(
  * per address turned a 240-section book into 240 filters in a single REQ; grouping puts every `d`
  * in one filter's `#d` list, which is the same query in one line instead of 240.
  *
- * Chunked at [MAX_VALUES_PER_FILTER] because relays cap the values they will accept in a tag filter,
- * and a filter silently truncated is worse than two filters.
- *
  * The `limit` is the number of coordinates asked for, not 1: these are replaceable, so a relay
  * holds exactly one event per coordinate and that is the most this filter can return.
+ *
+ * That `limit` is why the group is chunked at [MAX_VALUES_PER_FILTER]. Relays clamp a filter's
+ * limit down to their own `maxLimit` (`LimitsPolicy.applyLimits`), so one filter asking for 240
+ * coordinates with `limit = 240` comes back holding only `maxLimit` of them, and the rest go
+ * missing with no error to notice. Chunks keep each `limit` small enough to survive the clamp.
  */
 fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<Address>>): List<RelayBasedFilter> {
     if (missingAddressables.isEmpty()) return emptyList()
