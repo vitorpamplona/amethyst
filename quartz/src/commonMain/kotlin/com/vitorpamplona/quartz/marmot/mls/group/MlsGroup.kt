@@ -350,7 +350,7 @@ class MlsGroup private constructor(
          * proof against its public half, and hands both back here — the proof
          * cannot be computed after the fact by code that only sees the leaf.
          */
-        leafSignatureKeyPair: com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519KeyPair? = null,
+        leafSignatureKeyPair: Ed25519KeyPair? = null,
         leafExtensions: List<Extension> = emptyList(),
         capabilities: Capabilities = marmotLeafCapabilities(),
         keyPackageExtensions: List<Extension> = emptyList(),
@@ -2271,6 +2271,84 @@ class MlsGroup private constructor(
     }
 
     /**
+     * Resolve a commit's proposals as THIS state sees them, or null when it
+     * references a proposal this state does not hold.
+     *
+     * Convergence needs this without applying anything: a candidate parent is
+     * tried by several competing commits, and judging authorization must not
+     * advance the state being judged against.
+     */
+    fun resolveCommitProposals(pubMsg: PublicMessage): List<PendingProposal>? {
+        val commit =
+            try {
+                Commit.decodeTls(TlsReader(pubMsg.content))
+            } catch (_: Exception) {
+                return null
+            }
+        val resolved = mutableListOf<PendingProposal>()
+        for (proposalOrRef in commit.proposals) {
+            when (proposalOrRef) {
+                is ProposalOrRef.Inline ->
+                    resolved.add(PendingProposal(proposalOrRef.proposal, pubMsg.sender.leafIndex))
+
+                is ProposalOrRef.Reference -> {
+                    val match =
+                        pendingProposals.find { pending ->
+                            val refValue = pending.authenticatedContentBytes ?: pending.proposal.toTlsBytes()
+                            MlsCryptoProvider
+                                .refHash("MLS 1.0 Proposal Reference", refValue)
+                                .contentEquals(proposalOrRef.proposalRef)
+                        } ?: return null
+                    resolved.add(match)
+                }
+            }
+        }
+        return resolved
+    }
+
+    /**
+     * Whether [pubMsg]'s committer is authorized to make it against THIS state,
+     * without applying anything.
+     *
+     * Runs the same two gates the apply path runs, so an inbound commit and one
+     * we authored are held to one rule rather than two that drift. Authorization
+     * is parent-relative: this answer is only meaningful once MLS
+     * authentication has already established that this state IS the commit's
+     * candidate parent.
+     */
+    fun isCommitAuthorized(pubMsg: PublicMessage): Boolean {
+        val proposals = resolveCommitProposals(pubMsg) ?: return false
+        return try {
+            enforceAuthorizedProposalSet(proposals, committerLeafIndex = pubMsg.sender.leafIndex)
+            enforceNoAdminDepletion(proposals)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Whether every proposal in [pubMsg] is one its own sender may make without
+     * admin authority — a self-Update, or SelfRemove of itself.
+     *
+     * This is the `ordinary` / `privileged` distinction convergence compares on:
+     * a commit is `privileged` exactly when its applicable rule REQUIRES an
+     * active admin, so one an ordinary member could also have made stays
+     * ordinary even when an admin happened to send it.
+     */
+    fun isSelfOnlyCommit(pubMsg: PublicMessage): Boolean {
+        val proposals = resolveCommitProposals(pubMsg) ?: return false
+        if (proposals.isEmpty()) return false
+        val committer = pubMsg.sender.leafIndex
+        val allSelfRemove =
+            proposals.all { it.proposal is Proposal.SelfRemove && it.senderLeafIndex == committer }
+        if (allSelfRemove) return true
+        return proposals.size == 1 &&
+            proposals[0].proposal is Proposal.Update &&
+            proposals[0].senderLeafIndex == committer
+    }
+
+    /**
      * Verify RFC 9420 §6.2 membership_tag on an inbound PublicMessage Commit.
      * The tag binds the whole `(TBS || FramedContentAuthData)` payload to
      * the sender's epoch — if it's missing or wrong, the sender either
@@ -3218,8 +3296,7 @@ class MlsGroup private constructor(
             val sigKp =
                 signingKey?.let { key ->
                     val pub = Ed25519.publicFromPrivate(key)
-                    com.vitorpamplona.quartz.marmot.mls.crypto
-                        .Ed25519KeyPair(key, pub)
+                    Ed25519KeyPair(key, pub)
                 } ?: Ed25519.generateKeyPair()
 
             val encKp = X25519.generateKeyPair()

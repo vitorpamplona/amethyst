@@ -1,7 +1,7 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stages 0-6 landed in Quartz (selection + bounded pass; candidate-graph replay and
-the inbound wiring remain). The app layer still creates MIP-era groups. Stage 7 open.
+Status: Stages 0-6 landed in Quartz (selection, bounded pass, and candidate-graph replay;
+the inbound wiring remains). The app layer still creates MIP-era groups. Stage 7 open.
 
 Sources checked on 2026-09-08:
 
@@ -450,11 +450,47 @@ is the same pass, and restarting would let a trickle of forks hold it open forev
 commit expiry tracks the LIVE canonical tip while branch eligibility uses the FROZEN
 `pass_base_epoch`; using one epoch for both would let an open pass move its own horizon.
 
-**Still open:** the candidate-graph builder that replays MLS bytes against retained states, and
-wiring the pass + selector into `MarmotInboundProcessor` so inbound commits actually flow
-through them. `CommitOrdering`'s transport-metadata tiebreak therefore still stands — it is only
-safe to delete once something replaces it end to end, and a selector with no graph feeding it
-does not.
+`CandidateGraphBuilder` builds the branches the selector compares, over a
+`CandidateStateEngine<S>` so the graph algebra is testable without MLS and the MLS adapter
+(`MlsCandidateStateEngine`) is testable on real forks.
+
+The things that make it non-obvious, all of them tested:
+
+- **Parentage is derived, never declared.** A commit carries no parent pointer, and it must not
+  be believed if it did. The builder finds a parent by asking which retained state the commit's
+  membership tag authenticates against. `MlsCandidateGraphTest` builds a genuine same-epoch fork
+  (two Alices restored from one snapshot, each adding a different member) and both commits land
+  on the same retained parent.
+- **A state id is `SHA-256` over the serialized GroupContext, not the epoch number.** Two states
+  can share an epoch number and be different states — that is what a fork IS — and the
+  GroupContext covers the tree and transcript hashes, so it separates them.
+- **It is a fixed point, not a sweep.** Replaying a commit produces a state that may be the
+  parent of a commit nothing could place a moment earlier, so it keeps sweeping the unplaced set
+  until a pass produces no new edge. A two-commit chain offered child-first still rebuilds as one
+  branch of depth 2.
+- **"I cannot place this" is not "I caught you misbehaving."** An unauthorized commit whose
+  parent IS known is terminal `authorization_failed`; a commit nothing authenticates is
+  `deferred`, and only `stale` once the LIVE canonical tip has passed the rollback horizon. A
+  tampered commit therefore comes out `deferred`, never `authorization_failed`.
+- **An invalid resulting state produces no edge at all**, so convergence cannot select it.
+  Validation is "decode the component set" — every decoder is strict, so malformed or unsorted
+  bytes throw rather than yielding a lenient value.
+- **An unattributable tip is dropped, not zero-filled.** Comparison step 5 breaks ties on the tip
+  committer's account pubkey; substituting `ByteArray(32)` would hand such a tip the lowest
+  possible key and win it a tie-break it never earned. A group whose leaves are not account
+  pubkeys simply produces no selectable branch.
+- Every trial replay restores a FRESH group from the retained snapshot, because a candidate
+  parent gets tried by several competing commits and "advance it then roll it back" works until
+  an exception escapes halfway through.
+
+`MlsGroup` grew three non-mutating helpers for this — `resolveCommitProposals`,
+`isCommitAuthorized`, `isSelfOnlyCommit` — reusing the same `enforceAuthorizedProposalSet` /
+`enforceNoAdminDepletion` gates the local commit path runs, so an inbound commit and one we
+authored are held to one rule rather than two that drift.
+
+**Still open:** wiring the pass + selector + graph into `MarmotInboundProcessor` so inbound
+commits actually flow through them. `CommitOrdering`'s transport-metadata tiebreak therefore
+still stands — it is only safe to delete once something replaces it end to end.
 
 **Stage 7 — durability/restart conformance, app payload kinds (1009/1210), encrypted-media
 v2, push owner proof.**
@@ -499,10 +535,11 @@ Writing the producer side immediately found two bugs the reader-side tests could
   `MarmotGroupData`; nothing in `commons`, `amethyst`, `desktopApp` or `cli` calls
   `CurrentProfileGroupFactory` yet. The Quartz half is ready and tested; the wiring is not
   written.
-- **Convergence is not on the inbound path.** `BranchSelector` and `ConvergencePass` exist and
-  are tested, but `MarmotInboundProcessor` still routes commits through `CommitOrdering`'s
-  superseded timestamp/event-id tiebreak. What is missing between them is the candidate-graph
-  builder that replays MLS bytes against retained states.
+- **Convergence is not on the inbound path.** `CandidateGraphBuilder`, `BranchSelector` and
+  `ConvergencePass` exist and are tested end to end against real MLS forks, but
+  `MarmotInboundProcessor` still routes commits through `CommitOrdering`'s superseded
+  timestamp/event-id tiebreak. What is missing is only the wiring: feeding retained states and
+  inbound commits into a pass, and applying the selected branch.
 - **The lifecycle states gate nothing.** `GroupLifecycleState` is a correct model with no
   enforcement behind it.
 - Stage 7: durability/restart conformance, app payload kinds `1009`/`1210`, encrypted-media v2,
