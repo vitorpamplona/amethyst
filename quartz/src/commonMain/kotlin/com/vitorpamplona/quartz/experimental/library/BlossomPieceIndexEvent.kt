@@ -72,7 +72,43 @@ class BlossomPieceIndexEvent(
     /** The byte count, when the `size` really is one. Null rather than a guess otherwise. */
     fun sizeInBytes(): Long? = size()?.toLongOrNull()
 
+    /**
+     * A direct URL for the whole file (`r`), when the publisher offers one.
+     *
+     * The pieces are the point of the kind, but reassembling them is a download client's job.
+     * Until there is one, this is the single address that opens and plays, which is why it is
+     * what the card links to.
+     */
+    fun url() = firstValue(URL_TAG)
+
+    /** Blossom servers that hold the pieces. Publishers may list more than one. */
+    fun blossomServers(): List<String> = allValues(BLOSSOM_TAG)
+
+    /** The whole file's hash (`x`), the name the pieces reassemble into. */
+    fun hash() = firstValue(HASH_TAG)
+
+    /**
+     * The piece list: each `b` tag is one chunk's hash and, when published, its byte count.
+     *
+     * Order is the order published — it is the reassembly order, so it must not be sorted.
+     */
+    fun pieces(): List<BlossomPiece> =
+        tags.mapNotNull { tag ->
+            if (tag.size > 1 && tag[0] == PIECE_TAG && tag[1].isNotEmpty()) {
+                BlossomPiece(tag[1], tag.getOrNull(2)?.toLongOrNull())
+            } else {
+                null
+            }
+        }
+
+    fun pieceCount(): Int = tags.count { it.size > 1 && it[0] == PIECE_TAG && it[1].isNotEmpty() }
+
     fun titleOrIdentifier(): String = title()?.takeIf { it.isNotBlank() } ?: dTag()
+
+    private fun allValues(name: String) =
+        tags.mapNotNull { tag ->
+            if (tag.size > 1 && tag[0] == name && tag[1].isNotEmpty()) tag[1] else null
+        }
 
     private fun firstValue(name: String) =
         tags.firstNotNullOfOrNull { tag ->
@@ -83,6 +119,10 @@ class BlossomPieceIndexEvent(
         const val KIND = 32176
         const val SIZE_TAG = "size"
         const val TYPE_TAG = "type"
+        const val URL_TAG = "r"
+        const val BLOSSOM_TAG = "blossom"
+        const val HASH_TAG = "x"
+        const val PIECE_TAG = "b"
 
         fun build(
             title: String,
@@ -107,3 +147,10 @@ class BlossomPieceIndexEvent(
             }
     }
 }
+
+/** One chunk of the file: its hash, and its byte count when the publisher included one. */
+@Immutable
+data class BlossomPiece(
+    val hash: String,
+    val sizeInBytes: Long?,
+)

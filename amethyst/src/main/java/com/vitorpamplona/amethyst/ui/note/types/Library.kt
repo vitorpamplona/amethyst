@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -244,19 +247,34 @@ fun RenderBlossomPieceIndex(
     val observedEvent by observeNoteEvent<BlossomPieceIndexEvent>(note, accountViewModel)
     val noteEvent = observedEvent ?: return
 
+    val url = remember(noteEvent) { noteEvent.url()?.ifBlank { null } }
+    val uriHandler = LocalUriHandler.current
+
     LibraryHeader(
         symbol = MaterialSymbols.Storage,
         label = stringRes(R.string.library_blossom_piece),
         title = remember(noteEvent) { noteEvent.titleOrIdentifier() },
         subtitle = remember(noteEvent) { noteEvent.summary()?.ifBlank { null } },
-        // Size and type are the two facts that distinguish one file record from another, so they
-        // go on the detail line rather than being dropped for lack of a label.
+        // What actually distinguishes one file record from another: what it is, how big, and how
+        // many pieces it was cut into. The byte count is humanized -- "31838839" is a number the
+        // reader has to decode, and the piece count is the whole point of the kind.
         detail =
             remember(noteEvent) {
-                listOfNotNull(noteEvent.type(), noteEvent.size()).takeIf { it.isNotEmpty() }?.joinToString(" · ")
+                val pieces = noteEvent.pieceCount()
+                listOfNotNull(
+                    noteEvent.type(),
+                    noteEvent.sizeInBytes()?.let { countToHumanReadableBytes(it) } ?: noteEvent.size(),
+                    if (pieces > 0) "$pieces pieces" else null,
+                ).takeIf { it.isNotEmpty() }?.joinToString(" · ")
             },
+        // The servers holding the pieces: without them the hashes name something unreachable.
+        byline = remember(noteEvent) { noteEvent.blossomServers().takeIf { it.isNotEmpty() }?.joinToString(", ") { it.removePrefix("https://") } },
         banner = remember(noteEvent) { noteEvent.image()?.ifBlank { null } },
         accountViewModel = accountViewModel,
+        // Nothing in-app reassembles the pieces yet, so the card opens the whole-file URL the
+        // publisher offers. With no `r` there is nothing to open, and the card stays inert
+        // rather than pretending otherwise.
+        onClick = url?.let { { uriHandler.openUri(it) } },
     )
 }
 
@@ -311,8 +329,15 @@ private fun LibraryHeader(
     detail: String?,
     banner: String?,
     accountViewModel: AccountViewModel,
+    onClick: (() -> Unit)? = null,
 ) {
-    Column(MaterialTheme.colorScheme.replyModifier) {
+    Column(
+        if (onClick != null) {
+            MaterialTheme.colorScheme.replyModifier.clickable(onClick = onClick)
+        } else {
+            MaterialTheme.colorScheme.replyModifier
+        },
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = Size5dp)) {
             Icon(
                 symbol = symbol,
