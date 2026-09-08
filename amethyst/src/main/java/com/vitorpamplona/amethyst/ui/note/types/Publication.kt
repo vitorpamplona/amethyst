@@ -73,6 +73,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationSectionRef
@@ -335,6 +338,12 @@ private fun ObservedSectionRow(
             is PublicationContentEvent -> event.titleOrIdentifier()
             is LongTextNoteEvent -> event.title()
             is WikiNoteEvent -> event.title()
+            // A bookshelf directory lists whatever it likes, including another directory, so the
+            // row has to name the library kinds too -- otherwise a nested entry falls through to
+            // the section placeholder and reads "Untitled section", which it is not.
+            is BookshelfDirectoryEvent -> event.titleOrIdentifier()
+            is LearningResourceEvent -> event.titleOrIdentifier()
+            is BlossomPieceIndexEvent -> event.titleOrIdentifier()
             else -> null
         } ?: ref.title
 
