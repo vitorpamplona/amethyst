@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.marmot.mls.group
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519KeyPair
 import com.vitorpamplona.quartz.marmot.mls.crypto.Hpke
@@ -152,6 +153,14 @@ class MlsGroup private constructor(
      * `authenticatedContentBytes` we capture for ProposalRef matching).
      */
     internal fun pendingProposalsSnapshot(): List<PendingProposal> = pendingProposals.toList()
+
+    /**
+     * The GroupContext extension list as it stands. Test-only: callers
+     * that want the dictionary should use [appDataDictionary], which
+     * cannot distinguish an absent extension from an empty one — a
+     * distinction the wire format does make.
+     */
+    internal fun groupContextExtensionsSnapshot(): List<Extension> = groupContext.extensions.toList()
 
     /**
      * Encode the current ratchet tree the same way it's serialized into
@@ -403,6 +412,36 @@ class MlsGroup private constructor(
         return proposal
     }
 
+    /** The GroupContext `app_data_dictionary`, empty when the group carries none. */
+    fun appDataDictionary(): AppDataDictionary = AppDataDictionary.fromExtensionsOrEmpty(groupContext.extensions)
+
+    /**
+     * Propose setting one GroupContext app component to [data].
+     *
+     * Marmot components define their update payload as a full replacement
+     * state, so [data] is the component's new value, not a diff.
+     *
+     * This is the MLS mechanism only. Marmot's own authorization — most
+     * component changes are admin-gated, and the resulting state still has to
+     * satisfy every component's validation rules — is layered on top and is
+     * not enforced here.
+     */
+    fun proposeAppDataUpdate(
+        componentId: Int,
+        data: ByteArray,
+    ): Proposal.AppDataUpdate {
+        val proposal = Proposal.AppDataUpdate.update(componentId, data)
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+        return proposal
+    }
+
+    /** Propose dropping one GroupContext app component entirely. */
+    fun proposeAppDataRemoval(componentId: Int): Proposal.AppDataUpdate {
+        val proposal = Proposal.AppDataUpdate.remove(componentId)
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+        return proposal
+    }
+
     /**
      * Create a PSK proposal to include a pre-shared key in the next epoch.
      * The PSK must be registered via registerPsk() before committing.
@@ -486,13 +525,15 @@ class MlsGroup private constructor(
         // Order: Updates/Removes first, then Adds (so blank slots are freed before reuse)
         val addedMembers = mutableListOf<Pair<Int, MlsKeyPackage>>()
         val addProposals = mutableListOf<PendingProposal>()
+        val appDataUpdates = mutableListOf<Proposal.AppDataUpdate>()
         for (pending in proposals) {
-            if (pending.proposal is Proposal.Add) {
-                addProposals.add(pending)
-            } else {
-                applyProposal(pending.proposal, pending.senderLeafIndex)
+            when (val p = pending.proposal) {
+                is Proposal.Add -> addProposals.add(pending)
+                is Proposal.AppDataUpdate -> appDataUpdates.add(p)
+                else -> applyProposal(p, pending.senderLeafIndex)
             }
         }
+        applyAppDataUpdateProposals(appDataUpdates)
         // Apply Adds after Removes/Updates
         for (pending in addProposals) {
             val p = pending.proposal as Proposal.Add
@@ -1502,19 +1543,25 @@ class MlsGroup private constructor(
         val resolvedProposals = mutableListOf<Proposal>()
         val inlineAdds = mutableListOf<Proposal.Add>()
         val referenceAddSenders = mutableListOf<Pair<Proposal.Add, Int>>()
+        val inboundAppDataUpdates = mutableListOf<Proposal.AppDataUpdate>()
         for ((idx, pending) in resolvedPending.withIndex()) {
             val isInline = commit.proposals[idx] is ProposalOrRef.Inline
-            if (pending.proposal is Proposal.Add) {
-                if (isInline) {
-                    inlineAdds.add(pending.proposal)
-                } else {
-                    referenceAddSenders.add(pending.proposal to pending.senderLeafIndex)
+            when (val p = pending.proposal) {
+                is Proposal.Add -> {
+                    if (isInline) {
+                        inlineAdds.add(p)
+                    } else {
+                        referenceAddSenders.add(p to pending.senderLeafIndex)
+                    }
                 }
-            } else {
-                applyProposal(pending.proposal, pending.senderLeafIndex)
+
+                is Proposal.AppDataUpdate -> inboundAppDataUpdates.add(p)
+
+                else -> applyProposal(p, pending.senderLeafIndex)
             }
             resolvedProposals.add(pending.proposal)
         }
+        applyAppDataUpdateProposals(inboundAppDataUpdates)
         val newLeavesInCommit = mutableSetOf<Int>()
         for (add in inlineAdds) {
             newLeavesInCommit.add(applyProposalAdd(add))
@@ -2293,6 +2340,13 @@ class MlsGroup private constructor(
         committerLeafIndex: Int = myLeafIndex,
     ) {
         if (proposals.isEmpty()) return
+        // NOTE: this gate reads MIP-01's `marmot_group_data` (0xF2EE). A
+        // current-profile group keeps its admin list in the
+        // `marmot.group.admin-policy.v1` component (0x8003) instead, so
+        // `currentMarmotData()` is null there and this returns without
+        // enforcing anything. That is a real gap, not a deliberate exemption:
+        // current-profile authorization arrives with the admin-policy component
+        // (see quartz/plans/2026-09-08-marmot-spec-resync.md, Stage 3).
         val marmot = currentMarmotData()
         val adminsConfigured = marmot != null && marmot.adminPubkeys.isNotEmpty()
         if (!adminsConfigured || isLeafAdmin(committerLeafIndex)) return
@@ -2427,7 +2481,63 @@ class MlsGroup private constructor(
             }
 
             is Proposal.ExternalInit -> {} // Handled in external commit flow
+
+            is Proposal.AppDataUpdate -> {
+                // Applied by [applyAppDataUpdateProposals] after the rest of
+                // the proposal list, so a GroupContextExtensions proposal in
+                // the same commit is already reflected. Reaching it here would
+                // mean a caller bypassed that ordering.
+                error("AppDataUpdate must be applied through applyAppDataUpdateProposals")
+            }
         }
+    }
+
+    /**
+     * Fold every `AppDataUpdate` proposal in a commit into the GroupContext
+     * `app_data_dictionary`.
+     *
+     * Two ordering rules matter, and both change the resulting GroupContext
+     * bytes — and therefore the epoch's key schedule — if we get them wrong:
+     *
+     *  1. These run AFTER the rest of the proposal list, so a
+     *     `GroupContextExtensions` proposal in the same commit is already
+     *     applied and we update the dictionary it produced.
+     *  2. The dictionary extension is added-or-replaced in place and is never
+     *     dropped, even when the last component is removed and the dictionary
+     *     ends up empty. An absent extension and an empty one are different
+     *     GroupContexts.
+     *
+     * MLS deliberately leaves the meaning of an update payload to the
+     * application — openmls hands the proposals back for the app to resolve —
+     * because a component's payload can be an arbitrary diff. Every Marmot
+     * component document defines its update as a full replacement state, so
+     * here resolution is the identity function. A future component that wanted
+     * true diff semantics would have to resolve them before this point.
+     */
+    private fun applyAppDataUpdateProposals(updates: List<Proposal.AppDataUpdate>) {
+        if (updates.isEmpty()) return
+
+        var dictionary = AppDataDictionary.fromExtensionsOrEmpty(groupContext.extensions)
+        for (update in updates) {
+            dictionary =
+                when (val operation = update.operation) {
+                    is Proposal.AppDataUpdate.Operation.Update ->
+                        dictionary.with(update.componentId, operation.data)
+
+                    Proposal.AppDataUpdate.Operation.Remove ->
+                        dictionary.without(update.componentId)
+                }
+        }
+
+        val extension = dictionary.toExtension()
+        val existing = groupContext.extensions.indexOfFirst { it.extensionType == AppDataDictionary.EXTENSION_TYPE }
+        val newExtensions =
+            if (existing >= 0) {
+                groupContext.extensions.toMutableList().also { it[existing] = extension }
+            } else {
+                groupContext.extensions + extension
+            }
+        groupContext = groupContext.copy(extensions = newExtensions)
     }
 
     private fun buildWelcome(addedMembers: List<Pair<Int, MlsKeyPackage>>): ByteArray {
@@ -2729,6 +2839,10 @@ class MlsGroup private constructor(
                 EXTERNAL_PUB_EXTENSION_TYPE,
                 EXTERNAL_SENDERS_EXTENSION_TYPE,
                 MARMOT_GROUP_DATA_EXTENSION_TYPE,
+                // The current profile's carrier for all app-owned group state.
+                // A group can arrive at one either by being created with it or
+                // by a GroupContextExtensions proposal that installs it.
+                AppDataDictionary.EXTENSION_TYPE,
             )
 
         /**

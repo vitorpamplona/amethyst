@@ -1,6 +1,6 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stages 0 and 2 done. Stages 1, 3-7 open.
+Status: Stages 0, 1 and 2 done. Stages 3-7 open.
 
 Sources checked on 2026-09-08:
 
@@ -276,10 +276,44 @@ Each stage is independently shippable and independently testable.
 toolchain and a local relay. A human run of `marmot-interop-headless.sh` is the acceptance test,
 and is likely to surface at least the retry behaviour the old patch used to paper over.
 
-**Stage 1 — MLS extensions draft in Quartz (large, foundational).**
-`AppDataDictionary` / `ComponentData` TLS codecs; `app_components` (`0x0001`) and `safe_aad`
-(`0x0002`); `AppDataUpdate` proposal (`0x0008`) through `MlsGroup` staging/validation;
-last-resort as KeyPackage component `0x0004`. Everything else depends on this.
+**Stage 1 — MLS extensions draft in Quartz. DONE.**
+
+- `marmot/mls/components/` — `ComponentData`, `AppDataDictionary` (extension `0x0006`) and the
+  `ComponentsList` payload shared by `app_components` (`0x0001`) and `safe_aad` (`0x0002`).
+  Building a dictionary sorts for you; *decoding* rejects out-of-order or duplicate entries
+  rather than normalizing them, because a receiver that silently sorted would accept two
+  encodings of one dictionary and then disagree with a peer about the signed bytes.
+- `Proposal.AppDataUpdate` (`0x0008`), including its `update`/`remove` operations, wired
+  through `MlsGroup` on both the committing and receiving paths, plus `proposeAppDataUpdate` /
+  `proposeAppDataRemoval` / `appDataDictionary()`.
+- Last resort is read as the KeyPackage-level `0x0004` component, not an MLS extension type.
+
+Two application rules were taken from openmls rather than guessed, because both change the
+resulting GroupContext bytes and therefore the epoch key schedule:
+
+1. `AppDataUpdate` applies AFTER the rest of the proposal list, so a `GroupContextExtensions`
+   proposal in the same commit is already reflected — regardless of list order.
+2. The dictionary extension is added-or-replaced in place and never dropped, even when the
+   last component is removed. An absent extension and an empty dictionary are different
+   GroupContexts.
+
+MLS deliberately leaves update-payload semantics to the application (openmls hands the
+proposals back unresolved). Every Marmot component defines its update as a full replacement
+state, so resolution here is the identity function; a future diff-shaped component would have
+to resolve before this layer.
+
+Verified: 12 tests parse the MDK-generated KeyPackage in `marmot-current-profile.json` all the
+way down — MLSMessage → KeyPackage → LeafNode → dictionary → components — and re-encode the
+dictionary byte-identically (it sits inside the signed LeafNode, so a one-byte difference
+would invalidate the signature). 9 more cover the proposal wire format and its group-level
+application, including two members converging on the same dictionary across the receive path.
+Full `:quartz:jvmTest`: 4,507 tests, 0 failures.
+
+Known gap, deliberately left for Stage 3: `enforceAuthorizedProposalSet` and
+`enforceNoAdminDepletion` read MIP-01's `marmot_group_data` (`0xF2EE`). A current-profile group
+has no such extension, so both gates return without enforcing anything — an `AppDataUpdate` in
+such a group is currently unauthorized by us. The admin-policy component (`0x8003`) is what
+closes it.
 
 **Stage 2 — account identity proof v2 (`0x8009`). DONE.**
 
