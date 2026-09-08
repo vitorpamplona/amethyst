@@ -88,6 +88,8 @@ fun TokenizedSearchField(
      */
     peoplePicker: (@Composable (ActivePicker.People, onPick: (String) -> Unit) -> Unit)? = null,
     displayName: (String) -> String? = { null },
+    groupName: (String) -> String? = { null },
+    scopeName: (String, String) -> String? = { _, _ -> null },
     onPeopleQuery: (String) -> Unit = {},
     onGroupQuery: (String) -> Unit = {},
     onSubmit: () -> Unit = {},
@@ -133,7 +135,7 @@ fun TokenizedSearchField(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { if (!takeEnter(state, picker, highlighted, people, groups)) onSubmit() }),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            visualTransformation = remember(state.settleCaret, styles, displayName) { SearchTokenTransformation(state.settleCaret, styles, displayName) },
+            visualTransformation = remember(state.settleCaret, styles, displayName, groupName, scopeName) { SearchTokenTransformation(state.settleCaret, styles, displayName, groupName, scopeName) },
             decorationBox = { inner ->
                 if (decorationBox != null) {
                     decorationBox(inner)

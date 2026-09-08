@@ -100,10 +100,13 @@ import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.search.GroupCandidate
+import com.vitorpamplona.amethyst.commons.ui.search.SEARCH_PICKER_LIMIT
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
 import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -127,6 +130,8 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.filterNotNull
@@ -512,6 +517,31 @@ private fun SearchTextField(
                 UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
             }
 
+        // The rooms the reader can actually reach, for the `group:` picker and for naming the
+        // chips it writes. An id typed from memory is unverifiable; a name is not.
+        var groupQuery by remember { mutableStateOf("") }
+        val groupChannels = remember { LocalCache.allRelayGroupChannels() }
+        val groupNames = remember(groupChannels) { groupChannels.associate { it.groupId.id to it.toBestDisplayName() } }
+
+        val groupCandidates =
+            remember(groupChannels, groupQuery) {
+                groupChannels
+                    .asSequence()
+                    // A group id is opaque and case-exact, but a reader types the name they know.
+                    .filter { groupQuery.isBlank() || it.groupId.id.startsWith(groupQuery, true) || it.toBestDisplayName().contains(groupQuery, true) }
+                    .take(SEARCH_PICKER_LIMIT)
+                    .map { channel ->
+                        GroupCandidate(
+                            id = channel.groupId.id,
+                            name = channel.toBestDisplayName(),
+                            subtitle = channel.groupId.relayUrl.displayUrl(),
+                            // The same id on two relays is two rooms, and a `#h` filter cannot tell them apart.
+                            ambiguous = groupChannels.count { it.groupId.id == channel.groupId.id } > 1,
+                        )
+                    }.toList()
+                    .toImmutableList()
+            }
+
         LaunchedEffect(fieldState.text) { searchBarViewModel.updateSearchValue(fieldState.text) }
         // The one direction that is not the field's own: a clear, or a query loaded from elsewhere.
         LaunchedEffect(searchBarViewModel.searchValue) {
@@ -528,7 +558,13 @@ private fun SearchTextField(
             // A key already in the cache draws as its owner's name; one that has not arrived yet
             // stays a short npub rather than being given an invented name.
             displayName = { LocalCache.getUserIfExists(it)?.toBestDisplayName() },
+            groupName = { groupNames[it] },
+            // The same reverse-geocode cache the feed spinner and thread view already read
+            // through LoadCityName; null until it resolves, which leaves the geohash showing.
+            scopeName = { field, value -> if (field == "geo") CachedReversedGeoLocations.cached(value) else null },
+            groups = groupCandidates,
             onPeopleQuery = { userSuggestions.processCurrentWord(it) },
+            onGroupQuery = { partial -> groupQuery = partial },
             peoplePicker = { _, onPick ->
                 ShowUserSuggestionList(
                     userSuggestions = userSuggestions,

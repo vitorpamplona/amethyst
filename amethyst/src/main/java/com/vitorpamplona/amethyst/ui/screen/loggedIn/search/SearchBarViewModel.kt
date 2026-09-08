@@ -277,8 +277,12 @@ class SearchBarViewModel(
                 }
             }
 
-            if (term.isBlank()) return@combine emptyList<User>()
-            val users = LocalCache.search.findUsersStartingWith(term, account)
+            // The leftover terms, not the whole box: a name search handed `#bitcoin` or
+            // `from:npub1…` verbatim matches nobody, and since notes started honouring the
+            // tokens, leaving people and channels on the raw text made one box mean two things.
+            val nameTerm = plainTerms(term)
+            if (nameTerm.isBlank()) return@combine emptyList<User>()
+            val users = LocalCache.search.findUsersStartingWith(nameTerm, account)
             if (follows != null) users.filter { it.pubkeyHex in follows } else users
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -345,7 +349,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findPublicChatChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findPublicChatChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -355,7 +359,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findEphemeralChatChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findEphemeralChatChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -365,7 +369,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findLiveActivityChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findLiveActivityChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -413,6 +417,13 @@ class SearchBarViewModel(
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
+
+    /**
+     * What is left of the box once the filter tokens are lifted out — what a name search should
+     * actually be given. A blank result means the query named only filters, and a name search on
+     * "everything" is not a useful answer.
+     */
+    private fun plainTerms(term: String): String = QueryParser.parse(term).text
 
     /**
      * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex

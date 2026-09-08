@@ -51,15 +51,19 @@ class SearchTokenTransformationTest {
         text: String,
         caret: Int? = null,
         name: (String) -> String? = { null },
-    ): TransformedText = SearchTokenTransformation(caret, STYLES, name).filter(AnnotatedString(text))
+        groupName: (String) -> String? = { null },
+        scopeName: (String, String) -> String? = { _, _ -> null },
+    ): TransformedText = SearchTokenTransformation(caret, STYLES, name, groupName, scopeName).filter(AnnotatedString(text))
 
     /** Every offset must map into the other string's bounds, in both directions. */
     private fun assertMapsSafely(
         text: String,
         caret: Int? = null,
         name: (String) -> String? = { null },
+        groupName: (String) -> String? = { null },
+        scopeName: (String, String) -> String? = { _, _ -> null },
     ) {
-        val out = transform(text, caret, name)
+        val out = transform(text, caret, name, groupName, scopeName)
         val drawn = out.text.text
         (0..text.length).forEach {
             val mapped = out.offsetMapping.originalToTransformed(it)
@@ -141,6 +145,29 @@ class SearchTokenTransformationTest {
             assertMapsSafely(text)
             assertMapsSafely(text, name = { "A very long display name indeed" })
             (0..text.length).forEach { caret -> assertMapsSafely(text, caret) }
+        }
+    }
+
+    @Test
+    fun aKnownGroupDrawsAsItsNameAndAnUnknownOneKeepsItsId() {
+        // An id typed from memory is unverifiable; the name is the only part a reader can check
+        // against the room they meant.
+        assertEquals("group:Dev Chat", transform("group:abc123", groupName = { "Dev Chat" }).text.text)
+        assertEquals("group:abc123", transform("group:abc123").text.text)
+    }
+
+    @Test
+    fun aGeohashDrawsAsItsCityOnceTheCacheHasOne() {
+        assertEquals("geo:San Francisco", transform("geo:9q8yy", scopeName = { f, _ -> if (f == "geo") "San Francisco" else null }).text.text)
+        // Null means not resolved yet, which must leave the geohash showing rather than a guess.
+        assertEquals("geo:9q8yy", transform("geo:9q8yy").text.text)
+    }
+
+    @Test
+    fun namedTokensStillMapEveryOffsetSafely() {
+        listOf("group:abc123 tail", "geo:9q8yy tail", "group:abc123 geo:9q8yy #tag").forEach { text ->
+            assertMapsSafely(text, groupName = { "A Much Longer Group Name Than The Id" }, scopeName = { _, _ -> "Reykjavik" })
+            assertMapsSafely(text, groupName = { "x" }, scopeName = { _, _ -> "y" })
         }
     }
 

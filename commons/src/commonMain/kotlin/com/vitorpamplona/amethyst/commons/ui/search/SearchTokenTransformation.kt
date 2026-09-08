@@ -100,14 +100,22 @@ private class RewriteOffsetMapping(
  * to [SearchTokenizer.drawable], so a half-typed `#bit` stays plain text under the cursor rather
  * than reflowing on every keystroke. Pass null for a field nobody is typing in.
  *
- * [displayName] is asked for a key token's owner; returning null leaves the npub short-formed
- * rather than named, which is what a profile that has not arrived yet should look like.
+ * [displayName] is asked for a key token's owner and [groupName] for a group's id; returning null
+ * leaves the token short-formed rather than named, which is what something that has not arrived
+ * yet should look like — an invented name would be worse than a visible id.
  */
 @Immutable
 class SearchTokenTransformation(
     private val caret: Int?,
     private val styles: SearchTokenStyles,
     private val displayName: (String) -> String?,
+    private val groupName: (String) -> String? = { null },
+    /**
+     * A NIP-73 scope's human name, given its field and value — a `geo:` geohash's city, say.
+     * Synchronous by contract: this runs inside a text transformation, so it may only read what
+     * is already resolved and must return null rather than wait for anything.
+     */
+    private val scopeName: (String, String) -> String? = { _, _ -> null },
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val segments = SearchTokenizer.drawable(text.text, caret)
@@ -146,6 +154,11 @@ class SearchTokenTransformation(
             }
 
             is SearchSegment.Pointer -> "to:${shortBech32(raw.substringAfter(':'))}"
+            // A group id is a stranger's opaque string; its name is the only part a reader can
+            // check against the room they meant. The id stays the value, so the query is unchanged.
+            is SearchSegment.Group -> "group:${groupName(seg.id)?.let { clip(it, 32) } ?: seg.id}"
+            // Likewise a geohash: "9q8yy" says nothing, "San Francisco" says what was filtered on.
+            is SearchSegment.Scope -> scopeName(seg.field, seg.value)?.let { "${seg.field}:${clip(it, 32)}" } ?: raw
             else -> raw
         }
 
