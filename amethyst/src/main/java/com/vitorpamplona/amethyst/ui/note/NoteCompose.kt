@@ -1091,7 +1091,7 @@ private fun RenderNoteRow(
         }
 
         is PublicationIndexEvent -> {
-            RenderPublicationIndex(baseNote, accountViewModel, nav)
+            RenderPublicationIndex(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is ThreadEvent -> {

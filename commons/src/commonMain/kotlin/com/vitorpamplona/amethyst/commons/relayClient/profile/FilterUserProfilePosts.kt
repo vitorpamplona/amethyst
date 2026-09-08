@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -79,6 +81,8 @@ val UserProfilePostKinds2 =
         AttestationEvent.KIND,
         BirdDetectionEvent.KIND,
         BirdexEvent.KIND,
+        EntityRatingEvent.KIND,
+        PublicationIndexEvent.KIND,
     )
 
 // NIP-5A nsites (15128/35128) and NIP-5D napplets (15129/35129) the user publishes, surfaced in

@@ -41,6 +41,8 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -107,7 +109,11 @@ class UserProfileNewThreadFeedFilter(
                     it.event is AttestationEvent ||
                     it.event is AttestationRequestEvent ||
                     it.event is AttestorRecommendationEvent ||
-                    it.event is AttestorProficiencyEvent
+                    it.event is AttestorProficiencyEvent ||
+                    it.event is PublicationIndexEvent ||
+                    // Mirrors the Home filter: a rating with nothing to point at cannot be
+                    // rendered, so it would be an empty row on the author's own profile.
+                    (it.event as? EntityRatingEvent)?.hasTarget() == true
             ) &&
             it.isNewThread() &&
             account.isAcceptable(it)
