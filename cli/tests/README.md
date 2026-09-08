@@ -28,7 +28,6 @@ cli/tests/
 │   ├── tests-create.sh             # tests 01–05
 │   ├── tests-manage.sh             # tests 06–08, 11
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
-│   └── patches/                    # whitenoise-rs harness patches
 ├── nests/                 # Audio-rooms interop (Amethyst ↔ nostrnests.com)
 │   ├── nests-interop.sh            # 47-test manual harness
 │   └── README.md                   # operator brief + per-test matrix
@@ -96,7 +95,7 @@ A third, slimmer harness covers the NIP-17 DM surface:
 
 - **`dm/dm-interop-headless.sh`** — two `amy` processes (Identity A and
   Identity D) exchange NIP-17 DMs through the loopback nostr-rs-relay.
-  No whitenoise-rs required — only `amy` and the relay binary (which
+  No MDK required — only `amy` and the relay binary (which
   is shared with the Marmot harness's checkout at
   `marmot/state-headless/nostr-rs-relay/`).
 
@@ -123,11 +122,17 @@ A fourth harness covers audio rooms (NIP-53 + moq-lite):
   background audio. See `nests/README.md` for the full matrix and
   prereqs.
 
-Both Marmot harnesses validate Amethyst against **whitenoise-rs**
-(https://github.com/marmot-protocol/whitenoise-rs), the reference Rust
-implementation that powers the White Noise Flutter app. Every test records a
-pass/fail/skip result into a tab-separated log, and the summary is printed at
-the end of the run.
+Both Marmot harnesses validate Amethyst against **MDK**
+(https://github.com/marmot-protocol/mdk), the reference Rust implementation of
+the Marmot protocol, via its `wn` / `wnd` binaries (the `wn-cli` package).
+Every test records a pass/fail/skip result into a tab-separated log, and the
+summary is printed at the end of the run.
+
+> These harnesses previously targeted `marmot-protocol/whitenoise-rs`, which was
+> archived on 2026-08-05 pinned to `mdk-core 0.8.0`. Testing against it meant
+> testing against a frozen MIP-era client. The reference moved into `mdk`, and
+> so did we — see `quartz/plans/2026-09-08-marmot-spec-resync.md` for what that
+> change exposed.
 
 ## What gets tested
 
@@ -197,9 +202,10 @@ cd tools/marmot-interop
 The script will, in order:
 
 1. Verify `jq`, `git`, `cargo` etc. are present.
-2. Clone `whitenoise-rs` into `state/whitenoise-rs/` and build `wn`/`wnd`
-   (release, `--features cli`). First build takes ~5 minutes; subsequent runs
-   reuse the binaries.
+2. Clone `mdk` into `state/mdk/` and build `wn`/`wnd`
+   (`cargo build --release -p wn-cli`). First build takes ~5 minutes;
+   subsequent runs reuse the binaries. MDK pins its own Rust toolchain in
+   `rust-toolchain.toml`, so rustup may fetch a toolchain on the first run.
 3. Launch two `wnd` daemons (one for Identity B, one for Identity C).
 4. Create Nostr identities for B and C, persist their npubs in `state/run.env`.
 5. Ask you to paste **your Amethyst account npub** (Identity A). This is
@@ -219,7 +225,7 @@ The script will, in order:
 ```
 --local-relays    Use ws://localhost:8080 instead of the default public relays.
                   Required if the public relays reject kinds 444/445/30443.
-                  Run 'just docker-up' inside whitenoise-rs first.
+                  Run 'just docker-up' inside the mdk checkout first.
 --transponder     Run Test 14 (push notifications via the transponder service).
 --no-build        Fail instead of rebuilding wn/wnd. Useful when iterating.
 -h, --help        Show help.
@@ -228,7 +234,7 @@ The script will, in order:
 Environment overrides:
 
 ```
-WN_REPO=/some/path/whitenoise-rs   # use an existing checkout
+WN_REPO=/some/path/mdk             # use an existing checkout
 ```
 
 ## Default relays
@@ -245,7 +251,7 @@ that B just published — the harness warns you and continues. In that case
 re-run with `--local-relays` after starting the Docker stack:
 
 ```bash
-cd state/whitenoise-rs
+cd state/mdk
 just docker-up
 cd ../..
 ./marmot-interop.sh --local-relays
@@ -324,6 +330,6 @@ for B/C if this matters to you.
 - `marmot-interop.sh` — main entry point; orchestrates preflight, daemons,
   identities, relays, and runs the 13 tests in sequence.
 - `lib.sh` — helpers (logging, prompts, polling, jq wrappers, result table).
-- `state/` — runtime directory, gitignored. Contains `whitenoise-rs/` source
+- `state/` — runtime directory, gitignored. Contains the `mdk/` source
   checkout, per-daemon data/log dirs, the session `run.env`, logs, and
   results TSVs.

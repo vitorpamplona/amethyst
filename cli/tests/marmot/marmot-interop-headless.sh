@@ -3,7 +3,7 @@
 # marmot-interop-headless.sh — zero-prompt, zero-internet interop harness.
 #
 # Drives Identity A via the `amy` CLI (./gradlew :cli:installDist) and
-# Identities B/C via whitenoise-rs `wn`/`wnd`. Spins up a local
+# Identities B/C via MDK's `wn`/`wnd`. Spins up a local
 # nostr-rs-relay on ws://127.0.0.1:$RELAY_PORT so nothing ever leaves the
 # machine. Matches the 13 test scenarios in marmot-interop.sh but without
 # any human prompts — all checks run to completion and the exit code
@@ -24,14 +24,14 @@ LOG_DIR="$STATE_DIR/logs"
 A_DIR="$STATE_DIR/.amy/A"
 B_DIR="$STATE_DIR/B"
 C_DIR="$STATE_DIR/C"
-B_SOCKET="$B_DIR/release/wnd.sock"
-C_SOCKET="$C_DIR/release/wnd.sock"
+B_SOCKET="$B_DIR/wnd.sock"
+C_SOCKET="$C_DIR/wnd.sock"
 
 RUN_TS="$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="$LOG_DIR/run-$RUN_TS.log"
 RESULTS_FILE="$STATE_DIR/results-$RUN_TS.tsv"
 
-WN_REPO="${WN_REPO:-$SCRIPT_DIR/state/whitenoise-rs}"
+WN_REPO="${WN_REPO:-$SCRIPT_DIR/state/mdk}"
 WN_BIN="$WN_REPO/target/release/wn"
 WND_BIN="$WN_REPO/target/release/wnd"
 AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"

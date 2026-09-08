@@ -13,11 +13,11 @@
 // public half to the committer, then keep the three private keys so the
 // vector is fully-self-decryptable.
 
+use ::tls_codec::{Deserialize, Serialize};
 use openmls::prelude::*;
 use openmls_basic_credential::SignatureKeyPair;
 use openmls_rust_crypto::OpenMlsRustCrypto;
 use openmls_traits::OpenMlsProvider;
-use tls_codec::{Deserialize, Serialize};
 
 const CS: Ciphersuite = Ciphersuite::MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519;
 
@@ -64,13 +64,8 @@ fn main() {
         .use_ratchet_tree_extension(true)
         .build();
 
-    let mut alice_group = MlsGroup::new(
-        &provider_a,
-        &alice_sig,
-        &group_cfg,
-        alice_cwk.clone(),
-    )
-    .unwrap();
+    let mut alice_group =
+        MlsGroup::new(&provider_a, &alice_sig, &group_cfg, alice_cwk.clone()).unwrap();
 
     let (_commit_out, welcome_out, _group_info) = alice_group
         .add_members(&provider_a, &alice_sig, &[bob_kp.clone()])
@@ -95,7 +90,12 @@ fn main() {
     let exporter_context = b"group-event";
     let exporter_length: usize = 32;
     let exporter_secret = bob_group
-        .export_secret(provider_b.crypto(), exporter_label, exporter_context, exporter_length)
+        .export_secret(
+            provider_b.crypto(),
+            exporter_label,
+            exporter_context,
+            exporter_length,
+        )
         .unwrap();
 
     // Alice sends three application messages to the group. Bob will replay

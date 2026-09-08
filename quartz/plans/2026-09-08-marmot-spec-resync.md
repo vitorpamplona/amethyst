@@ -1,6 +1,6 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: analysis + staged plan. Nothing implemented yet.
+Status: Stage 0 done. Stages 1-7 open.
 
 Sources checked on 2026-09-08:
 
@@ -230,16 +230,16 @@ lineage.
 Kinds 446–449 exist for us. Missing: the kind `451` push **owner proof** (spec'd 2026-07-23)
 and the token-record `relay_hint` publish-target rules.
 
-### 4.11 Test/interop infrastructure — BLOCKER for verification
+### 4.11 Test/interop infrastructure — was a BLOCKER, addressed in Stage 0
 
-- `cli/tests/marmot/marmot-interop.sh:101` clones the archived `whitenoise-rs`. The `wn`/`wnd`
-  binaries moved to `mdk/crates/cli`.
-- `quartz/tools/mdk-vector-gen` pins plain openmls 0.8; MDK now uses the `extensions-draft`
-  fork. Regenerating against the fork is what gives us `app_data_dictionary` fixtures.
-- Our MIP tests (`MarmotMipComplianceTest`, `MarmotMipBehaviorTest`) assert the deprecated
-  rules — e.g. `MarmotMipBehaviorTest.kt:793` asserts `RequiredCapabilities == [0xF2EE]`.
-  They pin us to the old profile and must be re-pointed, not deleted (the legacy bytes still
-  matter for reading our own stored groups).
+- ~~`cli/tests/marmot/` clones the archived `whitenoise-rs`~~ — repointed at
+  `marmot-protocol/mdk` (`-p wn-cli`).
+- ~~`quartz/tools/mdk-vector-gen` pins plain openmls 0.8~~ — repointed at the
+  `extensions-draft` fork, and `marmot-profile-gen` now emits current-profile fixtures.
+- Still open: our MIP tests (`MarmotMipComplianceTest`, `MarmotMipBehaviorTest`) assert the
+  deprecated rules — e.g. `MarmotMipBehaviorTest.kt:793` asserts
+  `RequiredCapabilities == [0xF2EE]`. They pin us to the old profile and must be re-pointed,
+  not deleted (the legacy bytes still matter for reading our own stored groups).
 
 ## 5. Interop verdict today
 
@@ -255,10 +255,26 @@ and the token-record `relay_hint` publish-target rules.
 
 Each stage is independently shippable and independently testable.
 
-**Stage 0 — re-establish a live reference (small).**
-Repoint `marmot-interop.sh` at `marmot-protocol/mdk` and its `wn`/`wnd`; regenerate
-`mdk-vector-gen` against the `erskingardner/openmls` `extensions-draft` fork. Without this we
-are guessing at bytes. Do this first regardless of what else gets scoped.
+**Stage 0 — re-establish a live reference. DONE.**
+
+- `quartz/tools/mdk-vector-gen` now pins `erskingardner/openmls` at the exact rev MDK's root
+  `Cargo.toml` names, with the `extensions-draft` feature. Verified: it builds and runs.
+- New generator `marmot-profile-gen` emits
+  `quartz/src/commonTest/resources/mls/marmot-current-profile.json` — a real current-profile
+  group with `app_data_dictionary` state at every location, PublicMessage handshakes, the Add
+  commit, the Welcome, and exporter KATs. It self-checks the account-identity-proof v2
+  construction against the spec's published fixture at startup, so the emitted proofs are known
+  to match byte-for-byte.
+- The interop harness (`cli/tests/marmot/`) now clones `marmot-protocol/mdk` and builds
+  `-p wn-cli` instead of the archived `whitenoise-rs`. Both source patches are gone: the
+  mock-keyring patch is replaced by MDK's native `--secret-store file`, and the
+  skip-unprocessable-retry patch targeted a path MDK does not have. The daemon socket is now
+  pinned with `wnd --socket` rather than guessed from a derived default.
+
+**Not yet run end-to-end.** The harness changes are derived from reading MDK's `DaemonArgs` and
+`wn-cli` manifest, not from a passing run — building MDK's full workspace needs its pinned
+toolchain and a local relay. A human run of `marmot-interop-headless.sh` is the acceptance test,
+and is likely to surface at least the retry behaviour the old patch used to paper over.
 
 **Stage 1 — MLS extensions draft in Quartz (large, foundational).**
 `AppDataDictionary` / `ComponentData` TLS codecs; `app_components` (`0x0001`) and `safe_aad`
@@ -293,11 +309,19 @@ withdrawal. Delete `CommitOrdering`'s transport-metadata tiebreak at this point,
 **Stage 7 — durability/restart conformance, app payload kinds (1009/1210), encrypted-media
 v2, push owner proof.**
 
-### Open question for scoping
+### Settled: Quartz keeps its own MLS
 
-Stages 1–6 are a protocol rewrite, not a patch. The alternative worth naming: our Kotlin MLS
-stack is ~7,900 lines and now has to chase a moving IETF draft that upstream tracks via a
-fork of OpenMLS. If cross-client Marmot interop is a hard requirement, it may be cheaper to
-decide *now* whether Quartz keeps its own MLS or binds MDK (which ships `marmot-c` and
-`marmot-uniffi`) on Android/JVM. MDK is MIT, so licensing is clear; the cost is JNI/uniffi packaging per
-target and losing our pure-Kotlin iOS/Linux reach.
+Decided 2026-09-08. We do not bind `marmot-c` / `marmot-uniffi`; the pure-Kotlin stack stays,
+and full MDK interoperability is the target.
+
+Consequences to plan around, since they are now ours to carry:
+
+- Stage 1 means implementing draft-ietf-mls-extensions-10's `app_data_dictionary` (`0x0006`),
+  `app_components` (`0x0001`), `safe_aad` (`0x0002`) and the `app_data_update` proposal
+  (`0x0008`) in `quartz/.../marmot/mls/`, against a draft upstream tracks through a fork of
+  OpenMLS rather than a released crate.
+- The OpenMLS rev pinned in `mdk-vector-gen/Cargo.toml` is a version we now track deliberately.
+  When MDK bumps it, regenerate the vectors in the same change and diff them — a silent bump is
+  how we would drift again.
+- Byte-level conformance is the only thing that keeps us honest, so every stage below lands with
+  vectors from `marmot-profile-gen`, not just unit tests written against our own reading.

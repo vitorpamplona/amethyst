@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# marmot-interop.sh — interop test harness: Amethyst <-> whitenoise-rs (wn/wnd)
+# marmot-interop.sh — interop test harness: Amethyst <-> MDK (wn/wnd)
 #
 # Sequential, all-or-nothing. Script drives the `wn` side automatically and
 # prompts the human operator at each step that requires Amethyst UI action.
@@ -15,17 +15,16 @@ STATE_DIR="$SCRIPT_DIR/state"
 LOG_DIR="$STATE_DIR/logs"
 B_DIR="$STATE_DIR/B"
 C_DIR="$STATE_DIR/C"
-# wnd derives its socket path as "{data_dir}/release/wnd.sock" for release
-# builds (and ".../dev/wnd.sock" for debug); our preflight always uses
-# --release, so we hardcode the "release" suffix here.
-B_SOCKET="$B_DIR/release/wnd.sock"
-C_SOCKET="$C_DIR/release/wnd.sock"
+# The harness pins the daemon socket explicitly via wnd's --socket flag, so
+# these paths are our choice rather than a guess at wnd's derived default.
+B_SOCKET="$B_DIR/wnd.sock"
+C_SOCKET="$C_DIR/wnd.sock"
 
 RUN_TS="$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="$LOG_DIR/run-$RUN_TS.log"
 RESULTS_FILE="$STATE_DIR/results-$RUN_TS.tsv"
 
-WN_REPO="${WN_REPO:-$STATE_DIR/whitenoise-rs}"
+WN_REPO="${WN_REPO:-$STATE_DIR/mdk}"
 WN_BIN=""
 WND_BIN=""
 B_NPUB=""
@@ -48,7 +47,7 @@ NO_BUILD=0
 
 usage() {
   cat <<EOF
-marmot-interop.sh — Amethyst <-> whitenoise-rs interop harness
+marmot-interop.sh — Amethyst <-> MDK interop harness
 
 Options:
   --local-relays    Use ws://localhost:8080 instead of public relays (requires 'just docker-up')
@@ -57,7 +56,7 @@ Options:
   -h, --help        Show this help
 
 Environment:
-  WN_REPO           Path to whitenoise-rs checkout (default: state/whitenoise-rs)
+  WN_REPO           Path to the mdk checkout (default: state/mdk)
 EOF
 }
 
@@ -97,12 +96,14 @@ preflight() {
       fail_msg "wn/wnd not found and --no-build set: $WN_BIN"; exit 1
     fi
     if [[ ! -d "$WN_REPO/.git" ]]; then
-      step "cloning whitenoise-rs into $WN_REPO"
-      git clone --depth 1 https://github.com/marmot-protocol/whitenoise-rs.git "$WN_REPO" \
+      # marmot-protocol/whitenoise-rs was archived on 2026-08-05; wn/wnd now
+      # ship from marmot-protocol/mdk as the `wn-cli` package.
+      step "cloning mdk into $WN_REPO"
+      git clone --depth 1 https://github.com/marmot-protocol/mdk.git "$WN_REPO" \
         2>&1 | tee -a "$LOG_FILE"
     fi
-    step "building wn + wnd (cargo build --release --features cli) — ~5 min first run"
-    ( cd "$WN_REPO" && cargo build --release --features cli --bin wn --bin wnd ) \
+    step "building wn + wnd (cargo build --release -p wn-cli) — ~5 min first run"
+    ( cd "$WN_REPO" && cargo build --release -p wn-cli --bin wn --bin wnd ) \
       2>&1 | tee -a "$LOG_FILE"
   fi
   printf '  wn:  %s\n  wnd: %s\n' "$WN_BIN" "$WND_BIN" >>"$LOG_FILE"
@@ -114,10 +115,13 @@ preflight() {
 _start_daemon_attempt() {
   local name="$1" data_dir="$2" socket="$3"
   rm -f "$socket"
-  mkdir -p "$data_dir/logs" "$data_dir/release"
-  # wnd puts its socket at {data_dir}/release/wnd.sock (release build) — we
-  # don't pass --socket because the daemon doesn't accept that flag.
+  mkdir -p "$data_dir/logs"
+  # MDK's wnd accepts an explicit --socket, so the harness pins the listen
+  # path instead of guessing at the derived one ({home}/dev/wnd.sock today).
+  # --secret-store file keeps account secrets out of the OS keychain, which
+  # is what lets this run in a container.
   nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
+    --socket "$socket" --secret-store file \
     >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
   local pid=$!
   echo "$pid" > "$data_dir/pid"
@@ -153,11 +157,11 @@ start_daemon() {
   if _start_daemon_attempt "$name" "$data_dir" "$socket"; then
     return 0
   fi
-  # Recover from a stale MLS SQLite DB whose keyring entry has gone
-  # missing (e.g. the keychain entry was pruned, the data dir was
-  # restored without the keyring, or a previous run used the mock
-  # keyring). wnd can't open the DB in that state, but the identity is
-  # disposable — wipe the data dir and let ensure_identity recreate it.
+  # Recover from a stale MLS SQLite DB whose secret has gone missing (the
+  # data dir was restored without its secret store, or an earlier run used a
+  # different --secret-store). wnd can't open the DB in that state, but the
+  # identity is disposable — wipe the data dir and let ensure_identity
+  # recreate it.
   if [[ -s "$data_dir/logs/stderr.log" ]] && \
      grep -q 'KeyringEntryMissingForExistingDatabase' "$data_dir/logs/stderr.log"; then
     warn "$name: stale MLS DB detected (keyring entry missing) — wiping $data_dir and retrying"
@@ -428,7 +432,7 @@ configure_relays() {
     local who="$1" wnfn
     if [[ "$who" == "B" ]]; then wnfn=wn_b; else wnfn=wn_c; fi
     local name="marmot-interop $who"
-    local about="Scripted wn identity for Amethyst<->whitenoise-rs interop harness"
+    local about="Scripted wn identity for Amethyst<->MDK interop harness"
     local out
     if out=$("$wnfn" profile update --name "$name" --about "$about" 2>&1); then
       printf '%s profile update ok: %s\n' "$who" "$out" >>"$LOG_FILE"
@@ -530,7 +534,7 @@ configure_relays() {
       wn_b groups leave "$sanity_gid" >/dev/null 2>&1 || true
     else
       warn "kind:10050/1059 failed — C never received welcome; relays likely dropping gift wraps or inbox lists"
-      warn "Consider rerunning with --local-relays (requires 'just docker-up' in whitenoise-rs)."
+      warn "Consider rerunning with --local-relays (requires 'just docker-up' in the mdk checkout)."
     fi
   fi
 }
@@ -1304,7 +1308,7 @@ main() {
   trap 'exit 130' INT
   trap 'exit 143' TERM
   trap 'exit 129' HUP
-  banner "Amethyst <-> whitenoise-rs interop harness ($RUN_TS)"
+  banner "Amethyst <-> MDK interop harness ($RUN_TS)"
 
   preflight
   start_daemon B "$B_DIR" "$B_SOCKET"

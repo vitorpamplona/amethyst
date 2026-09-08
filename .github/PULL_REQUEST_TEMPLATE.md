@@ -40,7 +40,7 @@ locally and tick the box. If your change can't possibly affect them
 (docs-only, UI-only on unrelated screens, etc.), tick "N/A". -->
 
 - [ ] N/A — change can't affect wire bytes / decoded audio / MLS state / DM envelopes
-- [ ] Marmot / MLS — `cli/tests/marmot/marmot-interop-headless.sh` (NIP-EE / `whitenoise-rs`)
+- [ ] Marmot / MLS — `cli/tests/marmot/marmot-interop-headless.sh` (Marmot / MDK `wn`)
 - [ ] NIP-17 DM — `cli/tests/dm/dm-interop-headless.sh`
 - [ ] Audio rooms manual — `cli/tests/nests/nests-interop.sh` (Amethyst ↔ nostrnests.com)
 - [ ] MoQ-lite hang-tier — `:nestsClient:jvmTest -DnestsHangInterop=true`

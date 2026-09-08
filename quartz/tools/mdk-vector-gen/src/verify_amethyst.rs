@@ -14,13 +14,13 @@ use std::env;
 use std::fs::{self, File};
 use std::process;
 
+use ::tls_codec::Deserialize as TlsDeserialize;
 use base64::Engine;
 use openmls::prelude::*;
 use openmls_rust_crypto::OpenMlsRustCrypto;
 use openmls_traits::OpenMlsProvider;
 use serde::Deserialize;
 use std::collections::HashMap;
-use tls_codec::Deserialize as TlsDeserialize;
 
 #[derive(Deserialize)]
 struct Handoff {

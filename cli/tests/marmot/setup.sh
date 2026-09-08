@@ -6,12 +6,11 @@
 # --- preflight ---------------------------------------------------------------
 preflight() {
   banner "Preflight"
-  for cmd in jq git curl cargo protoc patch; do
+  for cmd in jq git curl cargo protoc; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
       fail_msg "missing required tool: $cmd"
       case "$cmd" in
         protoc) info "hint: apt-get install protobuf-compiler   (or brew install protobuf on macOS)" ;;
-        patch)  info "hint: apt-get install patch" ;;
       esac
       exit 1
     fi
@@ -42,61 +41,36 @@ preflight() {
   [[ -x "$AMY_BIN" ]] || { fail_msg "amy still missing after build"; exit 1; }
   info "amy: $AMY_BIN"
 
-  # Clone/build whitenoise-rs if needed (shared between both harnesses).
+  # Clone/build the MDK reference client if needed (shared between both
+  # harnesses).
+  #
+  # This used to point at marmot-protocol/whitenoise-rs. That repository was
+  # archived on 2026-08-05 ("This repository is obsolete and is no longer
+  # updated") pinned to mdk-core 0.8.0, and wn/wnd moved into
+  # marmot-protocol/mdk as the `wn-cli` package. Pointing the harness at the
+  # dead repo tested us against a frozen MIP-era client, which is exactly the
+  # blind spot that let our implementation drift off the adopted spec.
   if [[ ! -d "$WN_REPO/.git" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
-      fail_msg "whitenoise-rs checkout missing at $WN_REPO and --no-build set"; exit 1
+      fail_msg "mdk checkout missing at $WN_REPO and --no-build set"; exit 1
     fi
-    step "cloning whitenoise-rs into $WN_REPO"
-    git clone --depth 1 https://github.com/marmot-protocol/whitenoise-rs.git "$WN_REPO" \
+    step "cloning mdk into $WN_REPO"
+    git clone --depth 1 https://github.com/marmot-protocol/mdk.git "$WN_REPO" \
       2>&1 | tee -a "$LOG_FILE"
   fi
 
-  # Two harness-only patches to whitenoise-rs so it runs in sandboxes that
-  # block the kernel keyring:
-  #   1. mock-keyring: honour $WHITENOISE_MOCK_KEYRING so wnd uses the
-  #      integration-tests mock keyring store when the kernel keyutils
-  #      syscalls are blocked (common in containers / CI). Compiled in via
-  #      `--features whitenoise/integration-tests` on the build below.
-  #   2. skip-unprocessable-retry: when mdk-core returns a terminal MLS
-  #      error (MlsMessageUnprocessable / PreviouslyFailed / MdkCoreError)
-  #      the message is provably undecryptable — retrying it ten times with
-  #      exponential backoff (~17 min) just blocks later decryptable commits
-  #      behind a queue of doomed retries, which in the harness manifests as
-  #      "A already left" / "name unchanged" timeouts. The patch treats those
-  #      errors as terminal.
+  # No source patches. The harness used to carry two against whitenoise-rs:
   #
-  # The relay-override patches this harness used to carry (discovery-env /
-  # defaults-env) are gone: upstream wnd now takes native --discovery-relays
-  # and --default-account-relays flags (passed in start_daemon), which do the
-  # same job without patching. wn/wnd also moved into the crates/whitenoise-cli
-  # workspace member — the mock-keyring patch targets that path.
-  local -a patches=(
-    "whitenoise-mock-keyring.patch"
-    "whitenoise-skip-unprocessable-retry.patch"
-  )
-  # Apply each patch with a real exit-code check. The previous version
-  # swallowed patch's exit status via `| tee`, which meant a miscounted
-  # hunk header silently left the marker touched and the binary unpatched
-  # — the resulting wn retried provably-doomed MLS messages for ~17min
-  # and every later test flapped or timed out. Fail fast instead.
-  for name in "${patches[@]}"; do
-    local marker="$WN_REPO/.headless-patched-${name%.patch}"
-    if [[ ! -f "$marker" ]]; then
-      step "patching whitenoise-rs: $name"
-      if ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- \
-             <"$SCRIPT_DIR/patches/$name" >>"$LOG_FILE" 2>&1 ); then
-        touch "$marker"
-        # Invalidate the previous build so the patched source is picked up.
-        rm -f "$WN_BIN" "$WND_BIN"
-      else
-        fail_msg "patch $name failed — see $LOG_FILE"
-        tail -n 30 "$LOG_FILE" | sed 's/^/  /' >&2
-        exit 1
-      fi
-    fi
-  done
-
+  #   1. mock-keyring, so wnd could run where the kernel keyring is blocked.
+  #      MDK replaces this with a native flag: `--secret-store file` keeps
+  #      account secrets in files under the data dir instead of the OS
+  #      keychain. start_daemon passes it.
+  #   2. skip-unprocessable-retry, which made terminal MLS errors stop
+  #      retrying. That patched `src/whitenoise/event_processor/`, a path MDK
+  #      does not have. If MDK's retry behaviour turns out to stall this
+  #      harness the same way, that is a fresh diagnosis against MDK's own
+  #      code, not a patch to port.
+  #
   # cargo's transitive deps (rustup, crates.io) both return 503 on cold
   # caches often enough that a single attempt fails ~30% of the time.
   # Retry each cargo build until the binary actually exists or we've
@@ -109,8 +83,7 @@ preflight() {
     for attempt in $(seq 1 $max); do
       step "building wn + wnd (attempt $attempt/$max, ~5 min first run)"
       ( cd "$WN_REPO" && \
-          cargo build --release -p whitenoise-cli \
-            --features whitenoise/integration-tests --bin wn --bin wnd ) \
+          cargo build --release -p wn-cli --bin wn --bin wnd ) \
         2>&1 | tee -a "$LOG_FILE"
       [[ -x "$WN_BIN" && -x "$WND_BIN" ]] && break
       [[ "$attempt" -lt "$max" ]] && warn "wn/wnd build failed (likely transient 503 from rustup or crates.io) — retrying"
@@ -226,29 +199,31 @@ start_daemon() {
     info "$name daemon already running"; return 0
   fi
   rm -f "$socket"
-  # The mock keyring (WHITENOISE_MOCK_KEYRING=1) is in-memory only and
-  # resets to empty on every wnd restart, but the SQLite databases that
-  # wnd writes under $data_dir persist across runs and reference keys that
-  # no longer exist — wnd then bails with KeyringEntryMissingForExistingDatabase
-  # before it can even open a socket. Wipe the keyring-dependent state on
-  # each start so the daemon always comes up cold and consistent. Logs
-  # and the pid file are preserved for post-mortem.
+  # Start every daemon from a cold data dir. A stale SQLite database whose
+  # matching secret is gone leaves wnd unable to open its store, and it then
+  # bails before it can even create the socket. The identities here are
+  # disposable, so wiping is always the right move. Logs and the pid file are
+  # preserved for post-mortem.
   if [[ -d "$data_dir" ]]; then
     find "$data_dir" -mindepth 1 -maxdepth 1 \
       ! -name 'logs' ! -name 'pid' \
       -exec rm -rf {} + 2>/dev/null || true
   fi
-  mkdir -p "$data_dir/logs" "$data_dir/release"
+  mkdir -p "$data_dir/logs"
   # --discovery-relays / --default-account-relays are native wnd flags that
   # force both the discovery plane and freshly-created accounts' NIP-65 / inbox
   # / key-package lists onto our loopback relay (kills the "can't reach nos.lol"
   # exit path and stops accounts from carrying unreachable public relays).
   #
-  # WHITENOISE_MOCK_KEYRING=1 is consumed by the mock-keyring patch: it swaps in
-  # the integration-tests mock secret store so wnd doesn't fall over when the
-  # kernel blocks keyutils syscalls. Harmless on a real host with a real keyring.
-  WHITENOISE_MOCK_KEYRING=1 \
-    nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
+  # --socket pins the listen path instead of letting wnd derive it. MDK derives
+  # it as {home}/dev/wnd.sock, whitenoise-rs used {data_dir}/{profile}/wnd.sock;
+  # passing it explicitly makes the harness independent of that choice.
+  #
+  # --secret-store file replaces the old mock-keyring source patch: account
+  # secrets live in files under the data dir, so the daemon comes up in
+  # containers and CI where the kernel keyring is unavailable.
+  nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
+      --socket "$socket" --secret-store file \
       --discovery-relays "$RELAY_URL" --default-account-relays "$RELAY_URL" \
       >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
   local pid=$!
