@@ -100,10 +100,15 @@ class PublicationIndexEvent(
     fun topics() = hashtags()
 
     /**
-     * The table of contents: the referenced section coordinates, in the order the spec says they
-     * should be displayed in. Usually kind 30041 sections or nested 30040 indices.
+     * The table of contents, in the order the spec says to display it.
+     *
+     * Reads both `a` and `e` entries and the titles/levels publishers put in them — see
+     * [PublicationSectionRef], which documents why the documented `a`-only shape is not enough.
      */
-    fun sections() = tags.mapNotNull(ATag::parseAddressId)
+    fun sections(): List<PublicationSectionRef> = PublicationSectionRef.fromIndex(this)
+
+    /** The referenced coordinates only, for hint providers and link resolution. */
+    fun sectionAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
 
     fun sectionCount() = sections().size
 

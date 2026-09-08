@@ -1016,7 +1016,9 @@ private fun FullBleedNoteCompose(
                     // Belongs here rather than in the header `when` above: a 30040 has no content,
                     // so the generic body would add nothing but a duplicate of the topics this
                     // card already shows.
-                    PublicationHeader(noteEvent, baseNote, accountViewModel)
+                    // Uncapped here: the thread view is where a publication is actually read,
+                    // so the whole table of contents is listed rather than a feed-sized taste.
+                    PublicationHeader(noteEvent, baseNote, accountViewModel, nav, Int.MAX_VALUE)
                 } else if (noteEvent is PublicMessageEvent) {
                     RenderPublicMessage(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is CalendarTimeSlotEvent) {

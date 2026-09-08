@@ -1299,6 +1299,8 @@
     <string name="admission">Admission</string>
     <string name="subscription">Subscription</string>
     <string name="publication">Publication</string>
+    <string name="publication_untitled_section">Untitled section</string>
+    <string name="publication_contents">Contents</string>
     <string name="payments_url">Payments url</string>
     <string name="target_audience">Target Audience</string>
     <string name="policies_and_links">Policies &amp; Links</string>
@@ -1396,6 +1398,10 @@
     <plurals name="publication_section_count">
         <item quantity="one">%1$d section</item>
         <item quantity="other">%1$d sections</item>
+    </plurals>
+    <plurals name="publication_more_sections">
+        <item quantity="one">%1$d more section</item>
+        <item quantity="other">%1$d more sections</item>
     </plurals>
     <string name="music_playlist_collaborative">Collaborative</string>
     <string name="music_playlist_private">Private</string>

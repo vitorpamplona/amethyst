@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,9 +35,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,22 +54,38 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.publication_contents
+import com.vitorpamplona.amethyst.commons.resources.publication_more_sections
 import com.vitorpamplona.amethyst.commons.resources.publication_section_count
+import com.vitorpamplona.amethyst.commons.resources.publication_untitled_section
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationSectionRef
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import kotlinx.collections.immutable.toImmutableList
 
 // A 2:3 portrait cover — a book jacket, which is what NKBIP-01's default `book` type is. The
 // wide 16:9 hero LongForm uses would letterbox every one of them.
 private const val COVER_ASPECT = 2f / 3f
 private val CoverWidth = 96.dp
+
+// A feed card lists a taste of the contents rather than a whole book's worth of rows; each row
+// carries its own relay subscription, so the cap is a fetch budget as much as a layout one.
+private const val MAX_PREVIEW_SECTIONS = 12
 
 /**
  * Renders a kind-30040 NKBIP-01 publication index: cover, title, author, and what the index knows
@@ -84,7 +104,7 @@ fun RenderPublicationIndex(
 ) {
     val noteEvent = note.event as? PublicationIndexEvent ?: return
 
-    PublicationHeader(noteEvent, note, accountViewModel)
+    PublicationHeader(noteEvent, note, accountViewModel, nav)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -93,6 +113,10 @@ fun PublicationHeader(
     noteEvent: PublicationIndexEvent,
     note: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
+    // A feed card shows a taste of the contents; the thread view is where you actually read, so
+    // it lifts the cap.
+    maxSections: Int = MAX_PREVIEW_SECTIONS,
 ) {
     // `title` is mandatory in NKBIP-01 and missing from events in the wild, hence the slug
     // fallback rather than a blank card.
@@ -173,7 +197,162 @@ fun PublicationHeader(
                 topics.forEach { PublicationTopicChip(it) }
             }
         }
+
+        PublicationTableOfContents(noteEvent, maxSections, accountViewModel, nav)
     }
+}
+
+/**
+ * The publication's table of contents: its `a` tags, in the order the index lists them, each
+ * opening that section.
+ *
+ * Without this a publication is a cover that announces "34 sections" and offers no way to read
+ * one — the sections parse and render individually, but nothing ever links to them.
+ *
+ * Rows resolve lazily. [observeNoteEvent] drives the EventFinder subscription per row, so a
+ * section Amethyst has never seen is fetched by being listed; until it arrives the row shows its
+ * position and a placeholder rather than collapsing, so the contents keep their shape.
+ */
+@Composable
+private fun PublicationTableOfContents(
+    noteEvent: PublicationIndexEvent,
+    maxSections: Int,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val sections = remember(noteEvent) { noteEvent.sections().toImmutableList() }
+
+    if (sections.isEmpty()) return
+
+    Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 12.dp)) {
+        Text(
+            text = stringRes(Res.string.publication_contents),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.grayText,
+            modifier = Modifier.padding(bottom = Size5dp),
+        )
+
+        sections.take(maxSections).forEachIndexed { index, ref ->
+            if (index > 0) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+            }
+
+            PublicationSectionRow(index + 1, ref, accountViewModel, nav)
+        }
+
+        if (sections.size > maxSections) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+
+            val remaining = sections.size - maxSections
+            Text(
+                text = pluralStringRes(Res.plurals.publication_more_sections, remaining, remaining),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.grayText,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            )
+        }
+    }
+}
+
+/**
+ * One contents entry.
+ *
+ * The index's own title is used when it has one, so the whole table of contents is readable
+ * immediately — no round trip. The section event is still observed, because it carries the
+ * better title and because observing is what fetches it; when it lands the row upgrades in
+ * place. An entry listed only by event id has nothing to show until then.
+ */
+@Composable
+private fun PublicationSectionRow(
+    position: Int,
+    ref: PublicationSectionRef,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val address = ref.address
+
+    if (address != null) {
+        LoadAddressableNote(address, accountViewModel) { sectionNote ->
+            if (sectionNote != null) {
+                ObservedSectionRow(position, ref, sectionNote, accountViewModel, nav)
+            } else {
+                SectionRowContent(position, ref, ref.title, null)
+            }
+        }
+    } else if (ref.eventId != null) {
+        LoadNote(ref.eventId!!, accountViewModel) { sectionNote ->
+            if (sectionNote != null) {
+                ObservedSectionRow(position, ref, sectionNote, accountViewModel, nav)
+            } else {
+                SectionRowContent(position, ref, ref.title, null)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ObservedSectionRow(
+    position: Int,
+    ref: PublicationSectionRef,
+    sectionNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // Observing drives the EventFinder subscription, so a section listed but never seen is
+    // fetched by appearing here.
+    val sectionEvent by observeNoteEvent<Event>(sectionNote, accountViewModel)
+
+    val title =
+        when (val event = sectionEvent) {
+            // An index may list another index (a part holding chapters), and NKBIP-01 lets it
+            // list long-form, wiki and spec events as sections too.
+            is PublicationIndexEvent -> event.titleOrIdentifier()
+            is PublicationContentEvent -> event.titleOrIdentifier()
+            is LongTextNoteEvent -> event.title()
+            is WikiNoteEvent -> event.title()
+            else -> null
+        } ?: ref.title
+
+    SectionRowContent(position, ref, title) { nav.nav(Route.Note(sectionNote.idHex)) }
+}
+
+@Composable
+private fun SectionRowContent(
+    position: Int,
+    ref: PublicationSectionRef,
+    title: String?,
+    onClick: (() -> Unit)?,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+                // A nested entry is indented by its level, so a part/chapter structure reads as one.
+                .padding(start = ((ref.level - 1) * 12).dp)
+                .padding(vertical = 8.dp),
+    ) {
+        PublicationSectionPosition(position)
+
+        Text(
+            text = title ?: stringRes(Res.string.publication_untitled_section),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (title != null) LocalContentColor.current else MaterialTheme.colorScheme.grayText,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun PublicationSectionPosition(position: Int) {
+    Text(
+        text = position.toString(),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier = Modifier.width(28.dp).padding(end = 4.dp),
+    )
 }
 
 @Composable
