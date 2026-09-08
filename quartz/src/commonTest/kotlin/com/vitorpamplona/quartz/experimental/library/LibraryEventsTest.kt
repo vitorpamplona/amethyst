@@ -113,6 +113,148 @@ class LibraryEventsTest {
     }
 
     @Test
+    fun aLearningResourceReadsTheBookPublishersByline() {
+        // The Codices shape: a title, an author, a year, a cover, and no body at all. Reading only
+        // title + summary rendered these as a bare line of text.
+        val event =
+            LearningResourceEvent(
+                "id",
+                author,
+                0L,
+                arrayOf(
+                    arrayOf("d", "50078fd7-f337-40c2-852a-56f3751a8132"),
+                    arrayOf("title", "The End of Faith"),
+                    arrayOf("author", "Sam Harris"),
+                    arrayOf("published", "2004"),
+                    arrayOf("image", "https://covers.openlibrary.org/b/id/1469127-M.jpg"),
+                    arrayOf("t", "codices"),
+                ),
+                "",
+                "sig",
+            )
+
+        assertEquals("Sam Harris", event.author())
+        assertEquals("2004", event.published())
+        assertEquals(emptyList<String>(), event.facetLabels())
+    }
+
+    @Test
+    fun aLearningResourceReadsTheSchemaOrgFacets() {
+        // Shape taken from a real Edufeed event (`1f3208b1…`, an RWTH Aachen workshop).
+        val event =
+            LearningResourceEvent(
+                "id",
+                author,
+                0L,
+                arrayOf(
+                    arrayOf("d", "workshop-schatzsuche"),
+                    arrayOf("type", "LearningResource"),
+                    arrayOf("name", "Schatzsuche"),
+                    arrayOf("inLanguage", "de"),
+                    arrayOf("creator:name", "Michaela Wehling"),
+                    arrayOf("creator:type", "Person"),
+                    arrayOf("creator:name", "Kerstin Kamphausen"),
+                    arrayOf("license:id", "https://creativecommons.org/licenses/by-sa/4.0/"),
+                    arrayOf("isAccessibleForFree", "true"),
+                    arrayOf("about:id", "http://w3id.org/kim/schulfaecher/s1013"),
+                    arrayOf("about:prefLabel:de", "Informatik"),
+                    arrayOf("educationalLevel:id", "https://w3id.org/kim/educationalLevel/level_1"),
+                    arrayOf("educationalLevel:prefLabel:de", "Primarbereich"),
+                    arrayOf("educationalLevel:id", "https://w3id.org/kim/educationalLevel/level_2"),
+                    arrayOf("educationalLevel:prefLabel:de", "Sekundarbereich I"),
+                    arrayOf("learningResourceType:id", "https://w3id.org/kim/hcrt/educational_game"),
+                    arrayOf("learningResourceType:prefLabel:de", "Lernspiel"),
+                ),
+                "Body.",
+                "sig",
+            )
+
+        // Only the first creator: the byline is one line, and seven names would push the title off it.
+        assertEquals("Michaela Wehling", event.author())
+        assertEquals("de", event.language())
+        assertEquals(true, event.isFreeToAccess())
+        assertEquals("https://creativecommons.org/licenses/by-sa/4.0/", event.license())
+        assertEquals(listOf("Informatik"), event.subjects())
+        assertEquals(listOf("Primarbereich", "Sekundarbereich I"), event.educationalLevels())
+        assertEquals(listOf("Lernspiel"), event.resourceTypes())
+        // Type, then level, then subject — what it is before who it is for before what it is about.
+        assertEquals(listOf("Lernspiel", "Primarbereich", "Sekundarbereich I", "Informatik"), event.facetLabels())
+    }
+
+    @Test
+    fun aFacetIsShownInOneLanguageAndNeverRepeated() {
+        // A real event carries `learningResourceType` in six languages at once and repeats the same
+        // subject under several ids; concatenating either would read as gibberish.
+        val event =
+            LearningResourceEvent(
+                "id",
+                author,
+                0L,
+                arrayOf(
+                    arrayOf("d", "multi"),
+                    arrayOf("inLanguage", "de"),
+                    arrayOf("learningResourceType:prefLabel:en", "Worksheet"),
+                    arrayOf("learningResourceType:prefLabel:de", "Arbeitsmaterial"),
+                    arrayOf("learningResourceType:prefLabel:fr", "Materiel"),
+                    arrayOf("about:prefLabel:de", "Informatik"),
+                    arrayOf("about:prefLabel:de", "Mathematik"),
+                    arrayOf("about:prefLabel:de", "Informatik"),
+                ),
+                "",
+                "sig",
+            )
+
+        assertEquals(listOf("Arbeitsmaterial"), event.resourceTypes())
+        assertEquals(listOf("Worksheet"), event.resourceTypes("en"))
+        assertEquals(listOf("Informatik", "Mathematik"), event.subjects())
+    }
+
+    @Test
+    fun aFacetWithoutAMatchingLanguageFallsBackToTheFirstPublished() {
+        val event =
+            LearningResourceEvent(
+                "id",
+                author,
+                0L,
+                arrayOf(
+                    arrayOf("d", "no-lang"),
+                    arrayOf("learningResourceType:prefLabel:nl", "Werkblad"),
+                    arrayOf("learningResourceType:prefLabel:cs", "Pracovni list"),
+                ),
+                "",
+                "sig",
+            )
+
+        assertEquals(listOf("Werkblad"), event.resourceTypes())
+        assertEquals(listOf("Werkblad"), event.resourceTypes("de"))
+    }
+
+    @Test
+    fun aLearningResourceReadsTheFileItShipsAs() {
+        val event =
+            LearningResourceEvent(
+                "id",
+                author,
+                0L,
+                arrayOf(
+                    arrayOf("d", "6sah9tsh"),
+                    arrayOf("name", "H5P Multiple Choice"),
+                    arrayOf("encoding:contentUrl", "https://haven.laoc.xyz/982eaf3e.zip"),
+                    arrayOf("encoding:encodingFormat", "application/x-webxdc"),
+                    arrayOf("encoding:contentSize", "2805254"),
+                ),
+                "",
+                "sig",
+            )
+
+        assertEquals("https://haven.laoc.xyz/982eaf3e.zip", event.contentUrl())
+        assertEquals("application/x-webxdc", event.contentFormat())
+        assertEquals(2805254L, event.contentSize())
+        // Not stated is not "no": a resource that never mentions price must not read as paid.
+        assertNull(event.isFreeToAccess())
+    }
+
+    @Test
     fun aLearningResourceFallsBackToItsIdentifier() {
         val event = LearningResourceEvent("id", author, 0L, arrayOf(arrayOf("d", "untitled-course")), "", "sig")
 

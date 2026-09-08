@@ -123,8 +123,6 @@ fun RenderEntityRating(
     val targetEventId = remember(noteEvent) { noteEvent.targetEventId() }
 
     Column(Modifier.fillMaxWidth()) {
-        stars?.let { RatingStars(it, mark) }
-
         if (targetAddress != null) {
             LoadAddressableNote(targetAddress, accountViewModel) { targetNote ->
                 targetNote?.let {
@@ -156,6 +154,14 @@ fun RenderEntityRating(
 
             if (identifier.isNotEmpty()) {
                 RatedTargetCard(mark = mark, title = identifier, subtitle = null, onClick = null)
+            }
+        }
+
+        // Under the card, not above it: the stars are a verdict on the thing named in the card, so
+        // a reader who meets them first has nothing to attach them to.
+        stars?.let {
+            Box(Modifier.padding(top = Size5dp)) {
+                RatingStars(it, mark)
             }
         }
 

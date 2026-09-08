@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -74,8 +78,106 @@ class LearningResourceEvent(
     /** A display name, falling back to the `d` identifier when the title is missing. */
     fun titleOrIdentifier(): String = title()?.takeIf { it.isNotBlank() } ?: dTag()
 
+    /**
+     * Who made it. The book publishers write `author`/`artist`; the schema.org publishers write a
+     * structured creator, of which only `creator:name` is worth showing.
+     */
+    fun author() = tags.firstTagValueFor(AUTHOR, ARTIST) ?: tags.firstTagValue(CREATOR_NAME)
+
+    /** A year or a date. Three spellings are in the wild and none of them is normalised. */
+    fun published() = tags.firstTagValueFor(PUBLISHED, PUBLISHED_ON, RELEASE_DATE)
+
+    /** BCP-47-ish, e.g. `de`. Note this is `inLanguage`, not NIP-32's `l`, which is a label. */
+    fun language() = tags.firstTagValue(IN_LANGUAGE)
+
+    fun license() = tags.firstTagValue(LICENSE_ID)
+
+    /** `null` when the publisher did not say, which is not the same as "no". */
+    fun isFreeToAccess() = tags.firstTagValue(IS_ACCESSIBLE_FOR_FREE)?.let { it.equals("true", ignoreCase = true) }
+
+    /** The file this resource *is*, when it ships as one: a PDF, a webxdc bundle, an archive. */
+    fun contentUrl() = tags.firstTagValue(ENCODING_CONTENT_URL)
+
+    fun contentFormat() = tags.firstTagValue(ENCODING_FORMAT)
+
+    fun contentSize() = tags.firstTagValueAsLong(ENCODING_SIZE)
+
+    /** School subjects: "Biologie", "Informatik". */
+    fun subjects(preferredLanguage: String? = null) = facetLabelsFor(ABOUT, preferredLanguage)
+
+    /** What kind of thing it is: "Arbeitsmaterial", "Softwareanwendung". */
+    fun resourceTypes(preferredLanguage: String? = null) = facetLabelsFor(LEARNING_RESOURCE_TYPE, preferredLanguage)
+
+    /** Who it is for: "Primarbereich", "Sekundarbereich I". */
+    fun educationalLevels(preferredLanguage: String? = null) = facetLabelsFor(EDUCATIONAL_LEVEL, preferredLanguage)
+
+    /**
+     * Every facet worth showing, in the order a reader wants them: what kind of thing it is, who
+     * it is for, what it is about.
+     *
+     * Deduplicated across facets because the vocabularies overlap — a resource about "Informatik"
+     * routinely carries that label under two ids and again under a second facet — and a chip row
+     * that repeats itself reads as a bug.
+     */
+    fun facetLabels(preferredLanguage: String? = null): List<String> =
+        LinkedHashSet<String>()
+            .apply {
+                addAll(resourceTypes(preferredLanguage))
+                addAll(educationalLevels(preferredLanguage))
+                addAll(subjects(preferredLanguage))
+            }.toList()
+
+    /**
+     * One facet of the schema.org vocabularies these publishers use.
+     *
+     * A facet is spelled as a pair of flat tags — `about:id` carries a URI nobody wants to read
+     * and `about:prefLabel:de` carries the label they do — repeated once per value. Only labels
+     * are returned, and only in one language: an event routinely carries the same facet in six
+     * languages, so concatenating them all would read as gibberish. The same label also repeats
+     * across ids that map to it, so values are deduplicated in publication order.
+     */
+    private fun facetLabelsFor(
+        facet: String,
+        preferredLanguage: String?,
+    ): List<String> {
+        val prefix = "$facet:$PREF_LABEL:"
+        val byLanguage = LinkedHashMap<String, LinkedHashSet<String>>()
+
+        tags.fastForEach { tag ->
+            if (tag.size > 1 && tag[1].isNotEmpty() && tag[0].startsWith(prefix)) {
+                byLanguage.getOrPut(tag[0].substring(prefix.length)) { LinkedHashSet() }.add(tag[1])
+            }
+        }
+
+        if (byLanguage.isEmpty()) return emptyList()
+
+        val language =
+            preferredLanguage?.takeIf { byLanguage.containsKey(it) }
+                ?: language()?.takeIf { byLanguage.containsKey(it) }
+                ?: byLanguage.keys.first()
+
+        return byLanguage[language]?.toList() ?: emptyList()
+    }
+
     companion object {
         const val KIND = 30142
+
+        private const val AUTHOR = "author"
+        private const val ARTIST = "artist"
+        private const val CREATOR_NAME = "creator:name"
+        private const val PUBLISHED = "published"
+        private const val PUBLISHED_ON = "published_on"
+        private const val RELEASE_DATE = "release_date"
+        private const val IN_LANGUAGE = "inLanguage"
+        private const val LICENSE_ID = "license:id"
+        private const val IS_ACCESSIBLE_FOR_FREE = "isAccessibleForFree"
+        private const val ENCODING_CONTENT_URL = "encoding:contentUrl"
+        private const val ENCODING_FORMAT = "encoding:encodingFormat"
+        private const val ENCODING_SIZE = "encoding:contentSize"
+        private const val PREF_LABEL = "prefLabel"
+        private const val ABOUT = "about"
+        private const val LEARNING_RESOURCE_TYPE = "learningResourceType"
+        private const val EDUCATIONAL_LEVEL = "educationalLevel"
 
         fun build(
             title: String,

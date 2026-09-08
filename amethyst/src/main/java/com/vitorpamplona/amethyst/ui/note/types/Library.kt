@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -54,9 +57,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -65,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 // Landscape rather than the publications' 2:3: a course banner and a file preview are wide, and
@@ -99,16 +105,32 @@ fun RenderLearningResource(
     val observedEvent by observeNoteEvent<LearningResourceEvent>(note, accountViewModel)
     val noteEvent = observedEvent ?: return
 
+    // What these events actually carry: the book publishers write title/author/published/image and
+    // leave the body empty; the schema.org publishers write name/description plus a vocabulary of
+    // facets. Reading only title+summary rendered both families as a line of text, which is why
+    // the byline, the facets and the attached file are surfaced here.
+    val author = remember(noteEvent) { noteEvent.author()?.ifBlank { null } }
+    val published = remember(noteEvent) { noteEvent.published()?.ifBlank { null } }
+    val facets = remember(noteEvent) { noteEvent.facetLabels().toImmutableList() }
+    val fileUrl = remember(noteEvent) { noteEvent.contentUrl()?.ifBlank { null } }
+
     Column(Modifier.fillMaxWidth()) {
         LibraryHeader(
             symbol = MaterialSymbols.MenuBook,
             label = stringRes(R.string.library_learning_resource),
             title = remember(noteEvent) { noteEvent.titleOrIdentifier() },
             subtitle = remember(noteEvent) { noteEvent.summary()?.ifBlank { null } },
+            // The byline is what tells a shelf of books apart; without it "Effective Executive"
+            // and "Deep Work" are two titles floating on an author-less card.
+            byline = listOfNotNull(author, published).takeIf { it.isNotEmpty() }?.joinToString(" · "),
             detail = null,
             banner = remember(noteEvent) { noteEvent.image()?.ifBlank { null } },
             accountViewModel = accountViewModel,
         )
+
+        if (facets.isNotEmpty()) {
+            FacetChips(facets)
+        }
 
         if (noteEvent.content.isNotBlank()) {
             val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
@@ -124,6 +146,49 @@ fun RenderLearningResource(
                 callbackUri = note.toNostrUri(),
                 accountViewModel = accountViewModel,
                 nav = nav,
+            )
+        }
+
+        // Some of these resources *are* a file — a PDF, a webxdc bundle — named nowhere in the
+        // body. Without the link the card describes something the reader cannot open.
+        fileUrl?.let {
+            Box(Modifier.padding(top = 6.dp)) {
+                ClickableUrl(urlText = it, url = it)
+            }
+        }
+
+        DisplayUncitedHashtags(noteEvent, note.toNostrUri(), accountViewModel, nav)
+    }
+}
+
+/**
+ * The schema.org facets as a wrapped row of chips.
+ *
+ * These are the only thing that says what a resource is for — a subject, a school level, a
+ * material type — and they are publisher-chosen labels from a controlled vocabulary, so they are
+ * shown as published rather than mapped through a string table that would drop every value
+ * nobody enumerated.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FacetChips(facets: ImmutableList<String>) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Size5dp),
+        verticalArrangement = Arrangement.spacedBy(Size5dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+    ) {
+        facets.forEach { facet ->
+            Text(
+                text = facet,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
             )
         }
     }
@@ -242,6 +307,7 @@ private fun LibraryHeader(
     label: String,
     title: String,
     subtitle: String?,
+    byline: String? = null,
     detail: String?,
     banner: String?,
     accountViewModel: AccountViewModel,
@@ -275,6 +341,18 @@ private fun LibraryHeader(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+
+                byline?.let {
+                    Spacer(Modifier.padding(top = 2.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
 
                 subtitle?.let {
                     Spacer(Modifier.padding(top = 2.dp))
