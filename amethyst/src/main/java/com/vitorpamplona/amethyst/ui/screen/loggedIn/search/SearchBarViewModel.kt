@@ -33,6 +33,8 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
+import com.vitorpamplona.amethyst.commons.search.QueryParser
+import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -292,7 +294,19 @@ class SearchBarViewModel(
         ) { term, _, currentScope, order, follows ->
             if (currentScope == SearchScope.PEOPLE) return@combine emptyList()
 
-            val raw = LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
+            // The same filters the REQ carries, run against the cache — so `from:`, `to:`,
+            // `since:`, `#t` and the rest narrow local results exactly as they narrow relay
+            // results. A bech32 id typed in full is a lookup, not a search, and keeps its own
+            // path through findNotesStartingWith.
+            val parsed = QueryParser.parse(term)
+            val raw =
+                if (parsed.isEmpty) {
+                    emptyList()
+                } else {
+                    LocalCache.search
+                        .findNotesMatching(SearchFilterBuilder.build(parsed, limit = 200), account.hiddenUsers)
+                        .ifEmpty { LocalCache.search.findNotesStartingWith(term, account.hiddenUsers) }
+                }
             val filtered = if (follows != null) raw.filter { it.author?.pubkeyHex in follows } else raw
 
             when (order) {

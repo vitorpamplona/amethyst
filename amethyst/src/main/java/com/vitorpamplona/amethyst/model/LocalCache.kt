@@ -549,7 +549,20 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         }
     }
 
-    fun filter(filter: Filter): SortedSet<Note> {
+    fun filter(filter: Filter): SortedSet<Note> = filter(filter) { true }
+
+    /**
+     * Every note matching [filter]'s NIP-01 fields that also satisfies [predicate].
+     *
+     * [predicate] is where anything the wire type cannot express belongs — a NIP-50 `search` the
+     * matcher does not read, and viewer policy like the mute list, which a relay has no knowledge
+     * of and a `Filter` therefore has no field for. Keeping it a separate parameter is what lets
+     * search reuse this path instead of hand-rolling its own scan.
+     */
+    fun filter(
+        filter: Filter,
+        predicate: (Note) -> Boolean,
+    ): SortedSet<Note> {
         val byKinds = filter.kinds?.filter { it.isAddressable() || it.isReplaceable() }
 
         val addressableMatches =
@@ -560,7 +573,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                     byKinds.flatMap { kind ->
                         byAuthors.flatMap { pubkey ->
                             addressables.filter(kind, pubkey) { _, note ->
-                                filter.match(note)
+                                filter.match(note) && predicate(note)
                             }
                         }
                     }
@@ -568,13 +581,13 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                     // optimized
                     byKinds.flatMap { kind ->
                         addressables.filter(kind) { _, note ->
-                            filter.match(note)
+                            filter.match(note) && predicate(note)
                         }
                     }
                 }
             } else {
                 addressables.filter { _, note ->
-                    filter.match(note)
+                    filter.match(note) && predicate(note)
                 }
             }
 
@@ -582,7 +595,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             notes.filter { _, note ->
                 val event = note.event
                 if (event != null && event.kind.isRegular()) {
-                    filter.match(event)
+                    filter.match(event) && predicate(note)
                 } else {
                     false
                 }
