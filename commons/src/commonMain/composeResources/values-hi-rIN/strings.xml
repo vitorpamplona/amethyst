@@ -139,10 +139,6 @@
         <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
         <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s सं॰ %2$d अधिक</item>
-        <item quantity="other">%1$s सं॰ %2$d अधिक</item>
-    </plurals>
     <string name="ps1_save_title">पीएस१ स्मृति पत्रक अभिलेखन</string>
     <string name="ps1_save_block">खण्ड %1$d</string>
     <string name="ps1_save_empty_slot">रिक्त छेद</string>

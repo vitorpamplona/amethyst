@@ -27,9 +27,6 @@
     <plurals name="birdex_species_count">
         <item quantity="other">Birdex · %1$d loài</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s +%2$d khác</item>
-    </plurals>
     <string name="road_event_accident">Tai nạn</string>
     <string name="road_event_animal">Động vật trên đường</string>
     <string name="road_event_confirmed">Vẫn còn ở đó</string>

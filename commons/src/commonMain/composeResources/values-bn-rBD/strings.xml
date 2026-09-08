@@ -28,10 +28,6 @@
         <item quantity="one">Birdex · %1$d প্রজাতি</item>
         <item quantity="other">Birdex · %1$d প্রজাতি</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d টি আরও</item>
-        <item quantity="other">%1$s +%2$d টি আরও</item>
-    </plurals>
     <string name="road_event_accident">দুর্ঘটনা</string>
     <string name="road_event_animal">রাস্তায় প্রাণী</string>
     <string name="road_event_confirmed">এখনো আছে</string>

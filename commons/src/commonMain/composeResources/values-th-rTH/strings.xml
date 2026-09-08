@@ -27,9 +27,6 @@
     <plurals name="birdex_species_count">
         <item quantity="other">Birdex · %1$d สายพันธุ์</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s +%2$d รายการเพิ่มเติม</item>
-    </plurals>
     <string name="road_event_accident">อุบัติเหตุ</string>
     <string name="road_event_animal">สัตว์บนถนน</string>
     <string name="road_event_confirmed">ยังคงอยู่</string>
