@@ -127,7 +127,7 @@ class ProfilePictureFetcher(
                         connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
                         concurrentRequestStrategy = concurrentRequestStrategyLazy,
                     )
-                }
+                }.onSystemFileSystem(options.diskCacheKey ?: data.url)
 
             return ProfilePictureFetcher(
                 data.url,
