@@ -40,11 +40,13 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +55,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.publication_contents
 import com.vitorpamplona.amethyst.commons.resources.publication_more_sections
@@ -61,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.publication_untitled_section
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -69,7 +73,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationSectionRef
@@ -99,12 +102,16 @@ private const val MAX_PREVIEW_SECTIONS = 12
 @Composable
 fun RenderPublicationIndex(
     note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val noteEvent = note.event as? PublicationIndexEvent ?: return
 
-    PublicationHeader(noteEvent, note, accountViewModel, nav)
+    PublicationHeader(noteEvent, note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -112,6 +119,10 @@ fun RenderPublicationIndex(
 fun PublicationHeader(
     noteEvent: PublicationIndexEvent,
     note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
     // A feed card shows a taste of the contents; the thread view is where you actually read, so
@@ -136,8 +147,12 @@ fun PublicationHeader(
                 .toImmutableList()
         }
 
-    Column(MaterialTheme.colorScheme.replyModifier) {
-        Row(Modifier.fillMaxWidth().padding(14.dp)) {
+    // No card: a 30040 carries no content beside this, so the note row's own frame is the only
+    // one there should be. `replyModifier` here would draw a quote border around the whole post
+    // and read as a citation of something else. (LongForm splits the same way -- card in the feed
+    // row, bare column in the thread.)
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
             PublicationCover(cover, accountViewModel)
 
             Column(Modifier.padding(start = 14.dp)) {
@@ -180,11 +195,21 @@ fun PublicationHeader(
         }
 
         summary?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.grayText,
-                modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+            // A blurb is authored prose like any other: it deserves the translate offer and live
+            // links/mentions that a bare Text would render as dead literal characters.
+            val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
+
+            TranslatableRichTextViewer(
+                content = it,
+                canPreview = canPreview && !makeItShort,
+                quotesLeft = quotesLeft,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                tags = tags,
+                backgroundColor = backgroundColor,
+                id = note.idHex,
+                callbackUri = note.toNostrUri(),
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
 
@@ -192,7 +217,7 @@ fun PublicationHeader(
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(Size5dp),
                 verticalArrangement = Arrangement.spacedBy(Size5dp),
-                modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                modifier = Modifier.padding(bottom = 8.dp),
             ) {
                 topics.forEach { PublicationTopicChip(it) }
             }
@@ -224,7 +249,7 @@ private fun PublicationTableOfContents(
 
     if (sections.isEmpty()) return
 
-    Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Text(
             text = stringRes(Res.string.publication_contents),
             style = MaterialTheme.typography.labelMedium,
