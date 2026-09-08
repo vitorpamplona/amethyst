@@ -132,6 +132,60 @@ class BirdexEventTest {
         assertNull(species[3].reference, "a name with no `i` has no reference")
     }
 
+    /**
+     * An `i` that is not next to a name is not that name's reference: a Birdex
+     * could carry a NIP-73 identity for the event itself, and pairing it with
+     * the next species would send the reader to the wrong page.
+     */
+    @Test
+    fun doesNotPairAnIsolatedReferenceWithADistantName() {
+        val event: Event =
+            EventFactory.create(
+                id = "a099d4db563041bb289d3704f983fc148fc805860303a4f479a8264dc6a2d7cc",
+                pubKey = "932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d",
+                createdAt = 1_780_836_939L,
+                kind = BirdexEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("i", "https://birdstar.app/lists/42"),
+                        arrayOf("alt", "Birdex: 1 species"),
+                        arrayOf("n", "Bubo bubo"),
+                    ),
+                content = "",
+                sig = "00".repeat(64),
+            )
+        assertIs<BirdexEvent>(event)
+
+        val species = event.species()
+        assertEquals(1, species.size)
+        assertEquals("Bubo bubo", species[0].name)
+        assertNull(species[0].reference, "an `i` two tags away is not this name's reference")
+    }
+
+    @Test
+    fun countsSpeciesWithoutWalkingTheNameList() {
+        val event: Event =
+            EventFactory.create(
+                id = "a099d4db563041bb289d3704f983fc148fc805860303a4f479a8264dc6a2d7cc",
+                pubKey = "932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d",
+                createdAt = 1_780_836_939L,
+                kind = BirdexEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("n", "Bubo bubo"),
+                        arrayOf("n"),
+                        arrayOf("i", "https://www.wikidata.org/entity/Q25469"),
+                        arrayOf("n", "Sturnus vulgaris"),
+                    ),
+                content = "",
+                sig = "00".repeat(64),
+            )
+        assertIs<BirdexEvent>(event)
+
+        assertEquals(2, event.speciesCount(), "a valueless `n` tag is not a species")
+        assertEquals(event.speciesNames().size, event.speciesCount())
+    }
+
     @Test
     fun toleratesEmptyAndValuelessTags() {
         val event: Event =

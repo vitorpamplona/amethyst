@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.experimental.birdstar
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -45,9 +44,8 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
  * - `alt` — a human-readable summary written by the publisher
  *           (e.g. `Birdex: 24 species`).
  *
- * Amethyst renders a minimal summary card from [species] and [speciesCount],
- * linking each name to its Wikidata entry; it does not resolve the Wikidata
- * references to images.
+ * Amethyst renders a minimal summary card from [species], linking each name to
+ * its Wikidata entry; it does not resolve the references to images.
  */
 @Immutable
 class BirdexEvent(
@@ -69,35 +67,43 @@ class BirdexEvent(
      * reference (Wikidata entity URL) the publisher filed it under.
      *
      * The two tag families are positional, not keyed: Birdstar writes an `i`
-     * immediately before its `n`, so an `i` binds to the `n` next to it — the
-     * one right after it, or, when the pair is written the other way round, the
-     * one right before. A name with no adjacent `i` (or one whose `i` is not a
-     * web URL, which a UI could not open) keeps a null reference and renders as
-     * plain text.
+     * immediately before its `n`, so an `i` binds to the `n` **adjacent** to it
+     * — the tag right after it, or, when the pair is written the other way
+     * round, the tag right before. Adjacency is required, not merely proximity:
+     * a lone `i` elsewhere in the event (a NIP-73 identity for the event
+     * itself, say) is nobody's species reference, and pairing it with the next
+     * name would point that link at the wrong page.
+     *
+     * A name with no adjacent `i` (or one whose `i` is not a web URL, which a UI
+     * could not open) keeps a null reference and renders as plain text.
      */
     fun species(): List<BirdexSpecies> {
         val species = ArrayList<BirdexSpecies>(tags.size / 2)
         var pendingReference: String? = null
-        var lastWasName = false
+        var pendingIndex = -1
+        var nameIndex = -1
 
-        tags.fastForEach {
-            if (it.size > 1) {
-                when (it[0]) {
-                    "n" -> {
-                        species.add(BirdexSpecies(it[1], pendingReference))
-                        pendingReference = null
-                        lastWasName = true
+        for (index in tags.indices) {
+            val tag = tags[index]
+            if (tag.size < 2) continue
+
+            when (tag[0]) {
+                "n" -> {
+                    species.add(BirdexSpecies(tag[1], if (pendingIndex == index - 1) pendingReference else null))
+                    pendingReference = null
+                    pendingIndex = -1
+                    nameIndex = index
+                }
+                "i" -> {
+                    val reference = tag[1].asWebReference()
+                    val last = species.lastOrNull()
+                    if (nameIndex == index - 1 && last != null && last.reference == null) {
+                        species[species.lastIndex] = BirdexSpecies(last.name, reference)
+                    } else {
+                        pendingReference = reference
+                        pendingIndex = index
                     }
-                    "i" -> {
-                        val reference = it[1].asWebReference()
-                        val last = species.lastOrNull()
-                        if (lastWasName && last != null && last.reference == null) {
-                            species[species.lastIndex] = BirdexSpecies(last.name, reference)
-                        } else {
-                            pendingReference = reference
-                        }
-                        lastWasName = false
-                    }
+                    nameIndex = -1
                 }
             }
         }
@@ -106,7 +112,7 @@ class BirdexEvent(
     }
 
     /** Number of collected species (one `n` tag per species). */
-    fun speciesCount() = speciesNames().size
+    fun speciesCount() = tags.count { it.size > 1 && it[0] == "n" }
 
     /** Publisher-provided human-readable summary, from the NIP-31 `alt` tag (may be null). */
     fun summary() = tags.alt()

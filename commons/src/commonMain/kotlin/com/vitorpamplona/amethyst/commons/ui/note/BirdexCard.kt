@@ -28,12 +28,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -59,8 +61,16 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdexSpecies
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
-/** How many species names to list before collapsing into a "+N more" suffix. */
+/** How many species names to list before the rest go behind the "+N more" toggle. */
 private const val SPECIES_PREVIEW_LIMIT = 6
+
+/**
+ * How many more names one tap on "+N more" reveals. Every rendered link is a
+ * composable of its own (Compose lays out an interaction region per link), so a
+ * life list of a thousand species is revealed a page at a time rather than
+ * dropping a thousand of them into a single feed row at once.
+ */
+private const val SPECIES_PAGE_SIZE = 30
 
 /** Bird emoji prefix shared by both Birdstar card titles. */
 private const val BIRD_PREFIX = "🐦 "
@@ -71,16 +81,17 @@ private const val BIRD_PREFIX = "🐦 "
  * The event has no body and no images, only a species list, so the card is
  * built from it: the count, then the scientific names, each one a link to the
  * Wikidata entity the publisher paired it with. A Birdex grows without bound,
- * so only [SPECIES_PREVIEW_LIMIT] names show at first, behind a "+N more"
- * toggle that expands the rest in place — no images and no network calls
- * either way. The card is identical in the feed and the opened view, so it
- * takes no makeItShort flag.
+ * so only [SPECIES_PREVIEW_LIMIT] names show at first and "+N more" reveals
+ * another [SPECIES_PAGE_SIZE] at a time in place — no images and no network
+ * calls either way. The card is identical in the feed and the opened view, so
+ * it takes no makeItShort flag.
  */
 @Composable
 fun BirdexCard(noteEvent: BirdexEvent) {
     val species = remember(noteEvent) { noteEvent.species() }
-    var expanded by rememberSaveable(noteEvent) { mutableStateOf(false) }
-    val hidden = species.size - SPECIES_PREVIEW_LIMIT
+    var revealed by rememberSaveable(noteEvent) { mutableIntStateOf(SPECIES_PREVIEW_LIMIT) }
+    val shown = minOf(revealed, species.size)
+    val hidden = species.size - shown
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         Text(
@@ -89,13 +100,16 @@ fun BirdexCard(noteEvent: BirdexEvent) {
         )
 
         if (species.isNotEmpty()) {
+            val uriHandler = LocalUriHandler.current
             val linkColor = MaterialTheme.colorScheme.primary
             val plainColor = MaterialTheme.colorScheme.placeholderText
-            val shown = if (expanded) species else species.take(SPECIES_PREVIEW_LIMIT)
 
             Spacer(Modifier.height(6.dp))
             Text(
-                text = remember(shown, linkColor, plainColor) { speciesList(shown, linkColor, plainColor) },
+                text =
+                    remember(species, shown, linkColor, plainColor, uriHandler) {
+                        speciesList(species, shown, linkColor, plainColor, uriHandler)
+                    },
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -103,39 +117,54 @@ fun BirdexCard(noteEvent: BirdexEvent) {
         if (hidden > 0) {
             Spacer(Modifier.height(4.dp))
             ClickableTextPrimary(
-                text =
-                    if (expanded) {
-                        stringResource(Res.string.show_less)
-                    } else {
-                        pluralStringResource(Res.plurals.birdex_species_more, hidden, hidden)
-                    },
+                text = pluralStringResource(Res.plurals.birdex_species_more, hidden, hidden),
                 style = MaterialTheme.typography.bodyMedium,
-            ) { expanded = !expanded }
+            ) { revealed = shown + SPECIES_PAGE_SIZE }
+        } else if (species.size > SPECIES_PREVIEW_LIMIT) {
+            Spacer(Modifier.height(4.dp))
+            ClickableTextPrimary(
+                text = stringResource(Res.string.show_less),
+                style = MaterialTheme.typography.bodyMedium,
+            ) { revealed = SPECIES_PREVIEW_LIMIT }
         }
     }
 }
 
 /**
- * The species names as one comma-separated run of italics — the convention for
- * scientific names — where each name that carries a Wikidata reference is a
- * link to it. Names without one stay plain: nothing to open.
+ * The first [shown] species names as one comma-separated run of italics — the
+ * convention for scientific names — where each name that carries a Wikidata
+ * reference is a link to it. Names without one stay plain: nothing to open.
+ *
+ * The click goes through [uriHandler] inside a `runCatching`, as
+ * [com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl] does: these
+ * URLs come from a stranger's event, and an unopenable one throws from the
+ * platform handler (`URISyntaxException` on Desktop, no browser installed on
+ * Android). Compose's own link handling only swallows `IllegalArgumentException`,
+ * so a bad `i` tag would otherwise take the app down on tap.
  */
 private fun speciesList(
     species: List<BirdexSpecies>,
+    shown: Int,
     linkColor: Color,
     plainColor: Color,
+    uriHandler: UriHandler,
 ): AnnotatedString =
     buildAnnotatedString {
         val separator = SpanStyle(color = plainColor)
         val plainName = SpanStyle(color = plainColor, fontStyle = FontStyle.Italic)
         val linkedName = SpanStyle(color = linkColor, fontStyle = FontStyle.Italic)
 
-        species.forEachIndexed { index, entry ->
+        for (index in 0 until shown) {
+            val entry = species[index]
             if (index > 0) withStyle(separator) { append(", ") }
 
             val reference = entry.reference
             if (reference != null) {
-                withLink(LinkAnnotation.Url(reference, TextLinkStyles(linkedName))) { append(entry.name) }
+                val link =
+                    LinkAnnotation.Url(reference, TextLinkStyles(linkedName)) {
+                        runCatching { uriHandler.openUri(reference) }
+                    }
+                withLink(link) { append(entry.name) }
             } else {
                 withStyle(plainName) { append(entry.name) }
             }
