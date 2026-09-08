@@ -46,8 +46,11 @@ fun rememberMaterialSymbolPainter(
     // Lets a caller draw from a different glyph font (e.g. Amethyst's own icon font) while
     // reusing this painter, its shared TextMeasurer and its caching.
     family: FontFamily? = null,
+    // Draws the symbol solid instead of outlined, via the font's FILL axis. Ignored when
+    // [family] is given: that font is the caller's own and need not have the axis.
+    filled: Boolean = false,
 ): Painter {
-    val fontFamily = family ?: materialSymbolsFontFamily()
+    val fontFamily = family ?: if (filled) materialSymbolsFilledFontFamily() else materialSymbolsFontFamily()
     val textMeasurer = materialSymbolsTextMeasurer()
     val density = LocalDensity.current
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl

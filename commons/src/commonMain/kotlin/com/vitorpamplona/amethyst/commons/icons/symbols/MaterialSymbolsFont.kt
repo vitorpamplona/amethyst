@@ -39,6 +39,11 @@ import org.jetbrains.compose.resources.Font
 // remember cache, and forces a fresh TextMeasurer per call site.
 val LocalMaterialSymbolsFontFamily: ProvidableCompositionLocal<FontFamily?> = staticCompositionLocalOf { null }
 
+// The same font at FILL=1. Material Symbols expresses fill through a variable axis rather than
+// a second codepoint, so a filled star and an outlined one are one glyph drawn from two families.
+// Held separately (rather than built per call site) for the same reason as the outline family.
+val LocalMaterialSymbolsFilledFontFamily: ProvidableCompositionLocal<FontFamily?> = staticCompositionLocalOf { null }
+
 // Shared TextMeasurer so its internal LRU cache is hit by every icon draw in the tree.
 val LocalMaterialSymbolsTextMeasurer: ProvidableCompositionLocal<TextMeasurer?> = staticCompositionLocalOf { null }
 
@@ -57,31 +62,27 @@ fun ProvideMaterialSymbols(
     weight: Int = MaterialSymbolsDefaults.WEIGHT,
     content: @Composable () -> Unit,
 ) {
-    val font =
-        Font(
-            resource = Res.font.material_symbols_outlined,
-            weight = FontWeight(weight),
-            variationSettings =
-                FontVariation.Settings(
-                    FontVariation.weight(weight),
-                    FontVariation.Setting("FILL", MaterialSymbolsDefaults.FILL),
-                    FontVariation.Setting("opsz", MaterialSymbolsDefaults.OPTICAL_SIZE),
-                    FontVariation.Setting("GRAD", MaterialSymbolsDefaults.GRADE),
-                ),
-        )
+    val font = symbolFont(weight, MaterialSymbolsDefaults.FILL)
+    val filledFont = symbolFont(weight, MaterialSymbolsDefaults.FILL_ON)
     // Keyless remember is safe only when weight is stable; key on weight so a platform-
     // preview override swap actually rebuilds the FontFamily.
     val fontFamily = remember(weight) { FontFamily(font) }
+    val filledFontFamily = remember(weight) { FontFamily(filledFont) }
     val textMeasurer = rememberTextMeasurer(cacheSize = TEXT_MEASURER_CACHE_SIZE)
     CompositionLocalProvider(
         LocalMaterialSymbolsFontFamily provides fontFamily,
+        LocalMaterialSymbolsFilledFontFamily provides filledFontFamily,
         LocalMaterialSymbolsTextMeasurer provides textMeasurer,
         content = content,
     )
 }
 
 @Composable
-internal fun materialSymbolsFontFamily(): FontFamily = LocalMaterialSymbolsFontFamily.current ?: localMaterialSymbolsFontFamilyFallback()
+internal fun materialSymbolsFontFamily(): FontFamily = LocalMaterialSymbolsFontFamily.current ?: fontFamilyFallback(MaterialSymbolsDefaults.FILL)
+
+/** The same symbols drawn solid. See [LocalMaterialSymbolsFilledFontFamily]. */
+@Composable
+internal fun materialSymbolsFilledFontFamily(): FontFamily = LocalMaterialSymbolsFilledFontFamily.current ?: fontFamilyFallback(MaterialSymbolsDefaults.FILL_ON)
 
 @Composable
 internal fun materialSymbolsTextMeasurer(): TextMeasurer =
@@ -89,18 +90,23 @@ internal fun materialSymbolsTextMeasurer(): TextMeasurer =
         ?: rememberTextMeasurer(cacheSize = TEXT_MEASURER_CACHE_SIZE)
 
 @Composable
-private fun localMaterialSymbolsFontFamilyFallback(): FontFamily {
-    val font =
-        Font(
-            resource = Res.font.material_symbols_outlined,
-            weight = FontWeight(MaterialSymbolsDefaults.WEIGHT),
-            variationSettings =
-                FontVariation.Settings(
-                    FontVariation.weight(MaterialSymbolsDefaults.WEIGHT),
-                    FontVariation.Setting("FILL", MaterialSymbolsDefaults.FILL),
-                    FontVariation.Setting("opsz", MaterialSymbolsDefaults.OPTICAL_SIZE),
-                    FontVariation.Setting("GRAD", MaterialSymbolsDefaults.GRADE),
-                ),
-        )
-    return remember { FontFamily(font) }
+private fun symbolFont(
+    weight: Int,
+    fill: Float,
+) = Font(
+    resource = Res.font.material_symbols_outlined,
+    weight = FontWeight(weight),
+    variationSettings =
+        FontVariation.Settings(
+            FontVariation.weight(weight),
+            FontVariation.Setting("FILL", fill),
+            FontVariation.Setting("opsz", MaterialSymbolsDefaults.OPTICAL_SIZE),
+            FontVariation.Setting("GRAD", MaterialSymbolsDefaults.GRADE),
+        ),
+)
+
+@Composable
+private fun fontFamilyFallback(fill: Float): FontFamily {
+    val font = symbolFont(MaterialSymbolsDefaults.WEIGHT, fill)
+    return remember(fill) { FontFamily(font) }
 }
