@@ -29,9 +29,6 @@
     <plurals name="birdex_species_count">
         <item quantity="other">Birdex · %1$d 個物種</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s 還有 %2$d 個</item>
-    </plurals>
     <string name="road_event_accident">事故</string>
     <string name="road_event_animal">路上有動物</string>
     <string name="road_event_confirmed">仍在那裡</string>
