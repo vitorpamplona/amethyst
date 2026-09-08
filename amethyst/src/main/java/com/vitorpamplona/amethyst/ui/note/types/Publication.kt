@@ -263,7 +263,7 @@ private fun PublicationTableOfContents(
  * place. An entry listed only by event id has nothing to show until then.
  */
 @Composable
-private fun PublicationSectionRow(
+internal fun PublicationSectionRow(
     position: Int,
     ref: PublicationSectionRef,
     accountViewModel: AccountViewModel,

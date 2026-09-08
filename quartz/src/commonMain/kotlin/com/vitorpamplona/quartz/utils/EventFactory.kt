@@ -114,6 +114,9 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
+import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
@@ -125,6 +128,9 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -795,6 +801,12 @@ class EventFactory {
                 PublicMessageEvent.KIND -> PublicMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 ReactionEvent.KIND -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalReactionEvent.KIND -> ExternalReactionEvent(id, pubKey, createdAt, tags, content, sig)
+                ExternalCitationEvent.KIND -> ExternalCitationEvent(id, pubKey, createdAt, tags, content, sig)
+                HardcopyCitationEvent.KIND -> HardcopyCitationEvent(id, pubKey, createdAt, tags, content, sig)
+                PromptCitationEvent.KIND -> PromptCitationEvent(id, pubKey, createdAt, tags, content, sig)
+                LearningResourceEvent.KIND -> LearningResourceEvent(id, pubKey, createdAt, tags, content, sig)
+                BookshelfDirectoryEvent.KIND -> BookshelfDirectoryEvent(id, pubKey, createdAt, tags, content, sig)
+                BlossomPieceIndexEvent.KIND -> BlossomPieceIndexEvent(id, pubKey, createdAt, tags, content, sig)
                 WikiMergeRequestEvent.KIND -> WikiMergeRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 WikiMergeAcceptanceEvent.KIND -> WikiMergeAcceptanceEvent(id, pubKey, createdAt, tags, content, sig)
                 WikiRedirectEvent.KIND -> WikiRedirectEvent(id, pubKey, createdAt, tags, content, sig)

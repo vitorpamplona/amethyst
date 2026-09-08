@@ -29,6 +29,9 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
@@ -41,6 +44,9 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -495,6 +501,12 @@ object KindNames {
             WikiMergeAcceptanceEvent.KIND to KindName("Wiki Merge Accepted", null),
             WikiRedirectEvent.KIND to KindName("Wiki Redirect", "54"),
             ExternalReactionEvent.KIND to KindName("External Reaction", "25"),
+            ExternalCitationEvent.KIND to KindName("Citation (Web)", null),
+            HardcopyCitationEvent.KIND to KindName("Citation (Print)", null),
+            PromptCitationEvent.KIND to KindName("Citation (Prompt)", null),
+            LearningResourceEvent.KIND to KindName("Learning Resource", null),
+            BookshelfDirectoryEvent.KIND to KindName("Directory", null),
+            BlossomPieceIndexEvent.KIND to KindName("Blossom Piece Index", null),
             EntityRatingEvent.KIND to KindName("Rating", null),
             PublicationIndexEvent.KIND to KindName("Publication", null),
             PublicationContentEvent.KIND to KindName("Publication Section", null),

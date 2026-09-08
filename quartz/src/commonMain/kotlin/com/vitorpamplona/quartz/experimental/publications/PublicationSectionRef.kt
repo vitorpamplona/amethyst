@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -80,8 +81,15 @@ data class PublicationSectionRef(
          * Reads the ordered contents of an index. Order is tag order, because that is the order
          * the spec says to display in, and `a` and `e` entries interleave.
          */
-        fun fromIndex(event: PublicationIndexEvent): List<PublicationSectionRef> =
-            event.tags.mapNotNull { tag ->
+        fun fromIndex(event: PublicationIndexEvent): List<PublicationSectionRef> = fromTags(event.tags)
+
+        /**
+         * The tag-level entry point. A kind-30045 directory lists its shelf with the same `a`/`e`
+         * grammar, so it reads its contents through here rather than growing a parallel parser
+         * that would drift from this one.
+         */
+        fun fromTags(tags: TagArray): List<PublicationSectionRef> =
+            tags.mapNotNull { tag ->
                 when {
                     isSectionAddressTag(tag) -> fromAddressTag(tag)
                     isSectionEventTag(tag) -> fromEventTag(tag)

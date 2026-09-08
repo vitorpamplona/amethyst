@@ -154,6 +154,9 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
+import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -163,6 +166,9 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -3806,6 +3812,9 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is ExerciseTemplateEvent,
                 is PublicationIndexEvent,
                 is WikiRedirectEvent,
+                is LearningResourceEvent,
+                is BookshelfDirectoryEvent,
+                is BlossomPieceIndexEvent,
                 is PublicationContentEvent,
                 is RelayReviewEvent,
                 is EntityRatingEvent,
@@ -3885,6 +3894,9 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is SealedRumorEvent,
                 is SoftwareAssetEvent,
                 is ExternalReactionEvent,
+                is ExternalCitationEvent,
+                is HardcopyCitationEvent,
+                is PromptCitationEvent,
                 is WikiMergeRequestEvent,
                 is WikiMergeAcceptanceEvent,
                 is TextNoteEvent,
