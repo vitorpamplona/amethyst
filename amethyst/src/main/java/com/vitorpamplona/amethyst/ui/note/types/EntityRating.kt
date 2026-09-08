@@ -171,7 +171,7 @@ fun RenderEntityRating(
  * announce nothing to a screen reader.
  */
 @Composable
-private fun RatingStars(
+internal fun RatingStars(
     stars: Double,
     mark: String,
 ) {

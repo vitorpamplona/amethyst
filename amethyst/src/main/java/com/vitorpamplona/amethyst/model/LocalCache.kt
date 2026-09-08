@@ -176,8 +176,10 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
+import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -3799,6 +3801,8 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is WebBookmarkEvent,
                 is ExerciseTemplateEvent,
                 is PublicationIndexEvent,
+                is PublicationContentEvent,
+                is RelayReviewEvent,
                 is EntityRatingEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 

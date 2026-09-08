@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.connectedApps.signers
 
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
+import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -247,6 +249,8 @@ class NostrSignerPermissionLedger(
                 VideoHorizontalEvent.KIND, // 34235 — legacy addressable horizontal video (NIP-71)
                 VideoVerticalEvent.KIND, // 34236 — legacy addressable vertical video (NIP-71)
                 PublicationIndexEvent.KIND, // 30040 — NKBIP-01 publication index (addressable content)
+                PublicationContentEvent.KIND, // 30041 — NKBIP-01 publication section (addressable content)
+                RelayReviewEvent.KIND, // 31987 — relay reviews (addressable, one per author per relay)
                 EntityRatingEvent.KIND, // 34259 — entity ratings (addressable, one per author per target)
             )
     }

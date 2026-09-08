@@ -191,6 +191,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderProfileCard
 import com.vitorpamplona.amethyst.ui.note.types.RenderPs1Save
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicationIndex
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicationSection
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
@@ -199,6 +200,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayReview
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
@@ -269,8 +271,10 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82So
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
+import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -1640,6 +1644,30 @@ private fun RenderNoteRow(
 
         is InteractiveStoryBaseEvent -> {
             RenderInteractiveStory(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is PublicationContentEvent -> {
+            RenderPublicationSection(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is RelayReviewEvent -> {
+            RenderRelayReview(
                 baseNote,
                 makeItShort,
                 canPreview,
