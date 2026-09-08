@@ -1,6 +1,7 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stages 0-4 done, plus the Stage 3 image-crypto follow-up. Stages 5-7 open.
+Status: Stages 0-4 done. Stages 5-6 have their protocol cores landed; the pass scheduler,
+candidate-graph replay and Stage 7 remain.
 
 Sources checked on 2026-09-08:
 
@@ -404,13 +405,43 @@ canonical epoch, retained epochs inside the rollback horizon, and any staged-but
 commit — and no more") is defined in terms of the retained-state set that convergence owns, so
 it lands with Stage 6 rather than ahead of it.
 
-**Stage 5 — lifecycle state machine + publish-before-apply.**
-The six canonical states, the `Leaving` / `Disbanding` gates, and the publish-obligation
-record (bytes + recipient scope + prior state + pending state) surviving restart.
+**Stage 5 — lifecycle state machine. CORE DONE.**
 
-**Stage 6 — convergence engine.**
-Bounded passes, candidate graph, eligibility, witnesses, six-step selection, dispositions and
-withdrawal. Delete `CommitOrdering`'s transport-metadata tiebreak at this point, not before.
+`GroupLifecycleState` (the six canonical states with their legal-transition table),
+`ConvergenceStatus` (the four derived statuses with the legal-combination table), and
+`LocalOutboundGate` for `Leaving` / `Disbanding` / realized-removal.
+
+Two table entries are load-bearing and tested as such: there is NO `Merging -> Recovering`
+edge — a competing branch seen mid-merge is retained, the merge finishes to `Stable`, and the
+bounded pass then triggers `Stable -> Recovering`, because diverting mid-merge would leave a
+half-applied epoch — and `Disbanded` has no outgoing edge at all.
+
+**Still open:** the publish-obligation record (bytes + recipient scope + prior state + pending
+state) surviving restart, and wiring these states into `MlsGroup`/`MarmotManager` so they
+actually gate anything. Today they are a correct model with no enforcement behind them.
+
+**Stage 6 — convergence engine. SELECTION DONE.**
+
+`ConvergencePolicy` (the v1 constants, with the `max_witness_override_depth <=
+max_rewind_commits` bound enforced in the constructor), `CandidateBranch` (fork/tip epochs,
+raw depth, tip priority/committer/digest, per-epoch witnesses), `BranchSelector` (the six-step
+comparison), and the `ConvergenceDisposition` / `ConvergenceCategory` vocabularies.
+
+Things worth knowing about the implementation:
+
+- Byte ordering is UNSIGNED. Account keys and digests are uniformly distributed, so a signed
+  comparison would invert about half of all final ties — and two clients would then disagree
+  that often.
+- `raw_commit_depth` has no comparison step of its own. It is already inside
+  `effective_commit_depth`. The widely circulated write-up of this algorithm lists it as a
+  step; the spec explicitly does not, and there is a test that fails if it is added.
+- Witnesses count DISTINCT sender accounts per branch epoch, capped at the quorum size, and
+  epochs at or before `fork_epoch` do not count at all.
+
+**Still open:** the bounded pass scheduler (quiescence/deadline timers, the frozen batch,
+`pass_base_epoch`) and the candidate-graph builder that replays MLS bytes against retained
+states. `CommitOrdering`'s transport-metadata tiebreak therefore still stands — it is only safe
+to delete once something replaces it end to end, and selection alone does not.
 
 **Stage 7 — durability/restart conformance, app payload kinds (1009/1210), encrypted-media
 v2, push owner proof.**
