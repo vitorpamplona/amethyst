@@ -115,6 +115,24 @@ sealed class GroupEventResult {
     ) : GroupEventResult()
 
     /**
+     * An app payload that decrypted only on a losing candidate branch.
+     *
+     * `protocol-core/inbound-processing.md` is explicit that this is NOT a
+     * delivery — rendering it would show the application a message the
+     * canonical state contradicts. It is still protocol input: if it passed
+     * the payload checks it counted as an app-payload witness for the branch
+     * it decrypted on, which is how convergence can prefer a branch members
+     * actually used.
+     */
+    data class AppMessageOnCandidateBranch(
+        val groupId: HexKey,
+        val branchStateId: String,
+        val epoch: Long,
+        /** True when it passed the payload checks and was counted as a witness. */
+        val countedAsWitness: Boolean,
+    ) : GroupEventResult()
+
+    /**
      * The event could not be processed.
      */
     data class Error(
@@ -512,35 +530,48 @@ class MarmotInboundProcessor(
 
         return when (privMsg.contentType) {
             ContentType.APPLICATION -> {
-                // MLS decrypt to get the inner plaintext
-                val decrypted = groupManager.decrypt(groupId, mlsMessage.toTlsBytes())
-                val innerJson = decrypted.content.decodeToString()
+                val bytes = mlsMessage.toTlsBytes()
+                val decrypted = groupManager.decryptOrNull(groupId, bytes)
+                if (decrypted == null) {
+                    // Canonical state and every retained canonical epoch
+                    // failed. Before giving up, try the branches convergence is
+                    // holding — a payload sent on a fork decrypts on no
+                    // canonical epoch by construction.
+                    processCandidateBranchMessage(groupId, bytes)
+                } else {
+                    val innerJson = decrypted.content.decodeToString()
 
-                // MIP-03: if the inner application payload is a Nostr event,
-                // its `pubkey` field MUST equal the MLS sender's credential
-                // identity. Reject any mismatch — otherwise a group member
-                // could mint events claiming a different author. Non-event
-                // payloads (raw bytes via buildGroupEventFromBytes) bypass
-                // this check since there is no author field to verify.
-                val innerEvent =
-                    com.vitorpamplona.quartz.nip01Core.core.Event
-                        .fromJsonOrNull(innerJson)
-                if (innerEvent != null) {
+                    // MIP-03: if the inner application payload is a Nostr event,
+                    // its `pubkey` field MUST equal the MLS sender's credential
+                    // identity. Reject any mismatch — otherwise a group member
+                    // could mint events claiming a different author. Non-event
+                    // payloads (raw bytes via buildGroupEventFromBytes) bypass
+                    // this check since there is no author field to verify.
                     val senderIdentity = groupManager.memberIdentityHex(groupId, decrypted.senderLeafIndex)
-                    if (senderIdentity == null || innerEvent.pubKey != senderIdentity) {
+                    val innerEvent = Event.fromJsonOrNull(innerJson)
+                    if (innerEvent != null && (senderIdentity == null || innerEvent.pubKey != senderIdentity)) {
                         return GroupEventResult.Error(
                             groupId,
                             "MIP-03: inner event pubkey (${innerEvent.pubKey}) does not match MLS sender identity ($senderIdentity)",
                         )
                     }
-                }
 
-                GroupEventResult.ApplicationMessage(
-                    groupId = groupId,
-                    innerEventJson = innerJson,
-                    senderLeafIndex = decrypted.senderLeafIndex,
-                    epoch = decrypted.epoch,
-                )
+                    // A payload that passed the checks is an app-payload
+                    // witness for the canonical branch at its epoch. The
+                    // incumbent is rebuilt and rescored at every resolution, so
+                    // counting only divergent branches would let any fork win
+                    // the witness steps unopposed.
+                    if (innerEvent != null && senderIdentity != null) {
+                        convergence.recordCanonicalWitness(groupId, decrypted.epoch, senderIdentity)
+                    }
+
+                    GroupEventResult.ApplicationMessage(
+                        groupId = groupId,
+                        innerEventJson = innerJson,
+                        senderLeafIndex = decrypted.senderLeafIndex,
+                        epoch = decrypted.epoch,
+                    )
+                }
             }
 
             ContentType.COMMIT -> {
@@ -591,6 +622,42 @@ class MarmotInboundProcessor(
                 GroupEventResult.Error(groupId, "Application messages should use PrivateMessage")
             }
         }
+    }
+
+    /**
+     * Try an app message against the retained candidate branches.
+     *
+     * A payload that decrypts here is NOT delivered: it belongs to a branch
+     * that is not canonical, and handing it to the application would render a
+     * message the canonical state contradicts. What it can do is witness for
+     * that branch — but only if it passes the SAME payload checks a delivered
+     * one does. Decryption alone is not a witness; without the author check a
+     * single member could forge many distinct sender identities and buy a
+     * branch the witness quorum outright.
+     */
+    private suspend fun processCandidateBranchMessage(
+        groupId: HexKey,
+        mlsBytes: ByteArray,
+    ): GroupEventResult {
+        val candidate =
+            convergence.tryCandidateDecrypt(groupId, mlsBytes)
+                ?: return GroupEventResult.Error(
+                    groupId,
+                    "Application message decrypts on no canonical epoch or retained candidate branch",
+                )
+
+        val innerEvent = Event.fromJsonOrNull(candidate.content.decodeToString())
+        val sender = candidate.senderAccount
+        val valid = innerEvent != null && sender != null && innerEvent.pubKey == sender
+        if (valid && sender != null) {
+            convergence.recordWitness(groupId, candidate.stateId, sender)
+        }
+        return GroupEventResult.AppMessageOnCandidateBranch(
+            groupId = groupId,
+            branchStateId = candidate.stateId,
+            epoch = candidate.epoch,
+            countedAsWitness = valid,
+        )
     }
 
     /**
@@ -762,7 +829,7 @@ class MarmotInboundProcessor(
      * should treat null as an expected "nothing to do here" outcome and log
      * at DEBUG, not as an error.
      */
-    private fun tryDecryptOuterLayer(
+    private suspend fun tryDecryptOuterLayer(
         groupId: HexKey,
         encryptedContent: String,
     ): ByteArray? {
@@ -781,6 +848,19 @@ class MarmotInboundProcessor(
                 return GroupEventEncryption.decrypt(encryptedContent, retainedKey)
             } catch (_: Exception) {
                 // This retained key didn't work — try the next one
+            }
+        }
+
+        // Finally the branches convergence retains. An event published on a
+        // fork is keyed by that branch's epoch exporter, which appears in
+        // neither the canonical nor the retained-canonical set — so without
+        // this a payload on a candidate branch could never even be peeled, and
+        // the branch could never accumulate witnesses.
+        for (candidateKey in convergence.candidateExporterSecrets(groupId)) {
+            try {
+                return GroupEventEncryption.decrypt(encryptedContent, candidateKey)
+            } catch (_: Exception) {
+                // Not this branch — try the next.
             }
         }
 

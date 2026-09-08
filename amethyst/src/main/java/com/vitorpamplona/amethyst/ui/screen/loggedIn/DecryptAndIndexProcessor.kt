@@ -764,6 +764,18 @@ class GroupEventHandler(
                     }
                 }
 
+                is GroupEventResult.AppMessageOnCandidateBranch -> {
+                    // Decrypted on a branch that is not canonical. Not shown:
+                    // the canonical state contradicts it. If convergence later
+                    // selects that branch the message arrives again through
+                    // the normal path, so nothing is lost by not rendering it
+                    // now.
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: app payload on candidate branch for group=${result.groupId.take(8)}… " +
+                            "epoch=${result.epoch} witness=${result.countedAsWitness}"
+                    }
+                }
+
                 is GroupEventResult.Error -> {
                     Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR ${result.message}" }
                 }

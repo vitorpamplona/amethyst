@@ -56,8 +56,23 @@ class MarmotConvergenceWiringTest {
         val observerStateBytes: ByteArray,
         val commitA: GroupEvent,
         val commitB: GroupEvent,
+        /** An app payload Bob sent on HIS branch, authored honestly. */
+        val bobPayload: GroupEvent,
+        /** The same, but claiming an author Bob's MLS leaf does not authenticate. */
+        val bobForgedPayload: GroupEvent,
         val forkEpoch: Long,
     )
+
+    /**
+     * A minimal inner Nostr event.
+     *
+     * Only the `pubkey` field matters here: the receiver check compares it to
+     * the account the MLS sender leaf authenticates, and that comparison is
+     * what separates a witness from a forgery.
+     */
+    private fun innerEventJson(authorHex: String) =
+        """{"id":"${"0".repeat(64)}","pubkey":"$authorHex","created_at":1,"kind":9,""" +
+            """"tags":[],"content":"hi","sig":"${"0".repeat(128)}"}"""
 
     private fun account(seed: Byte) = ByteArray(32) { seed }
 
@@ -121,10 +136,27 @@ class MarmotConvergenceWiringTest {
         val eventB =
             outbound.buildCommitEvent(groupId, bobCommit.framedCommitBytes, bobCommit.preCommitExporterSecret)
 
+        // Bob speaks on his own branch. His epoch exporter is on neither the
+        // canonical nor the retained-canonical key list, so these only peel at
+        // all once the observer retains Bob's candidate state.
+        val bobOutbound = MarmotOutboundProcessor(bobMgr)
+        val honest =
+            bobOutbound.buildGroupEventFromBytes(
+                groupId,
+                innerEventJson(account(0x0b).toHexKey()).encodeToByteArray(),
+            )
+        val forged =
+            bobOutbound.buildGroupEventFromBytes(
+                groupId,
+                innerEventJson(account(0x0a).toHexKey()).encodeToByteArray(),
+            )
+
         return Fork(
             observerStateBytes = carolMgr.snapshot(groupId)!!.encodeTls(),
             commitA = eventA.signedEvent,
             commitB = eventB.signedEvent,
+            bobPayload = honest.signedEvent,
+            bobForgedPayload = forged.signedEvent,
             forkEpoch = forkEpoch,
         )
     }
@@ -306,6 +338,79 @@ class MarmotConvergenceWiringTest {
                 setOf(sha256Hex(fork.commitA, obs), sha256Hex(fork.commitB, obs)),
                 resolution.outcomes.map { it.commitId }.toSet(),
             )
+        }
+
+    /**
+     * A payload sent on a branch that is not ours decrypts on no canonical
+     * epoch, so it must not be delivered — but it must not vanish either. It
+     * is reported as living on a candidate branch, and (because it passes the
+     * payload checks) counted as an app-payload witness for that branch.
+     */
+    @Test
+    fun aPayloadOnTheLosingBranchWitnessesInsteadOfBeingDelivered() =
+        runBlocking<Unit> {
+            val fork = buildFork()
+            val obs = observer(fork.observerStateBytes)
+
+            // Our observer follows Alice's branch; Bob's is the candidate.
+            assertIs<GroupEventResult.CommitProcessed>(obs.inbound.processGroupEvent(fork.commitA))
+            assertIs<GroupEventResult.CommitPending>(obs.inbound.processGroupEvent(fork.commitB))
+
+            val onBob = fork.bobPayload
+            val result = obs.inbound.processGroupEvent(onBob)
+            val branchMsg = assertIs<GroupEventResult.AppMessageOnCandidateBranch>(result)
+            assertTrue(branchMsg.countedAsWitness, "a payload passing the author check is a witness")
+            assertEquals(fork.forkEpoch + 1, branchMsg.epoch)
+        }
+
+    /**
+     * Decryption alone is not a witness. A payload whose inner author does not
+     * match the MLS-authenticated sender is reported on its branch but MUST NOT
+     * be counted — otherwise one member could mint many sender identities and
+     * buy the witness quorum outright.
+     */
+    @Test
+    fun aPayloadFailingTheAuthorCheckIsNotCountedAsAWitness() =
+        runBlocking<Unit> {
+            val fork = buildFork()
+            val obs = observer(fork.observerStateBytes)
+
+            obs.inbound.processGroupEvent(fork.commitA)
+            obs.inbound.processGroupEvent(fork.commitB)
+
+            val result = obs.inbound.processGroupEvent(fork.bobForgedPayload)
+            val branchMsg = assertIs<GroupEventResult.AppMessageOnCandidateBranch>(result)
+            assertFalse(branchMsg.countedAsWitness, "a mismatched author must not witness")
+        }
+
+    /**
+     * A payload for a branch we do not hold is `transport_deferred`, not a
+     * terminal failure.
+     *
+     * The trial set really is bounded — canonical epochs plus retained
+     * candidates, nothing else — but "I could not peel this" is a statement
+     * about the keys we hold right now. Bob's commit may still arrive, and
+     * `protocol-core/inbound-processing.md` requires a retry whenever the
+     * transport decryption context changes. Reporting it terminal would strand
+     * the payload permanently on a race the group is about to resolve.
+     */
+    @Test
+    fun aPayloadForNoRetainedBranchIsDeferredNotRejected() =
+        runBlocking<Unit> {
+            val fork = buildFork()
+            val obs = observer(fork.observerStateBytes)
+            obs.inbound.processGroupEvent(fork.commitA)
+
+            // Bob's branch was never offered, so nothing retains its state and
+            // no key we hold derives his epoch exporter.
+            val before = obs.inbound.processGroupEvent(fork.bobPayload)
+            assertIs<GroupEventResult.UndecryptableOuterLayer>(before)
+
+            // Retaining Bob's branch IS a change of transport decryption
+            // context, and the retry now succeeds.
+            obs.inbound.processGroupEvent(fork.commitB)
+            val after = obs.inbound.processGroupEvent(fork.bobPayload)
+            assertIs<GroupEventResult.AppMessageOnCandidateBranch>(after)
         }
 
     /** The Marmot message id of a commit event, as the engine computes it. */

@@ -179,6 +179,7 @@ class MarmotManager(
             is GroupEventResult.CommitPending,
             is GroupEventResult.Duplicate,
             is GroupEventResult.UndecryptableOuterLayer,
+            is GroupEventResult.AppMessageOnCandidateBranch,
             is GroupEventResult.Error,
             -> {}
         }

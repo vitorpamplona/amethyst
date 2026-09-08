@@ -155,6 +155,9 @@ private suspend fun MarmotManager.ingestGroupEvent(ge: GroupEvent): MarmotIngest
 
         is GroupEventResult.Duplicate,
         is GroupEventResult.CommitPending,
+        // Decrypted only on a losing branch: real protocol input (it may have
+        // witnessed for that branch), but never application output.
+        is GroupEventResult.AppMessageOnCandidateBranch,
         -> {
             MarmotIngestResult.Ignored
         }

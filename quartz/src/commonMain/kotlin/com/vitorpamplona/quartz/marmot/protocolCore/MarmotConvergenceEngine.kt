@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
+import com.vitorpamplona.quartz.marmot.mls.framing.ContentType
+import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -40,6 +42,26 @@ enum class ConvergenceAdmission {
     /** Already in the current batch. Admitted as ordinary; changes nothing. */
     DUPLICATE,
 }
+
+/**
+ * An MLS application message that decrypted against a RETAINED CANDIDATE state
+ * rather than against canonical state.
+ *
+ * Per `protocol-core/inbound-processing.md` this is not a delivery: a payload
+ * that decrypts only on a losing branch is invalidated, not handed to the
+ * application. It is still protocol input — it can be an app-payload witness
+ * for the branch it decrypted on, which is how a branch members actually used
+ * outweighs an equally long one nobody did.
+ */
+class CandidateAppMessage(
+    /** The candidate state it decrypted against. */
+    val stateId: String,
+    val epoch: Long,
+    val senderLeafIndex: Int,
+    /** Account identity from the MLS leaf credential, hex. Never a transport key. */
+    val senderAccount: HexKey?,
+    val content: ByteArray,
+)
 
 /** The outcome of resolving one frozen pass. */
 class ConvergenceResolution(
@@ -108,6 +130,16 @@ class MarmotConvergenceEngine(
         /** stateId -> the accounts that sent a validated payload decrypting there. */
         val witnesses = mutableMapOf<String, MutableSet<HexKey>>()
 
+        /**
+         * States reachable only from divergent commits, by id.
+         *
+         * Kept so an app message that decrypts on no canonical epoch can still
+         * be tried against the branches under evaluation. Without them a
+         * losing branch could never accumulate witnesses and the witness steps
+         * of the comparison would be dead code.
+         */
+        val candidateStates = LinkedHashMap<String, MlsGroupState>()
+
         var pass: ConvergencePass? = null
         var lifecycle: GroupLifecycleState = GroupLifecycleState.STABLE
     }
@@ -119,6 +151,14 @@ class MarmotConvergenceEngine(
          * extend a window.
          */
         private val ORIGIN = TimeSource.Monotonic.markNow()
+
+        /**
+         * How many concurrent branches' worth of states to hold for trial
+         * decryption. A bound, not a protocol constant: a real group forks in
+         * two, and anything that produces more than a handful of live branches
+         * is an attack, not usage.
+         */
+        private const val MAX_CANDIDATE_BRANCHES = 4
     }
 
     /**
@@ -215,6 +255,18 @@ class MarmotConvergenceEngine(
             if (!hasParent) return@withLock ConvergenceAdmission.NOT_A_CANDIDATE
 
             ctx.divergent[candidate.id] = candidate
+            // Replay it now, not only at resolution. The resulting state is
+            // what an app message on this branch decrypts against, and
+            // witnesses have to accumulate DURING the pass to influence the
+            // selection that pass makes.
+            for (parent in ctx.retained) {
+                if (!stateEngine.authenticatesAgainst(parent, commitBytes)) continue
+                if (!stateEngine.isAuthorized(parent, commitBytes)) continue
+                val child = stateEngine.replay(parent, commitBytes) ?: continue
+                if (!stateEngine.resultingStateIsValid(child)) continue
+                ctx.candidateStates[stateEngine.stateId(child)] = child
+                trimCandidates(ctx)
+            }
             val pass = ctx.pass ?: openPass(groupId, ctx)
             // A new divergent commit can add an eligible edge, so it restarts
             // quiescence. Its admission may be refused if the pass already
@@ -243,6 +295,92 @@ class MarmotConvergenceEngine(
         val observation = WitnessObservation(stateId, senderAccount)
         ctx.pass?.admit(
             observation,
+            if (added) InputRelevance.SELECTION_RELEVANT else InputRelevance.ORDINARY,
+        )
+        Unit
+    }
+
+    /**
+     * Outer transport keys derived from retained CANDIDATE states.
+     *
+     * The Marmot outer layer is keyed by a per-epoch exporter secret, so an
+     * event published on a fork is not merely undecryptable at the MLS layer —
+     * it does not even peel. `protocol-core/inbound-processing.md` calls a
+     * transport object we cannot peel `transport_deferred` and requires a retry
+     * "whenever the transport decryption context changes", and retaining a
+     * candidate state IS such a change. Deriving from the retained state rather
+     * than storing another secret keeps the release condition in one place:
+     * when the state goes, the key goes with it.
+     */
+    suspend fun candidateExporterSecrets(groupId: HexKey): List<ByteArray> =
+        mutex.withLock {
+            contexts[groupId]?.candidateStates?.values?.mapNotNull { state ->
+                try {
+                    MlsGroup.restore(state).exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: emptyList()
+        }
+
+    /**
+     * Try to decrypt an MLS application message against retained CANDIDATE
+     * states, after canonical and retained-epoch decryption have both failed.
+     *
+     * This is the bounded trial set `protocol-core/retained-history.md`
+     * describes: canonical epochs inside the app-payload window (which the
+     * group manager's own retained-epoch fallback covers), plus the candidate
+     * parents convergence is holding. It is deliberately not "try every key we
+     * have ever seen" — the set is bounded by the rollback horizon, so a
+     * flood of undecryptable ciphertext costs a bounded number of attempts.
+     */
+    suspend fun tryCandidateDecrypt(
+        groupId: HexKey,
+        mlsBytes: ByteArray,
+    ): CandidateAppMessage? =
+        mutex.withLock {
+            val ctx = contexts[groupId] ?: return@withLock null
+            for ((stateId, state) in ctx.candidateStates) {
+                val decrypted =
+                    try {
+                        // A clone per attempt: decrypting advances the secret
+                        // tree, and a candidate state gets tried by every
+                        // message that failed canonically.
+                        MlsGroup.restore(state).decrypt(mlsBytes)
+                    } catch (_: Exception) {
+                        continue
+                    }
+                if (decrypted.contentType != ContentType.APPLICATION) continue
+                return@withLock CandidateAppMessage(
+                    stateId = stateId,
+                    epoch = decrypted.epoch,
+                    senderLeafIndex = decrypted.senderLeafIndex,
+                    senderAccount = MlsGroup.restore(state).memberIdentityHex(decrypted.senderLeafIndex),
+                    content = decrypted.content,
+                )
+            }
+            null
+        }
+
+    /**
+     * Record a witness for an app payload that decrypted on CANONICAL state at
+     * [epoch].
+     *
+     * The incumbent is rebuilt as a candidate branch at resolution time and
+     * scored by the same rule as its challengers, so it needs its witnesses
+     * counted too. Counting only divergent branches would make every fork win
+     * on witness score by default.
+     */
+    suspend fun recordCanonicalWitness(
+        groupId: HexKey,
+        epoch: Long,
+        senderAccount: HexKey,
+    ) = mutex.withLock {
+        val ctx = contexts[groupId] ?: return@withLock
+        val state = ctx.retained.lastOrNull { stateEngine.epoch(it) == epoch } ?: return@withLock
+        val added = ctx.witnesses.getOrPut(stateEngine.stateId(state)) { mutableSetOf() }.add(senderAccount)
+        ctx.pass?.admit(
+            WitnessObservation(stateEngine.stateId(state), senderAccount),
             if (added) InputRelevance.SELECTION_RELEVANT else InputRelevance.ORDINARY,
         )
         Unit
@@ -301,6 +439,23 @@ class MarmotConvergenceEngine(
             if (rewound && selectedTipId != null) {
                 adoptBranch(ctx, graph, selectedTipId, inputs.baseId)
             }
+            // Keep the states of branches that LOST but stay eligible: losing
+            // one pass is not permanent ineligibility, and a payload that
+            // arrives afterwards still needs somewhere to decrypt. Everything
+            // now on the canonical path is dropped from the candidate set — it
+            // is reachable as retained state.
+            val canonical = ctx.retained.map { stateEngine.stateId(it) }.toSet()
+            ctx.candidateStates.keys.retainAll { it !in canonical }
+            graph.branches
+                .mapNotNull { graph.branchTips[it.tipDigestHex] }
+                .forEach { tipId ->
+                    var cursor: String? = tipId
+                    while (cursor != null && cursor !in canonical) {
+                        graph.statesById[cursor]?.let { ctx.candidateStates[cursor!!] = it }
+                        cursor = graph.parentOf[cursor]
+                    }
+                }
+            trimCandidates(ctx)
             ctx.divergent.clear()
             ctx.pass = null
             val epoch = groupManager.getGroup(groupId)?.epoch ?: inputs.tipEpoch
@@ -436,6 +591,21 @@ class MarmotConvergenceEngine(
         ctx.pass = pass
         ctx.lifecycle = pass.lifecycleWhileRunning(ctx.lifecycle)
         return pass
+    }
+
+    /**
+     * Bound the candidate set the same way the retained window is bounded.
+     *
+     * A branch outside the rollback horizon can never be selected, so holding
+     * its states would only widen the trial-decryption cost for input that can
+     * no longer matter.
+     */
+    private fun trimCandidates(ctx: GroupContext) {
+        val max = windowSize * MAX_CANDIDATE_BRANCHES
+        while (ctx.candidateStates.size > max) {
+            val oldest = ctx.candidateStates.keys.first()
+            ctx.candidateStates.remove(oldest)
+        }
     }
 
     /**
