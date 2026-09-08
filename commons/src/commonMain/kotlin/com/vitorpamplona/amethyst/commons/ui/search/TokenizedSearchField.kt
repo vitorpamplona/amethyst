@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.search
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -90,6 +91,12 @@ fun TokenizedSearchField(
     displayName: (String) -> String? = { null },
     groupName: (String) -> String? = { null },
     scopeName: (String, String) -> String? = { _, _ -> null },
+    /**
+     * Shared with [decorationBox] so a caller's chrome — an outlined border, say — sees the same
+     * focus and hover the field does. Without one, chrome built on `OutlinedTextFieldDefaults`
+     * watches an interaction source nothing ever emits into and never lights up.
+     */
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     onPeopleQuery: (String) -> Unit = {},
     onGroupQuery: (String) -> Unit = {},
     onSubmit: () -> Unit = {},
@@ -132,6 +139,7 @@ fun TokenizedSearchField(
                     },
             textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
             singleLine = true,
+            interactionSource = interactionSource,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { if (!takeEnter(state, picker, highlighted, people, groups)) onSubmit() }),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),

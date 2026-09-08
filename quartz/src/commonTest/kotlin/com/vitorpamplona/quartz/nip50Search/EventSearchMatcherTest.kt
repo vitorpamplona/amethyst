@@ -95,6 +95,27 @@ class EventSearchMatcherTest {
     }
 
     @Test
+    fun aQuotedSpanIsOnePhraseNotTwoTermsCarryingQuotes() {
+        // Splitting on whitespace alone turned `"hello world"` into `"hello` and `world"`, so a
+        // phrase search could never match anything at all.
+        assertTrue(matches("\"hello world\"", note("say hello world today")))
+        assertFalse(matches("\"hello world\"", note("hello there, world")))
+        // The quotes are a delimiter, never part of what has to be present in the event.
+        assertTrue(matches("\"hello world\"", note("hello world")))
+    }
+
+    @Test
+    fun anUnterminatedQuoteRunsToTheEnd() {
+        assertTrue(matches("\"hello world", note("say hello world today")))
+    }
+
+    @Test
+    fun quotedAndBareTermsMix() {
+        assertTrue(matches("\"hello world\" bitcoin", note("hello world and bitcoin")))
+        assertFalse(matches("\"hello world\" bitcoin", note("hello world only")))
+    }
+
+    @Test
     fun oneMatcherAnswersManyEventsConsistently() {
         // The visitor is reused across events; a stale term or hit flag would show up here.
         val matcher = EventSearchMatcher("lightning")

@@ -136,6 +136,29 @@ class SearchFilterBuilderTest {
     }
 
     @Test
+    fun anUnresolvedNameAsksNothingRatherThanEverything() {
+        // `from:vitor` is a name the picker has not turned into a key. It is not a filter field,
+        // and a filter constrained only by its kinds is an unbounded REQ to every relay.
+        assertTrue(build("from:vitor", NOTES).isEmpty())
+        // Once there is something askable alongside it, the query is sent — minus the name.
+        val withText = build("from:vitor bitcoin", NOTES)
+        assertEquals(1, withText.size)
+        assertEquals("bitcoin", withText[0].search)
+        assertNull(withText[0].authors)
+    }
+
+    @Test
+    fun theGroupMetadataArmDoesNotInheritTheQuerysTextOrAuthor() {
+        // A kind-39000 event is written by the host relay and carries the room's name, not the
+        // searched author or the searched words — inheriting either finds nothing.
+        val filters = build("group:dev from:$NPUB bitcoin", NOTES)
+        val meta = filters.first { it.kinds == listOf(GroupMetadataEvent.KIND) }
+        assertNull(meta.search)
+        assertNull(meta.authors)
+        assertEquals(listOf("dev"), meta.tag("d"))
+    }
+
+    @Test
     fun everyArmOfAUnionCarriesTheMentionTagsAndAuthors() {
         val filters = build("from:$NPUB to:$NOTE #bitcoin", NOTES)
         assertTrue(filters.size > 1)

@@ -601,16 +601,14 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 }
             }
 
-        val limit = filter.limit
+        val all = (addressableMatches + noteMatches).toSortedSet(CreatedAtIdHexComparator)
+        val limit = filter.limit ?: return all
 
-        val limitedSet =
-            if (limit != null) {
-                (addressableMatches + noteMatches).take(limit)
-            } else {
-                (addressableMatches + noteMatches)
-            }
-
-        return limitedSet.toSortedSet(CreatedAtIdHexComparator)
+        // Sorted first, then cut. Both halves arrive in hash-walk order, so taking before sorting
+        // dropped whichever matches the walk happened to reach last — the newest ones as often as
+        // not — and a query with 200 addressable matches never showed a single regular note.
+        if (all.size <= limit) return all
+        return all.asSequence().take(limit).toCollection(sortedSetOf(CreatedAtIdHexComparator))
     }
 
     fun observeNotes(filter: Filter): Flow<List<Note>> =

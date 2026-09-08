@@ -62,6 +62,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -520,7 +521,13 @@ private fun SearchTextField(
         // The rooms the reader can actually reach, for the `group:` picker and for naming the
         // chips it writes. An id typed from memory is unverifiable; a name is not.
         var groupQuery by remember { mutableStateOf("") }
-        val groupChannels = remember { LocalCache.allRelayGroupChannels() }
+        var groupInvalidations by remember { mutableIntStateOf(0) }
+        LaunchedEffect(Unit) {
+            LocalCache.live.newEventBundles.collect { groupInvalidations++ }
+        }
+        // Keyed on the cache's own invalidation counter: a room joined while this screen is
+        // open has to reach the picker, and a keyless remember froze both it and the names.
+        val groupChannels = remember(groupInvalidations) { LocalCache.allRelayGroupChannels() }
         val groupNames = remember(groupChannels) { groupChannels.associate { it.groupId.id to it.toBestDisplayName() } }
 
         val groupCandidates =

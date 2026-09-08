@@ -138,7 +138,6 @@ fun SearchScreen(
     // The field's own editing state — the text, the caret, and which picker that position calls
     // for. The query below is derived from it; the field is the one place the text lives.
     val fieldState = remember { SearchFieldState(initialQuery) }
-    val searchInteraction = remember { MutableInteractionSource() }
 
     // Pre-fill initial query
     LaunchedEffect(initialQuery) {
@@ -490,6 +489,7 @@ fun SearchScreen(
                     state = fieldState,
                     modifier = Modifier.weight(1f),
                     fieldModifier = Modifier.height(40.dp).focusRequester(focusRequester),
+                    interactionSource = searchInteraction,
                     people = personCandidates,
                     displayName = chipNames,
                     onPeopleQuery = { userSearch.search(it) },
@@ -519,7 +519,10 @@ fun SearchScreen(
                             },
                             trailingIcon = {
                                 if (fieldState.text.isNotEmpty()) {
-                                    IconButton(onClick = { fieldState.clear() }, modifier = Modifier.size(28.dp)) {
+                                    IconButton(onClick = {
+                                        state.clearSearch()
+                                        fieldState.clear()
+                                    }, modifier = Modifier.size(28.dp)) {
                                         Icon(
                                             MaterialSymbols.Clear,
                                             contentDescription = "Clear",

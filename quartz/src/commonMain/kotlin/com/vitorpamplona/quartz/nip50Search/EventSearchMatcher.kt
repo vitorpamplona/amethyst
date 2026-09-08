@@ -62,13 +62,7 @@ class EventSearchMatcher(
      */
     private val exceptTagNames: Set<String> = DEFAULT_EXCLUDED_TAGS,
 ) {
-    private val terms: Array<String> =
-        SearchQuery
-            .stripExtensions(search)
-            ?.split(' ', '\t', '\n', '\r')
-            ?.filter { it.isNotBlank() }
-            ?.toTypedArray()
-            ?: emptyArray()
+    private val terms: Array<String> = splitTerms(SearchQuery.stripExtensions(search))
 
     /** True when this matcher constrains nothing, so callers can skip the walk entirely. */
     val isEmpty: Boolean get() = terms.isEmpty()
@@ -124,5 +118,43 @@ class EventSearchMatcher(
 
     companion object {
         val DEFAULT_EXCLUDED_TAGS = setOf("client", "p", "e", "a", "alt")
+
+        /**
+         * The search string as the terms to require: whitespace-separated, except inside double
+         * quotes, where the span is one term with the quotes removed.
+         *
+         * A naive split turned `"hello world"` into `"hello` and `world"` — two terms carrying a
+         * quote character, so a phrase search could never match anything. An unterminated quote
+         * runs to the end of the string, which is how a lexer reads it and how relays read it.
+         */
+        fun splitTerms(search: String?): Array<String> {
+            val s = search ?: return emptyArray()
+            val out = mutableListOf<String>()
+            val current = StringBuilder()
+            var quoted = false
+            for (c in s) {
+                when {
+                    c == '"' -> {
+                        // A closing quote ends the term even when empty-adjacent, so `a""b` is `a`, `b`.
+                        if (quoted && current.isNotEmpty()) {
+                            out.add(current.toString())
+                            current.clear()
+                        }
+                        quoted = !quoted
+                    }
+
+                    !quoted && c.isWhitespace() -> {
+                        if (current.isNotEmpty()) {
+                            out.add(current.toString())
+                            current.clear()
+                        }
+                    }
+
+                    else -> current.append(c)
+                }
+            }
+            if (current.isNotEmpty()) out.add(current.toString())
+            return out.toTypedArray()
+        }
     }
 }

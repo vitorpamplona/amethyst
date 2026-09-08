@@ -68,6 +68,17 @@ object SearchFilterBuilder {
         val search = searchString(query)?.takeIf { it.isNotBlank() }
         val authors = query.authors.takeIf { it.isNotEmpty() }?.toList()
 
+        // `from:vitor` names somebody the picker has not resolved to a key yet, and an unresolved
+        // name is not a filter field. Left alone it would produce a filter constrained by nothing
+        // but its kinds — an unbounded REQ to every relay, and locally the first N notes of the
+        // cache dressed up as results. A query that can express nothing asks nothing.
+        if (search == null && authors == null && tags.isEmpty() &&
+            query.hashtags.isEmpty() && query.labels.isEmpty() && query.scopes.isEmpty() && query.groups.isEmpty() &&
+            query.since == null && query.until == null
+        ) {
+            return emptyList()
+        }
+
         // Built per arm rather than shared, so the window and the mention tags ride every filter
         // of a union while each arm still adds the one tag that arm is about.
         fun arm(
@@ -104,7 +115,16 @@ object SearchFilterBuilder {
         if (query.groups.isNotEmpty()) {
             filters.add(arm(kinds, "h" to query.groups.toList()))
             // Plus the group's own metadata, so a result set can name the room it came from.
-            filters.add(arm(listOf(GroupMetadataEvent.KIND), "d" to query.groups.toList(), side))
+            // Deliberately bare: a kind-39000 event is written by the host relay, not by the
+            // author being searched for, and carries the room's name rather than the query's
+            // terms — inheriting either would make it match nothing exactly when it is needed.
+            filters.add(
+                Filter(
+                    kinds = listOf(GroupMetadataEvent.KIND),
+                    tags = mapOf("d" to query.groups.toList()),
+                    limit = side,
+                ),
+            )
         }
 
         if (tagged.isNotEmpty()) {
