@@ -228,6 +228,7 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip19Bech32.isATag
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
@@ -310,7 +311,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -3801,6 +3805,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is WebBookmarkEvent,
                 is ExerciseTemplateEvent,
                 is PublicationIndexEvent,
+                is WikiRedirectEvent,
                 is PublicationContentEvent,
                 is RelayReviewEvent,
                 is EntityRatingEvent,
@@ -3879,6 +3884,9 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is RoadEventConfirmationEvent,
                 is SealedRumorEvent,
                 is SoftwareAssetEvent,
+                is ExternalReactionEvent,
+                is WikiMergeRequestEvent,
+                is WikiMergeAcceptanceEvent,
                 is TextNoteEvent,
                 is TorrentEvent,
                 is TorrentCommentEvent,

@@ -94,6 +94,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
@@ -188,7 +189,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -487,6 +491,10 @@ object KindNames {
             WakeUpEvent.KIND to KindName("WakeUp", null),
             WebBookmarkEvent.KIND to KindName("Web Bookmark", "B0"),
             WikiNoteEvent.KIND to KindName("Wiki", "54"),
+            WikiMergeRequestEvent.KIND to KindName("Wiki Merge Request", "54"),
+            WikiMergeAcceptanceEvent.KIND to KindName("Wiki Merge Accepted", null),
+            WikiRedirectEvent.KIND to KindName("Wiki Redirect", "54"),
+            ExternalReactionEvent.KIND to KindName("External Reaction", "25"),
             EntityRatingEvent.KIND to KindName("Rating", null),
             PublicationIndexEvent.KIND to KindName("Publication", null),
             PublicationContentEvent.KIND to KindName("Publication Section", null),

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -249,6 +251,8 @@ class NostrSignerPermissionLedger(
                 VideoHorizontalEvent.KIND, // 34235 — legacy addressable horizontal video (NIP-71)
                 VideoVerticalEvent.KIND, // 34236 — legacy addressable vertical video (NIP-71)
                 PublicationIndexEvent.KIND, // 30040 — NKBIP-01 publication index (addressable content)
+                WikiRedirectEvent.KIND, // 30819 — NIP-54 wiki redirects (addressable, one per slug)
+                ExternalReactionEvent.KIND, // 17 — NIP-25 reactions to non-nostr targets
                 PublicationContentEvent.KIND, // 30041 — NKBIP-01 publication section (addressable content)
                 RelayReviewEvent.KIND, // 31987 — relay reviews (addressable, one per author per relay)
                 EntityRatingEvent.KIND, // 34259 — entity ratings (addressable, one per author per target)

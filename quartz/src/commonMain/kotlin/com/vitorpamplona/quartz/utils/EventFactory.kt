@@ -180,6 +180,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
@@ -281,7 +282,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -790,6 +794,10 @@ class EventFactory {
                 ProxyRelayListEvent.KIND -> ProxyRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 PublicMessageEvent.KIND -> PublicMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 ReactionEvent.KIND -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
+                ExternalReactionEvent.KIND -> ExternalReactionEvent(id, pubKey, createdAt, tags, content, sig)
+                WikiMergeRequestEvent.KIND -> WikiMergeRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                WikiMergeAcceptanceEvent.KIND -> WikiMergeAcceptanceEvent(id, pubKey, createdAt, tags, content, sig)
+                WikiRedirectEvent.KIND -> WikiRedirectEvent(id, pubKey, createdAt, tags, content, sig)
                 EntityRatingEvent.KIND -> EntityRatingEvent(id, pubKey, createdAt, tags, content, sig)
                 PublicationIndexEvent.KIND -> PublicationIndexEvent(id, pubKey, createdAt, tags, content, sig)
                 PublicationContentEvent.KIND -> PublicationContentEvent(id, pubKey, createdAt, tags, content, sig)

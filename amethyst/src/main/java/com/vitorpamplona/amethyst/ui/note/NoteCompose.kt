@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
+import com.vitorpamplona.amethyst.ui.note.types.RenderExternalReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -216,6 +217,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderWikiMergeAcceptance
+import com.vitorpamplona.amethyst.ui.note.types.RenderWikiMergeRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderWikiRedirect
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
@@ -292,6 +296,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -332,7 +337,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetupBesidesAuthor
@@ -1652,6 +1660,30 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
+        is ExternalReactionEvent -> {
+            RenderExternalReaction(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is WikiMergeRequestEvent -> {
+            RenderWikiMergeRequest(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is WikiMergeAcceptanceEvent -> {
+            RenderWikiMergeAcceptance(baseNote, accountViewModel, nav)
+        }
+
+        is WikiRedirectEvent -> {
+            RenderWikiRedirect(baseNote, accountViewModel, nav)
         }
 
         is PublicationContentEvent -> {
