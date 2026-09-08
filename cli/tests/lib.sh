@@ -320,6 +320,11 @@ extract_pubkey() {
     # JSON: {"result": [ {"pubkey": …}, … ]} — post-v0.2 `wn --json whoami` shape
     v=$(printf '%s' "$raw" | jq -r '.result[0].pubkey // .result[0].npub // .result[0].public_key // empty' 2>/dev/null || true)
     if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
+    # JSON: {"ok":true,"result":{"accounts":[{"npub": ...}, ...]}} — MDK 0.9.x.
+    # `result` became an object with a named list, so the array-indexed probes
+    # above miss it entirely and the caller sees an empty npub.
+    v=$(printf '%s' "$raw" | jq -r '.result.accounts[0].npub // .result.accounts[0].pubkey // empty' 2>/dev/null || true)
+    if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
     # JSON: array of accounts (whoami may return a list)
     v=$(printf '%s' "$raw" | jq -r '.[0].pubkey // .[0].npub // .[0].public_key // empty' 2>/dev/null || true)
     if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi

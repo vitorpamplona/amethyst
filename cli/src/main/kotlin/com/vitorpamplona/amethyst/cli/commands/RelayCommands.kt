@@ -146,7 +146,11 @@ object RelayCommands {
                 "dm",
                 ChatMessageRelayListEvent.KIND,
                 setOf("chat", "inbox-dm"),
-                read = { c, pk -> c.dmInboxOf(pk)?.relays().orEmpty() },
+                // allRelays(), not relays(): every Flat here is read for SELF,
+                // and the filtered accessor drops local entries meant for
+                // attacker-supplied lists — making a deliberately configured
+                // local relay report as no configuration at all.
+                read = { c, pk -> c.dmInboxOf(pk)?.allRelays().orEmpty() },
                 build = { c, r -> ChatMessageRelayListEvent.create(r, c.signer) },
             ),
             Flat(
@@ -154,7 +158,7 @@ object RelayCommands {
                 "key_package",
                 KeyPackageRelayListEvent.KIND,
                 setOf("keypackage", "key_package"),
-                read = { c, pk -> c.keyPackageRelaysOf(pk)?.relays().orEmpty() },
+                read = { c, pk -> c.keyPackageRelaysOf(pk)?.allRelays().orEmpty() },
                 build = { c, r -> KeyPackageRelayListEvent.create(r, c.signer) },
             ),
             Flat(
@@ -452,15 +456,21 @@ object RelayCommands {
                 "add" -> {
                     val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
                     val existing = flat.read(ctx, self)
-                    val added = existing.none { it.url == url.url }
-                    if (added) ctx.verifyAndStore(flat.build(ctx, existing + url))
+                    // Report what the STORE did, not what we decided to try.
+                    // These used to report the decision, so a rejected write
+                    // printed `added: yes` and the caller only found out much
+                    // later, when a publish silently fell back to defaults.
+                    val added =
+                        existing.none { it.url == url.url } &&
+                            ctx.verifyAndStore(flat.build(ctx, existing + url))
                     Output.emit(mapOf("noun" to flat.noun, "kind" to flat.kind, "url" to url.url, "added" to added))
                 }
                 "remove", "rm" -> {
                     val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
                     val existing = flat.read(ctx, self)
-                    val removed = existing.any { it.url == url.url }
-                    if (removed) ctx.verifyAndStore(flat.build(ctx, existing.filterNot { it.url == url.url }))
+                    val removed =
+                        existing.any { it.url == url.url } &&
+                            ctx.verifyAndStore(flat.build(ctx, existing.filterNot { it.url == url.url }))
                     Output.emit(mapOf("noun" to flat.noun, "kind" to flat.kind, "url" to url.url, "removed" to removed))
                 }
                 "set" -> {
@@ -601,13 +611,11 @@ object RelayCommands {
                 val existing = flat.read(ctx, self)
                 changed[flat.jsonKey] =
                     if (add) {
-                        val doAdd = existing.none { it.url == url.url }
-                        if (doAdd) ctx.verifyAndStore(flat.build(ctx, existing + url))
-                        doAdd
+                        existing.none { it.url == url.url } &&
+                            ctx.verifyAndStore(flat.build(ctx, existing + url))
                     } else {
-                        val doRemove = existing.any { it.url == url.url }
-                        if (doRemove) ctx.verifyAndStore(flat.build(ctx, existing.filterNot { it.url == url.url }))
-                        doRemove
+                        existing.any { it.url == url.url } &&
+                            ctx.verifyAndStore(flat.build(ctx, existing.filterNot { it.url == url.url }))
                     }
             }
 

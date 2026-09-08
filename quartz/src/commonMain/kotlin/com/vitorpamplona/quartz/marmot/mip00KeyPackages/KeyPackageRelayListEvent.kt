@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -48,7 +49,31 @@ class KeyPackageRelayListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    /**
+     * Relays from this list, with local-network entries dropped.
+     *
+     * The drop is for lists that came from SOMEONE ELSE. A relay list is
+     * attacker-supplied input, and an entry pointing at `127.0.0.1` or a
+     * RFC 1918 address would aim our connection at our own machine or LAN. It
+     * is also what exempts a relay from Tor, so an unfiltered entry could
+     * quietly strip a relay's own onion routing.
+     *
+     * Use [allRelays] to read back a list this account published itself; our
+     * own configuration is not attacker-supplied, and silently dropping it
+     * makes a deliberately configured local relay look unconfigured.
+     */
     fun relays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag::parse)
+
+    /**
+     * Every relay in this list, including local ones.
+     *
+     * For reading back OUR OWN published list. A user who configured a local
+     * relay meant it, and [relays] would report their list as empty — which a
+     * publisher then treats as "unconfigured" and answers with a default set
+     * the user never chose. Sending a KeyPackage somewhere the user did not
+     * pick is a worse outcome than the one the filter guards against.
+     */
+    fun allRelays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag::parseUnfiltered)
 
     companion object {
         const val KIND = 10051
@@ -98,12 +123,11 @@ class KeyPackageRelayListEvent(
 private object RelayTag {
     const val TAG_NAME = "relay"
 
-    fun parse(tag: Array<String>): NormalizedRelayUrl? {
+    fun parse(tag: Array<String>): NormalizedRelayUrl? = parseUnfiltered(tag)?.takeUnless { it.isLocalHost() }
+
+    fun parseUnfiltered(tag: Array<String>): NormalizedRelayUrl? {
         if (tag.size < 2 || tag[0] != TAG_NAME || tag[1].isEmpty()) return null
-        val relay =
-            com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-                .normalizeOrNull(tag[1])
-        return relay?.takeUnless { it.isLocalHost() }
+        return RelayUrlNormalizer.normalizeOrNull(tag[1])
     }
 
     fun assemble(relay: NormalizedRelayUrl) = arrayOf(TAG_NAME, relay.url)

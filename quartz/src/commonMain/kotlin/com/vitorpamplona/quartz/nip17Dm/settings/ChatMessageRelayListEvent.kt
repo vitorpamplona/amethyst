@@ -42,6 +42,9 @@ class ChatMessageRelayListEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun relays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag::parse)
 
+    /** Every relay in this list, local ones included. For reading back our OWN list. */
+    fun allRelays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag::parseUnfiltered)
+
     companion object {
         const val KIND = 10050
 

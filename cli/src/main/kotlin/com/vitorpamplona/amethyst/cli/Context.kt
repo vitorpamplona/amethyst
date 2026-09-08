@@ -480,12 +480,19 @@ class Context(
             ?: DefaultDMRelayList.toSet()
 
     /**
-     * KeyPackage relays (MIP-00 kind:10051) for this account. Falls
-     * back to [outboxRelays] when no kind:10051 has been seen — same
-     * fallback the Android app uses for KeyPackage discovery.
+     * Our own KeyPackage relay list (MIP-00 kind:10051). Falls back to
+     * [outboxRelays] when no kind:10051 has been seen — the same fallback the
+     * Android app uses for KeyPackage discovery.
+     *
+     * `allRelays()`, not `relays()`: the filtered accessor drops local-network
+     * entries because someone else's list is attacker-supplied input, but this
+     * is a list we published ourselves. Reading it filtered made a deliberately
+     * configured local relay look like no configuration at all, and the
+     * publisher then fell back to a default relay set the operator never chose
+     * — sending a KeyPackage somewhere they did not pick.
      */
     suspend fun keyPackageRelays(): Set<NormalizedRelayUrl> =
-        keyPackageRelaysOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
+        keyPackageRelaysOf(identity.pubKeyHex)?.allRelays()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: outboxRelays()
 
     /** Union of all three buckets. */

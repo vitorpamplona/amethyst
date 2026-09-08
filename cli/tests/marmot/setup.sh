@@ -210,6 +210,11 @@ start_daemon() {
       -exec rm -rf {} + 2>/dev/null || true
   fi
   mkdir -p "$data_dir/logs"
+  # MDK refuses to create its socket if the socket's parent directory is
+  # group-writable or world-accessible ("unsafe on-disk permissions"). A default
+  # umask gives 0755, so tighten it explicitly rather than depending on whatever
+  # umask the caller's shell happens to have.
+  chmod 700 "$data_dir"
   # --discovery-relays / --default-account-relays are native wnd flags that
   # force both the discovery plane and freshly-created accounts' NIP-65 / inbox
   # / key-package lists onto our loopback relay (kills the "can't reach nos.lol"
@@ -222,6 +227,7 @@ start_daemon() {
   # --secret-store file replaces the old mock-keyring source patch: account
   # secrets live in files under the data dir, so the daemon comes up in
   # containers and CI where the kernel keyring is unavailable.
+  #
   nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
       --socket "$socket" --secret-store file \
       --discovery-relays "$RELAY_URL" --default-account-relays "$RELAY_URL" \

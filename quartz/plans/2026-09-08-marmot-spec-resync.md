@@ -586,9 +586,38 @@ Writing the producer side immediately found two bugs the reader-side tests could
 
 ## What is NOT done
 
-- **The interop harness has never been run.** Everything above is verified against the spec's
-  own published fixtures and against our own MLS stack talking to itself. Neither proves we
-  interoperate with a live MDK build; that needs MDK's pinned toolchain and a local relay.
+- **The interop harness now RUNS but does not pass.** It used to die in preflight; it now
+  builds MDK 0.9.20 (against the same OpenMLS fork rev `mdk-vector-gen` pins), boots
+  nostr-rs-relay, brings up both `wnd` daemons and `amy`, and executes all 17 scenarios. Every
+  one fails, all downstream of Test 01 (MDK cannot find A's KeyPackage). Four environment
+  blockers were fixed to get that far, all recorded in the harness:
+  - `protoc` is a build prerequisite MDK now needs.
+  - MDK 0.9.x requires `WN_ALLOW_LOOPBACK_RELAYS=1` before it will accept a `ws://` loopback
+    relay at all; without it `wnd` exits before creating its socket.
+  - MDK refuses to create its socket unless the socket's parent directory is `0700`.
+  - `wn --json whoami` moved to `{"ok":true,"result":{"accounts":[…]}}`; the harness's
+    `extract_pubkey` probed only the older array shapes and silently returned nothing.
+
+  Two real defects in our own code came out of the run, both fixed:
+  - `amy relay add` reported success from the DECISION to write, not the store's answer, so a
+    rejected or no-op write printed `added: yes`.
+  - Our own KeyPackage/DM relay lists were read back through the local-network filter. That
+    filter is right for someone else's list — it is attacker-supplied input, and it is also what
+    exempts a relay from Tor — but applying it to a list we published ourselves made a
+    deliberately configured local relay look like no configuration at all. The publisher then
+    fell back to a default set, and A's KeyPackage went to five PUBLIC relays instead of the
+    harness's loopback. `allRelays()` now exists for reading back our own lists, and the
+    KeyPackage publish goes only to the configured relay.
+
+  **Still blocking Test 01:** the kind-10051 list persists under `relay key-package set` but not
+  under `relay add`/`relay key-package add`, so MDK finds no relay list to fetch A's KeyPackage
+  from. `verifyAndStore` returns true and kind 10050 works through the identical code path, so
+  this is a storage/CLI issue rather than a protocol one, and it needs its own focused pass.
+
+  **Also unresolved, and it is a design conflict rather than a bug:** MDK accepts `ws://` ONLY
+  for a loopback host, while quartz strips exactly those hosts out of relay lists. No address
+  satisfies both, so a loopback-relay harness cannot work until one side moves. Changing a
+  Tor-adjacent privacy guard is a maintainer decision, not one to make in passing.
 - **`MarmotManager.createGroup` (the MIP-era path) is still the one the UI calls.**
   `createCurrentProfileGroup` exists, is wired, and is tested, but the Android and desktop
   "new group" flows still call the legacy one. KeyPackage publishing HAS switched: it now

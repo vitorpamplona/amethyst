@@ -54,6 +54,15 @@ RELAY_PORT="${RELAY_PORT:-8080}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 NO_BUILD=0
 
+# Required as of MDK 0.9.x. `validate_relay_url` accepts `wss://`
+# unconditionally but `ws://` only for a loopback host AND only behind this
+# explicit opt-in; without it wnd refuses the harness relay with "invalid relay
+# URL" and exits before creating its socket. 127.0.0.2 is inside 127.0.0.0/8 and
+# already passes MDK's own loopback test, so the env var is the gate, not the
+# address. Exported once here so `wn` and `wnd` both inherit it — `wn` runs the
+# same validation on any relay argument.
+export WN_ALLOW_LOOPBACK_RELAYS=1
+
 A_NPUB=""
 A_HEX=""
 B_NPUB=""
