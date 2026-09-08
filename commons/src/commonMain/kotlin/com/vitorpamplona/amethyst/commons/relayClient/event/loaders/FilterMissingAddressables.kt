@@ -116,63 +116,104 @@ fun filterMissingAddressables(
  * limit down to their own `maxLimit` (`LimitsPolicy.applyLimits`), so one filter asking for 240
  * coordinates with `limit = 240` comes back holding only `maxLimit` of them, and the rest go
  * missing with no error to notice. Chunks keep each `limit` small enough to survive the clamp.
+ *
+ * Written as one pass into nested maps rather than `partition`/`groupBy`/`distinct`/`sorted`
+ * chains: this runs on every filter rebuild, several times a second, and each of those operators
+ * is another intermediate list. `groupBy { kind to pubKeyHex }` alone allocated a `Pair` and a
+ * boxed `Int` per address. No de-duplication is needed either -- the input is a `Set<Address>` and
+ * `Address` is a data class, so two entries in one group cannot share a `d`.
  */
 fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<Address>>): List<RelayBasedFilter> {
     if (missingAddressables.isEmpty()) return emptyList()
 
-    return missingAddressables.flatMap { (relay, addresses) ->
-        // A replaceable event below 25000 with no `d` is addressed by kind and author alone, so it
-        // cannot join a `#d` group.
-        val (withoutDTag, withDTag) = addresses.partition { it.kind < 25000 && it.dTag.isBlank() }
+    val filters = mutableListOf<RelayBasedFilter>()
 
-        val byKindAndAuthor =
-            withDTag
-                .groupBy { it.kind to it.pubKeyHex }
-                .flatMap { (kindAndAuthor, group) ->
-                    val (kind, author) = kindAndAuthor
-                    group
-                        .map { it.dTag }
-                        .distinct()
-                        .sorted()
-                        .chunked(MAX_VALUES_PER_FILTER)
-                        .map { dTags ->
-                            RelayBasedFilter(
-                                relay = relay,
-                                filter =
-                                    ExplainedFilter(
-                                        purpose = SubPurpose.REFERENCED_EVENTS,
-                                        kinds = listOf(kind),
-                                        tags = mapOf("d" to dTags),
-                                        authors = listOf(author),
-                                        limit = dTags.size,
-                                    ),
-                            )
-                        }
+    missingAddressables.forEach { (relay, addresses) ->
+        if (addresses.isEmpty()) return@forEach
+
+        // kind -> author -> the `d`s wanted from that author
+        var byAuthor: MutableMap<Int, MutableMap<String, MutableList<String>>>? = null
+        // A replaceable below 25000 with no `d` is addressed by kind and author alone, so it
+        // cannot join a `#d` group. Rare, so the map is only built if one turns up.
+        var plain: MutableMap<Int, MutableList<String>>? = null
+
+        addresses.forEach { address ->
+            if (address.kind < 25000 && address.dTag.isBlank()) {
+                (plain ?: HashMap<Int, MutableList<String>>().also { plain = it })
+                    .getOrPut(address.kind) { mutableListOf() }
+                    .add(address.pubKeyHex)
+            } else {
+                (byAuthor ?: HashMap<Int, MutableMap<String, MutableList<String>>>().also { byAuthor = it })
+                    .getOrPut(address.kind) { HashMap() }
+                    .getOrPut(address.pubKeyHex) { mutableListOf() }
+                    .add(address.dTag)
+            }
+        }
+
+        byAuthor?.forEach { (kind, authors) ->
+            val kinds = listOf(kind)
+            authors.forEach { (author, dTags) ->
+                val authorList = listOf(author)
+                dTags.sort()
+                forEachChunk(dTags) { chunk ->
+                    filters.add(
+                        RelayBasedFilter(
+                            relay = relay,
+                            filter =
+                                ExplainedFilter(
+                                    purpose = SubPurpose.REFERENCED_EVENTS,
+                                    kinds = kinds,
+                                    tags = mapOf("d" to chunk),
+                                    authors = authorList,
+                                    limit = chunk.size,
+                                ),
+                        ),
+                    )
                 }
+            }
+        }
 
-        val byKind =
-            withoutDTag
-                .groupBy { it.kind }
-                .flatMap { (kind, group) ->
-                    group
-                        .map { it.pubKeyHex }
-                        .distinct()
-                        .sorted()
-                        .chunked(MAX_VALUES_PER_FILTER)
-                        .map { authors ->
-                            RelayBasedFilter(
-                                relay = relay,
-                                filter =
-                                    ExplainedFilter(
-                                        purpose = SubPurpose.REFERENCED_EVENTS,
-                                        kinds = listOf(kind),
-                                        authors = authors,
-                                        limit = authors.size,
-                                    ),
-                            )
-                        }
-                }
+        plain?.forEach { (kind, pubkeys) ->
+            val kinds = listOf(kind)
+            pubkeys.sort()
+            forEachChunk(pubkeys) { chunk ->
+                filters.add(
+                    RelayBasedFilter(
+                        relay = relay,
+                        filter =
+                            ExplainedFilter(
+                                purpose = SubPurpose.REFERENCED_EVENTS,
+                                kinds = kinds,
+                                authors = chunk,
+                                limit = chunk.size,
+                            ),
+                    ),
+                )
+            }
+        }
+    }
 
-        byKindAndAuthor + byKind
+    return filters
+}
+
+/**
+ * Hands [block] each [MAX_VALUES_PER_FILTER]-sized slice of [values], passing the list itself when
+ * it already fits -- which is nearly always. `chunked` would allocate an outer list plus a copy
+ * even for the single-chunk case.
+ */
+internal inline fun forEachChunk(
+    values: List<String>,
+    block: (List<String>) -> Unit,
+) {
+    if (values.size <= MAX_VALUES_PER_FILTER) {
+        block(values)
+        return
+    }
+
+    var from = 0
+    while (from < values.size) {
+        val to = minOf(from + MAX_VALUES_PER_FILTER, values.size)
+        block(values.subList(from, to))
+        from = to
     }
 }

@@ -144,17 +144,27 @@ fun filterMissingEvents(
 fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): List<RelayBasedFilter> {
     if (missingEventIds.isEmpty()) return emptyList()
 
-    return missingEventIds.flatMap { (relay, ids) ->
-        ids
-            .sorted()
-            .chunked(MAX_VALUES_PER_FILTER)
-            .map { chunk ->
+    val filters = mutableListOf<RelayBasedFilter>()
+
+    missingEventIds.forEach { (relay, ids) ->
+        if (ids.isEmpty()) return@forEach
+
+        // Sorted so a rebuild that found the same ids produces the same filter and the
+        // subscription is not torn down and re-sent for nothing.
+        val sorted = ids.toMutableList()
+        sorted.sort()
+
+        forEachChunk(sorted) { chunk ->
+            filters.add(
                 RelayBasedFilter(
                     relay = relay,
                     filter = ExplainedFilter(purpose = SubPurpose.REFERENCED_EVENTS, ids = chunk),
-                )
-            }
+                ),
+            )
+        }
     }
+
+    return filters
 }
 
 /**
