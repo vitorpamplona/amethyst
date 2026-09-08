@@ -204,6 +204,10 @@ private fun RatingStars(
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     },
+                // `Star` and `StarBorder` are the same codepoint — Material Symbols carries fill on
+                // a variable axis — so without this a five-star review draws five hollow stars and
+                // reads as an empty row. Tint alone cannot say "earned" here.
+                filled = isOn,
             )
         }
 

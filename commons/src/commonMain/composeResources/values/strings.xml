@@ -1393,6 +1393,10 @@
     <string name="external_id_scope">Comment on an external resource</string>
     <string name="url_preview_open_in_browser">Open in browser</string>
     <string name="long_form_reading_minutes">%1$d min read</string>
+    <plurals name="publication_section_count">
+        <item quantity="one">%1$d section</item>
+        <item quantity="other">%1$d sections</item>
+    </plurals>
     <string name="music_playlist_collaborative">Collaborative</string>
     <string name="music_playlist_private">Private</string>
     <string name="music_playlist_unknown_track">Unknown track</string>

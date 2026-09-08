@@ -190,6 +190,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderProfileCard
 import com.vitorpamplona.amethyst.ui.note.types.RenderPs1Save
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicationIndex
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
@@ -268,6 +269,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82So
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
@@ -1066,6 +1068,10 @@ private fun RenderNoteRow(
 
         is LongTextNoteEvent -> {
             RenderLongFormContent(baseNote, accountViewModel, nav)
+        }
+
+        is PublicationIndexEvent -> {
+            RenderPublicationIndex(baseNote, accountViewModel, nav)
         }
 
         is ThreadEvent -> {
