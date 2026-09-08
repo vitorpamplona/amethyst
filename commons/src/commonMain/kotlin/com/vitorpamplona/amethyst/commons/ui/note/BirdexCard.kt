@@ -27,20 +27,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bird_detection_title
 import com.vitorpamplona.amethyst.commons.resources.birdex_species_count
-import com.vitorpamplona.amethyst.commons.resources.birdex_species_preview_more
+import com.vitorpamplona.amethyst.commons.resources.birdex_species_more
+import com.vitorpamplona.amethyst.commons.resources.show_less
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexSpecies
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -51,44 +66,81 @@ private const val SPECIES_PREVIEW_LIMIT = 6
 private const val BIRD_PREFIX = "🐦 "
 
 /**
- * Minimal, fixed-size summary card for a Birdstar "Birdex" (kind 12473).
+ * Summary card for a Birdstar "Birdex" (kind 12473).
  *
- * The event has no body and no images, only a species list. To keep the card
- * bounded regardless of how many species a Birdex holds, we show the count and a
- * short preview of scientific names with a "+N more" suffix — no images, no
- * expansion, no network calls. The card is identical in the feed and the opened
- * view, so it takes no makeItShort flag.
+ * The event has no body and no images, only a species list, so the card is
+ * built from it: the count, then the scientific names, each one a link to the
+ * Wikidata entity the publisher paired it with. A Birdex grows without bound,
+ * so only [SPECIES_PREVIEW_LIMIT] names show at first, behind a "+N more"
+ * toggle that expands the rest in place — no images and no network calls
+ * either way. The card is identical in the feed and the opened view, so it
+ * takes no makeItShort flag.
  */
 @Composable
 fun BirdexCard(noteEvent: BirdexEvent) {
-    val names = remember(noteEvent) { noteEvent.speciesNames() }
-    val preview = remember(names) { names.take(SPECIES_PREVIEW_LIMIT) }
-    val remaining = names.size - preview.size
-    val joined = remember(preview) { preview.joinToString(", ") }
+    val species = remember(noteEvent) { noteEvent.species() }
+    var expanded by rememberSaveable(noteEvent) { mutableStateOf(false) }
+    val hidden = species.size - SPECIES_PREVIEW_LIMIT
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         Text(
-            text = BIRD_PREFIX + pluralStringResource(Res.plurals.birdex_species_count, names.size, names.size),
+            text = BIRD_PREFIX + pluralStringResource(Res.plurals.birdex_species_count, species.size, species.size),
             style = MaterialTheme.typography.titleMedium,
         )
 
-        if (preview.isNotEmpty()) {
+        if (species.isNotEmpty()) {
+            val linkColor = MaterialTheme.colorScheme.primary
+            val plainColor = MaterialTheme.colorScheme.placeholderText
+            val shown = if (expanded) species else species.take(SPECIES_PREVIEW_LIMIT)
+
             Spacer(Modifier.height(6.dp))
             Text(
+                text = remember(shown, linkColor, plainColor) { speciesList(shown, linkColor, plainColor) },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        if (hidden > 0) {
+            Spacer(Modifier.height(4.dp))
+            ClickableTextPrimary(
                 text =
-                    if (remaining > 0) {
-                        pluralStringResource(Res.plurals.birdex_species_preview_more, remaining, joined, remaining)
+                    if (expanded) {
+                        stringResource(Res.string.show_less)
                     } else {
-                        joined
+                        pluralStringResource(Res.plurals.birdex_species_more, hidden, hidden)
                     },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            ) { expanded = !expanded }
         }
     }
 }
+
+/**
+ * The species names as one comma-separated run of italics — the convention for
+ * scientific names — where each name that carries a Wikidata reference is a
+ * link to it. Names without one stay plain: nothing to open.
+ */
+private fun speciesList(
+    species: List<BirdexSpecies>,
+    linkColor: Color,
+    plainColor: Color,
+): AnnotatedString =
+    buildAnnotatedString {
+        val separator = SpanStyle(color = plainColor)
+        val plainName = SpanStyle(color = plainColor, fontStyle = FontStyle.Italic)
+        val linkedName = SpanStyle(color = linkColor, fontStyle = FontStyle.Italic)
+
+        species.forEachIndexed { index, entry ->
+            if (index > 0) withStyle(separator) { append(", ") }
+
+            val reference = entry.reference
+            if (reference != null) {
+                withLink(LinkAnnotation.Url(reference, TextLinkStyles(linkedName))) { append(entry.name) }
+            } else {
+                withStyle(plainName) { append(entry.name) }
+            }
+        }
+    }
 
 /**
  * Minimal card for a single Birdstar bird detection (kind 2473).

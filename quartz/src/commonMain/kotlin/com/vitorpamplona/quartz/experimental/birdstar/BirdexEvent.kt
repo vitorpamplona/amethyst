@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.experimental.birdstar
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -44,8 +45,9 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
  * - `alt` — a human-readable summary written by the publisher
  *           (e.g. `Birdex: 24 species`).
  *
- * Amethyst renders a minimal, fixed-size summary card from [speciesNames] and
- * [speciesCount]; it does not resolve the Wikidata references to images.
+ * Amethyst renders a minimal summary card from [species] and [speciesCount],
+ * linking each name to its Wikidata entry; it does not resolve the Wikidata
+ * references to images.
  */
 @Immutable
 class BirdexEvent(
@@ -62,6 +64,47 @@ class BirdexEvent(
     /** Scientific names of the collected species, in event order, from the `n` tags. */
     fun speciesNames() = tags.mapValueTagged("n") { it }
 
+    /**
+     * The collected species, in event order, each paired with the external
+     * reference (Wikidata entity URL) the publisher filed it under.
+     *
+     * The two tag families are positional, not keyed: Birdstar writes an `i`
+     * immediately before its `n`, so an `i` binds to the `n` next to it — the
+     * one right after it, or, when the pair is written the other way round, the
+     * one right before. A name with no adjacent `i` (or one whose `i` is not a
+     * web URL, which a UI could not open) keeps a null reference and renders as
+     * plain text.
+     */
+    fun species(): List<BirdexSpecies> {
+        val species = ArrayList<BirdexSpecies>(tags.size / 2)
+        var pendingReference: String? = null
+        var lastWasName = false
+
+        tags.fastForEach {
+            if (it.size > 1) {
+                when (it[0]) {
+                    "n" -> {
+                        species.add(BirdexSpecies(it[1], pendingReference))
+                        pendingReference = null
+                        lastWasName = true
+                    }
+                    "i" -> {
+                        val reference = it[1].asWebReference()
+                        val last = species.lastOrNull()
+                        if (lastWasName && last != null && last.reference == null) {
+                            species[species.lastIndex] = BirdexSpecies(last.name, reference)
+                        } else {
+                            pendingReference = reference
+                        }
+                        lastWasName = false
+                    }
+                }
+            }
+        }
+
+        return species
+    }
+
     /** Number of collected species (one `n` tag per species). */
     fun speciesCount() = speciesNames().size
 
@@ -72,3 +115,19 @@ class BirdexEvent(
         const val KIND = 12473
     }
 }
+
+/** One entry of a [BirdexEvent] life list: a scientific name and where it points. */
+@Immutable
+class BirdexSpecies(
+    /** The species' scientific name, from an `n` tag (e.g. `Icterus galbula`). */
+    val name: String,
+    /** The species' Wikidata entity URL, from the adjacent `i` tag, or null. */
+    val reference: String?,
+)
+
+/**
+ * Keeps only references a UI can open as a link. Birdstar's `i` tags are
+ * Wikidata entity URLs, but the tag is free-form, so anything that is not
+ * http(s) is dropped here rather than at every call site.
+ */
+internal fun String.asWebReference() = takeIf { it.startsWith("https://") || it.startsWith("http://") }
