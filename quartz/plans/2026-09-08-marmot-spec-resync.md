@@ -1,7 +1,7 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stages 0-4 done. Stages 5-6 have their protocol cores landed; the pass scheduler,
-candidate-graph replay and Stage 7 remain.
+Status: Stages 0-6 landed in Quartz (selection + bounded pass; candidate-graph replay and
+the inbound wiring remain). The app layer still creates MIP-era groups. Stage 7 open.
 
 Sources checked on 2026-09-08:
 
@@ -475,3 +475,35 @@ Consequences to plan around, since they are now ours to carry:
   how we would drift again.
 - Byte-level conformance is the only thing that keeps us honest, so every stage below lands with
   vectors from `marmot-profile-gen`, not just unit tests written against our own reading.
+
+## Producing current-profile groups
+
+`CurrentProfileGroupFactory` builds current-profile leaves, KeyPackages and groups. The order
+it enforces is not stylistic: a leaf must carry an identity proof over its OWN signature key,
+and only an account signer — possibly a remote bunker — can produce that proof, so the keypair
+is generated first, authorized, and only then built into a leaf. A proof cannot be added
+afterwards by code that only sees a finished leaf. `MlsGroup.create` / `createKeyPackage` gained
+leaf-extension, capability and required-capability parameters to make that possible.
+
+Writing the producer side immediately found two bugs the reader-side tests could not:
+
+1. `buildLeafNode` accepted leaf extensions and then wrote `extensions = emptyList()`. Every
+   leaf we built would have silently dropped its identity proof.
+2. Fresh KeyPackages carried `Lifetime(0, Long.MAX_VALUE)`. That fails the bound Stage 4 had
+   just started enforcing, so every KeyPackage we published would have been rejected by any
+   conformant peer — including, once Stage 4 landed, by us. Now `now - 1h` to `+84 days`.
+
+## What is NOT done
+
+- **The app layer still creates MIP-era groups.** `MarmotManager.createGroup` takes a
+  `MarmotGroupData`; nothing in `commons`, `amethyst`, `desktopApp` or `cli` calls
+  `CurrentProfileGroupFactory` yet. The Quartz half is ready and tested; the wiring is not
+  written.
+- **Convergence is not on the inbound path.** `BranchSelector` and `ConvergencePass` exist and
+  are tested, but `MarmotInboundProcessor` still routes commits through `CommitOrdering`'s
+  superseded timestamp/event-id tiebreak. What is missing between them is the candidate-graph
+  builder that replays MLS bytes against retained states.
+- **The lifecycle states gate nothing.** `GroupLifecycleState` is a correct model with no
+  enforcement behind it.
+- Stage 7: durability/restart conformance, app payload kinds `1009`/`1210`, encrypted-media v2,
+  the push owner proof (kind `451`).

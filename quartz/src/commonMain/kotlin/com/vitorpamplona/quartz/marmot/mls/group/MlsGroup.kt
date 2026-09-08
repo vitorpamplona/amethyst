@@ -340,10 +340,24 @@ class MlsGroup private constructor(
     fun createKeyPackage(
         identity: ByteArray,
         signingKey: ByteArray,
+        /**
+         * The leaf signature keypair to use, when the caller had to generate it
+         * up front.
+         *
+         * A current-profile leaf must carry an account identity proof over its
+         * OWN signature key, and that proof is produced by an account signer
+         * that may be remote. So the caller generates the keypair, signs the
+         * proof against its public half, and hands both back here — the proof
+         * cannot be computed after the fact by code that only sees the leaf.
+         */
+        leafSignatureKeyPair: com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519KeyPair? = null,
+        leafExtensions: List<Extension> = emptyList(),
+        capabilities: Capabilities = marmotLeafCapabilities(),
+        keyPackageExtensions: List<Extension> = emptyList(),
     ): KeyPackageBundle {
         val initKp = X25519.generateKeyPair()
         val encKp = X25519.generateKeyPair()
-        val sigKp = Ed25519.generateKeyPair()
+        val sigKp = leafSignatureKeyPair ?: Ed25519.generateKeyPair()
 
         val leafNode =
             buildLeafNode(
@@ -352,12 +366,15 @@ class MlsGroup private constructor(
                 identity = identity,
                 source = LeafNodeSource.KEY_PACKAGE,
                 signingKey = sigKp.privateKey,
+                capabilities = capabilities,
+                leafExtensions = leafExtensions,
             )
 
         val unsigned =
             MlsKeyPackage(
                 initKey = initKp.publicKey,
                 leafNode = leafNode,
+                extensions = keyPackageExtensions,
                 signature = ByteArray(0),
             )
         val kp =
@@ -2891,6 +2908,19 @@ class MlsGroup private constructor(
         /** MLS self_remove proposal type (MIP-00 / MIP-03). */
         private const val SELF_REMOVE_PROPOSAL_TYPE = 0x000A
 
+        /** MLS extensions draft `app_data_update` proposal type. */
+        private const val APP_DATA_UPDATE_PROPOSAL_TYPE = 0x0008
+
+        /** How far back a fresh KeyPackage LeafNode's `not_before` is set. */
+        private const val LIFETIME_SKEW_SECONDS = 3_600L
+
+        /**
+         * 84 days. The spec's ceiling is 84 days plus one hour of skew, so this
+         * leaves the whole skew allowance as headroom rather than sitting
+         * exactly on the limit.
+         */
+        private const val LIFETIME_SPAN_SECONDS = 84L * 24 * 60 * 60
+
         /** Marmot Group Data Extension type (MIP-01). */
         private const val MARMOT_GROUP_DATA_EXTENSION_TYPE = 0xF2EE
 
@@ -3129,12 +3159,61 @@ class MlsGroup private constructor(
             )
 
         /**
+         * Leaf capabilities for the current profile.
+         *
+         * RFC 9420 §7.2 forbids advertising DEFAULT extension types, so only
+         * the draft `app_data_dictionary` extension and the `app_data_update`
+         * proposal appear — `required_capabilities` support is implicit.
+         */
+        fun currentProfileLeafCapabilities(): Capabilities =
+            Capabilities(
+                extensions = listOf(AppDataDictionary.EXTENSION_TYPE),
+                proposals = listOf(APP_DATA_UPDATE_PROPOSAL_TYPE, SELF_REMOVE_PROPOSAL_TYPE),
+            )
+
+        /**
+         * `required_capabilities` for a new current-profile group: extension
+         * `0x0006` and proposal `0x0008`.
+         *
+         * The Marmot components a group requires are negotiated in the
+         * upstream `app_components` component INSIDE the dictionary, not here —
+         * MLS `RequiredCapabilities` carries only MLS-level primitives.
+         */
+        fun buildCurrentProfileRequiredCapabilitiesExtension(): Extension {
+            val writer = TlsWriter()
+            val exts = TlsWriter()
+            exts.putUint16(AppDataDictionary.EXTENSION_TYPE)
+            writer.putOpaqueVarInt(exts.toByteArray())
+            val props = TlsWriter()
+            props.putUint16(APP_DATA_UPDATE_PROPOSAL_TYPE)
+            writer.putOpaqueVarInt(props.toByteArray())
+            val creds = TlsWriter()
+            creds.putUint16(Credential.CREDENTIAL_TYPE_BASIC)
+            writer.putOpaqueVarInt(creds.toByteArray())
+            return Extension(REQUIRED_CAPABILITIES_EXTENSION_TYPE, writer.toByteArray())
+        }
+
+        /**
          * Create a new MLS group with a single member (the creator).
          */
         fun create(
             identity: ByteArray,
             signingKey: ByteArray? = null,
-            initialExtensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> = emptyList(),
+            initialExtensions: List<Extension> = emptyList(),
+            /**
+             * LeafNode extensions for the creator's own leaf. A current-profile
+             * group MUST put its `app_data_dictionary` here, carrying the
+             * account identity proof — the proof is leaf-only and can never be
+             * added later by a proposal.
+             */
+            leafExtensions: List<Extension> = emptyList(),
+            capabilities: Capabilities = marmotLeafCapabilities(),
+            /**
+             * The `required_capabilities` extension for epoch 0. Defaults to
+             * the MIP-era set; a current-profile group passes
+             * [buildCurrentProfileRequiredCapabilitiesExtension].
+             */
+            requiredCapabilities: Extension = buildMarmotRequiredCapabilitiesExtension(),
         ): MlsGroup {
             val sigKp =
                 signingKey?.let { key ->
@@ -3153,6 +3232,8 @@ class MlsGroup private constructor(
                     identity = identity,
                     source = LeafNodeSource.KEY_PACKAGE,
                     signingKey = sigKp.privateKey,
+                    capabilities = capabilities,
+                    leafExtensions = leafExtensions,
                 )
 
             val tree = RatchetTree(1)
@@ -3163,7 +3244,7 @@ class MlsGroup private constructor(
             // bake into epoch 0 (e.g. the MIP-01 MarmotGroupData extension so
             // new peers who join later can see the group name without first
             // decrypting a pre-membership bootstrap commit — see MIP-03).
-            val baseExtensions = listOf(buildMarmotRequiredCapabilitiesExtension())
+            val baseExtensions = listOf(requiredCapabilities)
             val groupContext =
                 GroupContext(
                     groupId = groupId,
@@ -3725,24 +3806,35 @@ class MlsGroup private constructor(
             groupId: ByteArray? = null,
             leafIndex: Int? = null,
             parentHash: ByteArray? = null,
+            capabilities: Capabilities = marmotLeafCapabilities(),
+            leafExtensions: List<Extension> = emptyList(),
         ): LeafNode {
             val unsigned =
                 LeafNode(
                     encryptionKey = encryptionKey,
                     signatureKey = signatureKey,
                     credential = Credential.Basic(identity),
-                    // Advertise MIP-01/MIP-03 required capabilities so we can be
+                    // Advertise the profile's required capabilities so we can be
                     // added to compliant groups that mark them as required.
-                    capabilities = marmotLeafCapabilities(),
+                    capabilities = capabilities,
                     leafNodeSource = source,
                     lifetime =
                         if (source == LeafNodeSource.KEY_PACKAGE) {
-                            Lifetime(0, Long.MAX_VALUE)
+                            // A real, bounded window. `Lifetime(0, Long.MAX_VALUE)`
+                            // used to go here, which any receiver enforcing
+                            // `foundation/key-packages.md` rejects outright: the
+                            // extension must be current AND span at most
+                            // 7,261,200s (84 days + an hour of clock skew).
+                            // The one-hour backdate gives a peer with a slow
+                            // clock a window in which the package is already
+                            // valid.
+                            val notBefore = TimeUtils.now() - LIFETIME_SKEW_SECONDS
+                            Lifetime(notBefore, notBefore + LIFETIME_SPAN_SECONDS)
                         } else {
                             null
                         },
                     parentHash = parentHash,
-                    extensions = emptyList(),
+                    extensions = leafExtensions,
                     signature = ByteArray(0), // Placeholder
                 )
 
