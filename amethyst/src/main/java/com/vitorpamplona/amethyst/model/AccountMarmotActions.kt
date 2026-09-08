@@ -222,11 +222,12 @@ class AccountMarmotActions(
                 "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
         }
 
-        // Publish commit first (critical ordering)
+        // The commit was published by the manager, which only advances the
+        // group once a relay acknowledged it (publish-before-apply). Publishing
+        // it again here would just duplicate the event.
         Log.d("MarmotDbg") {
-            "addMarmotGroupMember: publishing commit kind:${commitEvent.signedEvent.kind} to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+            "addMarmotGroupMember: commit kind:${commitEvent.signedEvent.kind} published to ${groupRelays.size} relay(s)"
         }
-        account.client.publish(commitEvent.signedEvent, groupRelays.toSet())
 
         // Then send the Welcome gift wrap to the new member.
         //
@@ -431,8 +432,7 @@ class AccountMarmotActions(
             }
             if (remaining.isNotEmpty()) {
                 val demoted = metadata.copy(adminPubkeys = remaining)
-                val demoteCommit = manager.updateGroupMetadata(nostrGroupId, demoted)
-                account.client.publish(demoteCommit.signedEvent, groupRelays)
+                manager.updateGroupMetadata(nostrGroupId, demoted, groupRelays.toList())
             }
         }
 
@@ -492,17 +492,16 @@ class AccountMarmotActions(
             return
         }
 
-        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
+        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex, groupRelays.toList())
         Log.d("MarmotDbg") {
             "removeMarmotGroupMember: built commit kind=${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
         }
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
         Log.d("MarmotDbg") {
-            "removeMarmotGroupMember: publishing commit id=${outbound.signedEvent.id.take(8)}… " +
-                "to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+            "removeMarmotGroupMember: commit id=${outbound.signedEvent.id.take(8)}… " +
+                "published to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
         }
-        account.client.publish(outbound.signedEvent, groupRelays)
     }
 
     /**
@@ -517,13 +516,12 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val outbound = manager.updateGroupMetadata(nostrGroupId, metadata)
-        // The MLS commit has already been applied locally — surface the new
-        // metadata in the chatroom now so the UI reflects it without waiting
-        // for the relay round-trip.
+        manager.updateGroupMetadata(nostrGroupId, metadata, groupRelays.toList())
+        // The commit was published and acknowledged before it became canonical,
+        // so the local state is already the one peers will see — surface it now
+        // rather than waiting for our own event to loop back.
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
-        account.client.publish(outbound.signedEvent, groupRelays)
     }
 
     /**

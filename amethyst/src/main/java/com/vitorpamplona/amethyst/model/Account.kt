@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
+import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -212,6 +213,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -920,7 +922,22 @@ class Account(
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
-    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it, marmotMessageStore, marmotKeyPackageStore) }
+    val marmotManager: MarmotManager? =
+        mlsGroupStateStore?.let {
+            MarmotManager(
+                signer,
+                it,
+                marmotMessageStore,
+                marmotKeyPackageStore,
+                // Publish-before-apply: a group-state change becomes canonical
+                // only once a relay in the group's own scope returns OK true.
+                // `publishAndConfirm` is exactly that "at least one
+                // acknowledged accept" rule; a plain `publish` would report
+                // success for bytes nobody took.
+                MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays) },
+                scope = scope,
+            )
+        }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 

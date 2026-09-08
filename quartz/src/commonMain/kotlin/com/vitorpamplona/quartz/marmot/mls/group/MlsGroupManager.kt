@@ -332,6 +332,80 @@ class MlsGroupManager(
         }
 
     /**
+     * A locally prepared Commit that has NOT been applied.
+     *
+     * `protocol-core/publish-lifecycle.md` requires publish-before-apply: a
+     * locally generated group-state change must not become canonical until its
+     * publish obligation is confirmed. Applying first and rolling back on
+     * failure is not equivalent — between the two there is a window in which
+     * this client is forked from every peer, and a crash inside that window
+     * makes the fork permanent.
+     *
+     * So the commit is prepared on a CLONE restored from [priorState]. The live
+     * group is untouched, keeps its pending proposals (which is exactly the
+     * "proposal stays available for retry" rule on failure), and [pendingState]
+     * becomes canonical only via [installState] once publication is confirmed.
+     */
+    class StagedCommit(
+        val result: CommitResult,
+        /** Canonical state the commit was generated from. */
+        val priorState: MlsGroupState,
+        /** What becomes canonical once the publish obligation succeeds. */
+        val pendingState: MlsGroupState,
+    )
+
+    /**
+     * Prepare a Commit without applying it, by running [prepare] on a clone.
+     *
+     * The clone's pre-commit exporter secret equals the live group's, so the
+     * outbound kind:445 is outer-encrypted with the same epoch-N key it would
+     * have been either way.
+     */
+    private suspend fun stage(
+        nostrGroupId: HexKey,
+        prepare: (MlsGroup) -> CommitResult,
+    ): StagedCommit =
+        mutex.withLock {
+            val live = requireGroup(nostrGroupId)
+            val priorState = live.saveState()
+            val clone = MlsGroup.restore(priorState)
+            val result = prepare(clone)
+            StagedCommit(result, priorState, clone.saveState())
+        }
+
+    /** Stage an Add. See [StagedCommit] for why this does not apply. */
+    suspend fun stageAddMember(
+        nostrGroupId: HexKey,
+        keyPackageBytes: ByteArray,
+    ): StagedCommit = stage(nostrGroupId) { it.addMember(keyPackageBytes) }
+
+    /** Stage a Remove. See [StagedCommit] for why this does not apply. */
+    suspend fun stageRemoveMember(
+        nostrGroupId: HexKey,
+        targetLeafIndex: Int,
+    ): StagedCommit = stage(nostrGroupId) { it.removeMember(targetLeafIndex) }
+
+    /** Stage a GroupContextExtensions change. See [StagedCommit]. */
+    suspend fun stageUpdateGroupExtensions(
+        nostrGroupId: HexKey,
+        extensions: List<Extension>,
+    ): StagedCommit {
+        val live = requireGroup(nostrGroupId)
+        val currentMarmot = live.currentMarmotData()
+        val adminsConfigured = currentMarmot != null && currentMarmot.adminPubkeys.isNotEmpty()
+        check(!adminsConfigured || live.isLocalAdmin()) {
+            "MIP-01: only admins may update group extensions"
+        }
+        return stage(nostrGroupId) { clone ->
+            clone.proposeGroupContextExtensions(extensions)
+            clone.commit()
+        }
+    }
+
+    /** Stage a self-update / empty Commit. See [StagedCommit]. */
+    suspend fun stageCommit(nostrGroupId: HexKey): StagedCommit = stage(nostrGroupId) { it.commit() }
+
+    /**
      * Process a received Commit, advancing the epoch.
      *
      * @param nostrGroupId hex-encoded Nostr group ID

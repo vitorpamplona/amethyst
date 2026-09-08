@@ -224,7 +224,11 @@ class MarmotManagerLeaveRejoinTest {
         val mls = InMemoryMlsGroupStateStore()
         val kp = InMemoryKeyPackageBundleStore()
         val msg = InMemoryMarmotMessageStore()
-        return Fixture(MarmotManager(signer, mls, msg, kp), mls, kp, msg)
+        // Publish-before-apply needs an acknowledged accept, so a manager with
+        // no publisher can never advance group state. This stands in for a
+        // relay that accepts everything.
+        val acceptingRelay = MarmotPublisher { _, _ -> true }
+        return Fixture(MarmotManager(signer, mls, msg, kp, acceptingRelay), mls, kp, msg)
     }
 }
 

@@ -39,15 +39,20 @@ import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
+import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
+import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
+import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishGate
+import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
+import com.vitorpamplona.quartz.marmot.protocolCore.PublishOutcome
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
@@ -55,6 +60,10 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -75,6 +84,27 @@ class MarmotManager(
     store: MlsGroupStateStore,
     val messageStore: MarmotMessageStore? = null,
     val keyPackageStore: KeyPackageBundleStore? = null,
+    /**
+     * How this client publishes group-state changes and learns whether they
+     * were accepted.
+     *
+     * Publish-before-apply (`protocol-core/publish-lifecycle.md`) needs an
+     * acknowledgement, so the manager owns the publish rather than handing
+     * bytes to a caller that may or may not report back. The default refuses
+     * every obligation: a client that never configures one can read a group
+     * but can never advance its state, which is the safe direction to fail.
+     */
+    val publisher: MarmotPublisher = MarmotPublisher { _, _ -> false },
+    publishObligationStore: MarmotPublishObligationStore? = null,
+    /**
+     * Scope used to carry an open convergence pass to its cutoff.
+     *
+     * A group that goes quiet mid-pass has no inbound traffic to tick it, so
+     * something has to. When null the client MUST drive
+     * [driveConvergenceToSettlement] itself, or a fork will sit unresolved
+     * until the next message happens to arrive.
+     */
+    private val scope: CoroutineScope? = null,
 ) {
     val groupManager = MlsGroupManager(store)
     val keyPackageRotationManager = KeyPackageRotationManager(keyPackageStore)
@@ -82,6 +112,9 @@ class MarmotManager(
     val inboundProcessor = MarmotInboundProcessor(groupManager, keyPackageRotationManager)
     val outboundProcessor = MarmotOutboundProcessor(groupManager)
     val welcomeSender = MarmotWelcomeSender(signer)
+    val publishGate =
+        publishObligationStore?.let { MarmotPublishGate(groupManager, it) }
+            ?: MarmotPublishGate(groupManager)
 
     /**
      * Restore all Marmot state from persistent storage.
@@ -104,6 +137,11 @@ class MarmotManager(
             // before this has no retained parent, so a fork right after a
             // restart would be invisible.
             activeIds.forEach { inboundProcessor.trackGroup(it) }
+            // An interruption does not resolve a publish obligation. Anything
+            // still unresolved keeps its group in PendingPublish until it is
+            // retried byte-identically and acknowledged — generating a
+            // replacement commit instead would fork us at our own epoch.
+            publishGate.restore()
             // Also restore previously-published KeyPackage bundles so that
             // Welcomes referencing them remain processable across restarts.
             keyPackageRotationManager.restoreFromStore()
@@ -161,6 +199,13 @@ class MarmotManager(
      */
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
         val result = inboundProcessor.processGroupEvent(groupEvent)
+
+        // A fork just opened a bounded pass. Inbound traffic settles it
+        // opportunistically, but the group may fall silent before its cutoff —
+        // so start the carrier now, while we know a pass exists.
+        if (result is GroupEventResult.CommitPending && result.forkDetected) {
+            startConvergenceSettler()
+        }
 
         // Update subscription timestamp
         when (result) {
@@ -388,33 +433,30 @@ class MarmotManager(
         // outer-encrypted with the pre-commit (epoch-N) exporter secret so
         // that other existing members still at epoch N can decrypt and
         // process the commit. CommitResult.preCommitExporterSecret carries
-        // that key; the local group state has already advanced to N+1 by
-        // the time addMember returns, so we can't read it from the group
-        // any more.
-        val (preState, preEpoch) = preCommit(nostrGroupId)
-        val commitResult = groupManager.addMember(nostrGroupId, keyPackageBytes)
-        val commitEvent =
-            outboundProcessor.buildCommitEvent(
-                nostrGroupId = nostrGroupId,
-                commitBytes = commitResult.framedCommitBytes,
-                exporterKey = commitResult.preCommitExporterSecret,
-            )
-        // The published kind:445 will echo back from the relay — without this
-        // dedup our own inbound pipeline would try to re-apply a commit whose
-        // epoch we've already merged.
-        inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
-        recordLocalCommit(nostrGroupId, commitResult, preState, preEpoch)
+        // that key.
+        val publication =
+            commitAndPublish(nostrGroupId, relays) {
+                groupManager.stageAddMember(nostrGroupId, keyPackageBytes)
+            }
 
+        // The Welcome is a SEPARATE, retryable per-invitee delivery obligation
+        // that only exists once the Add is canonical. A Welcome for an epoch
+        // no relay accepted would invite someone into a group that does not
+        // exist anywhere else.
         val welcomeDelivery =
-            welcomeSender.wrapWelcome(
-                commitResult = commitResult,
-                recipientPubKey = memberPubKey,
-                keyPackageEventId = keyPackageEventId,
-                relays = relays,
-                nostrGroupId = nostrGroupId,
-            )
+            if (publication.confirmed) {
+                welcomeSender.wrapWelcome(
+                    commitResult = publication.commitResult,
+                    recipientPubKey = memberPubKey,
+                    keyPackageEventId = keyPackageEventId,
+                    relays = relays,
+                    nostrGroupId = nostrGroupId,
+                )
+            } else {
+                null
+            }
 
-        return Pair(commitEvent, welcomeDelivery)
+        return Pair(publication.event, welcomeDelivery)
     }
 
     /**
@@ -437,36 +479,158 @@ class MarmotManager(
         val identity = signer.pubKey.hexToByteArray()
         val extras = initialMetadata?.let { listOf(it.toExtension()) } ?: emptyList()
         groupManager.createGroup(nostrGroupId, identity, initialExtensions = extras)
+        // The group-creation exception: a one-member epoch-0 group has no peer
+        // that failure to publish could fork, so its obligation is empty and
+        // immediately satisfied. Every LATER commit takes the normal
+        // publish-before-apply path.
+        publishGate.satisfyEmptyObligation(nostrGroupId)
         inboundProcessor.trackGroup(nostrGroupId)
         subscriptionManager.subscribeGroup(nostrGroupId)
         Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
         return nostrGroupId
     }
 
+    /** A locally prepared commit, published and resolved. */
+    class CommitPublication(
+        val event: OutboundGroupEvent,
+        val commitResult: CommitResult,
+        /** Stable id of the publish obligation; a safe retry republishes its bytes. */
+        val obligationId: HexKey,
+        /** True when at least one relay in scope acknowledged an accept. */
+        val confirmed: Boolean,
+    )
+
     /**
-     * Tell convergence about a commit we just authored and applied locally.
+     * Prepare a local commit, publish it, and apply it only if publication was
+     * acknowledged (`protocol-core/publish-lifecycle.md`).
      *
-     * Our own commits are half of any fork we are party to. Without them in the
-     * retained window a peer's competing commit has no parent to replay
-     * against, so it would be deferred as an orphan rather than compared —
-     * and the group would quietly stay split.
+     * The commit is staged on a clone, so until an acknowledgement arrives the
+     * live group has not moved. Apply-then-undo would look equivalent and is
+     * not: between the two there is a window in which this client's canonical
+     * state is an epoch no peer has, and a crash inside it makes the fork
+     * permanent.
      */
-    private suspend fun recordLocalCommit(
+    private suspend fun commitAndPublish(
         nostrGroupId: HexKey,
-        commitResult: CommitResult,
-        preState: MlsGroupState?,
-        preEpoch: Long,
-    ) {
-        inboundProcessor.recordLocalCommit(
-            groupId = nostrGroupId,
-            framedCommitBytes = commitResult.framedCommitBytes,
-            sourceEpoch = preEpoch,
-            preState = preState,
+        relays: List<NormalizedRelayUrl>,
+        stage: suspend () -> MlsGroupManager.StagedCommit,
+    ): CommitPublication {
+        check(publishGate.canPrepareLocalCommit(nostrGroupId)) {
+            "Group $nostrGroupId cannot prepare a local commit " +
+                "(lifecycle=${publishGate.lifecycle(nostrGroupId)}, gate=${publishGate.outboundGate(nostrGroupId)})"
+        }
+
+        val staged = stage()
+        val event =
+            outboundProcessor.buildCommitEvent(
+                nostrGroupId = nostrGroupId,
+                commitBytes = staged.result.framedCommitBytes,
+                exporterKey = staged.result.preCommitExporterSecret,
+            )
+
+        // Durable BEFORE the publish. Publishing first would leave a crash
+        // window in which peers have accepted a commit this client has no
+        // memory of preparing — and on restart it would generate a
+        // replacement, forking itself at the same epoch.
+        val obligation =
+            publishGate.prepare(
+                groupId = nostrGroupId,
+                staged = staged,
+                outboundBytes = event.signedEvent.toJson().encodeToByteArray(),
+                recipientScope = relays.map { it.url },
+            )
+
+        val confirmed =
+            try {
+                publisher.publish(event.signedEvent, relays.toSet())
+            } catch (e: Exception) {
+                Log.w("MarmotManager", "publish failed for $nostrGroupId: ${e.message}", e)
+                false
+            }
+
+        publishGate.resolve(
+            obligation.obligationId,
+            if (confirmed) PublishOutcome.CONFIRMED else PublishOutcome.FAILED,
         )
+
+        if (confirmed) {
+            // The published kind:445 echoes back from the relay — without this
+            // dedup our own inbound pipeline would try to re-apply a commit
+            // whose epoch we have already merged.
+            inboundProcessor.markMessageProcessed(event.marmotMessageId)
+            // Our own commit is half of any fork we are party to. Without it in
+            // the retained window a peer's competing commit has no parent to
+            // replay against, so it would be deferred as an orphan rather than
+            // compared — and the group would quietly stay split.
+            inboundProcessor.recordLocalCommit(
+                groupId = nostrGroupId,
+                framedCommitBytes = staged.result.framedCommitBytes,
+                sourceEpoch = staged.priorState.groupContext.epoch,
+                preState = staged.priorState,
+            )
+        } else {
+            Log.w("MarmotManager") {
+                "commitAndPublish($nostrGroupId): no relay acknowledged the commit — pending state " +
+                    "discarded, group stays at epoch ${staged.priorState.groupContext.epoch}"
+            }
+        }
+
+        return CommitPublication(event, staged.result, obligation.obligationId, confirmed)
     }
 
-    /** The state and epoch a local commit is about to be applied to. */
-    private fun preCommit(nostrGroupId: HexKey): Pair<MlsGroupState?, Long> = groupManager.snapshot(nostrGroupId) to (groupManager.getGroup(nostrGroupId)?.epoch ?: 0L)
+    /**
+     * Carry open convergence passes to their cutoff and resolve them.
+     *
+     * Runs only while some pass is open and returns as soon as none is, so a
+     * quiet client does no periodic work at all — this is a carrier for work
+     * already in flight, not a heartbeat.
+     */
+    suspend fun driveConvergenceToSettlement(pollMs: Long = CONVERGENCE_POLL_MS) {
+        while (inboundProcessor.openConvergencePasses().isNotEmpty()) {
+            delay(pollMs)
+            inboundProcessor.settleDueConvergence().forEach { resolution ->
+                Log.d("MarmotManager") {
+                    "convergence settled group=${resolution.groupId.take(8)}… " +
+                        "epoch=${resolution.canonicalEpoch} rewound=${resolution.rewound}"
+                }
+            }
+        }
+    }
+
+    private fun startConvergenceSettler() {
+        val runner = scope ?: return
+        // One carrier at a time: every fork in a busy group would otherwise
+        // start another, and they would all poll the same passes.
+        if (!settlerRunning.compareAndSet(expect = false, update = true)) return
+        runner.launch {
+            try {
+                driveConvergenceToSettlement()
+            } finally {
+                settlerRunning.value = false
+            }
+        }
+    }
+
+    private val settlerRunning = MutableStateFlow(false)
+
+    /** Lifecycle state for a group, including any unresolved publish obligation. */
+    suspend fun lifecycle(nostrGroupId: HexKey): GroupLifecycleState = publishGate.lifecycle(nostrGroupId)
+
+    /**
+     * The group's own relay list, as the recipient scope for a publish
+     * obligation.
+     *
+     * Read from the group's canonical state rather than from a caller-supplied
+     * list, so a commit's acknowledgement has to come from an endpoint the
+     * GROUP names — the same set every other member is listening on.
+     */
+    fun groupRelays(nostrGroupId: HexKey): List<NormalizedRelayUrl> =
+        groupManager
+            .getGroup(nostrGroupId)
+            ?.currentMarmotData()
+            ?.relays
+            .orEmpty()
+            .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
 
     /**
      * Nuke all local Marmot state — every MLS group, every retained epoch
@@ -515,6 +679,13 @@ class MarmotManager(
                 exporterKey = exporterKey,
             )
 
+        // A departure is a SelfRemove PROPOSAL, not a local commit: another
+        // authorized member commits it, so the leaver has no pending state and
+        // publish-before-apply does not bind here. What does bind is the
+        // outbound gate — until the removal is realized, this client must not
+        // start new group-state work it would have no standing to publish.
+        publishGate.raiseGate(nostrGroupId, LocalOutboundGate.LEAVING)
+
         subscriptionManager.unsubscribeGroup(nostrGroupId)
         try {
             messageStore?.delete(nostrGroupId)
@@ -560,19 +731,11 @@ class MarmotManager(
     suspend fun removeMember(
         nostrGroupId: HexKey,
         targetLeafIndex: Int,
-    ): OutboundGroupEvent {
-        val (preState, preEpoch) = preCommit(nostrGroupId)
-        val commitResult = groupManager.removeMember(nostrGroupId, targetLeafIndex)
-        val commitEvent =
-            outboundProcessor.buildCommitEvent(
-                nostrGroupId = nostrGroupId,
-                commitBytes = commitResult.framedCommitBytes,
-                exporterKey = commitResult.preCommitExporterSecret,
-            )
-        inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
-        recordLocalCommit(nostrGroupId, commitResult, preState, preEpoch)
-        return commitEvent
-    }
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent =
+        commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageRemoveMember(nostrGroupId, targetLeafIndex)
+        }.event
 
     /**
      * Update group metadata (name, description, etc.) via a GroupContextExtensions proposal.
@@ -588,23 +751,16 @@ class MarmotManager(
     suspend fun updateGroupMetadata(
         nostrGroupId: HexKey,
         metadata: MarmotGroupData,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
     ): OutboundGroupEvent {
         val group =
             groupManager.getGroup(nostrGroupId)
                 ?: throw IllegalStateException("Not a member of group $nostrGroupId")
         val preserved = group.extensions.filter { it.extensionType != MarmotGroupData.EXTENSION_ID_INT }
         val merged = preserved + metadata.toExtension()
-        val (preState, preEpoch) = preCommit(nostrGroupId)
-        val commitResult = groupManager.updateGroupExtensions(nostrGroupId, merged)
-        val commitEvent =
-            outboundProcessor.buildCommitEvent(
-                nostrGroupId = nostrGroupId,
-                commitBytes = commitResult.framedCommitBytes,
-                exporterKey = commitResult.preCommitExporterSecret,
-            )
-        inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
-        recordLocalCommit(nostrGroupId, commitResult, preState, preEpoch)
-        return commitEvent
+        return commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageUpdateGroupExtensions(nostrGroupId, merged)
+        }.event
     }
 
     // --- KeyPackage Management ---
@@ -812,6 +968,16 @@ class MarmotManager(
          * absorb relay/system clock skew and out-of-order publishes.
          */
         internal val GROUP_EVENT_REFETCH_OVERLAP_SEC: Long = TimeUtils.ONE_DAY.toLong()
+
+        /**
+         * How often the settler re-checks an open pass.
+         *
+         * A quarter of the quiescence window, so a pass that goes quiet settles
+         * promptly without the poll itself becoming the thing that decides
+         * timing. The pass's own monotonic deadlines decide when it closes;
+         * this only decides how soon afterwards we notice.
+         */
+        internal const val CONVERGENCE_POLL_MS: Long = 250L
     }
 }
 

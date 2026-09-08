@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
+import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
 import com.vitorpamplona.amethyst.commons.marmot.MarmotSyncPolicy
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -43,6 +44,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -344,7 +346,18 @@ class Context(
     }
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
-    val marmot: MarmotManager by lazy { MarmotManager(signer, mlsStore, messageStore, keyPackageStore) }
+    val marmot: MarmotManager by lazy {
+        MarmotManager(
+            signer,
+            mlsStore,
+            messageStore,
+            keyPackageStore,
+            // Publish-before-apply: a group-state change becomes canonical only
+            // once a relay in the group's own scope returns OK true. Anything
+            // weaker (queued, sent, no error yet) is explicitly not success.
+            MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays) },
+        )
+    }
 
     // ------------------------------------------------------------------
     // Cashu (NIP-60 / NIP-61) — shared wallet code from commons

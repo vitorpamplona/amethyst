@@ -413,6 +413,32 @@ class MarmotConvergenceWiringTest {
             assertIs<GroupEventResult.AppMessageOnCandidateBranch>(after)
         }
 
+    /**
+     * A pass whose group falls silent still settles.
+     *
+     * Inbound traffic ticks convergence opportunistically, so a busy group
+     * resolves itself. A group where the fork was the LAST thing to arrive has
+     * nothing to carry it — which is why `settleDueConvergence()` exists and
+     * why the app layer drives it while a pass is open.
+     */
+    @Test
+    fun aQuietGroupStillSettlesThroughTheDueSweep() =
+        runBlocking<Unit> {
+            val fork = buildFork()
+            var now = 0L
+            val obs = observer(fork.observerStateBytes) { now }
+
+            obs.inbound.processGroupEvent(fork.commitA)
+            obs.inbound.processGroupEvent(fork.commitB)
+            // Nothing else ever arrives for this group.
+            assertEquals(1, obs.inbound.openConvergencePasses().size)
+
+            now = ConvergencePolicy.V1.maxConvergencePassMs
+            assertEquals(1, obs.inbound.settleDueConvergence().size)
+            assertTrue(obs.inbound.openConvergencePasses().isEmpty())
+            assertEquals(ConvergenceStatus.SETTLED, obs.inbound.convergenceStatus(groupId))
+        }
+
     /** The Marmot message id of a commit event, as the engine computes it. */
     private suspend fun sha256Hex(
         event: GroupEvent,
