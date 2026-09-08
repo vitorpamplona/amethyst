@@ -1,7 +1,7 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stages 0-6 landed in Quartz (selection, bounded pass, and candidate-graph replay;
-the inbound wiring remains). The app layer still creates MIP-era groups. Stage 7 open.
+Status: Stages 0-6 landed in Quartz, convergence is ON the inbound path, and the superseded
+`CommitOrdering` tiebreak is deleted. The app layer still creates MIP-era groups. Stage 7 open.
 
 Sources checked on 2026-09-08:
 
@@ -153,10 +153,11 @@ Blast radius of `MarmotGroupData`: 22 files across `quartz`, `commons`, `amethys
 
 ### 4.3 Convergence — GAP (the article's subject)
 
-We have none of it. `CommitOrdering.kt` implements the superseded rule (lowest `created_at`,
-then lowest Nostr event id) and is wired into `MarmotInboundProcessor.kt:523` as a
-per-`(group, epoch)` bucket. The spec now forbids using transport arrival order, transport
-timestamps, or outer event ids in branch selection at all.
+(As of the gap analysis; `CommitOrdering.kt` has since been deleted and replaced by
+`MarmotConvergenceEngine` — see Stage 6.) We had none of it. `CommitOrdering.kt` implemented
+the superseded rule (lowest `created_at`, then lowest Nostr event id) and was wired into
+`MarmotInboundProcessor` as a per-`(group, epoch)` bucket. The spec forbids using transport
+arrival order, transport timestamps, or outer event ids in branch selection at all.
 
 Missing, all of `protocol-core/convergence.md`:
 
@@ -488,9 +489,40 @@ The things that make it non-obvious, all of them tested:
 `enforceNoAdminDepletion` gates the local commit path runs, so an inbound commit and one we
 authored are held to one rule rather than two that drift.
 
-**Still open:** wiring the pass + selector + graph into `MarmotInboundProcessor` so inbound
-commits actually flow through them. `CommitOrdering`'s transport-metadata tiebreak therefore
-still stands — it is only safe to delete once something replaces it end to end.
+`MarmotConvergenceEngine` puts all of it on the inbound path and `mip03GroupMessages/
+CommitOrdering.kt` is **deleted** — the superseded rule (lowest outer `created_at`, then lowest
+Nostr event id) no longer exists anywhere in the tree.
+
+The wiring decision worth recording is that convergence does NOT hold every commit for the
+quiescence window. A literal reading of the bounded pass would tax the overwhelmingly common
+single-commit case with a second of latency for nothing. It does not have to, because MLS is
+its own fork detector: once a commit is applied, a competitor authored against the same parent
+stops authenticating against the new tip but still authenticates against the RETAINED parent.
+So linear commits apply eagerly, the state each was applied to is retained, and a commit that
+authenticates a retained state rather than the tip IS the fork — only then does a pass open.
+
+That is not an optimization that changes the answer, and the reason is the base choice at
+resolution time. The base is the newest retained state a divergent commit authenticates
+against, NOT the current tip; the canonical commits applied at or after it are replayed back
+into the graph, so the incumbent is rebuilt as a branch and scored by the same six-step rule as
+its challengers instead of winning by being already applied. Eager application only decides
+which branch is provisionally displayed while a pass runs.
+`MarmotConvergenceWiringTest.twoObserversConvergeRegardlessOfArrivalOrder` builds a real
+same-epoch fork, feeds two observers the same two commits in opposite orders, and asserts they
+end on the same GroupContext with exactly one of them having rewound.
+
+Supporting pieces: `MlsGroupManager.snapshot` (state without touching storage) and
+`installState` (the rewind primitive — it pushes the outgoing epoch's secrets into the
+retention window first, so traffic already sent on the abandoned branch still decrypts).
+`MarmotManager` records locally-authored commits too, because our own commit is half of any
+fork we are party to; without it a peer's competitor would look like an unplaceable orphan and
+be deferred rather than compared.
+
+**Still open:** app-payload witnesses are plumbed (`recordWitness`) but nothing feeds them yet
+— that needs the bounded retained-candidate trial decryption still outstanding from Stage 4.
+A group that goes quiet mid-pass has no inbound traffic to tick it, so the app layer must drive
+`settleDueConvergence()` from a timer while `openConvergencePasses()` is non-empty; that timer
+is not wired in `commons`/`amethyst` yet.
 
 **Stage 7 — durability/restart conformance, app payload kinds (1009/1210), encrypted-media
 v2, push owner proof.**
@@ -535,11 +567,14 @@ Writing the producer side immediately found two bugs the reader-side tests could
   `MarmotGroupData`; nothing in `commons`, `amethyst`, `desktopApp` or `cli` calls
   `CurrentProfileGroupFactory` yet. The Quartz half is ready and tested; the wiring is not
   written.
-- **Convergence is not on the inbound path.** `CandidateGraphBuilder`, `BranchSelector` and
-  `ConvergencePass` exist and are tested end to end against real MLS forks, but
-  `MarmotInboundProcessor` still routes commits through `CommitOrdering`'s superseded
-  timestamp/event-id tiebreak. What is missing is only the wiring: feeding retained states and
-  inbound commits into a pass, and applying the selected branch.
+- **Nothing drives a quiet group's pass to settle.** Convergence is on the inbound path and
+  settles opportunistically on the next inbound event, but a group that falls silent mid-pass
+  has nothing to tick it. `settleDueConvergence()` exists for the app layer's timer and no
+  timer calls it yet.
+- **App-payload witnesses are never recorded.** `MarmotConvergenceEngine.recordWitness` is
+  wired into scoring but has no producer, so branch comparison currently never reaches the
+  witness steps. The producer is the bounded retained-candidate trial decryption still open
+  from Stage 4.
 - **The lifecycle states gate nothing.** `GroupLifecycleState` is a correct model with no
   enforcement behind it.
 - Stage 7: durability/restart conformance, app payload kinds `1009`/`1210`, encrypted-media v2,

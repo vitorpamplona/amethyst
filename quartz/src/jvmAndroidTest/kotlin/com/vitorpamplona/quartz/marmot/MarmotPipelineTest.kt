@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceStatus
+import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -34,6 +36,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -524,20 +527,23 @@ class MarmotPipelineTest {
     }
 
     @Test
-    fun testCommitOrderingWithProcessor() {
+    fun testConvergenceStartsSettledWithProcessor() {
         runBlocking {
             val manager = createGroupManager()
             manager.createGroup(groupId, "alice".encodeToByteArray())
 
             val keyPackageRotationManager = KeyPackageRotationManager()
             val inbound = MarmotInboundProcessor(manager, keyPackageRotationManager)
+            inbound.trackGroup(groupId)
 
-            // Initially no pending commits
-            assertTrue(inbound.pendingCommitGroupEpochs().isEmpty())
+            // A group with no competing commits has no pass to run.
+            assertTrue(inbound.openConvergencePasses().isEmpty())
+            assertEquals(ConvergenceStatus.SETTLED, inbound.convergenceStatus(groupId))
+            assertEquals(GroupLifecycleState.STABLE, inbound.groupLifecycle(groupId))
+            assertNull(inbound.resolveConvergence(groupId))
 
-            // Clear works without error
             inbound.clearPendingCommits()
-            assertTrue(inbound.pendingCommitGroupEpochs().isEmpty())
+            assertTrue(inbound.openConvergencePasses().isEmpty())
         }
     }
 

@@ -153,6 +153,51 @@ class MlsGroupManager(
     fun getGroup(nostrGroupId: HexKey): MlsGroup? = groups[nostrGroupId]
 
     /**
+     * A snapshot of a group's current state, WITHOUT persisting anything.
+     *
+     * Convergence keeps a bounded window of these so a commit that lost a
+     * same-epoch race still has a parent to replay against later. Taking the
+     * snapshot must not touch storage: it happens on every applied commit,
+     * and the state that matters is already persisted by the apply itself.
+     */
+    fun snapshot(nostrGroupId: HexKey): MlsGroupState? = groups[nostrGroupId]?.saveState()
+
+    /**
+     * Replace a group's state wholesale — the convergence rewind primitive.
+     *
+     * Used when branch selection picks a candidate branch over what was
+     * canonical. The outgoing epoch's secrets are pushed into the retention
+     * window first, so application messages already sent on the abandoned
+     * branch still decrypt for as long as any other past epoch would.
+     *
+     * This deliberately takes a whole state rather than a commit: the state was
+     * produced by replaying MLS bytes during graph construction, and replaying
+     * them a second time here would risk the two answers differing.
+     */
+    suspend fun installState(
+        nostrGroupId: HexKey,
+        state: MlsGroupState,
+    ) = mutex.withLock {
+        val current = groups[nostrGroupId]
+        val changed =
+            current == null ||
+                !current
+                    .saveState()
+                    .groupContext
+                    .toTlsBytes()
+                    .contentEquals(state.groupContext.toTlsBytes())
+        if (!changed) return@withLock
+
+        val outgoing = current?.retainedSecrets()
+        groups[nostrGroupId] = MlsGroup.restore(state)
+        // Retain by outgoing epoch even when the epoch NUMBER is unchanged: a
+        // same-epoch rewind swaps one epoch-N state for a different one, and
+        // the abandoned N still has traffic addressed to it.
+        if (outgoing != null) pushRetainedEpoch(nostrGroupId, outgoing)
+        persistGroup(nostrGroupId)
+    }
+
+    /**
      * List all active Nostr group IDs.
      */
     fun activeGroupIds(): Set<HexKey> = groups.keys.toSet()

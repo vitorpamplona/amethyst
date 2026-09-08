@@ -39,7 +39,9 @@ import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -98,6 +100,10 @@ class MarmotManager(
                 subscriptionManager.subscribeGroup(groupId, since)
             }
             subscriptionManager.syncWithGroupManager(activeIds)
+            // Seed convergence with each restored state. A commit that arrives
+            // before this has no retained parent, so a fork right after a
+            // restart would be invisible.
+            activeIds.forEach { inboundProcessor.trackGroup(it) }
             // Also restore previously-published KeyPackage bundles so that
             // Welcomes referencing them remain processable across restarts.
             keyPackageRotationManager.restoreFromStore()
@@ -384,6 +390,7 @@ class MarmotManager(
         // that key; the local group state has already advanced to N+1 by
         // the time addMember returns, so we can't read it from the group
         // any more.
+        val (preState, preEpoch) = preCommit(nostrGroupId)
         val commitResult = groupManager.addMember(nostrGroupId, keyPackageBytes)
         val commitEvent =
             outboundProcessor.buildCommitEvent(
@@ -395,6 +402,7 @@ class MarmotManager(
         // dedup our own inbound pipeline would try to re-apply a commit whose
         // epoch we've already merged.
         inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
+        recordLocalCommit(nostrGroupId, commitResult, preState, preEpoch)
 
         val welcomeDelivery =
             welcomeSender.wrapWelcome(
@@ -428,10 +436,36 @@ class MarmotManager(
         val identity = signer.pubKey.hexToByteArray()
         val extras = initialMetadata?.let { listOf(it.toExtension()) } ?: emptyList()
         groupManager.createGroup(nostrGroupId, identity, initialExtensions = extras)
+        inboundProcessor.trackGroup(nostrGroupId)
         subscriptionManager.subscribeGroup(nostrGroupId)
         Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
         return nostrGroupId
     }
+
+    /**
+     * Tell convergence about a commit we just authored and applied locally.
+     *
+     * Our own commits are half of any fork we are party to. Without them in the
+     * retained window a peer's competing commit has no parent to replay
+     * against, so it would be deferred as an orphan rather than compared —
+     * and the group would quietly stay split.
+     */
+    private suspend fun recordLocalCommit(
+        nostrGroupId: HexKey,
+        commitResult: CommitResult,
+        preState: MlsGroupState?,
+        preEpoch: Long,
+    ) {
+        inboundProcessor.recordLocalCommit(
+            groupId = nostrGroupId,
+            framedCommitBytes = commitResult.framedCommitBytes,
+            sourceEpoch = preEpoch,
+            preState = preState,
+        )
+    }
+
+    /** The state and epoch a local commit is about to be applied to. */
+    private fun preCommit(nostrGroupId: HexKey): Pair<MlsGroupState?, Long> = groupManager.snapshot(nostrGroupId) to (groupManager.getGroup(nostrGroupId)?.epoch ?: 0L)
 
     /**
      * Nuke all local Marmot state — every MLS group, every retained epoch
@@ -526,6 +560,7 @@ class MarmotManager(
         nostrGroupId: HexKey,
         targetLeafIndex: Int,
     ): OutboundGroupEvent {
+        val (preState, preEpoch) = preCommit(nostrGroupId)
         val commitResult = groupManager.removeMember(nostrGroupId, targetLeafIndex)
         val commitEvent =
             outboundProcessor.buildCommitEvent(
@@ -534,6 +569,7 @@ class MarmotManager(
                 exporterKey = commitResult.preCommitExporterSecret,
             )
         inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
+        recordLocalCommit(nostrGroupId, commitResult, preState, preEpoch)
         return commitEvent
     }
 
@@ -557,6 +593,7 @@ class MarmotManager(
                 ?: throw IllegalStateException("Not a member of group $nostrGroupId")
         val preserved = group.extensions.filter { it.extensionType != MarmotGroupData.EXTENSION_ID_INT }
         val merged = preserved + metadata.toExtension()
+        val (preState, preEpoch) = preCommit(nostrGroupId)
         val commitResult = groupManager.updateGroupExtensions(nostrGroupId, merged)
         val commitEvent =
             outboundProcessor.buildCommitEvent(
@@ -565,6 +602,7 @@ class MarmotManager(
                 exporterKey = commitResult.preCommitExporterSecret,
             )
         inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
+        recordLocalCommit(nostrGroupId, commitResult, preState, preEpoch)
         return commitEvent
     }
 

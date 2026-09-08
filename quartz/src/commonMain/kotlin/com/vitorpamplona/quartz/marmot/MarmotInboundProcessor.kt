@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
-import com.vitorpamplona.quartz.marmot.mip03GroupMessages.CommitOrdering
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
@@ -32,6 +31,12 @@ import com.vitorpamplona.quartz.marmot.mls.framing.PrivateMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceAdmission
+import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceResolution
+import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceStatus
+import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
+import com.vitorpamplona.quartz.marmot.protocolCore.MarmotConvergenceEngine
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -72,6 +77,8 @@ sealed class GroupEventResult {
     data class CommitPending(
         val groupId: HexKey,
         val epoch: Long,
+        /** True when this commit forked the group and opened a convergence pass. */
+        val forkDetected: Boolean = false,
     ) : GroupEventResult()
 
     /**
@@ -162,13 +169,23 @@ sealed class WelcomeResult {
  *   extract welcome bytes and join the group via MlsGroupManager
  *
  * This class coordinates between [GroupEventEncryption] (outer layer),
- * [MlsGroupManager] (MLS engine), and [CommitOrdering] (conflict resolution).
+ * [MlsGroupManager] (MLS engine), and [MarmotConvergenceEngine] (fork
+ * resolution).
+ *
+ * ## Same-epoch conflicts
+ *
+ * Competing commits are resolved by `protocol-core/convergence.md`: a bounded
+ * pass collects candidates, branches are built by replaying MLS bytes against
+ * retained states, and the six-step comparison picks one. The superseded
+ * MIP-era rule — lowest outer `created_at`, then lowest Nostr event id — is
+ * gone, and deliberately: both are transport metadata the sender chooses and
+ * MLS does not authenticate, so a member could win every race by backdating.
  */
 class MarmotInboundProcessor(
     private val groupManager: MlsGroupManager,
     private val keyPackageRotationManager: KeyPackageRotationManager,
+    private val convergence: MarmotConvergenceEngine = MarmotConvergenceEngine(groupManager),
 ) {
-    private val commitTracker = CommitOrdering.EpochCommitTracker()
     private val processedIdsMutex = Mutex()
 
     /**
@@ -227,6 +244,13 @@ class MarmotInboundProcessor(
         if (!groupManager.isMember(groupId)) {
             return GroupEventResult.Error(groupId, "Not a member of group $groupId")
         }
+
+        // Settle FIRST, so this event is processed against resolved state
+        // rather than against a branch a pass is about to abandon. Inbound
+        // traffic is only an opportunistic tick, though: a group that goes
+        // quiet mid-pass has nothing to drive it, which is why
+        // [settleDueConvergence] exists for the app layer's timer.
+        convergence.settleIfDue(groupId)
 
         var messageId: String? = null
         val result =
@@ -376,6 +400,10 @@ class MarmotInboundProcessor(
             // Mark the KeyPackage as consumed — triggers rotation
             keyPackageRotationManager.markConsumedByEventId(keyPackageEventId)
 
+            // Seed convergence with the joined state, so the very first inbound
+            // commit already has a retained parent to fall back to.
+            convergence.trackGroup(nostrGroupId)
+
             WelcomeResult.Joined(
                 nostrGroupId = nostrGroupId,
                 needsKeyPackageRotation = keyPackageRotationManager.needsRotation(),
@@ -412,38 +440,66 @@ class MarmotInboundProcessor(
     }
 
     /**
-     * Resolve any pending commit conflicts for a given epoch.
+     * Start tracking [groupId] for convergence.
      *
-     * Call this after a brief delay when multiple commits may arrive for
-     * the same epoch. The winning commit is applied; losers are discarded.
-     *
-     * @param groupId the Nostr group ID
-     * @param epoch the epoch to resolve
-     * @return the result of processing the winning commit, or null if no commits pending
+     * Call after creating, joining, or restoring a group. The engine needs the
+     * current state in its retained window before the first commit arrives —
+     * a commit that loses a race is only recoverable if the state it was
+     * authored against is still held.
      */
-    suspend fun resolveCommitConflict(
-        groupId: HexKey,
-        epoch: Long,
-    ): GroupEventResult? {
-        val winner =
-            commitTracker.resolve(groupId, epoch)
-                ?: return null
-
-        val result = applyCommit(groupId, winner)
-        commitTracker.clearEpoch(groupId, epoch)
-        return result
+    suspend fun trackGroup(groupId: HexKey) {
+        convergence.trackGroup(groupId)
     }
 
     /**
-     * Get all (group, epoch) keys that have pending unresolved commits.
+     * Record a commit WE authored and already applied locally.
+     *
+     * Convergence has to see our own commits or it cannot resolve a fork we are
+     * half of: with no retained parent for our commit, a peer's competing one
+     * would look like an unplaceable orphan and be deferred forever instead of
+     * compared. [preState] must be captured BEFORE the local commit advanced
+     * the group — the outbound helper cannot recover it afterwards.
      */
-    suspend fun pendingCommitGroupEpochs(): Set<CommitOrdering.GroupEpochKey> = commitTracker.pendingGroupEpochs()
+    suspend fun recordLocalCommit(
+        groupId: HexKey,
+        framedCommitBytes: ByteArray,
+        sourceEpoch: Long,
+        preState: MlsGroupState?,
+    ) {
+        convergence.recordApplied(groupId, framedCommitBytes, sourceEpoch, preState)
+    }
 
     /**
-     * Clear all pending commit state.
+     * Resolve [groupId]'s open convergence pass now, without waiting for its
+     * cutoff.
+     *
+     * The pass timers are scheduling, not semantics, so closing one early
+     * changes WHEN the frozen batch is resolved and never what it resolves to.
+     * Returns null when no pass is open.
      */
+    suspend fun resolveConvergence(groupId: HexKey): ConvergenceResolution? = convergence.settle(groupId)
+
+    /**
+     * Resolve every group whose convergence pass has reached its cutoff.
+     *
+     * A quiet group settles nothing on its own — there is no inbound traffic to
+     * carry it — so the app layer should also drive this from a timer for as
+     * long as [openConvergencePasses] is non-empty.
+     */
+    suspend fun settleDueConvergence(): List<ConvergenceResolution> = convergence.settleAllDue()
+
+    /** Groups with an open convergence pass, and the base epoch each snapshotted. */
+    suspend fun openConvergencePasses(): Map<HexKey, Long> = convergence.openPasses()
+
+    /** Convergence status for [groupId]; `SETTLED` when no pass is running. */
+    suspend fun convergenceStatus(groupId: HexKey): ConvergenceStatus = convergence.status(groupId)
+
+    /** Group lifecycle state for [groupId], including a running pass's `Recovering`. */
+    suspend fun groupLifecycle(groupId: HexKey): GroupLifecycleState = convergence.lifecycle(groupId)
+
+    /** Drop all convergence state. */
     suspend fun clearPendingCommits() {
-        commitTracker.clear()
+        convergence.clear()
     }
 
     private suspend fun processPrivateMessage(
@@ -537,25 +593,26 @@ class MarmotInboundProcessor(
         }
     }
 
+    /**
+     * Apply an inbound commit, letting convergence decide anything ambiguous.
+     *
+     * Commits that extend the current tip apply straight away rather than being
+     * held for a pass. That is not a shortcut past convergence: the state the
+     * commit was applied to is retained, so a competitor authored against the
+     * same parent is still recoverable afterwards — it simply stops
+     * authenticating against the new tip, which is precisely how the fork is
+     * detected. Holding every commit for the quiescence window instead would
+     * tax the overwhelmingly common single-commit case with a second of
+     * latency and change no outcome.
+     */
     private suspend fun handleCommitEvent(
         groupId: HexKey,
         groupEvent: GroupEvent,
     ): GroupEventResult {
-        val group =
-            groupManager.getGroup(groupId)
-                ?: return GroupEventResult.Error(groupId, "Group not found")
-        val currentEpoch = group.epoch
-        commitTracker.addCommit(groupId, currentEpoch, groupEvent)
-
-        // If this is the only commit for this epoch, apply immediately
-        val pending = commitTracker.pendingForEpoch(groupId, currentEpoch)
-        return if (pending.size == 1) {
-            val result = applyCommit(groupId, groupEvent)
-            commitTracker.clearEpoch(groupId, currentEpoch)
-            result
-        } else {
-            GroupEventResult.CommitPending(groupId, currentEpoch)
+        if (groupManager.getGroup(groupId) == null) {
+            return GroupEventResult.Error(groupId, "Group not found")
         }
+        return applyCommit(groupId, groupEvent)
     }
 
     private suspend fun applyCommit(
@@ -616,19 +673,30 @@ class MarmotInboundProcessor(
                             GroupEventResult.Error(groupId, "PublicMessage commit missing confirmation_tag")
                         }
 
-                        // Reject commits that are not for our current epoch.
-                        // Happens most commonly when our own already-applied
-                        // commit is echoed back from the relay after an app
-                        // restart (the in-memory dedup set is cleared), and
-                        // the outer layer decrypts via a retained epoch key.
-                        // Calling `processCommit` on a past-epoch commit
+                        // A commit for an epoch we already left is either an
+                        // echo of something applied, or the losing half of a
+                        // same-epoch race. Convergence tells them apart by
+                        // asking whether any RETAINED state authenticates it:
+                        // an echo authenticates nothing (we consumed its
+                        // parent), a competitor authenticates the parent we
+                        // still hold.
+                        //
+                        // Either way it must not go to `processCommit`, which
                         // partially mutates tree / groupContext / epochSecrets
-                        // before throwing on the confirmation-tag check,
-                        // leaving the local state diverged from every other
-                        // member's — they then can't decrypt anything we
-                        // send next.
+                        // before throwing on the confirmation-tag check and
+                        // leaves local state diverged from every other
+                        // member's. The fork is replayed against a CLONE of
+                        // the retained state instead, so the live group is
+                        // never touched until selection has decided.
                         currentEpoch != null && pubMsg.epoch < currentEpoch -> {
-                            GroupEventResult.Duplicate(groupId)
+                            when (convergence.offerDivergent(groupId, mlsBytes, pubMsg.epoch)) {
+                                ConvergenceAdmission.ADMITTED ->
+                                    GroupEventResult.CommitPending(groupId, pubMsg.epoch, forkDetected = true)
+
+                                ConvergenceAdmission.DUPLICATE,
+                                ConvergenceAdmission.NOT_A_CANDIDATE,
+                                -> GroupEventResult.Duplicate(groupId)
+                            }
                         }
 
                         currentEpoch != null && pubMsg.epoch > currentEpoch -> {
@@ -652,6 +720,12 @@ class MarmotInboundProcessor(
                                     "Invalid membership_tag on PublicMessage commit",
                                 )
                             } else {
+                                // Captured BEFORE the epoch advance: this is
+                                // the parent a competing commit authenticates
+                                // against, and without it a commit that lost
+                                // the race would have nothing to replay on and
+                                // could never be reconsidered.
+                                val preState = groupManager.snapshot(groupId)
                                 groupManager.processCommit(
                                     nostrGroupId = groupId,
                                     commitBytes = pubMsg.content,
@@ -659,6 +733,7 @@ class MarmotInboundProcessor(
                                     confirmationTag = tag,
                                     signature = pubMsg.signature,
                                 )
+                                convergence.recordApplied(groupId, mlsBytes, pubMsg.epoch, preState)
                                 val post = groupManager.getGroup(groupId)
                                 GroupEventResult.CommitProcessed(groupId, post?.epoch ?: 0)
                             }

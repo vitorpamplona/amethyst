@@ -157,6 +157,23 @@ class CandidateGraph<S>(
     val outcomes: List<CommitOutcome>,
     /** Every state reachable in this graph, by id — canonical and candidate alike. */
     val statesById: Map<String, S>,
+    /**
+     * For each state this graph PRODUCED, the state it was produced from.
+     *
+     * Retained states have no entry — they were given, not derived. Walking
+     * this is how a caller that selected a branch recovers the states and
+     * commits along it, which is what applying a rewind needs.
+     */
+    val parentOf: Map<String, String> = emptyMap(),
+    /** For each produced state, the commit that produced it. */
+    val producedBy: Map<String, CandidateCommit> = emptyMap(),
+    /**
+     * Tip state id per branch, keyed by the branch's tip commit digest (hex).
+     *
+     * A tip state is produced by exactly one commit in a graph, so the digest
+     * identifies the branch unambiguously and no ordering has to be trusted.
+     */
+    val branchTips: Map<HexKey, String> = emptyMap(),
 )
 
 /**
@@ -280,8 +297,10 @@ class CandidateGraphBuilder<S>(
                 )
         }
 
+        val branchTips = LinkedHashMap<HexKey, String>()
         val branches =
             buildBranches(
+                branchTips = branchTips,
                 statesById = statesById,
                 parentOf = parentOf,
                 producedBy = producedBy,
@@ -293,10 +312,18 @@ class CandidateGraphBuilder<S>(
                 passBaseEpoch = passBaseEpoch,
             )
 
-        return CandidateGraph(branches, outcomes.values.toList(), statesById)
+        return CandidateGraph(
+            branches = branches,
+            outcomes = outcomes.values.toList(),
+            statesById = statesById,
+            parentOf = parentOf,
+            producedBy = producedBy,
+            branchTips = branchTips,
+        )
     }
 
     private fun buildBranches(
+        branchTips: MutableMap<HexKey, String>,
         statesById: Map<String, S>,
         parentOf: Map<String, String>,
         producedBy: Map<String, CandidateCommit>,
@@ -356,6 +383,7 @@ class CandidateGraphBuilder<S>(
                 tipDigest = engine.commitDigest(producedBy.getValue(tipId).bytes),
                 witnessesByEpoch = perEpoch,
             ).takeIf { it.isEligible(passBaseEpoch, policy) }
+                ?.also { branchTips[it.tipDigestHex] = tipId }
         }
     }
 }
