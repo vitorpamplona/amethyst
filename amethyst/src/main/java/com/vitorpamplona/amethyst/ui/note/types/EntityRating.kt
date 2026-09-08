@@ -58,6 +58,8 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -108,7 +110,12 @@ fun RenderEntityRating(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? EntityRatingEvent ?: return
+    // Observed, not read once: these kinds are DEFINED by replacement — a newer rating,
+    // review or redirect lands on the same Note instance. `Note` is @Stable and `event`
+    // is a plain @Volatile var, so a bare read registers no snapshot dependency and
+    // Compose would keep showing the superseded version.
+    val observedEvent by observeNoteEvent<EntityRatingEvent>(note, accountViewModel)
+    val noteEvent = observedEvent ?: return
 
     val stars = remember(noteEvent) { noteEvent.stars() }
     val mark = remember(noteEvent) { noteEvent.mark() }
@@ -331,12 +338,22 @@ private fun RatedNoteCard(
                 ?.take(140)
                 ?.ifBlank { null } ?: targetNote.idHex.take(8)
         }
-    val author = remember(noteState) { targetNote.author?.toBestDisplayName() }
+    // A name arrives with its author's kind-0, which routinely lands long after the note it
+    // signs. Observed so the card fills in the name instead of freezing on the hex it started
+    // with, and so the observation itself asks the relays for that metadata.
+    val author = noteState.note.author
+    val authorName =
+        if (author != null) {
+            val authorInfo by observeUserInfo(author, accountViewModel)
+            authorInfo?.info?.bestName() ?: author.pubkeyDisplayHex()
+        } else {
+            null
+        }
 
     RatedTargetCard(
         mark = mark,
         title = title,
-        subtitle = author,
+        subtitle = authorName,
         onClick = { nav.nav(Route.Note(targetNote.idHex)) },
     )
 }

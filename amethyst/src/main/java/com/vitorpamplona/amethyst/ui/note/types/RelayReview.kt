@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,7 +85,12 @@ fun RenderRelayReview(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? RelayReviewEvent ?: return
+    // Observed, not read once: these kinds are DEFINED by replacement — a newer rating,
+    // review or redirect lands on the same Note instance. `Note` is @Stable and `event`
+    // is a plain @Volatile var, so a bare read registers no snapshot dependency and
+    // Compose would keep showing the superseded version.
+    val observedEvent by observeNoteEvent<RelayReviewEvent>(note, accountViewModel)
+    val noteEvent = observedEvent ?: return
 
     val relayUrl = remember(noteEvent) { noteEvent.relay()?.url ?: noteEvent.relayUrl() }
     val stars = remember(noteEvent) { noteEvent.stars() }

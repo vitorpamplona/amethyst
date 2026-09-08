@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,7 +66,12 @@ fun RenderPublicationSection(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? PublicationContentEvent ?: return
+    // Observed, not read once: these kinds are DEFINED by replacement — a newer rating,
+    // review or redirect lands on the same Note instance. `Note` is @Stable and `event`
+    // is a plain @Volatile var, so a bare read registers no snapshot dependency and
+    // Compose would keep showing the superseded version.
+    val observedEvent by observeNoteEvent<PublicationContentEvent>(note, accountViewModel)
+    val noteEvent = observedEvent ?: return
 
     val title = remember(noteEvent) { noteEvent.titleOrIdentifier() }
 

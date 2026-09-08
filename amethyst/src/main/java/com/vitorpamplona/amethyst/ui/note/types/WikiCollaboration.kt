@@ -153,7 +153,12 @@ fun RenderWikiRedirect(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? WikiRedirectEvent ?: return
+    // Observed, not read once: these kinds are DEFINED by replacement — a newer rating,
+    // review or redirect lands on the same Note instance. `Note` is @Stable and `event`
+    // is a plain @Volatile var, so a bare read registers no snapshot dependency and
+    // Compose would keep showing the superseded version.
+    val observedEvent by observeNoteEvent<WikiRedirectEvent>(note, accountViewModel)
+    val noteEvent = observedEvent ?: return
 
     val from = remember(noteEvent) { noteEvent.fromSlug() }
     val target = remember(noteEvent) { noteEvent.target() }

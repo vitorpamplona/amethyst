@@ -109,7 +109,12 @@ fun RenderPublicationIndex(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? PublicationIndexEvent ?: return
+    // Observed, not read once: 30040 is addressable, so a re-published index (a new edition, a
+    // reordered table of contents) replaces the event on the same Note instance. `Note` is @Stable
+    // and `event` is a plain @Volatile var, so a bare read registers no snapshot dependency and
+    // Compose would keep showing the superseded index.
+    val observedEvent by observeNoteEvent<PublicationIndexEvent>(note, accountViewModel)
+    val noteEvent = observedEvent ?: return
 
     PublicationHeader(noteEvent, note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 }

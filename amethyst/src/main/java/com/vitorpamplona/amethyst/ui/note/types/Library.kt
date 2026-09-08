@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -90,7 +92,12 @@ fun RenderLearningResource(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? LearningResourceEvent ?: return
+    // Observed, not read once: all three library kinds are addressable, so an edited shelf or
+    // resource replaces the event on the same Note instance. `Note` is @Stable and `event` is a
+    // plain @Volatile var, so a bare read registers no snapshot dependency and Compose would keep
+    // showing the superseded version. Observing also asks the relays for the event.
+    val observedEvent by observeNoteEvent<LearningResourceEvent>(note, accountViewModel)
+    val noteEvent = observedEvent ?: return
 
     Column(Modifier.fillMaxWidth()) {
         LibraryHeader(
@@ -135,7 +142,12 @@ fun RenderBookshelfDirectory(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? BookshelfDirectoryEvent ?: return
+    // Observed, not read once: all three library kinds are addressable, so an edited shelf or
+    // resource replaces the event on the same Note instance. `Note` is @Stable and `event` is a
+    // plain @Volatile var, so a bare read registers no snapshot dependency and Compose would keep
+    // showing the superseded version. Observing also asks the relays for the event.
+    val observedEvent by observeNoteEvent<BookshelfDirectoryEvent>(note, accountViewModel)
+    val noteEvent = observedEvent ?: return
 
     val itemCount = remember(noteEvent) { noteEvent.itemCount() }
 
@@ -160,7 +172,12 @@ fun RenderBlossomPieceIndex(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val noteEvent = note.event as? BlossomPieceIndexEvent ?: return
+    // Observed, not read once: all three library kinds are addressable, so an edited shelf or
+    // resource replaces the event on the same Note instance. `Note` is @Stable and `event` is a
+    // plain @Volatile var, so a bare read registers no snapshot dependency and Compose would keep
+    // showing the superseded version. Observing also asks the relays for the event.
+    val observedEvent by observeNoteEvent<BlossomPieceIndexEvent>(note, accountViewModel)
+    val noteEvent = observedEvent ?: return
 
     LibraryHeader(
         symbol = MaterialSymbols.Storage,
