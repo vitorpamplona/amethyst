@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -135,8 +136,11 @@ class AccountMarmotActions(
                 ?.toSet()
                 .orEmpty()
         val fetchRelays =
-            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-                .fetchRelaysFor(memberKeyPackageRelays, memberOutbox, myOutbox)
+            KeyPackageFetcher.fetchRelaysFor(
+                targetOutbox = memberOutbox,
+                myOutbox = myOutbox,
+                targetKeyPackageRelays = memberKeyPackageRelays,
+            )
 
         Log.d("MarmotDbg") {
             "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
@@ -266,11 +270,16 @@ class AccountMarmotActions(
 
     /**
      * Relays where this account publishes kind:30443 KeyPackage events.
-     * Per MIP-00: prefer kind:10051 KeyPackage Relay List; fall back to NIP-65 outbox.
+     *
+     * The NIP-65 write set is the discovery rule now — the spec removed the
+     * dedicated kind:10051 KeyPackage relay list. The account's own 10051 is
+     * still unioned in so peers that have not migrated keep finding us.
      */
     fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> =
-        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-            .publishRelaysFor(account.keyPackageRelayList.flow.value, account.outboxRelays.flow.value)
+        KeyPackageFetcher.publishRelaysFor(
+            myOutbox = account.outboxRelays.flow.value,
+            legacyKeyPackageRelayList = account.keyPackageRelayList.flow.value,
+        )
 
     /**
      * Publish or rotate KeyPackage events.

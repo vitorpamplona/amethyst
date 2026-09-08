@@ -83,9 +83,9 @@ object GroupAddMemberCommand {
                             seedRelays = seed,
                         )
 
-                // KeyPackage discovery (MIP-00): prefer the invitee's own
-                // kind:10051, then their kind:10002 write marker, then our
-                // bootstrap pool as a last-resort fallback.
+                // KeyPackage discovery: the invitee's kind:10002 write set is
+                // the rule now; their kind:10051 is a legacy hint and our
+                // bootstrap pool a last-resort fallback.
                 val kpRelays =
                     KeyPackageFetcher.fetchRelaysFor(
                         targetKeyPackageRelays = recipient.keyPackage,

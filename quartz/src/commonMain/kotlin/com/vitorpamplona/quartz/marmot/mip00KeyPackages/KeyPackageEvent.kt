@@ -21,7 +21,9 @@
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.AppComponentsTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsProposalsTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -67,8 +69,17 @@ class KeyPackageEvent(
     /** Supported non-default MLS proposal type IDs */
     fun mlsProposals() = tags.mlsProposals()
 
-    /** Content encoding format (must be "base64") */
+    /** Content encoding format — MIP-era only; forbidden in the current profile. */
     fun encoding() = tags.encoding()
+
+    /** Marmot app-component ids this KeyPackage advertises (current profile). */
+    fun appComponents() = tags.appComponents()
+
+    /**
+     * True when this event advertises the current profile: it carries an
+     * `app_components` tag naming `0x8009`. A MIP-era event has no such tag.
+     */
+    fun isCurrentProfile() = appComponents()?.any { it.equals(AppComponentsTag.ACCOUNT_IDENTITY_PROOF_V2, true) } == true
 
     /** Hex-encoded KeyPackageRef for efficient relay queries */
     fun keyPackageRef() = tags.keyPackageRef()
@@ -85,6 +96,53 @@ class KeyPackageEvent(
     companion object {
         const val KIND = 30443
 
+        /** `app_data_dictionary` — the current profile's only required MLS extension. */
+        const val CURRENT_PROFILE_EXTENSION = "0x0006"
+
+        /** `app_data_update` — required alongside `self_remove`. */
+        const val APP_DATA_UPDATE_PROPOSAL = "0x0008"
+
+        /**
+         * Build a CURRENT-PROFILE kind:30443 event.
+         *
+         * Differences from [build], all of them wire-visible:
+         *  - `mls_extensions` names `app_data_dictionary` (`0x0006`), not
+         *    MIP-01's `marmot_group_data`; last resort is a KeyPackage
+         *    component now, not extension `0x000a`;
+         *  - `mls_proposals` adds `app_data_update` (`0x0008`);
+         *  - an `app_components` tag is required and must include `0x8009`;
+         *  - NO `encoding` tag — the current profile forbids it;
+         *  - NO `relays` tag — discovery uses the author's NIP-65 write set,
+         *    and the spec removed the dedicated KeyPackage relay list.
+         *
+         * [dTagSlot] is a stable random 32-byte publication slot id. Replacing
+         * the KeyPackage in that logical slot MUST reuse the same value; a
+         * fresh one creates a second concurrently discoverable slot.
+         */
+        fun buildCurrentProfile(
+            keyPackageBase64: String,
+            dTagSlot: String,
+            keyPackageRef: HexKey,
+            appComponentIds: List<String>,
+            ciphersuite: String = "0x0001",
+            clientName: String? = null,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<KeyPackageEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, keyPackageBase64, createdAt) {
+            dTag(dTagSlot)
+            mlsProtocolVersion()
+            mlsCiphersuite(ciphersuite)
+            mlsExtensions(listOf(CURRENT_PROFILE_EXTENSION))
+            mlsProposals(listOf(APP_DATA_UPDATE_PROPOSAL, MlsProposalsTag.SELF_REMOVE))
+            appComponents(
+                (appComponentIds + AppComponentsTag.ACCOUNT_IDENTITY_PROOF_V2).distinct().sorted(),
+            )
+            keyPackageRef(keyPackageRef)
+            clientName?.let { client(it) }
+            initializer()
+        }
+
+        /** MIP-era builder, kept for legacy groups already on disk. */
         fun build(
             keyPackageBase64: String,
             dTagSlot: String,

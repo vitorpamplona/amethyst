@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
@@ -168,7 +170,20 @@ class MarmotInboundProcessor(
 ) {
     private val commitTracker = CommitOrdering.EpochCommitTracker()
     private val processedIdsMutex = Mutex()
-    private val processedEventIds = LinkedHashSet<String>()
+
+    /**
+     * Marmot message ids (`SHA-256` over the recovered `MLSMessage` bytes) we
+     * have already applied, newest last.
+     *
+     * NOT Nostr event ids. `transports/nostr.md` is explicit: the Nostr event
+     * id is transport evidence and MUST NOT be the deduplication id. Relays
+     * redeliver, and a client subscribed to several relays receives the same
+     * group message repeatedly — those copies share MLS bytes but each carries
+     * its own fresh ephemeral pubkey and therefore a different event id, so an
+     * event-id dedup collapses nothing. Worse, a hostile republisher can mint
+     * unlimited distinct event ids for one MLS message.
+     */
+    private val processedMessageIds = LinkedHashSet<String>()
 
     companion object {
         private const val MAX_PROCESSED_IDS = 10_000
@@ -178,6 +193,16 @@ class MarmotInboundProcessor(
          */
         fun isWelcomeEvent(event: Event): Boolean = event.kind == WelcomeEvent.KIND
     }
+
+    /**
+     * `message_id = SHA-256(mls_message_bytes)` — the Marmot message id from
+     * `foundation/wire-envelopes.md`, computed over the recovered bytes
+     * without re-encoding so two transport copies of one MLS message agree.
+     *
+     * For a commit these are byte-for-byte its `commit_digest`, so convergence
+     * needs no second hash.
+     */
+    private fun marmotMessageId(mlsBytes: ByteArray): String = sha256(mlsBytes).toHexKey()
 
     /**
      * Process an inbound GroupEvent (kind:445).
@@ -195,16 +220,6 @@ class MarmotInboundProcessor(
      * @return the processing result
      */
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
-        // Deduplicate already-processed events (thread-safe)
-        val eventId = groupEvent.id
-        val alreadyProcessed =
-            processedIdsMutex.withLock {
-                eventId in processedEventIds
-            }
-        if (alreadyProcessed) {
-            return GroupEventResult.Duplicate(groupEvent.groupId() ?: "")
-        }
-
         val groupId =
             groupEvent.groupId()
                 ?: return GroupEventResult.Error(null, "GroupEvent missing h tag (group ID)")
@@ -213,6 +228,7 @@ class MarmotInboundProcessor(
             return GroupEventResult.Error(groupId, "Not a member of group $groupId")
         }
 
+        var messageId: String? = null
         val result =
             try {
                 // Step 1: Outer ChaCha20-Poly1305 decryption
@@ -227,13 +243,21 @@ class MarmotInboundProcessor(
                         retainedEpochCount = groupManager.retainedExporterSecrets(groupId).size,
                     )
                 } else {
-                    // Step 2: Parse the MLS message
-                    val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
+                    // The Marmot message id is defined over the recovered MLS
+                    // bytes, so dedup can only happen AFTER outer decryption —
+                    // there is nothing to hash before that.
+                    messageId = marmotMessageId(mlsBytes)
+                    if (processedIdsMutex.withLock { messageId in processedMessageIds }) {
+                        GroupEventResult.Duplicate(groupId)
+                    } else {
+                        // Step 2: Parse the MLS message
+                        val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
 
-                    when (mlsMessage.wireFormat) {
-                        WireFormat.PRIVATE_MESSAGE -> processPrivateMessage(groupId, mlsMessage, groupEvent)
-                        WireFormat.PUBLIC_MESSAGE -> processPublicMessage(groupId, mlsMessage, groupEvent)
-                        else -> GroupEventResult.Error(groupId, "Unexpected wire format: ${mlsMessage.wireFormat}")
+                        when (mlsMessage.wireFormat) {
+                            WireFormat.PRIVATE_MESSAGE -> processPrivateMessage(groupId, mlsMessage, groupEvent)
+                            WireFormat.PUBLIC_MESSAGE -> processPublicMessage(groupId, mlsMessage, groupEvent)
+                            else -> GroupEventResult.Error(groupId, "Unexpected wire format: ${mlsMessage.wireFormat}")
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -247,13 +271,14 @@ class MarmotInboundProcessor(
         // would cause the retry to hit the Duplicate early-return above and
         // skip MLS decryption entirely. DoS is already bounded by the
         // handler's per-group pending buffer.
-        if (result !is GroupEventResult.UndecryptableOuterLayer) {
+        val idToRemember = messageId
+        if (idToRemember != null && result !is GroupEventResult.UndecryptableOuterLayer) {
             processedIdsMutex.withLock {
-                processedEventIds.add(eventId)
+                processedMessageIds.add(idToRemember)
                 // Trim the set if it exceeds the max size
-                if (processedEventIds.size > MAX_PROCESSED_IDS) {
-                    val iterator = processedEventIds.iterator()
-                    val toRemove = processedEventIds.size - MAX_PROCESSED_IDS
+                if (processedMessageIds.size > MAX_PROCESSED_IDS) {
+                    val iterator = processedMessageIds.iterator()
+                    val toRemove = processedMessageIds.size - MAX_PROCESSED_IDS
                     repeat(toRemove) {
                         iterator.next()
                         iterator.remove()
@@ -372,12 +397,12 @@ class MarmotInboundProcessor(
      * local epoch. Reprocessing the same commit bytes would otherwise fail
      * with a confirmation-tag / transcript mismatch.
      */
-    suspend fun markEventProcessed(eventId: HexKey) {
+    suspend fun markMessageProcessed(marmotMessageId: HexKey) {
         processedIdsMutex.withLock {
-            processedEventIds.add(eventId)
-            if (processedEventIds.size > MAX_PROCESSED_IDS) {
-                val iterator = processedEventIds.iterator()
-                val toRemove = processedEventIds.size - MAX_PROCESSED_IDS
+            processedMessageIds.add(marmotMessageId)
+            if (processedMessageIds.size > MAX_PROCESSED_IDS) {
+                val iterator = processedMessageIds.iterator()
+                val toRemove = processedMessageIds.size - MAX_PROCESSED_IDS
                 repeat(toRemove) {
                     iterator.next()
                     iterator.remove()

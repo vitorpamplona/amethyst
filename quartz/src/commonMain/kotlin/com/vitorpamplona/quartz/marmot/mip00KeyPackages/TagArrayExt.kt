@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.AppComponentsTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.ClientTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.KeyPackageRefTag
@@ -45,3 +46,5 @@ fun TagArray.keyPackageRef() = firstNotNullOfOrNull(KeyPackageRefTag::parse)
 fun TagArray.keyPackageRelays() = firstNotNullOfOrNull(RelaysTag::parse)
 
 fun TagArray.clientName() = firstNotNullOfOrNull(ClientTag::parse)
+
+fun TagArray.appComponents() = firstNotNullOfOrNull(AppComponentsTag::parse)

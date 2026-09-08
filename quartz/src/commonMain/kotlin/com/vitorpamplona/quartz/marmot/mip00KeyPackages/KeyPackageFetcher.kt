@@ -40,22 +40,25 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  */
 object KeyPackageFetcher {
     /**
-     * Union of the three relay sets we'd ever want to query for a given user's
-     * KeyPackage, in priority order of specificity:
+     * Relays to query for a given user's KeyPackages.
      *
-     * 1. target's kind:10051 KeyPackage Relay List (most authoritative)
-     * 2. target's kind:10002 NIP-65 outbox (where the user publishes in general)
-     * 3. our own outbox (shared-relay fallback — someone publishing and us
-     *    reading often overlap here)
+     * The spec's rule is the target's NIP-65 (kind 10002) WRITE-capable set:
+     * "There is no dedicated KeyPackage relay list." MIP-00's kind 10051 is
+     * gone, so [targetKeyPackageRelays] is now only a legacy hint — still worth
+     * querying, because a peer that has not migrated may only be publishing
+     * there, and querying an extra relay costs nothing and changes no
+     * validity. Our own outbox stays as a shared-relay fallback.
+     *
+     * Order here is presentation only; the caller queries the whole set.
      */
     fun fetchRelaysFor(
-        targetKeyPackageRelays: Collection<NormalizedRelayUrl>,
         targetOutbox: Collection<NormalizedRelayUrl>,
         myOutbox: Collection<NormalizedRelayUrl>,
+        targetKeyPackageRelays: Collection<NormalizedRelayUrl> = emptySet(),
     ): Set<NormalizedRelayUrl> =
         buildSet {
-            addAll(targetKeyPackageRelays)
             addAll(targetOutbox)
+            addAll(targetKeyPackageRelays)
             addAll(myOutbox)
         }
 
@@ -86,16 +89,19 @@ object KeyPackageFetcher {
     }
 
     /**
-     * Resolve which relays this account should publish its OWN KeyPackage to.
+     * Resolve which relays this account should publish its OWN KeyPackages to.
      *
-     * Per MIP-00, a user's KeyPackages SHOULD live on the relays listed in their
-     * kind:10051 KeyPackageRelayListEvent. If they haven't published one yet,
-     * fall back to their NIP-65 outbox — that's where their other write-oriented
-     * events land and it keeps discovery working in the common "just starting out"
-     * case.
+     * The NIP-65 write-capable set, per `transports/nostr.md`: "The account
+     * publishes its kind 30443 KeyPackage events to its write-capable set."
+     *
+     * This deliberately no longer prefers a kind:10051 list. Publishing only
+     * where a now-removed list points would make us undiscoverable to a
+     * conformant peer, which looks in the NIP-65 set and nowhere else.
+     * [legacyKeyPackageRelayList] is unioned in rather than replacing the
+     * outbox, so a peer still on the MIP-era path keeps finding us.
      */
     fun publishRelaysFor(
-        keyPackageRelayList: Collection<NormalizedRelayUrl>,
         myOutbox: Collection<NormalizedRelayUrl>,
-    ): Set<NormalizedRelayUrl> = if (keyPackageRelayList.isNotEmpty()) keyPackageRelayList.toSet() else myOutbox.toSet()
+        legacyKeyPackageRelayList: Collection<NormalizedRelayUrl> = emptySet(),
+    ): Set<NormalizedRelayUrl> = myOutbox.toSet() + legacyKeyPackageRelayList.toSet()
 }

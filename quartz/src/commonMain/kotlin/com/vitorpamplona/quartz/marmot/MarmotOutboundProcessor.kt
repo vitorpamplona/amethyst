@@ -26,10 +26,12 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Result of building an outbound GroupEvent.
@@ -37,6 +39,16 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 data class OutboundGroupEvent(
     val signedEvent: GroupEvent,
     val nostrGroupId: HexKey,
+    /**
+     * `SHA-256` over the MLS bytes this event carries — the Marmot message id
+     * from `foundation/wire-envelopes.md`.
+     *
+     * Kept alongside the signed event so a publisher can suppress its own echo
+     * by MLS identity. The Nostr event id cannot serve: relays redeliver, and
+     * each transport copy of one MLS message carries its own fresh ephemeral
+     * pubkey and therefore a different event id.
+     */
+    val marmotMessageId: HexKey,
 )
 
 /**
@@ -115,6 +127,7 @@ class MarmotOutboundProcessor(
         return OutboundGroupEvent(
             signedEvent = signedEvent,
             nostrGroupId = nostrGroupId,
+            marmotMessageId = sha256(mlsCiphertext).toHexKey(),
         )
     }
 
@@ -159,6 +172,7 @@ class MarmotOutboundProcessor(
         return OutboundGroupEvent(
             signedEvent = signedEvent,
             nostrGroupId = nostrGroupId,
+            marmotMessageId = sha256(commitBytes).toHexKey(),
         )
     }
 

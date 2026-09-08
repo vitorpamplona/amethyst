@@ -20,12 +20,18 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
+import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils.isCryptographicallyValid
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils.isValid
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsCiphersuiteTag
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsProposalsTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsProtocolVersionTag
+import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
+import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
+import com.vitorpamplona.quartz.marmot.mls.components.ComponentsList
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
@@ -34,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -46,6 +53,12 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * - Migration: support both kind:443 (legacy) and kind:30443 (addressable) during transition
  */
 object KeyPackageUtils {
+    /**
+     * 84 days plus a one-hour clock-skew margin — the maximum span a Marmot
+     * KeyPackage `Lifetime` may cover (`foundation/key-packages.md`).
+     */
+    const val MAX_LIFETIME_SECONDS = 7_261_200L
+
     /** Legacy non-addressable KeyPackage kind (pre-migration) */
     const val LEGACY_KIND = 443
 
@@ -123,16 +136,31 @@ object KeyPackageUtils {
         // mls_ciphersuite == "0x0001"
         if (event.mlsCiphersuite() != MlsCiphersuiteTag.DEFAULT_CIPHERSUITE) return false
 
-        // mls_extensions MUST include both 0xf2ee and 0x000a
         val extensions = event.mlsExtensions()?.map { it.lowercase() }?.toSet() ?: return false
-        if (!extensions.contains("0xf2ee") || !extensions.contains("0x000a")) return false
-
-        // mls_proposals MUST include 0x000a (SelfRemove)
         val proposals = event.mlsProposals()?.map { it.lowercase() }?.toSet() ?: return false
-        if (!proposals.contains("0x000a")) return false
 
-        // encoding MUST be base64 and content non-empty
-        if (event.encoding() != EncodingTag.BASE64) return false
+        if (event.isCurrentProfile()) {
+            // Current profile: app_data_dictionary + app_data_update, and an
+            // app_components tag naming 0x8009. Last resort moved from
+            // extension 0x000a to a KeyPackage component, so it is NOT
+            // advertised here any more.
+            if (!extensions.contains(KeyPackageEvent.CURRENT_PROFILE_EXTENSION)) return false
+            if (!proposals.contains(KeyPackageEvent.APP_DATA_UPDATE_PROPOSAL)) return false
+            if (!proposals.contains(MlsProposalsTag.SELF_REMOVE)) return false
+            // The current profile forbids the encoding tag outright: a
+            // receiver must decode by the rule that defines each field, never
+            // by a negotiated marker.
+            if (event.encoding() != null) return false
+            // ...and does not repeat relays; discovery is the author's NIP-65
+            // write set.
+            if (event.relays() != null) return false
+        } else {
+            // MIP-era shape, kept so groups already on disk stay readable.
+            if (!extensions.contains("0xf2ee") || !extensions.contains("0x000a")) return false
+            if (!proposals.contains("0x000a")) return false
+            if (event.encoding() != EncodingTag.BASE64) return false
+        }
+
         if (event.content.isEmpty()) return false
 
         // i (KeyPackageRef) tag MUST be present
@@ -153,7 +181,10 @@ object KeyPackageUtils {
      * internally.
      */
     @OptIn(ExperimentalEncodingApi::class)
-    fun isCryptographicallyValid(event: KeyPackageEvent): Boolean {
+    fun isCryptographicallyValid(
+        event: KeyPackageEvent,
+        nowSeconds: Long = TimeUtils.now(),
+    ): Boolean {
         if (!isValid(event)) return false
 
         val iTag = event.keyPackageRef() ?: return false
@@ -178,7 +209,61 @@ object KeyPackageUtils {
         // KeyPackage signature MUST verify against the LeafNode's signatureKey.
         if (!keyPackage.verifySignature()) return false
 
+        if (!hasValidLifetime(keyPackage, nowSeconds)) return false
+
+        // Current profile: the embedded LeafNode must actually advertise and
+        // carry the account identity proof. The app_components TAG is only an
+        // advertisement — a producer can write anything there, so the decoded
+        // bytes are what decide.
+        if (event.isCurrentProfile() && !hasValidAccountIdentityProof(keyPackage, credential.identity)) {
+            return false
+        }
+
         return true
+    }
+
+    /**
+     * The MLS `Lifetime` extension is part of KeyPackage validity
+     * (`foundation/key-packages.md`).
+     *
+     * A candidate MUST carry one, MUST be current at validation time, and MUST
+     * span at most [MAX_LIFETIME_SECONDS]. A last-resort KeyPackage does NOT
+     * relax the span limit — reuse is about the init key, not about staying
+     * valid forever.
+     */
+    fun hasValidLifetime(
+        keyPackage: MlsKeyPackage,
+        nowSeconds: Long = TimeUtils.now(),
+    ): Boolean {
+        val lifetime = keyPackage.leafNode.lifetime ?: return false
+        if (lifetime.notBefore == 0L && lifetime.notAfter == 0L) return false
+        if (nowSeconds < lifetime.notBefore) return false
+        if (nowSeconds > lifetime.notAfter) return false
+        val span = lifetime.notAfter - lifetime.notBefore
+        if (span <= 0L || span > MAX_LIFETIME_SECONDS) return false
+        return true
+    }
+
+    /**
+     * Validate the LeafNode's `marmot.member.account-identity-proof.v2`
+     * component against that same leaf's credential and signature key.
+     */
+    fun hasValidAccountIdentityProof(
+        keyPackage: MlsKeyPackage,
+        credentialIdentity: ByteArray,
+    ): Boolean {
+        val dictionary = AppDataDictionary.fromExtensions(keyPackage.leafNode.extensions) ?: return false
+
+        val supported = dictionary[ComponentsList.APP_COMPONENTS_ID]?.let { ComponentsList.decode(it) } ?: return false
+        if (!supported.contains(AppComponentIds.ACCOUNT_IDENTITY_PROOF_V2)) return false
+
+        val ciphersuite = MlsCiphersuite.fromCode(MlsCiphersuiteTag.DEFAULT_CIPHERSUITE) ?: return false
+        return AccountIdentityProofV2.isValid(
+            componentData = dictionary[AppComponentIds.ACCOUNT_IDENTITY_PROOF_V2],
+            credentialIdentity = credentialIdentity,
+            mlsSignatureKey = keyPackage.leafNode.signatureKey,
+            ciphersuite = ciphersuite,
+        )
     }
 
     private fun Char.isHexChar(): Boolean = this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'

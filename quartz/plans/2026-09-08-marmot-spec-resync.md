@@ -1,6 +1,6 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stages 0-3 done. Stages 4-7 open.
+Status: Stages 0-4 done, plus the Stage 3 image-crypto follow-up. Stages 5-7 open.
 
 Sources checked on 2026-09-08:
 
@@ -374,16 +374,35 @@ group state; an admin can; adminship transfers; a phantom admin with no member l
 rejected; removing the admin policy is rejected). Full `:quartz:jvmTest`: 4,542 tests, 0
 failures. `:commons` and `:cli` still compile.
 
-**Still open in this stage** — the encryption side of `0x8002`. The component now carries
-`media_type` and exposes the `"marmot-group-image-v1" || 0x00 || media_type` AAD, but
-`MarmotGroupImageCipher` still encrypts with an empty AAD and treats `image_key` /
-`image_upload_key` as HKDF seeds rather than the keys themselves. Changing that touches the
-Android and CLI image paths, so it is its own change rather than a rider on the codecs.
+**Image crypto — DONE.** `GroupBlossomImageCrypto` implements the current-profile scheme:
+`image_key` IS the AEAD key, `image_upload_key` IS the Blossom-auth secret, and the AAD is
+`"marmot-group-image-v1" || 0x00 || canonical_media_type`. `MarmotMediaType` implements the
+frozen canonicalization (ASCII case folding only, one alias). The MIP-01 scheme stays in
+`MarmotGroupImageEncryption` for groups already on disk, and nothing falls back between them —
+the component id is the version.
 
-**Stage 4 — Nostr transport corrections.**
-Drop kind 10051 in favor of NIP-65 write relays; drop the `encoding` and `relays` tags from
-30443; add `app_components`; MLS-bytes dedup id; bounded retained-candidate trial decryption;
-KeyPackage lifetime bound.
+**Stage 4 — Nostr transport corrections. MOSTLY DONE.**
+
+- `KeyPackageEvent.buildCurrentProfile()` emits the current tag set: `mls_extensions` =
+  `0x0006`, `mls_proposals` adds `0x0008`, an `app_components` tag that must name `0x8009`,
+  and NO `encoding` or `relays` tags. `KeyPackageUtils.isValid` is profile-aware, told apart by
+  the presence of `app_components` rather than a version tag; the MIP-era shape stays valid.
+- KeyPackage discovery moved to the NIP-65 write set. `publishRelaysFor` no longer *prefers*
+  a kind:10051 list — publishing only where a removed list points would make us invisible to a
+  conformant peer, which looks in the NIP-65 set and nowhere else. The 10051 list is unioned
+  in, never substituted, so unmigrated peers still find us.
+- Dedup is now `SHA-256(mls_message_bytes)`, never the Nostr event id. The old scheme
+  collapsed nothing: each transport copy of one MLS message carries a fresh ephemeral pubkey
+  and therefore a different event id, and a hostile republisher can mint unlimited ids for one
+  message. `OutboundGroupEvent` carries the id so self-echo suppression works by MLS identity.
+- KeyPackage `Lifetime` is validated: present, current, and spanning at most 7,261,200 s.
+- The embedded account identity proof is validated on inbound current-profile KeyPackages —
+  the `app_components` tag is only an advertisement, so the decoded LeafNode decides.
+
+**Still open:** bounded retained-candidate trial decryption for kind:445. The rule ("try the
+canonical epoch, retained epochs inside the rollback horizon, and any staged-but-unmerged local
+commit — and no more") is defined in terms of the retained-state set that convergence owns, so
+it lands with Stage 6 rather than ahead of it.
 
 **Stage 5 — lifecycle state machine + publish-before-apply.**
 The six canonical states, the `Leaving` / `Disbanding` gates, and the publish-obligation

@@ -394,7 +394,7 @@ class MarmotManager(
         // The published kind:445 will echo back from the relay — without this
         // dedup our own inbound pipeline would try to re-apply a commit whose
         // epoch we've already merged.
-        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
 
         val welcomeDelivery =
             welcomeSender.wrapWelcome(
@@ -533,7 +533,7 @@ class MarmotManager(
                 commitBytes = commitResult.framedCommitBytes,
                 exporterKey = commitResult.preCommitExporterSecret,
             )
-        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
         return commitEvent
     }
 
@@ -564,7 +564,7 @@ class MarmotManager(
                 commitBytes = commitResult.framedCommitBytes,
                 exporterKey = commitResult.preCommitExporterSecret,
             )
-        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        inboundProcessor.markMessageProcessed(commitEvent.marmotMessageId)
         return commitEvent
     }
 
