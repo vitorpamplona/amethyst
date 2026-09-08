@@ -1,6 +1,7 @@
 # Local search as `filter(Filter)` — retiring the bespoke `find*StartingWith` scans
 
-_Status: proposal. Three decisions (§2) are open and change what the code looks like._
+_Status: **steps 1–6 shipped**; see §8 for what landed, what changed on contact with the code, and
+what is deliberately left. The three decisions in §2 were taken as recommended._
 
 ## 0. The shape of the thing
 
@@ -279,3 +280,51 @@ Call sites to migrate: `SearchBarViewModel`, `UserSuggestionState`, `UserSearchE
   mandatory-maintenance rule for §4.4.
 - `2026-09-07` search-field work (`SearchTokenizer` / `SearchFilterBuilder` in `commons/search/`)
   — produces the `Filter`s step 6 consumes.
+
+
+## 8. What actually shipped
+
+Steps 1–6 landed. Two things changed on contact with the code, both for the better:
+
+**Step 7 is moot, and the blast radius never opens.** The plan assumed local search needed
+`FilterMatcher` to honour `search`, which would have narrowed every filter carrying one — 33 feed
+filters, `FilterIndex`, geode's `MirrorWorker` — and needed an audit before flipping. It does not.
+`LocalCache.filter` grew a **predicate** parameter instead, and search composes an
+`EventSearchMatcher` into it. `FilterMatcher` is untouched, so nothing else can change behaviour.
+The predicate is also where viewer policy went (§2.2), so one parameter answers both.
+
+**Step 1 turned out to be a pure win with no search in it.** `FilterMatcher` was allocating three
+ways per event; fixing that needed no new API and pays for all 33 existing callers. It is pinned by
+a differential test that keeps the old implementation as an oracle and fuzzes 20,000 random
+event/filter pairs against it.
+
+**Step 2 is scoped, not universal.** `forEachIndexableField` has a default that falls back to
+`indexableContent()` — already free for the ~28 kinds whose indexable content is `content` itself —
+and only the kinds local search actually scans override it (text notes, long-form, wiki,
+highlights, classifieds, live activities, community definitions). The remaining ~79 joining
+implementations still allocate on the read path, which costs nothing until something scans them.
+A test pins every override's fields to rejoin to `indexableContent()` byte-for-byte, so the
+externally-mirrored kind table stays valid and no reindex is needed.
+
+### Deliberately not done
+
+- **`findUsersStartingWith` and the three channel finders stay.** They are name-prefix lookups over
+  users and channels, not event filters; forcing them through a `Filter` would be worse, not
+  better. The plan's framing ("retire the bespoke scans") was too broad — only the *note* search is
+  filter-shaped.
+- **`findNotesStartingWith` stays, on one narrow path.** It matches `idHex.startsWith(text)` and
+  resolves bech32 pointers, neither of which is content and so neither reachable through a
+  filter's `search`. Text that could name an event — a bech32 pointer, or ≥8 hex characters — is
+  routed to it; everything else goes through the filters. The first cut fell back to it whenever
+  the filter path came up empty, which made every zero-result keystroke scan the cache twice.
+- **No characterization test for `findNotesStartingWith`.** The parity harness §6 asked for was not
+  written; the id path it guards is now the only thing still using that scan, and it is unchanged.
+  Worth writing if that path is ever touched.
+
+### Semantics that changed
+
+Local text matching is now **terms ANDed**, each a case-insensitive substring, where it was one
+literal phrase. A single-word query — the common case — is identical; `bitcoin lightning` now finds
+notes carrying both words rather than only that exact phrase, which is what the relay already
+returned for the same string. Ordering stays recency (§2.3): no local relevance score exists, and
+`EventSearchMatcher` answers only yes or no.

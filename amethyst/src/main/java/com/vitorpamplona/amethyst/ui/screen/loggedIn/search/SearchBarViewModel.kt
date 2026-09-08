@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.IPubKeyEntity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -300,12 +301,18 @@ class SearchBarViewModel(
             // path through findNotesStartingWith.
             val parsed = QueryParser.parse(term)
             val raw =
-                if (parsed.isEmpty) {
-                    emptyList()
-                } else {
-                    LocalCache.search
-                        .findNotesMatching(SearchFilterBuilder.build(parsed, limit = 200), account.hiddenUsers)
-                        .ifEmpty { LocalCache.search.findNotesStartingWith(term, account.hiddenUsers) }
+                when {
+                    parsed.isEmpty -> emptyList()
+                    // An id, whole or half-typed, is a lookup rather than a search: it matches on
+                    // `idHex`, which is not content and so nothing a filter's `search` can reach.
+                    // Routed to the scan that knows how to resolve it — and only for text that
+                    // could actually be one, so an ordinary query never pays for two scans.
+                    looksLikeAnEventId(term) -> LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
+                    else ->
+                        LocalCache.search.findNotesMatching(
+                            SearchFilterBuilder.build(parsed, limit = 200),
+                            account.hiddenUsers,
+                        )
                 }
             val filtered = if (follows != null) raw.filter { it.author?.pubkeyHex in follows } else raw
 
@@ -406,6 +413,17 @@ class SearchBarViewModel(
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
+
+    /**
+     * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex
+     * long enough that it is nobody's search term.
+     */
+    private fun looksLikeAnEventId(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty() || trimmed.contains(' ')) return false
+        if (decodeEventIdAsHexOrNull(trimmed) != null) return true
+        return trimmed.length >= 8 && trimmed.all { it in "0123456789abcdefABCDEF" }
+    }
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
         // force new query
