@@ -41,7 +41,8 @@ import okio.ByteString.Companion.encodeUtf8
  *
  * On API 31+, the platform [android.graphics.ImageDecoder] produces an
  * [android.graphics.drawable.AnimatedImageDrawable] for animated AVIF. We delegate the
- * actual decode to Coil's [AnimatedImageDecoder] — only the brand sniff is custom.
+ * actual decode to Coil's [AnimatedImageDecoder] — only the brand sniff is custom. It is built
+ * through [newAnimatedImageDecoder] so an AVIF gets the same disk-cache file fast path a GIF does.
  *
  * Below API 31 the platform decoder cannot handle AVIF at all, so we decline and let
  * other decoders try (they will also fail, and Coil falls through to its error slot,
@@ -62,7 +63,7 @@ class AvifAnimatedDecoderFactory : Decoder.Factory {
     private fun createAnimatedImageDecoder(
         result: SourceFetchResult,
         options: Options,
-    ): Decoder = AnimatedImageDecoder(result.source, options)
+    ): Decoder = newAnimatedImageDecoder(result.source, options, mayNeedFrameDelayRewrite = false)
 
     private fun isAvif(source: BufferedSource): Boolean =
         source.rangeEquals(4, FTYP) &&

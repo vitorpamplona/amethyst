@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
+import com.vitorpamplona.amethyst.service.images.ImageDiskCacheReconciler
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -1133,6 +1134,22 @@ class AppModules(
             while (true) {
                 delay(5 * 60 * 1000L)
                 dnsStore.save()
+            }
+        }
+
+        // Reclaim image-cache files orphaned by a process death that lost DeferredDeleteFileSystem's
+        // queued unlinks — Coil cannot see them, so without this the directory keeps every killed
+        // process's residue and drifts past its own cap forever. See ImageDiskCacheReconciler.
+        //
+        // Rate-limited to once a day: drift accrues over process deaths, not over startups, and this
+        // runs on every one of them — including the WorkManager wake-ups that cold-start the graph.
+        //
+        // Also the one place that forces the `diskCache` lazy, so its build (a statvfs for the size
+        // budget) and the check both land on IO rather than on whichever thread loads an image first.
+        applicationIOScope.launch {
+            val result = ImageDiskCacheReconciler.reconcileIfDue(diskCache)
+            if (result != null && result.wasOverBudget) {
+                Log.i("AppModules") { "Image cache was over budget: wiped ${result.reclaimedFiles} files (${result.bytesOnDisk} bytes on disk, ${result.budgetBytes} budget)" }
             }
         }
 
