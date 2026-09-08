@@ -528,7 +528,9 @@ fn main() {
         },
         "committer": {
             "account_pubkey": hex::encode(alice.account_xonly),
-            "signer_pub": hex::encode(alice.signer.public()),
+            // Same key name as the joiner's: both are that member's MLS leaf
+            // signature public key, and one concept gets one name.
+            "signature_pub": hex::encode(alice.signer.public()),
             "leaf_dictionary": alice_leaf_dict,
             "account_identity_proof": {
                 "component": hex::encode(&alice_proof.component),

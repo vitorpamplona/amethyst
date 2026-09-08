@@ -10,7 +10,7 @@ _Audited 2026-09-08. 12 plans: 7 shipped (archived), 0 in-progress, 4 queued, 1 
 | [2026-07-03-incremental-negentropy-storage.md](2026-07-03-incremental-negentropy-storage.md) | Always-current (created_at, id) index so cold NEG-OPENs stop paying a full scan + seal (~340 ms at 50k vs strfry's ~21 ms). |
 | [2026-07-04-small-req-floor.md](2026-07-04-small-req-floor.md) | Small-REQ dispatch floor: decomposed, inline fast path tried and reverted (no wire-level win); floor is transport-side. |
 | [2026-08-13-gpu-pow-mining.md](2026-08-13-gpu-pow-mining.md) | GPU NIP-13 mining declined (ARMv8 has SHA-256 in silicon, mobile GPUs do not). Midstate is ~3x on JVM targets; Android hinges on Conscrypt per-digest JNI cost, still unmeasured. created_at refresh while mining shipped. |
-| [2026-09-08-marmot-spec-resync.md](2026-09-08-marmot-spec-resync.md) | Marmot moved off the MIP-era spec (2026-07-02): group state split into `app_data_dictionary` components, account identity proof v2, and a convergence engine. Current MDK rejects our groups outright. Gap analysis + 8-stage plan; Stage 0 (interop reference repointed at mdk, current-profile vector generator) done. |
+| [2026-09-08-marmot-spec-resync.md](2026-09-08-marmot-spec-resync.md) | Marmot moved off the MIP-era spec (2026-07-02): group state split into `app_data_dictionary` components, account identity proof v2, and a convergence engine. Current MDK rejects our groups outright. Gap analysis + 8-stage plan; Stages 0 (interop reference repointed at mdk, current-profile vector generator) and 2 (account-identity-proof v2) done. |
 
 ## Archived (shipped)
 | Plan | Summary |

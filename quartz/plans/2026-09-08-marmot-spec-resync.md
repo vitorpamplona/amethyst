@@ -1,6 +1,6 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stage 0 done. Stages 1-7 open.
+Status: Stages 0 and 2 done. Stages 1, 3-7 open.
 
 Sources checked on 2026-09-08:
 
@@ -281,11 +281,31 @@ and is likely to surface at least the retry behaviour the old patch used to pape
 (`0x0002`); `AppDataUpdate` proposal (`0x0008`) through `MlsGroup` staging/validation;
 last-resort as KeyPackage component `0x0004`. Everything else depends on this.
 
-**Stage 2 — account identity proof v2 (`0x8009`).**
-`MarmotAuthorizationProof` codec, kind-450 signing template, BIP-340 verify, LeafNode/
-KeyPackage validation, capability advertisement. Ships with the spec's published test vector,
-so it can be built and verified before Stage 1 lands. This is what makes us classifiable at
-all.
+**Stage 2 — account identity proof v2 (`0x8009`). DONE.**
+
+- `marmot/foundation/authorizationProofs/MarmotAuthorizationProof` — the 104-byte common
+  envelope from `foundation/authorization-proofs.md`, with the `created_at` bounds (`1` to
+  `2^53-1`, catching a uint64 that reads back negative as a Long) and event-id reconstruction.
+  Deliberately no wall-clock comparison: a proof does not expire, because clock skew must not
+  make two members disagree about the same Commit.
+- `marmot/appComponents/accountIdentityProof/AccountIdentityProofV2` — the kind-450 signing
+  template, production through `NostrSigner` (so NIP-46 / NIP-55 signers work), and validation
+  returning a typed reason. `create()` re-verifies what the signer returned — pubkey, timestamp,
+  kind, tags, content, id and signature — because an external signer is free to substitute.
+- `marmot/appComponents/AppComponentIds` — the component registry from
+  `foundation/registries.md`, needed by Stages 1 and 3 too.
+- `MlsCiphersuite` gained the RFC 9420 §17.1 signature-scheme mapping, which the proof signs
+  and validates explicitly.
+
+Verified: 16 tests against the spec's published fixture (canonical event serialization, event
+id, signature, 104-byte layout) plus every signed input's binding, and 6 tests validating the
+proofs in `marmot-current-profile.json` — proofs produced by a *separate* implementation for
+random keys, which a fixed vector cannot establish. Full `:quartz:jvmTest --tests "*marmot*"`:
+395 tests, 0 failures.
+
+Not yet wired: nothing reads or writes these components on a real leaf. The carrier is the
+`app_data_dictionary`, which is Stage 1. Until then this is a correct, tested primitive with no
+call sites — which is exactly what makes Stage 1 mechanical rather than exploratory.
 
 **Stage 3 — split `MarmotGroupData` into components.**
 `0x8001` profile, `0x8003` admin-policy, `0x8004` nostr-routing, `0x8002` blossom-image
