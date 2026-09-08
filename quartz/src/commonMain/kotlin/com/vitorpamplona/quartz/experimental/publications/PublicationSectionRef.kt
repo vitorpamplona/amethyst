@@ -112,7 +112,10 @@ data class PublicationSectionRef(
                 address = address,
                 // The documented slot-3 event id pins the entry to one revision.
                 eventId = slot3.takeIf { it.isValid() },
-                title = slot2.takeIf { it.isNotEmpty() && !looksLikeRelayUrl(it) && it.toIntOrNull() == null },
+                // A numeric slot 2 is a level, not a title — except that a chapter really can be
+                // called "1984". Only a small integer is plausible as a level, so anything outside
+                // the level range stays a title.
+                title = slot2.takeIf { it.isNotEmpty() && !looksLikeRelayUrl(it) && !isPlausibleLevel(it) },
                 level = slot3.toIntOrNull()?.coerceIn(1, MAX_LEVEL) ?: 1,
             )
         }
@@ -133,10 +136,22 @@ data class PublicationSectionRef(
             )
         }
 
+        private fun isPlausibleLevel(value: String): Boolean = value.toIntOrNull()?.let { it in 1..MAX_LEVEL } == true
+
+        /**
+         * Whether slot 2 holds a relay hint rather than a title.
+         *
+         * Schemeless hosts are matched too: publishers write bare `relay.example.com`, and reading
+         * that as a chapter title puts a hostname in the table of contents.
+         */
         private fun looksLikeRelayUrl(value: String): Boolean =
             value.startsWith("wss://", ignoreCase = true) ||
                 value.startsWith("ws://", ignoreCase = true) ||
                 value.startsWith("http://", ignoreCase = true) ||
-                value.startsWith("https://", ignoreCase = true)
+                value.startsWith("https://", ignoreCase = true) ||
+                SCHEMELESS_HOST.matches(value)
+
+        /** A dotted host with no spaces — `relay.example.com`, never a chapter title. */
+        private val SCHEMELESS_HOST = Regex("""^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(:\d+)?(/\S*)?$""")
     }
 }

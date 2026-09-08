@@ -117,6 +117,21 @@ class PublicationSectionRefTest {
     }
 
     @Test
+    fun keepsANumericTitleThatCannotBeALevel() {
+        // A chapter really can be called "1984"; only a small integer is plausible as a level.
+        assertEquals("1984", index(arrayOf("a", coord("ch"), "1984")).sections()[0].title)
+        assertNull(index(arrayOf("a", coord("ch"), "2")).sections()[0].title, "2 is a level, not a title")
+    }
+
+    @Test
+    fun doesNotReadASchemelessRelayHintAsATitle() {
+        // Publishers write bare hosts; reading one as a title puts a hostname in the contents.
+        assertNull(index(arrayOf("a", coord("ch"), "relay.example.com")).sections()[0].title)
+        assertNull(index(arrayOf("a", coord("ch"), "relay.example.com:443")).sections()[0].title)
+        assertEquals("A Real Title", index(arrayOf("a", coord("ch"), "A Real Title")).sections()[0].title)
+    }
+
+    @Test
     fun clampsAnAbsurdLevel() {
         assertEquals(PublicationSectionRef.MAX_LEVEL, index(arrayOf("a", coord("x"), "", "99")).sections()[0].level)
         assertEquals(1, index(arrayOf("a", coord("x"), "", "0")).sections()[0].level)

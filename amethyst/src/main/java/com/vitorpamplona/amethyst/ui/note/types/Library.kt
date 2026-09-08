@@ -209,7 +209,7 @@ private fun DirectoryContents(
 
             val remaining = items.size - MAX_PREVIEW_ITEMS
             Text(
-                text = pluralStringResource(R.plurals.library_directory_items, remaining, remaining),
+                text = pluralStringResource(R.plurals.library_directory_more_items, remaining, remaining),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.grayText,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),

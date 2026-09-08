@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip25Reactions.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 /**

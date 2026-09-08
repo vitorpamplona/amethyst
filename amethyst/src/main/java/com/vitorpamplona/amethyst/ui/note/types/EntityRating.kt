@@ -58,9 +58,11 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -111,6 +113,7 @@ fun RenderEntityRating(
     val stars = remember(noteEvent) { noteEvent.stars() }
     val mark = remember(noteEvent) { noteEvent.mark() }
     val targetAddress = remember(noteEvent) { noteEvent.targetAddress() }
+    val targetEventId = remember(noteEvent) { noteEvent.targetEventId() }
 
     Column(Modifier.fillMaxWidth()) {
         stars?.let { RatingStars(it, mark) }
@@ -125,6 +128,17 @@ fun RenderEntityRating(
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+                }
+            }
+        } else if (targetEventId != null) {
+            // The spec's default mark is `event`, and such a rating names its target by event id
+            // rather than by coordinate. Without this the card printed the raw 64-hex id as its
+            // title, which tells a reader nothing about what was rated.
+            LoadNote(targetEventId, accountViewModel) { targetNote ->
+                if (targetNote != null) {
+                    RatedNoteCard(targetNote, mark, accountViewModel, nav)
+                } else {
+                    RatedTargetCard(mark = mark, title = targetEventId.take(8), subtitle = null, onClick = null)
                 }
             }
         } else {
@@ -294,6 +308,40 @@ private fun RatedPublicationCard(
 }
 
 /**
+ * A rated nostr event, named by id rather than by coordinate.
+ *
+ * Observing drives the fetch, so a note the reader has never seen is pulled in by being rated.
+ * Its author and the opening of its content stand in for a title, because a plain note has none.
+ */
+@Composable
+private fun RatedNoteCard(
+    targetNote: Note,
+    mark: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteState by observeNote(targetNote, accountViewModel)
+
+    val event = noteState.note.event
+    val title =
+        remember(noteState) {
+            event
+                ?.content
+                ?.trim()
+                ?.take(140)
+                ?.ifBlank { null } ?: targetNote.idHex.take(8)
+        }
+    val author = remember(noteState) { targetNote.author?.toBestDisplayName() }
+
+    RatedTargetCard(
+        mark = mark,
+        title = title,
+        subtitle = author,
+        onClick = { nav.nav(Route.Note(targetNote.idHex)) },
+    )
+}
+
+/**
  * One card shape for every kind of rated thing: a cover when there is one, the mark's icon when
  * there is not, and a title plus optional second line. Shared so the resolvable and unresolvable
  * cases cannot drift apart visually.
@@ -362,8 +410,12 @@ private fun CoverPlaceholder(mark: String) {
     }
 }
 
-/** The marks whose target card already names and pictures the thing, so the chip would repeat it. */
-private val MARKS_WITH_A_CARD = setOf(RatingMark.BOOKS, RatingMark.MOVIES)
+/**
+ * The marks whose surrounding card already names and pictures the thing, so the chip beside the
+ * stars would only repeat it. Relay reviews belong here too: [RenderRelayReview] prints the relay
+ * URL directly above the star row.
+ */
+internal val MARKS_WITH_A_CARD = setOf(RatingMark.BOOKS, RatingMark.MOVIES, RatingMark.RELAY)
 
 private fun iconForMark(mark: String): MaterialSymbol =
     when (mark) {

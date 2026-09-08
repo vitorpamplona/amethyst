@@ -118,6 +118,11 @@ object AsciiDocToMarkdown {
                 continue
             }
 
+            // A `[source,kotlin]` describes the block on the very next lines. Once ordinary
+            // content intervenes it described nothing, and carrying it forward would label an
+            // unrelated later block with the wrong language.
+            if (trimmed.isNotBlank()) pendingLanguage = null
+
             out.append(block(line, resolveWikilink)).append('\n')
             i++
         }
@@ -134,7 +139,9 @@ object AsciiDocToMarkdown {
         resolveWikilink: (String) -> String?,
     ): String {
         val indent = line.takeWhile { it == ' ' || it == '\t' }
-        val body = line.substring(indent.length)
+        // Trailing whitespace must not defeat matchEntire: `image::url[Alt] ` would otherwise
+        // fall through to the inline rule, which captures `:url` and emits a dead link.
+        val body = line.substring(indent.length).trimEnd()
 
         HEADING.matchEntire(body)?.let { m ->
             // `= Title` is level 1, `== Section` level 2, matching Markdown's `#` count.

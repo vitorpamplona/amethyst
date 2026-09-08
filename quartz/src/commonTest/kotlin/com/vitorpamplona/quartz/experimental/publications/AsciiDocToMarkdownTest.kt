@@ -148,6 +148,22 @@ class AsciiDocToMarkdownTest {
     }
 
     @Test
+    fun aBlockImageSurvivesATrailingSpace() {
+        // Otherwise matchEntire fails, the inline rule catches `image:` and captures `:url`,
+        // and the "never mangled output" promise is broken by a dead link.
+        assertEquals("![A cover](https://img.example/c.jpg)", convert("image::https://img.example/c.jpg[A cover] "))
+    }
+
+    @Test
+    fun anOrphanSourceAttributeDoesNotLabelALaterBlock() {
+        // The language must not survive a block that never opened.
+        val out = convert("[source,kotlin]\n\nprose\n\n....\nplain\n....")
+
+        assertTrue("```\nplain\n```" in out, out)
+        assertTrue("```kotlin" !in out, out)
+    }
+
+    @Test
     fun leavesPlainProseAlone() {
         val prose = "ONE WINTER a Farmer found a Snake stiff and frozen with cold."
         assertEquals(prose, convert(prose))

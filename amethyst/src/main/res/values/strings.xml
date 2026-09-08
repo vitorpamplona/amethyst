@@ -1405,6 +1405,10 @@
         <item quantity="one">%1$d item</item>
         <item quantity="other">%1$d items</item>
     </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">%1$d more item</item>
+        <item quantity="other">%1$d more items</item>
+    </plurals>
     <string name="settings_section_reminders">Reminders</string>
     <string name="wallet_connect">Wallet Connect</string>
     <string name="theme">Theme</string>

@@ -21,12 +21,9 @@
 package com.vitorpamplona.amethyst.commons.connectedApps.signers
 
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
-import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
-import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
-import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -40,7 +37,6 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -254,14 +250,14 @@ class NostrSignerPermissionLedger(
                 VideoHorizontalEvent.KIND, // 34235 — legacy addressable horizontal video (NIP-71)
                 VideoVerticalEvent.KIND, // 34236 — legacy addressable vertical video (NIP-71)
                 PublicationIndexEvent.KIND, // 30040 — NKBIP-01 publication index (addressable content)
-                WikiRedirectEvent.KIND, // 30819 — NIP-54 wiki redirects (addressable, one per slug)
                 LearningResourceEvent.KIND, // 30142 — learning resources (addressable content)
-                BookshelfDirectoryEvent.KIND, // 30045 — curated directories (addressable list)
                 BlossomPieceIndexEvent.KIND, // 32176 — Blossom piece indexes (addressable content)
+                // Deliberately NOT auto-signed, by the rule above: a kind-30045 directory is a
+                // replaceable *list* one bad write wipes; and ratings (34259), relay reviews
+                // (31987) and wiki redirects (30819) attach a replaceable opinion or a redirect
+                // to the user's identity, which an app should have to ask before writing.
                 ExternalReactionEvent.KIND, // 17 — NIP-25 reactions to non-nostr targets
                 PublicationContentEvent.KIND, // 30041 — NKBIP-01 publication section (addressable content)
-                RelayReviewEvent.KIND, // 31987 — relay reviews (addressable, one per author per relay)
-                EntityRatingEvent.KIND, // 34259 — entity ratings (addressable, one per author per target)
             )
     }
 }
