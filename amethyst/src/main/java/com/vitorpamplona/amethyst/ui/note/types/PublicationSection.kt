@@ -20,26 +20,50 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.publication_untitled_section
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.experimental.publications.AsciiDocToMarkdown
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationSectionRef
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -80,6 +104,14 @@ fun RenderPublicationSection(
     val markdown = remember(noteEvent) { AsciiDocToMarkdown.convert(noteEvent.content, wikilinkResolver(noteEvent)) }
 
     Column(Modifier.fillMaxWidth()) {
+        // A chapter arrived at from a search, a mention or a wikilink has nothing around it to say
+        // what it is a chapter *of*. The index names itself, so show it above the title.
+        noteEvent.publicationAddress()?.let { address ->
+            LoadAddressableNote(address, accountViewModel) { indexNote ->
+                indexNote?.let { PublicationCrumb(it, accountViewModel, nav) }
+            }
+        }
+
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -100,6 +132,176 @@ fun RenderPublicationSection(
                 callbackUri = note.toNostrUri(),
                 accountViewModel = accountViewModel,
                 nav = nav,
+            )
+        }
+
+        noteEvent.publicationAddress()?.let { address ->
+            LoadAddressableNote(address, accountViewModel) { indexNote ->
+                indexNote?.let { PublicationPager(noteEvent, it, accountViewModel, nav) }
+            }
+        }
+    }
+}
+
+/**
+ * The index a section belongs to, as one tappable line above the chapter title.
+ *
+ * Deliberately a crumb and not the full [PublicationHeader]: the reader came here to read this
+ * chapter, and a cover, blurb and 34-row table of contents on top of it would bury the thing they
+ * opened.
+ */
+@Composable
+private fun PublicationCrumb(
+    indexNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val index by observeNoteEvent<PublicationIndexEvent>(indexNote, accountViewModel)
+    val label = index?.titleOrIdentifier() ?: return
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { routeFor(indexNote, accountViewModel.account)?.let { nav.nav(it) } }
+                .padding(bottom = Size5dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.MenuBook,
+            contentDescription = null,
+            modifier = Modifier.width(16.dp),
+            tint = MaterialTheme.colorScheme.grayText,
+        )
+
+        Spacer(Modifier.width(Size5dp))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.grayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * Previous/next across the index's own ordering.
+ *
+ * Only drawn when this section is actually listed by the index -- that listing is the only thing
+ * that defines an order, so a section the index does not mention has no neighbours to offer. The
+ * ends are left blank rather than disabled: there is no previous chapter before the first, and a
+ * greyed control invites a tap that cannot do anything.
+ */
+@Composable
+private fun PublicationPager(
+    noteEvent: PublicationContentEvent,
+    indexNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val index by observeNoteEvent<PublicationIndexEvent>(indexNote, accountViewModel)
+    val sections = remember(index) { index?.sections().orEmpty() }
+
+    val position =
+        remember(index, noteEvent) {
+            val self = noteEvent.address().toValue()
+            sections.indexOfFirst { it.address?.toValue() == self || it.eventId == noteEvent.id }
+        }
+
+    if (position < 0) return
+
+    val previous = sections.getOrNull(position - 1)
+    val next = sections.getOrNull(position + 1)
+
+    if (previous == null && next == null) return
+
+    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = Size5dp),
+    ) {
+        PagerEnd(previous, isBack = true, accountViewModel = accountViewModel, nav = nav, modifier = Modifier.weight(1f))
+        PagerEnd(next, isBack = false, accountViewModel = accountViewModel, nav = nav, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun PagerEnd(
+    ref: PublicationSectionRef?,
+    isBack: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    modifier: Modifier,
+) {
+    if (ref == null) {
+        Spacer(modifier)
+        return
+    }
+
+    val address = ref.address
+    val eventId = ref.eventId
+
+    // The index's own title shows immediately; the neighbour is still observed, because observing
+    // is what fetches it and it carries the better title.
+    if (address != null) {
+        LoadAddressableNote(address, accountViewModel) { target ->
+            target?.let { PagerButton(ref, it, isBack, accountViewModel, nav, modifier) }
+        }
+    } else if (eventId != null) {
+        LoadNote(eventId, accountViewModel) { target ->
+            target?.let { PagerButton(ref, it, isBack, accountViewModel, nav, modifier) }
+        }
+    }
+}
+
+@Composable
+private fun PagerButton(
+    ref: PublicationSectionRef,
+    target: Note,
+    isBack: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    modifier: Modifier,
+) {
+    val event by observeNoteEvent<PublicationContentEvent>(target, accountViewModel)
+    val label = event?.titleOrIdentifier() ?: ref.title ?: stringRes(Res.string.publication_untitled_section)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (isBack) Arrangement.Start else Arrangement.End,
+        modifier =
+            modifier
+                .clickable { nav.nav(Route.Note(target.idHex)) }
+                .padding(vertical = Size10dp),
+    ) {
+        if (isBack) {
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                contentDescription = null,
+                modifier = Modifier.width(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(Size5dp))
+        }
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        if (!isBack) {
+            Spacer(Modifier.width(Size5dp))
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.width(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     }
