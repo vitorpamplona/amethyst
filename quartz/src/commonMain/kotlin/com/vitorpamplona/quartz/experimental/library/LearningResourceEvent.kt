@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -55,9 +57,15 @@ class LearningResourceEvent(
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
-    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+    /**
+     * Publishers split on which vocabulary they use: most emit `title`/`summary`, but the ones
+     * that tag themselves `type: LearningResource` follow schema.org and emit `name`/`description`
+     * instead. Reading only the first spelling left those rendering as their `d` slug, so both are
+     * accepted with `title`/`summary` winning where an event carries both.
+     */
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse) ?: tags.firstNotNullOfOrNull(NameTag::parse)
 
-    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse) ?: tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 

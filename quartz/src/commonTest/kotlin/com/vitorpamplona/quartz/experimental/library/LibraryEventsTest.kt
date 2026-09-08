@@ -66,6 +66,53 @@ class LibraryEventsTest {
     }
 
     @Test
+    fun aLearningResourceReadsTheSchemaOrgNameAndDescription() {
+        // The `type: LearningResource` publishers emit schema.org's spelling. Shape taken from a
+        // real event (`4fa5d1c4...`, d=17xu8qb7), which rendered as its slug before this.
+        val event =
+            LearningResourceEvent(
+                "id",
+                author,
+                0L,
+                arrayOf(
+                    arrayOf("d", "17xu8qb7"),
+                    arrayOf("type", "LearningResource"),
+                    arrayOf("name", "Caesar-Scheibe"),
+                    arrayOf("description", "Eine Anleitung."),
+                ),
+                "Body.",
+                "sig",
+            )
+
+        assertEquals("Caesar-Scheibe", event.title())
+        assertEquals("Eine Anleitung.", event.summary())
+        assertEquals("Caesar-Scheibe", event.titleOrIdentifier())
+        assertEquals("Caesar-Scheibe\nEine Anleitung.\nBody.", event.indexableContent())
+    }
+
+    @Test
+    fun titleAndSummaryWinOverNameAndDescription() {
+        val event =
+            LearningResourceEvent(
+                "id",
+                author,
+                0L,
+                arrayOf(
+                    arrayOf("d", "both"),
+                    arrayOf("title", "Preferred"),
+                    arrayOf("name", "Ignored"),
+                    arrayOf("summary", "Preferred summary."),
+                    arrayOf("description", "Ignored description."),
+                ),
+                "",
+                "sig",
+            )
+
+        assertEquals("Preferred", event.title())
+        assertEquals("Preferred summary.", event.summary())
+    }
+
+    @Test
     fun aLearningResourceFallsBackToItsIdentifier() {
         val event = LearningResourceEvent("id", author, 0L, arrayOf(arrayOf("d", "untitled-course")), "", "sig")
 
