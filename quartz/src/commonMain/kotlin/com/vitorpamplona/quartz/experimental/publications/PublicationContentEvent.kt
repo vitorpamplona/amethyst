@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.publications
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.publications.tags.WikilinkTag
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
@@ -67,8 +68,33 @@ class PublicationContentEvent(
     /** A display name for the section, falling back to the `d` identifier when `title` is absent. */
     fun titleOrIdentifier(): String = title()?.takeIf { it.isNotBlank() } ?: PublicationIndexEvent.humanizeIdentifier(dTag())
 
+    /**
+     * The `d` of the publication this section belongs to.
+     *
+     * Sections point back with the index's bare identifier, not a coordinate: `T` in 59 of the 60
+     * live sections surveyed, with `c` as a second spelling the same publisher also emits. Neither
+     * carries a pubkey, which is safe because an index and its sections are published by the same
+     * author -- see [publicationAddress], which is where that assumption is made explicit.
+     */
+    fun publicationIdentifier(): String? = firstValue(PUBLICATION_TAG) ?: firstValue(PUBLICATION_TAG_ALT)
+
+    /**
+     * The index this section belongs to, as a coordinate.
+     *
+     * Reconstructed from [publicationIdentifier] and this event's own author, since the back
+     * reference carries no pubkey. A section published by someone other than the index's author
+     * would resolve to the wrong book, but nothing in the corpus does that, and the alternative --
+     * a reverse scan for an index listing this section -- costs a cache walk per chapter.
+     */
+    fun publicationAddress(): Address? = publicationIdentifier()?.let { Address(PublicationIndexEvent.KIND, pubKey, it) }
+
     /** The `[[wikilink]]` references this section declares, in event order. */
     fun wikilinks(): List<WikilinkTag> = tags.mapNotNull(WikilinkTag::parse)
+
+    private fun firstValue(name: String) =
+        tags.firstNotNullOfOrNull { tag ->
+            if (tag.size > 1 && tag[0] == name && tag[1].isNotEmpty()) tag[1] else null
+        }
 
     /** The `[[wikilink]]` targets this section references, in event order. */
     fun wikilinkTargets(): List<String> = wikilinks().map { it.target }
@@ -85,6 +111,8 @@ class PublicationContentEvent(
 
     companion object {
         const val KIND = 30041
+        const val PUBLICATION_TAG = "T"
+        const val PUBLICATION_TAG_ALT = "c"
         const val WIKILINK_TAG = WikilinkTag.TAG_NAME
 
         /** Case- and separator-insensitive key for matching a body reference to a `wikilink` tag. */
