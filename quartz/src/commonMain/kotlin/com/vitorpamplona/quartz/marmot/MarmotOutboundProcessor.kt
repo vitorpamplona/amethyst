@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
@@ -84,7 +85,28 @@ class MarmotOutboundProcessor(
     suspend fun buildGroupEvent(
         nostrGroupId: HexKey,
         innerEvent: Event,
-    ): OutboundGroupEvent = buildGroupEventFromBytes(nostrGroupId, innerEvent.toJson().encodeToByteArray())
+    ): OutboundGroupEvent = buildAppEvent(nostrGroupId, MarmotAppEvent.fromEvent(innerEvent))
+
+    /**
+     * Send a Marmot app event — the canonical, UNSIGNED payload shape
+     * (`foundation/application-messages.md`).
+     *
+     * The signature is dropped rather than merely left empty, and both halves
+     * of that matter. A conformant decoder REJECTS a payload carrying a `sig`
+     * member at all, so an event serialized with `"sig":""` is refused by every
+     * peer; and a payload with a real signature would be a valid standalone
+     * relay event, so one leaked plaintext could be republished publicly as a
+     * signed statement by its author.
+     *
+     * The event id is unchanged by the conversion: NIP-01 hashes
+     * `[0, pubkey, created_at, kind, tags, content]`, which never included the
+     * signature. Message identity therefore survives the switch, and history
+     * written under the old shape still lines up.
+     */
+    suspend fun buildAppEvent(
+        nostrGroupId: HexKey,
+        appEvent: MarmotAppEvent,
+    ): OutboundGroupEvent = buildGroupEventFromBytes(nostrGroupId, appEvent.encodeToPayload())
 
     /**
      * Encrypt raw bytes and build a GroupEvent for publishing.

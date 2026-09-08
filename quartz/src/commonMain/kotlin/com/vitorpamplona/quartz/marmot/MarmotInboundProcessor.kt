@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
@@ -539,20 +540,20 @@ class MarmotInboundProcessor(
                     // canonical epoch by construction.
                     processCandidateBranchMessage(groupId, bytes)
                 } else {
-                    val innerJson = decrypted.content.decodeToString()
+                    val payload = decrypted.content.decodeToString()
+                    val author = payloadAuthor(payload)
 
-                    // MIP-03: if the inner application payload is a Nostr event,
-                    // its `pubkey` field MUST equal the MLS sender's credential
-                    // identity. Reject any mismatch — otherwise a group member
-                    // could mint events claiming a different author. Non-event
-                    // payloads (raw bytes via buildGroupEventFromBytes) bypass
-                    // this check since there is no author field to verify.
+                    // `foundation/application-messages.md`, "Receiver
+                    // authentication": the inner author MUST equal the account
+                    // the MLS sender leaf authenticates. Without it any member
+                    // could mint messages attributed to anyone else in the
+                    // group. Payloads with no author field at all (raw bytes
+                    // via buildGroupEventFromBytes) have nothing to compare.
                     val senderIdentity = groupManager.memberIdentityHex(groupId, decrypted.senderLeafIndex)
-                    val innerEvent = Event.fromJsonOrNull(innerJson)
-                    if (innerEvent != null && (senderIdentity == null || innerEvent.pubKey != senderIdentity)) {
+                    if (author != null && (senderIdentity == null || author != senderIdentity)) {
                         return GroupEventResult.Error(
                             groupId,
-                            "MIP-03: inner event pubkey (${innerEvent.pubKey}) does not match MLS sender identity ($senderIdentity)",
+                            "inner event pubkey ($author) does not match MLS sender identity ($senderIdentity)",
                         )
                     }
 
@@ -561,13 +562,13 @@ class MarmotInboundProcessor(
                     // incumbent is rebuilt and rescored at every resolution, so
                     // counting only divergent branches would let any fork win
                     // the witness steps unopposed.
-                    if (innerEvent != null && senderIdentity != null) {
+                    if (author != null && senderIdentity != null) {
                         convergence.recordCanonicalWitness(groupId, decrypted.epoch, senderIdentity)
                     }
 
                     GroupEventResult.ApplicationMessage(
                         groupId = groupId,
-                        innerEventJson = innerJson,
+                        innerEventJson = asEventShapedJson(payload),
                         senderLeafIndex = decrypted.senderLeafIndex,
                         epoch = decrypted.epoch,
                     )
@@ -625,6 +626,36 @@ class MarmotInboundProcessor(
     }
 
     /**
+     * The account a payload claims as its author, or null when it has none.
+     *
+     * The canonical shape is tried first, because that is what a conformant
+     * peer sends and its checks are the strict ones. The legacy fall-back
+     * exists only for payloads this client itself wrote before the switch to
+     * the unsigned shape: those carry a `sig` member, which the strict decoder
+     * refuses by design. It is deliberately not a general "accept anything"
+     * path — a payload that is neither shape still has no author, and still
+     * fails the comparison rather than passing it.
+     */
+    private fun payloadAuthor(payload: String): HexKey? =
+        MarmotAppEvent.decodeOrNull(payload)?.pubKey
+            ?: Event.fromJsonOrNull(payload)?.pubKey
+
+    /**
+     * Re-shape a canonical payload into the Event-shaped JSON the app layer
+     * consumes.
+     *
+     * The application pipeline is built around `Event`, which requires a `sig`
+     * member; the wire form must not carry one. Rather than force every
+     * consumer to learn a second shape, the empty signature is re-added here at
+     * the boundary. The id is unaffected either way — NIP-01 never hashed the
+     * signature — so a message keeps one identity across the conversion.
+     */
+    private fun asEventShapedJson(payload: String): String {
+        val appEvent = MarmotAppEvent.decodeOrNull(payload) ?: return payload
+        return appEvent.toJson().dropLast(1) + ",\"sig\":\"\"}"
+    }
+
+    /**
      * Try an app message against the retained candidate branches.
      *
      * A payload that decrypts here is NOT delivered: it belongs to a branch
@@ -646,9 +677,9 @@ class MarmotInboundProcessor(
                     "Application message decrypts on no canonical epoch or retained candidate branch",
                 )
 
-        val innerEvent = Event.fromJsonOrNull(candidate.content.decodeToString())
+        val author = payloadAuthor(candidate.content.decodeToString())
         val sender = candidate.senderAccount
-        val valid = innerEvent != null && sender != null && innerEvent.pubKey == sender
+        val valid = author != null && sender != null && author == sender
         if (valid && sender != null) {
             convergence.recordWitness(groupId, candidate.stateId, sender)
         }
