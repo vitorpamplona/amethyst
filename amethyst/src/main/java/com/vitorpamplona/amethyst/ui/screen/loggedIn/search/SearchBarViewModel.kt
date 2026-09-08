@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
+import com.vitorpamplona.amethyst.commons.search.nameSearchTerms
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -419,11 +420,12 @@ class SearchBarViewModel(
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
 
     /**
-     * What is left of the box once the filter tokens are lifted out — what a name search should
-     * actually be given. A blank result means the query named only filters, and a name search on
-     * "everything" is not a useful answer.
+     * The single word a name search should be given — see [nameSearchTerms]. Not simply the
+     * leftover text: a query that is nothing but `#bitcoin` leaves no leftovers, and handing the
+     * finders an empty string means they answer with nobody rather than with the channel called
+     * "Bitcoin" that the reader was plainly looking for.
      */
-    private fun plainTerms(term: String): String = QueryParser.parse(term).text
+    private fun plainTerms(term: String): String = QueryParser.parse(term).nameSearchTerms()
 
     /**
      * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex

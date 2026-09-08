@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.search.UserSearchEngine
+import com.vitorpamplona.amethyst.commons.search.nameSearchTerms
 import com.vitorpamplona.amethyst.commons.search.parseSearchInput
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
 import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
@@ -274,10 +275,9 @@ fun SearchScreen(
 
         createSearchPeopleSubscription(
             relays = searchRelays,
-            searchQuery =
-                debouncedQuery.text.ifBlank {
-                    QuerySerializer.serialize(debouncedQuery)
-                },
+            // The word a name search means, not the query written back out: serializing
+            // `#bitcoin` asked the relay's people index for the literal "#bitcoin".
+            searchQuery = debouncedQuery.nameSearchTerms(),
             limit = 20,
             onEvent = { event, _, relay, _ ->
                 if (state.trackRelayEvent(relay.url, event.id)) {
