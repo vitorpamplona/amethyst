@@ -103,35 +103,74 @@ fun filterMissingAddressables(
     return filterMissingAddressables(addressesPerRelay)
 }
 
+/**
+ * Addressables are looked up by (kind, author, `d`), and a screen usually wants many that share
+ * the first two -- every section of a publication, for instance, is one author's one kind. Asking
+ * per address turned a 240-section book into 240 filters in a single REQ; grouping puts every `d`
+ * in one filter's `#d` list, which is the same query in one line instead of 240.
+ *
+ * Chunked at [MAX_VALUES_PER_FILTER] because relays cap the values they will accept in a tag filter,
+ * and a filter silently truncated is worse than two filters.
+ *
+ * The `limit` is the number of coordinates asked for, not 1: these are replaceable, so a relay
+ * holds exactly one event per coordinate and that is the most this filter can return.
+ */
 fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<Address>>): List<RelayBasedFilter> {
     if (missingAddressables.isEmpty()) return emptyList()
 
-    return missingAddressables.flatMap { relayEntry ->
-        relayEntry.value.map { address ->
-            if (address.kind < 25000 && address.dTag.isBlank()) {
-                RelayBasedFilter(
-                    relay = relayEntry.key,
-                    filter =
-                        ExplainedFilter(
-                            purpose = SubPurpose.REFERENCED_EVENTS,
-                            kinds = listOf(address.kind),
-                            authors = listOf(address.pubKeyHex),
-                            limit = 1,
-                        ),
-                )
-            } else {
-                RelayBasedFilter(
-                    relay = relayEntry.key,
-                    filter =
-                        ExplainedFilter(
-                            purpose = SubPurpose.REFERENCED_EVENTS,
-                            kinds = listOf(address.kind),
-                            tags = mapOf("d" to listOf(address.dTag)),
-                            authors = listOf(address.pubKeyHex),
-                            limit = 1,
-                        ),
-                )
-            }
-        }
+    return missingAddressables.flatMap { (relay, addresses) ->
+        // A replaceable event below 25000 with no `d` is addressed by kind and author alone, so it
+        // cannot join a `#d` group.
+        val (withoutDTag, withDTag) = addresses.partition { it.kind < 25000 && it.dTag.isBlank() }
+
+        val byKindAndAuthor =
+            withDTag
+                .groupBy { it.kind to it.pubKeyHex }
+                .flatMap { (kindAndAuthor, group) ->
+                    val (kind, author) = kindAndAuthor
+                    group
+                        .map { it.dTag }
+                        .distinct()
+                        .sorted()
+                        .chunked(MAX_VALUES_PER_FILTER)
+                        .map { dTags ->
+                            RelayBasedFilter(
+                                relay = relay,
+                                filter =
+                                    ExplainedFilter(
+                                        purpose = SubPurpose.REFERENCED_EVENTS,
+                                        kinds = listOf(kind),
+                                        tags = mapOf("d" to dTags),
+                                        authors = listOf(author),
+                                        limit = dTags.size,
+                                    ),
+                            )
+                        }
+                }
+
+        val byKind =
+            withoutDTag
+                .groupBy { it.kind }
+                .flatMap { (kind, group) ->
+                    group
+                        .map { it.pubKeyHex }
+                        .distinct()
+                        .sorted()
+                        .chunked(MAX_VALUES_PER_FILTER)
+                        .map { authors ->
+                            RelayBasedFilter(
+                                relay = relay,
+                                filter =
+                                    ExplainedFilter(
+                                        purpose = SubPurpose.REFERENCED_EVENTS,
+                                        kinds = listOf(kind),
+                                        authors = authors,
+                                        limit = authors.size,
+                                    ),
+                            )
+                        }
+                }
+
+        byKindAndAuthor + byKind
     }
 }

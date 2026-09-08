@@ -134,17 +134,31 @@ fun filterMissingEvents(
     return filterMissingEvents(eventsPerRelay)
 }
 
+/**
+ * One filter per relay carrying every id it might hold, chunked at [MAX_VALUES_PER_FILTER].
+ *
+ * Relays cap how many values they accept in a filter, and a filter quietly truncated loses the
+ * tail of a thread with no error to notice. Splitting asks for all of them.
+ */
 fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): List<RelayBasedFilter> {
     if (missingEventIds.isEmpty()) return emptyList()
 
-    return missingEventIds.mapNotNull {
-        if (it.value.isNotEmpty()) {
-            RelayBasedFilter(
-                relay = it.key,
-                filter = ExplainedFilter(purpose = SubPurpose.REFERENCED_EVENTS, ids = it.value.sorted()),
-            )
-        } else {
-            null
-        }
+    return missingEventIds.flatMap { (relay, ids) ->
+        ids
+            .sorted()
+            .chunked(MAX_VALUES_PER_FILTER)
+            .map { chunk ->
+                RelayBasedFilter(
+                    relay = relay,
+                    filter = ExplainedFilter(purpose = SubPurpose.REFERENCED_EVENTS, ids = chunk),
+                )
+            }
     }
 }
+
+/**
+ * How many ids or `d` values go in one filter before it is split.
+ *
+ * Matches the chunk size the other bulk filter builders in this module already use.
+ */
+internal const val MAX_VALUES_PER_FILTER = 100
