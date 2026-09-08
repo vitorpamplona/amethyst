@@ -30,6 +30,9 @@ import com.vitorpamplona.quartz.marmot.MarmotWelcomeSender
 import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
 import com.vitorpamplona.quartz.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
+import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
@@ -490,6 +493,46 @@ class MarmotManager(
         return nostrGroupId
     }
 
+    /**
+     * Create a CURRENT-PROFILE group (`app-components/`, the `0x8009` profile).
+     *
+     * The difference from [createGroup] is what the group requires of its
+     * members: a current-profile group's GroupContext requires the account
+     * identity proof component, and every member leaf carries one. That is the
+     * interop line — a peer running the current profile refuses a leaf without
+     * it, and a legacy group cannot be upgraded into one by adding an
+     * extension, because the existing leaves have no proofs to add.
+     *
+     * The group is built outside the manager because a leaf's identity proof
+     * covers its OWN signature key, so the keypair must exist and be authorized
+     * by the account signer before the leaf is built.
+     */
+    suspend fun createCurrentProfileGroup(
+        nostrGroupId: HexKey,
+        relays: List<String>,
+        profile: GroupProfileV1? = null,
+        additionalAdmins: List<ByteArray> = emptyList(),
+        retention: MessageRetentionV1? = null,
+    ): HexKey {
+        Log.d("MarmotManager") { "createCurrentProfileGroup($nostrGroupId): by ${signer.pubKey.take(8)}…" }
+        val group =
+            CurrentProfileGroupFactory.createGroup(
+                signer = signer,
+                nostrGroupId = nostrGroupId.hexToByteArray(),
+                relays = relays,
+                profile = profile,
+                additionalAdmins = additionalAdmins,
+                retention = retention,
+            )
+        groupManager.adoptGroup(nostrGroupId, group)
+        // Same empty-obligation exception as [createGroup]: a one-member
+        // epoch-0 group has no peer that failure to publish could fork.
+        publishGate.satisfyEmptyObligation(nostrGroupId)
+        inboundProcessor.trackGroup(nostrGroupId)
+        subscriptionManager.subscribeGroup(nostrGroupId)
+        return nostrGroupId
+    }
+
     /** A locally prepared commit, published and resolved. */
     class CommitPublication(
         val event: OutboundGroupEvent,
@@ -773,22 +816,53 @@ class MarmotManager(
     suspend fun generateKeyPackageEvent(
         relays: List<NormalizedRelayUrl>,
         slotName: String = KeyPackageUtils.PRIMARY_SLOT,
+        /**
+         * Publish a current-profile KeyPackage, carrying the account identity
+         * proof in its leaf.
+         *
+         * This is the decisive interop switch. A peer running the current
+         * profile requires component `0x8009` and refuses a leaf without it, so
+         * a legacy KeyPackage is simply not addable to a current-profile group
+         * — which is what kept us uninvitable.
+         */
+        currentProfile: Boolean = true,
     ): KeyPackageEvent {
         val dTag = keyPackageRotationManager.getOrCreateSlotDTag(slotName)
         val identity = signer.pubKey.hexToByteArray()
-        val bundle = keyPackageRotationManager.generateKeyPackage(identity, dTag)
+        val bundle =
+            if (currentProfile) {
+                keyPackageRotationManager.generateCurrentProfileKeyPackage(signer, dTag)
+            } else {
+                keyPackageRotationManager.generateKeyPackage(identity, dTag)
+            }
 
         val keyPackageBytes = bundle.keyPackage.toTlsBytes()
         val keyPackageBase64 = Base64.encode(keyPackageBytes)
         val keyPackageRef = bundle.keyPackage.reference().toHexKey()
 
         val template =
-            KeyPackageEvent.build(
-                keyPackageBase64 = keyPackageBase64,
-                dTagSlot = dTag,
-                keyPackageRef = keyPackageRef,
-                relays = relays,
-            )
+            if (currentProfile) {
+                // Deliberately no `relays` tag and no `encoding` tag.
+                // `transports/nostr.md`: a KeyPackage is fetched from the
+                // account's own inbox relay set, so repeating them here would
+                // be a second, drifting source of truth; and the binding
+                // forbids an `encoding` tag outright, because a receiver that
+                // switched decoders on one could be steered into a different
+                // parse of the same bytes.
+                KeyPackageEvent.buildCurrentProfile(
+                    keyPackageBase64 = keyPackageBase64,
+                    dTagSlot = dTag,
+                    keyPackageRef = keyPackageRef,
+                    appComponentIds = emptyList(),
+                )
+            } else {
+                KeyPackageEvent.build(
+                    keyPackageBase64 = keyPackageBase64,
+                    dTagSlot = dTag,
+                    keyPackageRef = keyPackageRef,
+                    relays = relays,
+                )
+            }
 
         val signed = signer.sign<KeyPackageEvent>(template)
         // Welcome receivers identify the consumed KeyPackage by its Nostr

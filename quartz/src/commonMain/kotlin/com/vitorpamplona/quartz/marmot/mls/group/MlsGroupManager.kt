@@ -198,6 +198,25 @@ class MlsGroupManager(
     }
 
     /**
+     * Register and persist a group built elsewhere, e.g. by
+     * `CurrentProfileGroupFactory`.
+     *
+     * Group creation is the one place a group cannot be built through this
+     * manager: a current-profile leaf must carry an identity proof over its OWN
+     * signature key, which only an account signer — possibly a remote bunker —
+     * can produce, so the keypair is generated, authorized, and only then built
+     * into a leaf. The manager takes ownership of the finished group here.
+     */
+    suspend fun adoptGroup(
+        nostrGroupId: HexKey,
+        group: MlsGroup,
+    ) = mutex.withLock {
+        require(!groups.containsKey(nostrGroupId)) { "Group $nostrGroupId already exists" }
+        groups[nostrGroupId] = group
+        persistGroup(nostrGroupId)
+    }
+
+    /**
      * List all active Nostr group IDs.
      */
     fun activeGroupIds(): Set<HexKey> = groups.keys.toSet()

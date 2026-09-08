@@ -1,7 +1,9 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stages 0-6 landed in Quartz, convergence is ON the inbound path, and the superseded
-`CommitOrdering` tiebreak is deleted. The app layer still creates MIP-era groups. Stage 7 open.
+Status: Stages 0-7 landed. Convergence is on the inbound path, the superseded `CommitOrdering`
+tiebreak is deleted, the app layer publishes current-profile KeyPackages and can create
+current-profile groups, and publish-before-apply is enforced. The MDK interop harness has still
+never been run against a live MDK build.
 
 Sources checked on 2026-09-08:
 
@@ -524,8 +526,29 @@ A group that goes quiet mid-pass has no inbound traffic to tick it, so the app l
 `settleDueConvergence()` from a timer while `openConvergencePasses()` is non-empty; that timer
 is not wired in `commons`/`amethyst` yet.
 
-**Stage 7 — durability/restart conformance, app payload kinds (1009/1210), encrypted-media
-v2, push owner proof.**
+**Stage 7 — app payloads, encrypted media v2, push owner proof. DONE.**
+
+The app-payload work turned up a live conformance bug rather than a gap: we were sending inner
+events WITH a Nostr signature, and a conformant decoder rejects a payload carrying a `sig`
+member at all. Every message we sent was refusable by any spec-following peer. `MarmotAppEvent`
+is the canonical unsigned shape; the id is unchanged by the switch (NIP-01 never hashed the
+signature), so existing history still lines up, and the Android pipeline already treated inner
+events as unsigned rumors, so the empty `sig` is re-added at the inbound boundary instead of
+travelling on the wire.
+
+Duplicate-key detection needed its own scanner. Every JSON library here resolves duplicates
+before the caller sees them, and "last one wins" versus "first one wins" are both defensible —
+which is the problem, because identical bytes would then yield different ids on two clients.
+
+Kinds `1009` (edits) and `1210` (system rows) are implemented, the latter synthesized from
+canonical state rather than received, which is what makes it unforgeable by one member.
+Encrypted-media v2 (`0x800b`) and the kind-`451` push owner proof are implemented and verified
+against the fixtures the spec publishes — the 1210 example's event id and the push removal
+vector's `owner_sig` both reproduce exactly, which is what separates correct from
+self-consistent.
+
+**Stage 7 leftover:** durability/restart conformance beyond the publish obligation (which IS
+durable) — specifically re-emission and reconstruction of application effects after restart.
 
 ### Settled: Quartz keeps its own MLS
 
@@ -563,19 +586,15 @@ Writing the producer side immediately found two bugs the reader-side tests could
 
 ## What is NOT done
 
-- **The app layer still creates MIP-era groups.** `MarmotManager.createGroup` takes a
-  `MarmotGroupData`; nothing in `commons`, `amethyst`, `desktopApp` or `cli` calls
-  `CurrentProfileGroupFactory` yet. The Quartz half is ready and tested; the wiring is not
-  written.
-- **Nothing drives a quiet group's pass to settle.** Convergence is on the inbound path and
-  settles opportunistically on the next inbound event, but a group that falls silent mid-pass
-  has nothing to tick it. `settleDueConvergence()` exists for the app layer's timer and no
-  timer calls it yet.
-- **App-payload witnesses are never recorded.** `MarmotConvergenceEngine.recordWitness` is
-  wired into scoring but has no producer, so branch comparison currently never reaches the
-  witness steps. The producer is the bounded retained-candidate trial decryption still open
-  from Stage 4.
-- **The lifecycle states gate nothing.** `GroupLifecycleState` is a correct model with no
-  enforcement behind it.
+- **The interop harness has never been run.** Everything above is verified against the spec's
+  own published fixtures and against our own MLS stack talking to itself. Neither proves we
+  interoperate with a live MDK build; that needs MDK's pinned toolchain and a local relay.
+- **`MarmotManager.createGroup` (the MIP-era path) is still the one the UI calls.**
+  `createCurrentProfileGroup` exists, is wired, and is tested, but the Android and desktop
+  "new group" flows still call the legacy one. KeyPackage publishing HAS switched: it now
+  defaults to the current profile, which is the half that decides whether anyone can invite us.
+- **Lifecycle enforcement covers the publish path, not everything.** `PendingPublish`,
+  `Merging` and the outbound gates are enforced; `Unrecoverable` and `Disbanded` are still a
+  correct model with nothing driving them.
 - Stage 7: durability/restart conformance, app payload kinds `1009`/`1210`, encrypted-media v2,
   the push owner proof (kind `451`).

@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager.Companion.SNAPSHOT_VERSION
+import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
@@ -35,6 +37,7 @@ import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.sync.Mutex
@@ -341,6 +344,30 @@ class KeyPackageRotationManager(
             )
 
         val bundle = KeyPackageBundle(keyPackage, initKp.privateKey, encKp.privateKey, sigKp.privateKey)
+        mutex.withLock {
+            activeBundles[dTagSlot] = bundle
+            persistUnlocked()
+        }
+        return bundle
+    }
+
+    /**
+     * Generate a CURRENT-PROFILE KeyPackage and install it in [dTagSlot].
+     *
+     * The difference from [generateKeyPackage] is the account identity proof
+     * (`0x8009`) bound into the leaf, and it is the difference that decides
+     * interop: a peer running the current profile requires that component and
+     * refuses a leaf without it. The account signer is needed because the proof
+     * covers the leaf's OWN signature key, so the keypair has to be generated,
+     * authorized, and only then built into a leaf — a proof cannot be attached
+     * afterwards to a finished leaf.
+     */
+    suspend fun generateCurrentProfileKeyPackage(
+        signer: NostrSigner,
+        dTagSlot: String = KeyPackageUtils.PRIMARY_SLOT,
+        ciphersuite: MlsCiphersuite = MlsCiphersuite.DEFAULT,
+    ): KeyPackageBundle {
+        val bundle = CurrentProfileGroupFactory.createKeyPackage(signer, ciphersuite = ciphersuite)
         mutex.withLock {
             activeBundles[dTagSlot] = bundle
             persistUnlocked()

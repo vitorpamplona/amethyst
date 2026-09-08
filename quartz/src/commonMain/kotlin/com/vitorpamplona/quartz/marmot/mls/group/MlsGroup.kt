@@ -3242,10 +3242,18 @@ class MlsGroup private constructor(
          * RFC 9420 §7.2 forbids advertising DEFAULT extension types, so only
          * the draft `app_data_dictionary` extension and the `app_data_update`
          * proposal appear — `required_capabilities` support is implicit.
+         *
+         * The legacy `0xF2EE` group-data extension is advertised alongside
+         * them, and that is not a hedge. A capability says "this client can
+         * handle it", not "this group uses it", and a group that REQUIRES
+         * `0xF2EE` refuses to add a leaf that does not advertise it. Without
+         * this line a current-profile KeyPackage would be un-addable to every
+         * legacy group that already exists — the exact mirror of the interop
+         * failure the current profile was adopted to fix.
          */
         fun currentProfileLeafCapabilities(): Capabilities =
             Capabilities(
-                extensions = listOf(AppDataDictionary.EXTENSION_TYPE),
+                extensions = listOf(AppDataDictionary.EXTENSION_TYPE, MarmotGroupData.EXTENSION_ID_INT),
                 proposals = listOf(APP_DATA_UPDATE_PROPOSAL_TYPE, SELF_REMOVE_PROPOSAL_TYPE),
             )
 
