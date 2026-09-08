@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.marmot.mls.components.ComponentsList
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
+import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -58,6 +60,52 @@ object KeyPackageUtils {
      * KeyPackage `Lifetime` may cover (`foundation/key-packages.md`).
      */
     const val MAX_LIFETIME_SECONDS = 7_261_200L
+
+    /**
+     * Frame a KeyPackage for publication.
+     *
+     * `foundation/key-packages.md` is explicit: "a transport publication is
+     * unambiguously the framed `MLSMessage`, not a bare `KeyPackage` struct."
+     * The envelope is only four bytes — `ProtocolVersion` then
+     * `WireFormat = mls_key_package` — but omitting it is not a cosmetic
+     * difference. A reader that expects the envelope reads a bare KeyPackage's
+     * leading `0x0001 0x0001` as version 1, wire format 1 (`mls_public_message`)
+     * and then parses the rest as a PublicMessage, desyncing a few fields in
+     * and failing on whatever byte it lands on. That is exactly how MDK
+     * rejected every KeyPackage we published, with a decode error naming a
+     * value that appears nowhere in the structure.
+     */
+    fun frameKeyPackage(keyPackage: MlsKeyPackage): ByteArray =
+        MlsMessage(
+            wireFormat = WireFormat.KEY_PACKAGE,
+            payload = keyPackage.toTlsBytes(),
+        ).toTlsBytes()
+
+    /**
+     * Decode published KeyPackage bytes, framed or bare.
+     *
+     * Framed is what the spec requires and what we now publish. The bare form
+     * is accepted because every KeyPackage this client published before the fix
+     * is bare, and those are still sitting on relays inside their publication
+     * lifetime; refusing them would make our own users un-invitable by each
+     * other until every one of them rotated.
+     *
+     * The two are told apart by the envelope rather than by trial and error: a
+     * framed message starts with `ProtocolVersion = 1` and
+     * `WireFormat = mls_key_package`, and a bare KeyPackage's second field is
+     * its ciphersuite, which is never 5 for any suite Marmot uses.
+     */
+    fun decodeKeyPackage(bytes: ByteArray): MlsKeyPackage {
+        if (bytes.size >= 4) {
+            val version = ((bytes[0].toInt() and 0xFF) shl 8) or (bytes[1].toInt() and 0xFF)
+            val wireFormat = ((bytes[2].toInt() and 0xFF) shl 8) or (bytes[3].toInt() and 0xFF)
+            if (version == MlsMessage.MLS_VERSION_10 && wireFormat == WireFormat.KEY_PACKAGE.value) {
+                val message = MlsMessage.decodeTls(TlsReader(bytes))
+                return MlsKeyPackage.decodeTls(TlsReader(message.payload))
+            }
+        }
+        return MlsKeyPackage.decodeTls(TlsReader(bytes))
+    }
 
     /** Legacy non-addressable KeyPackage kind (pre-migration) */
     const val LEGACY_KIND = 443
@@ -190,8 +238,7 @@ object KeyPackageUtils {
         val iTag = event.keyPackageRef() ?: return false
         val keyPackage =
             try {
-                val bytes = Base64.decode(event.content)
-                MlsKeyPackage.decodeTls(TlsReader(bytes))
+                decodeKeyPackage(Base64.decode(event.content))
             } catch (_: Throwable) {
                 return false
             }

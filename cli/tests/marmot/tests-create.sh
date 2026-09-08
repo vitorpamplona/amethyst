@@ -10,7 +10,9 @@ test_01_keypackage_discovery() {
   # B finds A's KP
   local raw ev
   raw=$(wn_b --json keys check "$A_NPUB" 2>>"$LOG_FILE" || true)
-  ev=$(printf '%s' "$raw" | jq -r '.result.event_id // .event_id // empty')
+  # MDK 0.9.x reports the found KeyPackage under result.key_package; the two
+  # older shapes are kept so this still reads a pre-0.9 daemon.
+  ev=$(printf '%s' "$raw" | jq -r '.result.key_package.key_package_event_id // .result.event_id // .event_id // empty')
   if [[ -z "$ev" || "$ev" == "null" ]]; then
     record_result "$id (B->A)" fail "wn couldn't find A's KP"; return
   fi

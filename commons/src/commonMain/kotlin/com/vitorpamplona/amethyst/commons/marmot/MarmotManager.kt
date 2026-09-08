@@ -418,12 +418,11 @@ class MarmotManager(
         keyPackageEventId: HexKey,
         relays: List<NormalizedRelayUrl>,
     ): Pair<OutboundGroupEvent, WelcomeDelivery?> {
-        // Verify that the KeyPackage credential matches the expected member pubkey
-        val kp =
-            com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage.decodeTls(
-                com.vitorpamplona.quartz.marmot.mls.codec
-                    .TlsReader(keyPackageBytes),
-            )
+        // Verify that the KeyPackage credential matches the expected member
+        // pubkey. Accepts either framing — a peer's published KeyPackage is an
+        // MLSMessage, and bare bytes still arrive from our own pre-fix
+        // publications sitting on relays.
+        val kp = KeyPackageUtils.decodeKeyPackage(keyPackageBytes)
         val credential = kp.leafNode.credential
         require(credential is Credential.Basic) {
             "KeyPackage must use BasicCredential"
@@ -439,7 +438,9 @@ class MarmotManager(
         // that key.
         val publication =
             commitAndPublish(nostrGroupId, relays) {
-                groupManager.stageAddMember(nostrGroupId, keyPackageBytes)
+                // The BARE KeyPackage, not the bytes as published. Transport
+                // framing is the Marmot layer's business; MLS takes the struct.
+                groupManager.stageAddMember(nostrGroupId, kp.toTlsBytes())
             }
 
         // The Welcome is a SEPARATE, retryable per-invitee delivery obligation
@@ -836,24 +837,32 @@ class MarmotManager(
                 keyPackageRotationManager.generateKeyPackage(identity, dTag)
             }
 
-        val keyPackageBytes = bundle.keyPackage.toTlsBytes()
-        val keyPackageBase64 = Base64.encode(keyPackageBytes)
+        // Framed as an MLSMessage, never bare: `foundation/key-packages.md`
+        // says a transport publication IS the framed message. The ref stays
+        // over the INNER KeyPackage, which is what RFC 9420 MakeKeyPackageRef
+        // hashes — framing the ref too would make our `i` tag disagree with
+        // every other implementation's.
+        val keyPackageBase64 = Base64.encode(KeyPackageUtils.frameKeyPackage(bundle.keyPackage))
         val keyPackageRef = bundle.keyPackage.reference().toHexKey()
 
         val template =
             if (currentProfile) {
+                // Every id-list tag is derived from the KeyPackage itself.
+                // They duplicate metadata already inside it, so writing them by
+                // hand is a second source of truth — and a receiver that
+                // compares them (MDK does, exactly) rejects the KeyPackage the
+                // moment the two disagree.
+                //
                 // Deliberately no `relays` tag and no `encoding` tag.
                 // `transports/nostr.md`: a KeyPackage is fetched from the
-                // account's own inbox relay set, so repeating them here would
-                // be a second, drifting source of truth; and the binding
-                // forbids an `encoding` tag outright, because a receiver that
-                // switched decoders on one could be steered into a different
-                // parse of the same bytes.
-                KeyPackageEvent.buildCurrentProfile(
-                    keyPackageBase64 = keyPackageBase64,
+                // account's own NIP-65 write set, so repeating relays here
+                // would be another drifting duplicate; and the binding forbids
+                // an `encoding` tag outright, because a receiver that switched
+                // decoders on one could be steered into a different parse of
+                // the same bytes.
+                KeyPackageEvent.buildCurrentProfileFrom(
+                    keyPackage = bundle.keyPackage,
                     dTagSlot = dTag,
-                    keyPackageRef = keyPackageRef,
-                    appComponentIds = emptyList(),
                 )
             } else {
                 KeyPackageEvent.build(
@@ -884,8 +893,7 @@ class MarmotManager(
         val identity = signer.pubKey.hexToByteArray()
         return pendingSlots.map { slot ->
             val bundle = keyPackageRotationManager.rotateSlot(identity, slot)
-            val keyPackageBytes = bundle.keyPackage.toTlsBytes()
-            val keyPackageBase64 = Base64.encode(keyPackageBytes)
+            val keyPackageBase64 = Base64.encode(KeyPackageUtils.frameKeyPackage(bundle.keyPackage))
             val keyPackageRef = bundle.keyPackage.reference().toHexKey()
 
             val template =
