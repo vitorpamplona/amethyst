@@ -1,6 +1,6 @@
 # Marmot: resync against the adopted spec and current MDK
 
-Status: Stages 0, 1 and 2 done. Stages 3-7 open.
+Status: Stages 0-3 done. Stages 4-7 open.
 
 Sources checked on 2026-09-08:
 
@@ -341,11 +341,44 @@ Not yet wired: nothing reads or writes these components on a real leaf. The carr
 `app_data_dictionary`, which is Stage 1. Until then this is a correct, tested primitive with no
 call sites — which is exactly what makes Stage 1 mechanical rather than exploratory.
 
-**Stage 3 — split `MarmotGroupData` into components.**
-`0x8001` profile, `0x8003` admin-policy, `0x8004` nostr-routing, `0x8002` blossom-image
-(with the new key semantics + `media_type` + domain-separated AAD), `0x8005`
-message-retention, `0x800c` lifecycle. Keep the `0xF2EE` decoder as a read-only legacy path
-for groups already on disk.
+**Stage 3 — split `MarmotGroupData` into components. DONE (codecs + authorization).**
+
+All six component codecs in `marmot/appComponents/`, plus `MarmotGroupState` — the read view
+over a GroupContext dictionary that replaces `MarmotGroupData`:
+
+| Component | Notes |
+| --- | --- |
+| `0x8001` profile | byte equality, no Unicode normalization; limits are in bytes |
+| `0x8003` admin-policy | sorted/unique/non-empty 32-byte account keys; unsigned byte order |
+| `0x8004` nostr-routing | raw 32-byte id + sorted relay list; relay-URL profile checked, never rewritten |
+| `0x8005` message-retention | fixed uint64, no length prefix; `0` = disabled (MIP-01 rejected `0`) |
+| `0x800c` lifecycle | one byte |
+| `0x8002` blossom-image | five var-byte fields incl. the new `media_type`, plus the domain-separated AAD |
+
+**The Stage 1 authorization gap is closed.** `enforceAuthorizedProposalSet` and
+`enforceNoAdminDepletion` now resolve admins through `currentAdminIdentities()`, which reads
+`0x8003` when present and falls back to `0xF2EE`. Depletion also resolves an admin-policy
+change carried by an `AppDataUpdate`, not just by a `GroupContextExtensions` proposal.
+
+One design decision worth recording: the admin lookup decodes **only** `0x8003`, never the
+whole component set. Authorization must not depend on components it does not read — an
+initial version that went through `MarmotGroupState` made a malformed profile component
+freeze the group, which its own tests caught.
+
+The `0xF2EE` decoder stays as the legacy read path; nothing that reads it was removed.
+
+Verified: 35 new tests — the MDK-generated GroupContext dictionary decoded component by
+component and re-encoded byte-identically, per-component validation rules the happy-path
+fixture cannot reach, and authorization driven through real groups (a non-admin cannot rewrite
+group state; an admin can; adminship transfers; a phantom admin with no member leaf is
+rejected; removing the admin policy is rejected). Full `:quartz:jvmTest`: 4,542 tests, 0
+failures. `:commons` and `:cli` still compile.
+
+**Still open in this stage** — the encryption side of `0x8002`. The component now carries
+`media_type` and exposes the `"marmot-group-image-v1" || 0x00 || media_type` AAD, but
+`MarmotGroupImageCipher` still encrypts with an empty AAD and treats `image_key` /
+`image_upload_key` as HKDF seeds rather than the keys themselves. Changing that touches the
+Android and CLI image paths, so it is its own change rather than a rider on the codecs.
 
 **Stage 4 — Nostr transport corrections.**
 Drop kind 10051 in favor of NIP-65 write relays; drop the `encoding` and `relays` tags from

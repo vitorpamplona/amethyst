@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.quartz.marmot.mls.components
 
+import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
+import com.vitorpamplona.quartz.marmot.appComponents.GroupLifecycleV1
+import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
@@ -49,6 +52,15 @@ import kotlin.test.assertTrue
  */
 class AppDataUpdateProposalTest {
     private val creator = "11".repeat(32).hexToByteArray()
+
+    // Real component payloads rather than placeholder bytes: these ids have
+    // decoders now, and every commit reads the dictionary to resolve the admin
+    // set, so junk under a known id would fail the commit rather than the
+    // assertion under test.
+    private val profileA = GroupProfileV1("A", "").encode()
+    private val profileB = GroupProfileV1("B", "").encode()
+    private val lifecycleActive = GroupLifecycleV1.ACTIVE.encode()
+    private val adminPolicy = AdminPolicyV1.of(listOf(creator)).encode()
 
     private fun encode(proposal: Proposal): ByteArray {
         val writer = TlsWriter()
@@ -107,8 +119,8 @@ class AppDataUpdateProposalTest {
         val group = MlsGroup.create(creator)
         assertTrue(group.appDataDictionary().isEmpty)
 
-        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, byteArrayOf(1))
-        group.proposeAppDataUpdate(AppComponentIds.GROUP_LIFECYCLE_V1, byteArrayOf(0))
+        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, profileA)
+        group.proposeAppDataUpdate(AppComponentIds.GROUP_LIFECYCLE_V1, lifecycleActive)
         group.commit()
 
         val first = group.appDataDictionary()
@@ -116,15 +128,15 @@ class AppDataUpdateProposalTest {
             listOf(AppComponentIds.GROUP_PROFILE_V1, AppComponentIds.GROUP_LIFECYCLE_V1),
             first.componentIds,
         )
-        assertContentEquals(byteArrayOf(1), first[AppComponentIds.GROUP_PROFILE_V1])
+        assertContentEquals(profileA, first[AppComponentIds.GROUP_PROFILE_V1])
 
         // A second update to the same id replaces rather than duplicates.
-        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, byteArrayOf(2))
+        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, profileB)
         group.commit()
 
         val second = group.appDataDictionary()
         assertEquals(first.componentIds, second.componentIds)
-        assertContentEquals(byteArrayOf(2), second[AppComponentIds.GROUP_PROFILE_V1])
+        assertContentEquals(profileB, second[AppComponentIds.GROUP_PROFILE_V1])
     }
 
     @Test
@@ -133,7 +145,7 @@ class AppDataUpdateProposalTest {
         // never dropped. An absent extension and an empty one are different
         // GroupContexts, so dropping it here would fork us from the reference.
         val group = MlsGroup.create(creator)
-        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, byteArrayOf(1))
+        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, profileA)
         group.commit()
         assertTrue(group.appDataDictionary().contains(AppComponentIds.GROUP_PROFILE_V1))
 
@@ -153,7 +165,7 @@ class AppDataUpdateProposalTest {
     @Test
     fun removingAnAbsentComponentIsANoOp() {
         val group = MlsGroup.create(creator)
-        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, byteArrayOf(1))
+        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, profileA)
         group.commit()
 
         group.proposeAppDataRemoval(AppComponentIds.NOSTR_ROUTING_V1)
@@ -170,9 +182,9 @@ class AppDataUpdateProposalTest {
         // order the two appear in the proposal list. Propose them in the
         // "wrong" order to prove we do not simply follow list order.
         val group = MlsGroup.create(creator)
-        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, byteArrayOf(0x42))
+        group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, profileA)
         group.proposeGroupContextExtensions(
-            listOf(AppDataDictionary(listOf(ComponentData(AppComponentIds.ADMIN_POLICY_V1, byteArrayOf(9)))).toExtension()),
+            listOf(AppDataDictionary(listOf(ComponentData(AppComponentIds.ADMIN_POLICY_V1, adminPolicy))).toExtension()),
         )
         group.commit()
 
@@ -182,8 +194,8 @@ class AppDataUpdateProposalTest {
             dictionary.componentIds,
             "the update lands on the dictionary the GCE installed, not on the pre-commit one",
         )
-        assertContentEquals(byteArrayOf(9), dictionary[AppComponentIds.ADMIN_POLICY_V1])
-        assertContentEquals(byteArrayOf(0x42), dictionary[AppComponentIds.GROUP_PROFILE_V1])
+        assertContentEquals(adminPolicy, dictionary[AppComponentIds.ADMIN_POLICY_V1])
+        assertContentEquals(profileA, dictionary[AppComponentIds.GROUP_PROFILE_V1])
     }
 
     @Test
@@ -192,14 +204,14 @@ class AppDataUpdateProposalTest {
         // divergence between them is a group split rather than a rendering bug.
         val (alice, bob) = twoMemberGroup()
 
-        alice.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, byteArrayOf(1, 2, 3))
-        alice.proposeAppDataUpdate(AppComponentIds.GROUP_LIFECYCLE_V1, byteArrayOf(0))
+        alice.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, profileA)
+        alice.proposeAppDataUpdate(AppComponentIds.GROUP_LIFECYCLE_V1, lifecycleActive)
         val commit = alice.commit()
         bob.processFramedCommit(commit.framedCommitBytes)
 
         assertEquals(alice.epoch, bob.epoch)
         assertEquals(alice.appDataDictionary(), bob.appDataDictionary())
-        assertContentEquals(byteArrayOf(1, 2, 3), bob.appDataDictionary()[AppComponentIds.GROUP_PROFILE_V1])
+        assertContentEquals(profileA, bob.appDataDictionary()[AppComponentIds.GROUP_PROFILE_V1])
 
         alice.proposeAppDataRemoval(AppComponentIds.GROUP_PROFILE_V1)
         val removal = alice.commit()

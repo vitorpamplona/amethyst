@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.mls.group
 
+import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
@@ -188,16 +190,62 @@ class MlsGroup private constructor(
     /** Parsed Marmot Group Data Extension from the current GroupContext, or null. */
     fun currentMarmotData(): MarmotGroupData? = MarmotGroupData.fromExtensions(groupContext.extensions)
 
-    /** True if the local member appears in the group's current `admin_pubkeys` list. */
-    fun isLocalAdmin(): Boolean {
-        val id = myIdentityHex() ?: return false
-        return currentMarmotData()?.isAdmin(id) ?: false
+    /** The current profile's component view of this GroupContext. */
+    fun currentGroupState(): MarmotGroupState = MarmotGroupState.fromExtensions(groupContext.extensions)
+
+    /**
+     * The group's configured admin account identities, as lowercase hex.
+     *
+     * Reads whichever profile this group is on: the current profile's
+     * `marmot.group.admin-policy.v1` component (`0x8003`) when present,
+     * otherwise MIP-01's `admin_pubkeys` field inside `marmot_group_data`
+     * (`0xF2EE`). Empty means the group names no admins at all, which happens
+     * during bootstrap and in groups that carry neither.
+     *
+     * The current profile is checked first because a group can only be one of
+     * the two — MDK rejects a group that requires both proof profiles — and a
+     * current-profile group is the one whose authorization we must not skip.
+     */
+    fun currentAdminIdentities(): Set<String> = adminIdentitiesIn(groupContext.extensions)
+
+    /**
+     * The admin set named by [extensions], preferring the current profile.
+     *
+     * Decodes ONLY the admin policy, never the whole component set. Authorization
+     * must not depend on the validity of components it does not read: a
+     * malformed group profile is a defect worth surfacing where the profile is
+     * used, but it must not make the group un-committable by taking the admin
+     * check down with it.
+     */
+    private fun adminIdentitiesIn(extensions: List<Extension>): Set<String> {
+        val policyBytes = AppDataDictionary.fromExtensionsOrEmpty(extensions)[AdminPolicyV1.COMPONENT_ID]
+        if (policyBytes != null) return AdminPolicyV1.decode(policyBytes).adminHexKeys.toSet()
+        return MarmotGroupData
+            .fromExtensions(extensions)
+            ?.adminPubkeys
+            ?.toSet()
+            .orEmpty()
     }
 
-    /** True if the member at [leafIndex] is listed as admin in the current group data. */
+    /**
+     * Account identities holding at least one current member leaf, as hex.
+     *
+     * Admin authority is per ACCOUNT, not per leaf: a multi-device account
+     * shares one admin entry across all of its leaves.
+     */
+    fun currentMemberIdentities(): Set<String> = (0 until tree.leafCount).mapNotNullTo(mutableSetOf()) { memberIdentityHex(it) }
+
+    /** True if the local member is an active admin. */
+    fun isLocalAdmin(): Boolean = isLeafAdmin(myLeafIndex)
+
+    /**
+     * True if the member at [leafIndex] is an ACTIVE admin: listed in the
+     * group's admin set and still holding a leaf. The leaf lookup satisfies
+     * the second half by construction.
+     */
     fun isLeafAdmin(leafIndex: Int): Boolean {
         val id = memberIdentityHex(leafIndex) ?: return false
-        return currentMarmotData()?.isAdmin(id) ?: false
+        return id in currentAdminIdentities()
     }
 
     // --- State Persistence ---
@@ -2340,16 +2388,12 @@ class MlsGroup private constructor(
         committerLeafIndex: Int = myLeafIndex,
     ) {
         if (proposals.isEmpty()) return
-        // NOTE: this gate reads MIP-01's `marmot_group_data` (0xF2EE). A
-        // current-profile group keeps its admin list in the
-        // `marmot.group.admin-policy.v1` component (0x8003) instead, so
-        // `currentMarmotData()` is null there and this returns without
-        // enforcing anything. That is a real gap, not a deliberate exemption:
-        // current-profile authorization arrives with the admin-policy component
-        // (see quartz/plans/2026-09-08-marmot-spec-resync.md, Stage 3).
-        val marmot = currentMarmotData()
-        val adminsConfigured = marmot != null && marmot.adminPubkeys.isNotEmpty()
-        if (!adminsConfigured || isLeafAdmin(committerLeafIndex)) return
+        // Reads whichever profile the group is on: the admin-policy component
+        // (0x8003) for current-profile groups, `marmot_group_data` (0xF2EE)
+        // for legacy ones. An empty set means bootstrap — no admins named yet —
+        // and the gate stays open, mirroring MlsGroupManager.updateGroupExtensions.
+        val admins = currentAdminIdentities()
+        if (admins.isEmpty() || isLeafAdmin(committerLeafIndex)) return
 
         val allSelfRemove =
             proposals.all { it.proposal is Proposal.SelfRemove && it.senderLeafIndex == committerLeafIndex }
@@ -2377,26 +2421,45 @@ class MlsGroup private constructor(
      * bootstrap before any admin is named.
      */
     internal fun enforceNoAdminDepletion(proposals: List<PendingProposal>) {
-        val currentAdmins = currentMarmotData()?.adminPubkeys?.toSet().orEmpty()
+        val currentAdmins = currentAdminIdentities()
         if (currentAdmins.isEmpty()) return // Bootstrap: no admins yet, nothing to deplete.
 
-        // Resolve the effective admin list after any GroupContextExtensions
-        // proposal in this commit. If none is present, keep the current list.
+        // Resolve the effective admin list after this commit. Three carriers can
+        // change it, and they are checked in the order the commit applies them:
+        // an AppDataUpdate on 0x8003 (current profile), then a
+        // GroupContextExtensions proposal replacing the whole extension list
+        // (either profile). AppDataUpdate is resolved last because
+        // `applyAppDataUpdateProposals` runs after the rest of the list.
         val gce =
             proposals
                 .asSequence()
                 .map { it.proposal }
                 .filterIsInstance<Proposal.GroupContextExtensions>()
                 .lastOrNull()
-        val projectedMarmot =
-            if (gce != null) {
-                MarmotGroupData.fromExtensions(gce.extensions)
-            } else {
-                currentMarmotData()
+        val extensionsAfterGce = gce?.extensions ?: groupContext.extensions
+
+        val adminUpdate =
+            proposals
+                .asSequence()
+                .map { it.proposal }
+                .filterIsInstance<Proposal.AppDataUpdate>()
+                .lastOrNull { it.componentId == AdminPolicyV1.COMPONENT_ID }
+
+        val adminSet =
+            when (val operation = adminUpdate?.operation) {
+                is Proposal.AppDataUpdate.Operation.Update ->
+                    AdminPolicyV1.decode(operation.data).adminHexKeys.toSet()
+
+                // Removing the admin policy is never valid — it is the sole
+                // admin authority for the group's lifetime — so an empty set
+                // here trips the depletion check below, which is the outcome
+                // we want.
+                Proposal.AppDataUpdate.Operation.Remove -> emptySet()
+
+                null -> adminIdentitiesIn(extensionsAfterGce)
             }
-        val adminSet = projectedMarmot?.adminPubkeys?.toSet().orEmpty()
         check(adminSet.isNotEmpty()) {
-            "MIP-03: commit would empty admin_pubkeys (admin depletion)"
+            "commit would leave the group with no admins (admin depletion)"
         }
 
         // Compute which leaves remain after applying Removes/SelfRemoves.
