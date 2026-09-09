@@ -290,6 +290,7 @@ private fun hasNonDefaultFilters(
 @Composable
 private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
     val currentScope by searchBarViewModel.scope.collectAsStateWithLifecycle()
+    val pinnedToNotes by searchBarViewModel.scopePinnedToNotes.collectAsStateWithLifecycle()
     val currentSource by searchBarViewModel.source.collectAsStateWithLifecycle()
     val currentFollowsOnly by searchBarViewModel.followsOnly.collectAsStateWithLifecycle()
     val currentSort by searchBarViewModel.sortOrder.collectAsStateWithLifecycle()
@@ -311,6 +312,10 @@ private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
                     selected = currentScope == s,
                     onClick = { searchBarViewModel.updateScope(s) },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = scopes.size),
+                    // A `kind:` in the box makes this an event-only query, so All and People are
+                    // greyed rather than merely unselected: they would return nothing, and a
+                    // toggle that offers an empty answer reads as the search being broken.
+                    enabled = !pinnedToNotes || s == SearchScope.NOTES,
                 ) {
                     Text(
                         text =

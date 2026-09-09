@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -168,5 +169,27 @@ class SearchSeedTest {
         assertEquals(listOf(34235), throughTheField(SearchSeed.ofKinds(34235)).kinds)
         assertEquals(listOf(34235, 34236), throughTheField(SearchSeed.ofKinds(34235, 34236)).kinds)
         assertEquals(listOf(21, 22, 34235, 34236), throughTheField(SearchSeed.ofKinds(21, 22, 34235, 34236)).kinds)
+    }
+
+    @Test
+    fun aKindWindowMakesTheQueryEventOnly() {
+        // A person is not an event of any kind, so a `kind:` query cannot return people — the
+        // search screen pins its scope to Notes on the strength of this.
+        assertTrue(QueryParser.parse("kind:article bitcoin").isEventOnly)
+        assertTrue(QueryParser.parse("kind:20").isEventOnly)
+        assertTrue(QueryParser.parse("kind:reply").isEventOnly, "a pseudo-kind is still a kind")
+        assertTrue(QueryParser.parse("kind:media").isEventOnly)
+        // Every seeded feed window pins it too.
+        assertTrue(SearchSeed.ofKinds(LongTextNoteEvent.KIND).isEventOnly)
+    }
+
+    @Test
+    fun aQueryWithoutAKindLeavesTheScopeAlone() {
+        assertFalse(QueryParser.parse("bitcoin").isEventOnly)
+        assertFalse(QueryParser.parse("from:npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6").isEventOnly)
+        assertFalse(QueryParser.parse("#nostr").isEventOnly)
+        assertFalse(SearchQuery.EMPTY.isEventOnly)
+        // A `kind:` the registry cannot resolve never became a filter, so it pins nothing either.
+        assertFalse(QueryParser.parse("kind:banana").isEventOnly)
     }
 }

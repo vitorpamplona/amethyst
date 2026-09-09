@@ -91,6 +91,17 @@ data class SearchQuery(
                 scopes.isEmpty() &&
                 groups.isEmpty()
 
+    /**
+     * Can this query only ever match events?
+     *
+     * A `kind:` window is a property of an event, and a person is not an event of any kind — so a
+     * query naming one cannot return people no matter how it is scoped. The search screen reads
+     * this to pin its All/People/Notes toggle to Notes, rather than leaving a reader free to pick
+     * a scope that is guaranteed to come back empty.
+     */
+    val isEventOnly
+        get() = kinds.isNotEmpty() || pseudoKinds.isNotEmpty()
+
     companion object {
         val EMPTY = SearchQuery()
     }

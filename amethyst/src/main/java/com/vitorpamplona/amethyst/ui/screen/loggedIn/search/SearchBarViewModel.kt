@@ -75,10 +75,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -103,7 +105,32 @@ class SearchBarViewModel(
     val invalidations = MutableStateFlow(0)
     val searchValueFlow = MutableStateFlow(searchValue)
 
-    val scope = MutableStateFlow(SearchScope.ALL)
+    /** The scope the reader picked, which is not always the one that applies — see [scope]. */
+    private val pickedScope = MutableStateFlow(SearchScope.ALL)
+
+    /**
+     * True while the query names a `kind:`, which only an event can have.
+     *
+     * The People half of the toggle cannot answer such a query — a person is not an event of any
+     * kind — so leaving it selectable offers the reader a scope guaranteed to come back empty.
+     */
+    val scopePinnedToNotes: StateFlow<Boolean> =
+        searchValueFlow
+            .map { QueryParser.parse(it).isEventOnly }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /**
+     * The scope that actually applies: the reader's pick, unless the query names a kind.
+     *
+     * Derived rather than written back over [pickedScope] on purpose — dropping the `kind:` chip
+     * has to give the reader the scope they chose before, not leave them pinned to Notes by a
+     * filter that is no longer there.
+     */
+    val scope: StateFlow<SearchScope> =
+        combine(pickedScope, scopePinnedToNotes) { picked, pinned ->
+            if (pinned) SearchScope.NOTES else picked
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, SearchScope.ALL)
     val source = MutableStateFlow(SearchSource.RELAYS)
     val followsOnly = MutableStateFlow(false)
     val sortOrder = MutableStateFlow(SearchSortOrder.EVENT_DEFAULT)
@@ -481,7 +508,7 @@ class SearchBarViewModel(
     }
 
     fun updateScope(newScope: SearchScope) {
-        scope.value = newScope
+        pickedScope.value = newScope
     }
 
     fun updateSource(newSource: SearchSource) {
