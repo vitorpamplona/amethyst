@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -33,9 +34,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * in-memory folds — no cache scan, no LocalCache state involved, which is why they live on the
  * note rather than the cache.
  *
- * All three kinds apply ONLY edits authored by the edited note's own author: the send side gates
- * editing to your own messages, and neither the relay (Buzz) nor an encrypted-plane peer (Concord)
- * is trusted to enforce that, so a foreign-authored edit never rewrites your message.
+ * All four kinds apply ONLY edits authored by the edited note's own author: the send side gates
+ * editing to your own messages, and neither the relay (Buzz) nor an encrypted-plane peer (Concord,
+ * Marmot) is trusted to enforce that, so a foreign-authored edit never rewrites your message.
  */
 
 /**
@@ -58,6 +59,27 @@ fun Note.latestBuzzEdit(): Note? {
     return edits
         .filter { it.event is StreamMessageEditEvent && it.author?.pubkeyHex == authorHex }
         // idHex tie-break so a same-second pair resolves identically on every client.
+        .maxWithOrNull(compareBy({ it.createdAt() ?: 0L }, { it.idHex }))
+}
+
+/**
+ * The kind-1009 Marmot edit overlaying this message, or null.
+ *
+ * Marmot fixes both halves of this rule in `foundation/application-messages.md`
+ * ("Message edits"): only the original author's account may replace a message,
+ * and the latest `created_at` wins with the event id breaking a tie. The
+ * tie-break is not decoration — two devices of one account can stamp the same
+ * second, and without it two readers would render different text for the same
+ * message forever.
+ *
+ * Authorship is by ACCOUNT, which is what `author?.pubkeyHex` already is for a
+ * Marmot inner event: a second device of the same account holds a different MLS
+ * leaf but the same account key, and may edit its own account's message.
+ */
+fun Note.latestMarmotEdit(): Note? {
+    val authorHex = author?.pubkeyHex ?: return null
+    return edits
+        .filter { it.author?.pubkeyHex == authorHex && it.event?.kind == MarmotAppEvent.KIND_EDIT }
         .maxWithOrNull(compareBy({ it.createdAt() ?: 0L }, { it.idHex }))
 }
 

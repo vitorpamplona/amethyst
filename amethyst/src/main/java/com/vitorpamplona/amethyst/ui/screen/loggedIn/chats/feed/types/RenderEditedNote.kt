@@ -40,12 +40,17 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
- * A Concord chat message whose content has been superseded by a kind-3302 edit:
- * renders the NEWEST edit's content (never the stale original) plus an "(edited)"
- * marker, matching the Concord reference client's last-write-wins presentation.
+ * A chat message whose content has been superseded by an edit: renders the
+ * WINNING edit's content (never the stale original) plus an "(edited)" marker.
+ *
+ * Which edit wins is decided per surface before this is called — Concord by
+ * CORD-02 send time, Marmot by `created_at` with an event-id tie-break — and is
+ * always author-only. The rendering itself has nothing surface-specific in it:
+ * an edit is a body plus its own tags, so the content, the custom emoji and the
+ * mentions all come off the edit rather than the original.
  */
 @Composable
-fun RenderConcordEditedNote(
+fun RenderEditedNote(
     note: Note,
     editNote: Note,
     canPreview: Boolean,

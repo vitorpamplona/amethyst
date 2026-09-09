@@ -139,9 +139,10 @@ class MarmotGroupList(
      *   payload is routing metadata with an empty body, so it would render as
      *   a blank bubble. What a reader sees is the live preview and then the
      *   authoritative kind:9.
-     * - **1210 system rows** are group-state captions, not messages. They are
-     *   held back here rather than shown as a bubble of JSON; a renderer with
-     *   a system-row style can surface them from the same log.
+     * 1210 system rows are NOT in this list. They are group-state captions
+     * rather than messages, but they belong in the conversation in
+     * chronological order, so the feed carries them and the renderer gives
+     * them their own style instead of a chat bubble.
      */
     private fun isDisplayableFeedMessage(msg: Note): Boolean {
         val kind = msg.event?.kind ?: return true
@@ -153,7 +154,6 @@ class MarmotGroupList(
         private const val MARMOT_INNER_KIND_REACTION = 7
         private const val MARMOT_INNER_KIND_EDIT = 1009
         private const val MARMOT_INNER_KIND_STREAM_START = 1200
-        private const val MARMOT_INNER_KIND_SYSTEM = 1210
 
         private val NON_CHAT_INNER_KINDS =
             setOf(
@@ -161,7 +161,6 @@ class MarmotGroupList(
                 MARMOT_INNER_KIND_REACTION,
                 MARMOT_INNER_KIND_EDIT,
                 MARMOT_INNER_KIND_STREAM_START,
-                MARMOT_INNER_KIND_SYSTEM,
             )
     }
 }

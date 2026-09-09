@@ -2648,6 +2648,24 @@
     <string name="marmot_group_description_placeholder">Enter group description (optional)</string>
     <string name="marmot_edit_info_footer">Changes will be committed to the group via MLS and propagated to all members.</string>
     <string name="marmot_group_icon">Group icon</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
+    <string name="marmot_system_member_added">%1$s added %2$s</string>
+    <string name="marmot_system_member_added_passive">%1$s joined</string>
+    <string name="marmot_system_member_removed">%1$s removed %2$s</string>
+    <string name="marmot_system_member_removed_passive">%1$s was removed</string>
+    <string name="marmot_system_member_left">%1$s left</string>
+    <string name="marmot_system_admin_added">%1$s made %2$s an admin</string>
+    <string name="marmot_system_admin_added_passive">%1$s is now an admin</string>
+    <string name="marmot_system_admin_removed">%1$s removed %2$s as an admin</string>
+    <string name="marmot_system_admin_removed_passive">%1$s is no longer an admin</string>
+    <string name="marmot_system_group_renamed">%1$s renamed the group to %2$s</string>
+    <string name="marmot_system_group_renamed_passive">The group was renamed to %1$s</string>
+    <string name="marmot_system_avatar_changed">%1$s changed the group avatar</string>
+    <string name="marmot_system_avatar_changed_passive">The group avatar changed</string>
+    <string name="marmot_system_group_disbanded">%1$s disbanded the group</string>
+    <string name="marmot_system_group_disbanded_passive">The group was disbanded</string>
     <string name="marmot_remove_photo">Remove photo</string>
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relays not set</string>
     <string name="marmot_keypackage_relays_not_set_message">You don't have a KeyPackage Relay List yet (MIP-00). This list tells other people where your KeyPackage is published so they can invite you to group chats.\n\nUse your current outbox relays for this?</string>

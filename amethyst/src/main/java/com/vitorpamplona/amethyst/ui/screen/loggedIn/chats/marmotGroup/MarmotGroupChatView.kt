@@ -148,6 +148,10 @@ fun MarmotGroupChatView(
                 routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
                 onWantsToReply = { note -> newMessageModel.reply(note) },
                 onWantsToEditDraft = { },
+                // kind:1210 rows sit in the conversation in order but are
+                // group-state captions rather than messages, so they get their
+                // own centered style instead of a bubble.
+                rowRenderer = remember(accountViewModel) { MarmotSystemRowRenderer(accountViewModel) },
             )
         }
 

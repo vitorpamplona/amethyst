@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -673,6 +675,25 @@ class GroupEventHandler(
                     event.innerEventId = innerEvent.id
                     cache.getNoteIfExists(event.id)?.let { outerNote ->
                         cache.copyRelaysFromTo(outerNote, innerEvent.id)
+                    }
+
+                    // A kind:1009 edit is anchored to the message it replaces,
+                    // exactly like a Concord edit or a reaction: the bubble reads
+                    // `Note.edits`, and holding the edit as a hard-referenced
+                    // child of its target is what keeps it alive as long as that
+                    // target is. A Marmot inner event is decrypted exactly once —
+                    // the ratchet has moved on by the time anyone could re-fetch
+                    // it — so an edit left orphaned in the soft cache could be
+                    // collected and never come back.
+                    //
+                    // The overlay's own rules (author-only, latest wins) are
+                    // applied at render time by `Note.latestMarmotEdit`, not here:
+                    // the target's author is not necessarily known yet when the
+                    // edit arrives, and a link is not an endorsement.
+                    if (innerEvent.kind == MarmotAppEvent.KIND_EDIT) {
+                        MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(innerEvent))?.let { edit ->
+                            cache.getOrCreateNote(edit.targetId).addEdit(innerNote)
+                        }
                     }
 
                     // Track the message in the Marmot group chatroom
