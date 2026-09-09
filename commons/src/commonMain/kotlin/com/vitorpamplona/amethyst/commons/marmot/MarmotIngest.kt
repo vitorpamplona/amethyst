@@ -162,7 +162,7 @@ private suspend fun MarmotManager.ingestGroupEvent(ge: GroupEvent): MarmotIngest
         is GroupEventResult.ApplicationMessage -> {
             // MLS ratchets once we decrypt; future reads of the same ciphertext
             // would fail — persist the plaintext now so restarts/replays see it.
-            persistDecryptedMessage(result.groupId, result.innerEventJson)
+            persistDecryptedMessage(result.groupId, result.innerEventJson, result.epoch)
             MarmotIngestResult.Message(result)
         }
 

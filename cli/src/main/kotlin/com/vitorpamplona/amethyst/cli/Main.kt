@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.StatusCommand
 import com.vitorpamplona.amethyst.cli.commands.StoreCommands
+import com.vitorpamplona.amethyst.cli.commands.StreamCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
@@ -370,12 +371,13 @@ private suspend fun marmotDispatch(
     route(
         name = "marmot",
         tail = tail,
-        usage = "marmot <key-package|group|message|await|reset>",
+        usage = "marmot <key-package|group|message|stream|await|reset>",
         routes =
             mapOf(
                 "key-package" to { rest -> KeyPackageCommands.dispatch(dataDir, rest) },
                 "group" to { rest -> GroupCommands.dispatch(dataDir, rest) },
                 "message" to { rest -> MessageCommands.dispatch(dataDir, rest) },
+                "stream" to { rest -> StreamCommands.dispatch(dataDir, rest) },
                 "await" to { rest -> AwaitCommands.dispatch(dataDir, rest) },
                 "reset" to { rest -> MarmotResetCommand.run(dataDir, rest) },
             ),

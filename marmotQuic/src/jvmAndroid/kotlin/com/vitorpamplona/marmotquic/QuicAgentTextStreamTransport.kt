@@ -24,6 +24,9 @@ import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextSt
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.AgentTextStreamFraming
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.BrokerControlType
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicAlpn
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicException
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicStream
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.QuicBrokerControlEnvelopeV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.QuicEndpointCandidate
 import com.vitorpamplona.quic.connection.QuicConnection
@@ -35,6 +38,7 @@ import com.vitorpamplona.quic.transport.UdpSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeoutOrNull
@@ -175,6 +179,7 @@ private class QuicStreamDelivery(
     private val stream: QuicStream,
     private val driver: QuicConnectionDriver,
     maxPlaintextFrameLen: Long?,
+    private val flushTimeoutMillis: Long = DEFAULT_FLUSH_TIMEOUT_MILLIS,
 ) : MarmotQuicStream {
     private val reader = AgentTextStreamFraming.Reader(maxPlaintextFrameLen)
 
@@ -190,12 +195,45 @@ private class QuicStreamDelivery(
             }
         }
 
+    /**
+     * FIN our write side and wait until the peer acknowledges it.
+     *
+     * The wait is the point. `enqueue` only puts bytes in the send buffer; the
+     * driver still has to put them on the wire and the peer still has to ACK
+     * them. Returning before that and letting the caller [close] tears the
+     * connection down with records still buffered, and they are simply lost —
+     * silently, because the publisher already counted them. QUIC only ACKs a
+     * FIN once everything ahead of it arrived, so `finAcked` is exactly the
+     * "the broker has all of it" signal.
+     */
     override suspend fun finish() {
         stream.send.finish()
         driver.wakeup()
+        withTimeoutOrNull(flushTimeoutMillis) {
+            while (!stream.send.finAcked) {
+                driver.wakeup()
+                delay(FLUSH_POLL_MILLIS)
+            }
+        }
     }
 
+    /**
+     * Tear down the connection. A caller that wrote records is expected to
+     * [finish] first; this still gives an unacknowledged FIN a bounded moment
+     * rather than dropping the tail of a stream on the floor.
+     */
     override suspend fun close() {
+        if (stream.send.finSent && !stream.send.finAcked) {
+            withTimeoutOrNull(flushTimeoutMillis) {
+                while (!stream.send.finAcked) {
+                    driver.wakeup()
+                    delay(FLUSH_POLL_MILLIS)
+                }
+            }
+        }
         driver.close()
     }
 }
+
+private const val DEFAULT_FLUSH_TIMEOUT_MILLIS = 10_000L
+private const val FLUSH_POLL_MILLIS = 20L

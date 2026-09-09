@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextSt
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRecordV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamTranscriptV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.InMemoryAgentTextStreamSequenceStore
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicException
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

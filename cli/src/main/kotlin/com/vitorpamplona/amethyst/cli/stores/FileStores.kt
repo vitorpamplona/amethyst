@@ -151,7 +151,32 @@ class FileMarmotMessageStore(
 
     override suspend fun delete(nostrGroupId: String) {
         file(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group messages")
+        epochFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message epochs")
     }
+
+    private fun epochFile(id: String) = File(dir, "$id.epochs")
+
+    override suspend fun recordEpoch(
+        nostrGroupId: String,
+        innerEventId: String,
+        epoch: Long,
+    ) {
+        val line = "$innerEventId $epoch"
+        val target = epochFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it == line }) return
+        SecureFileIO.appendText(target, line + "\n")
+    }
+
+    override suspend fun loadEpochs(nostrGroupId: String): Map<String, Long> =
+        epochFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                val epoch = parts[1].toLongOrNull() ?: return@mapNotNull null
+                parts[0] to epoch
+            }?.toMap() ?: emptyMap()
 }
 
 /**

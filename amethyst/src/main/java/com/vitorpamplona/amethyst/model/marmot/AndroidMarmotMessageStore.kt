@@ -111,16 +111,64 @@ class AndroidMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             writeMutex.withLock {
-                val file = messagesFile(nostrGroupId)
-                if (file.exists() && !file.delete()) {
-                    Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
+                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId))) {
+                    if (file.exists() && !file.delete()) {
+                        Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
+                    }
                 }
             }
         }
     }
 
-    private fun readAll(nostrGroupId: String): List<String> {
-        val file = messagesFile(nostrGroupId)
+    private fun epochsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epochs")
+
+    /**
+     * Which MLS epoch delivered an inner event. Agent text streams bind the
+     * epoch into their record key context, so a receiver needs the epoch that
+     * carried the stream's kind:1200 anchor rather than the group's current
+     * one — a commit landing in between would otherwise derive a different key
+     * and render nothing.
+     *
+     * Stored through the same encrypted codec as the messages: the ids are as
+     * sensitive as the payloads they point at.
+     */
+    override suspend fun recordEpoch(
+        nostrGroupId: String,
+        innerEventId: String,
+        epoch: Long,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            try {
+                val line = "$innerEventId $epoch"
+                val existing = readAllFrom(epochsFile(nostrGroupId)).toMutableList()
+                if (line in existing) return@withLock
+                existing.add(line)
+                writeAllTo(epochsFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordEpoch($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadEpochs(nostrGroupId: String): Map<String, Long> =
+        withContext(Dispatchers.IO) {
+            try {
+                readAllFrom(epochsFile(nostrGroupId))
+                    .mapNotNull { line ->
+                        val parts = line.trim().split(' ')
+                        if (parts.size != 2) return@mapNotNull null
+                        val epoch = parts[1].toLongOrNull() ?: return@mapNotNull null
+                        parts[0] to epoch
+                    }.toMap()
+            } catch (e: Exception) {
+                Log.e(TAG, "loadEpochs($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
+
+    private fun readAll(nostrGroupId: String): List<String> = readAllFrom(messagesFile(nostrGroupId))
+
+    private fun readAllFrom(file: File): List<String> {
         if (!file.exists()) return emptyList()
         val encrypted = file.readBytes()
         val plain = encryption.decrypt(encrypted) ?: return emptyList()
@@ -151,8 +199,12 @@ class AndroidMarmotMessageStore(
     private fun writeAll(
         nostrGroupId: String,
         messages: List<String>,
+    ) = writeAllTo(messagesFile(nostrGroupId), messages)
+
+    private fun writeAllTo(
+        file: File,
+        messages: List<String>,
     ) {
-        val file = messagesFile(nostrGroupId)
         file.parentFile?.mkdirs()
 
         val encodedEntries = messages.map { it.encodeToByteArray() }

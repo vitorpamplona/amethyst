@@ -37,6 +37,10 @@ import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamFinal
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamKeyContextV1
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamStart
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
@@ -457,6 +461,119 @@ class MarmotManager(
         if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
         return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
     }
+
+    /**
+     * Build the hidden kind:1200 payload that anchors one agent text stream.
+     *
+     * The start payload is what makes a live preview renderable at all: its
+     * own Marmot app event id goes into [AgentTextStreamKeyContextV1], so a
+     * receiver can only derive record keys for a stream it has already seen
+     * announced inside the group. That is also why the anchor is an ordinary
+     * in-group payload rather than something the broker hands out — the broker
+     * relays ciphertext and learns nothing.
+     *
+     * The returned bundle's `innerEvent.id` IS the `start_event_id`; a caller
+     * needs it before it can derive the stream's crypto, which is why this
+     * returns the built payload instead of publishing and forgetting it.
+     *
+     * @param brokerCandidates `quic://host:port` endpoints a receiver may try,
+     *   in preference order. Zero is valid — the preview is then unavailable
+     *   and every member still gets the final message.
+     * @param parentEventId the prompt this stream answers, when there is one.
+     */
+    suspend fun buildAgentStreamStart(
+        nostrGroupId: HexKey,
+        streamId: HexKey,
+        brokerCandidates: List<String> = emptyList(),
+        parentEventId: HexKey? = null,
+        persistOwn: Boolean = true,
+    ): TextMessageBundle {
+        val template =
+            com.vitorpamplona.quartz.nip01Core.signers
+                .eventTemplate<Event>(kind = AgentTextStreamStart.KIND, description = "") {
+                    AgentTextStreamStart
+                        .tags(streamId, brokerCandidates, parentEventId = parentEventId)
+                        .forEach { addUnique(it) }
+                }
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<Event>(signer.pubKey, template)
+        // The epoch this went out at is the one the stream's key context binds,
+        // so remember it the same way an inbound anchor's epoch is remembered.
+        val epoch = currentEpoch(nostrGroupId)
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson(), epoch)
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /**
+     * Build the durable kind:9 that closes an agent text stream out.
+     *
+     * This is the authoritative message. A receiver that rendered a preview
+     * compares its own fold against [transcriptHash] / [chunkCount]: agreement
+     * means it saw exactly the stream the publisher sent, disagreement means
+     * records were dropped, reordered or injected even though each one opened.
+     * A receiver that skipped the preview just reads this as normal chat.
+     */
+    suspend fun buildAgentStreamFinal(
+        nostrGroupId: HexKey,
+        streamId: HexKey,
+        transcriptHash: HexKey,
+        chunkCount: Long,
+        text: String,
+        persistOwn: Boolean = true,
+    ): TextMessageBundle {
+        val template =
+            com.vitorpamplona.quartz.nip01Core.signers
+                .eventTemplate<Event>(kind = 9, description = text) {
+                    AgentTextStreamFinal
+                        .tags(streamId, transcriptHash, chunkCount)
+                        .forEach { addUnique(it) }
+                }
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<Event>(signer.pubKey, template)
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /**
+     * The record AEAD for one stream in [nostrGroupId].
+     *
+     * The stream secret is the group's own
+     * `MLS-Exporter("marmot", "agent-text-stream-quic", 32)`, so every member
+     * of the epoch derives the same one and no key ever crosses the wire. All
+     * the per-stream separation comes from the key context: change the stream,
+     * the epoch, the sender or the anchoring kind:1200 event and the record
+     * key changes with it.
+     *
+     * [senderPubKey] is the stream's author, which is not necessarily us — a
+     * receiver derives the publisher's context, not its own.
+     */
+    fun agentTextStreamCrypto(
+        nostrGroupId: HexKey,
+        streamId: ByteArray,
+        startEventId: ByteArray,
+        senderPubKey: HexKey = signer.pubKey,
+        epoch: Long? = null,
+    ): AgentTextStreamCrypto {
+        val group = groupManager.getGroup(nostrGroupId) ?: error("not a member of group $nostrGroupId")
+        return AgentTextStreamCrypto(
+            streamSecret = group.agentTextStreamSecret(),
+            context =
+                AgentTextStreamKeyContextV1(
+                    groupId = group.groupId,
+                    streamId = streamId,
+                    mlsEpoch = epoch ?: group.epoch,
+                    senderId = senderPubKey.hexToByteArray(),
+                    startEventId = startEventId,
+                ),
+        )
+    }
+
+    /** The group's current MLS epoch, which the stream key context binds. */
+    fun currentEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
 
     /**
      * Build a kind:5 deletion inner event targeting one or more prior inner
@@ -907,13 +1024,32 @@ class MarmotManager(
     suspend fun persistDecryptedMessage(
         nostrGroupId: HexKey,
         innerEventJson: String,
+        /**
+         * The MLS epoch that delivered this payload, when the caller knows it.
+         * Only agent text streams read it back — their record key context
+         * binds the epoch, so a receiver has to derive keys under the epoch
+         * that carried the stream's anchor rather than the group's current one.
+         */
+        epoch: Long? = null,
     ) {
         try {
             messageStore?.appendMessage(nostrGroupId, innerEventJson)
+            if (epoch != null) {
+                Event.fromJsonOrNull(innerEventJson)?.let { messageStore?.recordEpoch(nostrGroupId, it.id, epoch) }
+            }
         } catch (e: Exception) {
             Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId", e)
         }
     }
+
+    /** Inner event id → delivering MLS epoch, for whatever the store kept. */
+    suspend fun storedEpochs(nostrGroupId: HexKey): Map<String, Long> =
+        try {
+            messageStore?.loadEpochs(nostrGroupId) ?: emptyMap()
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to read Marmot message epochs for $nostrGroupId", e)
+            emptyMap()
+        }
 
     /**
      * Load all persisted inner event JSONs for a group, in append order.

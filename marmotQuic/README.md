@@ -62,11 +62,23 @@ then:
 Without the property the cases skip visibly, so an ordinary `./gradlew test`
 never needs a broker on the machine.
 
+## Using it
+
+`amy marmot stream` drives the whole feature; the harness's tests 18 and 19
+run it in both directions against MDK.
+
+```bash
+amy marmot stream start GID --broker quic://127.0.0.1:4450
+amy marmot stream send  GID --stream-id … --start-event-id … --broker … "hello"
+amy marmot stream watch GID --stream-id …
+amy marmot stream finish GID --stream-id … --transcript-hash … --chunk-count N "hello"
+```
+
 ## Not done
 
-- Nothing in the app yet mints a kind-1200 start payload, chooses a broker
-  candidate, or renders a live preview — this is the transport, not the
-  feature wiring.
+- The GUIs do not originate or render a stream yet, which is why the `send`
+  (`0xF2D2`) and `fanout` (`0xF2D4`) role capabilities stay unadvertised — a
+  role is a promise to the whole group.
 - The direct path (`marmot.quic_stream.v1`) is unimplemented. v1 defines no
   start-payload candidate format for it, so it is only reachable with an
   endpoint known out of band.

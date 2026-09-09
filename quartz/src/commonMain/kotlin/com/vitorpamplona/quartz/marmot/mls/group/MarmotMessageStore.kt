@@ -68,4 +68,27 @@ interface MarmotMessageStore {
      * @param nostrGroupId hex-encoded Nostr group ID
      */
     suspend fun delete(nostrGroupId: String)
+
+    /**
+     * Remember which MLS epoch delivered [innerEventId].
+     *
+     * Almost nothing needs this — the inner event is the message. Agent text
+     * streams do: their record key context binds `mls_epoch`, so a receiver
+     * that derives keys for a stream must use the epoch that carried the
+     * stream's kind:1200 anchor, not whatever epoch the group has reached by
+     * the time someone watches. A commit landing in between would otherwise
+     * silently produce a different key and an empty preview.
+     *
+     * Optional: a store that does not keep it simply cannot render a live
+     * preview for a stream anchored in an older epoch, which is a degraded
+     * feature and not a broken group.
+     */
+    suspend fun recordEpoch(
+        nostrGroupId: String,
+        innerEventId: String,
+        epoch: Long,
+    ) = Unit
+
+    /** Inner event id → the MLS epoch that delivered it, for what was recorded. */
+    suspend fun loadEpochs(nostrGroupId: String): Map<String, Long> = emptyMap()
 }

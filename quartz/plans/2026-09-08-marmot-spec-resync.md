@@ -695,11 +695,12 @@ test we have.
   in-memory `AgentTextStreamSequenceStore` exists; a platform-backed one lands
   with the transport that needs it.
 
-  We still do NOT advertise `send` (`0xF2D2`) or `fanout` (`0xF2D4`). Not for
-  want of a transport any more — see below — but because nothing in the app yet
-  originates a stream, and a role we do not serve is worse for the group than a
-  role we do not claim. A group whose policy requires `send` is refused at join
-  rather than joined into a state every peer would reject us from.
+  We still do NOT advertise `send` (`0xF2D2`) or `fanout` (`0xF2D4`) in
+  KeyPackage capabilities. Everything behind them now works end to end, but the
+  roles are a promise to a whole group and the GUIs do not yet originate or
+  render a stream — only the CLI does. A group whose policy requires `send` is
+  refused at join rather than joined into a state every peer would reject us
+  from.
 
 - **The QUIC transport binding is implemented and verified against MDK's
   broker.** `transports/quic.md` is a RAW QUIC binding — its own ALPNs
@@ -718,8 +719,35 @@ test we have.
   publisher's transcript hash — plus that the broker keeps rooms apart. Opt in
   with `-DmarmotQuicBroker=host:port`; it skips visibly without one.
 
-  What is left is the application wiring: nothing yet mints a kind-1200 start,
-  picks a broker candidate, or renders a live preview. The direct path
-  (`marmot.quic_stream.v1`) is also unimplemented — v1 has no start-payload
-  candidate format for it, so it is only usable with an out-of-band endpoint.
+  The direct path (`marmot.quic_stream.v1`) is unimplemented — v1 has no
+  start-payload candidate format for it, so it is only usable with an
+  out-of-band endpoint.
+
+- **The feature is wired end to end, both directions, against MDK.**
+  `amy marmot stream start|send|watch|finish` mints the kind-1200 anchor,
+  pushes records through a broker, folds a preview under the receive discipline
+  (`seq` high-water mark, silent replay discard, gap → unverifiable) and
+  publishes the authoritative kind-9 carrying the transcript. Harness tests 18
+  and 19 run both directions: MDK's `wn stream verify` confirms our transcript
+  from our own kind-1200 + kind-9, and our subscriber folds MDK's stream to a
+  transcript hash identical to the one `wn stream send` computed. That equality
+  is the whole key schedule, key context, AEAD, framing and transcript
+  construction agreeing with an implementation that is not ours.
+
+  Two defects only that exercise could have found:
+
+  - **The epoch belongs to the stream, not to the clock.** The record key
+    context binds `mls_epoch`, and we were resolving it as "the group's current
+    epoch" at each command. A commit landing between the start and the send (or
+    the watch) put the two sides on different keys and produced an empty
+    preview. The epoch that DELIVERED the kind-1200 is the stream's, so it is
+    persisted with the message now (`MarmotMessageStore.recordEpoch`, which
+    MDK's own storage has as `source_epoch`) and read back by both sides.
+
+  - **`close()` dropped the tail of a stream.** `enqueue` only fills the send
+    buffer; tearing the connection down before the driver flushed it lost
+    records silently, because the publisher had already counted them. QUIC ACKs
+    a FIN only after everything ahead of it arrived, so `finish()` now waits for
+    `finAcked` and `close()` gives an unacknowledged FIN a bounded moment. This
+    is why the test passed alone and failed inside a full run.
 

@@ -53,6 +53,15 @@ RELAY_BIN="$RELAY_REPO/target/release/nostr-rs-relay"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8080}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
+
+# MDK's reference QUIC broker, for the agent-text-stream tests. Loopback like
+# everything else; the tests skip when the binary was never built.
+BROKER_BIN="$WN_REPO/target/release/marmot-quic-broker"
+BROKER_HOST="${BROKER_HOST:-127.0.0.1}"
+BROKER_PORT="${BROKER_PORT:-4455}"
+BROKER_URI="quic://$BROKER_HOST:$BROKER_PORT"
+BROKER_PID=""
+
 NO_BUILD=0
 # Every run starts from empty stores. wnd already wipes B's and C's data dirs
 # on each start, but A's amy home and the relay's SQLite file used to survive,
@@ -129,6 +138,7 @@ cleanup() {
   local rc=$?
   trap - EXIT INT TERM HUP
   stop_daemons
+  stop_quic_broker
   stop_local_relay
   print_summary
   exit "$rc"
@@ -141,6 +151,7 @@ trap 'exit 129' HUP
 banner "Marmot headless interop harness ($RUN_TS)"
 preflight
 start_local_relay
+start_quic_broker || true
 start_daemon B "$B_DIR" "$B_SOCKET"
 start_daemon C "$C_DIR" "$C_SOCKET"
 ensure_identity_a
@@ -166,6 +177,8 @@ ALL_TESTS=(
   test_14_wn_removes_a
   test_15_wn_member_leaves
   test_16_wn_keypackage_rotation
+  test_18_agent_stream_amy_publishes
+  test_19_agent_stream_wn_publishes
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

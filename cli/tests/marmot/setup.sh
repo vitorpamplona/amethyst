@@ -120,6 +120,48 @@ preflight() {
   info "relay bin: $RELAY_BIN"
 }
 
+# --- local QUIC broker -------------------------------------------------------
+# MDK's own `marmot-quic-broker`, the reference implementation of the other
+# side of `transports/quic.md`. Agent text stream previews are the only tests
+# that need it, and they are the only way to know our binding is right — the
+# ALPN, the control envelope, the frame prefix and the record key schedule all
+# have to agree with an implementation that is not ours.
+#
+# `--replay-ttl-secs` is what lets a subscriber that connects after the
+# records were pushed still see them; with the default 0 a test would have to
+# race the publisher.
+start_quic_broker() {
+  if [[ ! -x "$BROKER_BIN" ]]; then
+    info "marmot-quic-broker not built — agent text stream tests will skip"
+    return 1
+  fi
+  step "starting QUIC broker on $BROKER_HOST:$BROKER_PORT"
+  mkdir -p "$STATE_DIR/broker"
+  nohup "$BROKER_BIN" --bind "$BROKER_HOST:$BROKER_PORT" --replay-ttl-secs 60 --json \
+    >"$STATE_DIR/broker/stdout.log" 2>"$STATE_DIR/broker/stderr.log" &
+  BROKER_PID=$!
+  local deadline=$(( $(date +%s) + 15 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if grep -q '"local_addr"' "$STATE_DIR/broker/stdout.log" 2>/dev/null; then
+      info "broker pid $BROKER_PID ready"
+      return 0
+    fi
+    if ! kill -0 "$BROKER_PID" 2>/dev/null; then break; fi
+    sleep 1
+  done
+  fail_msg "broker never came up (see $STATE_DIR/broker/stderr.log)"
+  tail -n 20 "$STATE_DIR/broker/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
+  BROKER_PID=""
+  return 1
+}
+
+stop_quic_broker() {
+  [[ -n "${BROKER_PID:-}" ]] || return 0
+  step "stopping broker pid $BROKER_PID"
+  kill "$BROKER_PID" 2>/dev/null || true
+  BROKER_PID=""
+}
+
 # --- local relay -------------------------------------------------------------
 # Start nostr-rs-relay on $RELAY_PORT with a minimal config. Every test
 # runs against this one loopback endpoint — no external network traffic.

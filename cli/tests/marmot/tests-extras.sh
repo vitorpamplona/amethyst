@@ -409,3 +409,153 @@ test_16_wn_keypackage_rotation() {
     record_result "$id" fail "amy kept seeing the pre-rotation KP"
   fi
 }
+
+# --- Agent text streams (0x8006) --------------------------------------------
+# The live-preview half of an agent turn: a hidden kind:1200 anchors the
+# stream over MLS, encrypted records ride raw QUIC through a broker, and a
+# kind:9 closes it with the transcript a receiver checks its own fold against.
+#
+# Both tests need MDK's `marmot-quic-broker` — the reference implementation of
+# the other side. Without it there is no honest way to claim the binding is
+# right, so they skip rather than pretending.
+
+test_18_agent_stream_amy_publishes() {
+  banner "Test 18 — amy publishes an agent text stream; wn verifies it"
+  local id="18 agent stream amy->wn"
+
+  if [[ -z "${BROKER_PID:-}" ]]; then record_result "$id" skip "no QUIC broker"; return; fi
+
+  # Its own group: by this point in the run A has left GROUP_02 and been
+  # removed from others, and a stream needs both parties actually present.
+  local out gid mls_gid
+  out=$(amy_json marmot group create --name "Interop-18") || {
+    record_result "$id" fail "amy group create failed"; return
+  }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || {
+    record_result "$id" fail "amy group add B failed"; return
+  }
+  local b_gid
+  if ! b_gid=$(wait_for_invite B 60); then
+    record_result "$id" fail "B never received the invite"; return
+  fi
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+  save_state GROUP_STREAM "$gid"
+  save_state GROUP_STREAM_MLS "$mls_gid"
+
+  local start_json sid seid
+  start_json=$(amy_json marmot stream start "$gid" --broker "$BROKER_URI") || {
+    record_result "$id" fail "amy stream start failed"; return
+  }
+  sid=$(printf '%s' "$start_json" | jq -r '.stream_id // empty')
+  seid=$(printf '%s' "$start_json" | jq -r '.start_event_id // empty')
+  if [[ -z "$sid" || -z "$seid" ]]; then
+    record_result "$id" fail "stream start reported no ids"; return
+  fi
+
+  local send_json thash chunks
+  send_json=$(amy_json marmot stream send "$gid" --stream-id "$sid" --start-event-id "$seid" \
+                --broker "$BROKER_URI" "Hello " "from " "amethyst") || {
+    record_result "$id" fail "amy stream send failed"; return
+  }
+  thash=$(printf '%s' "$send_json" | jq -r '.transcript_hash // empty')
+  chunks=$(printf '%s' "$send_json" | jq -r '.chunk_count // empty')
+  printf 'stream18 start=%s\nstream18 send=%s\n' "$start_json" "$send_json" >>"$LOG_FILE"
+
+  # Our own subscriber must recover the stream from the broker's replay window
+  # and fold it to the same transcript the publisher computed.
+  local watch_json
+  watch_json=$(amy_json marmot stream watch "$gid" --stream-id "$sid" --timeout 15) || {
+    record_result "$id" fail "amy stream watch failed"; return
+  }
+  printf 'stream18 watch=%s\n' "$watch_json" >>"$LOG_FILE"
+  if [[ "$(printf '%s' "$watch_json" | jq -r '.transcript_hash')" != "$thash" ]]; then
+    record_result "$id" fail "amy's own fold disagrees with what it published"; return
+  fi
+  if [[ "$(printf '%s' "$watch_json" | jq -r '.preview')" != "Hello from amethyst" ]]; then
+    record_result "$id" fail "preview text did not survive the round trip"; return
+  fi
+
+  amy_json marmot stream finish "$gid" --stream-id "$sid" \
+      --transcript-hash "$thash" --chunk-count "$chunks" "Hello from amethyst" >/dev/null || {
+    record_result "$id" fail "amy stream finish failed"; return
+  }
+
+  # The real check: MDK reads our kind:1200 + kind:9 and confirms the
+  # transcript itself.
+  local deadline=$(( $(date +%s) + 60 )) verified="false"
+  while [[ $(date +%s) -lt $deadline ]]; do
+    verified=$(wn_b --json stream verify "$mls_gid" --stream-id "$sid" --transcript-hash "$thash" 2>/dev/null \
+                 | jq -r '.result.verified // false')
+    [[ "$verified" == "true" ]] && break
+    sleep 3
+  done
+  if [[ "$verified" == "true" ]]; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "wn could not verify amy's transcript"
+  fi
+}
+
+test_19_agent_stream_wn_publishes() {
+  banner "Test 19 — wn publishes an agent text stream; amy watches it"
+  local id="19 agent stream wn->amy"
+
+  local gid mls_gid
+  gid=$(load_state GROUP_STREAM || true)
+  mls_gid=$(load_state GROUP_STREAM_MLS || true)
+  if [[ -z "${gid:-}" ]]; then record_result "$id" skip "no stream group (test 18 did not run)"; return; fi
+  if [[ -z "${BROKER_PID:-}" ]]; then record_result "$id" skip "no QUIC broker"; return; fi
+
+  local wn_start wsid wseid
+  wn_start=$(wn_b --json stream start "$mls_gid" --quic-candidate "$BROKER_URI" 2>>"$LOG_FILE") || {
+    record_result "$id" fail "wn stream start failed"; return
+  }
+  wsid=$(printf '%s' "$wn_start" | jq -r '.result.stream_id // empty')
+  # wn reports the kind:1200's own Marmot app event id as message_ids[0] —
+  # the same value amy resolves as start_event_id from the payload itself.
+  wseid=$(printf '%s' "$wn_start" | jq -r '.result.message_ids[0] // empty')
+  if [[ -z "$wsid" || -z "$wseid" ]]; then
+    record_result "$id" fail "wn stream start reported no ids"; return
+  fi
+
+  # amy has to have the kind:1200 before it can derive the stream's keys: the
+  # anchor's own event id is part of the key context. Sync until it lands.
+  local anchor_deadline=$(( $(date +%s) + 45 )) saw_anchor=0
+  while [[ $(date +%s) -lt $anchor_deadline ]]; do
+    if amy_a marmot message list "$gid" --limit 50 2>/dev/null \
+         | jq -e --arg id "$wseid" '.messages[]? | select(.event_id == $id)' >/dev/null 2>&1; then
+      saw_anchor=1; break
+    fi
+    sleep 3
+  done
+  if [[ "$saw_anchor" -ne 1 ]]; then
+    record_result "$id" fail "amy never received wn's kind:1200 anchor"; return
+  fi
+
+  local watch_out="$STATE_DIR/stream-19-watch.json"
+  ( amy_a marmot stream watch "$gid" --stream-id "$wsid" --timeout 25 >"$watch_out" 2>>"$LOG_FILE" ) &
+  local watch_pid=$!
+  sleep 4
+
+  local send_json wthash
+  send_json=$(wn_b --json stream send --broker --connect "$BROKER_HOST:$BROKER_PORT" --insecure-local \
+                --stream-id "$wsid" --start-event-id "$wseid" "Hello from whitenoise" 2>>"$LOG_FILE")
+  wthash=$(printf '%s' "$send_json" | jq -r '.result.transcript_hash // empty')
+  wait "$watch_pid" || true
+
+  local preview athash
+  preview=$(tail -n 1 "$watch_out" 2>/dev/null | jq -r '.preview // empty')
+  athash=$(tail -n 1 "$watch_out" 2>/dev/null | jq -r '.transcript_hash // empty')
+
+  if [[ "$preview" != "Hello from whitenoise" ]]; then
+    record_result "$id" fail "amy rendered '$preview' instead of wn's text"; return
+  fi
+  # The decisive one: our record key schedule, key context, AEAD and transcript
+  # construction all have to match MDK's exactly for these to agree.
+  if [[ -n "$wthash" && "$athash" != "$wthash" ]]; then
+    record_result "$id" fail "transcript hash disagrees with wn's (${athash:0:12}… vs ${wthash:0:12}…)"; return
+  fi
+  record_result "$id" pass
+}
