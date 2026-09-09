@@ -217,7 +217,9 @@ private fun SearchBar(
             }
         }
 
-        // bech32 auto-resolve: navigate on hit without displaying results
+        // Invite links only. A pasted nip19 code used to navigate straight off this screen,
+        // which the token language made unusable: `from:npub1…` contains an npub, so typing an
+        // author filter opened that profile mid-query. Codes now resolve into the results list.
         launch {
             searchBarViewModel.directRouteResolver.filterNotNull().collect { route ->
                 nav.nav(route)
@@ -243,8 +245,8 @@ private fun SearchBar(
         // ".bit" host resolves to its `_@host` profile. Surfaces the
         // in-flight state, the eventual on-chain match, and any failure
         // explicitly. Tapping the resolved row navigates to the user and
-        // clears the search field, matching the existing bech32 auto-
-        // resolve behaviour in `SearchBarViewModel.directRouteResolver`.
+        // clears the search field, matching the invite-link behaviour in
+        // `SearchBarViewModel.directRouteResolver`.
         NamecoinResolutionRow(
             searchInput = searchBarViewModel.searchValue,
             accountViewModel = accountViewModel,
