@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.commons.search.SearchSegment
 
 /**
@@ -49,6 +50,8 @@ data class SearchTokenStyles(
     val group: SpanStyle,
     val kind: SpanStyle,
     val extension: SpanStyle,
+    val exclusion: SpanStyle,
+    val phrase: SpanStyle,
 ) {
     fun styleFor(segment: SearchSegment): SpanStyle? =
         when (segment) {
@@ -65,6 +68,8 @@ data class SearchTokenStyles(
             // as one family rather than two colours a reader would have to learn apart.
             is SearchSegment.Language -> extension
             is SearchSegment.Domain -> extension
+            is SearchSegment.Exclusion -> exclusion
+            is SearchSegment.Phrase -> phrase
         }
 }
 
@@ -89,6 +94,13 @@ fun rememberSearchTokenStyles(): SearchTokenStyles {
             group = chip(scheme.secondary, scheme.secondaryContainer),
             kind = chip(scheme.secondary, scheme.secondaryContainer, FontWeight.SemiBold),
             extension = chip(scheme.tertiary, scheme.tertiaryContainer),
+            // An exclusion removes results rather than narrowing to them, which is the one
+            // token whose effect a reader can misread as its opposite — so it is the one drawn
+            // in the error colour, struck through, instead of a tint like the rest.
+            exclusion =
+                chip(scheme.error, scheme.errorContainer)
+                    .copy(textDecoration = TextDecoration.LineThrough),
+            phrase = chip(scheme.onSurface, scheme.surfaceVariant),
         )
     }
 }

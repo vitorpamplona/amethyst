@@ -290,4 +290,63 @@ class SearchTokenizerTest {
         assertEquals(1, drawn.filterIsInstance<SearchSegment.Hashtag>().size)
         assertEquals(1, drawn.filterIsInstance<SearchSegment.Language>().size)
     }
+    // ---- -term and "a phrase" --------------------------------------------------------------
+    //
+    // Drawn only: the parser still owns what they mean, so these check that the chip covers
+    // exactly the characters the filter reads, and that the query is left alone.
+
+    @Test
+    fun anExclusionIsAToken() {
+        val ex = only<SearchSegment.Exclusion>("-scam")
+        assertEquals("-scam", ex.raw)
+        assertEquals("scam", ex.term)
+    }
+
+    @Test
+    fun aBareMinusIsNotAnExclusion() {
+        assertCovers("a - b")
+        assertTrue(SearchTokenizer.tokenize("a - b").none { it is SearchSegment.Exclusion })
+        assertTrue(SearchTokenizer.tokenize("-").none { it is SearchSegment.Exclusion })
+    }
+
+    @Test
+    fun aHyphenInsideAWordIsNotAnExclusion() {
+        assertCovers("well-known since:2026-01-01")
+        assertTrue(SearchTokenizer.tokenize("well-known").none { it is SearchSegment.Exclusion })
+    }
+
+    @Test
+    fun aNegatedHashtagIsLeftToTheHashtagSplitter() {
+        // Claiming it here would silently turn "the bitcoin hashtag" into "not the word #bitcoin".
+        assertTrue(SearchTokenizer.tokenize("-#bitcoin").none { it is SearchSegment.Exclusion })
+        assertTrue(SearchTokenizer.tokenize("-#bitcoin").any { it is SearchSegment.Hashtag })
+    }
+
+    @Test
+    fun aPhraseIsAToken() {
+        val phrase = only<SearchSegment.Phrase>("\"hello world\"")
+        assertEquals("\"hello world\"", phrase.raw)
+        assertEquals("hello world", phrase.text)
+    }
+
+    @Test
+    fun anUnterminatedPhraseRunsToTheEndLikeTheParserReadsIt() {
+        val phrase = only<SearchSegment.Phrase>("\"hello world")
+        assertEquals("\"hello world", phrase.raw)
+        assertEquals("hello world", phrase.text)
+    }
+
+    @Test
+    fun aQuoteInsideAWordIsNotAPhrase() {
+        assertCovers("say\"what\" next")
+        assertTrue(SearchTokenizer.tokenize("say\"what\" next").none { it is SearchSegment.Phrase })
+    }
+
+    @Test
+    fun drawingThemDoesNotChangeWhatTheQueryMeans() {
+        // The whole point of lifting these out is that only the rendering changes.
+        val q = QueryParser.parse("bitcoin \"hello world\" -scam -airdrop")
+        assertEquals(listOf("scam", "airdrop"), q.excludeTerms)
+        assertTrue(q.text.contains("hello world"))
+    }
 }

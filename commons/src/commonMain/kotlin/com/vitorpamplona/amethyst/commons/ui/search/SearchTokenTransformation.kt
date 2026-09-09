@@ -164,6 +164,9 @@ class SearchTokenTransformation(
             // that seeds `kind:20` shows "kind:picture" — the only form a reader can check. Only
             // an exact one-token match is used: `kind:30312` must not draw as the wider `live`.
             is SearchSegment.Kind -> "kind:${seg.pseudoKind ?: KindRegistry.tokenize(seg.kinds).singleOrNull() ?: seg.alias}"
+            // The quotes are punctuation once the span is a chip: the chip itself is what says
+            // these words travel together. Dropping them is a length change, so it maps.
+            is SearchSegment.Phrase -> seg.text.ifEmpty { seg.raw }
             else -> raw
         }
 

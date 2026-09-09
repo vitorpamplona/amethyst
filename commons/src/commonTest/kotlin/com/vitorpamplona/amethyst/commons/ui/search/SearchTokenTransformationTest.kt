@@ -46,6 +46,8 @@ class SearchTokenTransformationTest {
                 group = SpanStyle(),
                 kind = SpanStyle(),
                 extension = SpanStyle(),
+                exclusion = SpanStyle(),
+                phrase = SpanStyle(),
             )
     }
 
@@ -199,5 +201,25 @@ class SearchTokenTransformationTest {
     fun languageAndDomainDrawAsTyped() {
         assertEquals("lang:en domain:nostr.com", transform("lang:en domain:nostr.com").text.text)
         assertMapsSafely("lang:en domain:nostr.com")
+    }
+
+    @Test
+    fun aPhraseDrawsWithoutItsQuotesAndStillMapsSafely() {
+        assertEquals("hello world", transform("\"hello world\"").text.text)
+        assertMapsSafely("\"hello world\"")
+        assertMapsSafely("bitcoin \"hello world\" -scam")
+    }
+
+    @Test
+    fun anExclusionKeepsItsMinusSoItStillReadsAsOne() {
+        assertEquals("-scam", transform("-scam").text.text)
+        assertMapsSafely("bitcoin -scam -airdrop")
+    }
+
+    @Test
+    fun anUnterminatedQuoteDrawsTheRestOfTheLine() {
+        // The parser reads it to the end of the input, so the chip has to cover the same span.
+        assertEquals("hello world", transform("\"hello world").text.text)
+        assertMapsSafely("\"hello world")
     }
 }

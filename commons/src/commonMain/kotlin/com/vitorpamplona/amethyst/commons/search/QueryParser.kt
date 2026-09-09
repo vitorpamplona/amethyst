@@ -94,6 +94,11 @@ object QueryParser {
 
                 is SearchSegment.Language -> builder.language = seg.code
                 is SearchSegment.Domain -> builder.domain = seg.host
+                // Drawn only. These two exist so the field can chip them; the pass below still
+                // owns what they mean, so their text goes through untouched rather than being
+                // read twice in two places that could drift apart.
+                is SearchSegment.Exclusion -> leftover.append(seg.raw)
+                is SearchSegment.Phrase -> leftover.append(seg.raw)
                 is SearchSegment.Key ->
                     when (seg.field) {
                         KeyField.FROM -> builder.authors.addDistinct(seg.pubkey)

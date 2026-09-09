@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
 import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
+import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -334,7 +335,12 @@ class SearchBarViewModel(
                         )
                 }
             val withDirect = (listOfNotNull(direct) + raw).distinctBy { it.idHex }
-            val filtered = if (follows != null) withDirect.filter { it.author?.pubkeyHex in follows } else withDirect
+            val followed = if (follows != null) withDirect.filter { it.author?.pubkeyHex in follows } else withDirect
+            // `-term` and the `kind:reply`/`kind:media` pseudo-kinds cannot be asked of a relay —
+            // NIP-50 has no negation, and "is a reply" is a tag shape rather than an index — so
+            // they are applied over the results instead. Desktop has always done this; this
+            // screen never did, which left an exclusion the reader typed doing nothing at all.
+            val filtered = followed.filter { note -> note.event?.let { SearchResultFilter.matches(it, parsed) } != false }
 
             when (order) {
                 SearchSortOrder.POPULAR -> {

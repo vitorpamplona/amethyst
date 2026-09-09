@@ -34,7 +34,8 @@ import kotlinx.collections.immutable.toImmutableList
 /**
  * The search field's own small language, scanned in one place: `from:`/`to:` (a person, an event
  * or an address), `since:`/`until:`, `#hashtag`, `label:<mark>`, `group:<id>`, `kind:`, `lang:`,
- * `domain:` and the NIP-73 scopes (`site:`, `isbn:`, `geo:`, `isan:`, `doi:`, `podcast:*`).
+ * `domain:`, `-term`, `"a phrase"` and the NIP-73 scopes (`site:`, `isbn:`, `geo:`, `isan:`,
+ * `doi:`, `podcast:*`).
  *
  * All of these become NIP-01 filter fields, never NIP-50 extensions, so they compose with a
  * relay's own ranking instead of competing with it. The field renderer and the filter builder
@@ -74,6 +75,8 @@ object SearchTokenizer {
             SearchSegment.Kind::class,
             SearchSegment.Language::class,
             SearchSegment.Domain::class,
+            SearchSegment.Exclusion::class,
+            SearchSegment.Phrase::class,
         )
 
     private fun isBech32(c: Char) = c in BECH32
@@ -172,6 +175,8 @@ object SearchTokenizer {
             ?: kindAt(s, i)
             ?: languageAt(s, i)
             ?: domainAt(s, i)
+            ?: exclusionAt(s, i)
+            ?: phraseAt(s, i)
 
     /** `from:<npub>`, `to:<npub>`, or a bare `npub1…` that stays a search term. */
     private fun keyAt(
@@ -321,6 +326,43 @@ object SearchTokenizer {
         val value = valueAt(s, i + prefix.length) ?: return null
         if (!HOSTNAME.matches(value)) return null
         return SearchSegment.Domain(raw = s.substring(i, i + prefix.length + value.length), host = value.lowercase())
+    }
+
+    /**
+     * `-term` — read exactly as [QueryParser]'s own negation scanner reads it, because that is
+     * still the pass that turns it into a filter. A `-` with nothing after it is not an
+     * exclusion, and neither is a bare `-` before a space.
+     *
+     * `-#tag` is left alone deliberately: the hashtag splitter already claims it, and taking it
+     * here would quietly turn "the bitcoin hashtag" into "not the word #bitcoin". Changing that
+     * is a decision about the language, not about how it is drawn.
+     */
+    private fun exclusionAt(
+        s: String,
+        i: Int,
+    ): SearchSegment.Exclusion? {
+        if (s[i] != '-') return null
+        val start = i + 1
+        if (start >= s.length || s[start].isWhitespace() || s[start] == '#') return null
+        var end = start
+        while (end < s.length && !s[end].isWhitespace()) end++
+        return SearchSegment.Exclusion(raw = s.substring(i, end), term = s.substring(start, end))
+    }
+
+    /**
+     * `"a phrase"`, including an unterminated one, which [QueryParser] reads to the end of the
+     * input — so the chip covers the same characters the filter does.
+     */
+    private fun phraseAt(
+        s: String,
+        i: Int,
+    ): SearchSegment.Phrase? {
+        if (s[i] != '"') return null
+        var end = i + 1
+        while (end < s.length && s[end] != '"') end++
+        val text = s.substring(i + 1, end)
+        if (end < s.length) end++
+        return SearchSegment.Phrase(raw = s.substring(i, end), text = text)
     }
 
     private fun prefixAt(
