@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.FiatAmountTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.OrderStatus
@@ -46,6 +47,15 @@ class P2POrderEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = (listOfNotNull(makerName(), currency()) + paymentMethods().orEmpty()).joinToString(" ")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(makerName())) return
+        if (!visitor.visit(currency())) return
+        paymentMethods().orEmpty().forEach { if (!visitor.visit(it)) return }
+    }
+
+    override fun indexableSeparator() = " "
 
     fun orderType() = tags.orderType()
 

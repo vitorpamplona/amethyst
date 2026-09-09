@@ -33,19 +33,21 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
+import com.vitorpamplona.amethyst.commons.search.QueryParser
+import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
+import com.vitorpamplona.amethyst.commons.search.nameSearchTerms
+import com.vitorpamplona.amethyst.commons.search.wholeInputNip19
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
-import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
@@ -53,6 +55,8 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.IPubKeyEntity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -191,6 +195,19 @@ class SearchBarViewModel(
                 }
             }.flowOn(Dispatchers.IO)
 
+    /**
+     * The routes the box opens on its own, which is now **only** an invite link.
+     *
+     * It used to auto-navigate on any nip19 code found anywhere in the text, which the token
+     * language broke: `from:npub1…` contains an npub, so typing an author filter threw the reader
+     * out of the search screen and onto that person's profile mid-query. A pasted code now
+     * resolves into the results list instead (see [directEntity]) — still one tap away, but the
+     * reader decides when to leave.
+     *
+     * Invite links survive because they cannot be typed by accident: both require a URL carrying
+     * `/invite/`, which no token can produce, and both open a redeem flow rather than a profile
+     * or a post.
+     */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val directRouteResolver: Flow<Route?> =
         searchTerm
@@ -210,49 +227,22 @@ class SearchBarViewModel(
                     return@mapLatest Route.BuzzInvite(term)
                 }
 
-                val parsed =
-                    runCatching { Nip19Parser.uriToRoute(term)?.entity }
-                        .onFailure { if (it is CancellationException) throw it }
-                        .getOrNull()
-                        ?: return@mapLatest null
-                when (parsed) {
-                    // Both NPub (npub1…) and NProfile (nprofile1…, npub + relay hints)
-                    // resolve to the same profile route by hex pubkey.
-                    is IPubKeyEntity -> {
-                        LocalCache.consume(parsed)
-                        Route.Profile(parsed.hex)
-                    }
-
-                    is NNote -> {
-                        LocalCache.consume(parsed)
-                        Route.Note(parsed.hex)
-                    }
-
-                    is NEvent -> {
-                        LocalCache.consume(parsed)
-                        routeFor(LocalCache.getOrCreateNote(parsed.hex), account)
-                            ?: Route.EventRedirect(parsed.hex)
-                    }
-
-                    is NAddress -> {
-                        // A bare kind-33301 naddr is a Concord invite bundle — not renderable as a
-                        // generic addressable event (and unredeemable without the link's fragment
-                        // token). Send it to the invite flow, which shows a clean "needs the full
-                        // link" state rather than an "unable to render" event screen.
-                        if (parsed.kind == ConcordInviteBundleEvent.KIND) {
-                            Route.ConcordInvite(term)
-                        } else {
-                            LocalCache.consume(parsed)
-                            routeFor(LocalCache.getOrCreateAddressableNote(parsed.address()), account)
-                                ?: Route.EventRedirect(parsed.aTag())
-                        }
-                    }
-
-                    else -> {
-                        null
-                    }
-                }
+                null
             }.flowOn(Dispatchers.IO)
+
+    /**
+     * The nip19 entity the box holds *in its entirety*, or null.
+     *
+     * Whole-input only, and that is the point: `Nip19Parser` extracts a code from anywhere in a
+     * string, so anything looser matches the npub inside `from:npub1…` and treats an author filter
+     * as a request to open that person.
+     */
+    private fun directEntity(term: String): Entity? {
+        val code = wholeInputNip19(term) ?: return null
+        return runCatching { Nip19Parser.uriToRoute(code)?.entity }
+            .onFailure { if (it is CancellationException) throw it }
+            .getOrNull()
+    }
 
     val searchResultsUsers =
         combine(
@@ -274,8 +264,21 @@ class SearchBarViewModel(
                 }
             }
 
-            if (term.isBlank()) return@combine emptyList<User>()
-            val users = LocalCache.search.findUsersStartingWith(term, account)
+            // The leftover terms, not the whole box: a name search handed `#bitcoin` or
+            // `from:npub1…` verbatim matches nobody, and since notes started honouring the
+            // tokens, leaving people and channels on the raw text made one box mean two things.
+            // A pasted npub/nprofile resolves to its owner even when the cache has never seen
+            // them — this is what the auto-navigation used to do, minus the navigation.
+            val direct =
+                (directEntity(term) as? IPubKeyEntity)?.let {
+                    LocalCache.consume(it)
+                    LocalCache.getUserIfExists(it.hex) ?: LocalCache.getOrCreateUser(it.hex)
+                }
+
+            val nameTerm = plainTerms(term)
+            val found =
+                if (nameTerm.isBlank()) emptyList() else LocalCache.search.findUsersStartingWith(nameTerm, account)
+            val users = (listOfNotNull(direct) + found).distinctBy { it.pubkeyHex }
             if (follows != null) users.filter { it.pubkeyHex in follows } else users
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -292,8 +295,37 @@ class SearchBarViewModel(
         ) { term, _, currentScope, order, follows ->
             if (currentScope == SearchScope.PEOPLE) return@combine emptyList()
 
-            val raw = LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
-            val filtered = if (follows != null) raw.filter { it.author?.pubkeyHex in follows } else raw
+            // The same filters the REQ carries, run against the cache — so `from:`, `to:`,
+            // `since:`, `#t` and the rest narrow local results exactly as they narrow relay
+            // results. A bech32 id typed in full is a lookup, not a search, and keeps its own
+            // path through findNotesStartingWith.
+            val parsed = QueryParser.parse(term)
+            // A pasted note/nevent/naddr resolves even when the cache has never seen it —
+            // what the auto-navigation used to do, minus the navigation.
+            val direct =
+                when (val entity = directEntity(term)) {
+                    is NNote -> LocalCache.consume(entity).let { LocalCache.getOrCreateNote(entity.hex) }
+                    is NEvent -> LocalCache.consume(entity).let { LocalCache.getOrCreateNote(entity.hex) }
+                    is NAddress -> LocalCache.consume(entity).let { LocalCache.getOrCreateAddressableNote(entity.address()) }
+                    else -> null
+                }
+
+            val raw =
+                when {
+                    parsed.isEmpty -> emptyList()
+                    // An id, whole or half-typed, is a lookup rather than a search: it matches on
+                    // `idHex`, which is not content and so nothing a filter's `search` can reach.
+                    // Routed to the scan that knows how to resolve it — and only for text that
+                    // could actually be one, so an ordinary query never pays for two scans.
+                    looksLikeAnEventId(term) -> LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
+                    else ->
+                        LocalCache.search.findNotesMatching(
+                            SearchFilterBuilder.build(parsed, limit = 200),
+                            account.hiddenUsers,
+                        )
+                }
+            val withDirect = (listOfNotNull(direct) + raw).distinctBy { it.idHex }
+            val filtered = if (follows != null) withDirect.filter { it.author?.pubkeyHex in follows } else withDirect
 
             when (order) {
                 SearchSortOrder.POPULAR -> {
@@ -324,7 +356,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findPublicChatChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findPublicChatChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -334,7 +366,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findEphemeralChatChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findEphemeralChatChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -344,7 +376,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findLiveActivityChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findLiveActivityChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -392,6 +424,25 @@ class SearchBarViewModel(
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
+
+    /**
+     * The single word a name search should be given — see [nameSearchTerms]. Not simply the
+     * leftover text: a query that is nothing but `#bitcoin` leaves no leftovers, and handing the
+     * finders an empty string means they answer with nobody rather than with the channel called
+     * "Bitcoin" that the reader was plainly looking for.
+     */
+    private fun plainTerms(term: String): String = QueryParser.parse(term).nameSearchTerms()
+
+    /**
+     * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex
+     * long enough that it is nobody's search term.
+     */
+    private fun looksLikeAnEventId(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty() || trimmed.contains(' ')) return false
+        if (decodeEventIdAsHexOrNull(trimmed) != null) return true
+        return trimmed.length >= 8 && trimmed.all { it in "0123456789abcdefABCDEF" }
+    }
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
         // force new query

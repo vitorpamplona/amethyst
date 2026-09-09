@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ImageTag
@@ -58,6 +59,15 @@ class CommunityDefinitionEvent(
     PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(name(), description(), rules(), content).joinToString("\n")
+
+    // The read path: hands over the same fields indexableContent() joins, without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(name())) return
+        if (!visitor.visit(description())) return
+        if (!visitor.visit(rules())) return
+        visitor.visit(content)
+    }
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 

@@ -54,10 +54,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.search.ContentPreset
-import com.vitorpamplona.amethyst.commons.search.DateUtils
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import com.vitorpamplona.amethyst.commons.search.QueryParser
+import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
+import com.vitorpamplona.amethyst.commons.search.calendar.DateField
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -258,17 +259,17 @@ private fun DateRangeFields(
     // Local text is source of truth while typing.
     // Only propagate valid timestamps (or null when cleared).
     // Only sync from external when the timestamp changes to something we didn't produce.
-    var sinceText by remember { mutableStateOf(since?.let { DateUtils.timestampToDate(it) } ?: "") }
+    var sinceText by remember { mutableStateOf(since?.let { QuerySerializer.dayOf(it, DateField.SINCE) } ?: "") }
     var lastSince by remember { mutableStateOf(since) }
     if (since != lastSince) {
-        sinceText = since?.let { DateUtils.timestampToDate(it) } ?: ""
+        sinceText = since?.let { QuerySerializer.dayOf(it, DateField.SINCE) } ?: ""
         lastSince = since
     }
 
-    var untilText by remember { mutableStateOf(until?.let { DateUtils.timestampToDate(it) } ?: "") }
+    var untilText by remember { mutableStateOf(until?.let { QuerySerializer.dayOf(it, DateField.UNTIL) } ?: "") }
     var lastUntil by remember { mutableStateOf(until) }
     if (until != lastUntil) {
-        untilText = until?.let { DateUtils.timestampToDate(it) } ?: ""
+        untilText = until?.let { QuerySerializer.dayOf(it, DateField.UNTIL) } ?: ""
         lastUntil = until
     }
 
@@ -307,7 +308,7 @@ private fun DateRangeFields(
                 value = untilText,
                 onValueChange = {
                     untilText = it
-                    val ts = QueryParser.parseDateToTimestamp(it)
+                    val ts = QueryParser.parseDateToTimestamp(it, DateField.UNTIL)
                     if (ts != null || it.isBlank()) {
                         lastUntil = ts
                         onChanged(since, ts)

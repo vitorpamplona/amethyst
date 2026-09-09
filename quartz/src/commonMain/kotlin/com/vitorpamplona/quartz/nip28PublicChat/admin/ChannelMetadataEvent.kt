@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -51,6 +52,17 @@ class ChannelMetadataEvent(
     EventHintProvider,
     SearchableEvent {
     override fun indexableContent() = channelInfo().let { listOfNotNull(it.name, it.about, it.picture).joinToString(" ") }
+
+    // The read path. The parse happens once and its fields are handed over one by
+    // one; a scan that stops on the first hit never pays for the rest of the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = channelInfo()
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.about)) return
+        if (!visitor.visit(data.picture)) return
+    }
+
+    override fun indexableSeparator() = " "
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient

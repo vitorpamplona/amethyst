@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.filter
@@ -31,6 +32,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -43,6 +45,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip50Search.EventSearchMatcher
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -148,6 +151,58 @@ class CacheSearch(
             ATag.TAG_NAME,
             AltTag.TAG_NAME,
         )
+
+    /**
+     * Every note in the cache matching [filters], as the search screen asks for them.
+     *
+     * This is the generic path: the same `Filter`s the REQ carries are run against the cache, so
+     * `from:`, `to:`, `since:`, `#t` and the rest narrow local results exactly as they narrow
+     * relay results. Before this, local search could only ever match one substring, and every
+     * token the search box drew as a chip was ignored on the way in.
+     *
+     * The two things a `Filter` cannot say are supplied here instead:
+     * - **the NIP-50 `search`**, which [FilterMatcher] does not read. One [EventSearchMatcher] is
+     *   built per filter and reused across the whole scan; it allocates nothing per note.
+     * - **viewer policy** — the mute list, the kinds no one means to search, encrypted content —
+     *   which is the reader's business and not a relay's.
+     */
+    fun findNotesMatching(
+        filters: List<Filter>,
+        hiddenUsers: HiddenUsersState,
+    ): List<Note> {
+        checkNotInMainThread()
+
+        if (filters.isEmpty()) return emptyList()
+        val hidden = hiddenUsers.flow.value
+
+        // Distinct across filters: a union of arms (a hashtag asks #t, #l and the comment tags)
+        // routinely returns the same note down more than one of them.
+        val found = LinkedHashSet<Note>()
+        filters.forEach { filter ->
+            val search = EventSearchMatcher(filter.search)
+            cache.filter(filter) { note -> isSearchable(note, hidden) && (search.isEmpty || matchesSearch(note, search)) }.forEach(found::add)
+        }
+        return found.toList()
+    }
+
+    private fun matchesSearch(
+        note: Note,
+        search: EventSearchMatcher,
+    ): Boolean {
+        val event = note.event ?: return false
+        return search.match(event)
+    }
+
+    /** The kinds and authors a reader means to see in results, independent of any query. */
+    private fun isSearchable(
+        note: Note,
+        hidden: LiveHiddenUsers,
+    ): Boolean {
+        if (excludeNoteEventFromSearchResults(note)) return false
+        // Encrypted content cannot be matched and must not be offered.
+        if (note.event?.isContentEncoded() != false) return false
+        return !note.isHiddenFor(hidden)
+    }
 
     fun findNotesStartingWith(
         text: String,

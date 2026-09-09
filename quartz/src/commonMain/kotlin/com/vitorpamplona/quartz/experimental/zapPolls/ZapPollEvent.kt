@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -67,6 +68,13 @@ class ZapPollEvent(
             append(content)
             pollOptionsArray().forEach { append('\n').append(it.descriptor) }
         }
+
+    // The read path. `content` is visited even when empty: the joined form appends it
+    // unconditionally, so the separator it produces is part of what the store indexed.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(content)) return
+        pollOptionsArray().forEach { if (!visitor.visit(it.descriptor)) return }
+    }
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)

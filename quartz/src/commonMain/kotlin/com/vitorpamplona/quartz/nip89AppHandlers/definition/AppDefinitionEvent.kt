@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.client
@@ -75,6 +76,24 @@ class AppDefinitionEvent(
                 it.image,
             ).joinToString(" ")
         } ?: ""
+
+    // The read path. One JSON parse, then a field at a time, in the order the join takes them.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = appMetaData() ?: return
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.username)) return
+        if (!visitor.visit(data.displayName)) return
+        if (!visitor.visit(data.about)) return
+        if (!visitor.visit(data.nip05)) return
+        if (!visitor.visit(data.lud06)) return
+        if (!visitor.visit(data.lud16)) return
+        if (!visitor.visit(data.website)) return
+        if (!visitor.visit(data.picture)) return
+        if (!visitor.visit(data.banner)) return
+        visitor.visit(data.image)
+    }
+
+    override fun indexableSeparator() = " "
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient

@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -67,6 +68,13 @@ class EditMetadataEvent(
     fun previousEvents() = tags.previousEvents()
 
     override fun indexableContent() = (listOfNotNull(name(), about()) + hashtags()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(name())) return
+        if (!visitor.visit(about())) return
+        hashtags().forEach { if (!visitor.visit(it)) return }
+    }
 
     companion object {
         const val KIND = 9002

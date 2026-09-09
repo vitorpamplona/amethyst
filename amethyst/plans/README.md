@@ -5,6 +5,7 @@ _Audited 2026-06-30. 21 plans: 19 shipped (archived), 1 in-progress, 1 queued, 0
 ## In progress
 | Plan | Summary |
 | ---- | ------- |
+| [2026-09-07-generic-local-filter.md](2026-09-07-generic-local-filter.md) | Local note search moved onto `LocalCache.filter(Filter)` so the search box's tokens narrow local and relay results alike; steps 1–6 shipped, `FilterMatcher` left untouched via a predicate parameter. |
 | [2026-05-24-ios-support.md](2026-05-24-ios-support.md) | Incremental KMP-to-iOS port; quartz/commons iOS targets are configured (Phase 1) but no `iosApp` module exists yet. |
 
 ## Queued

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.AudioTag
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.DescriptionTag
@@ -55,6 +56,14 @@ class PodcastEpisodeEvent(
     RootScope,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), description(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        if (!visitor.visit(description())) return
+        visitor.visit(content)
+    }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

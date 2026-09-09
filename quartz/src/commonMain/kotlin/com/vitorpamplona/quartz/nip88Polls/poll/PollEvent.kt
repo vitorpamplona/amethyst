@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
@@ -48,6 +49,13 @@ class PollEvent(
             append(content)
             options().forEach { append('\n').append(it.label) }
         }
+
+    // The read path. `content` is visited even when empty: the joined form appends it
+    // unconditionally, so the separator it produces is part of what the store indexed.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(content)) return
+        options().forEach { if (!visitor.visit(it.label)) return }
+    }
 
     fun options() = tags.options()
 

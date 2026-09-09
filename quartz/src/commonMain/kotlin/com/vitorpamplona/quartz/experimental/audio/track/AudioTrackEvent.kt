@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -49,6 +50,12 @@ class AudioTrackEvent(
     SearchableEvent {
     // content is empty for audio tracks; the only free-text is the subject tag.
     override fun indexableContent() = listOfNotNull(subject()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(subject())
+    }
 
     fun subject() = tags.firstNotNullOfOrNull(SubjectTag::parse)
 

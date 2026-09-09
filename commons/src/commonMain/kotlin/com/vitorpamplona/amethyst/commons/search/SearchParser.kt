@@ -45,8 +45,10 @@ fun parseSearchInput(input: String): List<SearchResult> {
     val trimmed = input.trim()
     val results = mutableListOf<SearchResult>()
 
-    // Try to parse as Bech32 (npub, nevent, naddr, etc.)
-    val parsed = Nip19Parser.uriToRoute(trimmed)?.entity
+    // Whole-input only. `Nip19Parser` extracts a code from anywhere in a string, so without this
+    // an author filter — `from:npub1…` — read as a pasted profile and produced a direct-lookup
+    // row for somebody the reader was only filtering by.
+    val parsed = wholeInputNip19(trimmed)?.let { Nip19Parser.uriToRoute(it)?.entity }
     if (parsed != null) {
         when (parsed) {
             is NPub -> {

@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.amethyst.commons.search.calendar.DateField
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -98,15 +101,13 @@ class QueryParserTest {
     @Test
     fun sinceDate() {
         val q = QueryParser.parse("since:2025-01-01")
-        // 2025-01-01 00:00:00 UTC
-        assertEquals(1735689600L, q.since)
+        assertEquals(LocalClock.startOfDay(SearchDate(2025, 1, 1)), q.since)
     }
 
     @Test
     fun sinceDateYearOnly() {
         val q = QueryParser.parse("since:2025")
-        // 2025-01-01 00:00:00 UTC
-        assertEquals(1735689600L, q.since)
+        assertEquals(LocalClock.startOfDay(SearchDate(2025, 1, 1)), q.since)
     }
 
     @Test
@@ -211,7 +212,7 @@ class QueryParserTest {
     fun combinedQuery() {
         val q = QueryParser.parse("kind:note since:2025-01-01 #bitcoin -spam lightning")
         assertEquals(listOf(1), q.kinds.toList())
-        assertEquals(1735689600L, q.since)
+        assertEquals(LocalClock.startOfDay(SearchDate(2025, 1, 1)), q.since)
         assertEquals(listOf("bitcoin"), q.hashtags.toList())
         assertEquals(listOf("spam"), q.excludeTerms.toList())
         assertEquals("lightning", q.text)
@@ -253,10 +254,21 @@ class QueryParserTest {
 
     @Test
     fun parseDateToTimestamp_validDates() {
-        // 1970-01-01 = 0
-        assertEquals(0L, QueryParser.parseDateToTimestamp("1970-01-01"))
-        // 2000-01-01
-        assertEquals(946684800L, QueryParser.parseDateToTimestamp("2000-01-01"))
+        // A bound is the reader's own midnight, not UTC's: a search saved in Auckland and
+        // reopened in Sao Paulo must still name the same day. So this asserts against the
+        // platform clock rather than a hard-coded epoch second.
+        assertEquals(LocalClock.startOfDay(SearchDate(1970, 1, 1)), QueryParser.parseDateToTimestamp("1970-01-01"))
+        assertEquals(LocalClock.startOfDay(SearchDate(2000, 1, 1)), QueryParser.parseDateToTimestamp("2000-01-01"))
+    }
+
+    @Test
+    fun parseDateToTimestamp_partialSpellingsNameASpan() {
+        // The tokenizer already took the full ISO day; what reaches here names a span, and each
+        // end of it takes the end of the span it is bounding.
+        assertEquals(LocalClock.startOfDay(SearchDate(2026, 1, 1)), QueryParser.parseDateToTimestamp("2026", DateField.SINCE))
+        assertEquals(LocalClock.endOfDay(SearchDate(2026, 12, 31)), QueryParser.parseDateToTimestamp("2026", DateField.UNTIL))
+        assertEquals(LocalClock.startOfDay(SearchDate(2026, 2, 1)), QueryParser.parseDateToTimestamp("2026-02", DateField.SINCE))
+        assertEquals(LocalClock.endOfDay(SearchDate(2026, 2, 28)), QueryParser.parseDateToTimestamp("2026-02", DateField.UNTIL))
     }
 
     @Test

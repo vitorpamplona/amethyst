@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
@@ -49,6 +50,14 @@ class EmojiPackEvent(
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(titleOrName(), description(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(titleOrName())) return
+        if (!visitor.visit(description())) return
+        visitor.visit(content)
+    }
 
     @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)

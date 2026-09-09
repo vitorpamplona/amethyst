@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.relayClient.search
 
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.search.QueryParser
+import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
@@ -31,7 +33,6 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -106,38 +107,44 @@ val SearchPostsByTextKinds3 =
         CodeSnippetEvent.KIND,
     )
 
+private val SearchPostsByTextKindGroups =
+    listOf(SearchPostsByTextKinds1, SearchPostsByTextKinds2, SearchPostsByTextKinds3)
+
+/**
+ * The REQs a search sends, from the text the reader typed.
+ *
+ * The text is parsed first rather than handed to the relay whole: `from:`, `to:`, `since:`,
+ * `#tag`, `label:`, `group:` and the NIP-73 scopes become NIP-01 filter fields, and only what is
+ * left over travels as the NIP-50 `search` string. Before this the entire box — chips and all —
+ * went into `search`, so a query like `from:npub1… bitcoin` asked relays for the literal text of
+ * its own tokens and matched nothing.
+ *
+ * Kinds are asked in three groups because the set Amethyst can render is larger than most relays
+ * accept in one filter; the union is merged client-side.
+ */
 fun searchPostsByText(
-    searchString: HexKey,
+    searchString: String,
     relay: NormalizedRelayUrl,
-) = listOf(
-    RelayBasedFilter(
-        relay = relay,
-        filter =
-            ExplainedFilter(
-                purpose = SubPurpose.SEARCH,
-                kinds = SearchPostsByTextKinds1,
-                search = searchString,
-                limit = 100,
-            ),
-    ),
-    RelayBasedFilter(
-        relay = relay,
-        filter =
-            ExplainedFilter(
-                purpose = SubPurpose.SEARCH,
-                kinds = SearchPostsByTextKinds2,
-                search = searchString,
-                limit = 100,
-            ),
-    ),
-    RelayBasedFilter(
-        relay = relay,
-        filter =
-            ExplainedFilter(
-                purpose = SubPurpose.SEARCH,
-                kinds = SearchPostsByTextKinds3,
-                search = searchString,
-                limit = 100,
-            ),
-    ),
-)
+): List<RelayBasedFilter> {
+    val query = QueryParser.parse(searchString)
+    if (query.isEmpty) return emptyList()
+
+    return SearchPostsByTextKindGroups.flatMap { kinds ->
+        SearchFilterBuilder.build(query, kinds, limit = 100).map { filter ->
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    ExplainedFilter(
+                        purpose = SubPurpose.SEARCH,
+                        kinds = filter.kinds,
+                        authors = filter.authors,
+                        tags = filter.tags,
+                        since = filter.since,
+                        until = filter.until,
+                        limit = filter.limit,
+                        search = filter.search,
+                    ),
+            )
+        }
+    }
+}

@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -42,10 +44,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
@@ -55,12 +57,12 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,7 +71,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -99,8 +101,13 @@ import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.search.GroupCandidate
+import com.vitorpamplona.amethyst.commons.ui.search.SEARCH_PICKER_LIMIT
+import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
+import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -113,6 +120,8 @@ import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
@@ -122,6 +131,8 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.filterNotNull
@@ -206,7 +217,9 @@ private fun SearchBar(
             }
         }
 
-        // bech32 auto-resolve: navigate on hit without displaying results
+        // Invite links only. A pasted nip19 code used to navigate straight off this screen,
+        // which the token language made unusable: `from:npub1…` contains an npub, so typing an
+        // author filter opened that profile mid-query. Codes now resolve into the results list.
         launch {
             searchBarViewModel.directRouteResolver.filterNotNull().collect { route ->
                 nav.nav(route)
@@ -224,7 +237,7 @@ private fun SearchBar(
                 // window (Waydroid/DeX freeform) is respected too.
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
     ) {
-        SearchTextField(searchBarViewModel, Modifier)
+        SearchTextField(searchBarViewModel, accountViewModel, Modifier)
         // Inline Namecoin lookup feedback for the global search field.
         // Mirrors the wiring in OnchainZapSendDialog: the local prefix
         // search can race ahead of the on-chain resolution and show a
@@ -232,8 +245,8 @@ private fun SearchBar(
         // ".bit" host resolves to its `_@host` profile. Surfaces the
         // in-flight state, the eventual on-chain match, and any failure
         // explicitly. Tapping the resolved row navigates to the user and
-        // clears the search field, matching the existing bech32 auto-
-        // resolve behaviour in `SearchBarViewModel.directRouteResolver`.
+        // clears the search field, matching the invite-link behaviour in
+        // `SearchBarViewModel.directRouteResolver`.
         NamecoinResolutionRow(
             searchInput = searchBarViewModel.searchValue,
             accountViewModel = accountViewModel,
@@ -483,6 +496,7 @@ private fun sortLabel(opt: SearchSortOrder): String =
 @Composable
 private fun SearchTextField(
     searchBarViewModel: SearchBarViewModel,
+    accountViewModel: AccountViewModel,
     modifier: Modifier,
 ) {
     Row(
@@ -490,45 +504,115 @@ private fun SearchTextField(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextField(
-            value = searchBarViewModel.searchValue,
-            onValueChange = {
-                searchBarViewModel.updateSearchValue(it)
-            },
-            shape = RoundedCornerShape(25.dp),
-            keyboardOptions =
-                KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Sentences,
-                ),
-            leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
-            modifier =
+        // The tokenized field: `from:`/`to:`, `since:`/`until:`, `#tag`, `label:`, `group:` and
+        // the NIP-73 scopes settle into chips as the caret leaves them, and become NIP-01 filter
+        // fields rather than search terms. The value stays the plain text, so a query can still
+        // be copied out and pasted back.
+        val fieldState = remember { SearchFieldState(searchBarViewModel.searchValue) }
+        val interactionSource = remember { MutableInteractionSource() }
+
+        // The composer's own mention picker, reused verbatim: it already resolves NIP-05, asks
+        // the search and indexer relays through SearchQueryState, and ranks follows first. A
+        // second, thinner people search living only in the search field would answer `from:` with
+        // less than `@` answers in a post.
+        val userSuggestions =
+            remember(accountViewModel) {
+                UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
+            }
+
+        // The rooms the reader can actually reach, for the `group:` picker and for naming the
+        // chips it writes. An id typed from memory is unverifiable; a name is not.
+        var groupQuery by remember { mutableStateOf("") }
+        var groupInvalidations by remember { mutableIntStateOf(0) }
+        LaunchedEffect(Unit) {
+            LocalCache.live.newEventBundles.collect { groupInvalidations++ }
+        }
+        // Keyed on the cache's own invalidation counter: a room joined while this screen is
+        // open has to reach the picker, and a keyless remember froze both it and the names.
+        val groupChannels = remember(groupInvalidations) { LocalCache.allRelayGroupChannels() }
+        val groupNames = remember(groupChannels) { groupChannels.associate { it.groupId.id to it.toBestDisplayName() } }
+
+        val groupCandidates =
+            remember(groupChannels, groupQuery) {
+                groupChannels
+                    .asSequence()
+                    // A group id is opaque and case-exact, but a reader types the name they know.
+                    .filter { groupQuery.isBlank() || it.groupId.id.startsWith(groupQuery, true) || it.toBestDisplayName().contains(groupQuery, true) }
+                    .take(SEARCH_PICKER_LIMIT)
+                    .map { channel ->
+                        GroupCandidate(
+                            id = channel.groupId.id,
+                            name = channel.toBestDisplayName(),
+                            subtitle = channel.groupId.relayUrl.displayUrl(),
+                            // The same id on two relays is two rooms, and a `#h` filter cannot tell them apart.
+                            ambiguous = groupChannels.count { it.groupId.id == channel.groupId.id } > 1,
+                        )
+                    }.toList()
+                    .toImmutableList()
+            }
+
+        LaunchedEffect(fieldState.text) { searchBarViewModel.updateSearchValue(fieldState.text) }
+        // The one direction that is not the field's own: a clear, or a query loaded from elsewhere.
+        LaunchedEffect(searchBarViewModel.searchValue) {
+            if (fieldState.text != searchBarViewModel.searchValue) fieldState.setText(searchBarViewModel.searchValue)
+        }
+
+        TokenizedSearchField(
+            state = fieldState,
+            modifier = Modifier.weight(1f, true),
+            fieldModifier =
                 Modifier
-                    .weight(1f, true)
                     .defaultMinSize(minHeight = 20.dp)
                     .focusRequester(searchBarViewModel.focusRequester),
-            placeholder = {
-                Text(
-                    text = stringRes(Res.string.npub_hex_username),
-                    color = MaterialTheme.colorScheme.placeholderText,
+            // A key already in the cache draws as its owner's name; one that has not arrived yet
+            // stays a short npub rather than being given an invented name.
+            displayName = { LocalCache.getUserIfExists(it)?.toBestDisplayName() },
+            groupName = { groupNames[it] },
+            // The same reverse-geocode cache the feed spinner and thread view already read
+            // through LoadCityName; null until it resolves, which leaves the geohash showing.
+            scopeName = { field, value -> if (field == "geo") CachedReversedGeoLocations.cached(value) else null },
+            groups = groupCandidates,
+            onPeopleQuery = { userSuggestions.processCurrentWord(it) },
+            onGroupQuery = { partial -> groupQuery = partial },
+            peoplePicker = { _, onPick ->
+                ShowUserSuggestionList(
+                    userSuggestions = userSuggestions,
+                    onSelect = { onPick(it.pubkeyHex) },
+                    accountViewModel = accountViewModel,
+                    contentPadding = PaddingValues(0.dp),
                 )
             },
-            trailingIcon = {
-                if (searchBarViewModel.isRefreshing.value) {
-                    IconButton(
-                        onClick = {
-                            searchBarViewModel.clear()
-                        },
-                    ) {
-                        ClearTextIcon()
-                    }
-                }
+            textStyle = LocalTextStyle.current,
+            decorationBox = { innerTextField ->
+                TextFieldDefaults.DecorationBox(
+                    value = fieldState.text,
+                    innerTextField = innerTextField,
+                    enabled = true,
+                    singleLine = true,
+                    visualTransformation = VisualTransformation.None,
+                    interactionSource = interactionSource,
+                    shape = RoundedCornerShape(25.dp),
+                    leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
+                    placeholder = {
+                        Text(
+                            text = stringRes(Res.string.npub_hex_username),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchBarViewModel.isRefreshing.value) {
+                            IconButton(onClick = { searchBarViewModel.clear() }) {
+                                ClearTextIcon()
+                            }
+                        }
+                    },
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                )
             },
-            singleLine = true,
-            colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
         )
     }
 }

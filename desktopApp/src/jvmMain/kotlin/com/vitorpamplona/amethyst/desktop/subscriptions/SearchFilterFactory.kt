@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.subscriptions
 
+import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -95,62 +96,24 @@ object SearchFilterFactory {
             PollResponseEvent.KIND,
         )
 
+    private val DEFAULT_KIND_GROUPS = listOf(defaultKindGroup1, defaultKindGroup2, defaultKindGroup3)
+
+    /**
+     * The filters a query sends, per the shared search language — see
+     * [com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder], which owns how each token
+     * becomes a NIP-01 filter field and how a hashtag or a scope fans out into a union.
+     *
+     * The only thing this layer adds is the kind window. A query that names no kind still cannot
+     * ask a relay for "everything": the kinds Amethyst can render are listed explicitly, and
+     * there are more of them than most relays accept in one filter, so they are asked in three
+     * groups and the union is merged client-side.
+     */
     fun createFilters(
         query: SearchQuery,
         limit: Int = 100,
     ): List<Filter> {
         if (query.isEmpty) return emptyList()
-
-        val searchString = buildSearchString(query)
-        val tags = buildTags(query)
-        val authors = query.authors.takeIf { it.isNotEmpty() }
-
-        if (query.kinds.isNotEmpty()) {
-            // User specified kinds — single filter (no group splitting needed)
-            return listOf(
-                Filter(
-                    kinds = query.kinds.toList(),
-                    search = searchString,
-                    authors = authors,
-                    tags = tags,
-                    since = query.since,
-                    until = query.until,
-                    limit = limit,
-                ),
-            )
-        }
-
-        // No kinds specified — use default 3-group search (Android parity)
-        return listOf(defaultKindGroup1, defaultKindGroup2, defaultKindGroup3).map { kindGroup ->
-            Filter(
-                kinds = kindGroup,
-                search = searchString,
-                authors = authors,
-                tags = tags,
-                since = query.since,
-                until = query.until,
-                limit = limit,
-            )
-        }
-    }
-
-    private fun buildSearchString(query: SearchQuery): String? {
-        val parts = mutableListOf<String>()
-
-        // Free text (exclude negation terms — those are client-side only)
-        if (query.text.isNotBlank()) {
-            parts.add(query.text)
-        }
-
-        // NIP-50 inline extensions
-        query.language?.let { parts.add("language:$it") }
-        query.domain?.let { parts.add("domain:$it") }
-
-        return parts.joinToString(" ").takeIf { it.isNotBlank() }
-    }
-
-    private fun buildTags(query: SearchQuery): Map<String, List<String>>? {
-        if (query.hashtags.isEmpty()) return null
-        return mapOf("t" to query.hashtags.toList())
+        if (query.kinds.isNotEmpty()) return SearchFilterBuilder.build(query, query.kinds.toList(), limit)
+        return DEFAULT_KIND_GROUPS.flatMap { SearchFilterBuilder.build(query, it, limit) }
     }
 }
