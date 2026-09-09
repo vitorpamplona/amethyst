@@ -456,7 +456,7 @@ test_18_agent_stream_amy_publishes() {
 
   local send_json thash chunks
   send_json=$(amy_json marmot stream send "$gid" --stream-id "$sid" --start-event-id "$seid" \
-                --broker "$BROKER_URI" "Hello " "from " "amethyst") || {
+                --broker "$BROKER_URI" --pin-sha256 "$BROKER_PIN" "Hello " "from " "amethyst") || {
     record_result "$id" fail "amy stream send failed"; return
   }
   thash=$(printf '%s' "$send_json" | jq -r '.transcript_hash // empty')
@@ -466,7 +466,8 @@ test_18_agent_stream_amy_publishes() {
   # Our own subscriber must recover the stream from the broker's replay window
   # and fold it to the same transcript the publisher computed.
   local watch_json
-  watch_json=$(amy_json marmot stream watch "$gid" --stream-id "$sid" --timeout 15) || {
+  watch_json=$(amy_json marmot stream watch "$gid" --stream-id "$sid" --timeout 15 \
+                 --pin-sha256 "$BROKER_PIN") || {
     record_result "$id" fail "amy stream watch failed"; return
   }
   printf 'stream18 watch=%s\n' "$watch_json" >>"$LOG_FILE"
@@ -535,7 +536,8 @@ test_19_agent_stream_wn_publishes() {
   fi
 
   local watch_out="$STATE_DIR/stream-19-watch.json"
-  ( amy_a marmot stream watch "$gid" --stream-id "$wsid" --timeout 25 >"$watch_out" 2>>"$LOG_FILE" ) &
+  ( amy_a marmot stream watch "$gid" --stream-id "$wsid" --timeout 25 \
+      --pin-sha256 "$BROKER_PIN" >"$watch_out" 2>>"$LOG_FILE" ) &
   local watch_pid=$!
   sleep 4
 

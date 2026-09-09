@@ -61,6 +61,8 @@ BROKER_HOST="${BROKER_HOST:-127.0.0.1}"
 BROKER_PORT="${BROKER_PORT:-4455}"
 BROKER_URI="quic://$BROKER_HOST:$BROKER_PORT"
 BROKER_PID=""
+# SHA-256 of the broker's self-signed leaf, read from its startup JSON.
+BROKER_PIN=""
 
 # A loopback Blossom blob store for the encrypted-media tests. Ciphertext only:
 # the file key comes from each group's MLS exporter and never reaches it.

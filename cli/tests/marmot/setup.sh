@@ -143,7 +143,18 @@ start_quic_broker() {
   local deadline=$(( $(date +%s) + 15 ))
   while [[ $(date +%s) -lt $deadline ]]; do
     if grep -q '"local_addr"' "$STATE_DIR/broker/stdout.log" 2>/dev/null; then
-      info "broker pid $BROKER_PID ready"
+      # The broker generates a self-signed certificate and prints its
+      # fingerprint. `amy` pins that exact leaf rather than trusting a chain —
+      # there is no CA in this picture, and without the pin every stream test
+      # fails inside TLS before a single frame is written.
+      BROKER_PIN=$(sed -n 's/.*"server_cert_sha256_fingerprint":"\([0-9a-f]*\)".*/\1/p' \
+        "$STATE_DIR/broker/stdout.log" | head -1)
+      if [[ -z "$BROKER_PIN" ]]; then
+        fail_msg "broker printed no server_cert_sha256_fingerprint — cannot pin it"
+        BROKER_PID=""
+        return 1
+      fi
+      info "broker pid $BROKER_PID ready (cert ${BROKER_PIN:0:16}…)"
       return 0
     fi
     if ! kill -0 "$BROKER_PID" 2>/dev/null; then break; fi
