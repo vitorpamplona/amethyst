@@ -653,6 +653,16 @@ test we have.
    that object's three VALUES, so every poll matched nothing and reported "never
    received invite" for welcomes that had arrived and been accepted.
 
+8. **A hang-up ended the publish wait.** A relay that dropped the socket
+   between our EVENT frame and its OK gave no verdict — the event may be stored,
+   it may not — and we recorded that as the relay's answer and stopped waiting.
+   The pool's own outbox would have re-sent on reconnect; nobody was listening
+   by then. `publishAndCollectResults` now keeps a transport failure provisional
+   for one retry, dials past the backoff, and takes the OK when it arrives; it
+   stays inside the caller's existing timeout, so nothing waits longer than
+   before. This was one lost message per few harness runs, and on mobile it is
+   every publish that races a network change.
+
 ### Harness defects (not ours)
 
 - **Runs inherited each other's state.** wnd wipes B's and C's data dirs on
@@ -674,12 +684,6 @@ test we have.
 
 ### What is NOT done
 
-- **The local relay drops a publish occasionally.** One run in several,
-  `amy` gets `disconnected before OK` from nostr-rs-relay and reports the send
-  as unconfirmed even though the event is on the relay a moment later. It is a
-  harness-relay flake, not a protocol failure, and it costs whichever test is
-  running at the time. Worth making the CLI's publish confirmation tolerate a
-  reconnect rather than papering over it in the tests.
 - **Agent-text-stream publishes records but has nowhere to send them.** We
   decode the `0x8006` policy, derive per-stream record keys, open records and
   fold the transcript, we advertise the `0xF2D1` receive capability, and
