@@ -695,12 +695,11 @@ test we have.
   in-memory `AgentTextStreamSequenceStore` exists; a platform-backed one lands
   with the transport that needs it.
 
-  We still do NOT advertise `send` (`0xF2D2`) or `fanout` (`0xF2D4`) in
-  KeyPackage capabilities. Everything behind them now works end to end, but the
-  roles are a promise to a whole group and the GUIs do not yet originate or
-  render a stream — only the CLI does. A group whose policy requires `send` is
-  refused at join rather than joined into a state every peer would reject us
-  from.
+  Our leaf now advertises all three roles — `receive` (`0xF2D1`), `send`
+  (`0xF2D2`) and `fanout` (`0xF2D4`) — which is the same set MDK puts on every
+  KeyPackage it publishes, so a group requiring any of them admits us. A
+  capability is a claim about what the client supports, not a duty to stream: a
+  member that never originates one is a quiet member, not a broken one.
 
 - **The QUIC transport binding is implemented and verified against MDK's
   broker.** `transports/quic.md` is a RAW QUIC binding — its own ALPNs
@@ -722,6 +721,19 @@ test we have.
   The direct path (`marmot.quic_stream.v1`) is unimplemented — v1 has no
   start-payload candidate format for it, so it is only usable with an
   out-of-band endpoint.
+
+- **The Android GUI renders live previews.** `MarmotAgentStreamWatcher` in
+  `commons` follows the newest kind:1200 in a group, folds the QUIC records
+  behind it under the receive discipline, and settles the preview against the
+  durable kind:9 — confirmed when the transcript agrees, dropped when it does
+  not, because a disagreement means we rendered something the publisher did not
+  send. It is deliberately in `commons` and speaks only quartz's transport
+  port, so it is testable without a UI and the desktop app inherits it the day
+  it grows a Marmot chat screen. Android's chat view shows it as an italic,
+  labelled row between the transcript and the composer: provisional content has
+  to look provisional. Every failure path — no stream, no candidate, an
+  unreachable broker, a platform with no QUIC at all — ends as "no preview",
+  never as a broken group.
 
 - **The feature is wired end to end, both directions, against MDK.**
   `amy marmot stream start|send|watch|finish` mints the kind-1200 anchor,

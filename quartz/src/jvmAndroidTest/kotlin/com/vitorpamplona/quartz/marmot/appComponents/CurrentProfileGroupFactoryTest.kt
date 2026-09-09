@@ -107,12 +107,13 @@ class CurrentProfileGroupFactoryTest {
             assertContentEquals(ByteArray(0), kpDictionary[AppComponentIds.LAST_RESORT_KEY_PACKAGE])
 
             // Capabilities advertise the draft extension the current profile
-            // needs, plus the legacy 0xF2EE group-data extension and the
-            // agent-text-stream RECEIVE role.
+            // needs, plus the legacy 0xF2EE group-data extension and all three
+            // agent-text-stream roles — the same set MDK puts on every
+            // KeyPackage it publishes.
             //
             // The extra entries are deliberate and are NOT drift from the MDK
             // reference. A capability says "this client can handle it", and a
-            // group that REQUIRES 0xF2EE (legacy) or 0xF2D1 (any group MDK
+            // group that REQUIRES 0xF2EE (legacy) or a role (any group MDK
             // creates) refuses to add a leaf that does not advertise it — so
             // without these a current-profile KeyPackage would be un-addable
             // to every legacy group that already exists and to every group MDK
@@ -123,6 +124,8 @@ class CurrentProfileGroupFactoryTest {
                     AppDataDictionary.EXTENSION_TYPE,
                     MarmotGroupData.EXTENSION_ID_INT,
                     AgentTextStreamRoles.RECEIVE_CAPABILITY,
+                    AgentTextStreamRoles.SEND_CAPABILITY,
+                    AgentTextStreamRoles.FANOUT_CAPABILITY,
                 ),
                 kp.leafNode.capabilities.extensions,
             )

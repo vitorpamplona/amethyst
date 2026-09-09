@@ -76,9 +76,10 @@ amy marmot stream finish GID --stream-id … --transcript-hash … --chunk-count
 
 ## Not done
 
-- The GUIs do not originate or render a stream yet, which is why the `send`
-  (`0xF2D2`) and `fanout` (`0xF2D4`) role capabilities stay unadvertised — a
-  role is a promise to the whole group.
+- The Android GUI renders previews but does not originate a stream — that is
+  an agent's job, and no agent runs in the app yet. Only `amy` publishes one.
+- The desktop app has no Marmot chat screen at all, so there is nothing to
+  render a preview into. The watcher it would use already lives in `commons`.
 - The direct path (`marmot.quic_stream.v1`) is unimplemented. v1 defines no
   start-payload candidate format for it, so it is only reachable with an
   endpoint known out of band.

@@ -3442,7 +3442,21 @@ class MlsGroup private constructor(
                     listOf(
                         AppDataDictionary.EXTENSION_TYPE,
                         MarmotGroupData.EXTENSION_ID_INT,
+                        // All three agent-stream roles, matching what MDK puts
+                        // on every KeyPackage it publishes. `receive` is the
+                        // baseline compatibility role; `send` says we can
+                        // originate preview records, which we can now that the
+                        // publisher, the raw-QUIC binding and the app wiring
+                        // exist; `fanout` says records may be forwarded on our
+                        // behalf, which is what using a broker at all means.
+                        //
+                        // A capability is only a claim about what we support,
+                        // not a duty to stream: a group that requires `send`
+                        // wants members that COULD originate, and a member that
+                        // never does is a quiet member, not a broken one.
                         AgentTextStreamRoles.RECEIVE_CAPABILITY,
+                        AgentTextStreamRoles.SEND_CAPABILITY,
+                        AgentTextStreamRoles.FANOUT_CAPABILITY,
                     ),
                 proposals = listOf(APP_DATA_UPDATE_PROPOSAL_TYPE, SELF_REMOVE_PROPOSAL_TYPE),
             )

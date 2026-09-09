@@ -175,6 +175,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
@@ -204,6 +205,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -340,6 +342,7 @@ import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -952,6 +955,24 @@ class Account(
                 scope = scope,
             )
         }
+
+    /**
+     * Raw QUIC for agent text stream previews (`transports/quic.md`).
+     *
+     * Only the live preview needs it. A device that cannot open a QUIC
+     * connection still participates fully — it reads every stream's
+     * authoritative kind:9 like ordinary chat — which is why this is a
+     * separate optional piece rather than part of [marmotManager].
+     */
+    val marmotStreamTransport: MarmotQuicTransport by lazy {
+        QuicAgentTextStreamTransport(
+            parentScope = scope,
+            // Preview brokers are commonly self-signed and the binding expects
+            // that; the platform trust store is still the default answer, and
+            // a deployment that pins does it here.
+            certificateValidator = JdkCertificateValidator(),
+        )
+    }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 

@@ -23,6 +23,12 @@ package com.vitorpamplona.quartz.marmot.mls.group
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
+import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
+import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519KeyPair
+import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
+import com.vitorpamplona.quartz.marmot.mls.tree.Capabilities
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -88,12 +94,19 @@ class CurrentProfileWelcomeTest {
 
     /**
      * The `0x8006` policy names MLS leaf capabilities every member must
-     * advertise. Our current-profile leaf advertises `receive` only, so a
-     * group that also requires `send` must be refused at join rather than
-     * joined into a state where every commit we make is rejected by peers.
+     * advertise, and a group that requires one we do not advertise has to be
+     * refused at join — joining anyway lands us in a group where peers reject
+     * every commit we make.
+     *
+     * The gate is tested against a deliberately reduced leaf rather than
+     * against our own KeyPackage, because our own now advertises all three
+     * defined roles (see [aJoinerFillsEveryRoleTheProfileDefines]) and so
+     * cannot fail this check. Testing "we refuse what we cannot fill" through
+     * our own capability set would silently stop testing anything the moment
+     * that set changed — which is exactly what happened here.
      */
     @Test
-    fun aJoinerRefusesAGroupWhoseStreamRolesItCannotFill() =
+    fun aJoinerRefusesAGroupWhoseStreamRolesItsLeafDoesNotAdvertise() =
         runBlocking<Unit> {
             val group =
                 aGroup(
@@ -105,7 +118,7 @@ class CurrentProfileWelcomeTest {
                         paddingBucketBytes = 0,
                     ),
                 )
-            val invitee = CurrentProfileGroupFactory.createKeyPackage(signer(0x44))
+            val invitee = receiveOnlyKeyPackage(signer(0x44))
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
             val welcome = assertNotNull(group.commit().welcomeBytes)
 
@@ -115,6 +128,64 @@ class CurrentProfileWelcomeTest {
                 "expected a role-capability refusal, got: ${failure.message}",
             )
         }
+
+    /**
+     * Our published leaf advertises `receive`, `send` AND `fanout` — the same
+     * set MDK puts on every KeyPackage — so a group that requires any of them
+     * admits us.
+     */
+    @Test
+    fun aJoinerFillsEveryRoleTheProfileDefines() =
+        runBlocking<Unit> {
+            val group =
+                aGroup(
+                    AgentTextStreamQuicPolicyV1(
+                        requiredMemberRoles = AgentTextStreamRoles.MASK,
+                        allowedMemberRoles = AgentTextStreamRoles.MASK,
+                        maxPlaintextFrameLen = 4096,
+                        replayTtlSecs = 0,
+                        paddingBucketBytes = 0,
+                    ),
+                )
+            val invitee = CurrentProfileGroupFactory.createKeyPackage(signer(0x66))
+            group.proposeAdd(invitee.keyPackage.toTlsBytes())
+            val welcome = assertNotNull(group.commit().welcomeBytes)
+
+            val joined = MlsGroup.processWelcome(welcome, invitee)
+            assertEquals(nostrGroupId.toHexKey(), joined.currentNostrGroupId())
+        }
+
+    /** A current-profile leaf with the `send` and `fanout` roles stripped. */
+    private suspend fun receiveOnlyKeyPackage(signer: NostrSignerInternal): KeyPackageBundle {
+        val full = CurrentProfileGroupFactory.createKeyPackage(signer)
+        val reduced =
+            MlsGroup.currentProfileLeafCapabilities().let {
+                Capabilities(
+                    extensions = it.extensions.filterNot { ext -> ext == AgentTextStreamRoles.SEND_CAPABILITY || ext == AgentTextStreamRoles.FANOUT_CAPABILITY },
+                    proposals = it.proposals,
+                )
+            }
+        val identity = signer.pubKey.hexToByteArray()
+        // The SAME signature keypair: the leaf's account identity proof covers
+        // its own signature key, so a fresh one would fail proof validation
+        // before the role gate is ever reached and the test would pass for the
+        // wrong reason.
+        val leafKeys =
+            Ed25519KeyPair(
+                privateKey = full.signaturePrivateKey,
+                publicKey = Ed25519.publicFromPrivate(full.signaturePrivateKey),
+            )
+        return MlsGroup
+            .create(identity)
+            .createKeyPackage(
+                identity = identity,
+                signingKey = full.signaturePrivateKey,
+                leafSignatureKeyPair = leafKeys,
+                leafExtensions = full.keyPackage.leafNode.extensions,
+                capabilities = reduced,
+                keyPackageExtensions = full.keyPackage.extensions,
+            )
+    }
 
     @Test
     fun aJoinerAcceptsAGroupRequiringOnlyTheReceiveRole() =
