@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -35,32 +36,51 @@ object GroupCreateCommand {
     ): Int {
         val args = Args(rest)
         val name = args.flag("name", "")!!
+        val legacy = args.bool("legacy")
         args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = RandomInstance.bytes(32).toHexKey()
-
-            // Stamp initial metadata via the shared factory so UI + CLI stay
-            // byte-identical. Bake the MarmotGroupData extension into the
-            // epoch-0 GroupContext directly (see `MarmotManager.createGroup`)
-            // so later invitees receive a pre-populated group from the
-            // welcome and never have to chase an undecryptable bootstrap
-            // commit that predates their membership.
             val outboxUrls = ctx.outboxRelays().map { it.url }
-            val metadata =
-                MarmotGroupData.bootstrap(
+
+            if (legacy) {
+                // MIP-era group: its GroupContext requires the `0xF2EE`
+                // group-data extension, so only members whose leaves advertise
+                // that capability can be added. Kept for reproducing the
+                // behaviour of groups already on disk.
+                //
+                // Bake MarmotGroupData into the epoch-0 GroupContext directly
+                // so later invitees receive a pre-populated group from the
+                // welcome and never have to chase an undecryptable bootstrap
+                // commit that predates their membership.
+                val metadata =
+                    MarmotGroupData.bootstrap(
+                        nostrGroupId = gid,
+                        creatorPubKey = ctx.identity.pubKeyHex,
+                        outboxRelays = outboxUrls,
+                        name = name,
+                    )
+                ctx.marmot.createGroup(gid, initialMetadata = metadata)
+            } else {
+                // Current profile by default. The difference is what the group
+                // REQUIRES of a joining leaf: a current-profile group asks for
+                // the account identity proof, which every conformant peer's
+                // KeyPackage carries, while a legacy group asks for `0xF2EE`,
+                // which none of them do. Defaulting to legacy made every
+                // outside member un-addable.
+                ctx.marmot.createCurrentProfileGroup(
                     nostrGroupId = gid,
-                    creatorPubKey = ctx.identity.pubKeyHex,
-                    outboxRelays = outboxUrls,
-                    name = name,
+                    relays = outboxUrls,
+                    profile = if (name.isEmpty()) null else GroupProfileV1(name, ""),
                 )
-            ctx.marmot.createGroup(gid, initialMetadata = metadata)
+            }
 
             Output.emit(
                 mapOf(
                     "group_id" to gid,
                     "mls_group_id" to ctx.marmot.mlsGroupIdHex(gid),
                     "name" to name,
+                    "profile" to if (legacy) "legacy" else "current",
                     "epoch" to ctx.marmot.groupEpoch(gid),
                 ),
             )

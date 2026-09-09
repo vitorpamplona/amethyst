@@ -27,7 +27,9 @@ object GroupCommands {
         """
         |amy marmot group — MLS group management
         |
-        |  marmot group create [--name NAME]          create an empty group (self-only)
+        |  marmot group create [--name NAME]          create an empty group (self-only);
+        |    [--legacy]                                --legacy builds a MIP-era group that
+        |                                              only 0xF2EE-capable leaves can join
         |  marmot group list                          list joined groups
         |  marmot group show GID                      print full group details
         |  marmot group members GID                   print members

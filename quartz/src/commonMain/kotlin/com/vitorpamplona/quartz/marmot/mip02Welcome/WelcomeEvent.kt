@@ -89,7 +89,11 @@ class WelcomeEvent(
         ) = eventTemplate(KIND, welcomeBase64, createdAt) {
             keyPackageEventId(keyPackageEventId)
             welcomeRelays(relays)
-            encoding()
+            // No `encoding` tag. `transports/nostr.md`: "A sender MUST NOT add
+            // an `encoding` tag for any event shape in this document" — a
+            // receiver that switched decoders on one could be steered into a
+            // different parse of the same bytes, so the binding removes the
+            // negotiation entirely rather than defining it.
             nostrGroupId?.let { addUnique(arrayOf("h", it)) }
             initializer()
         }

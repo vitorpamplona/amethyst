@@ -47,9 +47,15 @@ class AdvertisedRelayListEvent(
 
     fun readRelaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseReadNorm).ifEmpty { null }
 
+    /** Read-marked relays including local ones. For reading back OUR OWN list. */
+    fun allReadRelaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseReadNormUnfiltered).ifEmpty { null }
+
     fun writeRelays() = tags.mapNotNull(AdvertisedRelayInfo::parseWrite).ifEmpty { null }
 
     fun writeRelaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseWriteNorm).ifEmpty { null }
+
+    /** Write-marked relays including local ones. For reading back OUR OWN list. */
+    fun allWriteRelaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseWriteNormUnfiltered).ifEmpty { null }
 
     companion object {
         const val KIND = 10002

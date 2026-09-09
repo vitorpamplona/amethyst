@@ -55,6 +55,13 @@ object CurrentProfileGroupFactory {
      *
      * `0x0001` is in the list because a client advertising `app_data_dictionary`
      * must understand and advertise `app_components` itself.
+     *
+     * This list is what decides which groups will accept us. A group states the
+     * components it REQUIRES, and a leaf that does not advertise every one of
+     * them is refused — so a component we implement but forget to list here is
+     * invisible, and one we list but do not implement is a lie that surfaces
+     * later as a group we cannot actually participate in. Add an id here only
+     * when the component is implemented.
      */
     val SUPPORTED_COMPONENTS: List<Int> =
         listOf(
@@ -65,6 +72,7 @@ object CurrentProfileGroupFactory {
             AppComponentIds.NOSTR_ROUTING_V1,
             AppComponentIds.MESSAGE_RETENTION_V1,
             AppComponentIds.ACCOUNT_IDENTITY_PROOF_V2,
+            AppComponentIds.GROUP_ENCRYPTED_MEDIA_V2,
             AppComponentIds.GROUP_LIFECYCLE_V1,
         )
 

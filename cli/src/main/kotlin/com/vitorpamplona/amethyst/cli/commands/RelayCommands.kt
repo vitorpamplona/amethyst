@@ -557,8 +557,11 @@ object RelayCommands {
                         mapOf(
                             "noun" to "nip65",
                             "kind" to AdvertisedRelayListEvent.KIND,
-                            "read" to (nip65?.readRelaysNorm()?.map { it.url } ?: emptyList<String>()),
-                            "write" to (nip65?.writeRelaysNorm()?.map { it.url } ?: emptyList<String>()),
+                            // Unfiltered: this is OUR list, and reporting it
+                            // through the attacker-input filter would hide a
+                            // local relay the operator deliberately configured.
+                            "read" to (nip65?.allReadRelaysNorm()?.map { it.url } ?: emptyList<String>()),
+                            "write" to (nip65?.allWriteRelaysNorm()?.map { it.url } ?: emptyList<String>()),
                             "relays" to (nip65?.relaysNorm()?.map { it.url } ?: emptyList<String>()),
                         ),
                     )
@@ -641,8 +644,8 @@ object RelayCommands {
             val self = ctx.identity.pubKeyHex
             val nip65 = ctx.relaysOf(self)
             val out = linkedMapOf<String, Any?>()
-            out["outbox"] = nip65?.writeRelaysNorm()?.map { it.url } ?: emptyList<String>()
-            out["inbox"] = nip65?.readRelaysNorm()?.map { it.url } ?: emptyList<String>()
+            out["outbox"] = nip65?.allWriteRelaysNorm()?.map { it.url } ?: emptyList<String>()
+            out["inbox"] = nip65?.allReadRelaysNorm()?.map { it.url } ?: emptyList<String>()
             out["nip65"] = nip65?.relaysNorm()?.map { it.url } ?: emptyList<String>()
             for (flat in FLATS) {
                 out[flat.jsonKey] = flat.read(ctx, self).map { it.url }
@@ -732,7 +735,7 @@ object RelayCommands {
         facet: Facet,
     ): List<String> {
         val nip65 = ctx.relaysOf(self)
-        val urls = if (facet == Facet.OUTBOX) nip65?.writeRelaysNorm() else nip65?.readRelaysNorm()
+        val urls = if (facet == Facet.OUTBOX) nip65?.allWriteRelaysNorm() else nip65?.allReadRelaysNorm()
         return urls?.map { it.url } ?: emptyList()
     }
 

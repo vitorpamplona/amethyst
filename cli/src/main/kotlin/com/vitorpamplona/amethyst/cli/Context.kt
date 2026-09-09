@@ -457,7 +457,7 @@ class Context(
      * Android app.
      */
     suspend fun outboxRelays(): Set<NormalizedRelayUrl> =
-        relaysOf(identity.pubKeyHex)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
+        relaysOf(identity.pubKeyHex)?.allWriteRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: DefaultNIP65RelaySet
 
     /**
@@ -468,7 +468,7 @@ class Context(
      * marked.
      */
     suspend fun nip65ReadRelays(): Set<NormalizedRelayUrl> =
-        relaysOf(identity.pubKeyHex)?.readRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
+        relaysOf(identity.pubKeyHex)?.allReadRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: outboxRelays()
 
     /**
@@ -476,7 +476,7 @@ class Context(
      * to [DefaultDMRelayList] when no kind:10050 has been seen.
      */
     suspend fun inboxRelays(): Set<NormalizedRelayUrl> =
-        dmInboxOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
+        dmInboxOf(identity.pubKeyHex)?.allRelays()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: DefaultDMRelayList.toSet()
 
     /**
@@ -885,14 +885,15 @@ class Context(
         } ?: input
     }
 
-    fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> {
-        val m = marmot.groupMetadata(nostrGroupId) ?: return emptySet()
-        return m.relays
-            .mapNotNull {
-                com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-                    .normalizeOrNull(it)
-            }.toSet()
-    }
+    /**
+     * The group's own relay set, from whichever routing component it carries.
+     *
+     * Delegates rather than reading `MarmotGroupData` directly: a
+     * current-profile group has no `0xF2EE` extension at all, and reading only
+     * that one silently returned an empty set for every group the current
+     * profile creates.
+     */
+    fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> = marmot.groupRelays(nostrGroupId).toSet()
 
     override fun close() {
         // Nothing to persist for an anonymous run (no account dir to write into).

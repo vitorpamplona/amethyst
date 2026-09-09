@@ -77,32 +77,49 @@ class AdvertisedRelayInfo(
             return tag[1]
         }
 
-        fun parseReadNorm(tag: Array<String>): NormalizedRelayUrl? {
+        /**
+         * Read-marked relays, with local-network entries dropped.
+         *
+         * The drop is for lists that came from SOMEONE ELSE: a NIP-65 list is
+         * attacker-supplied input, an entry naming `127.0.0.1` or an RFC 1918
+         * address would aim our connection at our own machine or LAN, and
+         * `isLocalHost` is also what exempts a relay from Tor. Use
+         * [parseReadNormUnfiltered] to read back a list this account published
+         * itself.
+         */
+        fun parseReadNorm(tag: Array<String>): NormalizedRelayUrl? = parseReadNormUnfiltered(tag)?.takeUnless { it.isLocalHost() }
+
+        /**
+         * Read-marked relays including local ones, for reading back OUR OWN
+         * list.
+         *
+         * A user who configured a local relay meant it, and the filtered form
+         * reports their write set as empty — which every publisher then treats
+         * as "unconfigured" and answers with a default relay set the user never
+         * chose.
+         */
+        fun parseReadNormUnfiltered(tag: Array<String>): NormalizedRelayUrl? {
             ensure(tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()) { return null }
 
             if (tag.has(2)) {
                 ensure(AdvertisedRelayType.isRead(tag[2])) { return null }
             }
 
-            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
-
-            ensure(relay != null && !relay.isLocalHost()) { return null }
-
             return RelayUrlNormalizer.normalizeOrNull(tag[1])
         }
 
-        fun parseWriteNorm(tag: Array<String>): NormalizedRelayUrl? {
+        /** Write-marked relays, local ones dropped. See [parseReadNorm]. */
+        fun parseWriteNorm(tag: Array<String>): NormalizedRelayUrl? = parseWriteNormUnfiltered(tag)?.takeUnless { it.isLocalHost() }
+
+        /** Write-marked relays including local ones, for OUR OWN list. See [parseReadNormUnfiltered]. */
+        fun parseWriteNormUnfiltered(tag: Array<String>): NormalizedRelayUrl? {
             ensure(tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()) { return null }
 
             if (tag.has(2)) {
                 ensure(AdvertisedRelayType.isWrite(tag[2])) { return null }
             }
 
-            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
-
-            ensure(relay != null && !relay.isLocalHost()) { return null }
-
-            return relay
+            return RelayUrlNormalizer.normalizeOrNull(tag[1])
         }
 
         fun assemble(

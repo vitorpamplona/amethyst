@@ -668,13 +668,22 @@ class MarmotManager(
      * list, so a commit's acknowledgement has to come from an endpoint the
      * GROUP names — the same set every other member is listening on.
      */
-    fun groupRelays(nostrGroupId: HexKey): List<NormalizedRelayUrl> =
-        groupManager
-            .getGroup(nostrGroupId)
-            ?.currentMarmotData()
-            ?.relays
-            .orEmpty()
-            .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+    fun groupRelays(nostrGroupId: HexKey): List<NormalizedRelayUrl> {
+        val group = groupManager.getGroup(nostrGroupId) ?: return emptyList()
+        // A current-profile group routes through `marmot.transport.nostr.routing.v1`
+        // (`0x8004`); only a legacy group carries its relays in the `0xF2EE`
+        // group-data extension. Reading just the legacy one left every
+        // current-profile group with an empty recipient scope, so its commits
+        // had nowhere to be acknowledged and never became canonical.
+        val routed =
+            group
+                .currentGroupState()
+                .routing
+                ?.relays
+                .orEmpty()
+        val legacy = group.currentMarmotData()?.relays.orEmpty()
+        return (routed + legacy).distinct().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+    }
 
     /**
      * Nuke all local Marmot state — every MLS group, every retained epoch
