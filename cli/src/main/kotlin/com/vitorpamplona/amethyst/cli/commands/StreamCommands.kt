@@ -36,7 +36,10 @@ import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quic.tls.CertificateValidator
+import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
+import com.vitorpamplona.quic.tls.PinnedCertificateValidator
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -56,8 +59,10 @@ object StreamCommands {
         |  marmot stream start GID [--stream-id HEX] [--broker quic://HOST:PORT[,…]]
         |        publish the kind:1200 that anchors a stream; prints stream_id + start_event_id
         |
-        |  marmot stream send GID --stream-id HEX --start-event-id HEX --broker URI TEXT…
-        |        push TEXT as TextDelta records to the broker; prints the transcript to finish with
+        |  marmot stream send GID --stream-id HEX --start-event-id HEX
+        |        (--broker URI | --direct quic://HOST:PORT) TEXT…
+        |        push TEXT as TextDelta records; --direct dials the receiver point to point
+        |        (ALPN marmot.quic_stream.v1, no control envelope) instead of a broker
         |
         |  marmot stream watch GID [--stream-id HEX] [--timeout SECS]
         |        find the kind:1200 in the group, subscribe over QUIC, fold the preview
@@ -67,6 +72,12 @@ object StreamCommands {
         |
         |Every record is encrypted under the group's own MLS exporter secret, so a
         |broker relays ciphertext and learns only which room it belongs to.
+        |
+        |TLS trust for the QUIC hop (send and watch):
+        |  --pin-sha256 HEX[,HEX…]   trust exactly these leaf certificates (self-signed
+        |                            endpoints; colons and whitespace are ignored)
+        |  --insecure                accept any certificate — local testing only
+        |Without either, the platform trust store decides.
         """.trimMargin()
 
     suspend fun dispatch(
@@ -141,8 +152,16 @@ object StreamCommands {
         val streamId = args.flag("stream-id")
         val startEventId = args.flag("start-event-id")
         val broker = args.flag("broker")
-        if (positional.size < 2 || streamId == null || startEventId == null || broker == null) {
-            return Output.error("bad_args", "stream send GID --stream-id HEX --start-event-id HEX --broker URI TEXT…")
+        // The two delivery modes are alternatives, not a fallback chain: one
+        // dials a broker room, the other dials the receiver itself, and they
+        // negotiate different ALPNs. Picking silently when both are given
+        // would hide which one actually carried the records.
+        val direct = args.flag("direct")
+        if (positional.size < 2 || streamId == null || startEventId == null || (broker == null) == (direct == null)) {
+            return Output.error(
+                "bad_args",
+                "stream send GID --stream-id HEX --start-event-id HEX (--broker URI | --direct quic://HOST:PORT) TEXT…",
+            )
         }
 
         Context.open(dataDir).use { ctx ->
@@ -165,13 +184,20 @@ object StreamCommands {
                     epoch = anchorEpoch,
                 )
             val publisher = AgentTextStreamPublisher.open(crypto, InMemoryAgentTextStreamSequenceStore())
-            val transport = QuicAgentTextStreamTransport(certificateValidator = PermissiveCertificateValidator())
+            val transport = QuicAgentTextStreamTransport(certificateValidator = certificateValidator(args))
 
             val stream =
                 try {
-                    transport.publish(broker, streamId.hexToByteArray(), startEventId.hexToByteArray())
+                    if (direct != null) {
+                        transport.sendDirect(direct, streamId.hexToByteArray(), startEventId.hexToByteArray())
+                    } else {
+                        transport.publish(broker!!, streamId.hexToByteArray(), startEventId.hexToByteArray())
+                    }
                 } catch (e: Exception) {
-                    return Output.error("broker_unreachable", "${e.message}")
+                    return Output.error(
+                        if (direct != null) "receiver_unreachable" else "broker_unreachable",
+                        "${e.message}",
+                    )
                 }
             try {
                 for (text in positional.drop(1)) {
@@ -187,6 +213,8 @@ object StreamCommands {
                     "group_id" to gid,
                     "stream_id" to streamId,
                     "start_event_id" to startEventId,
+                    "mode" to if (direct != null) "direct" else "broker",
+                    "endpoint" to (direct ?: broker),
                     "records" to positional.size - 1,
                     "epoch" to crypto.context.mlsEpoch,
                     // What `stream finish` has to publish so a receiver can
@@ -197,6 +225,29 @@ object StreamCommands {
             )
             return 0
         }
+    }
+
+    /**
+     * The TLS trust policy for the QUIC hop, from the flags.
+     *
+     * Pinning is the interesting one and the binding calls it out: preview
+     * endpoints and brokers are commonly self-signed, so a client MAY pin the
+     * endpoint certificate by SHA-256 fingerprint instead of chaining to a CA.
+     * `--insecure` stays available because a local test broker mints a fresh
+     * certificate on every boot, but it is not a weaker trust model — it is
+     * none, so it has to be asked for by name.
+     */
+    private fun certificateValidator(args: Args): CertificateValidator {
+        val pins =
+            args
+                .flag("pin-sha256")
+                ?.split(',')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                .orEmpty()
+        if (pins.isNotEmpty()) return PinnedCertificateValidator.ofSha256Hex(*pins.toTypedArray())
+        if (args.bool("insecure")) return PermissiveCertificateValidator()
+        return JdkCertificateValidator()
     }
 
     private suspend fun watch(
@@ -250,7 +301,7 @@ object StreamCommands {
                     epoch = anchorEpoch,
                 )
             val subscriber = AgentTextStreamSubscriber(crypto)
-            val transport = QuicAgentTextStreamTransport(certificateValidator = PermissiveCertificateValidator())
+            val transport = QuicAgentTextStreamTransport(certificateValidator = certificateValidator(args))
 
             // "A receiver tries advertised candidates in listed order"; the
             // first that yields the matching stream wins.

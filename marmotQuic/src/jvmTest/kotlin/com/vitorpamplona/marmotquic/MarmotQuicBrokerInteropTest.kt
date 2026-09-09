@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextSt
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.InMemoryAgentTextStreamSequenceStore
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicException
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
+import com.vitorpamplona.quic.tls.PinnedCertificateValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,6 +45,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -74,6 +76,13 @@ class MarmotQuicBrokerInteropTest {
     private val brokerAuthority: String? = System.getProperty("marmotQuicBroker")
 
     /**
+     * The broker's leaf-certificate SHA-256, which it prints as
+     * `server_cert_sha256_fingerprint` in its startup JSON. Supplying it opts
+     * into the pinning cases.
+     */
+    private val brokerPin: String? = System.getProperty("marmotQuicBrokerPin")
+
+    /**
      * Report "no broker configured" as a JUnit skip rather than a silent pass,
      * so a run that was meant to exercise the broker cannot look green because
      * the property never reached the worker.
@@ -91,6 +100,57 @@ class MarmotQuicBrokerInteropTest {
     @AfterTest
     fun tearDown() {
         scope.cancel()
+    }
+
+    /**
+     * The binding says a client MAY pin a self-signed endpoint by SHA-256
+     * fingerprint. A unit test can only prove the comparison; whether pinning
+     * actually admits the right peer is a question about a real TLS 1.3
+     * handshake, and only a real one answers it.
+     */
+    @Test
+    fun aPinnedFingerprintCompletesTheHandshake() {
+        requireBroker()
+        val pin = requirePin()
+        runBlocking {
+            val transport =
+                QuicAgentTextStreamTransport(
+                    parentScope = scope,
+                    certificateValidator = PinnedCertificateValidator.ofSha256Hex(pin),
+                )
+            val stream = transport.publish(candidate, Random.nextBytes(32), Random.nextBytes(32))
+            stream.finish()
+            stream.close()
+        }
+    }
+
+    @Test
+    fun aPinForAnotherCertificateIsRefused() {
+        requireBroker()
+        requirePin()
+        runBlocking {
+            // Same broker, wrong pin. If this connected, the pin would be
+            // decoration — which is exactly the failure mode that makes a
+            // misconfigured pin dangerous rather than merely broken.
+            val transport =
+                QuicAgentTextStreamTransport(
+                    parentScope = scope,
+                    certificateValidator = PinnedCertificateValidator.ofSha256Hex("00".repeat(32)),
+                )
+            val failure =
+                assertFailsWith<MarmotQuicException> {
+                    transport.publish(candidate, Random.nextBytes(32), Random.nextBytes(32))
+                }
+            assertEquals(MarmotQuicException.Kind.HandshakeFailed, failure.kind, "${failure.message}")
+        }
+    }
+
+    private fun requirePin(): String {
+        Assume.assumeTrue(
+            "set -DmarmotQuicBrokerPin=<server_cert_sha256_fingerprint from the broker's startup JSON>",
+            brokerPin != null,
+        )
+        return brokerPin!!
     }
 
     private fun transport() =

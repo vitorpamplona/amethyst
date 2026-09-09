@@ -78,9 +78,11 @@ kotlin {
     }
 }
 
-// Forward the broker opt-in from the Gradle JVM to the test workers. Without
-// this, `-DmarmotQuicBroker=...` never reaches the test and every interop
-// case silently skips. Mirrors the same forwarding in `:nestsClient`.
+// Forward the interop opt-ins from the Gradle JVM to the test workers.
+// Without this, `-DmarmotQuicBroker=...` / `-DmarmotWn=...` never reach the
+// tests and every interop case silently skips. Mirrors `:nestsClient`.
 tasks.withType<Test>().configureEach {
     System.getProperty("marmotQuicBroker")?.let { systemProperty("marmotQuicBroker", it) }
+    System.getProperty("marmotQuicBrokerPin")?.let { systemProperty("marmotQuicBrokerPin", it) }
+    System.getProperty("marmotWn")?.let { systemProperty("marmotWn", it) }
 }

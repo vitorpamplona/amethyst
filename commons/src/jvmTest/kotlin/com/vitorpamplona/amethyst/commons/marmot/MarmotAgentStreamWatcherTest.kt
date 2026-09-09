@@ -69,6 +69,12 @@ class MarmotAgentStreamWatcherTest {
             startEventId: ByteArray,
         ): MarmotQuicStream = error("the watcher never publishes")
 
+        override suspend fun sendDirect(
+            candidate: String,
+            streamId: ByteArray,
+            startEventId: ByteArray,
+        ): MarmotQuicStream = error("the watcher never sends")
+
         override suspend fun subscribe(
             candidate: String,
             streamId: ByteArray,

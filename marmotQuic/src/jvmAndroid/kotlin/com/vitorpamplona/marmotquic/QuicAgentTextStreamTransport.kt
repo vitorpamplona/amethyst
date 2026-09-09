@@ -54,8 +54,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * everything under that: the QUIC connection, TLS 1.3, ALPN negotiation,
  * stream multiplexing and the UDP socket.
  *
- * One stream per delivery: a publisher's uni stream or a subscriber's bidi
- * stream owns its connection and closes it on [MarmotQuicStream.close]. That
+ * One stream per delivery: a publisher's uni stream, a direct sender's uni
+ * stream, or a subscriber's bidi stream owns its connection and closes it on
+ * [MarmotQuicStream.close]. That
  * is the shape the binding describes — a room is a stream — and it keeps a
  * failed candidate from leaving a connection behind.
  */
@@ -89,15 +90,52 @@ class QuicAgentTextStreamTransport(
         startEventId: ByteArray,
     ): MarmotQuicStream = open(candidate, streamId, startEventId, BrokerControlType.SUBSCRIBE)
 
+    /**
+     * The direct path: dial the receiver, open one uni stream, write records.
+     *
+     * Two things separate it from [publish] beyond the ALPN. There is no
+     * control envelope — the dialed endpoint is already the one receiver, so
+     * there is no room to name, and the first bytes on the stream are a record
+     * frame. And [startEventId] never leaves this process: it is validated for
+     * shape so a caller cannot pass a placeholder that would later disagree
+     * with the record key and transcript hash it is bound into, but nothing is
+     * written for it. A direct endpoint learns it only if the out-of-band
+     * setup supplied it separately.
+     *
+     * Only the SENDER half lives here. The receiver half has to listen, and
+     * `:quic` is a client stack with no server role — so a direct-path
+     * receiver is not something this module can offer yet.
+     */
+    override suspend fun sendDirect(
+        candidate: String,
+        streamId: ByteArray,
+        startEventId: ByteArray,
+    ): MarmotQuicStream = open(candidate, streamId, startEventId, role = null)
+
     private suspend fun open(
         candidate: String,
         streamId: ByteArray,
         startEventId: ByteArray,
-        role: BrokerControlType,
+        /** The broker role to claim, or null for the envelope-less direct path. */
+        role: BrokerControlType?,
     ): MarmotQuicStream {
         val endpoint =
             QuicEndpointCandidate.parse(candidate)
                 ?: throw MarmotQuicException(MarmotQuicException.Kind.BadCandidate, "unusable quic:// candidate")
+
+        val alpn = if (role == null) MarmotQuicAlpn.DIRECT else MarmotQuicAlpn.BROKER
+        if (role == null) {
+            // Same bounds the broker envelope enforces, applied even though
+            // nothing is encoded: a stream id or start event id this layer
+            // would refuse to route is one the record key and transcript hash
+            // should not be built on either.
+            require(streamId.size in 1..QuicBrokerControlEnvelopeV1.MAX_ID_LEN) {
+                "direct stream_id must be 1..${QuicBrokerControlEnvelopeV1.MAX_ID_LEN} bytes"
+            }
+            require(startEventId.size in 1..QuicBrokerControlEnvelopeV1.MAX_ID_LEN) {
+                "direct start_event_id must be 1..${QuicBrokerControlEnvelopeV1.MAX_ID_LEN} bytes"
+            }
+        }
 
         val socket =
             try {
@@ -113,7 +151,7 @@ class QuicAgentTextStreamTransport(
                 serverName = endpoint.serverNameIndication ?: endpoint.host,
                 config = QuicConnectionConfig(),
                 tlsCertificateValidator = certificateValidator,
-                alpnList = listOf(MarmotQuicAlpn.BROKER),
+                alpnList = listOf(alpn),
             )
         val driver = QuicConnectionDriver(connection, socket, parentScope)
         driver.start()
@@ -133,11 +171,11 @@ class QuicAgentTextStreamTransport(
             // An endpoint that did not take our ALPN is not a Marmot endpoint,
             // whatever else it may be. Fail here so the caller moves to the
             // next candidate rather than waiting on records that never come.
-            val alpn = connection.tls.negotiatedAlpn
-            if (alpn == null || !alpn.contentEquals(MarmotQuicAlpn.BROKER)) {
+            val negotiated = connection.tls.negotiatedAlpn
+            if (negotiated == null || !negotiated.contentEquals(alpn)) {
                 throw MarmotQuicException(
                     MarmotQuicException.Kind.AlpnRejected,
-                    "endpoint negotiated ${alpn?.decodeToString()} instead of ${MarmotQuicAlpn.BROKER.decodeToString()}",
+                    "endpoint negotiated ${negotiated?.decodeToString()} instead of ${alpn.decodeToString()}",
                 )
             }
 
@@ -146,20 +184,36 @@ class QuicAgentTextStreamTransport(
             // one. A broker rejects the wrong pairing.
             val stream =
                 when (role) {
-                    BrokerControlType.PUBLISH -> connection.openUniStream()
+                    BrokerControlType.PUBLISH, null -> connection.openUniStream()
                     BrokerControlType.SUBSCRIBE -> connection.openBidiStream()
                 }
 
-            // The control envelope is the first frame, framed exactly like a
-            // record frame — length-prefixed the same way, so a broker reads
-            // both with one framer.
-            stream.send.enqueue(frameEnvelope(QuicBrokerControlEnvelopeV1(role, streamId, startEventId)))
-            driver.wakeup()
+            if (role != null) {
+                // The control envelope is the first frame, framed exactly like
+                // a record frame — length-prefixed the same way, so a broker
+                // reads both with one framer. The direct path writes none: its
+                // stream opens straight into records.
+                stream.send.enqueue(frameEnvelope(QuicBrokerControlEnvelopeV1(role, streamId, startEventId)))
+                driver.wakeup()
+            }
 
             return QuicStreamDelivery(stream, driver, maxPlaintextFrameLen)
         } catch (t: Throwable) {
             driver.close()
-            throw if (t is MarmotQuicException) t else MarmotQuicException(MarmotQuicException.Kind.PeerClosed, "${t.message}", t)
+            if (t is MarmotQuicException) throw t
+            // A connection that never reached CONNECTED did not fail as a
+            // peer closing on us mid-stream — it failed to be established at
+            // all, and that is a different decision for a caller walking its
+            // candidate list. Certificate rejection lands here: our own
+            // validator refuses, we send a TLS alert, and the connection
+            // closes before the handshake ever completes.
+            val kind =
+                if (connection.status == QuicConnection.Status.CONNECTED) {
+                    MarmotQuicException.Kind.PeerClosed
+                } else {
+                    MarmotQuicException.Kind.HandshakeFailed
+                }
+            throw MarmotQuicException(kind, "${t.message}", t)
         }
     }
 

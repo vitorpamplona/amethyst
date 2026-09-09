@@ -89,6 +89,35 @@ interface MarmotQuicTransport {
         streamId: ByteArray,
         startEventId: ByteArray,
     ): MarmotQuicStream
+
+    /**
+     * Dial a receiver directly and stream records to it, point to point.
+     *
+     * The direct path is the binding's other delivery mode, and it is
+     * deliberately smaller than the broker one: the dialed endpoint already
+     * corresponds to one receiver, so there is no room to claim and NO control
+     * envelope — the very first bytes on the stream are a record frame. It
+     * negotiates its own ALPN (`marmot.quic_stream.v1`) so an incompatible
+     * change to either mode cannot reach the other.
+     *
+     * Note the connection direction: the RECEIVER listens and the SENDER
+     * dials. That is inverted from the broker path, where both ends dial the
+     * broker, and it is why v1 has no start-payload discovery for this mode —
+     * a start payload advertises broker candidates only, and there is no
+     * candidate shape by which a direct receiver publishes its own endpoint.
+     * So this is usable only when the sender already knows where to dial:
+     * out-of-band configuration, a dev/test peer, a preconfigured pair.
+     *
+     * [startEventId] never crosses the wire here. It stays in the signature
+     * because the caller still binds it into the record key and transcript
+     * hash, and because a direct endpoint that was told it out of band should
+     * be checking the same pair we are.
+     */
+    suspend fun sendDirect(
+        candidate: String,
+        streamId: ByteArray,
+        startEventId: ByteArray,
+    ): MarmotQuicStream
 }
 
 /** Why a candidate turned out to be unusable. */
