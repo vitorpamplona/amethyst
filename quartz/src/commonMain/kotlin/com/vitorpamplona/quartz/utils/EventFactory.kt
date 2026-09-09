@@ -114,6 +114,9 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
+import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
@@ -125,6 +128,9 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -139,6 +145,10 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
+import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
@@ -176,6 +186,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
@@ -277,7 +288,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -786,6 +800,20 @@ class EventFactory {
                 ProxyRelayListEvent.KIND -> ProxyRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 PublicMessageEvent.KIND -> PublicMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 ReactionEvent.KIND -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
+                ExternalReactionEvent.KIND -> ExternalReactionEvent(id, pubKey, createdAt, tags, content, sig)
+                ExternalCitationEvent.KIND -> ExternalCitationEvent(id, pubKey, createdAt, tags, content, sig)
+                HardcopyCitationEvent.KIND -> HardcopyCitationEvent(id, pubKey, createdAt, tags, content, sig)
+                PromptCitationEvent.KIND -> PromptCitationEvent(id, pubKey, createdAt, tags, content, sig)
+                LearningResourceEvent.KIND -> LearningResourceEvent(id, pubKey, createdAt, tags, content, sig)
+                BookshelfDirectoryEvent.KIND -> BookshelfDirectoryEvent(id, pubKey, createdAt, tags, content, sig)
+                BlossomPieceIndexEvent.KIND -> BlossomPieceIndexEvent(id, pubKey, createdAt, tags, content, sig)
+                WikiMergeRequestEvent.KIND -> WikiMergeRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                WikiMergeAcceptanceEvent.KIND -> WikiMergeAcceptanceEvent(id, pubKey, createdAt, tags, content, sig)
+                WikiRedirectEvent.KIND -> WikiRedirectEvent(id, pubKey, createdAt, tags, content, sig)
+                EntityRatingEvent.KIND -> EntityRatingEvent(id, pubKey, createdAt, tags, content, sig)
+                PublicationIndexEvent.KIND -> PublicationIndexEvent(id, pubKey, createdAt, tags, content, sig)
+                PublicationContentEvent.KIND -> PublicationContentEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayReviewEvent.KIND -> RelayReviewEvent(id, pubKey, createdAt, tags, content, sig)
                 ContactCardEvent.KIND -> ContactCardEvent(id, pubKey, createdAt, tags, content, sig)
                 EventAssertionEvent.KIND -> EventAssertionEvent(id, pubKey, createdAt, tags, content, sig)
                 AddressableAssertionEvent.KIND -> AddressableAssertionEvent(id, pubKey, createdAt, tags, content, sig)

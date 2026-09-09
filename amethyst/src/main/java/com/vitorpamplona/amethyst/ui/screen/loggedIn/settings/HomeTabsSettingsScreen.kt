@@ -153,6 +153,7 @@ private val HOME_FEED_TYPES =
         HomeFeedTypeUi(HomeFeedType.MUSIC, R.string.home_content_type_music, MaterialSymbols.MusicNote),
         HomeFeedTypeUi(HomeFeedType.PODCASTS, R.string.home_content_type_podcasts, MaterialSymbols.Podcasts),
         HomeFeedTypeUi(HomeFeedType.FUNDRAISERS, R.string.home_content_type_fundraisers, MaterialSymbols.Paid),
+        HomeFeedTypeUi(HomeFeedType.RATINGS, R.string.home_content_type_ratings, MaterialSymbols.Star),
     )
 
 /**

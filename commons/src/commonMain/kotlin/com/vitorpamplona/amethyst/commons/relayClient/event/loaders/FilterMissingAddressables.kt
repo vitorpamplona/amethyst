@@ -103,35 +103,117 @@ fun filterMissingAddressables(
     return filterMissingAddressables(addressesPerRelay)
 }
 
+/**
+ * Addressables are looked up by (kind, author, `d`), and a screen usually wants many that share
+ * the first two -- every section of a publication, for instance, is one author's one kind. Asking
+ * per address turned a 240-section book into 240 filters in a single REQ; grouping puts every `d`
+ * in one filter's `#d` list, which is the same query in one line instead of 240.
+ *
+ * The `limit` is the number of coordinates asked for, not 1: these are replaceable, so a relay
+ * holds exactly one event per coordinate and that is the most this filter can return.
+ *
+ * That `limit` is why the group is chunked at [MAX_VALUES_PER_FILTER]. Relays clamp a filter's
+ * limit down to their own `maxLimit` (`LimitsPolicy.applyLimits`), so one filter asking for 240
+ * coordinates with `limit = 240` comes back holding only `maxLimit` of them, and the rest go
+ * missing with no error to notice. Chunks keep each `limit` small enough to survive the clamp.
+ *
+ * Written as one pass into nested maps rather than `partition`/`groupBy`/`distinct`/`sorted`
+ * chains: this runs on every filter rebuild, several times a second, and each of those operators
+ * is another intermediate list. `groupBy { kind to pubKeyHex }` alone allocated a `Pair` and a
+ * boxed `Int` per address. No de-duplication is needed either -- the input is a `Set<Address>` and
+ * `Address` is a data class, so two entries in one group cannot share a `d`.
+ */
 fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<Address>>): List<RelayBasedFilter> {
     if (missingAddressables.isEmpty()) return emptyList()
 
-    return missingAddressables.flatMap { relayEntry ->
-        relayEntry.value.map { address ->
+    val filters = mutableListOf<RelayBasedFilter>()
+
+    missingAddressables.forEach { (relay, addresses) ->
+        if (addresses.isEmpty()) return@forEach
+
+        // kind -> author -> the `d`s wanted from that author
+        var byAuthor: MutableMap<Int, MutableMap<String, MutableList<String>>>? = null
+        // A replaceable below 25000 with no `d` is addressed by kind and author alone, so it
+        // cannot join a `#d` group. Rare, so the map is only built if one turns up.
+        var plain: MutableMap<Int, MutableList<String>>? = null
+
+        addresses.forEach { address ->
             if (address.kind < 25000 && address.dTag.isBlank()) {
-                RelayBasedFilter(
-                    relay = relayEntry.key,
-                    filter =
-                        ExplainedFilter(
-                            purpose = SubPurpose.REFERENCED_EVENTS,
-                            kinds = listOf(address.kind),
-                            authors = listOf(address.pubKeyHex),
-                            limit = 1,
-                        ),
-                )
+                (plain ?: HashMap<Int, MutableList<String>>().also { plain = it })
+                    .getOrPut(address.kind) { mutableListOf() }
+                    .add(address.pubKeyHex)
             } else {
-                RelayBasedFilter(
-                    relay = relayEntry.key,
-                    filter =
-                        ExplainedFilter(
-                            purpose = SubPurpose.REFERENCED_EVENTS,
-                            kinds = listOf(address.kind),
-                            tags = mapOf("d" to listOf(address.dTag)),
-                            authors = listOf(address.pubKeyHex),
-                            limit = 1,
+                (byAuthor ?: HashMap<Int, MutableMap<String, MutableList<String>>>().also { byAuthor = it })
+                    .getOrPut(address.kind) { HashMap() }
+                    .getOrPut(address.pubKeyHex) { mutableListOf() }
+                    .add(address.dTag)
+            }
+        }
+
+        byAuthor?.forEach { (kind, authors) ->
+            val kinds = listOf(kind)
+            authors.forEach { (author, dTags) ->
+                val authorList = listOf(author)
+                dTags.sort()
+                forEachChunk(dTags) { chunk ->
+                    filters.add(
+                        RelayBasedFilter(
+                            relay = relay,
+                            filter =
+                                ExplainedFilter(
+                                    purpose = SubPurpose.REFERENCED_EVENTS,
+                                    kinds = kinds,
+                                    tags = mapOf("d" to chunk),
+                                    authors = authorList,
+                                    limit = chunk.size,
+                                ),
                         ),
+                    )
+                }
+            }
+        }
+
+        plain?.forEach { (kind, pubkeys) ->
+            val kinds = listOf(kind)
+            pubkeys.sort()
+            forEachChunk(pubkeys) { chunk ->
+                filters.add(
+                    RelayBasedFilter(
+                        relay = relay,
+                        filter =
+                            ExplainedFilter(
+                                purpose = SubPurpose.REFERENCED_EVENTS,
+                                kinds = kinds,
+                                authors = chunk,
+                                limit = chunk.size,
+                            ),
+                    ),
                 )
             }
         }
+    }
+
+    return filters
+}
+
+/**
+ * Hands [block] each [MAX_VALUES_PER_FILTER]-sized slice of [values], passing the list itself when
+ * it already fits -- which is nearly always. `chunked` would allocate an outer list plus a copy
+ * even for the single-chunk case.
+ */
+internal inline fun forEachChunk(
+    values: List<String>,
+    block: (List<String>) -> Unit,
+) {
+    if (values.size <= MAX_VALUES_PER_FILTER) {
+        block(values)
+        return
+    }
+
+    var from = 0
+    while (from < values.size) {
+        val to = minOf(from + MAX_VALUES_PER_FILTER, values.size)
+        block(values.subList(from, to))
+        from = to
     }
 }

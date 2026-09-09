@@ -32,9 +32,10 @@ fun Icon(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
+    filled: Boolean = false,
 ) {
     Material3Icon(
-        painter = rememberMaterialSymbolPainter(symbol, tint),
+        painter = rememberMaterialSymbolPainter(symbol, tint, filled = filled),
         contentDescription = contentDescription,
         modifier = modifier,
         // Tint is already baked into the painter draw; pass Unspecified so Material3 doesn't

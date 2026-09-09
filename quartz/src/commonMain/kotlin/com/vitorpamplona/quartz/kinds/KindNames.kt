@@ -29,6 +29,9 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
@@ -41,6 +44,9 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -55,6 +61,10 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
+import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
@@ -90,6 +100,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
@@ -184,7 +195,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -483,6 +497,20 @@ object KindNames {
             WakeUpEvent.KIND to KindName("WakeUp", null),
             WebBookmarkEvent.KIND to KindName("Web Bookmark", "B0"),
             WikiNoteEvent.KIND to KindName("Wiki", "54"),
+            WikiMergeRequestEvent.KIND to KindName("Wiki Merge Request", "54"),
+            WikiMergeAcceptanceEvent.KIND to KindName("Wiki Merge Accepted", null),
+            WikiRedirectEvent.KIND to KindName("Wiki Redirect", "54"),
+            ExternalReactionEvent.KIND to KindName("External Reaction", "25"),
+            ExternalCitationEvent.KIND to KindName("Citation (Web)", null),
+            HardcopyCitationEvent.KIND to KindName("Citation (Print)", null),
+            PromptCitationEvent.KIND to KindName("Citation (Prompt)", null),
+            LearningResourceEvent.KIND to KindName("Learning Resource", null),
+            BookshelfDirectoryEvent.KIND to KindName("Directory", null),
+            BlossomPieceIndexEvent.KIND to KindName("Blossom Piece Index", null),
+            EntityRatingEvent.KIND to KindName("Rating", null),
+            PublicationIndexEvent.KIND to KindName("Publication", null),
+            PublicationContentEvent.KIND to KindName("Publication Section", null),
+            RelayReviewEvent.KIND to KindName("Relay Review", null),
             ChatEvent.KIND to KindName("Relay Chat", "C7"),
             ThreadEvent.KIND to KindName("Thread", "7D"),
             AppDataEvent.KIND to KindName("App Data", "78"),

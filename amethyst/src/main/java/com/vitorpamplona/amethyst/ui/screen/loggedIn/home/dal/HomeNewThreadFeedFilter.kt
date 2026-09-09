@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -85,6 +86,7 @@ class HomeNewThreadFeedFilter(
                 AttestationEvent.KIND,
                 VideoHorizontalEvent.KIND,
                 VideoVerticalEvent.KIND,
+                EntityRatingEvent.KIND,
             )
     }
 
@@ -170,7 +172,9 @@ class HomeNewThreadFeedFilter(
                 noteEvent is AttestationEvent ||
                 noteEvent is AttestationRequestEvent ||
                 noteEvent is AttestorRecommendationEvent ||
-                noteEvent is AttestorProficiencyEvent
+                noteEvent is AttestorProficiencyEvent ||
+                // A rating with nothing to point at cannot be rendered.
+                (noteEvent is EntityRatingEvent && noteEvent.hasTarget())
         ) &&
             filterParams.match(noteEvent, it.relays) &&
             it.isNewThread()

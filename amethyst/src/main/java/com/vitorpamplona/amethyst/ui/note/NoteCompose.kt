@@ -138,7 +138,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.ui.note.types.RenderBirdDetection
 import com.vitorpamplona.amethyst.ui.note.types.RenderBirdex
+import com.vitorpamplona.amethyst.ui.note.types.RenderBlossomPieceIndex
 import com.vitorpamplona.amethyst.ui.note.types.RenderBolt12Zap
+import com.vitorpamplona.amethyst.ui.note.types.RenderBookshelfDirectory
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarCollectionEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarRSVPEvent
@@ -149,10 +151,13 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame
+import com.vitorpamplona.amethyst.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
+import com.vitorpamplona.amethyst.ui.note.types.RenderExternalReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -163,6 +168,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
+import com.vitorpamplona.amethyst.ui.note.types.RenderLearningResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge
@@ -189,6 +195,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderProfileCard
 import com.vitorpamplona.amethyst.ui.note.types.RenderPs1Save
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicationIndex
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicationSection
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
@@ -197,6 +205,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayReview
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
@@ -212,6 +221,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderWikiMergeAcceptance
+import com.vitorpamplona.amethyst.ui.note.types.RenderWikiMergeRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderWikiRedirect
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
@@ -253,11 +265,15 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
+import com.vitorpamplona.quartz.experimental.citations.CitationEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -267,6 +283,10 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82So
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
+import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -284,6 +304,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -324,7 +345,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetupBesidesAuthor
@@ -1066,6 +1090,10 @@ private fun RenderNoteRow(
             RenderLongFormContent(baseNote, accountViewModel, nav)
         }
 
+        is PublicationIndexEvent -> {
+            RenderPublicationIndex(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
         is ThreadEvent -> {
             RenderThread(
                 baseNote,
@@ -1632,6 +1660,99 @@ private fun RenderNoteRow(
 
         is InteractiveStoryBaseEvent -> {
             RenderInteractiveStory(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        // One branch for kinds 31/32/33: they are one idea aimed at three sorts of source.
+        is CitationEvent -> {
+            RenderCitation(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is LearningResourceEvent -> {
+            RenderLearningResource(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is BookshelfDirectoryEvent -> {
+            RenderBookshelfDirectory(baseNote, accountViewModel, nav)
+        }
+
+        is BlossomPieceIndexEvent -> {
+            RenderBlossomPieceIndex(baseNote, accountViewModel)
+        }
+
+        is ExternalReactionEvent -> {
+            RenderExternalReaction(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is WikiMergeRequestEvent -> {
+            RenderWikiMergeRequest(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is WikiMergeAcceptanceEvent -> {
+            RenderWikiMergeAcceptance(baseNote, accountViewModel, nav)
+        }
+
+        is WikiRedirectEvent -> {
+            RenderWikiRedirect(baseNote, accountViewModel, nav)
+        }
+
+        is PublicationContentEvent -> {
+            RenderPublicationSection(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is RelayReviewEvent -> {
+            RenderRelayReview(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is EntityRatingEvent -> {
+            RenderEntityRating(
                 baseNote,
                 makeItShort,
                 canPreview,
