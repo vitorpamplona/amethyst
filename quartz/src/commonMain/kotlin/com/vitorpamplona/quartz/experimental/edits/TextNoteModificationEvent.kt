@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -43,6 +44,13 @@ class TextNoteModificationEvent(
     fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
 
     override fun indexableContent() = listOfNotNull(content, summary()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(content)) return
+        visitor.visit(summary())
+    }
 
     companion object {
         const val KIND = 1010

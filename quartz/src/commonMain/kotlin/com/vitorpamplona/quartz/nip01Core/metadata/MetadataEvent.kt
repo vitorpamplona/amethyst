@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.githubClaim
 import com.vitorpamplona.quartz.nip39ExtIdentities.mastodonClaim
 import com.vitorpamplona.quartz.nip39ExtIdentities.replaceClaims
 import com.vitorpamplona.quartz.nip39ExtIdentities.twitterClaim
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -86,6 +87,22 @@ class MetadataEvent(
                 it.banner,
             ).joinToString(" ")
         } ?: ""
+
+    // The read path. One JSON parse, then a field at a time — a name hit never reads the banner url.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = contactMetaData() ?: return
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.displayName)) return
+        if (!visitor.visit(data.about)) return
+        if (!visitor.visit(data.nip05)) return
+        if (!visitor.visit(data.lud06)) return
+        if (!visitor.visit(data.lud16)) return
+        if (!visitor.visit(data.website)) return
+        if (!visitor.visit(data.picture)) return
+        visitor.visit(data.banner)
+    }
+
+    override fun indexableSeparator() = " "
 
     fun contactMetadataJson() =
         if (content.isBlank()) {

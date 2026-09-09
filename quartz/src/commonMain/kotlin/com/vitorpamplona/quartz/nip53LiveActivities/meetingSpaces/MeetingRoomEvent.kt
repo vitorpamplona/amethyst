@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
@@ -68,6 +69,13 @@ class MeetingRoomEvent(
     LiveStreamLike,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), summary()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        visitor.visit(summary())
+    }
 
     override fun eventHints(): List<EventIdHint> {
         val pinnedEvents = pinned()

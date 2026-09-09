@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -54,6 +55,13 @@ class InterestSetEvent(
     // Public title/description plus the public-interest hashtags. Private
     // hashtags live in NIP-44 encrypted content and are never indexed.
     override fun indexableContent() = (listOfNotNull(title(), description()) + publicHashtags()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        if (!visitor.visit(description())) return
+        publicHashtags().forEach { if (!visitor.visit(it)) return }
+    }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

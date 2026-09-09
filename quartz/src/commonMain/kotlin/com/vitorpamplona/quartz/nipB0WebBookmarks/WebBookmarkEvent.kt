@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -46,6 +47,13 @@ class WebBookmarkEvent(
     RootScope,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        visitor.visit(description())
+    }
 
     fun url(): String {
         val dTagValue = dTag()

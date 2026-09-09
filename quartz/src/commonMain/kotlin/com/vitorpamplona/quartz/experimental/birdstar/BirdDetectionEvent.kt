@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
@@ -56,6 +57,13 @@ class BirdDetectionEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(summary(), speciesName()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(summary())) return
+        visitor.visit(speciesName())
+    }
 
     /** Scientific name of the detected species, from the `n` tag (may be null). */
     fun speciesName() = tags.firstTagValue("n")

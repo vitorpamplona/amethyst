@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.tags.Committer
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitterTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.ParentCommitTag
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -60,6 +61,12 @@ class GitPatchEvent(
     AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = content
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(content)
+    }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

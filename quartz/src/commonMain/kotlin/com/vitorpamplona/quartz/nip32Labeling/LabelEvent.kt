@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelNamespaceTag
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -65,6 +66,13 @@ class LabelEvent(
     AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = (listOf(content) + labels().map { it.label }).filter { it.isNotEmpty() }.joinToString("\n")
+
+    // The read path. Empty strings are skipped rather than visited: the joined form filters
+    // them out, so visiting one would add a separator the store never indexed.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (content.isNotEmpty() && !visitor.visit(content)) return
+        labels().forEach { if (it.label.isNotEmpty() && !visitor.visit(it.label)) return }
+    }
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
@@ -70,6 +71,13 @@ abstract class TrustedListEvent(
      * every kind in the family, so all four index the same field.
      */
     override fun indexableContent() = title() ?: ""
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        // Null rather than the empty string the joined form yields: the visitor
+        // drops nulls, so both sides still produce the same text.
+        visitor.visit(title())
+    }
 
     /** The addressable identity of this list. Deterministic per list. */
     fun listId() = dTag()

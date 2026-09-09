@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
@@ -45,6 +46,13 @@ class NIP90PeopleSearchRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = searchQuery() ?: ""
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        // Null rather than the empty string the joined form yields: the visitor
+        // drops nulls, so both sides still produce the same text.
+        visitor.visit(searchQuery())
+    }
 
     fun inputs(): List<InputTag> = tags.inputs()
 

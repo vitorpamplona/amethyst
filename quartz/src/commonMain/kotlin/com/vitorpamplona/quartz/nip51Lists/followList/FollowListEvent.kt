@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
@@ -52,6 +53,13 @@ class FollowListEvent(
     PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        visitor.visit(description())
+    }
 
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 

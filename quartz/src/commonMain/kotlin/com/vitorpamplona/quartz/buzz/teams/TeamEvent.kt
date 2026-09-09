@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -49,6 +50,15 @@ class TeamEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = teamOrNull()?.let { listOfNotNull(it.name, it.description, it.instructions).joinToString("\n") } ?: ""
+
+    // The read path. The parse happens once and its fields are handed over one by
+    // one; a scan that stops on the first hit never pays for the rest of the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = teamOrNull() ?: return
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.description)) return
+        if (!visitor.visit(data.instructions)) return
+    }
 
     /** The team's stable id — the `d` tag. */
     fun teamId() = dTag()

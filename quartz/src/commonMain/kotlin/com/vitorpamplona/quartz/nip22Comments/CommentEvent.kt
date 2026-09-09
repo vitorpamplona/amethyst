@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
@@ -78,6 +79,12 @@ class CommentEvent(
     AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = (listOf(content) + tags.hashtags()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(content)) return
+        tags.hashtags().forEach { if (!visitor.visit(it)) return }
+    }
 
     override fun pubKeyHints(): List<PubKeyHint> {
         val pHints =

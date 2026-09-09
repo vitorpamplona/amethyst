@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -57,6 +58,12 @@ class LnZapRequestEvent(
     // content is the public zap comment. Private-zap messages live encrypted in
     // the `anon` tag, not in content, so they are naturally excluded.
     override fun indexableContent() = content
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(content)
+    }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

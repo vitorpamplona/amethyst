@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -53,6 +54,13 @@ class WorkoutRecordEvent(
     SearchableEvent,
     AddressHintProvider {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        visitor.visit(content)
+    }
 
     // POWR / NIP-101e workouts reference kind-33401 exercise templates (and a kind-33402
     // workout template) by coordinate + relay hint, so the templates can be fetched and

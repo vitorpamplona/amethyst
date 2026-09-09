@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PubDateTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TitleTag
@@ -55,6 +56,13 @@ class Podcasting20TrailerEvent(
     RootScope,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        visitor.visit(content)
+    }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -56,6 +57,15 @@ class AuctionEvent(
         }
 
     override fun indexableContent() = auctionData()?.let { (listOfNotNull(it.name, it.description) + tags.hashtags()).joinToString("\n") } ?: ""
+
+    // The read path. The parse happens once and its fields are handed over one by
+    // one; a scan that stops on the first hit never pays for the rest of the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = auctionData() ?: return
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.description)) return
+        tags.hashtags().forEach { if (!visitor.visit(it)) return }
+    }
 
     companion object {
         const val KIND = 30020

@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.reference
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.AmountTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.ClosedAtTag
@@ -60,6 +61,13 @@ class GoalEvent(
     PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(summary(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(summary())) return
+        visitor.visit(content)
+    }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

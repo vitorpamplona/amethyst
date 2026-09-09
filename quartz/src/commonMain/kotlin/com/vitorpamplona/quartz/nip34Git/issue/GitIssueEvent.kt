@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -62,6 +63,13 @@ class GitIssueEvent(
     AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(subject())) return
+        visitor.visit(content)
+    }
 
     override fun eventHints(): List<EventIdHint> {
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)

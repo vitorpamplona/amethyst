@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -60,6 +61,12 @@ class FileStorageHeaderEvent(
     // Only the summary tag is indexed; the file payload is base64 binary stored
     // in a separate FileStorageEvent and is intentionally never indexed.
     override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(summary())
+    }
 
     fun dataEvent() = tags.mapNotNull(ETag::parse)
 

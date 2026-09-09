@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
@@ -58,6 +59,12 @@ class BirdexEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = (listOfNotNull(summary()) + speciesNames()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(summary())) return
+        speciesNames().forEach { if (!visitor.visit(it)) return }
+    }
 
     /** Scientific names of the collected species, in event order, from the `n` tags. */
     fun speciesNames() = tags.mapValueTagged("n") { it }

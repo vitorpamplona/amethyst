@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip37Drafts.ExposeInDraft
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -67,6 +68,12 @@ class LiveActivitiesChatMessageEvent(
     ExposeInDraft,
     SearchableEvent {
     override fun indexableContent() = (listOf(content) + tags.hashtags()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(content)) return
+        tags.hashtags().forEach { if (!visitor.visit(it)) return }
+    }
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(ETag::parseAsHint)

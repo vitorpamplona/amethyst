@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -46,6 +47,12 @@ class ChatMessageEvent(
     SearchableEvent {
     // content is the decrypted (plaintext) direct-message body.
     override fun indexableContent() = content
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(content)
+    }
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 

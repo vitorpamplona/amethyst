@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -46,6 +47,14 @@ class CodeSnippetEvent(
     RootScope,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(snippetName(), snippetDescription(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(snippetName())) return
+        if (!visitor.visit(snippetDescription())) return
+        visitor.visit(content)
+    }
 
     /** Programming language, lowercase (e.g. "python"). */
     fun language() = tags.language()

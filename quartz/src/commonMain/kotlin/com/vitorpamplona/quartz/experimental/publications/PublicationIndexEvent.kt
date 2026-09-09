@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -72,6 +73,14 @@ class PublicationIndexEvent(
     PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), author(), summary()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        if (!visitor.visit(author())) return
+        visitor.visit(summary())
+    }
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 

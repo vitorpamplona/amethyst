@@ -64,4 +64,11 @@ interface SearchableEvent {
     fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         visitor.visit(indexableContent())
     }
+
+    /**
+     * What [indexableContent] joins its fields with — `"\n"` for nearly every kind, `" "` for the
+     * few metadata-ish ones. Declared so a test can rejoin what [forEachIndexableField] hands over
+     * and check it reproduces [indexableContent] exactly; nothing on the read path needs it.
+     */
+    fun indexableSeparator(): String = "\n"
 }

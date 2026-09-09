@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
@@ -60,6 +61,14 @@ abstract class CitationEvent(
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        if (!visitor.visit(summary())) return
+        visitor.visit(content)
+    }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

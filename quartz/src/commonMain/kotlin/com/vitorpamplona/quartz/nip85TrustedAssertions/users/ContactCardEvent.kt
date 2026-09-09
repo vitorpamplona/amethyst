@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -56,6 +57,13 @@ class ContactCardEvent(
     // indexed. (petName()/summary() read the public tag array, so a petname
     // kept in the encrypted content stays out of the index.)
     override fun indexableContent() = (listOfNotNull(petName(), summary()) + topics()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(petName())) return
+        if (!visitor.visit(summary())) return
+        topics().forEach { if (!visitor.visit(it)) return }
+    }
 
     fun aboutUser() = tags.dTag()
 

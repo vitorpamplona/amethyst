@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.tags.AmountTag
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.tags.OfferTag
@@ -69,6 +70,12 @@ class Bolt12ZapIntentEvent(
     PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = content
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(content)
+    }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

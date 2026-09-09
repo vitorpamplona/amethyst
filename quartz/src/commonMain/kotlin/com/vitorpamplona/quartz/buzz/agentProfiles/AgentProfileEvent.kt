@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -51,6 +52,14 @@ class AgentProfileEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = profileOrNull()?.let { listOfNotNull(it.name, it.displayName).joinToString("\n") } ?: ""
+
+    // The read path. The parse happens once and its fields are handed over one by
+    // one; a scan that stops on the first hit never pays for the rest of the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = profileOrNull() ?: return
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.displayName)) return
+    }
 
     /** Parses the profile metadata, or throws if the JSON is malformed. */
     fun profile(): AgentProfileContent = AgentProfileContent.decodeFromJson(content)

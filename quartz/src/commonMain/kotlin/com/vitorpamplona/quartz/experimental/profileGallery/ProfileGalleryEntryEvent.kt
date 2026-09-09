@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -57,6 +58,12 @@ class ProfileGalleryEntryEvent(
     // Only the optional summary caption is indexed; this event is otherwise a
     // url/hash pointer with no natural-language body (content is empty).
     override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(summary())
+    }
 
     fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
 

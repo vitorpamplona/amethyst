@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
@@ -46,6 +47,17 @@ class NIP90TextGenerationRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = inputs().filter { it.type == "prompt" || it.type == "text" }.joinToString(" ") { it.value }
+
+    // The read path: the prompt-ish inputs, in the order the joined form takes them.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        inputs().forEach {
+            if (it.type == "prompt" || it.type == "text") {
+                if (!visitor.visit(it.value)) return
+            }
+        }
+    }
+
+    override fun indexableSeparator() = " "
 
     fun inputs(): List<InputTag> = tags.inputs()
 
