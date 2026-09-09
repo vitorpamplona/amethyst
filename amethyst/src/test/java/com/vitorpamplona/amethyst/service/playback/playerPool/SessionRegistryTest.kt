@@ -162,4 +162,26 @@ class SessionRegistryTest {
         registry.register("a", replacement)
         assertEquals(listOf(original), dropped)
     }
+
+    // MediaSessionPool.lastPlayedAudibly() reads the LAST entry of idleSnapshot() as the most
+    // recently touched session. That only holds if the snapshot is ordered eldest-access-first,
+    // which is LruCache's contract but is not obvious at the call site — pin it here so a
+    // future swap of the backing collection can't silently invert the pick.
+    @Test
+    fun idleSnapshotIsOrderedFromLeastToMostRecentlyUsed() {
+        val registry = registry(maxIdle = 3)
+        registry.register("a", "A")
+        registry.register("b", "B")
+        registry.register("c", "C")
+        assertEquals(listOf("A", "B", "C"), registry.idleSnapshot().toList())
+
+        // Touching "A" moves it to the most-recent end.
+        registry.get("a")
+        assertEquals(listOf("B", "C", "A"), registry.idleSnapshot().toList())
+
+        // So does pausing it, which re-puts the same entry.
+        registry.setPlaying("b", true)
+        registry.setPlaying("b", false)
+        assertEquals(listOf("C", "A", "B"), registry.idleSnapshot().toList())
+    }
 }

@@ -26,6 +26,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.OptIn
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ServiceCompat
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.Player
@@ -35,8 +37,11 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.http.DynamicCallFactory
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
@@ -185,60 +190,94 @@ class PlaybackService : MediaSessionService() {
 
         poolWithProxy?.destroy()
         poolNoProxy?.destroy()
+
+        // When nothing is playing media3 posts through NotificationManager.notify() and takes the
+        // service back out of the foreground, so the notification is NOT owned by the foreground
+        // service and nothing cancels it when the service dies. Without this, stopping the service
+        // (swipe from recents with android:stopWithTask, or the OS reclaiming the process) leaves
+        // a "video paused" notification in the shade for a session that no longer exists, pointing
+        // at a post the user never opened.
+        removeMediaNotification()
+
         super.onDestroy()
     }
 
-    override fun onUpdateNotification(
+    /**
+     * Mirrors media3's own (private) MediaNotificationManager.removeNotification(): both the
+     * foreground detach and the explicit cancel are needed to clear the notification on every API
+     * level, because it may have been posted through either path.
+     */
+    @OptIn(UnstableApi::class)
+    private fun removeMediaNotification() {
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        NotificationManagerCompat.from(this).cancel(DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID)
+    }
+
+    /**
+     * Decides which playback — if any — owns the media notification.
+     *
+     * media3 hands us whichever session just fired a player event and, left to itself, shows a
+     * notification for any session whose player is merely *prepared*
+     * (MediaNotificationManager.shouldShowNotification only checks for a non-empty timeline and a
+     * non-IDLE state). Every video that scrolls into a feed is prepared, muted and paused the
+     * moment it leaves the centre of the screen, so that default puts a "video paused" notification
+     * in the shade for media the user never chose to play — and leaves it there, because the
+     * paused-state notification goes out through NotificationManager.notify() rather than the
+     * foreground service.
+     *
+     * The order below is the users' expectation of which playback they are controlling:
+     * 1. Picture-in-picture / background media — the one playback explicitly detached from the feed.
+     * 2. An on-screen video playing with the volume up.
+     * 3. An on-screen video playing muted.
+     * 4. Media that has already played out loud and is now paused (a music track, a podcast, a
+     *    voice note): keeps its notification so it can be resumed from the shade.
+     *
+     * Anything else — every muted, autoplayed, scrolled-past feed video — owns no notification.
+     *
+     * Note this must override [onUpdateNotificationAsync], not [onUpdateNotification]: the base
+     * MediaSessionService.onUpdateNotification(session, startInForegroundRequired) only forwards to
+     * the deprecated single-argument overload, whose whole body sets a `defaultMethodCalled` flag.
+     * The notification is then always posted by onUpdateNotificationAsync for the session *media3*
+     * picked, so calling super.onUpdateNotification() with a different session — as this class used
+     * to — changed nothing at all.
+     */
+    @OptIn(UnstableApi::class)
+    override fun onUpdateNotificationAsync(
         session: MediaSession,
         startInForegroundRequired: Boolean,
-    ) {
-        // Updates any new player ready
-        super.onUpdateNotification(session, startInForegroundRequired)
-
-        // playback controllers control the last notification updated.
-        // this procedure re-updates the notification to make sure it aligns
-        // with users expectation on which playback they decide to control:
-        // 1. If no video is being played, play the picture in picture if there.
-        // 2. If there are videos being played the order is:
-        // 2. a. Picture in picture if playing
-        // 2. b. On screen video with volume on
-        // 2. c. On screen video with volume off.
-
-        val playing = (poolWithProxy?.playingContent() ?: emptyList()) + (poolNoProxy?.playingContent() ?: emptyList())
-
-        // if nothing is pl
-        if (playing.isEmpty() && BackgroundMedia.hasInstance()) {
-            BackgroundMedia.bgInstance?.id?.let { id ->
-                (poolNoProxy?.getSession(id) ?: poolWithProxy?.getSession(id))?.let {
-                    super.onUpdateNotification(it, startInForegroundRequired)
-                }
-            }
-            return
+    ): ListenableFuture<Void?> {
+        electNotificationOwner()?.let {
+            return super.onUpdateNotificationAsync(it, startInForegroundRequired)
         }
 
-        playing.forEach {
-            if (it.session.player.isPlaying && it.session.player.volume > 0 && it.session.id == BackgroundMedia.bgInstance?.id) {
-                super.onUpdateNotification(it.session, startInForegroundRequired)
-                return
-            }
+        // Nothing qualifies. `startInForegroundRequired` can still be true in the narrow window
+        // where a player has playWhenReady set but has not reached isPlaying yet (media3 counts
+        // BUFFERING as engaged, the pool's playing tier does not); dropping the notification there
+        // would leave the service claiming the foreground with nothing posted, so defer to media3
+        // and let the next event — the one that flips isPlaying — settle it.
+        if (startInForegroundRequired) {
+            return super.onUpdateNotificationAsync(session, startInForegroundRequired)
         }
 
-        playing.forEach {
-            if (it.session.player.isPlaying && it.session.player.volume > 0) {
-                super.onUpdateNotification(it.session, startInForegroundRequired)
-                return
-            }
-        }
+        removeMediaNotification()
+        return Futures.immediateFuture(null)
+    }
 
-        // Falls through to the first muted-but-playing session. Earlier this loop missed
-        // its return and called super.onUpdateNotification once per playing session,
-        // hammering the notification system whenever multiple feed videos were preloading.
-        playing.forEach {
-            if (it.session.player.isPlaying) {
-                super.onUpdateNotification(it.session, startInForegroundRequired)
-                return
-            }
-        }
+    private fun electNotificationOwner(): MediaSession? {
+        val pools = listOfNotNull(poolNoProxy, poolWithProxy)
+        val background = BackgroundMedia.bgInstance?.id?.let { id -> pools.firstNotNullOfOrNull { it.getSession(id) } }
+
+        if (background != null && background.player.isPlaying) return background
+
+        val playing = pools.flatMap { it.playingContent() }
+        playing.firstOrNull { it.session.player.volume > 0f }?.let { return it.session }
+        playing.firstOrNull()?.let { return it.session }
+
+        // Nothing is playing: a paused picture-in-picture, and then any media that has already
+        // played out loud, keep the notification so the user can resume from the shade.
+        if (background != null) return background
+
+        return pools.firstNotNullOfOrNull { it.lastPlayedAudibly() }
     }
 
     // Return a MediaSession to link with the MediaController that is making

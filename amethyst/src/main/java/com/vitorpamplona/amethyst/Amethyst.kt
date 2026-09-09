@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst
 import android.app.Application
 import android.content.ComponentCallbacks2
 import android.os.Build
+import androidx.annotation.OptIn
+import androidx.core.app.NotificationManagerCompat
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.DefaultMediaNotificationProvider
 import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
 import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
@@ -159,6 +163,13 @@ class Amethyst : Application() {
         // exits) starts on the open web without first flashing a failed Tor load.
         WebAppNetworkRegistry.init(this)
 
+        // A paused media3 notification is posted with NotificationManager.notify() and the service
+        // is taken back out of the foreground, so it is not tied to the PlaybackService's lifetime:
+        // if the OS reclaims the process while one is up, it stays in the shade with no session
+        // behind it. This process has just started and owns no MediaSession yet, so anything
+        // still showing there is by definition stale.
+        clearOrphanedPlaybackNotification()
+
         // After-background foreground recycle: when the app returns to
         // the foreground after spending more than ~5 s in the
         // background, publish a network-change event so every active
@@ -185,6 +196,11 @@ class Amethyst : Application() {
         }
 
         instance.initiate(this)
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun clearOrphanedPlaybackNotification() {
+        NotificationManagerCompat.from(this).cancel(DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID)
     }
 
     /** True when this process is the isolated `:napplet` WebView host (see AndroidManifest). */

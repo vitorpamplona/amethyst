@@ -59,6 +59,12 @@ class SessionListener(
     // paths reach the same entry.
     val retired = AtomicBoolean(false)
 
+    // Sticky: set the first time this session plays with the volume up. It separates media the
+    // user chose to listen to (a music track, a podcast, a voice note, picture-in-picture) from
+    // the muted videos a feed autoplays as they scroll past. Only the former may keep the media
+    // notification while paused — see PlaybackService.onUpdateNotificationAsync.
+    val playedAudibly = AtomicBoolean(false)
+
     fun removeListeners() {
         session.player.removeListener(playerListener)
     }
@@ -191,6 +197,24 @@ class MediaSessionPool(
     ) {
         registry.setPlaying(id, isPlaying)
     }
+
+    /**
+     * Latches [SessionListener.playedAudibly] when the session is both playing and unmuted. Called
+     * on every play/pause and volume change, because either one can be the moment the pair first
+     * becomes true (unmuting a running video, or hitting play on an already-unmuted track).
+     */
+    internal fun markPlayedAudibly(session: MediaSession) {
+        val player = session.player
+        if (!player.isPlaying || player.volume <= 0f) return
+        registry.get(session.id)?.playedAudibly?.set(true)
+    }
+
+    /**
+     * The most recently touched live session that has already played out loud, or null. Used to
+     * keep a paused music track / podcast / voice note in the notification shade so it can be
+     * resumed from there, without giving one to a muted feed video that merely scrolled past.
+     */
+    fun lastPlayedAudibly(): MediaSession? = registry.idleSnapshot().lastOrNull { it.playedAudibly.get() }?.session
 
     @OptIn(UnstableApi::class)
     fun newSession(
@@ -365,6 +389,11 @@ class MediaSessionPool(
             // one live wrapper: dropping one wrapper would hand the player back while another
             // still pointed at the live session.
             pool.setPlaying(mediaSession.id, isPlaying)
+            if (isPlaying) pool.markPlayedAudibly(mediaSession)
+        }
+
+        override fun onVolumeChanged(volume: Float) {
+            pool.markPlayedAudibly(mediaSession)
         }
     }
 

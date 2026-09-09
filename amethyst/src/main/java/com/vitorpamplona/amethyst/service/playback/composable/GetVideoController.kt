@@ -22,10 +22,8 @@ package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
@@ -39,15 +37,19 @@ import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 internal const val BACKGROUND_RELEASE_TIMEOUT_MS = 30_000L
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun GetVideoController(
     mediaItem: LoadedMediaItem,
@@ -68,10 +70,21 @@ fun GetVideoController(
     // returned to the pool. On resume the flow is rebuilt, the new session reuses
     // the same paused player from the warm pool (keyed by URI), and the onEach
     // warm-pool fast path keeps position and buffered data intact.
-    val keepAlive = remember { mutableStateOf(true) }
+    //
+    // This gate is a StateFlow and not a Compose MutableState on purpose. The timeout
+    // fires while the activity is STOPPED, and Compose pauses its frame clock below
+    // Lifecycle.STARTED, so a state write there cannot recompose: `remember(keepAlive.value)`
+    // would never re-run, and ON_START/ON_RESUME flip the flag back to true in the same main
+    // thread message, before any frame — so the release never happened at all. Collecting a
+    // flow instead keeps the decision off the frame clock: flatMapLatest cancels the inner
+    // callbackFlow the moment the flag drops, which releases the MediaController (and with it
+    // the session, its ExoPlayer and its media notification) while the app is still stopped.
+    val keepAlive = remember { MutableStateFlow(true) }
 
-    val controllerState by remember(mediaItem, keepAlive.value) {
-        if (keepAlive.value) {
+    val controllerState by remember(mediaItem) {
+        keepAlive.flatMapLatest { alive ->
+            if (!alive) return@flatMapLatest flowOf<MediaControllerState?>(null)
+
             PlaybackServiceClient
                 .controllerAsFlow(
                     videoUri = mediaItem.src.videoUri,
@@ -132,8 +145,6 @@ fun GetVideoController(
                         state.controller.prepare()
                     }
                 }
-        } else {
-            flowOf<MediaControllerState?>(null)
         }
     }.collectAsState(null)
 
@@ -163,7 +174,7 @@ fun GetVideoController(
 private fun ReleaseControllerWhenBackgroundedFor(
     timeoutMs: Long,
     controllerState: MediaControllerState?,
-    keepAlive: MutableState<Boolean>,
+    keepAlive: MutableStateFlow<Boolean>,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentControllerState by rememberUpdatedState(controllerState)
