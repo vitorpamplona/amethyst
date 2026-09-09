@@ -142,6 +142,20 @@ class MarmotManager(
     val inboundProcessor = MarmotInboundProcessor(groupManager, keyPackageRotationManager)
     val outboundProcessor = MarmotOutboundProcessor(groupManager)
     val welcomeSender = MarmotWelcomeSender(signer)
+
+    /**
+     * Called for every kind:1210 row this client DERIVES, so a front end can
+     * surface it in the conversation as it happens.
+     *
+     * Only derived rows come through here, and that is the point. A 1210 that
+     * arrives over the wire is an assertion by its sender — see
+     * [syncGroupSystemRows] — so a renderer that took its `actor`/`subject`
+     * from the payload would let any member forge an attributed history row.
+     * These rows are diffed from MLS-authenticated state instead, which is why
+     * they are safe to attribute.
+     */
+    var onSystemRowDerived: ((nostrGroupId: HexKey, row: Event) -> Unit)? = null
+
     val publishGate =
         publishObligationStore?.let { MarmotPublishGate(groupManager, it) }
             ?: MarmotPublishGate(groupManager)
@@ -1194,7 +1208,12 @@ class MarmotManager(
                 // app event has a pubkey — this client, whose local derivation
                 // it is.
                 val appEvent = row.toAppEvent(actor ?: signer.pubKey, now)
-                persistDecryptedMessage(nostrGroupId, appEvent.toJson().dropLast(1) + ",\"sig\":\"\"}")
+                val json = appEvent.toJson().dropLast(1) + ",\"sig\":\"\"}"
+                persistDecryptedMessage(nostrGroupId, json)
+                // Surface it now as well as persisting it. Without this the
+                // row appears only after a restart re-reads the log, which is
+                // the wrong moment to learn that someone was removed.
+                Event.fromJsonOrNull(json)?.let { onSystemRowDerived?.invoke(nostrGroupId, it) }
             }
             store.recordGroupSnapshot(nostrGroupId, current.encode())
             rows

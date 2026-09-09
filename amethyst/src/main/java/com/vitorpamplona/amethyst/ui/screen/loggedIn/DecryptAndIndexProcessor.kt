@@ -726,7 +726,9 @@ class GroupEventHandler(
                         }
                     }
 
-                    // Track the message in the Marmot group chatroom
+                    // Track the message in the Marmot group chatroom. A
+                    // peer-sent kind:1210 is dropped inside addMessage — see
+                    // `MarmotGroupList.isDisplayableFeedMessage`.
                     account.marmotGroupList.addMessage(result.groupId, innerNote)
 
                     // Persist the decrypted plaintext so the message
@@ -764,6 +766,12 @@ class GroupEventHandler(
                     // Sync MIP-01 metadata after epoch advance (extensions may have changed)
                     val chatroom = account.marmotGroupList.getOrCreateGroup(result.groupId)
                     manager.syncMetadataTo(result.groupId, chatroom)
+                    // The epoch just advanced, so whatever this commit changed
+                    // is now canonical state — which is exactly what a kind:1210
+                    // row is derived from. Deriving here covers OTHER members'
+                    // commits; our own are derived by `commitAndPublish`. Both
+                    // reach the feed through `onSystemRowDerived`.
+                    manager.syncGroupSystemRows(result.groupId)
                     // Epoch just advanced — drain any kind:445 events that
                     // previously failed as UndecryptableOuterLayer for this
                     // group. See `pendingUndecryptable` for the scenario.

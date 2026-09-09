@@ -3789,6 +3789,17 @@ class Account(
 
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {
+            // Derived kind:1210 rows go straight into the conversation. Only
+            // DERIVED rows arrive here — one received over the wire is an
+            // assertion by its sender and is dropped at ingest — so these are
+            // safe to render with attribution.
+            marmotManager.onSystemRowDerived = { groupId, row ->
+                cache.justConsume(row, null, true)
+                val note = cache.getOrCreateNote(row.id)
+                note.event = row
+                marmotGroupList.addMessage(groupId, note)
+            }
+
             scope.launch(Dispatchers.IO) {
                 marmotManager.restoreAll()
 

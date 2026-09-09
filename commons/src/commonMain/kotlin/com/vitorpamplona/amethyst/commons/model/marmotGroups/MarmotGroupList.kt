@@ -142,18 +142,43 @@ class MarmotGroupList(
      * 1210 system rows are NOT in this list. They are group-state captions
      * rather than messages, but they belong in the conversation in
      * chronological order, so the feed carries them and the renderer gives
-     * them their own style instead of a chat bubble.
+     * them their own style instead of a chat bubble — subject to the
+     * authorship rule below.
      */
     private fun isDisplayableFeedMessage(msg: Note): Boolean {
         val kind = msg.event?.kind ?: return true
+        if (kind == MARMOT_INNER_KIND_SYSTEM_ROW) return isOwnDerivedSystemRow(msg)
         return kind !in NON_CHAT_INNER_KINDS
     }
+
+    /**
+     * A kind:1210 row is shown only when THIS client derived it.
+     *
+     * MLS authenticates that a member sent an inner payload; it says nothing
+     * about whether the payload is true. A received 1210 is therefore an
+     * assertion by its sender, with an `actor` and `subject` of the sender's
+     * choosing — so rendering one would let any member forge an attributed
+     * history row ("X removed Y") indistinguishable from a real one, in the
+     * part of the conversation a reader trusts most.
+     *
+     * Rows this client derives are diffed from MLS-authenticated group state
+     * (`MarmotManager.syncGroupSystemRows`) and are always authored by the
+     * account itself, so authorship is exactly the test. Nothing is lost by
+     * dropping the sender's version: every client that applied the same
+     * commits derives the same rows.
+     *
+     * The check has to live here rather than at ingest because rows reach the
+     * feed by two routes — live decryption and the restart re-read of the
+     * local log — and the log holds received payloads too.
+     */
+    private fun isOwnDerivedSystemRow(msg: Note): Boolean = msg.event?.pubKey == ownerPubKey
 
     companion object {
         private const val MARMOT_INNER_KIND_DELETION = 5
         private const val MARMOT_INNER_KIND_REACTION = 7
         private const val MARMOT_INNER_KIND_EDIT = 1009
         private const val MARMOT_INNER_KIND_STREAM_START = 1200
+        private const val MARMOT_INNER_KIND_SYSTEM_ROW = 1210
 
         // Push token gossip. Routing data for a notification server, addressed
         // to the other members' clients rather than to the people in the room —

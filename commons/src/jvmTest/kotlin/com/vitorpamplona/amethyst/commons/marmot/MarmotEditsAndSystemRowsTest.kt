@@ -183,4 +183,25 @@ class MarmotEditsAndSystemRowsTest {
             val rows = restarted.loadStoredMessages(nostrGroupId).mapNotNull { Event.fromJsonOrNull(it) }.filter { it.kind == MarmotAppEvent.KIND_SYSTEM }
             assertEquals(1, rows.size)
         }
+
+    @Test
+    fun `a derived row is surfaced as it happens, not only after a restart`() =
+        runBlocking {
+            // Rows used to reach the conversation only when a restart re-read
+            // the local log, which is the wrong moment to learn that someone
+            // was removed from the group.
+            val f = Fixture()
+            f.createGroup(name = "before")
+            f.manager.syncGroupSystemRows(nostrGroupId)
+
+            val surfaced = mutableListOf<Event>()
+            f.manager.onSystemRowDerived = { _, row -> surfaced.add(row) }
+            f.manager.setGroupProfile(nostrGroupId, "after", "")
+
+            assertEquals(1, surfaced.size, "a rename must surface exactly one row")
+            assertEquals(MarmotAppEvent.KIND_SYSTEM, surfaced.single().kind)
+            // Authored by this client: a derived row is OUR reading of
+            // authenticated state, and the feed admits a 1210 on exactly that.
+            assertEquals(f.signer.pubKey, surfaced.single().pubKey)
+        }
 }
