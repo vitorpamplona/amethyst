@@ -172,4 +172,55 @@ class PartialTokensTest {
         // Standing in the middle of a finished token is editing it, not writing it.
         assertNull(PartialTokens.activePicker("kind:article extra", 8))
     }
+
+    // ---- tapping a finished chip -----------------------------------------------------------
+
+    @Test
+    fun theCaretOnAFinishedChipNamesThatChip() {
+        val text = "bitcoin kind:article rest"
+        val token = PartialTokens.tokenAt(text, 12)
+        assertTrue(token?.segment is SearchSegment.Kind)
+        assertEquals(8, token.start)
+        assertEquals(20, token.end)
+        assertEquals("kind:article", text.substring(token.start, token.end))
+    }
+
+    @Test
+    fun theCaretOnPlainTextNamesNoChip() {
+        assertNull(PartialTokens.tokenAt("bitcoin kind:article rest", 2))
+        assertNull(PartialTokens.tokenAt("bitcoin kind:article rest", 23))
+        assertNull(PartialTokens.tokenAt("", 0))
+    }
+
+    @Test
+    fun everyOffsetOfEveryChipResolvesToThatChip() {
+        // A tap can land anywhere in a chip, including either edge, and must always name it.
+        val text = "#bitcoin"
+        (0..text.length).forEach { at ->
+            assertTrue(PartialTokens.tokenAt(text, at)?.segment is SearchSegment.Hashtag, "offset $at")
+        }
+    }
+
+    @Test
+    fun aChipWithAPickerReopensOnItsPrefix() {
+        val text = "kind:article"
+        assertEquals("kind:", PartialTokens.tokenAt(text, 4)?.editPrefix)
+        assertEquals("from:", PartialTokens.tokenAt("from:$NPUB", 3)?.editPrefix)
+        assertEquals("since:", PartialTokens.tokenAt("since:2026-01-01", 3)?.editPrefix)
+        assertEquals("group:", PartialTokens.tokenAt("group:dev", 3)?.editPrefix)
+        assertEquals("geo:", PartialTokens.tokenAt("geo:9q8yy", 2)?.editPrefix)
+    }
+
+    @Test
+    fun aChipWithNoPickerHasNoPrefixAndIsChangedByRetyping() {
+        assertNull(PartialTokens.tokenAt("#bitcoin", 3)?.editPrefix)
+        assertNull(PartialTokens.tokenAt("-scam", 3)?.editPrefix)
+        assertNull(PartialTokens.tokenAt("\"a phrase\"", 3)?.editPrefix)
+    }
+
+    @Test
+    fun aBareKeyIsNotChangedThroughAPrefixItNeverHad() {
+        // `npub1…` on its own is a search term, not a `from:`; it has no prefix to reopen.
+        assertNull(PartialTokens.tokenAt(NPUB, 3)?.editPrefix)
+    }
 }

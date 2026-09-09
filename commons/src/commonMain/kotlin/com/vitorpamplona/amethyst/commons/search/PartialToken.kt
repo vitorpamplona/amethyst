@@ -76,6 +76,40 @@ sealed interface ActivePicker {
 }
 
 /**
+ * A *finished* token the caret is sitting on, with the span it covers.
+ *
+ * This is what a tap on a chip produces: the caret lands somewhere in the token, which is the
+ * signal that the reader means to change or drop that filter rather than write a new one. A
+ * half-written token is [ActivePicker]'s business instead, and the two never both apply — a
+ * picker only opens on a token that is not finished yet.
+ */
+@Immutable
+data class EditableToken(
+    val segment: SearchSegment,
+    val start: Int,
+    val end: Int,
+) {
+    /**
+     * The prefix that reopens this token's picker when the reader asks to change it, or null for
+     * a token that has no picker and is changed by retyping it (`#tag`, `-term`, `"a phrase"`).
+     */
+    val editPrefix: String?
+        get() =
+            when (val seg = segment) {
+                is SearchSegment.Key -> seg.field?.let { "${it.token}:" }
+                is SearchSegment.Pointer -> "to:"
+                is SearchSegment.DateBound -> "${seg.field.token}:"
+                is SearchSegment.Group -> "group:"
+                is SearchSegment.Kind -> "kind:"
+                is SearchSegment.Label -> "label:"
+                is SearchSegment.Scope -> "${seg.field}:"
+                is SearchSegment.Language -> "lang:"
+                is SearchSegment.Domain -> "domain:"
+                is SearchSegment.Hashtag, is SearchSegment.Exclusion, is SearchSegment.Phrase, is SearchSegment.Text -> null
+            }
+}
+
+/**
  * Which half-written token the caret is in, and therefore which picker belongs under the field.
  *
  * Everything here is derived from the text and the caret, never from whatever picker happens to
@@ -155,6 +189,27 @@ object PartialTokens {
         text: String,
         caret: Int,
     ): PartialToken? = partialAt(text, caret, GROUP_PREFIXES)
+
+    /**
+     * The finished token the caret is on, or null when it is on plain text.
+     *
+     * Offsets come from [SearchTokenizer] rather than being re-scanned here, so the span this
+     * reports is exactly the span the field drew as a chip — tapping a chip and editing it can
+     * never act on different characters than the ones the reader saw.
+     */
+    fun tokenAt(
+        text: String,
+        caret: Int,
+    ): EditableToken? {
+        val at = caret.coerceIn(0, text.length)
+        var start = 0
+        SearchTokenizer.tokenize(text).forEach { seg ->
+            val end = start + seg.length
+            if (seg !is SearchSegment.Text && at in start..end) return EditableToken(seg, start, end)
+            start = end
+        }
+        return null
+    }
 
     /**
      * Is this exactly one finished key? An npub only: hex pasted after `from:` stays unfinished,

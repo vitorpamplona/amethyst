@@ -46,12 +46,16 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.search.ActivePicker
+import com.vitorpamplona.amethyst.commons.search.EditableToken
 import com.vitorpamplona.amethyst.commons.search.KindCandidate
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
+import com.vitorpamplona.amethyst.commons.search.rawText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -214,8 +218,50 @@ fun TokenizedSearchField(
 
             null -> Unit
         }
+
+        // Tapping a chip only moves the caret — a chip is drawn text, not a composable — so the
+        // caret landing on a finished token is what stands in for "the reader tapped this one",
+        // and this row is where changing or dropping it lives.
+        state.editableToken?.let { token ->
+            SearchPickerSurface(Modifier.padding(top = 4.dp).fillMaxWidth()) {
+                SearchTokenEditor(
+                    // Drawn exactly as the field draws it, so the row is unmistakably about the
+                    // chip under the caret rather than the raw text hiding behind it.
+                    label = tokenLabel(token, displayName, groupName, scopeName),
+                    onChange = { state.changeToken(token) },
+                    onRemove = { state.removeToken(token) },
+                )
+            }
+        }
     }
 }
+
+/** One token drawn the way the field draws it, for the editor row's label. */
+private fun tokenLabel(
+    token: EditableToken,
+    displayName: (String) -> String?,
+    groupName: (String) -> String?,
+    scopeName: (String, String) -> String?,
+): String =
+    SearchTokenTransformation(null, EMPTY_STYLES, displayName, groupName, scopeName)
+        .filter(AnnotatedString(token.segment.rawText))
+        .text.text
+
+/** The label only needs the text the transformation produces, never its colours. */
+private val EMPTY_STYLES =
+    SearchTokenStyles(
+        person = SpanStyle(),
+        pointer = SpanStyle(),
+        hashtag = SpanStyle(),
+        date = SpanStyle(),
+        label = SpanStyle(),
+        scope = SpanStyle(),
+        group = SpanStyle(),
+        kind = SpanStyle(),
+        extension = SpanStyle(),
+        exclusion = SpanStyle(),
+        phrase = SpanStyle(),
+    )
 
 @Composable
 private fun LaunchedQuery(
