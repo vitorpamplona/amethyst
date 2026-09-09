@@ -107,6 +107,24 @@ amy marmot stream watch GID --stream-id …
 amy marmot stream finish GID --stream-id … --transcript-hash … --chunk-count N "hello"
 ```
 
+## Not wired into the app
+
+The implementation is complete and tested, and nothing in the app starts it.
+
+Nothing in the deployed network publishes agent text stream previews, so the
+Android chat screen no longer builds a watcher and dials the brokers a kind:1200
+advertises, and our published KeyPackage no longer advertises component `0x8006`
+or the `receive`/`send`/`fanout` role capabilities. A capability is a standing
+promise to every peer that reads the KeyPackage; making one for a path nobody
+exercises costs something and buys nothing.
+
+What that leaves: the codecs, this module, the CLI (`amy marmot stream …`) and
+the interop tests all still work and still run. Turning the feature back on is
+re-adding `AppComponentIds.AGENT_TEXT_STREAM_QUIC_V1` to
+`CurrentProfileGroupFactory.SUPPORTED_COMPONENTS`, the three roles to
+`MlsGroup.currentProfileLeafCapabilities()`, and the watcher to
+`MarmotGroupChatView`.
+
 ## Not done
 
 - The Android GUI renders previews but does not originate a stream — that is

@@ -210,6 +210,12 @@ object AgentTextStreamRoles {
     const val SEND_CAPABILITY = 0xF2D2
     const val FANOUT_CAPABILITY = 0xF2D4
 
+    /**
+     * Every role capability, for callers that need to ask "does this leaf
+     * advertise any of them" without enumerating the three by hand.
+     */
+    val ALL_CAPABILITIES = listOf(RECEIVE_CAPABILITY, SEND_CAPABILITY, FANOUT_CAPABILITY)
+
     fun capabilityFor(role: Int): Int =
         when (role) {
             RECEIVE -> RECEIVE_CAPABILITY

@@ -44,10 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.marmot.MarmotAgentStreamWatcher
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_default_name
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
@@ -78,7 +76,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -123,31 +120,19 @@ fun MarmotGroupChatView(
         }
     }
 
-    // The live agent-preview watcher. It follows the newest kind:1200 in the
-    // group and folds the QUIC records behind it; a group with no stream, no
-    // broker candidate or no reachable broker simply never shows a preview,
-    // and the durable kind:9 still arrives as ordinary chat either way.
-    val marmot = accountViewModel.account.marmotManager
-    val streamScope = rememberCoroutineScope()
-    val streamWatcher =
-        remember(nostrGroupId, marmot) {
-            marmot?.let {
-                MarmotAgentStreamWatcher(it, accountViewModel.account.marmotStreamTransport, streamScope)
-            }
-        }
-    val streamPreview by (streamWatcher?.preview ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
-
-    // Re-check on every feed change: a kind:1200 arrives as an ordinary group
-    // message, so "the feed moved" is exactly when a new stream may have been
-    // anchored. watchLatest is idempotent for a stream already being followed.
-    val feedState by feedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
-    LaunchedEffect(feedState, streamWatcher) {
-        streamWatcher?.watchLatest(nostrGroupId)
-    }
-
-    DisposableEffect(streamWatcher) {
-        onDispose { streamWatcher?.stop() }
-    }
+    // The live agent-preview watcher is NOT started here.
+    //
+    // Opening the chat used to build a [MarmotAgentStreamWatcher] and call
+    // `watchLatest` on every feed change, which dials the QUIC brokers a
+    // kind:1200 advertises. Nothing in the deployed network publishes those
+    // streams, so that was a UDP connection attempt to a third-party endpoint
+    // on behalf of a feature no one is using — a service we start, not a
+    // capability we hold.
+    //
+    // The watcher, the transport and the banner all still exist and are still
+    // tested; `amy marmot stream watch` drives the same code on demand. Wiring
+    // it back is re-adding the watcher, the LaunchedEffect and the banner
+    // below, once there is something to watch.
 
     Column(Modifier.fillMaxHeight()) {
         Column(
@@ -165,8 +150,6 @@ fun MarmotGroupChatView(
                 onWantsToEditDraft = { },
             )
         }
-
-        AgentStreamPreviewBanner(streamPreview)
 
         Spacer(modifier = DoubleVertSpacer)
 

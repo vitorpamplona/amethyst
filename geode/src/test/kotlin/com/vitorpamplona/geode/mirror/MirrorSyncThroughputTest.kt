@@ -81,6 +81,15 @@ import kotlin.test.Test
  *
  * Size with `-DsyncN` (default 1,000,000). Timed from first byte to the
  * downstream reaching the target (or plateauing).
+ *
+ * **Opt-in.** This is a benchmark, not a regression test: it preloads a
+ * million events and pulls them over a real WebSocket, which took 4,584 s of
+ * `:geode:test`'s 4,636 s total — 98.9% of the module's test time for one test
+ * that asserts nothing about correctness. Every other benchmark in this module
+ * is already gated the same way (see `perf.LoadBenchmark`), and every
+ * invocation documented above passes `-DsyncN` or `-DsyncSourceUrl`, so those
+ * still run it. A plain `./gradlew test` — which is what the pre-push hook
+ * runs — now skips it in milliseconds.
  */
 class MirrorSyncThroughputTest {
     // geode's real relay config (deferred FTS, live negentropy index) — not the
@@ -148,9 +157,30 @@ class MirrorSyncThroughputTest {
         return String(out)
     }
 
+    /**
+     * True when someone actually asked for a throughput number: either the
+     * module-wide benchmark switch, or any of this test's own sizing/source
+     * properties. Naming a size IS the opt-in — a run that says `-DsyncN=…`
+     * plainly wants the measurement and should not need a second flag.
+     */
+    private val enabled =
+        System.getProperty("runLoadBenchmark") == "true" ||
+            System.getProperty("syncN") != null ||
+            System.getProperty("syncSourceUrl") != null
+
     @Test
     fun mirrorSyncThroughput() =
         runBlocking {
+            // Bail before building anything. The old code decided nothing up
+            // front and spent over an hour preloading and syncing a million
+            // events on every ordinary test run.
+            if (!enabled) {
+                println(
+                    "[skip] mirrorSyncThroughput — benchmark. Enable with -DrunLoadBenchmark=true, " +
+                        "or size it directly with -DsyncN=… / -DsyncSourceUrl=…",
+                )
+                return@runBlocking
+            }
             val n = System.getProperty("syncN")?.toInt() ?: 1_000_000
             val externalUrl = System.getProperty("syncSourceUrl")
             val expect = System.getProperty("syncExpect")?.toInt() ?: n

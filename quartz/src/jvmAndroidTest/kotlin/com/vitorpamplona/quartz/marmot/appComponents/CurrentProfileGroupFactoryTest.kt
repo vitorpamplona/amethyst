@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.marmot.appComponents
 
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
@@ -111,21 +110,22 @@ class CurrentProfileGroupFactoryTest {
             // agent-text-stream roles — the same set MDK puts on every
             // KeyPackage it publishes.
             //
-            // The extra entries are deliberate and are NOT drift from the MDK
-            // reference. A capability says "this client can handle it", and a
-            // group that REQUIRES 0xF2EE (legacy) or a role (any group MDK
-            // creates) refuses to add a leaf that does not advertise it — so
-            // without these a current-profile KeyPackage would be un-addable
-            // to every legacy group that already exists and to every group MDK
-            // makes. Advertising more than a group requires is always
-            // acceptable; advertising less is what gets a leaf rejected.
+            // `0xF2EE` is deliberate and is NOT drift from the MDK reference:
+            // a legacy group REQUIRES it, and a group refuses to add a leaf
+            // that does not advertise what it requires, so without it a
+            // current-profile KeyPackage would be un-addable to every legacy
+            // group that already exists.
+            //
+            // The agent-stream roles are deliberately absent. Advertising more
+            // than a group requires is harmless to that group but is not free:
+            // it is a standing claim to every peer that reads this KeyPackage,
+            // and nothing in the deployed network uses the QUIC preview path.
+            // The reference KeyPackage in `mls/marmot-current-profile.json`
+            // does not advertise `0x8006` either.
             assertEquals(
                 listOf(
                     AppDataDictionary.EXTENSION_TYPE,
                     MarmotGroupData.EXTENSION_ID_INT,
-                    AgentTextStreamRoles.RECEIVE_CAPABILITY,
-                    AgentTextStreamRoles.SEND_CAPABILITY,
-                    AgentTextStreamRoles.FANOUT_CAPABILITY,
                 ),
                 kp.leafNode.capabilities.extensions,
             )

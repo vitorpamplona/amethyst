@@ -135,7 +135,7 @@ class CurrentProfileWelcomeTest {
      * admits us.
      */
     @Test
-    fun aJoinerFillsEveryRoleTheProfileDefines() =
+    fun aLeafAdvertisingEveryRoleFillsAGroupThatRequiresThem() =
         runBlocking<Unit> {
             val group =
                 aGroup(
@@ -147,7 +147,7 @@ class CurrentProfileWelcomeTest {
                         paddingBucketBytes = 0,
                     ),
                 )
-            val invitee = CurrentProfileGroupFactory.createKeyPackage(signer(0x66))
+            val invitee = allRolesKeyPackage(signer(0x66))
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
             val welcome = assertNotNull(group.commit().welcomeBytes)
 
@@ -155,13 +155,71 @@ class CurrentProfileWelcomeTest {
             assertEquals(nostrGroupId.toHexKey(), joined.currentNostrGroupId())
         }
 
-    /** A current-profile leaf with the `send` and `fanout` roles stripped. */
-    private suspend fun receiveOnlyKeyPackage(signer: NostrSignerInternal): KeyPackageBundle {
+    /**
+     * Our published KeyPackage advertises NO agent-stream role, and is
+     * therefore refused by a group that requires one.
+     *
+     * That refusal is the deliberate cost of not advertising, so it is asserted
+     * rather than discovered: the implementation is still here and still
+     * tested, but a capability is a standing promise to every peer that reads
+     * the KeyPackage, and we do not make one for a path nothing uses. If this
+     * test starts failing because the default advertises a role again, that is
+     * a decision to take on purpose, not a drift to absorb.
+     */
+    @Test
+    fun ourDefaultLeafAdvertisesNoStreamRoleAndIsRefusedByAGroupThatNeedsOne() =
+        runBlocking<Unit> {
+            val group = aGroup(AgentTextStreamQuicPolicyV1.userToAgentDefault())
+            val invitee = CurrentProfileGroupFactory.createKeyPackage(signer(0x77))
+
+            assertTrue(
+                invitee.keyPackage.leafNode.capabilities.extensions
+                    .none { it in AgentTextStreamRoles.ALL_CAPABILITIES },
+                "the default leaf must carry no agent-stream role, got ${invitee.keyPackage.leafNode.capabilities.extensions}",
+            )
+
+            group.proposeAdd(invitee.keyPackage.toTlsBytes())
+            val welcome = assertNotNull(group.commit().welcomeBytes)
+            val failure = assertFailsWith<IllegalArgumentException> { MlsGroup.processWelcome(welcome, invitee) }
+            assertTrue(
+                failure.message.orEmpty().contains("agent text stream roles"),
+                "expected a role-capability refusal, got: ${failure.message}",
+            )
+        }
+
+    /** A current-profile leaf carrying the `receive` role and nothing beyond it. */
+    private suspend fun receiveOnlyKeyPackage(signer: NostrSignerInternal): KeyPackageBundle = keyPackageAdvertising(signer, listOf(AgentTextStreamRoles.RECEIVE_CAPABILITY))
+
+    /** A current-profile leaf carrying every role the profile defines. */
+    private suspend fun allRolesKeyPackage(signer: NostrSignerInternal): KeyPackageBundle =
+        keyPackageAdvertising(
+            signer,
+            listOf(
+                AgentTextStreamRoles.RECEIVE_CAPABILITY,
+                AgentTextStreamRoles.SEND_CAPABILITY,
+                AgentTextStreamRoles.FANOUT_CAPABILITY,
+            ),
+        )
+
+    /**
+     * A current-profile KeyPackage whose leaf advertises exactly [roles] on top
+     * of the default capability set.
+     *
+     * The default set no longer carries any agent-stream role, so these tests
+     * build the leaf they need instead of relying on it. That is the right
+     * shape regardless: a test that asserted the gate through OUR default was
+     * really asserting the default, and stopped testing the gate the moment the
+     * default changed — which is exactly what happened.
+     */
+    private suspend fun keyPackageAdvertising(
+        signer: NostrSignerInternal,
+        roles: List<Int>,
+    ): KeyPackageBundle {
         val full = CurrentProfileGroupFactory.createKeyPackage(signer)
         val reduced =
             MlsGroup.currentProfileLeafCapabilities().let {
                 Capabilities(
-                    extensions = it.extensions.filterNot { ext -> ext == AgentTextStreamRoles.SEND_CAPABILITY || ext == AgentTextStreamRoles.FANOUT_CAPABILITY },
+                    extensions = it.extensions + roles,
                     proposals = it.proposals,
                 )
             }
@@ -188,10 +246,10 @@ class CurrentProfileWelcomeTest {
     }
 
     @Test
-    fun aJoinerAcceptsAGroupRequiringOnlyTheReceiveRole() =
+    fun aLeafAdvertisingReceiveJoinsAGroupRequiringOnlyThatRole() =
         runBlocking<Unit> {
             val group = aGroup(AgentTextStreamQuicPolicyV1.userToAgentDefault())
-            val invitee = CurrentProfileGroupFactory.createKeyPackage(signer(0x55))
+            val invitee = receiveOnlyKeyPackage(signer(0x55))
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
             val welcome = assertNotNull(group.commit().welcomeBytes)
 

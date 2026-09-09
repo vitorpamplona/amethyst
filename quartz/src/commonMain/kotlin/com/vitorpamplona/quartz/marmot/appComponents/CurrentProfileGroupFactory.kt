@@ -64,10 +64,13 @@ object CurrentProfileGroupFactory {
      * later as a group we cannot actually participate in. Add an id here only
      * when the component is implemented.
      *
-     * `0x8006` (agent-text-stream over QUIC) is listed for every role
-     * [MlsGroup.currentProfileLeafCapabilities] advertises — receive, send and
-     * fanout. Publishing needs durable per-stream sequence state so a restart
-     * cannot reuse an AEAD nonce, and that store exists.
+     * `0x8006` (agent-text-stream over QUIC) is deliberately absent even
+     * though it is implemented. Nothing in the deployed network uses the QUIC
+     * preview path, and this list is a promise rather than a description: a
+     * group may require any id we advertise, and we would then owe every peer
+     * behaviour for a feature no one exercises. The code stays (`:marmotQuic`,
+     * the codecs, `amy marmot stream`), and the id goes back on the list the
+     * day the feature is actually used.
      */
     val SUPPORTED_COMPONENTS: List<Int> =
         listOf(
@@ -78,7 +81,6 @@ object CurrentProfileGroupFactory {
             AppComponentIds.ADMIN_POLICY_V1,
             AppComponentIds.NOSTR_ROUTING_V1,
             AppComponentIds.MESSAGE_RETENTION_V1,
-            AppComponentIds.AGENT_TEXT_STREAM_QUIC_V1,
             AppComponentIds.ACCOUNT_IDENTITY_PROOF_V2,
             AppComponentIds.GROUP_ENCRYPTED_MEDIA_V2,
             AppComponentIds.GROUP_LIFECYCLE_V1,

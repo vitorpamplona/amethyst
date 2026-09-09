@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
@@ -3442,21 +3441,21 @@ class MlsGroup private constructor(
                     listOf(
                         AppDataDictionary.EXTENSION_TYPE,
                         MarmotGroupData.EXTENSION_ID_INT,
-                        // All three agent-stream roles, matching what MDK puts
-                        // on every KeyPackage it publishes. `receive` is the
-                        // baseline compatibility role; `send` says we can
-                        // originate preview records, which we can now that the
-                        // publisher, the raw-QUIC binding and the app wiring
-                        // exist; `fanout` says records may be forwarded on our
-                        // behalf, which is what using a broker at all means.
+                        // The agent-stream roles (`0xF2D1` receive, `0xF2D2`
+                        // send, `0xF2D4` fanout) are deliberately NOT here.
                         //
-                        // A capability is only a claim about what we support,
-                        // not a duty to stream: a group that requires `send`
-                        // wants members that COULD originate, and a member that
-                        // never does is a quiet member, not a broken one.
-                        AgentTextStreamRoles.RECEIVE_CAPABILITY,
-                        AgentTextStreamRoles.SEND_CAPABILITY,
-                        AgentTextStreamRoles.FANOUT_CAPABILITY,
+                        // The implementation exists and stays — see
+                        // [AgentTextStreamRoles] and the `:marmotQuic` module —
+                        // but nothing in the deployed network uses the QUIC
+                        // preview path, and an advertised capability is a
+                        // standing promise to every peer that reads our
+                        // KeyPackage. Advertising a role no one exercises buys
+                        // nothing and commits us to answering for it; the
+                        // reference KeyPackage in our own conformance vector
+                        // does not advertise it either.
+                        //
+                        // Re-adding them is a one-line change once the feature
+                        // is actually in use.
                     ),
                 proposals = listOf(APP_DATA_UPDATE_PROPOSAL_TYPE, SELF_REMOVE_PROPOSAL_TYPE),
             )
