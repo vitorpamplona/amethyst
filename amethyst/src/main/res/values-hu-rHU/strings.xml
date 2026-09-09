@@ -1201,6 +1201,19 @@
     <string name="home_content_type_music">Zene és hang</string>
     <string name="home_content_type_podcasts">Podcastok</string>
     <string name="home_content_type_fundraisers">Gyűjtések</string>
+    <string name="home_content_type_ratings">Értékelések és megjegyzések</string>
+    <string name="rating_stars_out_of_five">Értékelés: %1$s / 5</string>
+    <string name="library_learning_resource">Tanulási forrás</string>
+    <string name="library_directory">Könyvtár</string>
+    <string name="library_blossom_piece">Fájlbejegyzés</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d elem</item>
+        <item quantity="other">%1$d elem</item>
+    </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">további %1$d elem</item>
+        <item quantity="other">további %1$d elem</item>
+    </plurals>
     <string name="settings_section_reminders">Emlékeztetők</string>
     <string name="wallet_connect">Kapcsolódás pénztárcához</string>
     <string name="theme">Téma</string>

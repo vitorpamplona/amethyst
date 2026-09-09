@@ -139,6 +139,10 @@
         <item quantity="one">Madárnapló · %1$d faj</item>
         <item quantity="other">Madárnapló · %1$d faj</item>
     </plurals>
+    <plurals name="birdex_species_more">
+        <item quantity="one">+%1$d további</item>
+        <item quantity="other">+%1$d további</item>
+    </plurals>
     <string name="ps1_save_title">PS1 memóriakártya-mentés</string>
     <string name="ps1_save_block">%1$d blokk</string>
     <string name="ps1_save_empty_slot">Üres hely</string>
@@ -238,6 +242,7 @@
     <string name="number_followers">%1$s követő</string>
     <string name="log_out">Kijelentkezés</string>
     <string name="show_more">Továbbiak megjelenítése</string>
+    <string name="show_less">Kevesebb megjelenítése</string>
     <string name="lightning_invoice">Lightning-számla</string>
     <string name="invoice_expired">Lejárt</string>
     <string name="clink_lightning_offer">CLINK ajánlat</string>
@@ -1278,6 +1283,8 @@
     <string name="admission">Felvétel</string>
     <string name="subscription">Előfizetés</string>
     <string name="publication">Közzététel</string>
+    <string name="publication_untitled_section">Névtelen szakasz</string>
+    <string name="publication_contents">Tartalom</string>
     <string name="payments_url">Fizetési webcím</string>
     <string name="target_audience">Célközönség</string>
     <string name="policies_and_links">Irányelvek és hivatkozások</string>
@@ -1372,6 +1379,14 @@
     <string name="external_id_scope">Megjegyzés egy külső forráshoz</string>
     <string name="url_preview_open_in_browser">Megnyitás böngészőben</string>
     <string name="long_form_reading_minutes">Olvasási idő: %1$d perc</string>
+    <plurals name="publication_section_count">
+        <item quantity="one">%1$d szakasz</item>
+        <item quantity="other">%1$d szakasz</item>
+    </plurals>
+    <plurals name="publication_more_sections">
+        <item quantity="one">további %1$d szakasz</item>
+        <item quantity="other">további %1$d szakasz</item>
+    </plurals>
     <string name="music_playlist_collaborative">Közreműködési</string>
     <string name="music_playlist_private">Privát</string>
     <string name="music_playlist_unknown_track">Ismeretlen szám</string>
