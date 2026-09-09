@@ -446,6 +446,9 @@ class MlsGroup private constructor(
             (currentLeaf?.credential as? Credential.Basic)?.identity
                 ?: ByteArray(0)
 
+        // An Update replaces our leaf with fresh key material and nothing
+        // else. Capabilities and leaf extensions (the account identity proof
+        // among them) describe the member, not the keys, so they carry over.
         val newLeafNode =
             buildLeafNode(
                 encryptionKey = newEncKp.publicKey,
@@ -455,6 +458,8 @@ class MlsGroup private constructor(
                 signingKey = newSigKp.privateKey,
                 groupId = groupId,
                 leafIndex = myLeafIndex,
+                capabilities = currentLeaf?.capabilities ?: marmotLeafCapabilities(),
+                leafExtensions = currentLeaf?.extensions ?: emptyList(),
             )
 
         val proposal = Proposal.Update(newLeafNode)
@@ -694,18 +699,35 @@ class MlsGroup private constructor(
                 // signature we mint fails to verify.
                 val effectiveSigningKey = pendingSigningKey ?: signingPrivateKey
                 val newEncKp = X25519.generateKeyPair()
+                // RFC 9420 §7.1: an UpdatePath leaf REPLACES our leaf. It is
+                // the same member, so everything about that member that is not
+                // key material carries over — capabilities and the leaf
+                // extensions. Rebuilding from defaults instead is not a
+                // cosmetic loss: a current-profile leaf keeps its
+                // `account-identity-proof` in an `app_data_dictionary` LEAF
+                // extension, and that extension can never be re-added by a
+                // proposal, so dropping it here silently demotes us out of the
+                // current profile at our very first commit. It also drops the
+                // `app_data_dictionary` capability the group's own
+                // `required_capabilities` demands, which makes the resulting
+                // tree fail RFC 9420 §7.3 leaf validation for every receiver —
+                // openmls reports `LeafNodeValidation(UnsupportedExtensions)`
+                // and the Welcome we just minted is unjoinable.
+                val previousLeaf = tree.getLeaf(myLeafIndex)
                 val newLeafNode =
                     buildLeafNode(
                         encryptionKey = newEncKp.publicKey,
                         signatureKey = Ed25519.publicFromPrivate(effectiveSigningKey),
                         identity =
-                            (tree.getLeaf(myLeafIndex)?.credential as? Credential.Basic)?.identity
+                            (previousLeaf?.credential as? Credential.Basic)?.identity
                                 ?: ByteArray(0),
                         source = LeafNodeSource.COMMIT,
                         signingKey = effectiveSigningKey,
                         groupId = groupId,
                         leafIndex = myLeafIndex,
                         parentHash = leafParentHash,
+                        capabilities = previousLeaf?.capabilities ?: marmotLeafCapabilities(),
+                        leafExtensions = previousLeaf?.extensions ?: emptyList(),
                     )
                 encryptionPrivateKey = newEncKp.privateKey
                 tree.setLeaf(myLeafIndex, newLeafNode)
@@ -3583,6 +3605,12 @@ class MlsGroup private constructor(
          * @param groupInfoBytes TLS-serialized GroupInfo
          * @param identity the joiner's identity
          * @param signingKey optional Ed25519 signing key (generated if null)
+         * @param capabilities the joiner leaf's capabilities. A current-profile
+         *   join MUST pass [currentProfileLeafCapabilities]; the default only
+         *   satisfies a legacy group's `required_capabilities`.
+         * @param leafExtensions the joiner leaf's extensions. A current-profile
+         *   join MUST pass the `app_data_dictionary` carrying its account
+         *   identity proof — leaf extensions cannot be added after the fact.
          * @return the new MlsGroup along with the raw inner commit bytes and a
          *   wire-ready PublicMessage envelope. Existing group members consume
          *   the framed bytes via [MlsGroup.processFramedCommit].
@@ -3591,6 +3619,8 @@ class MlsGroup private constructor(
             groupInfoBytes: ByteArray,
             identity: ByteArray,
             signingKey: ByteArray? = null,
+            capabilities: Capabilities = marmotLeafCapabilities(),
+            leafExtensions: List<Extension> = emptyList(),
         ): ExternalJoinResult {
             val groupInfo = GroupInfo.decodeTls(TlsReader(groupInfoBytes))
             val groupContext = groupInfo.groupContext
@@ -3655,6 +3685,8 @@ class MlsGroup private constructor(
                     signingKey = sigKp.privateKey,
                     groupId = groupContext.groupId,
                     leafIndex = tree.leafCount,
+                    capabilities = capabilities,
+                    leafExtensions = leafExtensions,
                 )
             val myLeafIndex = tree.addLeaf(placeholderLeaf)
 
@@ -3717,6 +3749,8 @@ class MlsGroup private constructor(
                     groupId = groupContext.groupId,
                     leafIndex = myLeafIndex,
                     parentHash = extLeafParentHash,
+                    capabilities = capabilities,
+                    leafExtensions = leafExtensions,
                 )
             tree.setLeaf(myLeafIndex, leafNode)
 
