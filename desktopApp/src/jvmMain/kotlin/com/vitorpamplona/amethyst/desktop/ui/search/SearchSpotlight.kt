@@ -62,13 +62,22 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
+import com.vitorpamplona.amethyst.commons.search.UserSearchEngine
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
 import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
+import com.vitorpamplona.amethyst.commons.ui.search.rememberChipNames
+import com.vitorpamplona.amethyst.commons.ui.search.rememberPersonCandidates
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.search.DesktopRelayUserSearchDelegate
+import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.theme.hoverHighlight
 
 @Composable
 fun SearchSpotlight(
+    localCache: DesktopLocalCache,
+    relayManager: DesktopRelayConnectionManager,
     onSelectProfile: (String) -> Unit,
     onSelectNote: (String) -> Unit,
     onSelectHashtag: (String) -> Unit,
@@ -78,6 +87,19 @@ fun SearchSpotlight(
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val fieldState = remember { SearchFieldState() }
+
+    // The people a half-written `from:`/`to:` token offers, and the names their finished
+    // chips draw. Same engine the full search screen uses: cache hits first, then whatever
+    // the account's search relays answer with.
+    val searchRelays by LocalRelayCategories.current.searchRelays.collectAsState()
+    val userSearch =
+        remember(relayManager, localCache) {
+            UserSearchEngine(localCache, scope).apply {
+                relayDelegate = DesktopRelayUserSearchDelegate(relayManager, localCache, { searchRelays }, scope)
+            }
+        }
+    val personCandidates = rememberPersonCandidates(userSearch)
+    val chipNames = rememberChipNames(userSearch)
 
     val history by SearchHistoryStore.history.collectAsState()
     val savedSearches by SearchHistoryStore.savedSearches.collectAsState()
@@ -130,7 +152,11 @@ fun SearchSpotlight(
                 ) {
                     // Search input
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                        // Top, not centre: the picker opens *below* the field inside the
+                        // same column, and centring would drag the leading icon halfway
+                        // down it. With no picker up the two are the same height, so the
+                        // resting layout is unchanged.
+                        verticalAlignment = Alignment.Top,
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                     ) {
                         Icon(
@@ -148,6 +174,9 @@ fun SearchSpotlight(
                             modifier = Modifier.weight(1f),
                             fieldModifier = Modifier.focusRequester(focusRequester),
                             placeholder = "Search notes, profiles, hashtags...",
+                            people = personCandidates,
+                            displayName = chipNames,
+                            onPeopleQuery = { userSearch.search(it) },
                             textStyle = MaterialTheme.typography.bodyLarge,
                             onSubmit = { onOpenFullSearch(fieldState.text) },
                         )
