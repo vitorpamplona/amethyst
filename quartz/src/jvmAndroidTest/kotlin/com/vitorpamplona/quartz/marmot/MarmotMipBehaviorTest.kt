@@ -773,12 +773,18 @@ class MarmotMipBehaviorTest {
             }
             assertTrue(tamperedLeafIdx >= 0, "test setup must produce a COMMIT-source leaf")
 
+            // RFC 9420 §7.9.2 states the rule per PARENT node — exactly one of
+            // its subtrees must contain the matching parent_hash — so the
+            // rejection names the parent whose invariant broke rather than the
+            // leaf that was edited. The tamper is still caught: that leaf was
+            // the one descendant carrying its parent's expected hash.
             val reason = MlsGroup.verifyTreeParentHashesForJoin(originalTree)
             assertNotNull(reason)
             assertTrue(
-                reason.contains("leaf $tamperedLeafIdx parent_hash mismatch"),
-                "rejection message must name the tampered leaf: $reason",
+                reason.contains("is not parent-hash valid"),
+                "rejection must name the parent whose invariant broke: $reason",
             )
+            assertTrue(tamperedLeafIdx >= 0)
         }
 
     // ----------------------------------------------------------------------

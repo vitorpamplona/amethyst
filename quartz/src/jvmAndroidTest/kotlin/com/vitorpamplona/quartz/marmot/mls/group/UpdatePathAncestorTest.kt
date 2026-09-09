@@ -127,6 +127,61 @@ class UpdatePathAncestorTest {
             bob.exporterSecret("marmot", "group-event".encodeToByteArray(), 32),
         )
     }
+
+    /**
+     * The case MDK actually produced, and the one no two-party test can reach.
+     *
+     * A Commit's UpdatePath refreshes every node from the committer's leaf to
+     * the root, and a refreshed node has no unmerged leaves — so a member added
+     * by that same Commit is MERGED at their common ancestor the instant it
+     * joins. RFC 9420 §12.4.1 also excludes newly-added leaves from the copath
+     * resolution, so that ancestor's secret is not in the UpdatePath at all.
+     * The only place it exists is `GroupSecrets.path_secret` (§12.4.3.1).
+     *
+     * Drop it and the joiner holds nothing above its own leaf. The next commit
+     * from the OTHER side of the tree resolves the joiner's sibling subtree to
+     * that merged ancestor, and the joiner cannot decrypt it — which is exactly
+     * what MDK produced: `resolution=[1], held_path_nodes=[]`.
+     */
+    @Test
+    fun aJoinerDerivesItsMergedAncestorKeyFromTheWelcomePathSecret() {
+        val alice = MlsGroup.create(identity = ByteArray(32) { 0x0a })
+        val bobBundle = bundleFor(0x0b)
+        val carolBundle = bundleFor(0x0c)
+        val daveBundle = bundleFor(0x0d)
+
+        alice.proposeAdd(bobBundle.keyPackage.toTlsBytes())
+        val addBob = alice.commit()
+        val bob = MlsGroup.processWelcome(assertNotNull(addBob.welcomeBytes), bobBundle)
+
+        alice.proposeAdd(carolBundle.keyPackage.toTlsBytes())
+        val addCarol = alice.commit()
+        bob.processFramedCommit(addCarol.framedCommitBytes)
+        val carol = MlsGroup.processWelcome(assertNotNull(addCarol.welcomeBytes), carolBundle)
+
+        // Dave is added by CAROL, his own sibling. Their common ancestor is the
+        // parent of their two leaves, and Carol's UpdatePath refreshes it — so
+        // Dave is merged there on arrival and gets that node's secret only
+        // through the Welcome.
+        carol.proposeAdd(daveBundle.keyPackage.toTlsBytes())
+        val addDave = carol.commit()
+        alice.processFramedCommit(addDave.framedCommitBytes)
+        bob.processFramedCommit(addDave.framedCommitBytes)
+        val dave = MlsGroup.processWelcome(assertNotNull(addDave.welcomeBytes), daveBundle)
+
+        // A commit from the other subtree. Dave's sibling subtree resolves to
+        // the merged ancestor, so this addresses Dave there, not at his leaf.
+        val aliceCommit = alice.commit()
+        bob.processFramedCommit(aliceCommit.framedCommitBytes)
+        carol.processFramedCommit(aliceCommit.framedCommitBytes)
+        dave.processFramedCommit(aliceCommit.framedCommitBytes)
+
+        assertEquals(alice.epoch, dave.epoch)
+        assertContentEquals(
+            alice.exporterSecret("marmot", "group-event".encodeToByteArray(), 32),
+            dave.exporterSecret("marmot", "group-event".encodeToByteArray(), 32),
+        )
+    }
 }
 
 private object MlsGroupStateCodec {

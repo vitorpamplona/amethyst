@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
+import com.vitorpamplona.quartz.marmot.mls.tree.PathSecretAndKey
 import com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.marmot.mls.tree.UpdatePathNode
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -938,7 +939,7 @@ class MlsGroup private constructor(
         // Build Welcome for added members
         val welcomeBytes =
             if (addedMembers.isNotEmpty()) {
-                buildWelcome(addedMembers)
+                buildWelcome(addedMembers, pathSecrets)
             } else {
                 null
             }
@@ -2849,7 +2850,34 @@ class MlsGroup private constructor(
         groupContext = groupContext.copy(extensions = newExtensions)
     }
 
-    private fun buildWelcome(addedMembers: List<Pair<Int, MlsKeyPackage>>): ByteArray {
+    /**
+     * Lowest common ancestor of [myLeafIndex] and [otherLeafIndex] expressed as
+     * an index INTO our own direct path, or -1 when there is none.
+     *
+     * Our direct path runs leaf-ward to root-ward, so the first node it shares
+     * with the other leaf's direct path is their lowest common ancestor — and
+     * its position is also the index of that node's path secret in
+     * `derivePathSecrets`, which walks the same list.
+     */
+    private fun directPathIndexOfAncestorWith(otherLeafIndex: Int): Int {
+        val mine = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+        val theirs = BinaryTree.directPath(otherLeafIndex, tree.leafCount).toSet()
+        return mine.indexOfFirst { it in theirs }
+    }
+
+    /**
+     * @param committerPathSecrets the path secrets this commit minted for the
+     *   committer's own direct path, in direct-path order. RFC 9420 §12.4.3.1:
+     *   when the Commit carries an UpdatePath, each new member's GroupSecrets
+     *   MUST carry the path secret at the lowest common ancestor of that
+     *   member's leaf and the committer's. Without it the joiner holds no key
+     *   for any ancestor, and the FIRST later commit that addresses it at one —
+     *   which is every commit once its subtree is merged — is undecryptable.
+     */
+    private fun buildWelcome(
+        addedMembers: List<Pair<Int, MlsKeyPackage>>,
+        committerPathSecrets: List<PathSecretAndKey>,
+    ): ByteArray {
         // Add ratchet tree as GroupInfo extension (RFC 9420 Section 12.4.3.3)
         val treeWriter = TlsWriter()
         tree.encodeTls(treeWriter)
@@ -2905,10 +2933,11 @@ class MlsGroup private constructor(
         // Build per-member encrypted group secrets
         val secrets =
             addedMembers.map { (leafIdx, kp) ->
+                val ancestorIdx = directPathIndexOfAncestorWith(leafIdx)
                 val groupSecrets =
                     GroupSecrets(
                         joinerSecret = epochSecrets.joinerSecret,
-                        pathSecret = null,
+                        pathSecret = committerPathSecrets.getOrNull(ancestorIdx)?.pathSecret,
                     )
                 val gsBytes = groupSecrets.toTlsBytes()
 
@@ -3279,101 +3308,70 @@ class MlsGroup private constructor(
         }
 
         /**
-         * RFC 9420 §7.9 parent_hash chain verification for a STATIC tree —
-         * specifically, the ratchet_tree extension a joiner reconstructs
-         * from a Welcome's GroupInfo. Without this, a malicious or
-         * misconfigured GroupInfo signer could ship a tree whose stored
-         * parent_hash values are inconsistent with the actual tree shape;
-         * peers that DO validate would reject every commit produced from
-         * this tree, but the joiner wouldn't notice until the next epoch
-         * silently rolled back.
+         * RFC 9420 §7.9.2 "Verifying Parent Hashes", over the STATIC tree a
+         * joiner reconstructs from a Welcome's GroupInfo.
          *
-         * For each leaf with `source == COMMIT` (the only source that
-         * carries a parent_hash payload), recompute the parent_hash chain
-         * top-down on the leaf's filtered direct path and verify the
-         * leaf's stored parent_hash matches what the chain produces.
-         *
+         * Without it a malicious or misconfigured GroupInfo signer could ship
+         * a tree whose stored parent_hash values do not match its shape; peers
+         * that DO validate would reject every commit produced from it, and the
+         * joiner would not notice until an epoch silently rolled back.
          * Returns `null` on success, or a human-readable failure reason.
-         * Skips KEY_PACKAGE and UPDATE leaves — those don't carry a
-         * meaningful parent_hash on the wire.
+         *
+         * The rule is per PARENT node, not per leaf: for each non-blank parent
+         * P, EXACTLY ONE of its two subtrees must contain a node whose
+         * `parent_hash` equals `ParentHash(P, other_subtree)`. That node is the
+         * child the committer descended through when it set P; the other
+         * subtree supplies the sibling hash.
+         *
+         * We used to re-derive every COMMIT-source leaf's `parent_hash`
+         * top-down from the CURRENT tree and demand a match. That is a much
+         * stronger claim than the RFC makes, and a false one: a later commit
+         * refreshes ancestors and a later Add changes the tree's shape, so a
+         * leaf set two epochs ago legitimately no longer re-derives. It
+         * rejected every tree where the inviter was not the last committer —
+         * in practice, every group invitation sent by anyone but the creator.
+         *
+         * Both sibling hashes and both resolutions exclude P's
+         * `unmerged_leaves`: those are precisely the leaves added after P was
+         * populated, so removing them reconstructs the tree as P's author saw
+         * it.
          */
         internal fun verifyTreeParentHashesForJoin(tree: RatchetTree): String? {
             if (tree.leafCount == 0) return null
-            val nodeCount = BinaryTree.nodeCount(tree.leafCount)
-            for (leafIdx in 0 until tree.leafCount) {
-                val leaf = tree.getLeaf(leafIdx) ?: continue
-                if (leaf.leafNodeSource != LeafNodeSource.COMMIT) continue
-                val expected = computeStaticLeafParentHash(tree, leafIdx, nodeCount)
-                val stored = leaf.parentHash ?: ByteArray(0)
-                if (!stored.contentEquals(expected)) {
-                    return "leaf $leafIdx parent_hash mismatch (stored=${stored.size}B, expected=${expected.size}B)"
+            for (parentIdx in tree.parentNodeIndices()) {
+                val key = tree.parentEncryptionKeyOf(parentIdx) ?: continue
+                val storedParentHash = tree.parentHashOf(parentIdx) ?: ByteArray(0)
+                val excluded = tree.unmergedLeavesOf(parentIdx)
+                val leftIdx = BinaryTree.left(parentIdx)
+                val rightIdx = BinaryTree.right(parentIdx)
+
+                fun hashWithSibling(siblingIdx: Int) =
+                    MlsCryptoProvider.hash(
+                        encodeParentHashInput(
+                            encryptionKey = key,
+                            parentHash = storedParentHash,
+                            originalSiblingTreeHash = tree.originalTreeHash(siblingIdx, excluded),
+                        ),
+                    )
+
+                val expectedInLeft = hashWithSibling(rightIdx)
+                val expectedInRight = hashWithSibling(leftIdx)
+
+                val foundLeft =
+                    tree.resolutionExcluding(leftIdx, excluded).any {
+                        tree.parentHashOf(it)?.contentEquals(expectedInLeft) == true
+                    }
+                val foundRight =
+                    tree.resolutionExcluding(rightIdx, excluded).any {
+                        tree.parentHashOf(it)?.contentEquals(expectedInRight) == true
+                    }
+
+                if (foundLeft == foundRight) {
+                    return "parent node $parentIdx is not parent-hash valid " +
+                        "(matched left=$foundLeft right=$foundRight)"
                 }
             }
             return null
-        }
-
-        /**
-         * Top-down recomputation of the parent_hash that a COMMIT-source
-         * leaf at [leafIdx] should carry, given the current tree shape.
-         * Mirrors [computeSenderParentHashes] but uses
-         * [RatchetTree.treeHashNode] for sibling tree hashes (no
-         * pre-update / post-update distinction in static validation).
-         */
-        private fun computeStaticLeafParentHash(
-            tree: RatchetTree,
-            leafIdx: Int,
-            nodeCount: Int,
-        ): ByteArray {
-            val (filteredDp, _) = tree.filteredDirectPath(leafIdx)
-            if (filteredDp.isEmpty()) return ByteArray(0)
-
-            // Walk top-down from root, propagating the expected parent_hash.
-            val hashes = mutableMapOf<Int, ByteArray>()
-            hashes[filteredDp.last()] = ByteArray(0)
-            for (i in filteredDp.size - 2 downTo 0) {
-                val xIdx = filteredDp[i]
-                val parentIdx = filteredDp[i + 1]
-                val parentNode = tree.getNode(parentIdx)
-                if (parentNode !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
-                    hashes[xIdx] = ByteArray(0)
-                    continue
-                }
-                // x's sibling under parent — parent has children left/right;
-                // sibling is whichever isn't x's ancestor.
-                val left = BinaryTree.left(parentIdx)
-                val right = BinaryTree.right(parentIdx)
-                val siblingIdx = if (xIdx == left) right else left
-                val siblingTreeHash = tree.treeHashNode(siblingIdx)
-                hashes[xIdx] =
-                    MlsCryptoProvider.hash(
-                        encodeParentHashInput(
-                            encryptionKey = parentNode.parentNode.encryptionKey,
-                            parentHash = hashes[parentIdx] ?: ByteArray(0),
-                            originalSiblingTreeHash = siblingTreeHash,
-                        ),
-                    )
-            }
-
-            // The leaf's expected parent_hash is the chain value AT the
-            // immediate parent (filteredDp[0]) — same convention as the
-            // committer-side computation in [computeSenderParentHashes].
-            val immediateParentIdx = filteredDp.first()
-            val immediateParent = tree.getNode(immediateParentIdx)
-            if (immediateParent !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
-                return ByteArray(0)
-            }
-            // Sibling of the leaf's node at the immediate parent.
-            val leafNodeIdx = BinaryTree.leafToNode(leafIdx)
-            val left = BinaryTree.left(immediateParentIdx)
-            val right = BinaryTree.right(immediateParentIdx)
-            val leafSiblingIdx = if (leafNodeIdx == left) right else left
-            return MlsCryptoProvider.hash(
-                encodeParentHashInput(
-                    encryptionKey = immediateParent.parentNode.encryptionKey,
-                    parentHash = hashes[immediateParentIdx] ?: ByteArray(0),
-                    originalSiblingTreeHash = tree.treeHashNode(leafSiblingIdx),
-                ),
-            )
         }
 
         /**
@@ -3760,17 +3758,31 @@ class MlsGroup private constructor(
             interimInput.putOpaqueVarInt(confirmationTag)
             val interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
 
-            return MlsGroup(
-                groupContext = groupContext,
-                tree = tree,
-                myLeafIndex = myLeafIndex,
-                epochSecrets = epochSecrets,
-                secretTree = secretTree,
-                initSecret = epochSecrets.initSecret,
-                signingPrivateKey = bundle.signaturePrivateKey,
-                encryptionPrivateKey = bundle.encryptionPrivateKey,
-                interimTranscriptHash = interimTranscriptHash,
-            )
+            // RFC 9420 §12.4.3.1: when the Commit that added us carried an
+            // UpdatePath, GroupSecrets carries the path secret at the lowest
+            // common ancestor of our leaf and the committer's. Deriving our
+            // direct-path keys from it is not optional bookkeeping — our
+            // subtree is already MERGED in the tree this Welcome hands us, so
+            // the very next commit addresses us at an ancestor, and a joiner
+            // that dropped this secret cannot decrypt a single one of them.
+            val joined =
+                MlsGroup(
+                    groupContext = groupContext,
+                    tree = tree,
+                    myLeafIndex = myLeafIndex,
+                    epochSecrets = epochSecrets,
+                    secretTree = secretTree,
+                    initSecret = epochSecrets.initSecret,
+                    signingPrivateKey = bundle.signaturePrivateKey,
+                    encryptionPrivateKey = bundle.encryptionPrivateKey,
+                    interimTranscriptHash = interimTranscriptHash,
+                )
+            groupSecrets.pathSecret?.let { pathSecret ->
+                val ancestorIdx = joined.directPathIndexOfAncestorWith(groupInfo.signer)
+                val fullPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+                fullPath.getOrNull(ancestorIdx)?.let { joined.rememberPathKeys(it, pathSecret) }
+            }
+            return joined
         }
 
         /**
