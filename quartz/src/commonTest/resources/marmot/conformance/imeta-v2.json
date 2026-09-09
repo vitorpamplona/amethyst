@@ -1,0 +1,250 @@
+{
+  "schema": "mdk-encrypted-media-imeta-fixture/v1",
+  "description": "Golden and rejection imeta fixtures for encrypted-media-v2. Shared by marmot-app, marmot-uniffi, and wn-cli tests so every layer agrees on validation verdicts and exact wire round-trips. `expected.dim`/`expected.thumbhash` distinguish absent (null) from present-empty (\"\").",
+  "media_version": "encrypted-media-v2",
+  "cases": [
+    {
+      "name": "golden-image-full",
+      "source_epoch": 9,
+      "valid": true,
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m image/jpeg",
+        "filename photo.jpg",
+        "dim 1920x1080",
+        "thumbhash 1QcSHQRnh493V4dIh4eXh1h4kJUI"
+      ],
+      "expected": {
+        "version": "encrypted-media-v2",
+        "locators": [
+          {
+            "kind": "blossom-v1",
+            "value": "https://media.example/abababababababababababababababababababababababababababababababab.bin"
+          }
+        ],
+        "ciphertext_sha256": "abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce_hex": "efefefefefefefefefefefef",
+        "media_type": "image/jpeg",
+        "file_name": "photo.jpg",
+        "dim": "1920x1080",
+        "thumbhash": "1QcSHQRnh493V4dIh4eXh1h4kJUI"
+      }
+    },
+    {
+      "name": "golden-audio-minimal",
+      "source_epoch": 3,
+      "valid": true,
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/1212121212121212121212121212121212121212121212121212121212121212.bin",
+        "ciphertext_sha256 1212121212121212121212121212121212121212121212121212121212121212",
+        "plaintext_sha256 3434343434343434343434343434343434343434343434343434343434343434",
+        "nonce 565656565656565656565656",
+        "m audio/ogg",
+        "filename voice.ogg"
+      ],
+      "expected": {
+        "version": "encrypted-media-v2",
+        "locators": [
+          {
+            "kind": "blossom-v1",
+            "value": "https://media.example/1212121212121212121212121212121212121212121212121212121212121212.bin"
+          }
+        ],
+        "ciphertext_sha256": "1212121212121212121212121212121212121212121212121212121212121212",
+        "plaintext_sha256": "3434343434343434343434343434343434343434343434343434343434343434",
+        "nonce_hex": "565656565656565656565656",
+        "media_type": "audio/ogg",
+        "file_name": "voice.ogg",
+        "dim": null,
+        "thumbhash": null
+      }
+    },
+    {
+      "name": "golden-multi-locator",
+      "source_epoch": 12,
+      "valid": true,
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "locator mirror-v9 https://mirror.example/blob",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m video/mp4",
+        "filename clip.mp4"
+      ],
+      "expected": {
+        "version": "encrypted-media-v2",
+        "locators": [
+          {
+            "kind": "blossom-v1",
+            "value": "https://media.example/abababababababababababababababababababababababababababababababab.bin"
+          },
+          {
+            "kind": "mirror-v9",
+            "value": "https://mirror.example/blob"
+          }
+        ],
+        "ciphertext_sha256": "abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce_hex": "efefefefefefefefefefefef",
+        "media_type": "video/mp4",
+        "file_name": "clip.mp4",
+        "dim": null,
+        "thumbhash": null
+      }
+    },
+    {
+      "name": "golden-present-empty-dim",
+      "source_epoch": 5,
+      "valid": true,
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m image/jpeg",
+        "filename photo.jpg",
+        "dim "
+      ],
+      "expected": {
+        "version": "encrypted-media-v2",
+        "locators": [
+          {
+            "kind": "blossom-v1",
+            "value": "https://media.example/abababababababababababababababababababababababababababababababab.bin"
+          }
+        ],
+        "ciphertext_sha256": "abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce_hex": "efefefefefefefefefefefef",
+        "media_type": "image/jpeg",
+        "file_name": "photo.jpg",
+        "dim": "",
+        "thumbhash": null
+      }
+    },
+    {
+      "name": "golden-exact-space-filename",
+      "source_epoch": 5,
+      "valid": true,
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m image/jpeg",
+        "filename  "
+      ],
+      "expected": {
+        "version": "encrypted-media-v2",
+        "locators": [
+          {
+            "kind": "blossom-v1",
+            "value": "https://media.example/abababababababababababababababababababababababababababababababab.bin"
+          }
+        ],
+        "ciphertext_sha256": "abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce_hex": "efefefefefefefefefefefef",
+        "media_type": "image/jpeg",
+        "file_name": " ",
+        "dim": null,
+        "thumbhash": null
+      }
+    },
+    {
+      "name": "rejects-noncanonical-media-type",
+      "source_epoch": 9,
+      "valid": false,
+      "error_contains": "canonical",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m Image/JPG",
+        "filename photo.jpg"
+      ]
+    },
+    {
+      "name": "rejects-overlong-filename",
+      "source_epoch": 9,
+      "valid": false,
+      "error_contains": "file name",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m image/jpeg",
+        "filename aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ]
+    },
+    {
+      "name": "rejects-nul-in-filename",
+      "source_epoch": 9,
+      "valid": false,
+      "error_contains": "file name",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m image/jpeg",
+        "filename bad\u0000name.jpg"
+      ]
+    },
+    {
+      "name": "rejects-duplicate-plaintext-hash",
+      "source_epoch": 9,
+      "valid": false,
+      "error_contains": "exactly one plaintext_sha256",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v2",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m image/jpeg",
+        "filename photo.jpg",
+        "plaintext_sha256 3434343434343434343434343434343434343434343434343434343434343434"
+      ]
+    },
+    {
+      "name": "rejects-missing-version",
+      "source_epoch": 9,
+      "valid": false,
+      "error_contains": "missing v",
+      "tag": [
+        "imeta",
+        "locator blossom-v1 https://media.example/abababababababababababababababababababababababababababababababab.bin",
+        "ciphertext_sha256 abababababababababababababababababababababababababababababababab",
+        "plaintext_sha256 cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "nonce efefefefefefefefefefefef",
+        "m image/jpeg",
+        "filename photo.jpg"
+      ]
+    }
+  ]
+}
