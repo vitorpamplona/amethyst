@@ -115,6 +115,7 @@ import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -2452,6 +2453,29 @@ class AccountViewModel(
     }
 
     fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
+
+    /**
+     * True when this group carries the `encrypted-media-v2` policy (`0x800b`)
+     * and a sender should therefore produce v2 references.
+     *
+     * A group without it is not a licence to reinterpret the frozen v1 policy
+     * at `0x8008` as v2 — they are different components — so this is a plain
+     * "does the group say v2", and the sender falls back to MIP-04 when it
+     * does not.
+     */
+    fun marmotUsesEncryptedMediaV2(nostrGroupId: String): Boolean = account.marmotManager?.encryptedMediaPolicy(nostrGroupId) != null
+
+    /** Post the kind:9 carrying an `encrypted-media-v2` attachment. */
+    suspend fun sendMarmotGroupEncryptedMediaV2(
+        nostrGroupId: String,
+        reference: EncryptedMediaReferenceV2,
+        caption: String,
+    ) {
+        val manager = account.marmotManager ?: return
+        val bundle = manager.buildMediaMessage(nostrGroupId, reference, caption, persistOwn = false)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+    }
 
     suspend fun createMarmotGroup(
         nostrGroupId: String,

@@ -105,10 +105,42 @@ class EncryptedMediaV2Test {
             "https://a.example.com/?q=1",
             "https://a.example.com/#f",
             "https://A.EXAMPLE.COM/",
-            "https://a.example.com//double/",
             "https://a.example.com/../up/",
             "https:///",
         ).forEach { url ->
+            assertFailsWith<IllegalArgumentException>("expected '$url' to be rejected") {
+                EncryptedMediaPolicyV2(listOf("blossom-v1"), listOf(BlobStoreEndpointV2("blossom-v1", url)))
+            }
+        }
+    }
+
+    @Test
+    fun acceptsBaseUrlsTheWhatwgSerializerLeavesAlone() {
+        // An empty path segment is NOT collapsed by the WHATWG serializer — the
+        // path is a segment list, and only "." and ".." are special. Rejecting
+        // a doubled slash therefore refuses group state the reference
+        // implementation produces and accepts, which is the exact failure mode
+        // this component's normalization rule exists to prevent.
+        //
+        // `http` is likewise valid here and not for avatars: the media policy
+        // permits it, and a self-hosted blob store on a private network is a
+        // real deployment.
+        listOf(
+            "https://a.example.com//double/",
+            "http://blobs.internal/",
+            "https://a.example.com:8443/blobs/",
+        ).forEach { url ->
+            EncryptedMediaPolicyV2(listOf("blossom-v1"), listOf(BlobStoreEndpointV2("blossom-v1", url)))
+        }
+    }
+
+    @Test
+    fun dropsNothingButRefusesToRepair() {
+        // The default port is absent from a normalized URL, so a stored value
+        // carrying it is non-normalized and refused rather than trimmed. A
+        // decoder that repaired it would hold different bytes than the peer
+        // that stored them.
+        listOf("https://a.example.com:443/", "http://a.example.com:80/").forEach { url ->
             assertFailsWith<IllegalArgumentException>("expected '$url' to be rejected") {
                 EncryptedMediaPolicyV2(listOf("blossom-v1"), listOf(BlobStoreEndpointV2("blossom-v1", url)))
             }

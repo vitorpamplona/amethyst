@@ -73,7 +73,7 @@ class GroupAvatarUrlV1Test {
             )
 
         for ((raw, expected) in vectors) {
-            assertEquals("normalizing $raw", expected, MarmotHttpsUrl.normalize(raw))
+            assertEquals("normalizing $raw", expected, MarmotWebUrl.normalize(raw))
         }
     }
 
@@ -86,8 +86,8 @@ class GroupAvatarUrlV1Test {
             "https://cdn.example.com/%7euser/a b.png",
             "https://[2001:DB8::1]:8443/",
         )) {
-            val once = MarmotHttpsUrl.normalize(raw)
-            assertEquals(once, MarmotHttpsUrl.normalize(once))
+            val once = MarmotWebUrl.normalize(raw)
+            assertEquals(once, MarmotWebUrl.normalize(once))
         }
     }
 
@@ -106,7 +106,7 @@ class GroupAvatarUrlV1Test {
             "",
         )) {
             assertThrows("must reject $bad", IllegalArgumentException::class.java) {
-                MarmotHttpsUrl.normalize(bad)
+                MarmotWebUrl.normalize(bad)
             }
         }
     }
@@ -122,14 +122,14 @@ class GroupAvatarUrlV1Test {
             "https://10.0.0.1/avatar.png",
             "https://[::1]/avatar.png",
         )) {
-            MarmotHttpsUrl.normalize(raw)
+            MarmotWebUrl.normalize(raw)
         }
-        assertTrue(MarmotHttpsUrl.isSafeToContact("https://cdn.example.com/a.png"))
-        assertTrue(!MarmotHttpsUrl.isSafeToContact("https://localhost/a.png"))
-        assertTrue(!MarmotHttpsUrl.isSafeToContact("https://127.0.0.1/a.png"))
-        assertTrue(!MarmotHttpsUrl.isSafeToContact("https://10.0.0.1/a.png"))
-        assertTrue(!MarmotHttpsUrl.isSafeToContact("https://192.168.1.1/a.png"))
-        assertTrue(!MarmotHttpsUrl.isSafeToContact("https://[::1]/a.png"))
+        assertTrue(MarmotWebUrl.isSafeToContact("https://cdn.example.com/a.png"))
+        assertTrue(!MarmotWebUrl.isSafeToContact("https://localhost/a.png"))
+        assertTrue(!MarmotWebUrl.isSafeToContact("https://127.0.0.1/a.png"))
+        assertTrue(!MarmotWebUrl.isSafeToContact("https://10.0.0.1/a.png"))
+        assertTrue(!MarmotWebUrl.isSafeToContact("https://192.168.1.1/a.png"))
+        assertTrue(!MarmotWebUrl.isSafeToContact("https://[::1]/a.png"))
     }
 
     @Test
@@ -140,7 +140,7 @@ class GroupAvatarUrlV1Test {
         // punycode and a raw Unicode host is non-normalized anyway.
         val failure =
             assertThrows(IllegalArgumentException::class.java) {
-                MarmotHttpsUrl.normalize("https://bücher.example/a.png")
+                MarmotWebUrl.normalize("https://bücher.example/a.png")
             }
         assertTrue(failure.message.orEmpty().contains("punycode"))
     }
@@ -197,7 +197,7 @@ class GroupAvatarUrlV1Test {
     @Test
     fun theBoundsAreEnforcedOnBothFields() {
         val longPath = "https://cdn.example.com/" + "a".repeat(2100)
-        assertThrows(IllegalArgumentException::class.java) { MarmotHttpsUrl.normalize(longPath) }
+        assertThrows(IllegalArgumentException::class.java) { MarmotWebUrl.normalize(longPath) }
         assertThrows(IllegalArgumentException::class.java) {
             GroupAvatarUrlV1(url = "https://cdn.example.com/a.png", dim = ByteArray(257)).encode()
         }

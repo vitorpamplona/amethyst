@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
-import com.vitorpamplona.quartz.marmot.appComponents.MarmotHttpsUrl
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -118,7 +118,7 @@ fun rememberMarmotGroupAvatarUrl(
 ): String? {
     val link =
         remember(avatarUrl) {
-            avatarUrl?.url?.takeIf { it.isNotEmpty() && MarmotHttpsUrl.isSafeToContact(it) }
+            avatarUrl?.url?.takeIf { it.isNotEmpty() && MarmotWebUrl.isSafeToContact(it) }
         }
     // Branch rather than resolving both: the Blossom path registers a
     // decryption cipher and probes servers as a side effect, and neither is

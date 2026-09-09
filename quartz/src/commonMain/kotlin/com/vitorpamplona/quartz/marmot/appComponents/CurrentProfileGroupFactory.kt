@@ -64,19 +64,17 @@ object CurrentProfileGroupFactory {
      * later as a group we cannot actually participate in. Add an id here only
      * when the component is implemented.
      *
-     * `0x8006` (agent-text-stream over QUIC) is listed for the RECEIVE role
-     * only, which is what [MlsGroup.currentProfileLeafCapabilities] advertises:
-     * we decode the group's policy, derive the per-stream record keys, open
-     * records and fold the transcript. We do not advertise the `send`
-     * (`0xF2D2`) or `fanout` (`0xF2D4`) capabilities, because publishing needs
-     * durable per-stream sequence state to avoid reusing an AEAD nonce across
-     * a restart, and we have none.
+     * `0x8006` (agent-text-stream over QUIC) is listed for every role
+     * [MlsGroup.currentProfileLeafCapabilities] advertises — receive, send and
+     * fanout. Publishing needs durable per-stream sequence state so a restart
+     * cannot reuse an AEAD nonce, and that store exists.
      */
     val SUPPORTED_COMPONENTS: List<Int> =
         listOf(
             ComponentsList.APP_COMPONENTS_ID,
             AppComponentIds.GROUP_PROFILE_V1,
             AppComponentIds.GROUP_BLOSSOM_IMAGE_V1,
+            AppComponentIds.GROUP_AVATAR_URL_V1,
             AppComponentIds.ADMIN_POLICY_V1,
             AppComponentIds.NOSTR_ROUTING_V1,
             AppComponentIds.MESSAGE_RETENTION_V1,
@@ -176,6 +174,19 @@ object CurrentProfileGroupFactory {
         profile: GroupProfileV1? = null,
         additionalAdmins: List<ByteArray> = emptyList(),
         retention: MessageRetentionV1? = null,
+        /**
+         * The media policy (`0x800b`), off by default.
+         *
+         * The component is "required for new app groups under a media-capable
+         * application profile", but that is application-profile policy rather
+         * than something epoch 0 has to carry — and the reference
+         * implementation's own epoch-0 GroupContext does not carry it. Putting
+         * it there unasked would make our group context differ from the
+         * reference's for the same inputs AND would require every joiner to
+         * advertise `0x800b` before it could be added. A group that wants a
+         * media policy commits one, which is also how it gets changed later.
+         */
+        encryptedMedia: EncryptedMediaPolicyV2? = null,
         agentTextStream: AgentTextStreamQuicPolicyV1? = null,
         ciphersuite: MlsCiphersuite = MlsCiphersuite.DEFAULT,
     ): MlsGroup {
@@ -188,6 +199,7 @@ object CurrentProfileGroupFactory {
                 routing = NostrRoutingV1.of(nostrGroupId, relays),
                 profile = profile,
                 retention = retention,
+                encryptedMedia = encryptedMedia,
                 lifecycle = GroupLifecycleV1.ACTIVE,
                 agentTextStream = agentTextStream,
             )

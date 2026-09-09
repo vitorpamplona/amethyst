@@ -29,6 +29,11 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2Cipher
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotMediaType
+import com.vitorpamplona.quartz.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04NostrCipher
 
 /**
@@ -44,6 +49,16 @@ class Mip04UploadResult(
     val blurhash: String?,
     val caption: String?,
     val thumbhash: String? = null,
+    /**
+     * The `encrypted-media-v2` reference, when the group's policy asked for
+     * one. Null means this upload is a MIP-04 attachment and the fields above
+     * are what builds its tag.
+     *
+     * The two are carried together rather than as two result types because the
+     * upload pipeline is identical — only the cipher and the tag differ — and
+     * the choice belongs to the group, not to the uploader.
+     */
+    val encryptedMediaV2: EncryptedMediaReferenceV2? = null,
 )
 
 /**
@@ -60,6 +75,11 @@ class MarmotFileUploader(
         exporterSecret: ByteArray,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        /**
+         * Produce `encrypted-media-v2` references instead of MIP-04 ones.
+         * Decided by the group's policy component, not by the uploader.
+         */
+        useEncryptedMediaV2: Boolean = false,
         onceUploaded: suspend (List<Mip04UploadResult>) -> Unit,
     ) {
         val multiOrchestrator = viewState.multiOrchestrator ?: return
@@ -75,7 +95,14 @@ class MarmotFileUploader(
             val mimeType = media.mimeType ?: "application/octet-stream"
             val filename = resolveFilename(context, media.uri, mimeType)
 
-            val cipher = Mip04NostrCipher(exporterSecret, mimeType, filename)
+            // v2 puts `m` inside both the key derivation and the AEAD
+            // associated data, so it has to be the canonical form and not
+            // whatever the content resolver reported. A type that will not
+            // canonicalize falls back to MIP-04 for this file rather than
+            // producing a reference no receiver can key.
+            val canonicalMediaType = if (useEncryptedMediaV2) MarmotMediaType.canonicalize(mimeType) else null
+            val v2Cipher = canonicalMediaType?.let { EncryptedMediaV2Cipher(exporterSecret, it, filename) }
+            val cipher = v2Cipher ?: Mip04NostrCipher(exporterSecret, mimeType, filename)
 
             item.orchestrator.uploadEncrypted(
                 uri = media.uri,
@@ -93,17 +120,38 @@ class MarmotFileUploader(
             val state = item.orchestrator.progressState.value
             if (state is UploadingState.Finished && state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                 val serverResult = state.result
+                // The reference is built from what the cipher recorded while
+                // encrypting the bytes the pipeline actually uploaded — after
+                // compression and metadata stripping — because that is what the
+                // key was derived from.
+                val reference =
+                    v2Cipher?.let {
+                        EncryptedMediaReferenceV2(
+                            locators =
+                                listOf(
+                                    MediaLocatorV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, serverResult.url),
+                                ),
+                            ciphertextSha256 = it.ciphertextSha256,
+                            plaintextSha256 = it.plaintextSha256,
+                            nonce = it.nonce,
+                            mediaType = it.mediaType,
+                            filename = filename,
+                            dim = serverResult.fileHeader.dim?.toString(),
+                            thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,
+                        )
+                    }
                 results.add(
                     Mip04UploadResult(
                         url = serverResult.url,
                         mimeType = mimeType,
                         filename = filename,
-                        originalFileHash = cipher.originalFileHash,
-                        nonce = cipher.nonce,
+                        originalFileHash = (cipher as? Mip04NostrCipher)?.originalFileHash ?: ByteArray(0),
+                        nonce = (cipher as? Mip04NostrCipher)?.nonce ?: ByteArray(0),
                         dimensions = serverResult.fileHeader.dim?.toString(),
                         blurhash = serverResult.fileHeader.blurHash?.blurhash,
                         caption = viewState.caption.ifEmpty { null },
                         thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,
+                        encryptedMediaV2 = reference,
                     ),
                 )
             } else {

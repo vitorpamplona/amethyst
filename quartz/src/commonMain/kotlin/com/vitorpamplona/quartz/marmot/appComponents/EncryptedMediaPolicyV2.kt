@@ -193,38 +193,36 @@ data class EncryptedMediaPolicyV2(
 
         /**
          * A base URL is normalized when it is byte-equal to its own
-         * parse-and-serialize output.
+         * parse-and-serialize output — the same WHATWG normalization
+         * `group-avatar-url-v1` defines, which is why it runs through the same
+         * serializer rather than a second hand-rolled approximation of it. Two
+         * approximations of one rule is how two components end up disagreeing
+         * about the same URL.
          *
-         * The checks below are the structural subset that decides validity for
-         * every member identically: scheme, no userinfo, a present host, and no
-         * query or fragment. Reachability and whether this client is willing to
-         * contact the host are LOCAL policy and must not influence whether the
-         * component bytes — or the Commit carrying them — are valid; otherwise
-         * one member's blocklist would fork the group.
+         * `http` is permitted here and not for avatars: the media policy says
+         * so explicitly, and a self-hosted blob store on a private network is
+         * a real deployment.
+         *
+         * A query or fragment is refused outright rather than serialized away.
+         * The serializer would happily keep a query, but the component says an
+         * endpoint carrying one is invalid, and dropping it would change where
+         * the group uploads.
+         *
+         * Reachability and whether this client is willing to contact the host
+         * are LOCAL policy and must not influence whether the component bytes —
+         * or the Commit carrying them — are valid; otherwise one member's
+         * blocklist would fork the group.
          */
         fun requireNormalizedBaseUrl(url: String) {
             val bytes = url.encodeToByteArray()
             require(bytes.isNotEmpty() && bytes.size <= MAX_BASE_URL_BYTES) {
                 "base_url must be 1..$MAX_BASE_URL_BYTES bytes, was ${bytes.size}"
             }
-            val scheme =
-                when {
-                    url.startsWith("https://") -> "https://"
-                    url.startsWith("http://") -> "http://"
-                    else -> throw IllegalArgumentException("base_url must be http or https: '$url'")
-                }
             require('#' !in url) { "base_url must not carry a fragment: '$url'" }
             require('?' !in url) { "base_url must not carry a query: '$url'" }
-
-            val afterScheme = url.substring(scheme.length)
-            val authority = afterScheme.substringBefore('/')
-            require(authority.isNotEmpty()) { "base_url has no host: '$url'" }
-            require('@' !in authority) { "base_url must not carry userinfo: '$url'" }
-            require(authority == authority.lowercase()) {
-                "base_url host is not normalized (lowercase): '$url'"
+            require(MarmotWebUrl.normalize(url, allowHttp = true, label = "base_url") == url) {
+                "base_url is not normalized: '$url'"
             }
-            require("//" !in afterScheme) { "base_url path is not normalized: '$url'" }
-            require(".." !in afterScheme) { "base_url path is not normalized: '$url'" }
         }
     }
 }

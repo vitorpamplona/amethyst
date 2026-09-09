@@ -21,18 +21,20 @@
 package com.vitorpamplona.quartz.marmot.appComponents
 
 /**
- * The `https`-only WHATWG URL normalizer Marmot group state needs.
+ * The WHATWG URL normalizer Marmot group state needs.
  *
  * This exists because normalization is part of the wire format, not a
  * convenience: `marmot.group.avatar-url.v1` stores the serialized form, and a
  * decoder "MUST reject state whose stored URL bytes differ from the
- * serializer's output". So this has to agree with every other implementation
- * byte for byte — too lax and we accept state a peer rejects, too strict and we
- * reject a group somebody else made.
+ * serializer's output". `marmot.group.encrypted-media.v2` says the same about
+ * its blob-store base URLs, and names this same normalization. So this has to
+ * agree with every other implementation byte for byte — too lax and we accept
+ * state a peer rejects, too strict and we reject a group somebody else made.
  *
- * It is not a general URL library. It handles exactly the shape the component
- * allows — `https`, a host, no userinfo, no fragment — and refuses everything
- * else rather than guessing.
+ * It is not a general URL library. It handles exactly the shapes the components
+ * allow — an `https` (or, where the component permits it, `http`) URL with a
+ * host, no userinfo and no fragment — and refuses everything else rather than
+ * guessing.
  *
  * **Known limit: no IDNA.** A host with non-ASCII characters is refused instead
  * of punycoded. That costs nothing on the decode side, where it matters: a
@@ -41,11 +43,11 @@ package com.vitorpamplona.quartz.marmot.appComponents
  * and must be rejected anyway. It only stops us from *accepting* a
  * Unicode-typed host from our own user, who can paste the punycode form.
  */
-object MarmotHttpsUrl {
+object MarmotWebUrl {
     const val MAX_BYTES = 2048
 
-    private const val SCHEME = "https://"
-    private const val DEFAULT_PORT = "443"
+    private const val HTTPS_DEFAULT_PORT = "443"
+    private const val HTTP_DEFAULT_PORT = "80"
 
     /**
      * Parse [raw] and return its WHATWG serialization.
@@ -53,50 +55,67 @@ object MarmotHttpsUrl {
      * @throws IllegalArgumentException when the URL is not a valid group-avatar
      *   URL, or when normalizing it would need something this does not do.
      */
-    fun normalize(raw: String): String {
-        require(raw.isNotEmpty()) { "avatar URL must not be empty" }
-        require(raw.encodeToByteArray().size <= MAX_BYTES) { "avatar URL exceeds $MAX_BYTES bytes" }
+    fun normalize(
+        raw: String,
+        /**
+         * Whether plain `http` is acceptable. Off by default because the
+         * avatar component is https-only; the media policy permits both, and
+         * that is a per-component rule rather than a global one.
+         */
+        allowHttp: Boolean = false,
+        /** What to call this URL in an error, e.g. "avatar URL". */
+        label: String = "URL",
+    ): String {
+        require(raw.isNotEmpty()) { "$label must not be empty" }
+        require(raw.encodeToByteArray().size <= MAX_BYTES) { "$label exceeds $MAX_BYTES bytes" }
 
         val schemeEnd = raw.indexOf("://")
-        require(schemeEnd > 0) { "avatar URL must be an absolute https URL" }
-        require(raw.substring(0, schemeEnd).lowercase() == "https") { "avatar URL scheme must be https" }
+        require(schemeEnd > 0) { "$label must be an absolute URL" }
+        val scheme = raw.substring(0, schemeEnd).lowercase()
+        require(scheme == "https" || (allowHttp && scheme == "http")) {
+            if (allowHttp) "$label scheme must be http or https" else "$label scheme must be https"
+        }
+        val defaultPort = if (scheme == "http") HTTP_DEFAULT_PORT else HTTPS_DEFAULT_PORT
 
         var rest = raw.substring(schemeEnd + 3)
-        require(!rest.contains('#')) { "avatar URL must not include a fragment" }
+        require(!rest.contains('#')) { "$label must not include a fragment" }
 
         // The authority runs to the first "/" or "?" — everything after is path
         // and query.
         val authorityEnd = rest.indexOfFirst { it == '/' || it == '?' }.let { if (it < 0) rest.length else it }
         val authority = rest.substring(0, authorityEnd)
         rest = rest.substring(authorityEnd)
-        require(!authority.contains('@')) { "avatar URL must not include credentials" }
-        require(authority.isNotEmpty()) { "avatar URL must include a host" }
+        require(!authority.contains('@')) { "$label must not include credentials" }
+        require(authority.isNotEmpty()) { "$label must include a host" }
 
         val (host, port) = splitHostPort(authority)
-        require(host.isNotEmpty()) { "avatar URL must include a host" }
+        require(host.isNotEmpty()) { "$label must include a host" }
         require(host.all { it.code < 0x80 }) {
-            "avatar URL host must be ASCII — encode an international host as punycode first"
+            "$label host must be ASCII — encode an international host as punycode first"
         }
 
         val queryStart = rest.indexOf('?')
         val rawPath = if (queryStart < 0) rest else rest.substring(0, queryStart)
         val rawQuery = if (queryStart < 0) null else rest.substring(queryStart + 1)
 
-        val out = StringBuilder(SCHEME)
+        val out = StringBuilder(scheme).append("://")
         out.append(host.lowercase())
-        if (port != null && port != DEFAULT_PORT) out.append(':').append(port)
+        if (port != null && port != defaultPort) out.append(':').append(port)
         out.append(normalizePath(rawPath))
         if (rawQuery != null) out.append('?').append(percentEncode(rawQuery, QUERY_KEEP))
 
         val normalized = out.toString()
-        require(normalized.encodeToByteArray().size <= MAX_BYTES) { "avatar URL exceeds $MAX_BYTES bytes" }
+        require(normalized.encodeToByteArray().size <= MAX_BYTES) { "$label exceeds $MAX_BYTES bytes" }
         return normalized
     }
 
     /** True when [normalize] accepts [raw] and returns it unchanged. */
-    fun isNormalized(raw: String): Boolean =
+    fun isNormalized(
+        raw: String,
+        allowHttp: Boolean = false,
+    ): Boolean =
         try {
-            normalize(raw) == raw
+            normalize(raw, allowHttp) == raw
         } catch (_: IllegalArgumentException) {
             false
         }
@@ -115,7 +134,7 @@ object MarmotHttpsUrl {
     fun isSafeToContact(raw: String): Boolean {
         val host =
             try {
-                hostOf(normalize(raw))
+                hostOf(normalize(raw, allowHttp = true))
             } catch (_: IllegalArgumentException) {
                 return false
             }
@@ -127,7 +146,7 @@ object MarmotHttpsUrl {
     }
 
     private fun hostOf(normalized: String): String {
-        val rest = normalized.substring(SCHEME.length)
+        val rest = normalized.substringAfter("://")
         val end = rest.indexOfFirst { it == '/' || it == '?' }.let { if (it < 0) rest.length else it }
         return splitHostPort(rest.substring(0, end)).first
     }

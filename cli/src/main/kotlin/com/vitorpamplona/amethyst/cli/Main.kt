@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
 import com.vitorpamplona.amethyst.cli.commands.KindCommand
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
 import com.vitorpamplona.amethyst.cli.commands.LogoffCommand
+import com.vitorpamplona.amethyst.cli.commands.MarmotMediaCommands
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
 import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
@@ -371,12 +372,13 @@ private suspend fun marmotDispatch(
     route(
         name = "marmot",
         tail = tail,
-        usage = "marmot <key-package|group|message|stream|await|reset>",
+        usage = "marmot <key-package|group|message|media|stream|await|reset>",
         routes =
             mapOf(
                 "key-package" to { rest -> KeyPackageCommands.dispatch(dataDir, rest) },
                 "group" to { rest -> GroupCommands.dispatch(dataDir, rest) },
                 "message" to { rest -> MessageCommands.dispatch(dataDir, rest) },
+                "media" to { rest -> MarmotMediaCommands.dispatch(dataDir, rest) },
                 "stream" to { rest -> StreamCommands.dispatch(dataDir, rest) },
                 "await" to { rest -> AwaitCommands.dispatch(dataDir, rest) },
                 "reset" to { rest -> MarmotResetCommand.run(dataDir, rest) },

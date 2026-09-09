@@ -58,6 +58,13 @@ data class MarmotGroupState(
     val image: GroupBlossomImageV1?,
     val avatarUrl: GroupAvatarUrlV1?,
     val retention: MessageRetentionV1?,
+    /**
+     * The group's media policy (`0x800b`). Null means the group has none, and
+     * a current-profile sender then has nowhere it is told to upload — it is
+     * not a licence to fall back to the frozen v1 policy at `0x8008`, which
+     * MUST NOT be reinterpreted as v2.
+     */
+    val encryptedMedia: EncryptedMediaPolicyV2?,
     val lifecycle: GroupLifecycleV1?,
     val agentTextStream: AgentTextStreamQuicPolicyV1?,
 ) {
@@ -116,6 +123,10 @@ data class MarmotGroupState(
                 image = dictionary[GroupBlossomImageV1.COMPONENT_ID]?.let { GroupBlossomImageV1.decode(it) },
                 avatarUrl = dictionary[GroupAvatarUrlV1.COMPONENT_ID]?.let { GroupAvatarUrlV1.decode(it) },
                 retention = dictionary[MessageRetentionV1.COMPONENT_ID]?.let { MessageRetentionV1.decode(it) },
+                encryptedMedia =
+                    dictionary[EncryptedMediaPolicyV2.COMPONENT_ID]?.let {
+                        EncryptedMediaPolicyV2.decode(it)
+                    },
                 lifecycle = dictionary[GroupLifecycleV1.COMPONENT_ID]?.let { GroupLifecycleV1.decode(it) },
                 agentTextStream =
                     dictionary[AgentTextStreamQuicPolicyV1.COMPONENT_ID]?.let {
@@ -139,6 +150,7 @@ data class MarmotGroupState(
             image: GroupBlossomImageV1? = null,
             avatarUrl: GroupAvatarUrlV1? = null,
             retention: MessageRetentionV1? = null,
+            encryptedMedia: EncryptedMediaPolicyV2? = null,
             lifecycle: GroupLifecycleV1? = GroupLifecycleV1.ACTIVE,
             agentTextStream: AgentTextStreamQuicPolicyV1? = null,
             extraRequiredComponents: Collection<Int> = emptyList(),
@@ -168,6 +180,10 @@ data class MarmotGroupState(
             retention?.let {
                 required.add(MessageRetentionV1.COMPONENT_ID)
                 dictionary = dictionary.with(MessageRetentionV1.COMPONENT_ID, it.encode())
+            }
+            encryptedMedia?.let {
+                required.add(EncryptedMediaPolicyV2.COMPONENT_ID)
+                dictionary = dictionary.with(EncryptedMediaPolicyV2.COMPONENT_ID, it.encode())
             }
             lifecycle?.let {
                 required.add(GroupLifecycleV1.COMPONENT_ID)

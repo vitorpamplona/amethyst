@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
-import com.vitorpamplona.quartz.marmot.appComponents.MarmotHttpsUrl
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -164,7 +164,7 @@ object GroupMetadataCommands {
         val avatar =
             try {
                 GroupAvatarUrlV1(
-                    url = MarmotHttpsUrl.normalize(url),
+                    url = MarmotWebUrl.normalize(url, label = "avatar URL"),
                     dim = dim?.encodeToByteArray() ?: ByteArray(0),
                     thumbhash = thumbhash?.encodeToByteArray() ?: ByteArray(0),
                 )

@@ -33,6 +33,9 @@ import com.vitorpamplona.quartz.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.WelcomeResult
 import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
@@ -1445,6 +1448,105 @@ class MarmotManager(
                 encoded,
             )
         }.event
+    }
+
+    /**
+     * Set or replace the group's encrypted-media policy (`0x800b`).
+     *
+     * The state is a FULL replacement, including both ordered lists — and
+     * `default_blob_endpoints` order is the upload/fetch fallback priority, so
+     * a caller reordering it is changing where the group uploads, not
+     * reformatting it.
+     *
+     * Current profile only. The frozen v1 policy at `0x8008` is a different
+     * component and MUST NOT be reinterpreted as v2, so there is no legacy
+     * carrier to fall back to here.
+     */
+    suspend fun setEncryptedMediaPolicy(
+        nostrGroupId: HexKey,
+        policy: EncryptedMediaPolicyV2,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent {
+        val view = groupView(nostrGroupId) ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        check(view.isCurrentProfile) {
+            "Group $nostrGroupId is a legacy MIP-01 group and has no carrier for an encrypted-media policy"
+        }
+        val encoded = policy.encode()
+        return commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageAppDataUpdate(nostrGroupId, EncryptedMediaPolicyV2.COMPONENT_ID, encoded)
+        }.event
+    }
+
+    /** The group's media policy, or null when it carries none. */
+    fun encryptedMediaPolicy(nostrGroupId: HexKey): EncryptedMediaPolicyV2? = groupState(nostrGroupId)?.encryptedMedia
+
+    /**
+     * Encrypt an attachment under the group's media secret
+     * (`MLS-Exporter("marmot", "encrypted-media", 32)`).
+     *
+     * The secret is the CURRENT epoch's. `source_epoch` is deliberately not a
+     * field of the reference: it is the epoch of the application message that
+     * carries the tag, so a sender must publish the message in the same epoch
+     * it encrypted under — which is what publishing right after this does.
+     */
+    fun encryptMedia(
+        nostrGroupId: HexKey,
+        plaintext: ByteArray,
+        mediaType: String,
+        filename: String,
+    ): EncryptedMediaV2.EncryptionResult =
+        EncryptedMediaV2.encrypt(
+            plaintext = plaintext,
+            mediaSecret = groupManager.mediaExporterSecret(nostrGroupId),
+            mediaType = mediaType,
+            filename = filename,
+        )
+
+    /** Decrypt an attachment a peer sent, verifying it is the file the reference names. */
+    fun decryptMedia(
+        nostrGroupId: HexKey,
+        reference: EncryptedMediaReferenceV2,
+        ciphertext: ByteArray,
+        /**
+         * The epoch that delivered the carrying message, when the caller knows
+         * it. The media secret is per-epoch, so a message from an older epoch
+         * does not open under the current one.
+         */
+        epochSecret: ByteArray? = null,
+    ): ByteArray =
+        EncryptedMediaV2.decrypt(
+            ciphertext = ciphertext,
+            mediaSecret = epochSecret ?: groupManager.mediaExporterSecret(nostrGroupId),
+            nonce = reference.nonce,
+            plaintextSha256 = reference.plaintextSha256,
+            mediaType = reference.mediaType,
+            filename = reference.filename,
+        )
+
+    /**
+     * Build the kind:9 that carries an `encrypted-media-v2` attachment.
+     *
+     * The reference rides in an `imeta` tag; [caption] is the message body a
+     * client without media support still reads. The locator URLs are the only
+     * thing in the tag a server ever sees, and they name ciphertext.
+     */
+    suspend fun buildMediaMessage(
+        nostrGroupId: HexKey,
+        reference: EncryptedMediaReferenceV2,
+        caption: String = "",
+        persistOwn: Boolean = true,
+    ): TextMessageBundle {
+        val template =
+            com.vitorpamplona.quartz.nip01Core.signers
+                .eventTemplate<Event>(kind = 9, description = caption) {
+                    addUnique(reference.toImetaTag())
+                }
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<Event>(signer.pubKey, template)
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
     }
 
     // --- KeyPackage Management ---

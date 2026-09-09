@@ -88,7 +88,7 @@ data class GroupAvatarUrlV1(
 
         // Normalizing at encode is the producer's job: the stored bytes ARE the
         // serialized form, and every decoder re-derives them to check.
-        val stored = if (isAbsent) "" else MarmotHttpsUrl.normalize(url)
+        val stored = if (isAbsent) "" else MarmotWebUrl.normalize(url, label = "avatar URL")
 
         val writer = TlsWriter()
         writer.putOpaqueVarInt(stored.encodeToByteArray())
@@ -112,7 +112,7 @@ data class GroupAvatarUrlV1(
 
     companion object {
         const val COMPONENT_ID = AppComponentIds.GROUP_AVATAR_URL_V1
-        const val URL_MAX_BYTES = MarmotHttpsUrl.MAX_BYTES
+        const val URL_MAX_BYTES = MarmotWebUrl.MAX_BYTES
         const val HINT_MAX_BYTES = 256
 
         /** The cleared avatar: every field empty. */
@@ -139,7 +139,7 @@ data class GroupAvatarUrlV1(
                 // differ from the serializer's output." A decoder never repairs a
                 // non-normalized URL into canonical state — two members would then
                 // hold different bytes for the same group.
-                require(MarmotHttpsUrl.normalize(text) == text) { "group avatar URL is not normalized" }
+                require(MarmotWebUrl.normalize(text, label = "avatar URL") == text) { "group avatar URL is not normalized" }
             }
             return GroupAvatarUrlV1(text, dim, thumbhash)
         }
