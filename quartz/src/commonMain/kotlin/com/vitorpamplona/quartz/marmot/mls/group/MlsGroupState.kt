@@ -60,6 +60,17 @@ data class MlsGroupState(
     val interimTranscriptHash: ByteArray,
     val encryptionSecret: ByteArray,
     val senderRatchetStates: Map<Int, SenderRatchetState> = emptyMap(),
+    /**
+     * HPKE private keys for the PARENT nodes on our own direct path, by node
+     * index (STATE_VERSION 3+).
+     *
+     * RFC 9420 §7.6 lets a committer address us at any node in the copath
+     * resolution whose key we hold — usually an ancestor rather than our leaf,
+     * because a merged subtree resolves to its parent. A member that keeps
+     * only its leaf key cannot decrypt those commits at all, and losing these
+     * across a restart makes the same group undecryptable on relaunch.
+     */
+    val pathPrivateKeys: Map<Int, ByteArray> = emptyMap(),
 ) {
     fun encodeTls(): ByteArray {
         val writer = TlsWriter()
@@ -115,6 +126,13 @@ data class MlsGroupState(
             writer.putUint32(ratchet.applicationGeneration.toLong())
         }
 
+        // Direct-path node private keys (STATE_VERSION 3+).
+        writer.putUint32(pathPrivateKeys.size.toLong())
+        for ((nodeIndex, key) in pathPrivateKeys) {
+            writer.putUint32(nodeIndex.toLong())
+            writer.putOpaqueVarInt(key)
+        }
+
         return writer.toByteArray()
     }
 
@@ -135,8 +153,11 @@ data class MlsGroupState(
          * v1: original layout (no SecretTree ratchet positions).
          * v2: appends [senderRatchetStates] so restores don't reset the
          *     ratchet to generation 0. v1 blobs still decode (empty map).
+         * v3: appends [pathPrivateKeys] so a restore can still decrypt an
+         *     UpdatePath addressed at one of our ancestors. Older blobs decode
+         *     with an empty map and refill on the next commit we process.
          */
-        private const val STATE_VERSION = 2
+        private const val STATE_VERSION = 3
 
         fun decodeTls(data: ByteArray): MlsGroupState {
             val reader = TlsReader(data)
@@ -197,6 +218,22 @@ data class MlsGroupState(
                     emptyMap()
                 }
 
+            // v3+: direct-path node private keys. Absent for older blobs,
+            // which restore able to decrypt only commits addressed at their
+            // own leaf until the next commit refills the path.
+            val pathPrivateKeys =
+                if (version >= 3 && reader.hasRemaining) {
+                    val count = reader.readUint32().toInt()
+                    buildMap {
+                        repeat(count) {
+                            val nodeIndex = reader.readUint32().toInt()
+                            put(nodeIndex, reader.readOpaqueVarInt())
+                        }
+                    }
+                } else {
+                    emptyMap()
+                }
+
             return MlsGroupState(
                 groupContext = groupContext,
                 treeBytes = treeBytes,
@@ -208,6 +245,7 @@ data class MlsGroupState(
                 interimTranscriptHash = interimTranscriptHash,
                 encryptionSecret = encryptionSecret,
                 senderRatchetStates = senderRatchetStates,
+                pathPrivateKeys = pathPrivateKeys,
             )
         }
     }

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -227,7 +228,56 @@ class MarmotConvergenceEngine(
         }
         ctx.canonicalCommits.addLast(candidateOf(commitBytes, sourceEpoch))
         trim(ctx)
+        terminalizeIfDisbanded(groupId, ctx)
     }
+
+    /**
+     * Move a group to `Disbanded` once its lifecycle component says so.
+     *
+     * `Disbanded` is absorbing: there is no outgoing transition, no later
+     * branch supersedes a terminalized disband, and a replacement conversation
+     * is a new MLS group. Deriving it from the applied state rather than from
+     * a transport claim is the whole point — the only thing that can disband a
+     * group is an authenticated Commit that every member replays identically.
+     */
+    private fun terminalizeIfDisbanded(
+        groupId: HexKey,
+        ctx: GroupContext,
+    ) {
+        if (ctx.lifecycle == GroupLifecycleState.DISBANDED) return
+        val disbanded = groupManager.getGroup(groupId)?.currentGroupState()?.isDisbanded == true
+        if (disbanded) ctx.lifecycle = GroupLifecycleState.DISBANDED
+    }
+
+    /**
+     * Mark a group locally unrecoverable.
+     *
+     * Local to ONE client: it does not mean the group is dead, it means this
+     * client cannot safely apply more traffic until it repairs, restores,
+     * rejoins or discards its copy. Settling for the current local state just
+     * because it is the only one available is exactly what this state exists
+     * to prevent, so it also drops any pass in flight rather than letting it
+     * resolve against material we no longer trust.
+     */
+    suspend fun markUnrecoverable(groupId: HexKey) =
+        mutex.withLock {
+            val ctx = contexts.getOrPut(groupId) { GroupContext() }
+            if (ctx.lifecycle == GroupLifecycleState.DISBANDED) return@withLock
+            ctx.lifecycle = GroupLifecycleState.UNRECOVERABLE
+            ctx.pass = null
+        }
+
+    /**
+     * Clear `Unrecoverable` after a verified repair — a replacement Welcome, a
+     * restore, or a rejoin. `Disbanded` is NOT clearable.
+     */
+    suspend fun markRepaired(groupId: HexKey) =
+        mutex.withLock {
+            val ctx = contexts[groupId] ?: return@withLock
+            if (ctx.lifecycle == GroupLifecycleState.UNRECOVERABLE) {
+                ctx.lifecycle = GroupLifecycleState.STABLE
+            }
+        }
 
     /**
      * Offer a commit that did NOT extend the canonical tip.
@@ -431,7 +481,25 @@ class MarmotConvergenceEngine(
         val rewound = selectedTipId != null && selectedTipId != inputs.tipId
 
         if (rewound) {
-            groupManager.installState(groupId, graph.statesById.getValue(selectedTipId))
+            // The selected tip's state must be rebuildable from retained
+            // material. When it is not — the anchor the rewind needs fell out
+            // of the window, or a retained state failed to replay — this
+            // client cannot reach the branch the group selected, and the one
+            // thing it must NOT do is keep its own losing branch and call that
+            // settled. That is exactly `Unrecoverable`: local, repairable, and
+            // never resolved by pretending the pass succeeded.
+            val target = graph.statesById[selectedTipId]
+            if (target == null) {
+                markUnrecoverable(groupId)
+                return null
+            }
+            try {
+                groupManager.installState(groupId, target)
+            } catch (e: Exception) {
+                Log.w("MarmotConvergence", "rewind of $groupId to the selected branch failed: ${e.message}", e)
+                markUnrecoverable(groupId)
+                return null
+            }
         }
 
         return mutex.withLock {
@@ -458,6 +526,7 @@ class MarmotConvergenceEngine(
             trimCandidates(ctx)
             ctx.divergent.clear()
             ctx.pass = null
+            terminalizeIfDisbanded(groupId, ctx)
             val epoch = groupManager.getGroup(groupId)?.epoch ?: inputs.tipEpoch
             ConvergenceResolution(
                 groupId = groupId,

@@ -22,9 +22,14 @@ package com.vitorpamplona.amethyst.cli.stores
 
 import com.vitorpamplona.amethyst.cli.SecureFileIO
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /**
@@ -147,4 +152,82 @@ class FileMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         file(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group messages")
     }
+}
+
+/**
+ * Durable publish obligations, one file per obligation under [dir].
+ *
+ * Publish-before-apply only means anything if the obligation outlives the
+ * process: the whole point is that a commit is prepared, recorded, published,
+ * and only then applied, so a crash between record and publish must leave a
+ * trace. With a non-durable store that window silently becomes "the commit
+ * never happened", and on relaunch the client mints a REPLACEMENT commit for
+ * the same epoch — forking itself against the peers that accepted the first
+ * one.
+ *
+ * A file per obligation rather than one appended log: obligations resolve out
+ * of order (two groups publish concurrently), and deleting one must not
+ * rewrite the others.
+ */
+class FilePublishObligationStore(
+    private val dir: File,
+) : MarmotPublishObligationStore {
+    init {
+        SecureFileIO.secureMkdirs(dir)
+    }
+
+    private fun file(obligationId: String) = File(dir, "$obligationId.obligation")
+
+    override suspend fun save(
+        obligationId: HexKey,
+        bytes: ByteArray,
+    ) {
+        SecureFileIO.writeBytesAtomic(file(obligationId), bytes)
+    }
+
+    override suspend fun delete(obligationId: HexKey) {
+        file(obligationId).deleteOrWarn("FilePublishObligationStore", "publish obligation")
+    }
+
+    override suspend fun loadAll(): List<ByteArray> =
+        dir
+            .listFiles { f -> f.isFile && f.name.endsWith(".obligation") }
+            ?.sortedBy { it.name }
+            ?.mapNotNull { runCatching { it.readBytes() }.getOrNull() }
+            .orEmpty()
+}
+
+/**
+ * Durable "already decided" markers, one hex id per line.
+ *
+ * Append-only and capped: the point is to stop re-deciding backdated gift
+ * wraps forever, not to remember every event this account has ever seen. When
+ * the cap is hit the oldest half is dropped — the worst case for a forgotten
+ * marker is one wasted re-decision, so trading memory for exactness is the
+ * right way round.
+ */
+class FileIngestDedupStore(
+    private val file: File,
+    private val maxEntries: Int = 20_000,
+) : MarmotIngestDedupStore {
+    private val mutex = Mutex()
+
+    override suspend fun mark(eventId: HexKey) =
+        mutex.withLock {
+            SecureFileIO.appendText(file, eventId + "\n")
+            if (file.length() > maxEntries.toLong() * 65L) {
+                val kept = file.readLines().filter { it.isNotBlank() }.takeLast(maxEntries / 2)
+                SecureFileIO.writeBytesAtomic(file, (kept.joinToString("\n") + "\n").encodeToByteArray())
+            }
+        }
+
+    override suspend fun loadAll(): Set<HexKey> =
+        mutex.withLock {
+            file
+                .takeIf { it.exists() }
+                ?.readLines()
+                ?.filter { it.isNotBlank() }
+                ?.toSet()
+                .orEmpty()
+        }
 }

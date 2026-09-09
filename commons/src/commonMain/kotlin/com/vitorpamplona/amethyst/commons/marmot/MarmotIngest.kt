@@ -105,7 +105,28 @@ suspend fun MarmotManager.ingest(event: Event): MarmotIngestResult =
         else -> MarmotIngestResult.Ignored
     }
 
-private suspend fun MarmotManager.ingestGiftWrap(wrap: GiftWrapEvent): MarmotIngestResult =
+private suspend fun MarmotManager.ingestGiftWrap(wrap: GiftWrapEvent): MarmotIngestResult {
+    // A relay `since` cursor cannot skip a backdated event, and NIP-59 wraps
+    // are backdated by up to two days on purpose — so without a durable marker
+    // every wrap in that band is unwrapped and re-decided on every single sync.
+    if (isTerminallyIngested(wrap.id)) return MarmotIngestResult.Ignored
+    val result = ingestGiftWrapUncached(wrap)
+    when (result) {
+        // Joined, or already in the group: nothing more can come of this wrap.
+        is MarmotIngestResult.JoinedGroup, is MarmotIngestResult.AlreadyInGroup -> markTerminallyIngested(wrap.id)
+
+        // A Welcome naming a KeyPackage whose private half we never held can
+        // never become processable: bundles are generated locally BEFORE the
+        // KeyPackage is published, so one we do not have is one we never will.
+        is MarmotIngestResult.Failure ->
+            if (result.message.contains("No matching KeyPackageBundle")) markTerminallyIngested(wrap.id)
+
+        else -> Unit
+    }
+    return result
+}
+
+private suspend fun MarmotManager.ingestGiftWrapUncached(wrap: GiftWrapEvent): MarmotIngestResult =
     try {
         // NIP-59 wraps carry two encryption layers (kind:1059 → kind:13 → rumor).
         // [unwrapAndUnsealOrNull] peels both so we land directly on the inner
@@ -158,6 +179,9 @@ private suspend fun MarmotManager.ingestGroupEvent(ge: GroupEvent): MarmotIngest
         // Decrypted only on a losing branch: real protocol input (it may have
         // witnessed for that branch), but never application output.
         is GroupEventResult.AppMessageOnCandidateBranch,
+        // Disbanded or locally unrecoverable — refused before decryption, so
+        // there is nothing to deliver and nothing to retain.
+        is GroupEventResult.RefusedByLifecycle,
         -> {
             MarmotIngestResult.Ignored
         }

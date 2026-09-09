@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.sun.management.UnixOperatingSystemMXBean
+import com.vitorpamplona.amethyst.cli.stores.FileIngestDedupStore
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
 import com.vitorpamplona.amethyst.cli.stores.FileMlsGroupStateStore
+import com.vitorpamplona.amethyst.cli.stores.FilePublishObligationStore
 import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
@@ -319,6 +321,8 @@ class Context(
     private val mlsStore by lazy { FileMlsGroupStateStore(dataDir.groupsDir) }
     private val keyPackageStore by lazy { FileKeyPackageBundleStore(dataDir.keyPackageBundleFile) }
     private val messageStore by lazy { FileMarmotMessageStore(dataDir.groupsDir) }
+    private val publishObligationStore by lazy { FilePublishObligationStore(dataDir.publishObligationsDir) }
+    private val ingestDedupStore by lazy { FileIngestDedupStore(dataDir.ingestDedupFile) }
 
     /**
      * Shared Nostr event store for this run, opened via [StoreFactory]
@@ -356,6 +360,8 @@ class Context(
             // once a relay in the group's own scope returns OK true. Anything
             // weaker (queued, sent, no error yet) is explicitly not success.
             MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays) },
+            publishObligationStore,
+            ingestDedupStore,
         )
     }
 

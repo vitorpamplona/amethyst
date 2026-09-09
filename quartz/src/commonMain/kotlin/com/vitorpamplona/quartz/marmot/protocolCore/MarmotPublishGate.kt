@@ -122,7 +122,25 @@ enum class PublishOutcome {
     /** At least one endpoint in the recipient scope acknowledged an accept. */
     CONFIRMED,
 
-    /** Every endpoint rejected, or the attempt is known not to have been accepted. */
+    /**
+     * The attempt did not confirm, and we cannot prove no endpoint took it.
+     *
+     * A timeout, a dropped connection, or an OK that never arrived all land
+     * here, and none of them means "no peer has this commit". The obligation
+     * stays durable and the group stays held, because minting a REPLACEMENT
+     * commit for the same epoch would fork us against whoever did receive the
+     * first one. This is the default for a publisher that answers with a
+     * boolean: `false` is "unconfirmed", not "rejected".
+     */
+    UNKNOWN,
+
+    /**
+     * The attempt can never succeed and there is nothing to retry — an
+     * unreadable record, or bytes no endpoint could ever accept.
+     *
+     * Discards the obligation. Use it only when retrying is impossible, never
+     * as a synonym for "did not get an OK".
+     */
     FAILED,
 }
 
@@ -278,6 +296,17 @@ class MarmotPublishGate(
             // partially applied merge must never be observable, so the state
             // swap is the single atomic step that ends it.
             groupManager.installState(obligation.groupId, obligation.pendingState)
+        }
+
+        if (outcome == PublishOutcome.UNKNOWN) {
+            // Keep the record and keep the group held. The staged commit was
+            // never applied, so nothing local is wrong — what is unknown is
+            // whether a PEER took it, and preparing a fresh commit while that
+            // is unknown is exactly the fork this gate exists to prevent.
+            return mutex.withLock {
+                lifecycles[obligation.groupId] = GroupLifecycleState.PENDING_PUBLISH
+                GroupLifecycleState.PENDING_PUBLISH
+            }
         }
 
         store.delete(obligationId)

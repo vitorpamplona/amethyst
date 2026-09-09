@@ -237,9 +237,17 @@ class MarmotPublishBeforeApplyTest {
     /**
      * A group whose publisher never acknowledges anything can still be read.
      * It simply cannot advance — which is the safe direction to fail.
+     *
+     * It also cannot start over. "No OK arrived" is not "no peer took it": a
+     * timeout or a dropped connection leaves us unable to say. Discarding the
+     * obligation and letting a SECOND commit be prepared for the same epoch is
+     * how that uncertainty becomes a permanent fork — the peer that did
+     * receive the first commit is at epoch 1, rejects our second, and the two
+     * copies never reconcile. So the obligation stays, the group stays held,
+     * and the retry republishes the SAME bytes.
      */
     @Test
-    fun aFailedPublishLeavesTheGroupUsable() =
+    fun anUnconfirmedPublishHoldsTheGroupInsteadOfStartingOver() =
         runBlocking<Unit> {
             val fx = fixture(accepts = false)
             fx.manager.addMember(
@@ -250,15 +258,24 @@ class MarmotPublishBeforeApplyTest {
                 relays = listOf(relay),
             )
 
-            assertEquals(GroupLifecycleState.STABLE, fx.manager.lifecycle(fx.groupId))
-            assertTrue(
+            assertEquals(GroupLifecycleState.PENDING_PUBLISH, fx.manager.lifecycle(fx.groupId))
+            assertEquals(
+                1,
                 fx.manager.publishGate
                     .pendingFor(fx.groupId)
-                    .isEmpty(),
-                "a failed obligation is discarded, not left pending forever",
+                    .size,
+                "an unconfirmed obligation stays retryable",
             )
-            // A second attempt is allowed: nothing was consumed by the failure.
-            val retry =
+            // Reading is unaffected; only advancing the group is blocked.
+            assertEquals(
+                0L,
+                fx.manager.groupManager
+                    .getGroup(fx.groupId)!!
+                    .epoch,
+            )
+
+            // A second, different commit for the same epoch is refused.
+            assertFailsWith<IllegalStateException> {
                 fx.manager.addMember(
                     nostrGroupId = fx.groupId,
                     memberPubKey = fx.bobPubKey,
@@ -266,11 +283,8 @@ class MarmotPublishBeforeApplyTest {
                     keyPackageEventId = "c".repeat(64),
                     relays = listOf(relay),
                 )
-            assertEquals(2, fx.publisher.published.size)
-            assertTrue(
-                retry.first.signedEvent.id
-                    .isNotEmpty(),
-            )
+            }
+            assertEquals(1, fx.publisher.published.size, "no replacement commit was offered")
         }
 
     /** The group's own relay list is the default recipient scope. */

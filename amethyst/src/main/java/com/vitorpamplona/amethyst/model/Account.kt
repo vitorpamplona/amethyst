@@ -375,6 +375,18 @@ class Account(
     val mlsGroupStateStore: MlsGroupStateStore? = null,
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
+    /**
+     * Durable publish obligations. Null means publish-before-apply does not
+     * survive a restart, so a commit interrupted mid-publish is replaced by a
+     * fresh one for the same epoch — a fork against the peers that took the
+     * first.
+     */
+    val marmotPublishObligationStore: com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore? = null,
+    /**
+     * Durable "already decided" markers for inbound events. Null means every
+     * backdated gift wrap is re-unwrapped on every sync.
+     */
+    val marmotIngestDedupStore: com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
@@ -935,6 +947,8 @@ class Account(
                 // acknowledged accept" rule; a plain `publish` would report
                 // success for bytes nobody took.
                 MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays) },
+                marmotPublishObligationStore,
+                marmotIngestDedupStore,
                 scope = scope,
             )
         }

@@ -135,6 +135,20 @@ class MlsGroup private constructor(
     /** Staged keys from proposeSigningKeyRotation — only promoted on successful commit */
     private var pendingSigningKey: ByteArray? = null,
     private var pendingEncryptionKey: ByteArray? = null,
+    /**
+     * HPKE private keys for the PARENT nodes on our own direct path, keyed by
+     * node index.
+     *
+     * RFC 9420 §7.6 does not say "the committer encrypts to your leaf" — it
+     * says the committer encrypts one path secret per node in the copath
+     * resolution, and you decrypt at whichever of those nodes you hold a key
+     * for. A merged subtree resolves to its PARENT, so as soon as a group has
+     * three members the commits addressed to us stop naming our leaf at all.
+     * Keeping only the leaf key is why every MDK commit after a three-member
+     * Add failed with "UpdatePath at common ancestor carries no ciphertext
+     * for us".
+     */
+    private val pathPrivateKeys: MutableMap<Int, ByteArray> = mutableMapOf(),
 ) {
     val groupId: ByteArray get() = groupContext.groupId
     val epoch: Long get() = groupContext.epoch
@@ -295,7 +309,36 @@ class MlsGroup private constructor(
             // rewind our own generation counter to 0 and reuse an AEAD
             // key+nonce within this epoch (RFC 9420 §9).
             senderRatchetStates = secretTree.exportSenderStates(),
+            pathPrivateKeys = pathPrivateKeys.toMap(),
         )
+    }
+
+    /**
+     * Record the HPKE private keys our direct path gained from [pathSecret] at
+     * [fromNodeIndex] and every node above it, up to the root.
+     *
+     * A path secret ratchets one KDF step per level regardless of filtering,
+     * and each level's node keypair is `DeriveKeyPair(DeriveSecret(secret,
+     * "node"))` — the same derivation the committer used, which is what makes
+     * the keys we store here the ones a later committer will encrypt to.
+     */
+    private fun rememberPathKeys(
+        fromNodeIndex: Int,
+        pathSecret: ByteArray,
+    ) {
+        val fullPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+        val start = fullPath.indexOf(fromNodeIndex)
+        if (start < 0) return
+        var secret = pathSecret
+        for (i in start until fullPath.size) {
+            val nodeSecret = MlsCryptoProvider.deriveSecret(secret, "node")
+            pathPrivateKeys[fullPath[i]] = Hpke.deriveKeyPair(nodeSecret).privateKey
+            secret = MlsCryptoProvider.deriveSecret(secret, "path")
+        }
+        // Anything no longer on our direct path (the tree reshaped under us)
+        // can never be addressed to us again; holding it would only make a
+        // stale key look usable at the next resolution scan.
+        pathPrivateKeys.keys.retainAll(fullPath.toSet())
     }
 
     /**
@@ -633,6 +676,17 @@ class MlsGroup private constructor(
         // Generate new path secrets on the updated tree
         val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         val pathSecrets = tree.derivePathSecrets(myLeafIndex, leafSecret)
+
+        // We just minted the keys for our whole direct path. Keep the private
+        // halves: the next committer will address us at one of these nodes,
+        // not at our leaf, as soon as our subtree is merged.
+        run {
+            val fullPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+            pathPrivateKeys.keys.retainAll(fullPath.toSet())
+            for ((i, nodeIdx) in fullPath.withIndex()) {
+                pathSecrets.getOrNull(i)?.let { pathPrivateKeys[nodeIdx] = it.privateKey }
+            }
+        }
 
         // RFC 9420 §12.4.1: newly-added leaves (from Add proposals in THIS commit)
         // MUST be excluded from the copath resolution — they join via the Welcome
@@ -1810,24 +1864,67 @@ class MlsGroup private constructor(
                         BinaryTree.nodeToLeaf(resNode) in newLeavesInCommit
                 }
 
-            // Find which encrypted secret corresponds to our position
+            // RFC 9420 §7.6: the committer encrypts one path secret per node
+            // in the copath resolution, and we decrypt at whichever of those
+            // nodes we hold a private key for. That is usually NOT our leaf —
+            // a merged subtree resolves to its parent, so from three members
+            // on we are addressed at an ancestor. Scan the resolution for a
+            // key we actually have rather than assuming our own leaf node.
             val myNodeIdx = BinaryTree.leafToNode(myLeafIndex)
-            val myResIdx = resolution.indexOf(myNodeIdx)
-            check(myResIdx in 0 until pathNode.encryptedPathSecret.size) {
+            val candidates =
+                resolution.withIndex().mapNotNull { (i, resNode) ->
+                    if (i >= pathNode.encryptedPathSecret.size) {
+                        null
+                    } else {
+                        val key = if (resNode == myNodeIdx) encryptionPrivateKey else pathPrivateKeys[resNode]
+                        key?.let { Triple(i, resNode, it) }
+                    }
+                }
+            check(candidates.isNotEmpty()) {
                 "UpdatePath at common ancestor carries no ciphertext for us " +
                     "(my_leaf=$myLeafIndex, my_node=$myNodeIdx, resolution=$resolution, " +
+                    "held_path_nodes=${pathPrivateKeys.keys.sorted()}, " +
                     "encrypted_path_secrets=${pathNode.encryptedPathSecret.size})"
             }
 
-            val ct = pathNode.encryptedPathSecret[myResIdx]
-            val pathSecret =
-                MlsCryptoProvider.decryptWithLabel(
-                    encryptionPrivateKey,
-                    "UpdatePathNode",
-                    pathDecContextBytes,
-                    ct.kemOutput,
-                    ct.ciphertext,
-                )
+            // Try each node we hold a key for rather than committing to the
+            // first. An Add or Remove renumbers nodes, so a retained key can
+            // outlive the node it belonged to; a stale one fails the AEAD
+            // rather than producing a wrong secret, so trying the next
+            // candidate is exact, not a guess.
+            var pathSecret: ByteArray? = null
+            var decryptedAt = -1
+            for ((i, _, key) in candidates) {
+                val ct = pathNode.encryptedPathSecret[i]
+                pathSecret =
+                    try {
+                        MlsCryptoProvider.decryptWithLabel(
+                            key,
+                            "UpdatePathNode",
+                            pathDecContextBytes,
+                            ct.kemOutput,
+                            ct.ciphertext,
+                        )
+                    } catch (_: Exception) {
+                        null
+                    }
+                if (pathSecret != null) {
+                    decryptedAt = i
+                    break
+                }
+            }
+            val recoveredPathSecret =
+                checkNotNull(pathSecret) {
+                    "UpdatePath at common ancestor did not decrypt with any key we hold " +
+                        "(my_leaf=$myLeafIndex, resolution=$resolution, slot_tried=$decryptedAt, " +
+                        "tried=${candidates.map { it.second }})"
+                }
+
+            // The path secret we just recovered belongs to the common ancestor
+            // and ratchets up to the root, so it hands us the private key for
+            // every node above it on our own direct path. Those are exactly
+            // the nodes a later committer may address us at.
+            rememberPathKeys(commonAncestorNode, recoveredPathSecret)
 
             // Derive remaining path secrets from common ancestor up to root,
             // then one more step to reach the `commit_secret` (RFC 9420 §9.2:
@@ -1842,7 +1939,7 @@ class MlsGroup private constructor(
             // UpdatePath node, so filtering changes which nodes carry
             // ciphertext but not the number of KDF steps.
             val stepsToRoot = unfilteredDirectPath.size - commonAncestorUnfilteredIdx - 1
-            var currentSecret = pathSecret
+            var currentSecret = recoveredPathSecret
             repeat(stepsToRoot) {
                 currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
             }
@@ -3991,6 +4088,7 @@ class MlsGroup private constructor(
                 signingPrivateKey = state.signingPrivateKey,
                 encryptionPrivateKey = state.encryptionPrivateKey,
                 interimTranscriptHash = state.interimTranscriptHash,
+                pathPrivateKeys = state.pathPrivateKeys.toMutableMap(),
             )
         }
 

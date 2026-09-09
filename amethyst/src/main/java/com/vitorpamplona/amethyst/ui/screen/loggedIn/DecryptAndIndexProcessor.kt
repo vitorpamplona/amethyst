@@ -776,6 +776,17 @@ class GroupEventHandler(
                     }
                 }
 
+                is GroupEventResult.RefusedByLifecycle -> {
+                    // Disbanded is absorbing and Unrecoverable needs a repair
+                    // before anything more may be applied, so this input was
+                    // refused before decryption. Nothing to render, nothing to
+                    // retain, and nothing the user can do about it here.
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: refused for group=${result.groupId.take(8)}… " +
+                            "lifecycle=${result.lifecycle}"
+                    }
+                }
+
                 is GroupEventResult.Error -> {
                     Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR ${result.message}" }
                 }

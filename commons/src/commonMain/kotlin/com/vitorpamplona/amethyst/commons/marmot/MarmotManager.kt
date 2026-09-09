@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
+import com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore
 import com.vitorpamplona.quartz.marmot.MarmotOutboundProcessor
 import com.vitorpamplona.quartz.marmot.MarmotSubscriptionManager
 import com.vitorpamplona.quartz.marmot.MarmotWelcomeSender
@@ -70,6 +71,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -102,6 +105,14 @@ class MarmotManager(
      */
     val publisher: MarmotPublisher = MarmotPublisher { _, _ -> false },
     publishObligationStore: MarmotPublishObligationStore? = null,
+    /**
+     * Durable "already decided" markers for inbound events.
+     *
+     * Null means every backdated gift wrap is re-unwrapped and re-decided on
+     * every sync, forever — correct, but it costs a full NIP-59 double
+     * decryption per wrap per sync and keeps the relay busy re-serving them.
+     */
+    private val ingestDedupStore: MarmotIngestDedupStore? = null,
     /**
      * Scope used to carry an open convergence pass to its cutoff.
      *
@@ -151,9 +162,90 @@ class MarmotManager(
             // Also restore previously-published KeyPackage bundles so that
             // Welcomes referencing them remain processable across restarts.
             keyPackageRotationManager.restoreFromStore()
+            ingestDedupStore?.loadAll()?.let { marks ->
+                terminallyIngestedMutex.withLock { terminallyIngested.addAll(marks) }
+                Unit
+            }
+            retryPendingPublishObligations()
             Log.d("MarmotManager") { "restoreAll(): done, ${activeIds.size} groups: $activeIds" }
         } catch (e: Exception) {
             Log.e("MarmotManager", "Failed to restore Marmot state", e)
+        }
+    }
+
+    /**
+     * Event ids this client has terminally decided about — see
+     * [MarmotIngestDedupStore]. Loaded once in [restoreAll]; the in-memory set
+     * is the hot path, the store only makes it survive a restart.
+     */
+    private val terminallyIngested = mutableSetOf<HexKey>()
+    private val terminallyIngestedMutex = Mutex()
+
+    suspend fun isTerminallyIngested(eventId: HexKey): Boolean = terminallyIngestedMutex.withLock { eventId in terminallyIngested }
+
+    suspend fun markTerminallyIngested(eventId: HexKey) {
+        val added = terminallyIngestedMutex.withLock { terminallyIngested.add(eventId) }
+        if (added) {
+            try {
+                ingestDedupStore?.mark(eventId)
+            } catch (e: Exception) {
+                // A marker we failed to persist costs a re-decision next
+                // launch; it never costs correctness, so it is not worth
+                // failing the ingest over.
+                Log.w("MarmotManager", "could not persist ingest marker for ${eventId.take(8)}: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Re-emit every publish obligation a previous run left unresolved.
+     *
+     * The bytes are republished VERBATIM — the same signed kind-445, to the
+     * same recipient scope. That is the whole reason the obligation stores
+     * them rather than storing "there was a commit": a replacement commit for
+     * the same epoch is a fork against every peer that accepted the first one,
+     * and a peer that already has this event simply deduplicates it.
+     *
+     * A retry that still fails leaves the group in `PendingPublish`, which is
+     * the safe direction: it blocks new local commits until the group actually
+     * knows what happened to this one.
+     */
+    suspend fun retryPendingPublishObligations() {
+        val pending = publishGate.allPending()
+        if (pending.isEmpty()) return
+        Log.d("MarmotManager") { "retryPendingPublishObligations(): ${pending.size} unresolved" }
+        for (obligation in pending) {
+            val event =
+                try {
+                    Event.fromJson(obligation.outboundBytes.decodeToString())
+                } catch (e: Exception) {
+                    // A record we cannot decode can never be republished, and
+                    // holding the group in PendingPublish forever helps nobody.
+                    Log.w("MarmotManager", "unreadable publish obligation ${obligation.obligationId}: ${e.message}", e)
+                    publishGate.resolve(obligation.obligationId, PublishOutcome.FAILED)
+                    continue
+                }
+            val relays = obligation.recipientScope.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+            val confirmed =
+                if (relays.isEmpty()) {
+                    false
+                } else {
+                    try {
+                        publisher.publish(event, relays)
+                    } catch (e: Exception) {
+                        Log.w("MarmotManager", "publish retry failed for ${obligation.groupId}: ${e.message}", e)
+                        false
+                    }
+                }
+            val state =
+                publishGate.resolve(
+                    obligation.obligationId,
+                    if (confirmed) PublishOutcome.CONFIRMED else PublishOutcome.UNKNOWN,
+                )
+            Log.d("MarmotManager") {
+                "retryPendingPublishObligations(): ${obligation.groupId.take(8)}… " +
+                    "confirmed=$confirmed lifecycle=$state"
+            }
         }
     }
 
@@ -231,6 +323,7 @@ class MarmotManager(
             is GroupEventResult.Duplicate,
             is GroupEventResult.UndecryptableOuterLayer,
             is GroupEventResult.AppMessageOnCandidateBranch,
+            is GroupEventResult.RefusedByLifecycle,
             is GroupEventResult.Error,
             -> {}
         }
@@ -267,7 +360,10 @@ class MarmotManager(
     suspend fun buildGroupMessage(
         nostrGroupId: HexKey,
         innerEvent: Event,
-    ): OutboundGroupEvent = outboundProcessor.buildGroupEvent(nostrGroupId, innerEvent)
+    ): OutboundGroupEvent {
+        requireOutboundAllowed(nostrGroupId, "send a message")
+        return outboundProcessor.buildGroupEvent(nostrGroupId, innerEvent)
+    }
 
     /**
      * Build a kind:9 chat-message GroupEvent from plain text. The inner
@@ -562,6 +658,7 @@ class MarmotManager(
         relays: List<NormalizedRelayUrl>,
         stage: suspend () -> MlsGroupManager.StagedCommit,
     ): CommitPublication {
+        requireOutboundAllowed(nostrGroupId, "commit a group-state change")
         check(publishGate.canPrepareLocalCommit(nostrGroupId)) {
             "Group $nostrGroupId cannot prepare a local commit " +
                 "(lifecycle=${publishGate.lifecycle(nostrGroupId)}, gate=${publishGate.outboundGate(nostrGroupId)})"
@@ -597,7 +694,10 @@ class MarmotManager(
 
         publishGate.resolve(
             obligation.obligationId,
-            if (confirmed) PublishOutcome.CONFIRMED else PublishOutcome.FAILED,
+            // Not confirmed is NOT the same as rejected: a timeout or a
+            // dropped connection leaves us unable to say whether a peer took
+            // the commit, so the obligation stays retryable.
+            if (confirmed) PublishOutcome.CONFIRMED else PublishOutcome.UNKNOWN,
         )
 
         if (confirmed) {
@@ -660,8 +760,55 @@ class MarmotManager(
 
     private val settlerRunning = MutableStateFlow(false)
 
-    /** Lifecycle state for a group, including any unresolved publish obligation. */
-    suspend fun lifecycle(nostrGroupId: HexKey): GroupLifecycleState = publishGate.lifecycle(nostrGroupId)
+    /**
+     * The group's effective lifecycle state.
+     *
+     * Two components track lifecycle for different reasons and neither is the
+     * whole answer on its own: the publish gate owns the local-publish states
+     * (`PendingPublish`, `Merging`), convergence owns `Recovering` and the two
+     * terminal-ish states (`Disbanded`, `Unrecoverable`). Reading only the
+     * publish gate — as this used to — meant a disbanded or unrecoverable
+     * group still reported `Stable` and every outbound gate keyed on it
+     * happily let work through.
+     *
+     * Terminal wins: a group that convergence has terminalized is terminal
+     * regardless of what the publish gate is doing, because the publish that
+     * gate is tracking can no longer be applied to anything.
+     */
+    suspend fun lifecycle(nostrGroupId: HexKey): GroupLifecycleState {
+        val converged = inboundProcessor.groupLifecycle(nostrGroupId)
+        if (converged == GroupLifecycleState.DISBANDED || converged == GroupLifecycleState.UNRECOVERABLE) {
+            return converged
+        }
+        val publish = publishGate.lifecycle(nostrGroupId)
+        return if (publish == GroupLifecycleState.STABLE) converged else publish
+    }
+
+    /**
+     * Refuse outbound work a group's lifecycle does not permit.
+     *
+     * The check is here rather than at each call site because every outbound
+     * path has the same answer: a `Disbanded` group takes no further work of
+     * any kind, and an `Unrecoverable` one takes none until it is repaired —
+     * encrypting against state we do not trust produces a message the group
+     * will invalidate, which is worse than refusing.
+     */
+    private suspend fun requireOutboundAllowed(
+        nostrGroupId: HexKey,
+        what: String,
+    ) {
+        when (val state = lifecycle(nostrGroupId)) {
+            GroupLifecycleState.DISBANDED ->
+                throw IllegalStateException("Group $nostrGroupId is disbanded; cannot $what")
+
+            GroupLifecycleState.UNRECOVERABLE ->
+                throw IllegalStateException(
+                    "Group $nostrGroupId is unrecoverable locally; repair, restore or rejoin before you $what",
+                )
+
+            else -> Log.d("MarmotManager") { "$what allowed for ${nostrGroupId.take(8)}… in $state" }
+        }
+    }
 
     /**
      * The group's own relay list, as the recipient scope for a publish

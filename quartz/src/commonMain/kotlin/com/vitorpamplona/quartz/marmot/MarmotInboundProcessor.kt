@@ -134,6 +134,21 @@ sealed class GroupEventResult {
     ) : GroupEventResult()
 
     /**
+     * The group's lifecycle state refuses this input outright.
+     *
+     * `Disbanded` is absorbing — no later branch supersedes a terminalized
+     * disband, so there is nothing a subsequent kind-445 could do but be
+     * retained forever. `Unrecoverable` means this client cannot safely apply
+     * more traffic until it repairs, restores or rejoins; retaining input
+     * against material we no longer trust is how a client talks itself into
+     * settling for a state it should have refused.
+     */
+    data class RefusedByLifecycle(
+        val groupId: HexKey,
+        val lifecycle: GroupLifecycleState,
+    ) : GroupEventResult()
+
+    /**
      * The event could not be processed.
      */
     data class Error(
@@ -262,6 +277,15 @@ class MarmotInboundProcessor(
 
         if (!groupManager.isMember(groupId)) {
             return GroupEventResult.Error(groupId, "Not a member of group $groupId")
+        }
+
+        // Lifecycle BEFORE anything is retained. A disbanded group is
+        // terminal and an unrecoverable one cannot safely apply traffic, so
+        // input for either is refused here rather than decrypted, retained,
+        // and then quietly never acted on.
+        val lifecycle = convergence.lifecycle(groupId)
+        if (lifecycle == GroupLifecycleState.DISBANDED || lifecycle == GroupLifecycleState.UNRECOVERABLE) {
+            return GroupEventResult.RefusedByLifecycle(groupId, lifecycle)
         }
 
         // Settle FIRST, so this event is processed against resolved state

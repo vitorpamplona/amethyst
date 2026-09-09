@@ -584,46 +584,75 @@ Writing the producer side immediately found two bugs the reader-side tests could
    just started enforcing, so every KeyPackage we published would have been rejected by any
    conformant peer — including, once Stage 4 landed, by us. Now `now - 1h` to `+84 days`.
 
-## What is NOT done
+## Interop status (2026-09-09)
 
-- **The interop harness now RUNS but does not pass.** It used to die in preflight; it now
-  builds MDK 0.9.20 (against the same OpenMLS fork rev `mdk-vector-gen` pins), boots
-  nostr-rs-relay, brings up both `wnd` daemons and `amy`, and executes all 17 scenarios. Every
-  one fails, all downstream of Test 01 (MDK cannot find A's KeyPackage). Four environment
-  blockers were fixed to get that far, all recorded in the harness:
-  - `protoc` is a build prerequisite MDK now needs.
-  - MDK 0.9.x requires `WN_ALLOW_LOOPBACK_RELAYS=1` before it will accept a `ws://` loopback
-    relay at all; without it `wnd` exits before creating its socket.
-  - MDK refuses to create its socket unless the socket's parent directory is `0700`.
-  - `wn --json whoami` moved to `{"ok":true,"result":{"accounts":[…]}}`; the harness's
-    `extract_pubkey` probed only the older array shapes and silently returned nothing.
+The MDK 0.9.20 harness runs end to end. It went **1 passed / 12 failed** to
+**9 passed** over this pass, and the failures that remain are named below rather
+than lumped together.
 
-  Two real defects in our own code came out of the run, both fixed:
-  - `amy relay add` reported success from the DECISION to write, not the store's answer, so a
-    rejected or no-op write printed `added: yes`.
-  - Our own KeyPackage/DM relay lists were read back through the local-network filter. That
-    filter is right for someone else's list — it is attacker-supplied input, and it is also what
-    exempts a relay from Tor — but applying it to a list we published ourselves made a
-    deliberately configured local relay look like no configuration at all. The publisher then
-    fell back to a default set, and A's KeyPackage went to five PUBLIC relays instead of the
-    harness's loopback. `allRelays()` now exists for reading back our own lists, and the
-    KeyPackage publish goes only to the configured relay.
+### Defects the harness found in our own code
 
-  **Still blocking Test 01:** the kind-10051 list persists under `relay key-package set` but not
-  under `relay add`/`relay key-package add`, so MDK finds no relay list to fetch A's KeyPackage
-  from. `verifyAndStore` returns true and kind 10050 works through the identical code path, so
-  this is a storage/CLI issue rather than a protocol one, and it needs its own focused pass.
+Each of these was invisible to every same-implementation test we have, because
+each is a place where two implementations have to agree on something one
+implementation alone never disagrees with.
 
-  **Also unresolved, and it is a design conflict rather than a bug:** MDK accepts `ws://` ONLY
-  for a loopback host, while quartz strips exactly those hosts out of relay lists. No address
-  satisfies both, so a loopback-relay harness cannot work until one side moves. Changing a
-  Tor-adjacent privacy guard is a maintainer decision, not one to make in passing.
-- **`MarmotManager.createGroup` (the MIP-era path) is still the one the UI calls.**
-  `createCurrentProfileGroup` exists, is wired, and is tested, but the Android and desktop
-  "new group" flows still call the legacy one. KeyPackage publishing HAS switched: it now
-  defaults to the current profile, which is the half that decides whether anyone can invite us.
-- **Lifecycle enforcement covers the publish path, not everything.** `PendingPublish`,
-  `Merging` and the outbound gates are enforced; `Unrecoverable` and `Disbanded` are still a
-  correct model with nothing driving them.
-- Stage 7: durability/restart conformance, app payload kinds `1009`/`1210`, encrypted-media v2,
-  the push owner proof (kind `451`).
+1. **A Commit rebuilt our own leaf from defaults.** The UpdatePath leaf replaces
+   OUR leaf — same member, new key material — so its capabilities and extensions
+   must carry over. `buildLeafNode` was called with neither, so the very first
+   invite we ever sent dropped the `account-identity-proof` (a LEAF extension no
+   proposal can restore) and stopped advertising the extension and proposal the
+   group's own `required_capabilities` demanded. MDK reported
+   `PublicGroupError(LeafNodeValidation(UnsupportedExtensions))` and dropped the
+   Welcome minted by that same commit; the invitee simply never saw an invite,
+   with nothing logged on either side.
+
+2. **We held private keys for our leaf only, not our direct path.** RFC 9420
+   §7.6 lets a committer address us at any node in the copath resolution whose
+   key we hold, and a merged subtree resolves to its PARENT — so from three
+   members on, the ciphertext meant for us stops naming our leaf. Worked for
+   two members, failed for three, which is exactly why it survived every
+   two-party test. `MlsGroupState` v3 persists them.
+
+3. **Three readers only understood the legacy `0xF2EE` extension**, so they did
+   nothing at all on a current-profile group: the Welcome's `nostr_group_id`
+   (without which a joiner cannot even subscribe), the admin gate on
+   GroupContextExtensions changes (which skipped rather than failed closed), and
+   disappearing-message expiration. Group metadata reads and writes now go
+   through `MarmotManager.groupView` / `setGroupProfile` / `setGroupAdmins` /
+   `setGroupImage`, which dispatch on the profile the group actually uses.
+
+4. **A non-confirmed publish discarded its obligation**, letting a REPLACEMENT
+   commit be prepared for the same epoch. "No OK arrived" is not "no peer took
+   it": a timeout or a dropped connection leaves it unknown, and minting a
+   second commit for an epoch a peer may already hold is the fork the gate
+   exists to prevent. `PublishOutcome.UNKNOWN` keeps the record and holds the
+   group.
+
+5. **The harness was parsing a wire format `wn` no longer speaks.** MDK 0.9.x
+   returns `{"ok":true,"result":{"invites":[…]}}`; iterating `.result` walked
+   that object's three VALUES, so every poll matched nothing and reported "never
+   received invite" for welcomes that had arrived and been accepted.
+
+### What is NOT done
+
+- **Test 03 gets further but does not pass.** We join MDK's group and see its
+  name; the first kind-445 after the join is not delivered. Tests 05/12/14/15
+  fail behind it with "A never received invite".
+- **Tests 13 and 16 (KeyPackage rotation) fail.** `wn keys check` finds no prior
+  KeyPackage for A at that point in the run, and amy keeps seeing B's
+  pre-rotation KeyPackage.
+- **Test 09 fails on the relay, not on us**: `disconnected before OK` from the
+  local nostr-rs-relay under the load of a full run. The durable ingest markers
+  added in this pass cut a large part of that load (a backdated gift wrap used
+  to be re-unwrapped on every sync, forever) but the test has not been re-run
+  since.
+- **Agent-text-stream is receive-only.** We decode the `0x8006` policy, derive
+  per-stream record keys, open records and fold the transcript, and we advertise
+  the `0xF2D1` receive capability. We do NOT advertise `send` (`0xF2D2`) or
+  `fanout` (`0xF2D4`): publishing needs durable per-stream sequence state to
+  avoid reusing an AEAD nonce across a restart, and there is none. A group whose
+  policy requires `send` is refused at join rather than joined into a state
+  every peer would reject us from.
+- **The QUIC transport for agent text streams is not wired.** The record layer
+  and the kind-1200 anchor are implemented; nothing yet opens a WebTransport
+  session to a broker and feeds it records.
