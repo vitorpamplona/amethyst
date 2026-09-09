@@ -124,13 +124,19 @@ class SearchBarViewModel(
             followPlusAllMineWithSearchRelays = account.followPlusAllMineWithSearch.flow,
         )
 
+    // Declared before [sourceWatcher], and it must stay there. That collector is Eagerly
+    // shared, so it runs `updateDataSource` during construction, and `updateDataSource` scrolls
+    // this list -- Kotlin initialises properties in declaration order, so from below it would
+    // still be null. It never showed while the box opened empty, because a blank term returns
+    // before the scroll; seeding the field from the screen's filter made the term non-blank on
+    // the very first pass and turned that into an NPE the moment search opened.
+    val listState: LazyListState = LazyListState(0, 0)
+
     @Suppress("unused")
     val sourceWatcher =
         source
             .onEach { updateDataSource(searchValue) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, SearchSource.RELAYS)
-
-    val listState: LazyListState = LazyListState(0, 0)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val directNip05Resolver: Flow<User?> =
