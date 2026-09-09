@@ -76,6 +76,99 @@ class MarmotJsonObject(
 object MarmotJson {
     private val parser = Json { ignoreUnknownKeys = false }
 
+    /**
+     * Resource bounds for an app-payload `content` string.
+     *
+     * A payload reaches a decoder only after MLS has authenticated that a group
+     * MEMBER sent it — never that it is well-intentioned. Deep nesting and huge
+     * collections cost a parser far more than they cost the sender, so the
+     * shape is checked with a linear pre-scan BEFORE any JSON library sees the
+     * bytes. The reference client draws the same three limits at the same
+     * values, which is why they are these numbers and not rounder ones.
+     */
+    const val MAX_INPUT_BYTES = 64 * 1024
+    const val MAX_JSON_DEPTH = 16
+    const val MAX_COLLECTION_ELEMENTS = 64
+
+    /**
+     * True when [json] is small enough and shallow enough to hand to a parser.
+     *
+     * Deliberately NOT a validity check: malformed input that stays inside the
+     * limits still goes through to the real parser, so its error paths keep
+     * being exercised rather than being masked by a pre-filter.
+     */
+    fun withinResourceBounds(json: String): Boolean = !exceedsByteLimit(json) && BoundsScanner().scan(json)
+
+    private fun exceedsByteLimit(json: String): Boolean {
+        var bytes = 0
+        var i = 0
+        while (i < json.length) {
+            val ch = json[i]
+            bytes +=
+                when {
+                    ch.code <= 0x7F -> 1
+                    ch.code <= 0x7FF -> 2
+                    ch.isHighSurrogate() && i + 1 < json.length && json[i + 1].isLowSurrogate() -> {
+                        i++
+                        4
+                    }
+
+                    else -> 3
+                }
+            if (bytes > MAX_INPUT_BYTES) return true
+            i++
+        }
+        return false
+    }
+
+    /**
+     * One pass over the text, counting container depth and the members at each
+     * depth. It only has to be right about structure — string boundaries and
+     * escapes — so it reads nothing else.
+     */
+    private class BoundsScanner {
+        private val membersByDepth = IntArray(MAX_JSON_DEPTH + 2)
+        private var depth = 0
+        private var quote: Char? = null
+        private var escaped = false
+
+        fun scan(json: String): Boolean {
+            for (ch in json) {
+                if (!consume(ch)) return false
+            }
+            return true
+        }
+
+        private fun consume(ch: Char): Boolean {
+            val open = quote
+            if (open != null) {
+                when {
+                    escaped -> escaped = false
+                    ch == '\\' -> escaped = true
+                    ch == open -> quote = null
+                }
+                return true
+            }
+            when (ch) {
+                '"' -> quote = ch
+                '{', '[' -> {
+                    depth++
+                    if (depth > MAX_JSON_DEPTH) return false
+                    membersByDepth[depth] = 0
+                }
+
+                '}', ']' -> if (depth > 0) depth--
+                ',' -> {
+                    if (depth > 0) {
+                        membersByDepth[depth]++
+                        if (membersByDepth[depth] >= MAX_COLLECTION_ELEMENTS) return false
+                    }
+                }
+            }
+            return true
+        }
+    }
+
     fun parseObject(json: String): MarmotJsonObject {
         val element = parser.parseToJsonElement(json)
         val obj = element as? JsonObject ?: throw IllegalArgumentException("payload is not a JSON object")

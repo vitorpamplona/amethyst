@@ -139,6 +139,14 @@ class MarmotAppEvent(
          * @throws IllegalArgumentException naming the reason.
          */
         fun decode(json: String): MarmotAppEvent {
+            // Shape before content. MLS authenticates that a group MEMBER sent
+            // these bytes, never that they are well-intentioned, and a deeply
+            // nested or enormous payload costs a parser far more than it costs
+            // the sender. The pre-scan is linear and runs before any JSON
+            // library sees the string.
+            require(MarmotJson.withinResourceBounds(json)) {
+                "Marmot app payload exceeds the parse bounds"
+            }
             val obj = MarmotJson.parseObject(json)
 
             require(!obj.containsKey("sig")) {

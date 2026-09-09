@@ -133,6 +133,10 @@ class MarmotSystemEvent(
          */
         fun fromAppEvent(event: MarmotAppEvent): MarmotSystemEvent? {
             if (event.kind != MarmotAppEvent.KIND_SYSTEM) return null
+            // Bounded before parsed: a row's content is peer-authored, and
+            // deep nesting or a huge collection costs a parser far more than
+            // it costs whoever sent it.
+            if (!MarmotJson.withinResourceBounds(event.content)) return null
             return try {
                 val obj = MarmotJson.parseObject(event.content)
                 if (obj.int("v") != SCHEMA_VERSION) return null
