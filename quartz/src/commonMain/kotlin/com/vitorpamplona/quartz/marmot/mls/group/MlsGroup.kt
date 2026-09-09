@@ -21,7 +21,11 @@
 package com.vitorpamplona.quartz.marmot.mls.group
 
 import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
@@ -65,6 +69,7 @@ import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
 import com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.marmot.mls.tree.UpdatePathNode
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mac.MacInstance
@@ -192,6 +197,20 @@ class MlsGroup private constructor(
 
     /** The current profile's component view of this GroupContext. */
     fun currentGroupState(): MarmotGroupState = MarmotGroupState.fromExtensions(groupContext.extensions)
+
+    /**
+     * The `nostr_group_id` this group routes kind-445 traffic under, from
+     * whichever profile the group is actually using.
+     *
+     * A current-profile group carries it in the `marmot.transport.nostr.routing.v1`
+     * component (`0x8004`); a legacy group carries it inside the monolithic
+     * `0xF2EE` extension. Reading only the legacy one leaves us unable to join
+     * any group a current-profile client created — the routing id is required
+     * to subscribe at all, so the failure is total rather than partial.
+     */
+    fun currentNostrGroupId(): HexKey? =
+        currentGroupState().routing?.nostrGroupIdHex
+            ?: currentMarmotData()?.nostrGroupId
 
     /**
      * The group's configured admin account identities, as lowercase hex.
@@ -1905,6 +1924,19 @@ class MlsGroup private constructor(
         length: Int,
     ): ByteArray = KeySchedule.mlsExporter(epochSecrets.exporterSecret, label, context, length)
 
+    /**
+     * `MLS-Exporter("marmot", "agent-text-stream-quic", 32)` — the secret every
+     * member of this epoch derives per-stream record keys from. Per-stream and
+     * per-record separation is entirely in the HKDF key context, so this one
+     * secret covers every stream in the epoch.
+     */
+    fun agentTextStreamSecret(): ByteArray =
+        exporterSecret(
+            AgentTextStreamCrypto.EXPORTER_LABEL,
+            AgentTextStreamCrypto.EXPORTER_CONTEXT,
+            AgentTextStreamCrypto.SECRET_LENGTH,
+        )
+
     // --- External Join Support (RFC 9420 Section 8.3, 12.4.3.2) ---
 
     /**
@@ -3259,6 +3291,37 @@ class MlsGroup private constructor(
             )
 
         /**
+         * Enforce the `0x8006` component's `required_member_roles` mask over
+         * the joining tree.
+         *
+         * A group carrying the agent-text-stream component requires each named
+         * role as an MLS leaf capability (`0xF2D1` receive, `0xF2D2` send,
+         * `0xF2D4` fanout). Advertising the component id alone is not enough —
+         * that only says "understands the component"; the role capability says
+         * "can actually do this".
+         */
+        private fun requireAgentTextStreamRoles(
+            extensions: List<Extension>,
+            tree: RatchetTree,
+            myLeafIndex: Int,
+        ) {
+            val policy =
+                AppDataDictionary
+                    .fromExtensionsOrEmpty(extensions)[AgentTextStreamQuicPolicyV1.COMPONENT_ID]
+                    ?.let { AgentTextStreamQuicPolicyV1.decode(it) } ?: return
+            val required = policy.requiredRoleCapabilities()
+            if (required.isEmpty()) return
+
+            val myLeaf = tree.getLeaf(myLeafIndex)
+            requireNotNull(myLeaf) { "Joiner's leaf is blank after tree reconstruction" }
+            val missing = required.filterNot { myLeaf.capabilities.extensions.contains(it) }
+            require(missing.isEmpty()) {
+                "Joiner does not advertise agent text stream roles this group requires: " +
+                    missing.joinToString { AppComponentIds.toHex(it) }
+            }
+        }
+
+        /**
          * Leaf capabilities for the current profile.
          *
          * RFC 9420 §7.2 forbids advertising DEFAULT extension types, so only
@@ -3272,10 +3335,20 @@ class MlsGroup private constructor(
          * this line a current-profile KeyPackage would be un-addable to every
          * legacy group that already exists — the exact mirror of the interop
          * failure the current profile was adopted to fix.
+         *
+         * `0xF2D1` is the agent-text-stream RECEIVE role, for the same reason:
+         * a group carrying component `0x8006` with `required_member_roles`
+         * naming `receive` refuses a leaf that does not advertise it. We stop
+         * at receive — see `CurrentProfileGroupFactory.SUPPORTED_COMPONENTS`.
          */
         fun currentProfileLeafCapabilities(): Capabilities =
             Capabilities(
-                extensions = listOf(AppDataDictionary.EXTENSION_TYPE, MarmotGroupData.EXTENSION_ID_INT),
+                extensions =
+                    listOf(
+                        AppDataDictionary.EXTENSION_TYPE,
+                        MarmotGroupData.EXTENSION_ID_INT,
+                        AgentTextStreamRoles.RECEIVE_CAPABILITY,
+                    ),
                 proposals = listOf(APP_DATA_UPDATE_PROPOSAL_TYPE, SELF_REMOVE_PROPOSAL_TYPE),
             )
 
@@ -3525,6 +3598,14 @@ class MlsGroup private constructor(
                     requireCapabilitiesMeetRequirements(leaf.capabilities, req, "Member leaf $i")
                 }
             }
+
+            // The agent-text-stream component (0x8006) states its own
+            // per-member requirement OUTSIDE MLS `required_capabilities`:
+            // `required_member_roles` names role capabilities every member
+            // must advertise. MLS cannot enforce it, so a joiner that skipped
+            // this check would join a group it can never satisfy and have
+            // every one of its commits refused by peers that do check.
+            requireAgentTextStreamRoles(groupContext.extensions, tree, myLeafIndex)
 
             // Derive epoch secrets directly from memberSecret (RFC 9420 Section 8.3)
             // For Welcome, epoch_secret = ExpandWithLabel(member_secret, "epoch", GroupContext, Nh)

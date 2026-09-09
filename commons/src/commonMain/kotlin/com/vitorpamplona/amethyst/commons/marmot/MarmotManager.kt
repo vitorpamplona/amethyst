@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.WelcomeResult
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
@@ -1012,6 +1013,13 @@ class MarmotManager(
     }
 
     /**
+     * The current profile's GroupContext components for a group, or null when
+     * the group is unknown. A legacy group returns a state whose component
+     * fields are all null — read [groupMetadata] for those.
+     */
+    fun groupState(nostrGroupId: HexKey): MarmotGroupState? = groupManager.getGroup(nostrGroupId)?.currentGroupState()
+
+    /**
      * Sync MIP-01 metadata and member info from the MLS group into a [MarmotGroupChatroom].
      * Call after joining a group, processing a commit, or restoring from storage.
      */
@@ -1019,27 +1027,44 @@ class MarmotManager(
         nostrGroupId: HexKey,
         chatroom: MarmotGroupChatroom,
     ) {
-        val metadata = groupMetadata(nostrGroupId)
-        if (metadata != null) {
-            if (metadata.name.isNotEmpty()) {
-                chatroom.displayName.value = metadata.name
-            }
-            if (metadata.description.isNotEmpty()) {
-                chatroom.description.value = metadata.description
-            }
-            chatroom.adminPubkeys.value = metadata.adminPubkeys
-            chatroom.relays.value = metadata.relays
-            chatroom.image.value =
-                if (metadata.hasImage()) {
+        // Read the current profile's components first, then the legacy
+        // 0xF2EE extension. Reading only the legacy one left every
+        // current-profile group with a blank name, no admins, no relays and no
+        // avatar in the UI — the group worked, it just looked empty.
+        val state = groupState(nostrGroupId)
+        val legacy = groupMetadata(nostrGroupId)
+
+        val name = state?.profile?.name?.takeIf { it.isNotEmpty() } ?: legacy?.name
+        if (!name.isNullOrEmpty()) chatroom.displayName.value = name
+
+        val description = state?.profile?.description?.takeIf { it.isNotEmpty() } ?: legacy?.description
+        if (!description.isNullOrEmpty()) chatroom.description.value = description
+
+        val admins = state?.adminPolicy?.adminHexKeys ?: legacy?.adminPubkeys
+        if (admins != null) chatroom.adminPubkeys.value = admins
+
+        val relays = state?.routing?.relays ?: legacy?.relays
+        if (relays != null) chatroom.relays.value = relays
+
+        val image = state?.image
+        chatroom.image.value =
+            when {
+                image?.imageHash != null ->
                     MarmotGroupImage(
-                        hash = metadata.imageHash!!,
-                        key = metadata.imageKey!!,
-                        nonce = metadata.imageNonce!!,
+                        hash = image.imageHash!!.toHexKey(),
+                        key = image.imageKey!!,
+                        nonce = image.imageNonce!!,
                     )
-                } else {
-                    null
-                }
-        }
+
+                legacy?.hasImage() == true ->
+                    MarmotGroupImage(
+                        hash = legacy.imageHash!!,
+                        key = legacy.imageKey!!,
+                        nonce = legacy.imageNonce!!,
+                    )
+
+                else -> null
+            }
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)
         chatroom.members.value = members

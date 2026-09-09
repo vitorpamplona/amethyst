@@ -798,10 +798,12 @@ class Context(
         val kp = keyPackageRelaysOf(pubKey)
         val nip65 = relaysOf(pubKey)
         if (dm == null && kp == null && nip65 == null) return null
+        val dmInbox = dm?.relays().orEmpty()
         return RecipientRelayFetcher.Lists(
-            dmInbox = dm?.relays().orEmpty(),
+            dmInbox = dmInbox,
             keyPackage = kp?.relays().orEmpty(),
             nip65 = nip65,
+            dmInboxWithheld = dmInbox.isEmpty() && dm?.allRelays().orEmpty().isNotEmpty(),
         )
     }
 

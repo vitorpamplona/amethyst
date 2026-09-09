@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
 import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.marmot.mls.components.ComponentsList
 import com.vitorpamplona.quartz.marmot.mls.tree.Extension
@@ -57,6 +58,7 @@ data class MarmotGroupState(
     val image: GroupBlossomImageV1?,
     val retention: MessageRetentionV1?,
     val lifecycle: GroupLifecycleV1?,
+    val agentTextStream: AgentTextStreamQuicPolicyV1?,
 ) {
     /** True once a disband Commit has been applied. Absorbing and terminal. */
     val isDisbanded: Boolean get() = lifecycle == GroupLifecycleV1.DISBANDED
@@ -99,6 +101,10 @@ data class MarmotGroupState(
                 image = dictionary[GroupBlossomImageV1.COMPONENT_ID]?.let { GroupBlossomImageV1.decode(it) },
                 retention = dictionary[MessageRetentionV1.COMPONENT_ID]?.let { MessageRetentionV1.decode(it) },
                 lifecycle = dictionary[GroupLifecycleV1.COMPONENT_ID]?.let { GroupLifecycleV1.decode(it) },
+                agentTextStream =
+                    dictionary[AgentTextStreamQuicPolicyV1.COMPONENT_ID]?.let {
+                        AgentTextStreamQuicPolicyV1.decode(it)
+                    },
             )
 
         fun fromExtensions(extensions: List<Extension>): MarmotGroupState = fromDictionary(AppDataDictionary.fromExtensionsOrEmpty(extensions))
@@ -117,6 +123,7 @@ data class MarmotGroupState(
             image: GroupBlossomImageV1? = null,
             retention: MessageRetentionV1? = null,
             lifecycle: GroupLifecycleV1? = GroupLifecycleV1.ACTIVE,
+            agentTextStream: AgentTextStreamQuicPolicyV1? = null,
             extraRequiredComponents: Collection<Int> = emptyList(),
         ): AppDataDictionary {
             var dictionary = AppDataDictionary.EMPTY
@@ -144,6 +151,10 @@ data class MarmotGroupState(
             lifecycle?.let {
                 required.add(GroupLifecycleV1.COMPONENT_ID)
                 dictionary = dictionary.with(GroupLifecycleV1.COMPONENT_ID, it.encode())
+            }
+            agentTextStream?.let {
+                required.add(AgentTextStreamQuicPolicyV1.COMPONENT_ID)
+                dictionary = dictionary.with(AgentTextStreamQuicPolicyV1.COMPONENT_ID, it.encode())
             }
 
             return dictionary.with(ComponentsList.APP_COMPONENTS_ID, ComponentsList.encode(required))

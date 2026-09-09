@@ -287,9 +287,10 @@ class MlsGroupManager(
             val group = MlsGroup.processWelcome(welcomeBytes, bundle)
 
             val derivedId =
-                group.currentMarmotData()?.nostrGroupId
+                group.currentNostrGroupId()
                     ?: throw IllegalArgumentException(
-                        "Welcome GroupContext is missing the NostrGroupData extension — cannot derive nostrGroupId",
+                        "Welcome GroupContext carries no nostr routing: neither the current profile's " +
+                            "0x8004 component nor the legacy 0xF2EE extension — cannot derive nostrGroupId",
                     )
 
             if (hintNostrGroupId != null && hintNostrGroupId != derivedId) {
@@ -404,17 +405,34 @@ class MlsGroupManager(
         targetLeafIndex: Int,
     ): StagedCommit = stage(nostrGroupId) { it.removeMember(targetLeafIndex) }
 
+    /**
+     * Refuse a GroupContextExtensions change from a non-admin.
+     *
+     * The admin set is read profile-agnostically: a current-profile group
+     * keeps it in the `0x8003` admin-policy component, a legacy group inside
+     * the `0xF2EE` extension. Reading only the legacy one made
+     * `adminsConfigured` false for every current-profile group, which skipped
+     * the gate entirely rather than failing closed — the group would then
+     * refuse the commit on arrival at every peer, so the only thing the
+     * missing check bought was a locally-diverged copy.
+     *
+     * A group with NO admin set at all is still open: that is the MIP-01
+     * bootstrap state, before any admin policy has been installed.
+     */
+    private fun requireAdminForExtensionChange(group: MlsGroup) {
+        val admins = group.currentAdminIdentities()
+        check(admins.isEmpty() || group.isLocalAdmin()) {
+            "MIP-01: only admins may update group extensions"
+        }
+    }
+
     /** Stage a GroupContextExtensions change. See [StagedCommit]. */
     suspend fun stageUpdateGroupExtensions(
         nostrGroupId: HexKey,
         extensions: List<Extension>,
     ): StagedCommit {
         val live = requireGroup(nostrGroupId)
-        val currentMarmot = live.currentMarmotData()
-        val adminsConfigured = currentMarmot != null && currentMarmot.adminPubkeys.isNotEmpty()
-        check(!adminsConfigured || live.isLocalAdmin()) {
-            "MIP-01: only admins may update group extensions"
-        }
+        requireAdminForExtensionChange(live)
         return stage(nostrGroupId) { clone ->
             clone.proposeGroupContextExtensions(extensions)
             clone.commit()
@@ -636,11 +654,7 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            val currentMarmot = group.currentMarmotData()
-            val adminsConfigured = currentMarmot != null && currentMarmot.adminPubkeys.isNotEmpty()
-            check(!adminsConfigured || group.isLocalAdmin()) {
-                "MIP-01: only admins may update group extensions"
-            }
+            requireAdminForExtensionChange(group)
             val retainedBefore = group.retainedSecrets()
             group.proposeGroupContextExtensions(extensions)
             val result = group.commit()

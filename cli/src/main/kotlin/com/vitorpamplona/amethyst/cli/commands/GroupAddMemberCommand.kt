@@ -127,9 +127,17 @@ object GroupAddMemberCommand {
                         //      bootstrapped Amethyst accounts listen on these)
                         // Our own outbox is added as belt-and-braces so we
                         // can re-ingest the welcome ourselves too.
+                        //
+                        // The default set is a bootstrap for someone who has
+                        // advertised NOTHING, not a fallback for someone whose
+                        // advertised inbox we declined to use. When they named
+                        // a local-network relay we refuse to reach, sending
+                        // their invite to a public default set instead is a
+                        // different action than they asked for — so we keep it
+                        // on the group's own relays and say so.
                         buildSet {
                             addAll(recipient.dmInboxOrFallback())
-                            if (isEmpty()) {
+                            if (isEmpty() && !recipient.dmInboxWithheld) {
                                 addAll(DefaultDMRelayList)
                             }
                             addAll(ctx.outboxRelays())
@@ -154,6 +162,7 @@ object GroupAddMemberCommand {
                         "commit_accepted_by" to commitAck.filterValues { it.accepted }.keys.map { it.url },
                         "welcome_accepted_by" to welcomeAck.filterValues { it.accepted }.keys.map { it.url },
                         "welcome_targets" to welcomeTargets.map { it.url },
+                        "welcome_inbox_withheld" to recipient.dmInboxWithheld,
                         "key_package_relays" to kpRelays.map { it.url },
                     ),
                 )

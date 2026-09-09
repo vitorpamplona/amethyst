@@ -210,9 +210,21 @@ class MarmotOutboundProcessor(
         nostrGroupId: HexKey,
         createdAt: Long,
     ): Long? {
-        val extensions = groupManager.getGroup(nostrGroupId)?.extensions ?: return null
-        val marmotData = MarmotGroupData.fromExtensions(extensions) ?: return null
-        val secs = marmotData.disappearingMessageSecs ?: return null
-        return createdAt + secs.toLong()
+        val group = groupManager.getGroup(nostrGroupId) ?: return null
+        // The current profile carries retention in the 0x8005 component; the
+        // legacy profile in the monolithic 0xF2EE extension. Reading only the
+        // legacy one silently dropped the expiration tag on every
+        // current-profile group, so disappearing messages simply did not
+        // disappear.
+        val secs =
+            group
+                .currentGroupState()
+                .retention
+                ?.takeIf { it.isEnabled }
+                ?.disappearingMessageSecs
+                ?.toLong()
+                ?: MarmotGroupData.fromExtensions(group.extensions)?.disappearingMessageSecs?.toLong()
+                ?: return null
+        return createdAt + secs
     }
 }

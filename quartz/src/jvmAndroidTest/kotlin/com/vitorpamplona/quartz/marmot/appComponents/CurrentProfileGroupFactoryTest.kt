@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.marmot.appComponents
 
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
@@ -106,17 +107,23 @@ class CurrentProfileGroupFactoryTest {
             assertContentEquals(ByteArray(0), kpDictionary[AppComponentIds.LAST_RESORT_KEY_PACKAGE])
 
             // Capabilities advertise the draft extension the current profile
-            // needs, plus the legacy 0xF2EE group-data extension.
+            // needs, plus the legacy 0xF2EE group-data extension and the
+            // agent-text-stream RECEIVE role.
             //
-            // The extra entry is deliberate and is NOT drift from the MDK
+            // The extra entries are deliberate and are NOT drift from the MDK
             // reference. A capability says "this client can handle it", and a
-            // group that REQUIRES 0xF2EE refuses to add a leaf that does not
-            // advertise it — so without this a current-profile KeyPackage
-            // would be un-addable to every legacy group that already exists.
-            // Advertising more than a group requires is always acceptable;
-            // advertising less is what gets a leaf rejected.
+            // group that REQUIRES 0xF2EE (legacy) or 0xF2D1 (any group MDK
+            // creates) refuses to add a leaf that does not advertise it — so
+            // without these a current-profile KeyPackage would be un-addable
+            // to every legacy group that already exists and to every group MDK
+            // makes. Advertising more than a group requires is always
+            // acceptable; advertising less is what gets a leaf rejected.
             assertEquals(
-                listOf(AppDataDictionary.EXTENSION_TYPE, MarmotGroupData.EXTENSION_ID_INT),
+                listOf(
+                    AppDataDictionary.EXTENSION_TYPE,
+                    MarmotGroupData.EXTENSION_ID_INT,
+                    AgentTextStreamRoles.RECEIVE_CAPABILITY,
+                ),
                 kp.leafNode.capabilities.extensions,
             )
             assertTrue(

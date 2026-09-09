@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.marmot.appComponents
 
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.marmot.mls.components.ComponentData
@@ -62,6 +63,14 @@ object CurrentProfileGroupFactory {
      * invisible, and one we list but do not implement is a lie that surfaces
      * later as a group we cannot actually participate in. Add an id here only
      * when the component is implemented.
+     *
+     * `0x8006` (agent-text-stream over QUIC) is listed for the RECEIVE role
+     * only, which is what [MlsGroup.currentProfileLeafCapabilities] advertises:
+     * we decode the group's policy, derive the per-stream record keys, open
+     * records and fold the transcript. We do not advertise the `send`
+     * (`0xF2D2`) or `fanout` (`0xF2D4`) capabilities, because publishing needs
+     * durable per-stream sequence state to avoid reusing an AEAD nonce across
+     * a restart, and we have none.
      */
     val SUPPORTED_COMPONENTS: List<Int> =
         listOf(
@@ -71,6 +80,7 @@ object CurrentProfileGroupFactory {
             AppComponentIds.ADMIN_POLICY_V1,
             AppComponentIds.NOSTR_ROUTING_V1,
             AppComponentIds.MESSAGE_RETENTION_V1,
+            AppComponentIds.AGENT_TEXT_STREAM_QUIC_V1,
             AppComponentIds.ACCOUNT_IDENTITY_PROOF_V2,
             AppComponentIds.GROUP_ENCRYPTED_MEDIA_V2,
             AppComponentIds.GROUP_LIFECYCLE_V1,
@@ -166,6 +176,7 @@ object CurrentProfileGroupFactory {
         profile: GroupProfileV1? = null,
         additionalAdmins: List<ByteArray> = emptyList(),
         retention: MessageRetentionV1? = null,
+        agentTextStream: AgentTextStreamQuicPolicyV1? = null,
         ciphersuite: MlsCiphersuite = MlsCiphersuite.DEFAULT,
     ): MlsGroup {
         val identity = signer.pubKey.hexToByteArray()
@@ -178,6 +189,7 @@ object CurrentProfileGroupFactory {
                 profile = profile,
                 retention = retention,
                 lifecycle = GroupLifecycleV1.ACTIVE,
+                agentTextStream = agentTextStream,
             )
 
         return MlsGroup.create(
