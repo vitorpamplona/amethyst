@@ -91,4 +91,24 @@ interface MarmotMessageStore {
 
     /** Inner event id → the MLS epoch that delivered it, for what was recorded. */
     suspend fun loadEpochs(nostrGroupId: String): Map<String, Long> = emptyMap()
+
+    /**
+     * Remember the group state the last kind `1210` rows were derived FROM.
+     *
+     * System rows are synthesized locally from canonical state rather than
+     * received as messages, so a client needs a baseline to derive against —
+     * otherwise it either re-emits every row each time it looks at the group,
+     * or emits none at all. This is that baseline: a client's memory of where
+     * it left off, never a wire value.
+     *
+     * Optional, like [recordEpoch]. A store that keeps no snapshot simply
+     * derives no rows, which is a missing caption rather than a broken group.
+     */
+    suspend fun recordGroupSnapshot(
+        nostrGroupId: String,
+        snapshotJson: String,
+    ) = Unit
+
+    /** The last recorded snapshot, or null when there is no baseline yet. */
+    suspend fun loadGroupSnapshot(nostrGroupId: String): String? = null
 }

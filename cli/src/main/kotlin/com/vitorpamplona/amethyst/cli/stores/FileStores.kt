@@ -152,7 +152,20 @@ class FileMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         file(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group messages")
         epochFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message epochs")
+        snapshotFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group system-row baseline")
     }
+
+    private fun snapshotFile(id: String) = File(dir, "$id.snapshot")
+
+    override suspend fun recordGroupSnapshot(
+        nostrGroupId: String,
+        snapshotJson: String,
+    ) {
+        // Overwritten, not appended: this is one baseline, not a history.
+        SecureFileIO.writeBytesAtomic(snapshotFile(nostrGroupId), snapshotJson.encodeToByteArray())
+    }
+
+    override suspend fun loadGroupSnapshot(nostrGroupId: String): String? = snapshotFile(nostrGroupId).takeIf { it.exists() }?.readText()
 
     private fun epochFile(id: String) = File(dir, "$id.epochs")
 

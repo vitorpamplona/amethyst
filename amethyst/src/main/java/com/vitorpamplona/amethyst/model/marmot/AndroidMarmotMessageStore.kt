@@ -111,7 +111,7 @@ class AndroidMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             writeMutex.withLock {
-                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId))) {
+                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId))) {
                     if (file.exists() && !file.delete()) {
                         Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
                     }
@@ -163,6 +163,41 @@ class AndroidMarmotMessageStore(
             } catch (e: Exception) {
                 Log.e(TAG, "loadEpochs($nostrGroupId) FAILED: ${e.message}", e)
                 emptyMap()
+            }
+        }
+
+    private fun snapshotFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "snapshot")
+
+    /**
+     * The group state the last kind:1210 rows were derived from.
+     *
+     * Encrypted like everything else here: it names members and admins, which
+     * is the group's membership written down.
+     *
+     * A single entry rather than an append log — this is one baseline, not a
+     * history, and the previous one is worthless the moment rows are derived
+     * against it.
+     */
+    override suspend fun recordGroupSnapshot(
+        nostrGroupId: String,
+        snapshotJson: String,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            try {
+                writeAllTo(snapshotFile(nostrGroupId), listOf(snapshotJson))
+            } catch (e: Exception) {
+                Log.e(TAG, "recordGroupSnapshot($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadGroupSnapshot(nostrGroupId: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                readAllFrom(snapshotFile(nostrGroupId)).firstOrNull()
+            } catch (e: Exception) {
+                Log.e(TAG, "loadGroupSnapshot($nostrGroupId) FAILED: ${e.message}", e)
+                null
             }
         }
 

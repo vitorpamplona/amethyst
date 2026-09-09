@@ -119,24 +119,49 @@ class MarmotGroupList(
 
     /**
      * True if this inner event should appear as its own bubble in the group
-     * chat feed. Side-channel kinds (reactions, deletions) must still be
-     * consumed into LocalCache — they drive the reaction row on the target
-     * note and, for kind:5, revoke a prior reaction — but they must NOT show
-     * up as standalone messages.
+     * chat feed. Side-channel kinds must still be consumed into LocalCache —
+     * they drive the reaction row on the target note and, for kind:5, revoke a
+     * prior reaction — but they must NOT show up as standalone messages.
      *
      * Needed because WhiteNoise emits plain kind:7 reactions (emoji content +
      * `e` tag) and kind:5 unreacts inside kind:445, and the Marmot pipeline
      * blindly routed every inner event into the chatroom. The reaction then
      * rendered as a chat bubble containing just the emoji, with a quoted
      * citation of the target message — which reads exactly like a reply.
+     *
+     * The same reasoning covers the three kinds that are not chat either:
+     *
+     * - **1009 edits** replace a prior message's text in place. Rendering one
+     *   as its own row would show the same sentence twice, and it must not
+     *   advance an unread count — a reader caught up with the original is
+     *   caught up with the edit.
+     * - **1200 agent-stream anchors** are hidden by their own feature: the
+     *   payload is routing metadata with an empty body, so it would render as
+     *   a blank bubble. What a reader sees is the live preview and then the
+     *   authoritative kind:9.
+     * - **1210 system rows** are group-state captions, not messages. They are
+     *   held back here rather than shown as a bubble of JSON; a renderer with
+     *   a system-row style can surface them from the same log.
      */
     private fun isDisplayableFeedMessage(msg: Note): Boolean {
         val kind = msg.event?.kind ?: return true
-        return kind != MARMOT_INNER_KIND_REACTION && kind != MARMOT_INNER_KIND_DELETION
+        return kind !in NON_CHAT_INNER_KINDS
     }
 
     companion object {
         private const val MARMOT_INNER_KIND_DELETION = 5
         private const val MARMOT_INNER_KIND_REACTION = 7
+        private const val MARMOT_INNER_KIND_EDIT = 1009
+        private const val MARMOT_INNER_KIND_STREAM_START = 1200
+        private const val MARMOT_INNER_KIND_SYSTEM = 1210
+
+        private val NON_CHAT_INNER_KINDS =
+            setOf(
+                MARMOT_INNER_KIND_DELETION,
+                MARMOT_INNER_KIND_REACTION,
+                MARMOT_INNER_KIND_EDIT,
+                MARMOT_INNER_KIND_STREAM_START,
+                MARMOT_INNER_KIND_SYSTEM,
+            )
     }
 }

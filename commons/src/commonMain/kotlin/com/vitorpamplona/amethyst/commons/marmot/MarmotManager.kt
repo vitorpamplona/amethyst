@@ -42,6 +42,11 @@ import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextSt
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamFinal
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamKeyContextV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamStart
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotGroupSnapshot
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemEvent
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemRowDiff
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
@@ -577,6 +582,38 @@ class MarmotManager(
     fun currentEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
 
     /**
+     * Build a kind:1009 edit that replaces the text of a prior message.
+     *
+     * An edit is not chat and must never render as its own row: the
+     * replacement is overlaid on the original body, and a reader who was
+     * caught up with the original is caught up with the edit. It carries
+     * exactly one `e` tag naming its target — an edit that named several would
+     * leave every client to pick one, and they would not all pick the same.
+     *
+     * Authorship is checked at READ time, not here: only the original author
+     * may replace their own words, and a receiver enforces that against the
+     * message it actually holds rather than trusting the sender to have.
+     */
+    suspend fun buildMessageEdit(
+        nostrGroupId: HexKey,
+        targetEventId: HexKey,
+        replacement: String,
+        persistOwn: Boolean = true,
+    ): TextMessageBundle {
+        val template =
+            com.vitorpamplona.quartz.nip01Core.signers
+                .eventTemplate<Event>(kind = MarmotAppEvent.KIND_EDIT, description = replacement) {
+                    addUnique(arrayOf("e", targetEventId))
+                }
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<Event>(signer.pubKey, template)
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /**
      * Build a kind:5 deletion inner event targeting one or more prior inner
      * events in the same group. Unsigned rumor (MIP-03); e-tag + k-tag for
      * each target per NIP-09.
@@ -833,6 +870,11 @@ class MarmotManager(
                 sourceEpoch = staged.priorState.groupContext.epoch,
                 preState = staged.priorState,
             )
+            // Our own change is canonical state now, so it gets the same
+            // derived rows a peer's commit would. The actor is known here in a
+            // way it is not for an inbound commit, which is what lets a
+            // self-removal read as "left" rather than "removed".
+            syncGroupSystemRows(nostrGroupId, actor = signer.pubKey)
         } else {
             Log.w("MarmotManager") {
                 "commitAndPublish($nostrGroupId): no relay acknowledged the commit — pending state " +
@@ -1040,6 +1082,122 @@ class MarmotManager(
             }
         } catch (e: Exception) {
             Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId", e)
+        }
+    }
+
+    /**
+     * The winning edit for every message a set of app events edits.
+     *
+     * Returns `target event id → replacement text`. Two rules do the work, and
+     * both are read-side because a sender cannot be trusted to have applied
+     * them:
+     *
+     * - **Authorship is by ACCOUNT.** Only the account that wrote a message may
+     *   replace it. A second device of the same account holds a different leaf
+     *   and may still edit its own account's words; any other account's edit is
+     *   ignored outright, or every member could rewrite anyone.
+     * - **The latest edit wins, with the event id breaking a tie.** Two devices
+     *   of one account can stamp the same second, and without a deterministic
+     *   rule two readers would render different text for the same message
+     *   forever.
+     *
+     * [messages] is the group's decrypted app events — the originals and the
+     * edits together, since an edit is only authorized against the message it
+     * targets.
+     */
+    fun editOverlays(messages: List<Event>): Map<HexKey, String> {
+        val authorOf = HashMap<HexKey, HexKey>(messages.size)
+        val edits = HashMap<HexKey, MutableList<MarmotMessageEdit>>()
+        for (event in messages) {
+            if (event.kind == MarmotAppEvent.KIND_EDIT) {
+                val edit =
+                    MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(event))
+                        ?: continue
+                edits.getOrPut(edit.targetId) { mutableListOf() }.add(edit)
+            } else {
+                authorOf[event.id] = event.pubKey
+            }
+        }
+        val overlays = HashMap<HexKey, String>(edits.size)
+        for ((targetId, candidates) in edits) {
+            // An edit for a message this client does not hold is not applied.
+            // It is not dropped as invalid either — the target may simply not
+            // have arrived yet — it just has nothing to overlay.
+            val originalAuthor = authorOf[targetId] ?: continue
+            val authorized = candidates.filter { MarmotMessageEdit.isAuthorized(it, originalAuthor) }
+            MarmotMessageEdit.selectOverlay(authorized)?.let { overlays[targetId] = it.replacement }
+        }
+        return overlays
+    }
+
+    /**
+     * The slice of canonical group state that kind:1210 rows are derived from,
+     * or null when this client is not in the group.
+     */
+    fun groupSnapshot(nostrGroupId: HexKey): MarmotGroupSnapshot? {
+        val group = groupManager.getGroup(nostrGroupId) ?: return null
+        // Name and admins come from [groupView], not from the components
+        // alone: a legacy group keeps both inside `0xF2EE`, and reading the
+        // current profile's components there would report a nameless group
+        // that never changes — so a rename would derive no row at all.
+        val view = groupView(nostrGroupId)
+        return MarmotGroupSnapshot.of(
+            state = group.currentGroupState(),
+            memberAccounts = memberPubkeys(nostrGroupId).map { it.pubkey },
+            name = view?.name.orEmpty(),
+            admins = view?.adminPubkeys.orEmpty(),
+        )
+    }
+
+    /**
+     * Derive the kind:1210 rows for whatever changed since this client last
+     * looked, append them to the local log, and record the new baseline.
+     *
+     * System rows are synthesized from canonical group state, never received:
+     * a row derived from an MLS-authenticated commit cannot be forged by one
+     * member, and every client that applied the same commits derives the same
+     * rows. A client MUST NOT wait for a 1210 *message* to learn that state
+     * changed — one that arrives over the wire is an assertion by its sender,
+     * not a derived fact.
+     *
+     * Diffing against a stored baseline rather than against the pre-commit
+     * state in hand is what makes this safe to call at any time: it is
+     * idempotent, it survives a restart mid-transition, and it cannot
+     * double-write a row for a change it already described.
+     *
+     * The very first call on a group establishes the baseline and writes
+     * nothing. Announcing every existing member as newly added would be a
+     * timeline full of events that did not happen.
+     */
+    suspend fun syncGroupSystemRows(
+        nostrGroupId: HexKey,
+        /** The committer, when the caller knows it. An unattributed row is still true. */
+        actor: HexKey? = null,
+    ): List<MarmotSystemEvent> {
+        val store = messageStore ?: return emptyList()
+        val current = groupSnapshot(nostrGroupId) ?: return emptyList()
+        return try {
+            val stored = store.loadGroupSnapshot(nostrGroupId)
+            val baseline = stored?.let { MarmotGroupSnapshot.decode(it) }
+            if (baseline == null) {
+                store.recordGroupSnapshot(nostrGroupId, current.encode())
+                return emptyList()
+            }
+            val rows = MarmotSystemRowDiff.diff(baseline, current, actor)
+            val now = TimeUtils.now()
+            for (row in rows) {
+                // The row is attributed to the committer when there is one.
+                // With no actor it is still attributed to somebody, because an
+                // app event has a pubkey — this client, whose local derivation
+                // it is.
+                val appEvent = row.toAppEvent(actor ?: signer.pubKey, now)
+                persistDecryptedMessage(nostrGroupId, appEvent.toJson().dropLast(1) + ",\"sig\":\"\"}")
+            }
+            store.recordGroupSnapshot(nostrGroupId, current.encode())
+            rows
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to sync Marmot system rows for $nostrGroupId", e)
+            emptyList()
         }
     }
 

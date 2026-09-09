@@ -157,7 +157,7 @@ class MarmotSystemEvent(
             sb.append('"')
             for (ch in value) {
                 when (ch) {
-                    '"' -> sb.append("ESC\"")
+                    '"' -> sb.append("\\\"")
                     '\\' -> sb.append("\\\\")
                     '\n' -> sb.append("\\n")
                     '\r' -> sb.append("\\r")

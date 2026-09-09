@@ -139,6 +139,11 @@ private suspend fun MarmotManager.ingestGiftWrapUncached(wrap: GiftWrapEvent): M
         }
         when (val result = processWelcome(rumor, rumor.nostrGroupId())) {
             is WelcomeResult.Joined -> {
+                // Establish the baseline for this group's system rows without
+                // writing any: a joiner announcing every existing member as
+                // newly added would be a timeline full of events that never
+                // happened.
+                syncGroupSystemRows(result.nostrGroupId)
                 MarmotIngestResult.JoinedGroup(
                     nostrGroupId = result.nostrGroupId,
                     needsKeyPackageRotation = result.needsKeyPackageRotation,
@@ -167,6 +172,12 @@ private suspend fun MarmotManager.ingestGroupEvent(ge: GroupEvent): MarmotIngest
         }
 
         is GroupEventResult.CommitProcessed -> {
+            // The epoch just advanced, so whatever this commit changed about
+            // the group is now canonical state — which is exactly what a
+            // kind:1210 row is derived from. Deriving here rather than at
+            // render time means the rows land in the same log as the messages
+            // they sit between, in the order they happened.
+            syncGroupSystemRows(result.groupId)
             MarmotIngestResult.Commit(result)
         }
 
