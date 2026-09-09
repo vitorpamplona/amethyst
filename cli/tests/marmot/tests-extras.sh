@@ -17,7 +17,8 @@ test_09_reply_react_unreact() {
   # B anchors. Needs a member to be present — if Test 11 already ran and A left,
   # skip cleanly so we don't double-fail.
   if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-        | jq -e --arg p "$A_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' \
+        | jq_list members | jq -e --arg p "$A_HEX" \
+            'select((.member_id // .pubkey // .public_key) == $p)' \
         >/dev/null 2>&1; then
     record_result "$id" skip "A already left GROUP_02"; return
   fi
@@ -26,7 +27,9 @@ test_09_reply_react_unreact() {
   sleep 3
   local msg_id
   msg_id=$(wn_b --json messages list "$mls_gid" --limit 10 2>/dev/null \
-             | jq -r '[(.result // .) | .[]? | select((.content // .text // "") == "anchor for reactions")][0].id // empty')
+             | jq_list messages \
+             | jq -r 'select((.plaintext // .content // .text // "") == "anchor for reactions")
+                      | (.message_id // .id)' | head -n 1)
   if [[ -z "$msg_id" || "$msg_id" == "null" ]]; then
     record_result "$id" fail "couldn't find anchor message id"; return
   fi
@@ -47,7 +50,9 @@ test_09_reply_react_unreact() {
   sleep 3
   local a_anchor_id
   a_anchor_id=$(amy_json marmot message list "$gid" --limit 50 2>/dev/null \
-                  | jq -r '[.messages[]? | select((.content // "") == "anchor for reactions")][0].event_id // empty')
+                  | jq_list messages \
+                  | jq -r 'select((.plaintext // .content // "") == "anchor for reactions")
+                           | (.message_id // .event_id)' | head -n 1)
   if [[ -z "$a_anchor_id" || "$a_anchor_id" == "null" ]]; then
     record_result "$id" fail "amy couldn't find anchor message in local log"; return
   fi
@@ -67,7 +72,7 @@ test_09_reply_react_unreact() {
     payload=$(wn_b_json messages list "$mls_gid" --limit 50 2>/dev/null || true)
     if [[ -n "$payload" ]] && \
          printf '%s' "$payload" \
-           | jq -e '(.result // .) | .[]? | (.reactions.by_emoji // {}) | keys[]?' \
+           | jq_list messages | jq -e '(.reactions.by_emoji // {}) | keys[]?' \
                   2>/dev/null \
            | grep -qF '"🍕"'; then
       saw=1; break
@@ -92,7 +97,8 @@ test_10_concurrent_commits() {
     record_result "$id" skip "no GROUP_02"; return
   fi
   if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-        | jq -e --arg p "$A_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' \
+        | jq_list members | jq -e --arg p "$A_HEX" \
+            'select((.member_id // .pubkey // .public_key) == $p)' \
         >/dev/null 2>&1; then
     record_result "$id" skip "A already left GROUP_02"; return
   fi
@@ -110,7 +116,8 @@ test_10_concurrent_commits() {
   # whitenoise-rs ≥ v0.2.x wraps the group payload one level deeper as
   # `{"result": {"group": {…name…}}}`; the older shape was a bare group
   # object under `.result`. Accept both.
-  b_name=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | (.group // .) | .name // empty')
+  b_name=$(wn_b --json groups show "$mls_gid" 2>/dev/null \
+             | jq -r '(.result // .) | (.group // .) | (.profile.name // .name) // empty')
   local a_name
   a_name=$(amy_field '.name' marmot group show "$gid" 2>/dev/null || echo "")
 
@@ -194,7 +201,8 @@ test_13_keypackage_rotation() {
   local id="13 keypackage rotation"
 
   local before
-  before=$(wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -r '.result.event_id // empty')
+  before=$(wn_b --json keys check "$A_NPUB" 2>/dev/null \
+             | jq -r '.result.key_package.key_package_event_id // .result.event_id // empty')
   if [[ -z "$before" ]]; then
     record_result "$id" fail "no prior KP for A"; return
   fi
@@ -205,7 +213,8 @@ test_13_keypackage_rotation() {
 
   local deadline=$(( $(date +%s) + 60 )) after=""
   while [[ $(date +%s) -lt $deadline ]]; do
-    after=$(wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -r '.result.event_id // empty')
+    after=$(wn_b --json keys check "$A_NPUB" 2>/dev/null \
+              | jq -r '.result.key_package.key_package_event_id // .result.event_id // empty')
     [[ -n "$after" && "$after" != "$before" ]] && break
     sleep 3
   done
@@ -323,9 +332,9 @@ test_15_wn_member_leaves() {
     local show
     show=$(amy_json marmot group show "$a_gid" 2>/dev/null) || { sleep 3; continue; }
     local c_still
-    c_still=$(printf '%s' "$show" | jq --arg p "$C_HEX" '[.members[]? | select(.pubkey == $p)] | length')
+    c_still=$(printf '%s' "$show" | jq --arg p "$C_HEX" '[.members[]? | select((.pubkey // .member_id) == $p)] | length')
     local a_still
-    a_still=$(printf '%s' "$show" | jq --arg p "$A_HEX" '[.members[]? | select(.pubkey == $p)] | length')
+    a_still=$(printf '%s' "$show" | jq --arg p "$A_HEX" '[.members[]? | select((.pubkey // .member_id) == $p)] | length')
     if [[ "$c_still" == "0" && "$a_still" == "1" ]]; then
       ok=1; break
     fi

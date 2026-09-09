@@ -184,12 +184,19 @@ test_05_b_adds_a_existing() {
     record_result "$id" fail "wn add-members A failed"; return
   }
 
-  # A joins
-  if ! amy_json marmot await group --name "Interop-05" --timeout 30 >/dev/null; then
+  # A joins. `gid` is wn's MLS group id; amy indexes by the MIP-01
+  # nostr_group_id, which only exists locally once A has processed the
+  # welcome — so take amy's id from its own await, never wn's.
+  local a_out a_gid
+  a_out=$(amy_json marmot await group --name "Interop-05" --timeout 30) || {
     record_result "$id" fail "A never received invite to Interop-05"; return
+  }
+  a_gid=$(printf '%s' "$a_out" | jq -r '.group_id // empty')
+  if [[ -z "$a_gid" ]]; then
+    record_result "$id" fail "A joined Interop-05 but reported no group_id"; return
   fi
 
-  amy_json marmot message send "$gid" "joined from amethyst" >/dev/null || {
+  amy_json marmot message send "$a_gid" "joined from amethyst" >/dev/null || {
     record_result "$id" fail "amy send failed"; return
   }
   if wait_for_message B "$gid" "joined from amethyst" 90 \

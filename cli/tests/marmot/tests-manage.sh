@@ -28,7 +28,8 @@ test_06_member_removal() {
   local deadline=$(( $(date +%s) + 120 )) removed=0
   while [[ $(date +%s) -lt $deadline ]]; do
     if ! wn_c --json groups members "$mls_gid" 2>/dev/null \
-         | jq -e --arg p "$C_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' \
+         | jq_list members | jq -e --arg p "$C_HEX" \
+             'select((.member_id // .pubkey // .public_key) == $p)' \
          >/dev/null 2>&1; then
       removed=1; break
     fi
@@ -78,7 +79,10 @@ test_07_metadata_rename() {
     # `{"result": {"group": {…name…}}}`; older builds returned the bare
     # group object under `.result`. Probe both shapes so the test survives
     # either schema.
-    seen=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | (.group // .) | .name // empty')
+    # MDK 0.9.x keeps the display name in the profile component, not a
+    # top-level `name`: `.result.group.profile.name`.
+    seen=$(wn_b --json groups show "$mls_gid" 2>/dev/null \
+             | jq -r '(.result // .) | (.group // .) | (.profile.name // .name) // empty')
     [[ "$seen" == "Interop-02-renamed" ]] && break
     sleep 3
   done
@@ -151,7 +155,7 @@ test_08_admin_promote_demote() {
 
   local admins
   admins=$(wn_b --json groups admins "$mls_gid" 2>/dev/null \
-             | jq -r '(.result // .) | .[]?.pubkey // .[]?.public_key // .[]?' | tr '\n' ' ')
+             | jq_list admins | jq_member_ids | tr '\n' ' ')
   if [[ "$admins" == *"$A_HEX"* ]]; then
     record_result "$id" fail "A still admin after demote"
   else
@@ -177,7 +181,8 @@ test_11_leave_group() {
   local deadline=$(( $(date +%s) + 120 )) gone=0
   while [[ $(date +%s) -lt $deadline ]]; do
     if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-         | jq -e --arg p "$A_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' \
+         | jq_list admins | jq -e --arg p "$A_HEX" \
+             'select((.admin_id // .pubkey // .public_key) == $p)' \
          >/dev/null 2>&1; then
       gone=1; break
     fi
@@ -218,7 +223,8 @@ test_17_group_image_commit() {
   # Skip cleanly if A is no longer a member of GROUP_02 (a later test may have removed
   # A) — this test only makes sense while A can still commit to the group.
   if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-        | jq -e --arg p "$A_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' \
+        | jq_list members | jq -e --arg p "$A_HEX" \
+            'select((.member_id // .pubkey // .public_key) == $p)' \
         >/dev/null 2>&1; then
     record_result "$id" skip "A not in GROUP_02"; return
   fi
