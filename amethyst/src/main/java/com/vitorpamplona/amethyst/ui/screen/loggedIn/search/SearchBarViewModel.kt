@@ -142,6 +142,7 @@ class SearchBarViewModel(
         combine(pickedScope, scopePinnedToNotes) { picked, pinned ->
             if (pinned) SearchScope.NOTES else picked
         }.stateIn(viewModelScope, SharingStarted.Eagerly, SearchScope.ALL)
+
     val source = MutableStateFlow(SearchSource.RELAYS)
     val followsOnly = MutableStateFlow(false)
     val sortOrder = MutableStateFlow(SearchSortOrder.EVENT_DEFAULT)
