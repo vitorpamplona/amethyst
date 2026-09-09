@@ -586,15 +586,14 @@ Writing the producer side immediately found two bugs the reader-side tests could
 
 ## Interop status (2026-09-09)
 
-The MDK 0.9.20 harness runs end to end. It went **1 passed / 12 failed** to
-**9 passed** over this pass, and the failures that remain are named below rather
-than lumped together.
+The MDK 0.9.20 harness runs end to end and is **green: 17 of 17**, twice in a
+row from a clean state. It started this pass at **1 passed / 12 failed**. The
+defects it found are below — every one of them a place where two
+implementations have to agree on something one implementation alone never
+disagrees with, which is why none of them was visible to any same-implementation
+test we have.
 
 ### Defects the harness found in our own code
-
-Each of these was invisible to every same-implementation test we have, because
-each is a place where two implementations have to agree on something one
-implementation alone never disagrees with.
 
 1. **A Commit rebuilt our own leaf from defaults.** The UpdatePath leaf replaces
    OUR leaf — same member, new key material — so its capabilities and extensions
@@ -628,24 +627,59 @@ implementation alone never disagrees with.
    exists to prevent. `PublishOutcome.UNKNOWN` keeps the record and holds the
    group.
 
-5. **The harness was parsing a wire format `wn` no longer speaks.** MDK 0.9.x
+5. **We treated a last-resort KeyPackage as single-use.** We publish every
+   KeyPackage marked last resort and then dropped its private keys the moment
+   one Welcome consumed it. OpenMLS deletes a consumed bundle only
+   `if !key_package.last_resort()`; MDK marks all of its own last resort, caches
+   the peer KeyPackage it resolved, and invites from that cached copy every time
+   after. So the first invite addressed to us worked and every one after it died
+   on "No matching KeyPackageBundle". Two things had to be fixed together: the
+   last-resort check had to read the current profile's carrier (a
+   `last_resort_key_package` component inside the KeyPackage-level
+   `app_data_dictionary`, not the MIP-era `0x000A` extension type), and the
+   Welcome lookup had to trust the MLS KeyPackageRefs over the Nostr `e` tag,
+   which MDK stamps from its stale cached copy.
+
+6. **Every rotation downgraded us off the current profile.** MIP-00 replaces a
+   KeyPackage as soon as a Welcome consumes it, so rotation runs right after the
+   first group we are ever invited to — and it minted the replacement through
+   the legacy generator. From that moment the only KeyPackage on relays for us
+   had no account identity proof, MDK refused it outright, and the account was
+   silently uninvitable one join after setup. Rotation and first publication now
+   share one mint path.
+
+7. **The harness was parsing a wire format `wn` no longer speaks.** MDK 0.9.x
    returns `{"ok":true,"result":{"invites":[…]}}`; iterating `.result` walked
    that object's three VALUES, so every poll matched nothing and reported "never
    received invite" for welcomes that had arrived and been accepted.
 
+### Harness defects (not ours)
+
+- **Runs inherited each other's state.** wnd wipes B's and C's data dirs on
+  start, but A's amy home and the relay's SQLite file survived, and the
+  leftovers are not inert — a KeyPackage from an earlier run is still on the
+  relay to be invited with, and old kind:445 events still arrive undecryptable.
+  Tests 03 and 08 failed on a dirty tree and passed on a clean one. Every run
+  now starts from empty stores; `--reuse-state` opts out and `--tests "…"` runs
+  a subset.
+- **Test 16 asked `wn keys publish` to rotate.** That verb is the idempotent
+  retry of the durable stable-slot replacement, so with nothing pending it
+  republishes the same event id and there is no rotation to observe.
+  `wn keys rotate` is the one that mints.
+- **Test 09 polled the wrong surface.** `wn messages list` reads the raw
+  app-event log, where a reaction is its own kind:7 entry with an `e` tag naming
+  the anchor; `reactions.by_emoji` is the materialized timeline's aggregate,
+  which that command does not project. The reaction had been arriving and being
+  stored correctly the whole time.
+
 ### What is NOT done
 
-- **Test 03 gets further but does not pass.** We join MDK's group and see its
-  name; the first kind-445 after the join is not delivered. Tests 05/12/14/15
-  fail behind it with "A never received invite".
-- **Tests 13 and 16 (KeyPackage rotation) fail.** `wn keys check` finds no prior
-  KeyPackage for A at that point in the run, and amy keeps seeing B's
-  pre-rotation KeyPackage.
-- **Test 09 fails on the relay, not on us**: `disconnected before OK` from the
-  local nostr-rs-relay under the load of a full run. The durable ingest markers
-  added in this pass cut a large part of that load (a backdated gift wrap used
-  to be re-unwrapped on every sync, forever) but the test has not been re-run
-  since.
+- **The local relay drops a publish occasionally.** One run in several,
+  `amy` gets `disconnected before OK` from nostr-rs-relay and reports the send
+  as unconfirmed even though the event is on the relay a moment later. It is a
+  harness-relay flake, not a protocol failure, and it costs whichever test is
+  running at the time. Worth making the CLI's publish confirmation tolerate a
+  reconnect rather than papering over it in the tests.
 - **Agent-text-stream is receive-only.** We decode the `0x8006` policy, derive
   per-stream record keys, open records and fold the transcript, and we advertise
   the `0xF2D1` receive capability. We do NOT advertise `send` (`0xF2D2`) or

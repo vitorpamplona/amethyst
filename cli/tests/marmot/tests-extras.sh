@@ -60,16 +60,26 @@ test_09_reply_react_unreact() {
     record_result "$id" fail "amy marmot message react failed"; return
   fi
 
-  # Round-trip: B should surface amy's kind:7 reaction. wn aggregates
-  # reactions onto the anchor message (`.reactions.by_emoji[<emoji>]`),
-  # not as a standalone entry whose `.content` is the emoji — so polling
-  # `messages list` for an entry whose content equals "🍕" would never
-  # match, even when the reaction was successfully decrypted. Look for
-  # the emoji under any message's `reactions.by_emoji` keys instead.
+  # Round-trip: B should surface amy's kind:7 reaction. `wn messages list`
+  # reads the raw app-event log, where a reaction is its own kind:7 entry
+  # carrying the emoji and an "e" tag naming the anchor — the aggregated
+  # `reactions.by_emoji` summary belongs to the materialized timeline, which
+  # this command does not project. Match the raw shape, and accept an
+  # aggregated one too so a wn that starts summarising here still passes.
   local deadline=$(( $(date +%s) + 90 )) saw=0
   while [[ $(date +%s) -lt $deadline ]]; do
     local payload
     payload=$(wn_b_json messages list "$mls_gid" --limit 50 2>/dev/null || true)
+    if [[ -n "$payload" ]] && \
+         printf '%s' "$payload" \
+           | jq_list messages \
+           | jq -e --arg anchor "$msg_id" --arg emoji "🍕" \
+                 'select(.kind == 7)
+                  | select((.plaintext // .content // "") == $emoji)
+                  | select([(.tags // [])[] | select(.[0] == "e") | .[1]] | index($anchor))' \
+                  >/dev/null 2>&1; then
+      saw=1; break
+    fi
     if [[ -n "$payload" ]] && \
          printf '%s' "$payload" \
            | jq_list messages | jq -e '(.reactions.by_emoji // {}) | keys[]?' \
@@ -200,11 +210,15 @@ test_13_keypackage_rotation() {
   banner "Test 13 — KeyPackage rotation"
   local id="13 keypackage rotation"
 
-  local before
-  before=$(wn_b --json keys check "$A_NPUB" 2>/dev/null \
-             | jq -r '.result.key_package.key_package_event_id // .result.event_id // empty')
+  # `keys check` resolves A's KeyPackage the way an invite would, so an empty
+  # answer here is a real finding, not a missing fixture: it means MDK looked
+  # at what A published and refused it. Keep the raw JSON in the log.
+  local before raw
+  raw=$(wn_b --json keys check "$A_NPUB" 2>&1)
+  printf 'wn keys check %s -> %s\n' "$A_NPUB" "$raw" >>"$LOG_FILE"
+  before=$(printf '%s' "$raw" | jq -r '.result.key_package.key_package_event_id // .result.event_id // empty')
   if [[ -z "$before" ]]; then
-    record_result "$id" fail "no prior KP for A"; return
+    record_result "$id" fail "wn cannot resolve a KeyPackage for A"; return
   fi
 
   amy_json marmot key-package publish >/dev/null || {
@@ -373,11 +387,12 @@ test_16_wn_keypackage_rotation() {
     record_result "$id" fail "no prior KP visible to amy for B"; return
   fi
 
-  # Ask B to rotate. `wn keys publish` writes a new kind:443 with a fresh
-  # created_at; the old event may or may not be evicted depending on the
-  # relay's retention policy, so both may coexist for a while.
-  wn_b keys publish >/dev/null 2>&1 || {
-    record_result "$id" fail "wn_b keys publish failed"; return
+  # Ask B to rotate. It has to be `keys rotate` ("force mint and publish a
+  # fresh replacement"), not `keys publish` — the latter is the idempotent
+  # retry of the durable stable-slot replacement, so with nothing pending it
+  # republishes the same event id and there is no rotation to observe.
+  wn_b keys rotate >/dev/null 2>&1 || {
+    record_result "$id" fail "wn_b keys rotate failed"; return
   }
 
   local deadline=$(( $(date +%s) + 60 )) after=""

@@ -1126,8 +1126,22 @@ class MarmotManager(
          * — which is what kept us uninvitable.
          */
         currentProfile: Boolean = true,
+    ): KeyPackageEvent = mintKeyPackageEventForSlot(keyPackageRotationManager.getOrCreateSlotDTag(slotName), relays, currentProfile)
+
+    /**
+     * Mint, sign and index a KeyPackage for an already-resolved d-tag slot.
+     *
+     * Both the first publication and every rotation go through here, and that
+     * is the point: a replacement minted any other way can end up on a
+     * different protocol profile than the KeyPackage it replaces, which makes
+     * the account uninvitable to peers that require the current one.
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    private suspend fun mintKeyPackageEventForSlot(
+        dTag: String,
+        relays: List<NormalizedRelayUrl>,
+        currentProfile: Boolean,
     ): KeyPackageEvent {
-        val dTag = keyPackageRotationManager.getOrCreateSlotDTag(slotName)
         val identity = signer.pubKey.hexToByteArray()
         val bundle =
             if (currentProfile) {
@@ -1184,26 +1198,22 @@ class MarmotManager(
      * Rotate consumed KeyPackage slots.
      * Returns list of KeyPackageEvents to publish.
      */
-    @OptIn(ExperimentalEncodingApi::class)
-    suspend fun rotateConsumedKeyPackages(relays: List<NormalizedRelayUrl>): List<KeyPackageEvent> {
+    suspend fun rotateConsumedKeyPackages(
+        relays: List<NormalizedRelayUrl>,
+        currentProfile: Boolean = true,
+    ): List<KeyPackageEvent> {
         val pendingSlots = keyPackageRotationManager.pendingRotationSlots()
         if (pendingSlots.isEmpty()) return emptyList()
 
-        val identity = signer.pubKey.hexToByteArray()
+        // Same mint path as the first publication. MIP-00 makes us replace a
+        // KeyPackage the moment a Welcome consumes it, so this runs right
+        // after the first group we are ever invited to — minting the
+        // replacement any other way would silently downgrade the only
+        // KeyPackage on relays for us, and a peer that requires the current
+        // profile refuses it and can never add us again.
         return pendingSlots.map { slot ->
-            val bundle = keyPackageRotationManager.rotateSlot(identity, slot)
-            val keyPackageBase64 = Base64.encode(KeyPackageUtils.frameKeyPackage(bundle.keyPackage))
-            val keyPackageRef = bundle.keyPackage.reference().toHexKey()
-
-            val template =
-                KeyPackageEvent.build(
-                    keyPackageBase64 = keyPackageBase64,
-                    dTagSlot = slot,
-                    keyPackageRef = keyPackageRef,
-                    relays = relays,
-                )
-            val signed = signer.sign<KeyPackageEvent>(template)
-            keyPackageRotationManager.recordPublishedEventId(slot, signed.id)
+            val signed = mintKeyPackageEventForSlot(slot, relays, currentProfile)
+            keyPackageRotationManager.clearPendingRotation(slot)
             signed
         }
     }
