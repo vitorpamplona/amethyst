@@ -21,6 +21,11 @@
 package com.vitorpamplona.amethyst.commons.search
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -29,6 +34,10 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -48,6 +57,8 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 
 data class ContentPreset(
     val kinds: List<Int> = emptyList(),
@@ -104,6 +115,21 @@ object KindRegistry {
             "git" to listOf(GitRepositoryEvent.KIND),
             "nest" to listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
             "app" to listOf(AppDefinitionEvent.KIND),
+            "workout" to listOf(WorkoutRecordEvent.KIND),
+            "music" to listOf(MusicTrackEvent.KIND),
+            "playlist" to listOf(MusicPlaylistEvent.KIND),
+            "podcast" to listOf(PodcastMetadataEvent.KIND),
+            "episode" to listOf(Podcasting20EpisodeEvent.KIND),
+            "software" to listOf(SoftwareApplicationEvent.KIND),
+            "followpack" to listOf(FollowListEvent.KIND),
+            "zappoll" to listOf(ZapPollEvent.KIND),
+            // `video` is every video kind; these name the two the app gives their own feeds.
+            "stories" to listOf(VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
+            "short" to listOf(VideoVerticalEvent.KIND),
+            "longvideo" to listOf(VideoHorizontalEvent.KIND),
+            // The slots on a calendar, and the calendars that collect them.
+            "calendar" to listOf(CalendarTimeSlotEvent.KIND, CalendarDateSlotEvent.KIND),
+            "calendarset" to listOf(CalendarEvent.KIND),
         )
 
     val pseudoKinds: Set<String> = setOf("reply", "media")

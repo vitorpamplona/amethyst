@@ -215,7 +215,9 @@ private fun RelayGroupsDiscoveryTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
+    // No seed: this lists groups across relays, so there is no one `group:` id to carry. A
+    // single room's own top bar seeds it.
+    UserDrawerSearchTopBar(accountViewModel, nav, null) {
         val selectedFilter by accountViewModel.account.settings.defaultRelayGroupsDiscoveryFollowList
             .collectAsStateWithLifecycle()
         val options by accountViewModel.feedStates.feedListOptions.relayGroupsDiscoveryRoutes

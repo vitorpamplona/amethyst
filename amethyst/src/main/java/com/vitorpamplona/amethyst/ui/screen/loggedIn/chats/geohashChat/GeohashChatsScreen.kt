@@ -90,7 +90,8 @@ fun GeohashChatsScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            UserDrawerSearchTopBar(accountViewModel, nav) {
+            // No seed: this lists every location channel, so there is no one geohash to carry.
+            UserDrawerSearchTopBar(accountViewModel, nav, null) {
                 Text(stringRes(R.string.location_channels), fontWeight = FontWeight.Bold)
             }
         },

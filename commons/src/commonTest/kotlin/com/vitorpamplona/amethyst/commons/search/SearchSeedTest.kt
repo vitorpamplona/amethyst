@@ -129,4 +129,44 @@ class SearchSeedTest {
         assertEquals("kind:picture kind:video", QuerySerializer.serialize(seed))
         assertEquals(seed, throughTheField(seed))
     }
+
+    @Test
+    fun everyFeedKindWindowNamesItselfAndComesBackUnchanged() {
+        // One case per screen that seeds a kind window. A window that serialized to a name the
+        // parser read as a *different* set would hand the reader a search their screen never
+        // asked for, and nothing else in the round trip would notice.
+        mapOf(
+            "kind:community" to listOf(34550),
+            "kind:workout" to listOf(1301),
+            "kind:playlist" to listOf(34139),
+            "kind:music" to listOf(36787),
+            "kind:podcast" to listOf(10154),
+            "kind:episode" to listOf(30054),
+            "kind:software" to listOf(32267),
+            "kind:short" to listOf(34236),
+            "kind:classified" to listOf(30402),
+            "kind:followpack" to listOf(39089),
+            "kind:live" to listOf(30311, 30312, 30313),
+            "kind:stories" to listOf(34235, 34236),
+            "kind:longvideo" to listOf(34235),
+            "kind:calendar" to listOf(31923, 31922),
+            "kind:calendarset" to listOf(31924),
+            "kind:poll kind:zappoll" to listOf(1068, 6969),
+        ).forEach { (token, kinds) ->
+            val seed = SearchSeed.ofKinds(*kinds.toIntArray())
+            assertEquals(token, QuerySerializer.serialize(seed), "kinds $kinds")
+            assertEquals(seed, throughTheField(seed), "kinds $kinds")
+        }
+    }
+
+    @Test
+    fun theVideoFeedsDoNotBorrowEachOthersNames() {
+        // `short`, `longvideo`, `stories` and `video` are nested windows over the same kinds.
+        // Each must name exactly its own set: widening any of them silently changes the feed the
+        // search claims to have come from.
+        assertEquals(listOf(34236), throughTheField(SearchSeed.ofKinds(34236)).kinds)
+        assertEquals(listOf(34235), throughTheField(SearchSeed.ofKinds(34235)).kinds)
+        assertEquals(listOf(34235, 34236), throughTheField(SearchSeed.ofKinds(34235, 34236)).kinds)
+        assertEquals(listOf(21, 22, 34235, 34236), throughTheField(SearchSeed.ofKinds(21, 22, 34235, 34236)).kinds)
+    }
 }

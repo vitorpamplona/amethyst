@@ -54,15 +54,18 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
  *
  * [baseFilter] is what this screen already knows about what it is showing — its kind window, the
  * person whose profile it is, the topic it is filtered to. It seeds the search box so the reader
- * carries on narrowing from where they were instead of starting over; pass null on a screen that
- * has nothing to say, and search opens bare as before.
+ * carries on narrowing from where they were instead of starting over.
+ *
+ * Deliberately has no default. It started with one, and the result was that two thirds of the
+ * screens in the app opened search bare without anyone noticing — an omission that looks exactly
+ * like a decision. A screen with nothing to say passes null and says why.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserDrawerSearchTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
-    baseFilter: SearchQuery? = null,
+    baseFilter: SearchQuery?,
     content: @Composable () -> Unit,
 ) {
     ShorterTopAppBar(

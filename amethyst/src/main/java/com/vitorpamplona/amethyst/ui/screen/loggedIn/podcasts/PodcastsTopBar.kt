@@ -22,11 +22,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
+import com.vitorpamplona.amethyst.commons.search.SearchSeed
+import com.vitorpamplona.amethyst.commons.search.asSearchQuery
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
@@ -37,16 +40,22 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 @Composable
 fun PodcastsTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultPodcastsFollowList
-            .collectAsStateWithLifecycle()
+    val list by accountViewModel.account.settings.defaultPodcastsFollowList
+        .collectAsStateWithLifecycle()
 
+    // The feed's own kind window, plus whatever the list spinner narrowed it to — a hashtag
+    // or a geohash says itself as a token; a follow set does not, and seeds nothing.
+    val me = accountViewModel.userProfile().pubkeyHex
+    val seed = remember(list, me) { SearchSeed.merge(SearchSeed.ofKinds(PodcastMetadataEvent.KIND), list.asSearchQuery(me)) }
+
+    UserDrawerSearchTopBar(accountViewModel, nav, seed) {
         PodcastsTopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
