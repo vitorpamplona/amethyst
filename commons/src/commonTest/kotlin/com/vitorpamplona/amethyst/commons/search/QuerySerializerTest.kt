@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import kotlinx.collections.immutable.persistentListOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -63,13 +65,13 @@ class QuerySerializerTest {
 
     @Test
     fun sinceDate() {
-        val q = SearchQuery(since = 1735689600L) // 2025-01-01
+        val q = SearchQuery(since = LocalClock.startOfDay(SearchDate(2025, 1, 1)))
         assertEquals("since:2025-01-01", QuerySerializer.serialize(q))
     }
 
     @Test
     fun untilDate() {
-        val q = SearchQuery(until = 1735689600L)
+        val q = SearchQuery(until = LocalClock.startOfDay(SearchDate(2025, 1, 1)))
         assertEquals("until:2025-01-01", QuerySerializer.serialize(q))
     }
 
@@ -115,7 +117,7 @@ class QuerySerializerTest {
             SearchQuery(
                 authorNames = persistentListOf("vitor"),
                 kinds = persistentListOf(1),
-                since = 1735689600L,
+                since = LocalClock.startOfDay(SearchDate(2025, 1, 1)),
                 hashtags = persistentListOf("bitcoin"),
                 text = "lightning",
                 excludeTerms = persistentListOf("spam"),

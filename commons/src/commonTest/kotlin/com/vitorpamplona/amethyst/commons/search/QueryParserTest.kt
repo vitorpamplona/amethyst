@@ -101,15 +101,13 @@ class QueryParserTest {
     @Test
     fun sinceDate() {
         val q = QueryParser.parse("since:2025-01-01")
-        // 2025-01-01 00:00:00 UTC
-        assertEquals(1735689600L, q.since)
+        assertEquals(LocalClock.startOfDay(SearchDate(2025, 1, 1)), q.since)
     }
 
     @Test
     fun sinceDateYearOnly() {
         val q = QueryParser.parse("since:2025")
-        // 2025-01-01 00:00:00 UTC
-        assertEquals(1735689600L, q.since)
+        assertEquals(LocalClock.startOfDay(SearchDate(2025, 1, 1)), q.since)
     }
 
     @Test
@@ -214,7 +212,7 @@ class QueryParserTest {
     fun combinedQuery() {
         val q = QueryParser.parse("kind:note since:2025-01-01 #bitcoin -spam lightning")
         assertEquals(listOf(1), q.kinds.toList())
-        assertEquals(1735689600L, q.since)
+        assertEquals(LocalClock.startOfDay(SearchDate(2025, 1, 1)), q.since)
         assertEquals(listOf("bitcoin"), q.hashtags.toList())
         assertEquals(listOf("spam"), q.excludeTerms.toList())
         assertEquals("lightning", q.text)
