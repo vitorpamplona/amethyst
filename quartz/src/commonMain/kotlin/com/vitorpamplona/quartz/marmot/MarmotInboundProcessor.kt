@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
+import com.vitorpamplona.quartz.marmot.mls.messages.Welcome
 import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceAdmission
 import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceResolution
 import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceStatus
@@ -41,6 +43,7 @@ import com.vitorpamplona.quartz.marmot.protocolCore.MarmotConvergenceEngine
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -380,7 +383,7 @@ class MarmotInboundProcessor(
         hintNostrGroupId: HexKey? = null,
     ): WelcomeResult =
         try {
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .d("MarmotDbg") {
                     "MarmotInboundProcessor.processWelcome: hint=${hintNostrGroupId?.take(8)} eventId=${welcomeEvent.id.take(8)}…"
                 }
@@ -390,7 +393,7 @@ class MarmotInboundProcessor(
             if (keyPackageEventId == null) {
                 return WelcomeResult.Error("WelcomeEvent missing KeyPackage event ID tag")
             }
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .d("MarmotDbg") {
                     "MarmotInboundProcessor.processWelcome: welcomeBytes=${welcomeBytes.size}B looking up KeyPackage by ref=${keyPackageEventId.take(8)}…"
                 }
@@ -404,23 +407,28 @@ class MarmotInboundProcessor(
             // log a noisy "No matching KeyPackageBundle" warning for what
             // is actually a benign replay.
             if (hintNostrGroupId != null && groupManager.isMember(hintNostrGroupId)) {
-                com.vitorpamplona.quartz.utils.Log
+                Log
                     .d("MarmotDbg") {
                         "MarmotInboundProcessor.processWelcome: already a member of group=${hintNostrGroupId.take(8)}… — treating Welcome as replay"
                     }
                 return WelcomeResult.AlreadyJoined(hintNostrGroupId)
             }
 
-            // Find the KeyPackageBundle that was consumed.
+            // Find the KeyPackageBundle the inviter encrypted to.
             //
-            // The Welcome's "e" tag carries the *Nostr event id* of the
-            // kind:30443 event (NOT the MLS reference hash), so we must
-            // resolve it via the eventId→slot index that
-            // [MarmotManager.generateKeyPackageEvent] populates after
-            // signing each KeyPackageEvent.
-            val bundle = keyPackageRotationManager.findBundleByEventId(keyPackageEventId)
+            // The authority is the MLS Welcome itself: each EncryptedGroupSecrets
+            // is addressed to a KeyPackageRef, and RFC 9420 says a joiner takes
+            // the first one it holds private keys for — which is exactly what
+            // OpenMLS does. The Welcome's "e" tag carries only the *Nostr event
+            // id* of the kind:30443 event, which is a routing hint an inviter can
+            // get wrong: MDK stamps the event id of the copy cached in its user
+            // directory, so a peer that rotated its published KeyPackage while
+            // MDK kept inviting from cache would be unjoinable if we trusted the
+            // tag alone. Try the refs first, then fall back to the tag.
+            val bundle =
+                findBundleForWelcome(welcomeBytes) ?: keyPackageRotationManager.findBundleByEventId(keyPackageEventId)
             if (bundle == null) {
-                com.vitorpamplona.quartz.utils.Log
+                Log
                     .w("MarmotDbg") {
                         "MarmotInboundProcessor.processWelcome: NO matching KeyPackageBundle for eventId=${keyPackageEventId.take(8)}… " +
                             "— inviter referenced a KeyPackage we don't have private keys for. " +
@@ -431,17 +439,19 @@ class MarmotInboundProcessor(
                     "No matching KeyPackageBundle found for event $keyPackageEventId",
                 )
             }
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: bundle found — invoking groupManager.processWelcome" }
 
             // Join the group; nostrGroupId is derived from the MLS GroupContext's
             // NostrGroupData extension. The h-tag hint (if any) is validated inside.
             val (_, nostrGroupId) = groupManager.processWelcome(welcomeBytes, bundle, hintNostrGroupId)
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: joined group=${nostrGroupId.take(8)}…" }
 
-            // Mark the KeyPackage as consumed — triggers rotation
-            keyPackageRotationManager.markConsumedByEventId(keyPackageEventId)
+            // Mark the KeyPackage as consumed — triggers rotation. Keyed on the
+            // bundle we actually used, not the "e" tag, for the same reason the
+            // lookup above is.
+            keyPackageRotationManager.markConsumedByRef(bundle.keyPackage.reference())
 
             // Seed convergence with the joined state, so the very first inbound
             // commit already has a retained parent to fall back to.
@@ -452,10 +462,38 @@ class MarmotInboundProcessor(
                 needsKeyPackageRotation = keyPackageRotationManager.needsRotation(),
             )
         } catch (e: Exception) {
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .w("MarmotDbg", "MarmotInboundProcessor.processWelcome: exception ${e.message}", e)
             WelcomeResult.Error("Failed to process Welcome: ${e.message}", e)
         }
+
+    /**
+     * Resolve the KeyPackageBundle a Welcome is addressed to, the way RFC 9420
+     * §12.4.3.1 (and OpenMLS) does it: walk the Welcome's EncryptedGroupSecrets
+     * in order and take the first `new_member` KeyPackageRef we hold private
+     * keys for.
+     *
+     * Returns null when the Welcome does not parse or names no KeyPackage of
+     * ours — the caller then falls back to the Nostr "e" tag hint, and reports
+     * the failure if that misses too.
+     */
+    private suspend fun findBundleForWelcome(welcomeBytes: ByteArray): KeyPackageBundle? {
+        val welcome =
+            try {
+                val mlsMessage = MlsMessage.decodeTls(TlsReader(welcomeBytes))
+                require(mlsMessage.wireFormat == WireFormat.WELCOME) { "not a Welcome wire format" }
+                Welcome.decodeTls(TlsReader(mlsMessage.payload))
+            } catch (e: Exception) {
+                Log.d("MarmotDbg") {
+                    "MarmotInboundProcessor.findBundleForWelcome: welcome did not parse (${e.message}) — falling back to the e tag"
+                }
+                return null
+            }
+        for (secret in welcome.secrets) {
+            keyPackageRotationManager.findBundleByRef(secret.newMember)?.let { return it }
+        }
+        return null
+    }
 
     /**
      * Mark a kind:445 event id as already processed so that a later relay

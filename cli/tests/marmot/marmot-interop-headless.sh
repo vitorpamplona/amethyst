@@ -9,7 +9,8 @@
 # any human prompts — all checks run to completion and the exit code
 # reflects pass/fail totals.
 #
-# Usage: ./marmot-interop-headless.sh [--port N] [--no-build]
+# Usage: ./marmot-interop-headless.sh [--port N] [--no-build] [--reuse-state]
+#                                     [--tests "name ..."]
 #
 set -uo pipefail
 
@@ -53,6 +54,16 @@ RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8080}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 NO_BUILD=0
+# Every run starts from empty stores. wnd already wipes B's and C's data dirs
+# on each start, but A's amy home and the relay's SQLite file used to survive,
+# and the leftovers are not inert: a KeyPackage A published in an earlier run
+# is still on the relay for B to invite with, an old group's kind:445 events
+# still arrive and fail to decrypt, and A's cursors still say it has seen them.
+# That drift is what made tests 03 and 08 fail on a dirty tree and pass on a
+# clean one. Pass --reuse-state when you are deliberately debugging carry-over.
+RESET_STATE=1
+# Space-separated test function names; empty means the full suite below.
+ONLY_TESTS=""
 
 # Required as of MDK 0.9.x. `validate_relay_url` accepts `wss://`
 # unconditionally but `ws://` only for a loopback host AND only behind this
@@ -75,6 +86,8 @@ while [[ $# -gt 0 ]]; do
     --port)      RELAY_PORT="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
     --host)      RELAY_HOST="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
     --no-build)  NO_BUILD=1 ;;
+    --reuse-state) RESET_STATE=0 ;;
+    --tests)     ONLY_TESTS="$2"; shift ;;
     -h|--help)
       sed -n '3,14p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
       exit 0 ;;
@@ -82,6 +95,12 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+if [[ $RESET_STATE -eq 1 && -d "$STATE_DIR" ]]; then
+  # Keep the relay checkout + its build (minutes to rebuild) and the log and
+  # results history; drop everything that holds protocol state.
+  rm -rf "$STATE_DIR/.amy" "$B_DIR" "$C_DIR" "$RELAY_DATA"
+fi
 
 mkdir -p "$STATE_DIR" "$LOG_DIR" "$B_DIR/logs" "$C_DIR/logs"
 : >"$LOG_FILE"
@@ -129,20 +148,37 @@ ensure_identity B
 ensure_identity C
 configure_relays
 
-test_01_keypackage_discovery
-test_02_a_creates_group
-test_03_b_creates_group
-test_04_three_member_group
-test_05_b_adds_a_existing
-test_06_member_removal
-test_07_metadata_rename
-test_08_admin_promote_demote
-test_17_group_image_commit
-test_09_reply_react_unreact
-test_10_concurrent_commits
-test_11_leave_group
-test_12_offline_catchup
-test_13_keypackage_rotation
-test_14_wn_removes_a
-test_15_wn_member_leaves
-test_16_wn_keypackage_rotation
+ALL_TESTS=(
+  test_01_keypackage_discovery
+  test_02_a_creates_group
+  test_03_b_creates_group
+  test_04_three_member_group
+  test_05_b_adds_a_existing
+  test_06_member_removal
+  test_07_metadata_rename
+  test_08_admin_promote_demote
+  test_17_group_image_commit
+  test_09_reply_react_unreact
+  test_10_concurrent_commits
+  test_11_leave_group
+  test_12_offline_catchup
+  test_13_keypackage_rotation
+  test_14_wn_removes_a
+  test_15_wn_member_leaves
+  test_16_wn_keypackage_rotation
+)
+
+# --tests runs a subset in the order given. Most tests read state a previous
+# one saved (GROUP_02, GROUP_05, …), so a subset that skips a producer will
+# report `skip`, not a false failure.
+if [[ -n "$ONLY_TESTS" ]]; then
+  read -r -a ALL_TESTS <<<"$ONLY_TESTS"
+fi
+
+for t in "${ALL_TESTS[@]}"; do
+  if ! declare -F "$t" >/dev/null; then
+    fail_msg "unknown test: $t"
+    continue
+  fi
+  "$t"
+done

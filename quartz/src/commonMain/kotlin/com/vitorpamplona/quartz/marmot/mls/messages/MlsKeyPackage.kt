@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.marmot.mls.messages
 
+import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsSerializable
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
@@ -75,6 +77,25 @@ data class MlsKeyPackage(
     }
 
     /**
+     * True when this KeyPackage is marked last resort, in either carrier.
+     *
+     * The two profiles say it differently and a KeyPackage may be read under
+     * either: the MIP-era profile sets the MLS Extensions draft extension type
+     * `0x000A` directly on the KeyPackage, while the current profile carries a
+     * `last_resort_key_package` component inside the KeyPackage-level
+     * `app_data_dictionary` (`0x0006`).
+     *
+     * A last-resort KeyPackage is explicitly NOT single-use: OpenMLS skips
+     * `delete_key_package` for one, and MDK — which marks every KeyPackage it
+     * publishes last resort — invites from the copy cached in its directory.
+     * Anything that consumes a KeyPackage has to check this before discarding
+     * the bundle.
+     */
+    fun isLastResort(): Boolean =
+        extensions.any { it.extensionType == LAST_RESORT_EXTENSION_TYPE } ||
+            AppDataDictionary.fromExtensionsOrEmpty(extensions).contains(AppComponentIds.LAST_RESORT_KEY_PACKAGE)
+
+    /**
      * Encode the TBS (to-be-signed) portion for signature verification.
      */
     fun encodeTbs(): ByteArray {
@@ -118,6 +139,12 @@ data class MlsKeyPackage(
     }
 
     companion object {
+        /**
+         * `last_resort` KeyPackage extension (MLS Extensions draft). Marks a
+         * KeyPackage as reusable rather than single-use.
+         */
+        const val LAST_RESORT_EXTENSION_TYPE = 0x000A
+
         fun decodeTls(reader: TlsReader): MlsKeyPackage {
             val version = reader.readUint16()
             require(version == 1) { "Unsupported MLS version: $version" }
