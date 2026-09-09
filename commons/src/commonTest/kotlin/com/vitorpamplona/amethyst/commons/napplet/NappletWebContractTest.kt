@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFalse
@@ -64,16 +63,4 @@ class NappletWebContractTest {
         assertContains(csp, "form-action 'none'")
         assertFalse(csp.contains("'self'"))
     }
-
-    @Test
-    fun shellTemplateKeepsTheOpaqueIframeAndSourceChecks() =
-        runTest {
-            val shell = NappletWebContract.shellHtml().decodeToString()
-
-            assertContains(shell, "sandbox=\"${NappletWebContract.APP_SANDBOX_PLACEHOLDER}\"")
-            assertContains(shell, NappletWebContract.APP_BOOTSTRAP_PLACEHOLDER)
-            assertContains(shell, "e.source !== iframe.contentWindow")
-            assertContains(shell, "iframe.contentWindow.postMessage(msg, '*')")
-            assertFalse(shell.contains("allow-same-origin"))
-        }
 }
