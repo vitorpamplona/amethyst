@@ -31,12 +31,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geohash_chat_open
+import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SearchTopBarAction
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
@@ -98,6 +100,8 @@ fun GeoHashScreen(
                     DisplayGeoTagHeader(tag.geohash, Modifier.weight(1f))
                     GeoHashActionOptions(tag.geohash, accountViewModel, nav)
                 },
+                // The box opens holding `geo:<geohash>`, which draws under the city's name.
+                actions = { SearchTopBarAction(SearchSeed.byGeohash(tag.geohash), nav) },
                 popBack = nav::popBack,
             )
         },

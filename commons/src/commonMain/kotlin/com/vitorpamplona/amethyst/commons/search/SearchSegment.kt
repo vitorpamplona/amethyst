@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.search
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.search.calendar.DateField
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /** Which end of a `from:`/`to:` pair a key token was written with. */
 enum class KeyField {
@@ -131,6 +133,42 @@ sealed interface SearchSegment {
     ) : SearchSegment {
         override val length get() = raw.length
     }
+
+    /**
+     * `kind:<alias|number>` — the kind window, asked as NIP-01's own `kinds`.
+     *
+     * [kinds] is what the filter carries and [pseudoKind] what only a post-filter can answer
+     * (`reply`, `media`); exactly one of the two is populated. An alias the registry does not
+     * know and a number that is not a kind never reach here — they stay [Text], because a chip
+     * saying `kind:banana` would claim a window the builder does not send.
+     */
+    @Immutable
+    data class Kind(
+        val raw: String,
+        val alias: String,
+        val kinds: ImmutableList<Int> = persistentListOf(),
+        val pseudoKind: String? = null,
+    ) : SearchSegment {
+        override val length get() = raw.length
+    }
+
+    /** `lang:<code>` — a NIP-50 `language:` extension, the relay's own to answer. */
+    @Immutable
+    data class Language(
+        val raw: String,
+        val code: String,
+    ) : SearchSegment {
+        override val length get() = raw.length
+    }
+
+    /** `domain:<host>` — a NIP-50 `domain:` extension, the relay's own to answer. */
+    @Immutable
+    data class Domain(
+        val raw: String,
+        val host: String,
+    ) : SearchSegment {
+        override val length get() = raw.length
+    }
 }
 
 /** The characters a segment covers, whichever kind it is. */
@@ -145,4 +183,7 @@ val SearchSegment.rawText: String
             is SearchSegment.Label -> raw
             is SearchSegment.Scope -> raw
             is SearchSegment.Group -> raw
+            is SearchSegment.Kind -> raw
+            is SearchSegment.Language -> raw
+            is SearchSegment.Domain -> raw
         }

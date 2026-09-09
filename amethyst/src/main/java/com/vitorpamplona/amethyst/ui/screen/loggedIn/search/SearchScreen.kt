@@ -138,18 +138,29 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
+/**
+ * The search screen, opened either bare or with the calling screen's own filter already in the
+ * box — see [Route.Search.of].
+ *
+ * [initialQuery] is seeded straight into the field rather than held beside it, so the tokens it
+ * contains draw as chips through the same path as anything typed, and a backspace drops them.
+ */
 @Composable
 fun SearchScreen(
+    initialQuery: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val searchBarViewModel: SearchBarViewModel =
         viewModel(
-            key = "SearchBarViewModel",
+            // Keyed on the seed: navigating from one screen's search button to another's has to
+            // build a model holding that screen's filter, not hand back the previous one.
+            key = "SearchBarViewModel${initialQuery?.let { " $it" }.orEmpty()}",
             factory =
                 SearchBarViewModel.Factory(
                     accountViewModel.account,
                     accountViewModel.nip05ClientBuilder(),
+                    initialQuery,
                 ),
         )
 
@@ -176,7 +187,7 @@ fun SearchScreen(
             SearchBar(searchBarViewModel, accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Search, nav, accountViewModel) { route ->
+            AppBottomBar(Route.Search(), nav, accountViewModel) { route ->
                 nav.navBottomBar(route)
             }
         },

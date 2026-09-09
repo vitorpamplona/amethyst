@@ -203,4 +203,91 @@ class SearchTokenizerTest {
         // NIP-50's own operators survive.
         assertEquals("\"a b\" -c #d", SearchTokenizer.tidyTerms("\"a b\" -c #d"))
     }
+
+    // ---- kind:, lang: and domain: --------------------------------------------------------
+    //
+    // These used to be read only by QueryParser's second pass over the leftover text, so they
+    // filtered but never drew as chips. A screen that seeds `kind:article` needs them to pill
+    // like every other filter, or the seeded query reads as if the reader had typed a word.
+
+    @Test
+    fun kindAliasIsAToken() {
+        val kind = only<SearchSegment.Kind>("kind:article")
+        assertEquals("kind:article", kind.raw)
+        assertEquals("article", kind.alias)
+        assertEquals(listOf(30023), kind.kinds)
+        assertNull(kind.pseudoKind)
+    }
+
+    @Test
+    fun kindNumberIsAToken() {
+        assertEquals(listOf(20), only<SearchSegment.Kind>("kind:20").kinds)
+    }
+
+    @Test
+    fun kindPseudoIsATokenAndCarriesNoKinds() {
+        val kind = only<SearchSegment.Kind>("kind:media")
+        assertEquals("media", kind.pseudoKind)
+        assertTrue(kind.kinds.isEmpty())
+    }
+
+    @Test
+    fun kindAliasIsCaseInsensitive() {
+        assertEquals(listOf(30023), only<SearchSegment.Kind>("kind:Article").kinds)
+    }
+
+    @Test
+    fun anUnresolvableKindStaysText() {
+        // A chip saying `kind:banana` would claim a window the filter builder never sends.
+        assertCovers("kind:banana")
+        assertTrue(SearchTokenizer.tokenize("kind:banana").all { it is SearchSegment.Text })
+        assertTrue(SearchTokenizer.tokenize("kind:99999").all { it is SearchSegment.Text })
+        assertTrue(SearchTokenizer.tokenize("kind:").all { it is SearchSegment.Text })
+    }
+
+    @Test
+    fun langIsAToken() {
+        assertEquals("en", only<SearchSegment.Language>("lang:en").code)
+        assertEquals("pt-br", only<SearchSegment.Language>("lang:pt-BR").code)
+    }
+
+    @Test
+    fun aLanguageThatIsNotACodeStaysText() {
+        assertCovers("lang:portuguese-brazilian-variant")
+        assertTrue(SearchTokenizer.tokenize("lang:portuguese-brazilian-variant").all { it is SearchSegment.Text })
+    }
+
+    @Test
+    fun domainIsAToken() {
+        assertEquals("nostr.com", only<SearchSegment.Domain>("domain:nostr.com").host)
+        assertEquals("a.b.example.co.uk", only<SearchSegment.Domain>("domain:A.B.Example.co.uk").host)
+    }
+
+    @Test
+    fun aDomainWithASchemeOrPathStaysText() {
+        // Those belong to `site:`, which asks a different tag entirely.
+        assertCovers("domain:https://nostr.com")
+        assertTrue(SearchTokenizer.tokenize("domain:https://nostr.com").none { it is SearchSegment.Domain })
+        assertTrue(SearchTokenizer.tokenize("domain:localhost").none { it is SearchSegment.Domain })
+    }
+
+    @Test
+    fun theNewTokensSettleOnlyOnceTheCaretHasLeftThem() {
+        val text = "kind:article"
+        // Caret still inside the token: it is a word being typed, not a chip.
+        assertTrue(SearchTokenizer.drawable(text, text.length).all { it is SearchSegment.Text })
+        // Caret gone: it settles.
+        assertTrue(SearchTokenizer.drawable("$text ", "$text ".length).any { it is SearchSegment.Kind })
+    }
+
+    @Test
+    fun aSeededQueryTokenizesEveryPartOfItself() {
+        val input = "from:$NPUB kind:article #bitcoin lang:en "
+        assertCovers(input)
+        val drawn = SearchTokenizer.drawable(input, input.length)
+        assertEquals(1, drawn.filterIsInstance<SearchSegment.Key>().size)
+        assertEquals(1, drawn.filterIsInstance<SearchSegment.Kind>().size)
+        assertEquals(1, drawn.filterIsInstance<SearchSegment.Hashtag>().size)
+        assertEquals(1, drawn.filterIsInstance<SearchSegment.Language>().size)
+    }
 }

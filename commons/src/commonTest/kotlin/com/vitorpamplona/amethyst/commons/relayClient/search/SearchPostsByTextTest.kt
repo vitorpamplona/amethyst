@@ -89,4 +89,29 @@ class SearchPostsByTextTest {
             assertNull(it.ids)
         }
     }
+
+    @Test
+    fun aKindTokenNarrowsTheWindowInsteadOfBeingIgnored() {
+        // The box drew a `kind:` chip while the REQ still asked for all three fallback groups —
+        // the field promising a narrowing that never reached the relay.
+        val filters = filtersFor("kind:article bitcoin")
+        assertTrue(filters.isNotEmpty())
+        assertTrue(filters.all { it.kinds == listOf(30023) }, "kinds were ${filters.map { it.kinds }}")
+        assertTrue(filters.all { it.search == "bitcoin" })
+    }
+
+    @Test
+    fun aQueryNamingNoKindStillAsksTheWholeRenderableSet() {
+        val named = filtersFor("kind:article bitcoin")
+        val unnamed = filtersFor("bitcoin")
+        assertTrue(unnamed.size > named.size, "the fallback fan-out must survive")
+        assertTrue(unnamed.any { (it.kinds?.size ?: 0) > 1 })
+    }
+
+    @Test
+    fun aKindOnlyQueryStillAsksNothing() {
+        // A bare kind window is not a search: it would be an unbounded REQ for every recent
+        // event of that kind, which the builder refuses for exactly that reason.
+        assertTrue(filtersFor("kind:article").isEmpty())
+    }
 }

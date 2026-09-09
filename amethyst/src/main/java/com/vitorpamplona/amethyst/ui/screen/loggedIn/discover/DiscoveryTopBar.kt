@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
+import com.vitorpamplona.amethyst.commons.search.asSearchQuery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
@@ -39,10 +41,16 @@ fun DiscoveryTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultDiscoveryFollowList
-            .collectAsStateWithLifecycle()
+    val list by accountViewModel.account.settings.defaultDiscoveryFollowList
+        .collectAsStateWithLifecycle()
 
+    // No kind seed here: Discover's tabs span live streams, communities, classifieds and DVM
+    // feeds at once, so there is no one window to hand over. What the list spinner narrowed to
+    // still seeds, when it is something the token language can say.
+    val me = accountViewModel.userProfile().pubkeyHex
+    val seed = remember(list, me) { list.asSearchQuery(me) }
+
+    UserDrawerSearchTopBar(accountViewModel, nav, seed) {
         TopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,

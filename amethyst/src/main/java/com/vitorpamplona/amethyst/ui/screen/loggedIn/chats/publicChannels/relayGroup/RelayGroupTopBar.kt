@@ -69,11 +69,13 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_pending
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_admin
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_moderator
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_title
+import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SearchTopBarAction
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -196,6 +198,11 @@ fun RelayGroupTopBar(
             }
         },
         actions = {
+            // Search this room: the box opens holding `group:<id>`, which draws under the room's
+            // name. Not on a DM — a private two-person conversation has nothing to search openly.
+            if (!isDm) {
+                SearchTopBarAction(SearchSeed.byGroup(channel.groupId.id), nav)
+            }
             // Buzz canvas (kind 40100): shown on any Buzz-dialect relay so a member can open the
             // channel's shared markdown doc — or create one when it has none yet. The only affordance
             // that stays an icon: it is this channel's shared document, i.e. content, while Threads and

@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.your_profile_image
+import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
@@ -47,11 +48,21 @@ import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
+/**
+ * The standard root top bar: the drawer avatar (or a back arrow), the screen's own title slot,
+ * and the search button.
+ *
+ * [baseFilter] is what this screen already knows about what it is showing — its kind window, the
+ * person whose profile it is, the topic it is filtered to. It seeds the search box so the reader
+ * carries on narrowing from where they were instead of starting over; pass null on a screen that
+ * has nothing to say, and search opens bare as before.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserDrawerSearchTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
+    baseFilter: SearchQuery? = null,
     content: @Composable () -> Unit,
 ) {
     ShorterTopAppBar(
@@ -66,11 +77,31 @@ fun UserDrawerSearchTopBar(
         },
         navigationIcon = { TopBarNavigationIcon(accountViewModel, nav) },
         actions = {
-            IconButton(onClick = { nav.nav(Route.Search) }) {
+            IconButton(onClick = { nav.nav(searchRouteFor(baseFilter)) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }
         },
     )
+}
+
+/**
+ * The search screen this button opens: seeded with [baseFilter] when the screen named one, and
+ * bare when it did not — an empty query seeds nothing rather than an empty chip.
+ */
+fun searchRouteFor(baseFilter: SearchQuery?): Route.Search = baseFilter?.takeIf { !it.isEmpty }?.let { Route.Search.of(it) } ?: Route.Search()
+
+/**
+ * A search button for a top bar that is not the root one — a hashtag feed, a location feed, a
+ * profile — opening search already narrowed to what that screen is showing.
+ */
+@Composable
+fun SearchTopBarAction(
+    baseFilter: SearchQuery?,
+    nav: INav,
+) {
+    IconButton(onClick = { nav.nav(searchRouteFor(baseFilter)) }) {
+        SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
+    }
 }
 
 /**

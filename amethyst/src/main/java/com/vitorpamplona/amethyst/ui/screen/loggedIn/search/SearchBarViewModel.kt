@@ -88,13 +88,19 @@ import kotlinx.coroutines.flow.update
 class SearchBarViewModel(
     val account: Account,
     val nip05Client: INip05Client,
+    /**
+     * The query the calling screen seeded the box with — `from:<npub>` off a profile,
+     * `kind:article` off the articles feed. It is ordinary field text from here on: the reader
+     * can edit or delete it like anything they typed themselves.
+     */
+    initialQuery: String? = null,
 ) : ViewModel(),
     InvalidatableContent {
     val focusRequester = FocusRequester()
-    var searchValue by mutableStateOf("")
+    var searchValue by mutableStateOf(initialQuery.orEmpty())
 
     val invalidations = MutableStateFlow(0)
-    val searchValueFlow = MutableStateFlow("")
+    val searchValueFlow = MutableStateFlow(searchValue)
 
     val scope = MutableStateFlow(SearchScope.ALL)
     val source = MutableStateFlow(SearchSource.RELAYS)
@@ -320,7 +326,10 @@ class SearchBarViewModel(
                     looksLikeAnEventId(term) -> LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
                     else ->
                         LocalCache.search.findNotesMatching(
-                            SearchFilterBuilder.build(parsed, limit = 200),
+                            // The kind window the query named, so a `kind:` chip narrows the
+                            // local results exactly as it narrows the relay's. Null asks every
+                            // kind, which is what a query naming none means.
+                            SearchFilterBuilder.build(parsed, parsed.kinds.takeIf { it.isNotEmpty() }?.toList(), limit = 200),
                             account.hiddenUsers,
                         )
                 }
@@ -486,8 +495,9 @@ class SearchBarViewModel(
     class Factory(
         val account: Account,
         val nip05: INip05Client,
+        val initialQuery: String? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05, initialQuery) as T
     }
 }

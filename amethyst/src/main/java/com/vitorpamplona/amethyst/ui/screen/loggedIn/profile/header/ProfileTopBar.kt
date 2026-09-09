@@ -39,8 +39,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.search_button
+import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.navigation.topbars.searchRouteFor
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -80,6 +84,26 @@ fun ProfileTopBar(
         },
         actions = {
             var popupExpanded by remember { mutableStateOf(false) }
+
+            // Search this person's posts. Styled as the other floating buttons here rather than a
+            // plain icon: this bar sits over the profile banner, where a bare icon can land on an
+            // image and disappear.
+            Button(
+                modifier = Modifier.padding(end = 10.dp).size(30.dp),
+                onClick = { nav.nav(searchRouteFor(SearchSeed.byAuthor(baseUser.pubkeyHex))) },
+                shape = ButtonBorder,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                contentPadding = ZeroPadding,
+            ) {
+                Icon(
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                    symbol = MaterialSymbols.Search,
+                    contentDescription = stringRes(Res.string.search_button),
+                )
+            }
 
             Button(
                 modifier = Modifier.padding(end = 10.dp).size(30.dp),

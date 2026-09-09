@@ -119,8 +119,9 @@ private val SearchPostsByTextKindGroups =
  * went into `search`, so a query like `from:npub1… bitcoin` asked relays for the literal text of
  * its own tokens and matched nothing.
  *
- * Kinds are asked in three groups because the set Amethyst can render is larger than most relays
- * accept in one filter; the union is merged client-side.
+ * A `kind:` token names the window itself, and is asked as the one group it says. Only a query
+ * that names no kind falls back to the full set Amethyst can render — which is larger than most
+ * relays accept in one filter, so it is asked in three groups and the union merged client-side.
  */
 fun searchPostsByText(
     searchString: String,
@@ -129,7 +130,12 @@ fun searchPostsByText(
     val query = QueryParser.parse(searchString)
     if (query.isEmpty) return emptyList()
 
-    return SearchPostsByTextKindGroups.flatMap { kinds ->
+    // The window the query itself named, else the everything-we-can-render fallback. Without
+    // this a `kind:` chip drew on screen while the REQ still asked for all three groups — the
+    // field promising a narrowing that never reached the relay.
+    val kindGroups = query.kinds.takeIf { it.isNotEmpty() }?.let { listOf(it.toList()) } ?: SearchPostsByTextKindGroups
+
+    return kindGroups.flatMap { kinds ->
         SearchFilterBuilder.build(query, kinds, limit = 100).map { filter ->
             RelayBasedFilter(
                 relay = relay,

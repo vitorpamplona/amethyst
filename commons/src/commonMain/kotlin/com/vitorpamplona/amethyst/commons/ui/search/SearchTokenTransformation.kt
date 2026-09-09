@@ -25,6 +25,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import com.vitorpamplona.amethyst.commons.search.SearchSegment
 import com.vitorpamplona.amethyst.commons.search.SearchTokenizer
 import com.vitorpamplona.amethyst.commons.search.rawText
@@ -159,6 +160,10 @@ class SearchTokenTransformation(
             is SearchSegment.Group -> "group:${groupName(seg.id)?.let { clip(it, 32) } ?: seg.id}"
             // Likewise a geohash: "9q8yy" says nothing, "San Francisco" says what was filtered on.
             is SearchSegment.Scope -> scopeName(seg.field, seg.value)?.let { "${seg.field}:${clip(it, 32)}" } ?: raw
+            // A kind typed as a number draws under the name the registry has for it, so a screen
+            // that seeds `kind:20` shows "kind:picture" — the only form a reader can check. Only
+            // an exact one-token match is used: `kind:30312` must not draw as the wider `live`.
+            is SearchSegment.Kind -> "kind:${seg.pseudoKind ?: KindRegistry.tokenize(seg.kinds).singleOrNull() ?: seg.alias}"
             else -> raw
         }
 

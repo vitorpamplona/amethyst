@@ -23,11 +23,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
+import com.vitorpamplona.amethyst.commons.search.SearchQuery
+import com.vitorpamplona.amethyst.commons.search.SearchSeed
+import com.vitorpamplona.amethyst.commons.search.asSearchQuery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
@@ -35,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun NotificationTopBar(
@@ -42,11 +47,19 @@ fun NotificationTopBar(
     nav: INav,
     showSpinner: Boolean = true,
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
-        if (showSpinner) {
-            val list by accountViewModel.account.settings.defaultNotificationFollowList
-                .collectAsStateWithLifecycle()
+    val list by accountViewModel.account.settings.defaultNotificationFollowList
+        .collectAsStateWithLifecycle()
 
+    // Notifications are the events that name the reader, which `to:` says exactly; the list
+    // spinner adds its own narrowing on top where it has one that can be spelled as a token.
+    val me = accountViewModel.userProfile().pubkeyHex
+    val seed =
+        remember(list, me) {
+            SearchSeed.merge(SearchQuery(mentions = persistentListOf(me)), list.asSearchQuery(me))
+        }
+
+    UserDrawerSearchTopBar(accountViewModel, nav, seed) {
+        if (showSpinner) {
             TopNavFilterBar(
                 followListsModel = accountViewModel.feedStates.feedListOptions,
                 listName = list,
