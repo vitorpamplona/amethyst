@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.marmot.appComponents
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /**
@@ -118,6 +119,9 @@ data class AdminPolicyV1(
             }
             return AdminPolicyV1(unique)
         }
+
+        /** Build from hex account keys, sorting and de-duplicating. */
+        fun ofHex(keys: Collection<HexKey>): AdminPolicyV1 = of(keys.map { it.hexToByteArray() })
 
         fun decode(bytes: ByteArray): AdminPolicyV1 {
             val reader = TlsReader(bytes)

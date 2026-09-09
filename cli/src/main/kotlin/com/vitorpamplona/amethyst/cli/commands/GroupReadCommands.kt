@@ -35,7 +35,7 @@ object GroupReadCommands {
             val ids = ctx.marmot.activeGroupIds()
             val items =
                 ids.map { id ->
-                    val m = ctx.marmot.groupMetadata(id)
+                    val m = ctx.marmot.groupView(id)
                     mapOf(
                         "group_id" to id,
                         "name" to (m?.name ?: ""),
@@ -58,7 +58,7 @@ object GroupReadCommands {
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
-            val meta = ctx.marmot.groupMetadata(gid)
+            val meta = ctx.marmot.groupView(gid)
             val members =
                 ctx.marmot.memberPubkeys(gid).map {
                     mapOf("pubkey" to it.pubkey, "leaf_index" to it.leafIndex)
@@ -109,7 +109,7 @@ object GroupReadCommands {
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
-            val m = ctx.marmot.groupMetadata(gid)
+            val m = ctx.marmot.groupView(gid)
             Output.emit(mapOf("group_id" to gid, "admins" to (m?.adminPubkeys ?: emptyList())))
             return 0
         }

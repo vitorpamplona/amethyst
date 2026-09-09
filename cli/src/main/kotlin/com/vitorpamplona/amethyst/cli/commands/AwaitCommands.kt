@@ -145,14 +145,14 @@ object AwaitCommands {
                 ctx.syncIncoming(timeoutMs = 3_000)
                 val match =
                     ctx.marmot.activeGroupIds().firstOrNull { gid ->
-                        wantedName == null || ctx.marmot.groupMetadata(gid)?.name == wantedName
+                        wantedName == null || ctx.marmot.groupView(gid)?.name == wantedName
                     }
                 if (match != null) {
                     Output.emit(
                         mapOf(
                             "group_id" to match,
                             "mls_group_id" to ctx.marmot.mlsGroupIdHex(match),
-                            "name" to (ctx.marmot.groupMetadata(match)?.name ?: ""),
+                            "name" to (ctx.marmot.groupView(match)?.name ?: ""),
                             "epoch" to ctx.marmot.groupEpoch(match),
                         ),
                     )
@@ -190,7 +190,7 @@ object AwaitCommands {
             if (!ctx.marmot.isMember(gid)) {
                 null
             } else if (ctx.marmot
-                    .groupMetadata(gid)
+                    .groupView(gid)
                     ?.adminPubkeys
                     ?.contains(target) == true
             ) {
@@ -215,7 +215,7 @@ object AwaitCommands {
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
                 ctx.syncIncoming(timeoutMs = 3_000)
-                val name = ctx.marmot.groupMetadata(gid)?.name
+                val name = ctx.marmot.groupView(gid)?.name
                 if (name == wantedName) {
                     Output.emit(mapOf("group_id" to gid, "name" to name, "epoch" to ctx.marmot.groupEpoch(gid)))
                     return 0

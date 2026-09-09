@@ -30,7 +30,9 @@ import com.vitorpamplona.quartz.marmot.MarmotWelcomeSender
 import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
 import com.vitorpamplona.quartz.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
+import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
@@ -817,6 +819,146 @@ class MarmotManager(
         }.event
     }
 
+    /**
+     * A group's metadata read through whichever profile it actually uses.
+     *
+     * Every caller that wants a name, an admin list or an avatar wants this,
+     * not [groupMetadata]: the legacy accessor returns null for every
+     * current-profile group, so the UI, the CLI and the await verbs all showed
+     * a blank name and an empty admin set for groups that were perfectly fine.
+     */
+    class GroupView(
+        val name: String,
+        val description: String,
+        val adminPubkeys: List<HexKey>,
+        val relays: List<String>,
+        val image: MarmotGroupImage?,
+        /** True when the group requires `0x8009` — see [MarmotGroupState.isCurrentProfile]. */
+        val isCurrentProfile: Boolean,
+    )
+
+    fun groupView(nostrGroupId: HexKey): GroupView? {
+        val group = groupManager.getGroup(nostrGroupId) ?: return null
+        val state = group.currentGroupState()
+        val legacy = MarmotGroupData.fromExtensions(group.extensions)
+        val image = state.image
+        return GroupView(
+            name = state.profile?.name?.takeIf { it.isNotEmpty() } ?: legacy?.name.orEmpty(),
+            description = state.profile?.description?.takeIf { it.isNotEmpty() } ?: legacy?.description.orEmpty(),
+            adminPubkeys = state.adminPolicy?.adminHexKeys ?: legacy?.adminPubkeys.orEmpty(),
+            relays = state.routing?.relays ?: legacy?.relays.orEmpty(),
+            image =
+                when {
+                    image?.imageHash != null ->
+                        MarmotGroupImage(image.imageHash!!.toHexKey(), image.imageKey!!, image.imageNonce!!)
+
+                    legacy?.hasImage() == true ->
+                        MarmotGroupImage(legacy.imageHash!!, legacy.imageKey!!, legacy.imageNonce!!)
+
+                    else -> null
+                },
+            isCurrentProfile = state.isCurrentProfile,
+        )
+    }
+
+    /**
+     * Rename a group, writing to whichever carrier the group actually uses.
+     *
+     * A current-profile group takes an `app_data_update` naming ONLY the
+     * profile component, so a concurrent admin-policy change does not lose its
+     * work to this one. A legacy group has no such separation — its single
+     * `0xF2EE` extension is rewritten whole.
+     */
+    suspend fun setGroupProfile(
+        nostrGroupId: HexKey,
+        name: String,
+        description: String,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent {
+        val view = groupView(nostrGroupId) ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        if (!view.isCurrentProfile) {
+            val legacy =
+                groupMetadata(nostrGroupId)
+                    ?: throw IllegalStateException("Legacy group $nostrGroupId has no MarmotGroupData")
+            return updateGroupMetadata(nostrGroupId, legacy.copy(name = name, description = description), relays)
+        }
+        return commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageAppDataUpdate(
+                nostrGroupId,
+                GroupProfileV1.COMPONENT_ID,
+                GroupProfileV1(name, description).encode(),
+            )
+        }.event
+    }
+
+    /**
+     * Replace the group's admin set, writing to whichever carrier the group uses.
+     *
+     * Refuses an empty set. Both profiles reject a group with no admins — a
+     * groupthat can never again change its own state is not a state anyone
+     * can recover from, so the check belongs here rather than at each caller.
+     */
+    suspend fun setGroupAdmins(
+        nostrGroupId: HexKey,
+        admins: List<HexKey>,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent {
+        require(admins.isNotEmpty()) { "a Marmot group cannot be left with no admins" }
+        val view = groupView(nostrGroupId) ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        if (!view.isCurrentProfile) {
+            val legacy =
+                groupMetadata(nostrGroupId)
+                    ?: throw IllegalStateException("Legacy group $nostrGroupId has no MarmotGroupData")
+            return updateGroupMetadata(nostrGroupId, legacy.copy(adminPubkeys = admins), relays)
+        }
+        return commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageAppDataUpdate(
+                nostrGroupId,
+                AdminPolicyV1.COMPONENT_ID,
+                AdminPolicyV1.ofHex(admins).encode(),
+            )
+        }.event
+    }
+
+    /**
+     * Set or clear the group avatar, writing to whichever carrier the group uses.
+     *
+     * [image] null clears it: the current profile removes the `0x8002`
+     * component outright rather than storing an "absent" encoding, so a group
+     * with no avatar carries no avatar state.
+     */
+    suspend fun setGroupImage(
+        nostrGroupId: HexKey,
+        image: GroupBlossomImageV1?,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent {
+        val view = groupView(nostrGroupId) ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        if (!view.isCurrentProfile) {
+            val legacy =
+                groupMetadata(nostrGroupId)
+                    ?: throw IllegalStateException("Legacy group $nostrGroupId has no MarmotGroupData")
+            val updated =
+                if (image?.imageHash == null) {
+                    legacy.withoutImage()
+                } else {
+                    legacy.withImage(
+                        image.imageHash!!.toHexKey(),
+                        image.imageKey!!,
+                        image.imageNonce!!,
+                        image.imageUploadKey!!,
+                    )
+                }
+            return updateGroupMetadata(nostrGroupId, updated, relays)
+        }
+        return commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageAppDataUpdate(
+                nostrGroupId,
+                GroupBlossomImageV1.COMPONENT_ID,
+                image?.encode(),
+            )
+        }.event
+    }
+
     // --- KeyPackage Management ---
 
     /**
@@ -1027,44 +1169,18 @@ class MarmotManager(
         nostrGroupId: HexKey,
         chatroom: MarmotGroupChatroom,
     ) {
-        // Read the current profile's components first, then the legacy
-        // 0xF2EE extension. Reading only the legacy one left every
-        // current-profile group with a blank name, no admins, no relays and no
-        // avatar in the UI — the group worked, it just looked empty.
-        val state = groupState(nostrGroupId)
-        val legacy = groupMetadata(nostrGroupId)
-
-        val name = state?.profile?.name?.takeIf { it.isNotEmpty() } ?: legacy?.name
-        if (!name.isNullOrEmpty()) chatroom.displayName.value = name
-
-        val description = state?.profile?.description?.takeIf { it.isNotEmpty() } ?: legacy?.description
-        if (!description.isNullOrEmpty()) chatroom.description.value = description
-
-        val admins = state?.adminPolicy?.adminHexKeys ?: legacy?.adminPubkeys
-        if (admins != null) chatroom.adminPubkeys.value = admins
-
-        val relays = state?.routing?.relays ?: legacy?.relays
-        if (relays != null) chatroom.relays.value = relays
-
-        val image = state?.image
-        chatroom.image.value =
-            when {
-                image?.imageHash != null ->
-                    MarmotGroupImage(
-                        hash = image.imageHash!!.toHexKey(),
-                        key = image.imageKey!!,
-                        nonce = image.imageNonce!!,
-                    )
-
-                legacy?.hasImage() == true ->
-                    MarmotGroupImage(
-                        hash = legacy.imageHash!!,
-                        key = legacy.imageKey!!,
-                        nonce = legacy.imageNonce!!,
-                    )
-
-                else -> null
-            }
+        // Read through [groupView], not [groupMetadata]: the legacy accessor
+        // returns null for every current-profile group, which left them with a
+        // blank name, no admins, no relays and no avatar in the UI. The group
+        // worked; it just looked empty.
+        val view = groupView(nostrGroupId)
+        if (view != null) {
+            if (view.name.isNotEmpty()) chatroom.displayName.value = view.name
+            if (view.description.isNotEmpty()) chatroom.description.value = view.description
+            chatroom.adminPubkeys.value = view.adminPubkeys
+            chatroom.relays.value = view.relays
+            chatroom.image.value = view.image
+        }
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)
         chatroom.members.value = members

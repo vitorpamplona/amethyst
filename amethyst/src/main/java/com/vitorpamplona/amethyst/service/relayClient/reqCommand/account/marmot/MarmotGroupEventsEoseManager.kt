@@ -77,7 +77,7 @@ class MarmotGroupEventsEoseManager(
                 } ?: continue
 
             // Use group-specific relays from MLS metadata; fall back to home relays
-            val metadata = manager.groupMetadata(groupId)
+            val metadata = manager.groupView(groupId)
             val groupRelays =
                 metadata
                     ?.relays

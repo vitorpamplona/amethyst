@@ -51,6 +51,15 @@ class MarmotGroupIconUpload(
     val imageNonce: ByteArray,
     /** 32-byte HKDF seed for the Blossom-auth keypair (MIP-01 v2). */
     val imageUploadKey: ByteArray,
+    /**
+     * Media type of the DECRYPTED image.
+     *
+     * MIP-01's blob never carried one, but the current profile's `0x8002`
+     * component requires it on a present image — and it is bound into the
+     * AEAD's AAD there, so a receiver cannot be steered into decoding the
+     * plaintext as a different type than the uploader meant.
+     */
+    val mediaType: String,
 )
 
 /**
@@ -123,6 +132,7 @@ class MarmotGroupIconUploader(
                     imageKey = cipher.imageKey,
                     imageNonce = cipher.imageNonce,
                     imageUploadKey = uploadKeySeed,
+                    mediaType = uploadMime,
                 )
             }
 

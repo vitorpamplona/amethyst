@@ -115,11 +115,12 @@ import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
-import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -2452,8 +2453,12 @@ class AccountViewModel(
 
     fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
 
-    suspend fun createMarmotGroup(nostrGroupId: String) {
-        account.marmot.createMarmotGroup(nostrGroupId)
+    suspend fun createMarmotGroup(
+        nostrGroupId: String,
+        name: String = "",
+        description: String = "",
+    ) {
+        account.marmot.createMarmotGroup(nostrGroupId, name, description)
     }
 
     suspend fun publishMarmotKeyPackage() {
@@ -2549,35 +2554,26 @@ class AccountViewModel(
         // overlap, so kind:445 messages never reach the other side. The
         // welcome carries the metadata, so the invitee learns the relays at
         // join time.
-        val outboxRelayStrings =
-            account.outboxRelays.flow.value
-                .map { it.url }
-        val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
-        val baseMetadata =
-            currentMetadata
-                ?.copy(name = name, description = description)
-                ?.withMergedRelays(outboxRelayStrings)
-                ?: MarmotGroupData.bootstrap(
-                    nostrGroupId = nostrGroupId,
-                    creatorPubKey = account.signer.pubKey,
-                    outboxRelays = outboxRelayStrings,
-                    name = name,
-                    description = description,
-                )
-        val updatedMetadata =
-            when (icon) {
-                is MarmotGroupIconChange.Keep -> baseMetadata
-                is MarmotGroupIconChange.Clear -> baseMetadata.withoutImage()
-                is MarmotGroupIconChange.Set ->
-                    baseMetadata.withImage(
-                        imageHash = icon.upload.imageHash,
+        val manager = account.marmotManager ?: return
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+
+        manager.setGroupProfile(nostrGroupId, name, description, relays.toList())
+        when (icon) {
+            is MarmotGroupIconChange.Keep -> Unit
+            is MarmotGroupIconChange.Clear -> manager.setGroupImage(nostrGroupId, null, relays.toList())
+            is MarmotGroupIconChange.Set ->
+                manager.setGroupImage(
+                    nostrGroupId,
+                    GroupBlossomImageV1(
+                        imageHash = icon.upload.imageHash.hexToByteArray(),
                         imageKey = icon.upload.imageKey,
                         imageNonce = icon.upload.imageNonce,
                         imageUploadKey = icon.upload.imageUploadKey,
-                    )
-            }
-        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
+                        mediaType = icon.upload.mediaType,
+                    ),
+                    relays.toList(),
+                )
+        }
     }
 
     override fun onCleared() {

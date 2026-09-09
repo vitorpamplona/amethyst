@@ -439,6 +439,29 @@ class MlsGroupManager(
         }
     }
 
+    /**
+     * Stage an `app_data_update` proposal + Commit for one component.
+     *
+     * The current profile's carrier for group metadata. A GroupContextExtensions
+     * change rewrites the WHOLE extension set, which is what MIP-01 had to do
+     * with its single monolithic blob; `app_data_update` names one component
+     * id, so two admins changing different components do not clobber each
+     * other's work just by racing.
+     *
+     * Passing null [data] removes the component.
+     */
+    suspend fun stageAppDataUpdate(
+        nostrGroupId: HexKey,
+        componentId: Int,
+        data: ByteArray?,
+    ): StagedCommit {
+        requireAdminForExtensionChange(requireGroup(nostrGroupId))
+        return stage(nostrGroupId) { clone ->
+            if (data == null) clone.proposeAppDataRemoval(componentId) else clone.proposeAppDataUpdate(componentId, data)
+            clone.commit()
+        }
+    }
+
     /** Stage a self-update / empty Commit. See [StagedCommit]. */
     suspend fun stageCommit(nostrGroupId: HexKey): StagedCommit = stage(nostrGroupId) { it.commit() }
 

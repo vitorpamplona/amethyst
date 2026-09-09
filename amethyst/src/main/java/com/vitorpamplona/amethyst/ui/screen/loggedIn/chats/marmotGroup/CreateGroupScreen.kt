@@ -87,7 +87,7 @@ fun CreateGroupScreen(
         scope.launch(Dispatchers.IO) {
             try {
                 val nostrGroupId = RandomInstance.bytes(32).toHexKey()
-                accountViewModel.createMarmotGroup(nostrGroupId)
+                accountViewModel.createMarmotGroup(nostrGroupId, groupName.trim(), groupDescription.trim())
                 // Encrypt + upload the picked icon (if any) before the metadata commit,
                 // so its parameters land in the group's MarmotGroupData extension.
                 val iconChange =

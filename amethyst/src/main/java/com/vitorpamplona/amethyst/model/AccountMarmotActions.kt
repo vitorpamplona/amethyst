@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -53,7 +54,7 @@ class AccountMarmotActions(
     fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> {
         val groupRelays =
             account.marmotManager
-                ?.groupMetadata(nostrGroupId)
+                ?.groupView(nostrGroupId)
                 ?.relays
                 ?.mapNotNull {
                     com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -386,12 +387,33 @@ class AccountMarmotActions(
     }
 
     /**
-     * Create a new Marmot MLS group.
+     * Create a new Marmot MLS group under the CURRENT profile.
+     *
+     * Not the legacy `0xF2EE` shape. A current-profile peer refuses a leaf
+     * with no account identity proof, and a legacy group cannot be upgraded
+     * into one afterwards — its existing leaves have no proofs to add — so the
+     * profile is decided here, once, and never migrated. Groups made the old
+     * way are joinable only by other legacy clients.
+     *
+     * The name, description and avatar arrive later through
+     * `updateMarmotGroupMetadata`; the routing component has to exist from
+     * epoch 0 because it carries the `nostr_group_id` every kind-445 event in
+     * this group is addressed to.
      */
-    suspend fun createMarmotGroup(nostrGroupId: HexKey) {
+    suspend fun createMarmotGroup(
+        nostrGroupId: HexKey,
+        name: String = "",
+        description: String = "",
+    ) {
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
-        manager.createGroup(nostrGroupId)
+        manager.createCurrentProfileGroup(
+            nostrGroupId = nostrGroupId,
+            relays =
+                account.outboxRelays.flow.value
+                    .map { it.url },
+            profile = if (name.isEmpty() && description.isEmpty()) null else GroupProfileV1(name, description),
+        )
         // Creator owns the group — mark it as "known" immediately so it
         // doesn't appear under "New Requests" before the first message.
         account.marmotGroupList.markAsKnown(nostrGroupId)
@@ -416,9 +438,9 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val metadata = manager.groupMetadata(nostrGroupId)
-        if (metadata != null && metadata.adminPubkeys.contains(account.signer.pubKey)) {
-            val remaining = metadata.adminPubkeys.filter { it != account.signer.pubKey }.toMutableList()
+        val view = manager.groupView(nostrGroupId)
+        if (view != null && view.adminPubkeys.contains(account.signer.pubKey)) {
+            val remaining = view.adminPubkeys.filter { it != account.signer.pubKey }.toMutableList()
             // MIP-03 also rejects any GCE commit that leaves the group with zero
             // admins. If we're the only one, promote an arbitrary non-self
             // member to admin before stepping down.
@@ -431,8 +453,7 @@ class AccountMarmotActions(
                 if (heir != null) remaining.add(heir)
             }
             if (remaining.isNotEmpty()) {
-                val demoted = metadata.copy(adminPubkeys = remaining)
-                manager.updateGroupMetadata(nostrGroupId, demoted, groupRelays.toList())
+                manager.setGroupAdmins(nostrGroupId, remaining, groupRelays.toList())
             }
         }
 
@@ -541,17 +562,10 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val metadata = manager.groupMetadata(nostrGroupId) ?: return
-        if (metadata.adminPubkeys.contains(targetPubKey)) return
+        val view = manager.groupView(nostrGroupId) ?: return
+        if (view.adminPubkeys.contains(targetPubKey)) return
 
-        val outboxRelayStrings =
-            account.outboxRelays.flow.value
-                .map { it.url }
-        val updated =
-            metadata
-                .copy(adminPubkeys = metadata.adminPubkeys + targetPubKey)
-                .withMergedRelays(outboxRelayStrings)
-        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
+        manager.setGroupAdmins(nostrGroupId, view.adminPubkeys + targetPubKey, groupRelays.toList())
     }
 
     /**
@@ -568,20 +582,13 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val metadata = manager.groupMetadata(nostrGroupId) ?: return
-        if (!metadata.adminPubkeys.contains(targetPubKey)) return
-        val remaining = metadata.adminPubkeys.filter { it != targetPubKey }
+        val view = manager.groupView(nostrGroupId) ?: return
+        if (!view.adminPubkeys.contains(targetPubKey)) return
+        val remaining = view.adminPubkeys.filter { it != targetPubKey }
         check(remaining.isNotEmpty()) {
             "Cannot revoke the last admin from a Marmot group (MIP-03)"
         }
 
-        val outboxRelayStrings =
-            account.outboxRelays.flow.value
-                .map { it.url }
-        val updated =
-            metadata
-                .copy(adminPubkeys = remaining)
-                .withMergedRelays(outboxRelayStrings)
-        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
+        manager.setGroupAdmins(nostrGroupId, remaining, groupRelays.toList())
     }
 }

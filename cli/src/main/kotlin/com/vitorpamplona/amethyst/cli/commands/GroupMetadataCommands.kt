@@ -24,12 +24,15 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
-import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
+import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import java.io.File
@@ -44,7 +47,9 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "group rename <gid> <name>")
-        return edit(dataDir, rest[0]) { _, cur -> cur.copy(name = rest[1]) }
+        return commit(dataDir, rest[0]) { ctx, gid, view ->
+            ctx.marmot.setGroupProfile(gid, rest[1], view.description)
+        }
     }
 
     suspend fun promote(
@@ -52,11 +57,9 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "group promote <gid> <npub>")
-        return edit(dataDir, rest[0]) { ctx, cur ->
+        return commit(dataDir, rest[0]) { ctx, gid, view ->
             val newAdmin = ctx.requireUserHex(rest[1])
-            val admins = cur.adminPubkeys.toMutableList()
-            if (newAdmin !in admins) admins.add(newAdmin)
-            cur.copy(adminPubkeys = admins)
+            ctx.marmot.setGroupAdmins(gid, (view.adminPubkeys + newAdmin).distinct())
         }
     }
 
@@ -65,10 +68,9 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "group demote <gid> <npub>")
-        return edit(dataDir, rest[0]) { ctx, cur ->
+        return commit(dataDir, rest[0]) { ctx, gid, view ->
             val target = ctx.requireUserHex(rest[1])
-            val admins = cur.adminPubkeys.filter { it != target }
-            cur.copy(adminPubkeys = admins)
+            ctx.marmot.setGroupAdmins(gid, view.adminPubkeys.filter { it != target })
         }
     }
 
@@ -114,8 +116,17 @@ object GroupMetadataCommands {
             }
         }
 
-        return edit(dataDir, gid, mapOf("image_hash" to enc.imageHash, "image_url" to uploadedUrl)) { _, cur ->
-            cur.withImage(enc.imageHash, enc.imageKey, enc.imageNonce, uploadKeySeed)
+        return commit(dataDir, gid, mapOf("image_hash" to enc.imageHash, "image_url" to uploadedUrl)) { ctx, resolved, _ ->
+            ctx.marmot.setGroupImage(
+                resolved,
+                GroupBlossomImageV1(
+                    imageHash = enc.imageHash.hexToByteArray(),
+                    imageKey = enc.imageKey,
+                    imageNonce = enc.imageNonce,
+                    imageUploadKey = uploadKeySeed,
+                    mediaType = args.flag("mime") ?: "image/jpeg",
+                ),
+            )
         }
     }
 
@@ -125,40 +136,43 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Output.error("bad_args", "group clear-image <gid>")
-        return edit(dataDir, rest[0]) { _, cur -> cur.withoutImage() }
+        return commit(dataDir, rest[0]) { ctx, gid, _ -> ctx.marmot.setGroupImage(gid, null) }
     }
 
-    private suspend fun edit(
+    /**
+     * Run one metadata commit and report it.
+     *
+     * The mutation goes through [MarmotManager]'s profile-agnostic setters
+     * rather than being applied to a legacy `MarmotGroupData` here. Building
+     * that blob locally was the bug: `groupMetadata` is null for every
+     * current-profile group, so this bootstrapped a legacy `0xF2EE` extension
+     * and committed it INTO a current-profile group — the rename appeared to
+     * succeed locally and every peer kept showing the old name.
+     */
+    private suspend fun commit(
         dataDir: DataDir,
         rawGid: HexKey,
         extra: Map<String, Any?> = emptyMap(),
-        mutate: suspend (Context, MarmotGroupData) -> MarmotGroupData,
+        mutate: suspend (Context, HexKey, MarmotManager.GroupView) -> OutboundGroupEvent,
     ): Int {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rawGid)
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
-            val outboxUrls = ctx.outboxRelays().map { it.url }
-            val cur =
-                ctx.marmot.groupMetadata(gid)
-                    ?: MarmotGroupData.bootstrap(
-                        nostrGroupId = gid,
-                        creatorPubKey = ctx.identity.pubKeyHex,
-                        outboxRelays = outboxUrls,
-                    )
-            val updated = mutate(ctx, cur).withMergedRelays(outboxUrls)
+            val view = ctx.marmot.groupView(gid) ?: return Output.error("not_member", "not a member of group $gid")
 
-            val commit = ctx.marmot.updateGroupMetadata(gid, updated)
+            val commit = mutate(ctx, gid, view)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(commit.signedEvent, targets)
             RawEventSupport.publishGuard(ack, commit.signedEvent.id)?.let { return it }
 
+            val after = ctx.marmot.groupView(gid)
             Output.emit(
                 mapOf(
                     "group_id" to gid,
-                    "name" to updated.name,
-                    "admins" to updated.adminPubkeys,
+                    "name" to (after?.name ?: view.name),
+                    "admins" to (after?.adminPubkeys ?: view.adminPubkeys),
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "commit_event_id" to commit.signedEvent.id,
                 ) + RawEventSupport.ackFields(ack) + extra,

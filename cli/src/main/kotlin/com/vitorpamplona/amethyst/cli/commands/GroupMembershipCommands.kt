@@ -77,10 +77,10 @@ object GroupMembershipCommands {
             // leave the group with zero admins (admin depletion). If we're
             // the only admin, hand admin to another member first.
             val demoteEventId: String? =
-                ctx.marmot.groupMetadata(gid)?.let { metadata ->
-                    if (!metadata.adminPubkeys.contains(ctx.identity.pubKeyHex)) return@let null
+                ctx.marmot.groupView(gid)?.let { view ->
+                    if (!view.adminPubkeys.contains(ctx.identity.pubKeyHex)) return@let null
 
-                    val newAdmins = metadata.adminPubkeys.filter { it != ctx.identity.pubKeyHex }.toMutableList()
+                    val newAdmins = view.adminPubkeys.filter { it != ctx.identity.pubKeyHex }.toMutableList()
                     if (newAdmins.isEmpty()) {
                         val heir =
                             ctx.marmot
@@ -90,8 +90,7 @@ object GroupMembershipCommands {
                                 ?: return@let null // solo group — skip demote, let MLS state cleanup handle it
                         newAdmins.add(heir)
                     }
-                    val demoted = metadata.copy(adminPubkeys = newAdmins)
-                    val demoteCommit = ctx.marmot.updateGroupMetadata(gid, demoted)
+                    val demoteCommit = ctx.marmot.setGroupAdmins(gid, newAdmins, targets.toList())
                     ctx.publish(demoteCommit.signedEvent, targets)
                     demoteCommit.signedEvent.id
                 }
