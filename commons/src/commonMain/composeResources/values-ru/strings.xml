@@ -10,12 +10,6 @@
         <item quantity="many">Birdex · %1$d видов</item>
         <item quantity="other">Birdex · %1$d вида</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d ещё</item>
-        <item quantity="few">%1$s +%2$d ещё</item>
-        <item quantity="many">%1$s +%2$d ещё</item>
-        <item quantity="other">%1$s +%2$d ещё</item>
-    </plurals>
     <string name="road_event_accident">Авария</string>
     <string name="road_event_animal">Животное на дороге</string>
     <string name="road_event_confirmed">Всё ещё там</string>

@@ -1396,6 +1396,19 @@
     <string name="home_content_type_music">Music &amp; audio</string>
     <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Fundraisers</string>
+    <string name="home_content_type_ratings">Ratings and reviews</string>
+    <string name="rating_stars_out_of_five">Rated %1$s out of 5</string>
+    <string name="library_learning_resource">Learning resource</string>
+    <string name="library_directory">Directory</string>
+    <string name="library_blossom_piece">File record</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">%1$d more item</item>
+        <item quantity="other">%1$d more items</item>
+    </plurals>
     <string name="settings_section_reminders">Reminders</string>
     <string name="wallet_connect">Wallet Connect</string>
     <string name="theme">Theme</string>

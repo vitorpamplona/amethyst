@@ -134,17 +134,45 @@ fun filterMissingEvents(
     return filterMissingEvents(eventsPerRelay)
 }
 
+/**
+ * One filter per relay carrying every id it might hold, chunked at [MAX_VALUES_PER_FILTER].
+ *
+ * Split for the same reason as the addressable groups: a relay that clamps `limit` returns only
+ * part of a large batch. This path sets no `limit`, so it is exposed only through a relay's
+ * `defaultLimit`, but the failure is the same shape and silent either way.
+ */
 fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): List<RelayBasedFilter> {
     if (missingEventIds.isEmpty()) return emptyList()
 
-    return missingEventIds.mapNotNull {
-        if (it.value.isNotEmpty()) {
-            RelayBasedFilter(
-                relay = it.key,
-                filter = ExplainedFilter(purpose = SubPurpose.REFERENCED_EVENTS, ids = it.value.sorted()),
+    val filters = mutableListOf<RelayBasedFilter>()
+
+    missingEventIds.forEach { (relay, ids) ->
+        if (ids.isEmpty()) return@forEach
+
+        // Sorted so a rebuild that found the same ids produces the same filter and the
+        // subscription is not torn down and re-sent for nothing.
+        val sorted = ids.toMutableList()
+        sorted.sort()
+
+        forEachChunk(sorted) { chunk ->
+            filters.add(
+                RelayBasedFilter(
+                    relay = relay,
+                    filter = ExplainedFilter(purpose = SubPurpose.REFERENCED_EVENTS, ids = chunk),
+                ),
             )
-        } else {
-            null
         }
     }
+
+    return filters
 }
+
+/**
+ * How many ids or `d` values go in one filter before it is split.
+ *
+ * Matches the chunk size `OutboxDispatcher` and `FeedMetadataCoordinator` already use for bulk
+ * author queries. Note that no relay is known to reject a filter for carrying too many values --
+ * neither NIP-11 nor [com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits] has
+ * such a cap. The limit clamp above is the observed mechanism; this size is convention.
+ */
+internal const val MAX_VALUES_PER_FILTER = 100

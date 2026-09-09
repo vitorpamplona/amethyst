@@ -20,11 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.connectedApps.signers
 
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
@@ -244,6 +249,15 @@ class NostrSignerPermissionLedger(
                 WikiNoteEvent.KIND, // 30818 — NIP-54 wiki articles (addressable content)
                 VideoHorizontalEvent.KIND, // 34235 — legacy addressable horizontal video (NIP-71)
                 VideoVerticalEvent.KIND, // 34236 — legacy addressable vertical video (NIP-71)
+                PublicationIndexEvent.KIND, // 30040 — NKBIP-01 publication index (addressable content)
+                LearningResourceEvent.KIND, // 30142 — learning resources (addressable content)
+                BlossomPieceIndexEvent.KIND, // 32176 — Blossom piece indexes (addressable content)
+                // Deliberately NOT auto-signed, by the rule above: a kind-30045 directory is a
+                // replaceable *list* one bad write wipes; and ratings (34259), relay reviews
+                // (31987) and wiki redirects (30819) attach a replaceable opinion or a redirect
+                // to the user's identity, which an app should have to ask before writing.
+                ExternalReactionEvent.KIND, // 17 — NIP-25 reactions to non-nostr targets
+                PublicationContentEvent.KIND, // 30041 — NKBIP-01 publication section (addressable content)
             )
     }
 }

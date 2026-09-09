@@ -28,10 +28,6 @@
         <item quantity="one">Birdex · %1$d இனம்</item>
         <item quantity="other">Birdex · %1$d இனங்கள்</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d மேலும்</item>
-        <item quantity="other">%1$s +%2$d மேலும்</item>
-    </plurals>
     <string name="road_event_accident">விபத்து</string>
     <string name="road_event_animal">சாலையில் விலங்கு</string>
     <string name="road_event_confirmed">இன்னும் உள்ளது</string>

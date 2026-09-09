@@ -1002,7 +1002,7 @@ fun BoostReaction(
             if (hasBoosted) {
                 RepostedIcon(iconSizeModifier)
             } else {
-                RepostIcon(iconSizeModifier)
+                RepostIcon(iconSizeModifier, grayTint)
             }
         }
 

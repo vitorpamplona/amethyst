@@ -25,6 +25,10 @@ package com.vitorpamplona.amethyst.commons.icons.symbols
 object MaterialSymbolsDefaults {
     const val WEIGHT: Int = 300
     const val FILL: Float = 0f
+
+    // Fully solid. Material Symbols has no separate filled codepoint — `star` and `star_border`
+    // are the same glyph — so a solid icon is this axis, not a different symbol.
+    const val FILL_ON: Float = 1f
     const val OPTICAL_SIZE: Float = 24f
     const val GRADE: Float = 0f
 }

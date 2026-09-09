@@ -28,10 +28,6 @@
         <item quantity="one">Birdex · %1$d گونه</item>
         <item quantity="other">Birdex · %1$d گونه</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s و %2$d مورد بیشتر</item>
-        <item quantity="other">%1$s و %2$d مورد بیشتر</item>
-    </plurals>
     <string name="road_event_accident">تصادف</string>
     <string name="road_event_animal">حیوان روی جاده</string>
     <string name="road_event_confirmed">هنوز هست</string>

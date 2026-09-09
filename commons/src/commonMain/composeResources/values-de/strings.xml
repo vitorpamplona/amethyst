@@ -8,10 +8,6 @@
         <item quantity="one">Birdex · %1$d Art</item>
         <item quantity="other">Birdex · %1$d Arten</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d weitere</item>
-        <item quantity="other">%1$s +%2$d weitere</item>
-    </plurals>
     <string name="road_event_accident">Unfall</string>
     <string name="road_event_animal">Tier auf der Straße</string>
     <string name="road_event_confirmed">Noch da</string>

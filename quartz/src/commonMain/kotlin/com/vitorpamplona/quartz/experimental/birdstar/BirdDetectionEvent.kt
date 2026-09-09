@@ -65,7 +65,7 @@ class BirdDetectionEvent(
      * Only http(s) URLs are returned — UIs render this as a clickable link,
      * so other schemes are rejected here rather than at every call site.
      */
-    fun speciesReference() = tags.firstTagValue("i")?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+    fun speciesReference() = tags.firstTagValue("i")?.asWebReference()
 
     /** Publisher-provided human-readable summary, from the NIP-31 `alt` tag (may be null). */
     fun summary() = tags.alt()

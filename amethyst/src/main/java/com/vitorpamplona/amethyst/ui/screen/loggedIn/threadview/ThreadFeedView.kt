@@ -160,7 +160,9 @@ import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.MAX_THREAD_SECTIONS
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
+import com.vitorpamplona.amethyst.ui.note.types.PublicationHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestation
@@ -169,13 +171,17 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderBirdDetection
 import com.vitorpamplona.amethyst.ui.note.types.RenderBirdex
+import com.vitorpamplona.amethyst.ui.note.types.RenderBlossomPieceIndex
 import com.vitorpamplona.amethyst.ui.note.types.RenderBolt12Zap
+import com.vitorpamplona.amethyst.ui.note.types.RenderBookshelfDirectory
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
+import com.vitorpamplona.amethyst.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -186,6 +192,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
+import com.vitorpamplona.amethyst.ui.note.types.RenderLearningResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
@@ -204,6 +211,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderProfileCard
 import com.vitorpamplona.amethyst.ui.note.types.RenderPs1Save
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicationSection
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
@@ -211,6 +219,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayReview
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
@@ -263,10 +272,14 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
+import com.vitorpamplona.quartz.experimental.citations.CitationEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
+import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -275,6 +288,10 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
+import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
+import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -1006,6 +1023,29 @@ private fun FullBleedNoteCompose(
                     RenderDraft(baseNote, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is EntityRatingEvent) {
+                    RenderEntityRating(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is PublicationContentEvent) {
+                    RenderPublicationSection(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is RelayReviewEvent) {
+                    RenderRelayReview(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is CitationEvent) {
+                    // One branch for kinds 31/32/33, matching the feed: they are one idea aimed at
+                    // three sorts of source.
+                    RenderCitation(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is LearningResourceEvent) {
+                    RenderLearningResource(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is BookshelfDirectoryEvent) {
+                    RenderBookshelfDirectory(baseNote, accountViewModel, nav)
+                } else if (noteEvent is BlossomPieceIndexEvent) {
+                    RenderBlossomPieceIndex(baseNote, accountViewModel)
+                } else if (noteEvent is PublicationIndexEvent) {
+                    // Belongs here rather than in the header `when` above: a 30040 has no content,
+                    // so the generic body would add nothing but a duplicate of the topics this
+                    // card already shows.
+                    // Uncapped here: the thread view is where a publication is actually read,
+                    // so the whole table of contents is listed rather than a feed-sized taste.
+                    PublicationHeader(noteEvent, baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav, MAX_THREAD_SECTIONS)
                 } else if (noteEvent is PublicMessageEvent) {
                     RenderPublicMessage(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is CalendarTimeSlotEvent) {
