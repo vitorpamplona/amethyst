@@ -181,8 +181,14 @@ fun SearchScreen(
         }
     }
 
+    // A picker is a scrollable living inside the top bar, and the scaffold moves its bars on any
+    // scroll in its subtree. Pin them while one is open, or paging through the kinds drags the
+    // whole chrome up with it.
+    val pickerOpen by searchBarViewModel.pickerOpen.collectAsStateWithLifecycle()
+
     DisappearingScaffold(
         isInvertedLayout = false,
+        allowBarHide = !pickerOpen,
         topBar = {
             SearchBar(searchBarViewModel, accountViewModel, nav)
         },
@@ -525,6 +531,11 @@ private fun SearchTextField(
         // fields rather than search terms. The value stays the plain text, so a query can still
         // be copied out and pasted back.
         val fieldState = remember { SearchFieldState(searchBarViewModel.searchValue) }
+
+        // Reported up rather than read down: the scaffold that has to stop moving is composed
+        // above this field, and it is the only thing that can keep a picker's scroll off the bars.
+        val hasPicker = fieldState.activePicker != null
+        LaunchedEffect(hasPicker) { searchBarViewModel.pickerOpen.value = hasPicker }
         val interactionSource = remember { MutableInteractionSource() }
 
         // The composer's own mention picker, reused verbatim: it already resolves NIP-05, asks

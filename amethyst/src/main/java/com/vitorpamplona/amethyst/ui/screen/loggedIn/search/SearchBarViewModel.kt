@@ -105,6 +105,17 @@ class SearchBarViewModel(
     val invalidations = MutableStateFlow(0)
     val searchValueFlow = MutableStateFlow(searchValue)
 
+    /**
+     * True while a token picker is open under the field.
+     *
+     * The search screen pins its bars on this. A picker is a scrollable inside the *top bar*, and
+     * [com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarNestedScroll] moves the bars
+     * on `consumed + available` — a sum that is conserved as a scroll walks up the nested-scroll
+     * chain, so no connection under the picker can hide its scrolling from the scaffold. Scrolling
+     * the list of kinds slid the whole chrome away with it. The scaffold has to be told instead.
+     */
+    val pickerOpen = MutableStateFlow(false)
+
     /** The scope the reader picked, which is not always the one that applies — see [scope]. */
     private val pickedScope = MutableStateFlow(SearchScope.ALL)
 
