@@ -695,11 +695,31 @@ test we have.
   in-memory `AgentTextStreamSequenceStore` exists; a platform-backed one lands
   with the transport that needs it.
 
-  We still do NOT advertise `send` (`0xF2D2`) or `fanout` (`0xF2D4`), because
-  there is no data plane behind them yet and a role we cannot serve is worse for
-  the group than a role we do not claim. A group whose policy requires `send` is
-  refused at join rather than joined into a state every peer would reject us
-  from.
-- **The QUIC transport for agent text streams is not wired.** The record layer
-  and the kind-1200 anchor are implemented; nothing yet opens a WebTransport
-  session to a broker and feeds it records.
+  We still do NOT advertise `send` (`0xF2D2`) or `fanout` (`0xF2D4`). Not for
+  want of a transport any more — see below — but because nothing in the app yet
+  originates a stream, and a role we do not serve is worse for the group than a
+  role we do not claim. A group whose policy requires `send` is refused at join
+  rather than joined into a state every peer would reject us from.
+
+- **The QUIC transport binding is implemented and verified against MDK's
+  broker.** `transports/quic.md` is a RAW QUIC binding — its own ALPNs
+  (`marmot.quic_broker.v1` / `marmot.quic_stream.v1`), frames written straight
+  onto QUIC streams — so it does not go through `nestsClient`'s
+  `WebTransportSession`, which begins above HTTP/3 Extended CONNECT. It sits
+  directly on `:quic`, which already had everything under that line: the
+  connection, TLS 1.3, ALPN negotiation, stream multiplexing, the UDP socket.
+
+  The pure protocol layer (control envelope, `uint32` frame codec with both
+  caps, `quic://` candidate parsing, stream-id pinning) is in `quartz`; the
+  connection layer is the new `:marmotQuic` module, which mirrors how
+  `:nestsClient` sits on `:quic`. `MarmotQuicBrokerInteropTest` drives our
+  publisher and subscriber through MDK's own `marmot-quic-broker` and checks
+  that the records come back, open under the group-derived key, and fold to the
+  publisher's transcript hash — plus that the broker keeps rooms apart. Opt in
+  with `-DmarmotQuicBroker=host:port`; it skips visibly without one.
+
+  What is left is the application wiring: nothing yet mints a kind-1200 start,
+  picks a broker candidate, or renders a live preview. The direct path
+  (`marmot.quic_stream.v1`) is also unimplemented — v1 has no start-payload
+  candidate format for it, so it is only usable with an out-of-band endpoint.
+
