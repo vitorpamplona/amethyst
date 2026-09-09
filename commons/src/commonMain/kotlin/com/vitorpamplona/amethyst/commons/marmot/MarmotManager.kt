@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.WelcomeResult
 import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
+import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
@@ -1116,6 +1117,16 @@ class MarmotManager(
         val adminPubkeys: List<HexKey>,
         val relays: List<String>,
         val image: MarmotGroupImage?,
+        /**
+         * The plain-https avatar (`0x8007`), or null when the group carries
+         * none. Absent-but-present state reads as null here: a cleared avatar
+         * and no avatar look identical to a renderer, and the difference only
+         * matters to the codec.
+         *
+         * When this and [image] are both set, this one wins — see
+         * [MarmotGroupState.preferredAvatar].
+         */
+        val avatarUrl: GroupAvatarUrlV1?,
         /** True when the group requires `0x8009` — see [MarmotGroupState.isCurrentProfile]. */
         val isCurrentProfile: Boolean,
     )
@@ -1140,6 +1151,7 @@ class MarmotManager(
 
                     else -> null
                 },
+            avatarUrl = state.avatarUrl?.takeIf { !it.isAbsent },
             isCurrentProfile = state.isCurrentProfile,
         )
     }
@@ -1238,6 +1250,41 @@ class MarmotManager(
                 nostrGroupId,
                 GroupBlossomImageV1.COMPONENT_ID,
                 image?.encode(),
+            )
+        }.event
+    }
+
+    /**
+     * Set or clear the group's plain-https avatar (`marmot.group.avatar-url.v1`).
+     *
+     * [avatar] null clears it by writing the canonical EMPTY state rather than
+     * removing the component. That is the spec's own clear ("Clearing the
+     * avatar sends the empty state"), and removal is not a free substitute for
+     * it: a component MUST NOT be removed while `app_components` still lists it
+     * as required, so a remove would only be legal in the same Commit that
+     * stopped requiring it.
+     *
+     * There is no legacy carrier for this. MIP-01's `0xF2EE` blob had only the
+     * encrypted-Blossom fields, so a legacy group genuinely cannot hold a URL
+     * avatar and this refuses rather than silently writing somewhere else.
+     */
+    suspend fun setGroupAvatarUrl(
+        nostrGroupId: HexKey,
+        avatar: GroupAvatarUrlV1?,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent {
+        val view = groupView(nostrGroupId) ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        check(view.isCurrentProfile) {
+            "Group $nostrGroupId is a legacy MIP-01 group and has no carrier for a URL avatar"
+        }
+        // Encode before staging: an invalid or non-normalizable URL should fail
+        // the caller here, not halfway through building a Commit.
+        val encoded = (avatar?.takeIf { !it.isAbsent } ?: GroupAvatarUrlV1.ABSENT).encode()
+        return commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageAppDataUpdate(
+                nostrGroupId,
+                GroupAvatarUrlV1.COMPONENT_ID,
+                encoded,
             )
         }.event
     }
@@ -1473,6 +1520,7 @@ class MarmotManager(
             chatroom.adminPubkeys.value = view.adminPubkeys
             chatroom.relays.value = view.relays
             chatroom.image.value = view.image
+            chatroom.avatarUrl.value = view.avatarUrl
         }
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)

@@ -56,10 +56,25 @@ data class MarmotGroupState(
     val adminPolicy: AdminPolicyV1?,
     val routing: NostrRoutingV1?,
     val image: GroupBlossomImageV1?,
+    val avatarUrl: GroupAvatarUrlV1?,
     val retention: MessageRetentionV1?,
     val lifecycle: GroupLifecycleV1?,
     val agentTextStream: AgentTextStreamQuicPolicyV1?,
 ) {
+    /**
+     * The avatar a renderer should show, honouring the components' documented
+     * precedence: "When both are present, the URL avatar wins."
+     *
+     * A cleared URL avatar (present but empty) is not the same as an absent
+     * one — it explicitly falls back to the Blossom image, which is why this
+     * checks [GroupAvatarUrlV1.isAbsent] rather than nullness alone.
+     */
+    val preferredAvatar: MarmotGroupAvatar?
+        get() {
+            avatarUrl?.takeIf { !it.isAbsent }?.let { return MarmotGroupAvatar.Url(it) }
+            return image?.let { MarmotGroupAvatar.Blossom(it) }
+        }
+
     /** True once a disband Commit has been applied. Absorbing and terminal. */
     val isDisbanded: Boolean get() = lifecycle == GroupLifecycleV1.DISBANDED
 
@@ -99,6 +114,7 @@ data class MarmotGroupState(
                 adminPolicy = dictionary[AdminPolicyV1.COMPONENT_ID]?.let { AdminPolicyV1.decode(it) },
                 routing = dictionary[NostrRoutingV1.COMPONENT_ID]?.let { NostrRoutingV1.decode(it) },
                 image = dictionary[GroupBlossomImageV1.COMPONENT_ID]?.let { GroupBlossomImageV1.decode(it) },
+                avatarUrl = dictionary[GroupAvatarUrlV1.COMPONENT_ID]?.let { GroupAvatarUrlV1.decode(it) },
                 retention = dictionary[MessageRetentionV1.COMPONENT_ID]?.let { MessageRetentionV1.decode(it) },
                 lifecycle = dictionary[GroupLifecycleV1.COMPONENT_ID]?.let { GroupLifecycleV1.decode(it) },
                 agentTextStream =
@@ -121,6 +137,7 @@ data class MarmotGroupState(
             routing: NostrRoutingV1? = null,
             profile: GroupProfileV1? = null,
             image: GroupBlossomImageV1? = null,
+            avatarUrl: GroupAvatarUrlV1? = null,
             retention: MessageRetentionV1? = null,
             lifecycle: GroupLifecycleV1? = GroupLifecycleV1.ACTIVE,
             agentTextStream: AgentTextStreamQuicPolicyV1? = null,
@@ -144,6 +161,10 @@ data class MarmotGroupState(
                 required.add(GroupBlossomImageV1.COMPONENT_ID)
                 dictionary = dictionary.with(GroupBlossomImageV1.COMPONENT_ID, it.encode())
             }
+            avatarUrl?.let {
+                required.add(GroupAvatarUrlV1.COMPONENT_ID)
+                dictionary = dictionary.with(GroupAvatarUrlV1.COMPONENT_ID, it.encode())
+            }
             retention?.let {
                 required.add(MessageRetentionV1.COMPONENT_ID)
                 dictionary = dictionary.with(MessageRetentionV1.COMPONENT_ID, it.encode())
@@ -160,4 +181,17 @@ data class MarmotGroupState(
             return dictionary.with(ComponentsList.APP_COMPONENTS_ID, ComponentsList.encode(required))
         }
     }
+}
+
+/** Which avatar surface a group's state resolves to, after precedence. */
+sealed class MarmotGroupAvatar {
+    /** `marmot.group.avatar-url.v1` — a plain https link, no key material. */
+    data class Url(
+        val avatar: GroupAvatarUrlV1,
+    ) : MarmotGroupAvatar()
+
+    /** `marmot.group.blossom.image.v1` — an encrypted blob on a Blossom server. */
+    data class Blossom(
+        val image: GroupBlossomImageV1,
+    ) : MarmotGroupAvatar()
 }

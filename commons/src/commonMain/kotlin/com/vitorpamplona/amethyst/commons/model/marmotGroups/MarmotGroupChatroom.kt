@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.channels.BufferOverflow
@@ -55,6 +56,14 @@ class MarmotGroupChatroom(
      * it; when null they fall back to the host relay's NIP-11 icon.
      */
     var image = MutableStateFlow<MarmotGroupImage?>(null)
+
+    /**
+     * The group's plain-https avatar (`marmot.group.avatar-url.v1`), or null
+     * when it has none. It takes precedence over [image]: a group carrying
+     * both shows this one, and only falls back to the encrypted Blossom blob
+     * once this is cleared.
+     */
+    var avatarUrl = MutableStateFlow<GroupAvatarUrlV1?>(null)
     var adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
     var relays = MutableStateFlow<List<String>>(emptyList())
     var memberCount = MutableStateFlow(0)

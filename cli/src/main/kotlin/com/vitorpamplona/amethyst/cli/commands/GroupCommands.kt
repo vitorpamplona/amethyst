@@ -41,6 +41,9 @@ object GroupCommands {
         |  marmot group set-image GID FILE            encrypt + commit a group avatar
         |    [--server URL]                            (--server uploads the ciphertext to Blossom)
         |  marmot group clear-image GID               remove the group avatar
+        |  marmot group set-avatar-url GID URL        commit a plain https avatar link
+        |    [--dim WxH] [--thumbhash TEXT]            (optional opaque render hints)
+        |  marmot group clear-avatar-url GID          remove the https avatar link
         |  marmot group remove GID NPUB               remove member
         |  marmot group leave GID                     self-remove
         """.trimMargin()
@@ -65,6 +68,8 @@ object GroupCommands {
                 "demote" to { rest -> GroupMetadataCommands.demote(dataDir, rest) },
                 "set-image" to { rest -> GroupMetadataCommands.setImage(dataDir, rest) },
                 "clear-image" to { rest -> GroupMetadataCommands.clearImage(dataDir, rest) },
+                "set-avatar-url" to { rest -> GroupMetadataCommands.setAvatarUrl(dataDir, rest) },
+                "clear-avatar-url" to { rest -> GroupMetadataCommands.clearAvatarUrl(dataDir, rest) },
                 "remove" to { rest -> GroupMembershipCommands.remove(dataDir, rest) },
                 "leave" to { rest -> GroupMembershipCommands.leave(dataDir, rest) },
             ),

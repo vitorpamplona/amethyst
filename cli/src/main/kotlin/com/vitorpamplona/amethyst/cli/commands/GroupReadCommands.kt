@@ -72,6 +72,21 @@ object GroupReadCommands {
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "admins" to (meta?.adminPubkeys ?: emptyList()),
                     "relays" to (meta?.relays ?: emptyList()),
+                    "avatar_url" to meta?.avatarUrl?.url,
+                    // Hints are opaque bytes by contract; render them as text
+                    // only for the conventional UTF-8 case an operator can read.
+                    "avatar_dim" to
+                        meta
+                            ?.avatarUrl
+                            ?.dim
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.decodeToString(),
+                    "avatar_thumbhash" to
+                        meta
+                            ?.avatarUrl
+                            ?.thumbhash
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.decodeToString(),
                     "members" to members,
                     "is_admin" to (meta?.adminPubkeys?.contains(ctx.identity.pubKeyHex) == true),
                 ),

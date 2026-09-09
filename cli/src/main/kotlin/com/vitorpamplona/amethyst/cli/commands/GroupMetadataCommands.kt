@@ -29,7 +29,9 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
+import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotHttpsUrl
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -137,6 +139,51 @@ object GroupMetadataCommands {
     ): Int {
         if (rest.isEmpty()) return Output.error("bad_args", "group clear-image <gid>")
         return commit(dataDir, rest[0]) { ctx, gid, _ -> ctx.marmot.setGroupImage(gid, null) }
+    }
+
+    /**
+     * Point the group avatar at a plain `https` URL (`0x8007`).
+     *
+     * The URL is normalized by the component's encoder, so what gets committed
+     * may differ from what was typed — the emitted `avatar_url` is the stored
+     * form, not the argument.
+     *
+     * `group set-avatar-url <gid> <https-url> [--dim WIDTHxHEIGHT] [--thumbhash TEXT]`
+     */
+    suspend fun setAvatarUrl(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val gid = args.positional(0, "gid")
+        val url = args.positional(1, "url")
+        val dim = args.flag("dim")
+        val thumbhash = args.flag("thumbhash")
+        args.rejectUnknown()
+
+        val avatar =
+            try {
+                GroupAvatarUrlV1(
+                    url = MarmotHttpsUrl.normalize(url),
+                    dim = dim?.encodeToByteArray() ?: ByteArray(0),
+                    thumbhash = thumbhash?.encodeToByteArray() ?: ByteArray(0),
+                )
+            } catch (e: IllegalArgumentException) {
+                return Output.error("bad_args", e.message ?: "invalid avatar URL")
+            }
+
+        return commit(dataDir, gid, mapOf("avatar_url" to avatar.url)) { ctx, resolved, _ ->
+            ctx.marmot.setGroupAvatarUrl(resolved, avatar)
+        }
+    }
+
+    /** Remove the https avatar link. `group clear-avatar-url <gid>` */
+    suspend fun clearAvatarUrl(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.isEmpty()) return Output.error("bad_args", "group clear-avatar-url <gid>")
+        return commit(dataDir, rest[0]) { ctx, gid, _ -> ctx.marmot.setGroupAvatarUrl(gid, null) }
     }
 
     /**

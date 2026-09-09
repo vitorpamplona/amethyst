@@ -103,7 +103,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimeli
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
@@ -466,6 +466,7 @@ private fun MarmotGroupRoomCompose(
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val image by chatroom.image.collectAsStateWithLifecycle()
+    val avatarUrl by chatroom.avatarUrl.collectAsStateWithLifecycle()
     val relays by chatroom.relays.collectAsStateWithLifecycle()
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
@@ -473,11 +474,12 @@ private fun MarmotGroupRoomCompose(
     val noteEvent = lastMessage.event
     val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
 
-    // Prefer the group's own (encrypted) avatar; when it has none, fall back to the
-    // NIP-11 icon of one of the group's relays (fetched on a cache miss).
+    // Prefer the group's own avatar — the plain https link first, then the
+    // encrypted Blossom blob; when it has neither, fall back to the NIP-11 icon
+    // of one of the group's relays (fetched on a cache miss).
     val channelPicture =
-        if (image != null) {
-            rememberMarmotGroupIconUrl(image, accountViewModel, adminPubkeys)
+        if (avatarUrl != null || image != null) {
+            rememberMarmotGroupAvatarUrl(avatarUrl, image, accountViewModel, adminPubkeys)
         } else {
             loadMarmotRelayIcon(relays)
         }

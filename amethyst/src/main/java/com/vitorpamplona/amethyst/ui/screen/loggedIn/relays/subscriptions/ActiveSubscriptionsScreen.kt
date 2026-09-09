@@ -90,7 +90,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.SubPurposeLabels
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -593,14 +593,15 @@ private fun rememberMarmotEntity(
 
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val image by chatroom.image.collectAsStateWithLifecycle()
+    val avatarUrl by chatroom.avatarUrl.collectAsStateWithLifecycle()
     val relays by chatroom.relays.collectAsStateWithLifecycle()
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
     // Same name/icon precedence the chat-rooms list uses, so a group reads identically in both places.
     val name = displayName?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.marmot_group_fallback_name, id.take(8))
     val picture =
-        if (image != null) {
-            rememberMarmotGroupIconUrl(image, accountViewModel, adminPubkeys)
+        if (avatarUrl != null || image != null) {
+            rememberMarmotGroupAvatarUrl(avatarUrl, image, accountViewModel, adminPubkeys)
         } else {
             loadMarmotRelayIcon(relays)
         }
