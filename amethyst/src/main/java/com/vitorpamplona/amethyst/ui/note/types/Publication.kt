@@ -94,6 +94,20 @@ private val CoverWidth = 96.dp
 private const val MAX_PREVIEW_SECTIONS = 12
 
 /**
+ * The cap the thread view uses.
+ *
+ * Not unbounded: this table of contents is a plain `Column` inside one lazy-list item, so every
+ * row it draws is composed at once and every row opens its own event observation and relay
+ * subscription. Real books make that a lot of rows -- of 897 indexes on the public relays, 234
+ * list more than 12 sections, 21 list more than 100, and the largest lists 240.
+ *
+ * Big enough that almost every publication still shows its whole contents, small enough that the
+ * few that do not cannot cost 240 subscriptions in one frame. Past it the row count is shown, and
+ * the previous/next pager walks the rest.
+ */
+internal const val MAX_THREAD_SECTIONS = 60
+
+/**
  * Renders a kind-30040 NKBIP-01 publication index: cover, title, author, and what the index knows
  * about the work.
  *
@@ -309,7 +323,7 @@ internal fun PublicationSectionRow(
             if (sectionNote != null) {
                 ObservedSectionRow(position, ref, sectionNote, accountViewModel, nav)
             } else {
-                SectionRowContent(position, ref, ref.title, null)
+                SectionRowContent(position, ref, ref.title ?: ref.fallbackTitle(), null)
             }
         }
     } else if (ref.eventId != null) {
@@ -317,7 +331,7 @@ internal fun PublicationSectionRow(
             if (sectionNote != null) {
                 ObservedSectionRow(position, ref, sectionNote, accountViewModel, nav)
             } else {
-                SectionRowContent(position, ref, ref.title, null)
+                SectionRowContent(position, ref, ref.title ?: ref.fallbackTitle(), null)
             }
         }
     }
@@ -350,10 +364,25 @@ private fun ObservedSectionRow(
             is LearningResourceEvent -> event.titleOrIdentifier()
             is BlossomPieceIndexEvent -> event.titleOrIdentifier()
             else -> null
-        } ?: ref.title
+        } ?: ref.title ?: ref.fallbackTitle()
 
     SectionRowContent(position, ref, title) { nav.nav(Route.Note(sectionNote.idHex)) }
 }
+
+/**
+ * The name to show for a contents entry before its section event arrives.
+ *
+ * NKBIP-01 lets an index carry each entry's title in the `a` tag's slot 2, and reading it is why
+ * that slot is parsed -- but across 897 indexes on the public relays, not one of 11,176 entries
+ * uses it. Every publisher writes `["a", coord, relay, <event id>]` instead, so relying on the
+ * slot meant a whole table of contents read "Untitled section" until 240 separate fetches came
+ * back.
+ *
+ * The coordinate's own `d` is right there and is a slug of the title
+ * (`pg59225-chapter-1-introduction`), so it names the row immediately and for free. It is a
+ * fallback, not a replacement: the section's real title still wins the moment it lands.
+ */
+private fun PublicationSectionRef.fallbackTitle(): String? = address?.dTag?.takeIf { it.isNotBlank() }?.let { PublicationIndexEvent.humanizeIdentifier(it) }
 
 @Composable
 private fun SectionRowContent(

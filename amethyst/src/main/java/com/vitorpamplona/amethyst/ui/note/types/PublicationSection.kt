@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.publication_untitled_section
+import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.quartz.experimental.publications.AsciiDocToMarkdown
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationSectionRef
@@ -99,9 +99,14 @@ fun RenderPublicationSection(
 
     val title = remember(noteEvent) { noteEvent.titleOrIdentifier() }
 
-    // Converting is a pure string pass over the whole body, so it is remembered per event
-    // rather than redone on every recomposition of a scrolling feed.
-    val markdown = remember(noteEvent) { AsciiDocToMarkdown.convert(noteEvent.content, wikilinkResolver(noteEvent)) }
+    // Cached across compositions, not just remembered: `remember` is dropped the moment the card
+    // leaves the lazy list, and at chapter size the conversion is far from free (worst measured
+    // 7.2ms on a desktop JVM for a 13.5 KB section, and a phone is slower), so scrolling back to
+    // a chapter would re-convert it on the composition thread every time.
+    val markdown =
+        remember(noteEvent) {
+            CachedAsciiDocToMarkdown.convert(noteEvent.id, noteEvent.content, wikilinkResolver(noteEvent))
+        }
 
     Column(Modifier.fillMaxWidth()) {
         // A chapter arrived at from a search, a mention or a wikilink has nothing around it to say

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryStat
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
+import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
@@ -1430,6 +1431,7 @@ class AppModules(
                     // from scratch. memoryCache is byte-sized (Coil), the rest are entry counts.
                     memoryCache.trimToSize(memoryCache.maxSize / 10)
                     CachedRichTextParser.trimToSize(10)
+                    CachedAsciiDocToMarkdown.trimToSize(4)
                     CachedRobohash.trimToSize(20)
                     nip11Cache.trimToSize(10)
                 }

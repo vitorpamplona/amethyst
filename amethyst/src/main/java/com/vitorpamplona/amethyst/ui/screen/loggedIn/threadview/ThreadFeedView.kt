@@ -160,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.MAX_THREAD_SECTIONS
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PublicationHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
@@ -1044,7 +1045,7 @@ private fun FullBleedNoteCompose(
                     // card already shows.
                     // Uncapped here: the thread view is where a publication is actually read,
                     // so the whole table of contents is listed rather than a feed-sized taste.
-                    PublicationHeader(noteEvent, baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav, Int.MAX_VALUE)
+                    PublicationHeader(noteEvent, baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav, MAX_THREAD_SECTIONS)
                 } else if (noteEvent is PublicMessageEvent) {
                     RenderPublicMessage(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is CalendarTimeSlotEvent) {

@@ -59,6 +59,11 @@ object AsciiDocToMarkdown {
         val lines = content.split('\n')
         var i = 0
         var openFence: String? = null
+        // `[%hardbreaks]` (block) and `:hardbreaks:` (document) both mean "every newline in this
+        // prose is a line break". Asciidoctor honours them; Markdown joins lines into a paragraph
+        // unless each is given a hard break, so the flag has to survive to the append below.
+        var docHardBreaks = false
+        var blockHardBreaks = false
         // `[source,kotlin]` sits on the line above the `----` it describes, so the language has
         // to be carried forward one line. A local, never a field: this object is shared and two
         // concurrent conversions would otherwise trade languages.
@@ -96,12 +101,14 @@ object AsciiDocToMarkdown {
             // rather than printed as literal brackets.
             if (BLOCK_ATTRIBUTE.matches(trimmed)) {
                 pendingLanguage = sourceLanguageOf(trimmed) ?: pendingLanguage
+                if (HARDBREAKS_OPTION.containsMatchIn(trimmed)) blockHardBreaks = true
                 i++
                 continue
             }
 
             // Document attributes (`:toc:`, `:author: X`) and line comments are metadata.
             if (DOC_ATTRIBUTE.matches(trimmed) || trimmed.startsWith("//")) {
+                if (HARDBREAKS_ATTRIBUTE.matches(trimmed)) docHardBreaks = true
                 i++
                 continue
             }
@@ -123,7 +130,21 @@ object AsciiDocToMarkdown {
             // unrelated later block with the wrong language.
             if (trimmed.isNotBlank()) pendingLanguage = null
 
-            out.append(block(line, resolveWikilink)).append('\n')
+            // A block option covers exactly the one block it sits above, so it lapses at the blank
+            // line that ends it. A document attribute holds for the rest of the document.
+            if (trimmed.isBlank()) blockHardBreaks = false
+
+            val converted = block(line, resolveWikilink)
+            out.append(converted)
+            // Two trailing spaces is CommonMark's hard line break. Only worth adding where a line
+            // follows -- on the last line of a paragraph it would be trailing whitespace.
+            if ((docHardBreaks || blockHardBreaks) &&
+                converted.isNotBlank() &&
+                lines.getOrNull(i + 1)?.isNotBlank() == true
+            ) {
+                out.append("  ")
+            }
+            out.append('\n')
             i++
         }
 
@@ -232,6 +253,8 @@ object AsciiDocToMarkdown {
     private val BLOCK_ATTRIBUTE = Regex("""^\s*\[[^\]]*]\s*$""")
     private val SOURCE_ATTRIBUTE = Regex("""^\[source\s*,\s*([^\],]*)(?:,[^\]]*)?]$""")
     private val DOC_ATTRIBUTE = Regex("""^:[A-Za-z][A-Za-z0-9_-]*!?:.*$""")
+    private val HARDBREAKS_ATTRIBUTE = Regex("""^:hardbreaks(-option)?:\s*$""")
+    private val HARDBREAKS_OPTION = Regex("""(^|[\[,])%hardbreaks([],])""")
     private val BLOCK_IMAGE = Regex("""^image::(\S+?)\[(.*)]$""")
     private val INLINE_IMAGE = Regex("""image:(\S+?)\[([^\]]*)]""")
     private val LINK_MACRO = Regex("""link:(\S+?)\[([^\]]*)]""")

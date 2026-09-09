@@ -201,4 +201,67 @@ class AsciiDocToMarkdownTest {
         assertTrue("- compassion\n- ingratitude" in out, out)
         assertTrue("[the collection](https://example.com/aesop)" in out, out)
     }
+
+    @Test
+    fun blockHardBreaksKeepEveryLine() {
+        // Shape taken from a real section (`a1e57e05…`, KJV Genesis chapter 9). Asciidoctor honours
+        // `[%hardbreaks]`; without it Markdown runs every verse into one paragraph.
+        val out =
+            AsciiDocToMarkdown.convert(
+                """
+                [%hardbreaks]
+                AND God blessed Noah.
+                ^2^ And the fear of you.
+                ^3^ Every moving thing.
+                """.trimIndent(),
+            )
+
+        assertEquals(
+            "AND God blessed Noah.  \n^2^ And the fear of you.  \n^3^ Every moving thing.",
+            out,
+        )
+    }
+
+    @Test
+    fun aBlockOptionLapsesAtTheEndOfItsBlock() {
+        val out =
+            AsciiDocToMarkdown.convert(
+                """
+                [%hardbreaks]
+                One.
+                Two.
+
+                Three.
+                Four.
+                """.trimIndent(),
+            )
+
+        // The option covers the block it sits above and no further, so the second paragraph is
+        // left to Markdown's ordinary line joining.
+        assertEquals("One.  \nTwo.\n\nThree.\nFour.", out)
+    }
+
+    @Test
+    fun theDocumentAttributeHardBreaksEverything() {
+        val out =
+            AsciiDocToMarkdown.convert(
+                """
+                :hardbreaks:
+                One.
+                Two.
+
+                Three.
+                Four.
+                """.trimIndent(),
+            )
+
+        assertEquals("One.  \nTwo.\n\nThree.  \nFour.", out)
+    }
+
+    @Test
+    fun anUnrelatedBlockOptionDoesNotHardBreak() {
+        val out = AsciiDocToMarkdown.convert("[%collapsible]\nOne.\nTwo.")
+
+        assertEquals("One.\nTwo.", out)
+    }
 }

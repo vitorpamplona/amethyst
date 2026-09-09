@@ -185,4 +185,31 @@ class PublicationSectionRefTest {
         assertEquals(coord("ch-1"), refs[0].key())
         assertEquals(eventId, refs[1].key())
     }
+
+    @Test
+    fun theShapeEveryRealPublisherActuallyWrites() {
+        // Sampled from 897 kind-30040 indexes on the public relays: every one of their 11,176
+        // entries is `["a", coord, relay, <event id>]`. Not one uses the slot-2 title this parser
+        // also accepts, so a reader has nothing to name a row with until the section is fetched --
+        // which is why the UI falls back to humanizing the coordinate's own `d`.
+        val refs =
+            PublicationSectionRef.fromTags(
+                arrayOf(
+                    arrayOf(
+                        "a",
+                        "30041:${"3".repeat(64)}:pg59225-chapter-1-introduction",
+                        "wss://thecitadel.nostr1.com",
+                        "f".repeat(64),
+                    ),
+                ),
+            )
+
+        assertEquals(1, refs.size)
+        assertNull(refs[0].title)
+        assertEquals("f".repeat(64), refs[0].eventId)
+        assertEquals(1, refs[0].level)
+        // The readable name is in the coordinate, not in a title slot.
+        assertEquals("pg59225-chapter-1-introduction", refs[0].address?.dTag)
+        assertEquals("Pg59225 Chapter 1 Introduction", PublicationIndexEvent.humanizeIdentifier(refs[0].address!!.dTag))
+    }
 }
