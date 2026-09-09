@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -49,6 +50,7 @@ import com.vitorpamplona.quartz.nip50Search.EventSearchMatcher
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
@@ -134,7 +136,9 @@ class CacheSearch(
                 note.event is FileHeaderEvent ||
                 note.event is MetadataEvent ||
                 note.event is ContactListEvent ||
-                note.event is AppSpecificDataEvent
+                note.event is AppSpecificDataEvent ||
+                note.event is DeletionEvent ||
+                note.event is RequestToVanishEvent
         )
 
     /**
