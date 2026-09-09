@@ -25,6 +25,7 @@ package com.vitorpamplona.amethyst.commons.search.calendar
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.utils.currentTimeSeconds
+import platform.Foundation.NSCalendar
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSLocale
@@ -44,52 +45,44 @@ private val dayFormatter: NSDateFormatter = formatter("d MMM yyyy")
 private fun formatter(pattern: String): NSDateFormatter =
     NSDateFormatter().apply {
         dateFormat = pattern
+        // localTimeZone is the auto-updating zone, so a device that crosses one keeps formatting
+        // in the zone it is now in rather than the one the process started in.
         timeZone = NSTimeZone.localTimeZone
         locale = NSLocale.currentLocale
     }
 
 private fun dateAt(epochSeconds: Long): NSDate = NSDate.dateWithTimeIntervalSince1970(epochSeconds.toDouble())
 
-/** The seconds this zone is ahead of UTC at [epochSeconds], which a clock change moves. */
-private fun offsetAt(epochSeconds: Long): Long = NSTimeZone.localTimeZone.secondsFromGMTForDate(dateAt(epochSeconds)).toLong()
-
 /**
- * The unix second at local 00:00 on a civil date, in two passes.
- *
- * The date arithmetic is exact and lives in [SearchDate]; the only thing this needs from the
- * platform is the zone's offset. But the offset itself depends on the instant, so the first pass
- * probes with UTC midnight and the second re-probes at the instant that produced — which is what
- * lands correctly on a day whose clocks changed, where a single pass is off by the change.
+ * The one thing the day arithmetic needs from Foundation: how far ahead of UTC this zone is at an
+ * instant, which a clock change moves. [ZoneMath] does the rest, in commonMain, where a test can
+ * actually run it — this source set compiles off a Mac but never runs off one.
  */
-private fun localMidnight(date: SearchDate): Long {
-    val utcMidnight = date.daysFromEpoch() * 86400L
-    val firstPass = utcMidnight - offsetAt(utcMidnight)
-    return utcMidnight - offsetAt(firstPass)
-}
+private val localZone = ZoneOffsets { NSTimeZone.localTimeZone.secondsFromGMTForDate(dateAt(it)) }
 
 actual object LocalClock {
-    actual fun startOfDay(date: SearchDate): Long = localMidnight(date)
+    actual fun startOfDay(date: SearchDate): Long = ZoneMath.startOfDay(date, localZone)
 
-    // The second before the next midnight, so a day that gained or lost an hour still ends where
-    // it ends — never midnight plus 86,399.
-    actual fun endOfDay(date: SearchDate): Long = localMidnight(date.plusDays(1)) - 1
+    actual fun endOfDay(date: SearchDate): Long = ZoneMath.endOfDay(date, localZone)
 
-    actual fun today(): SearchDate {
-        val now = currentTimeSeconds()
-        return SearchDate.civilFromDays((now + offsetAt(now)).floorDiv(86400L))
-    }
+    actual fun today(): SearchDate = ZoneMath.dayAt(currentTimeSeconds(), localZone)
 
     /**
-     * Which weekday a week starts on here. Foundation only exposes this through NSCalendar, so
-     * this takes the ISO default rather than reaching for it — a week that starts on the wrong
-     * day shifts a grid's columns, which is a cosmetic fault, and one worth taking over a
-     * platform call this target cannot yet be built to verify.
+     * Which weekday a week starts on here, 0 = Sunday. `firstWeekday` follows the reader's own
+     * region setting — Sunday across most of the Americas and East Asia, Monday across Europe,
+     * Saturday across much of the Middle East — and is read per call so a settings change lands
+     * without a restart. Foundation counts it 1..7 from Sunday; this API counts 0..6.
      */
-    actual fun firstDayOfWeek(): Int = 1
+    actual fun firstDayOfWeek(): Int {
+        val sundayBased = NSCalendar.currentCalendar.firstWeekday.toInt() - 1
+        // A calendar that answers outside 1..7 is not one this can lay out a week from; ISO
+        // Monday shifts the grid's columns, where an out-of-range index would crash it.
+        return if (sundayBased in 0..6) sundayBased else 1
+    }
 
-    actual fun monthLabel(date: SearchDate): String = labelLock.withLock { monthFormatter.stringFromDate(dateAt(localMidnight(date.firstOfMonth()))) }
+    actual fun monthLabel(date: SearchDate): String = labelLock.withLock { monthFormatter.stringFromDate(dateAt(startOfDay(date.firstOfMonth()))) }
 
-    actual fun dayLabel(date: SearchDate): String = labelLock.withLock { dayFormatter.stringFromDate(dateAt(localMidnight(date))) }
+    actual fun dayLabel(date: SearchDate): String = labelLock.withLock { dayFormatter.stringFromDate(dateAt(startOfDay(date))) }
 
     actual fun narrowWeekdayNames(): List<String> =
         labelLock.withLock {
