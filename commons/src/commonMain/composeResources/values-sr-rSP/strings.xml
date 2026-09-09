@@ -29,11 +29,6 @@
         <item quantity="few">Birdex · %1$d vrste</item>
         <item quantity="other">Birdex · %1$d vrsta</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d više</item>
-        <item quantity="few">%1$s +%2$d više</item>
-        <item quantity="other">%1$s +%2$d više</item>
-    </plurals>
     <string name="road_event_accident">Nesreća</string>
     <string name="road_event_animal">Životinja na putu</string>
     <string name="road_event_confirmed">I dalje postoji</string>

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BirdexEventTest {
@@ -74,5 +75,140 @@ class BirdexEventTest {
             event.speciesNames(),
         )
         assertEquals("Birdex: 3 species", event.summary())
+    }
+
+    @Test
+    fun pairsEachSpeciesWithItsReference() {
+        val event = sampleEvent()
+        assertIs<BirdexEvent>(event)
+
+        val species = event.species()
+        assertEquals(3, species.size)
+        assertEquals("Icterus galbula", species[0].name)
+        assertEquals("https://www.wikidata.org/entity/Q805774", species[0].reference)
+        assertEquals("Baeolophus bicolor", species[1].name)
+        assertEquals("https://www.wikidata.org/entity/Q738534", species[1].reference)
+        assertEquals("Mimus polyglottos", species[2].name)
+        assertEquals("https://www.wikidata.org/entity/Q829683", species[2].reference)
+    }
+
+    /**
+     * Birdstar writes the `i` first, but the pairing is positional, so a `n`
+     * followed by its `i` must bind the same way. An `i` that is not a web URL
+     * is dropped (a UI could not open it), as is a name with no `i` at all.
+     */
+    @Test
+    fun pairsSpeciesRegardlessOfTagOrderAndDropsUnopenableReferences() {
+        val event: Event =
+            EventFactory.create(
+                id = "a099d4db563041bb289d3704f983fc148fc805860303a4f479a8264dc6a2d7cc",
+                pubKey = "932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d",
+                createdAt = 1_780_836_939L,
+                kind = BirdexEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("alt", "Birdex: 4 species"),
+                        arrayOf("n", "Icterus galbula"),
+                        arrayOf("i", "https://www.wikidata.org/entity/Q805774"),
+                        arrayOf("n", "Baeolophus bicolor"),
+                        arrayOf("i", "isbn:9780307957894"),
+                        arrayOf("n", "Mimus polyglottos"),
+                        arrayOf("n", "Sturnus vulgaris"),
+                        arrayOf("client", "birdstar.app"),
+                    ),
+                content = "",
+                sig = "00".repeat(64),
+            )
+        assertIs<BirdexEvent>(event)
+
+        val species = event.species()
+        assertEquals(
+            listOf("Icterus galbula", "Baeolophus bicolor", "Mimus polyglottos", "Sturnus vulgaris"),
+            species.map { it.name },
+        )
+        assertEquals("https://www.wikidata.org/entity/Q805774", species[0].reference)
+        assertNull(species[1].reference, "a non-web `i` is not a link")
+        assertNull(species[2].reference, "the dropped `i` must not leak onto the next name")
+        assertNull(species[3].reference, "a name with no `i` has no reference")
+    }
+
+    /**
+     * An `i` that is not next to a name is not that name's reference: a Birdex
+     * could carry a NIP-73 identity for the event itself, and pairing it with
+     * the next species would send the reader to the wrong page.
+     */
+    @Test
+    fun doesNotPairAnIsolatedReferenceWithADistantName() {
+        val event: Event =
+            EventFactory.create(
+                id = "a099d4db563041bb289d3704f983fc148fc805860303a4f479a8264dc6a2d7cc",
+                pubKey = "932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d",
+                createdAt = 1_780_836_939L,
+                kind = BirdexEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("i", "https://birdstar.app/lists/42"),
+                        arrayOf("alt", "Birdex: 1 species"),
+                        arrayOf("n", "Bubo bubo"),
+                    ),
+                content = "",
+                sig = "00".repeat(64),
+            )
+        assertIs<BirdexEvent>(event)
+
+        val species = event.species()
+        assertEquals(1, species.size)
+        assertEquals("Bubo bubo", species[0].name)
+        assertNull(species[0].reference, "an `i` two tags away is not this name's reference")
+    }
+
+    @Test
+    fun countsSpeciesWithoutWalkingTheNameList() {
+        val event: Event =
+            EventFactory.create(
+                id = "a099d4db563041bb289d3704f983fc148fc805860303a4f479a8264dc6a2d7cc",
+                pubKey = "932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d",
+                createdAt = 1_780_836_939L,
+                kind = BirdexEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("n", "Bubo bubo"),
+                        arrayOf("n"),
+                        arrayOf("i", "https://www.wikidata.org/entity/Q25469"),
+                        arrayOf("n", "Sturnus vulgaris"),
+                    ),
+                content = "",
+                sig = "00".repeat(64),
+            )
+        assertIs<BirdexEvent>(event)
+
+        assertEquals(2, event.speciesCount(), "a valueless `n` tag is not a species")
+        assertEquals(event.speciesNames().size, event.speciesCount())
+    }
+
+    @Test
+    fun toleratesEmptyAndValuelessTags() {
+        val event: Event =
+            EventFactory.create(
+                id = "a099d4db563041bb289d3704f983fc148fc805860303a4f479a8264dc6a2d7cc",
+                pubKey = "932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d",
+                createdAt = 1_780_836_939L,
+                kind = BirdexEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("n"),
+                        arrayOf("i"),
+                        arrayOf("i", "https://www.wikidata.org/entity/Q805774"),
+                        arrayOf("n", "Icterus galbula"),
+                    ),
+                content = "",
+                sig = "00".repeat(64),
+            )
+        assertIs<BirdexEvent>(event)
+
+        val species = event.species()
+        assertEquals(1, species.size)
+        assertEquals("Icterus galbula", species[0].name)
+        assertEquals("https://www.wikidata.org/entity/Q805774", species[0].reference)
     }
 }

@@ -29,11 +29,6 @@
         <item quantity="one">Birdex · %1$d suga</item>
         <item quantity="other">Birdex · %1$d sugas</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="zero">%1$s +%2$d vairāk</item>
-        <item quantity="one">%1$s +%2$d vairāk</item>
-        <item quantity="other">%1$s +%2$d vairāk</item>
-    </plurals>
     <string name="road_event_accident">Avārija</string>
     <string name="road_event_animal">Dzīvnieks uz ceļa</string>
     <string name="road_event_confirmed">Joprojām tur</string>

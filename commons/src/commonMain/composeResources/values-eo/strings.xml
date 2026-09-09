@@ -8,10 +8,6 @@
         <item quantity="one">Birdex · %1$d specio</item>
         <item quantity="other">Birdex · %1$d specioj</item>
     </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d plia</item>
-        <item quantity="other">%1$s +%2$d pliaj</item>
-    </plurals>
     <string name="road_event_accident">Akcidento</string>
     <string name="road_event_animal">Besto sur la vojo</string>
     <string name="road_event_confirmed">Ankoraŭ tie</string>
