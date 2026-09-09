@@ -62,6 +62,13 @@ BROKER_PORT="${BROKER_PORT:-4455}"
 BROKER_URI="quic://$BROKER_HOST:$BROKER_PORT"
 BROKER_PID=""
 
+# A loopback Blossom blob store for the encrypted-media tests. Ciphertext only:
+# the file key comes from each group's MLS exporter and never reaches it.
+BLOSSOM_HOST="${BLOSSOM_HOST:-127.0.0.1}"
+BLOSSOM_PORT="${BLOSSOM_PORT:-8456}"
+BLOSSOM_URL="http://$BLOSSOM_HOST:$BLOSSOM_PORT"
+BLOSSOM_PID=""
+
 NO_BUILD=0
 # Every run starts from empty stores. wnd already wipes B's and C's data dirs
 # on each start, but A's amy home and the relay's SQLite file used to survive,
@@ -82,6 +89,10 @@ ONLY_TESTS=""
 # address. Exported once here so `wn` and `wnd` both inherit it — `wn` runs the
 # same validation on any relay argument.
 export WN_ALLOW_LOOPBACK_RELAYS=1
+# Same shape for blob stores: wn refuses a loopback Blossom endpoint unless it
+# is told this is a dev/test run. The harness's blob store is loopback by
+# design — nothing in a test run may leave the machine.
+export WN_ALLOW_LOOPBACK_BLOB_ENDPOINTS=1
 
 A_NPUB=""
 A_HEX=""
@@ -108,7 +119,12 @@ done
 if [[ $RESET_STATE -eq 1 && -d "$STATE_DIR" ]]; then
   # Keep the relay checkout + its build (minutes to rebuild) and the log and
   # results history; drop everything that holds protocol state.
-  rm -rf "$STATE_DIR/.amy" "$B_DIR" "$C_DIR" "$RELAY_DATA"
+  #
+  # run.env counts as protocol state: it is where tests hand each other group
+  # ids. Leaving it behind a wipe leaves ids naming groups nobody is in any
+  # more, and a later `--tests` subset that consumes without re-creating then
+  # fails on "not a member" for a group id from a previous run.
+  rm -rf "$STATE_DIR/.amy" "$B_DIR" "$C_DIR" "$RELAY_DATA" "$STATE_DIR/run.env"
 fi
 
 mkdir -p "$STATE_DIR" "$LOG_DIR" "$B_DIR/logs" "$C_DIR/logs"
@@ -129,6 +145,8 @@ source "$SCRIPT_DIR/tests-create.sh"
 source "$SCRIPT_DIR/tests-manage.sh"
 # shellcheck source=tests-extras.sh
 source "$SCRIPT_DIR/tests-extras.sh"
+# shellcheck source=tests-media.sh
+source "$SCRIPT_DIR/tests-media.sh"
 
 # Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
 # otherwise wnd is nohup'd and keeps running after the script dies,
@@ -139,6 +157,7 @@ cleanup() {
   trap - EXIT INT TERM HUP
   stop_daemons
   stop_quic_broker
+  stop_blossom
   stop_local_relay
   print_summary
   exit "$rc"
@@ -152,6 +171,7 @@ banner "Marmot headless interop harness ($RUN_TS)"
 preflight
 start_local_relay
 start_quic_broker || true
+start_blossom || true
 start_daemon B "$B_DIR" "$B_SOCKET"
 start_daemon C "$C_DIR" "$C_SOCKET"
 ensure_identity_a
@@ -179,6 +199,12 @@ ALL_TESTS=(
   test_16_wn_keypackage_rotation
   test_18_agent_stream_amy_publishes
   test_19_agent_stream_wn_publishes
+  test_20_avatar_url_amy_to_wn
+  test_21_avatar_url_wn_to_amy
+  test_22_message_edit_amy_to_wn
+  test_23_deletion_amy_to_wn
+  test_24_media_v2_amy_to_wn
+  test_25_media_v2_wn_to_amy
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

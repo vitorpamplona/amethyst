@@ -18,9 +18,13 @@ amy_a() { HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --
 
 # Run amy, log stderr, surface JSON on stdout, remember last result.
 amy_json() {
-  local out
-  if ! out=$(amy_a "$@" 2>>"$LOG_FILE"); then
-    fail_msg "amy $*: exit $? (see $LOG_FILE)"
+  local out rc
+  # Capture the status separately: inside `if ! cmd; then`, `$?` is the status
+  # of the negation (always 0), so the message reported "exit 0" for every
+  # failure and told a reader nothing about what went wrong.
+  out=$(amy_a "$@" 2>>"$LOG_FILE"); rc=$?
+  if [[ $rc -ne 0 ]]; then
+    fail_msg "amy $*: exit $rc (see $LOG_FILE)"
     printf '%s\n' "$out" >>"$LOG_FILE"
     return 1
   fi

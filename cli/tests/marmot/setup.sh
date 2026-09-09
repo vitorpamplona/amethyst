@@ -155,6 +155,42 @@ start_quic_broker() {
   return 1
 }
 
+# --- blossom blob store ------------------------------------------------------
+# A loopback Blossom server for the encrypted-media tests. Both implementations
+# upload ciphertext to it and fetch each other's back; it never sees a key.
+start_blossom() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    info "python3 not found — encrypted-media tests will skip"
+    return 1
+  fi
+  step "starting blossom blob store on $BLOSSOM_URL"
+  mkdir -p "$STATE_DIR/blossom/blobs"
+  nohup python3 "$SCRIPT_DIR/blossom-server.py" \
+    --host "$BLOSSOM_HOST" --port "$BLOSSOM_PORT" --dir "$STATE_DIR/blossom/blobs" \
+    >"$STATE_DIR/blossom/stdout.log" 2>"$STATE_DIR/blossom/stderr.log" &
+  BLOSSOM_PID=$!
+  local deadline=$(( $(date +%s) + 15 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if grep -q '"ready"' "$STATE_DIR/blossom/stdout.log" 2>/dev/null; then
+      info "blossom pid $BLOSSOM_PID ready"
+      return 0
+    fi
+    if ! kill -0 "$BLOSSOM_PID" 2>/dev/null; then break; fi
+    sleep 1
+  done
+  fail_msg "blossom never came up (see $STATE_DIR/blossom/stderr.log)"
+  tail -n 20 "$STATE_DIR/blossom/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
+  BLOSSOM_PID=""
+  return 1
+}
+
+stop_blossom() {
+  [[ -n "${BLOSSOM_PID:-}" ]] || return 0
+  step "stopping blossom pid $BLOSSOM_PID"
+  kill "$BLOSSOM_PID" 2>/dev/null || true
+  BLOSSOM_PID=""
+}
+
 stop_quic_broker() {
   [[ -n "${BROKER_PID:-}" ]] || return 0
   step "stopping broker pid $BROKER_PID"
