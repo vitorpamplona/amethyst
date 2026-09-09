@@ -84,6 +84,13 @@ object CurrentProfileGroupFactory {
             AppComponentIds.ACCOUNT_IDENTITY_PROOF_V2,
             AppComponentIds.GROUP_ENCRYPTED_MEDIA_V2,
             AppComponentIds.GROUP_LIFECYCLE_V1,
+            // `0x8006` agent-text-stream-QUIC is a SUPPORT claim, not a
+            // running service. Nothing in the app dials a broker — see
+            // `marmotQuic/README.md` — but the reference client puts this
+            // component into the required set of every group it creates and
+            // refuses an invitee whose KeyPackage omits it. Dropping it here
+            // makes an Amethyst user un-addable to any group they start.
+            AppComponentIds.AGENT_TEXT_STREAM_QUIC_V1,
         )
 
     /** A leaf keypair plus the account proof authorizing it. */

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.marmot.appComponents
 
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
@@ -106,26 +107,26 @@ class CurrentProfileGroupFactoryTest {
             assertContentEquals(ByteArray(0), kpDictionary[AppComponentIds.LAST_RESORT_KEY_PACKAGE])
 
             // Capabilities advertise the draft extension the current profile
-            // needs, plus the legacy 0xF2EE group-data extension and all three
-            // agent-text-stream roles — the same set MDK puts on every
-            // KeyPackage it publishes.
+            // needs, plus the legacy `0xF2EE` group-data extension and the
+            // `0xF2D1` agent-text-stream RECEIVE role.
             //
-            // `0xF2EE` is deliberate and is NOT drift from the MDK reference:
-            // a legacy group REQUIRES it, and a group refuses to add a leaf
-            // that does not advertise what it requires, so without it a
-            // current-profile KeyPackage would be un-addable to every legacy
-            // group that already exists.
+            // Both extras are there for the same reason, and it is not a
+            // hedge: a group refuses to add a leaf that does not advertise
+            // what it requires. A legacy group REQUIRES `0xF2EE`, so without
+            // it a current-profile KeyPackage would be un-addable to every
+            // legacy group that already exists. And the reference client puts
+            // `0x8006` with `required_member_roles = receive` into EVERY group
+            // it creates, so without `0xF2D1` an Amethyst user cannot be
+            // invited into one at all.
             //
-            // The agent-stream roles are deliberately absent. Advertising more
-            // than a group requires is harmless to that group but is not free:
-            // it is a standing claim to every peer that reads this KeyPackage,
-            // and nothing in the deployed network uses the QUIC preview path.
-            // The reference KeyPackage in `mls/marmot-current-profile.json`
-            // does not advertise `0x8006` either.
+            // `send` and `fanout` stay absent: we can be shown a preview, we
+            // do not originate one, and a capability is a standing promise to
+            // every peer that reads this KeyPackage.
             assertEquals(
                 listOf(
                     AppDataDictionary.EXTENSION_TYPE,
                     MarmotGroupData.EXTENSION_ID_INT,
+                    AgentTextStreamRoles.RECEIVE_CAPABILITY,
                 ),
                 kp.leafNode.capabilities.extensions,
             )

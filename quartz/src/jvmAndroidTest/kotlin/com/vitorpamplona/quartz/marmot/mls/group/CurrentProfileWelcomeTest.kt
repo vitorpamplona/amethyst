@@ -156,26 +156,61 @@ class CurrentProfileWelcomeTest {
         }
 
     /**
-     * Our published KeyPackage advertises NO agent-stream role, and is
-     * therefore refused by a group that requires one.
+     * Our published KeyPackage satisfies the policy the reference client puts
+     * on EVERY group it creates.
      *
-     * That refusal is the deliberate cost of not advertising, so it is asserted
-     * rather than discovered: the implementation is still here and still
-     * tested, but a capability is a standing promise to every peer that reads
-     * the KeyPackage, and we do not make one for a path nothing uses. If this
-     * test starts failing because the default advertises a role again, that is
-     * a decision to take on purpose, not a drift to absorb.
+     * `userToAgentDefault()` is not a hypothetical: `create_group` in the
+     * reference installs exactly it, requiring `receive` of every invitee, and
+     * refuses a KeyPackage that does not advertise `0xF2D1`. So this is the
+     * assertion that decides whether an Amethyst user can be invited into a
+     * group started by that client at all — it failed for real once, when the
+     * role was dropped from the default leaf.
      */
     @Test
-    fun ourDefaultLeafAdvertisesNoStreamRoleAndIsRefusedByAGroupThatNeedsOne() =
+    fun ourDefaultLeafIsAdmittedByTheReferenceStreamPolicy() =
         runBlocking<Unit> {
             val group = aGroup(AgentTextStreamQuicPolicyV1.userToAgentDefault())
             val invitee = CurrentProfileGroupFactory.createKeyPackage(signer(0x77))
 
             assertTrue(
                 invitee.keyPackage.leafNode.capabilities.extensions
-                    .none { it in AgentTextStreamRoles.ALL_CAPABILITIES },
-                "the default leaf must carry no agent-stream role, got ${invitee.keyPackage.leafNode.capabilities.extensions}",
+                    .contains(AgentTextStreamRoles.RECEIVE_CAPABILITY),
+                "the default leaf must advertise receive, got ${invitee.keyPackage.leafNode.capabilities.extensions}",
+            )
+
+            group.proposeAdd(invitee.keyPackage.toTlsBytes())
+            val welcome = assertNotNull(group.commit().welcomeBytes)
+            val joined = MlsGroup.processWelcome(welcome, invitee)
+            assertEquals(nostrGroupId.toHexKey(), joined.currentNostrGroupId())
+        }
+
+    /**
+     * Where we stop: a group requiring `send` refuses our default leaf.
+     *
+     * Advertising `receive` and not `send` is a deliberate line — we can be
+     * shown a preview, we do not originate one — and the refusal is its cost.
+     * Asserted rather than discovered, so that widening the default is a
+     * decision someone takes on purpose.
+     */
+    @Test
+    fun ourDefaultLeafIsRefusedByAGroupThatRequiresSend() =
+        runBlocking<Unit> {
+            val group =
+                aGroup(
+                    AgentTextStreamQuicPolicyV1(
+                        requiredMemberRoles = AgentTextStreamRoles.RECEIVE or AgentTextStreamRoles.SEND,
+                        allowedMemberRoles = AgentTextStreamRoles.MASK,
+                        maxPlaintextFrameLen = 4096,
+                        replayTtlSecs = 0,
+                        paddingBucketBytes = 0,
+                    ),
+                )
+            val invitee = CurrentProfileGroupFactory.createKeyPackage(signer(0x78))
+
+            assertTrue(
+                invitee.keyPackage.leafNode.capabilities.extensions
+                    .none { it == AgentTextStreamRoles.SEND_CAPABILITY },
+                "the default leaf must not advertise send",
             )
 
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
@@ -205,11 +240,12 @@ class CurrentProfileWelcomeTest {
      * A current-profile KeyPackage whose leaf advertises exactly [roles] on top
      * of the default capability set.
      *
-     * The default set no longer carries any agent-stream role, so these tests
-     * build the leaf they need instead of relying on it. That is the right
-     * shape regardless: a test that asserted the gate through OUR default was
-     * really asserting the default, and stopped testing the gate the moment the
-     * default changed — which is exactly what happened.
+     * The default set carries `receive` and nothing beyond it, so a test that
+     * needs `send` or `fanout` builds the leaf it needs instead of relying on
+     * the default. That is the right shape regardless: a test that asserted the
+     * gate through OUR default was really asserting the default, and stopped
+     * testing the gate the moment the default changed — which is exactly what
+     * happened, twice, in both directions.
      */
     private suspend fun keyPackageAdvertising(
         signer: NostrSignerInternal,

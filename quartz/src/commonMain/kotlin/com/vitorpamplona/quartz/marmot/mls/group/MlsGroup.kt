@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
@@ -3432,8 +3433,14 @@ class MlsGroup private constructor(
          *
          * `0xF2D1` is the agent-text-stream RECEIVE role, for the same reason:
          * a group carrying component `0x8006` with `required_member_roles`
-         * naming `receive` refuses a leaf that does not advertise it. We stop
-         * at receive — see `CurrentProfileGroupFactory.SUPPORTED_COMPONENTS`.
+         * naming `receive` refuses a leaf that does not advertise it. The
+         * reference client puts exactly that policy into EVERY group it
+         * creates, so without this line an Amethyst KeyPackage cannot be
+         * invited into one at all.
+         *
+         * We stop at receive. `send` and `fanout` are not here because we do
+         * not originate previews from the app, and a capability is a standing
+         * promise rather than a hedge.
          */
         fun currentProfileLeafCapabilities(): Capabilities =
             Capabilities(
@@ -3441,21 +3448,7 @@ class MlsGroup private constructor(
                     listOf(
                         AppDataDictionary.EXTENSION_TYPE,
                         MarmotGroupData.EXTENSION_ID_INT,
-                        // The agent-stream roles (`0xF2D1` receive, `0xF2D2`
-                        // send, `0xF2D4` fanout) are deliberately NOT here.
-                        //
-                        // The implementation exists and stays — see
-                        // [AgentTextStreamRoles] and the `:marmotQuic` module —
-                        // but nothing in the deployed network uses the QUIC
-                        // preview path, and an advertised capability is a
-                        // standing promise to every peer that reads our
-                        // KeyPackage. Advertising a role no one exercises buys
-                        // nothing and commits us to answering for it; the
-                        // reference KeyPackage in our own conformance vector
-                        // does not advertise it either.
-                        //
-                        // Re-adding them is a one-line change once the feature
-                        // is actually in use.
+                        AgentTextStreamRoles.RECEIVE_CAPABILITY,
                     ),
                 proposals = listOf(APP_DATA_UPDATE_PROPOSAL_TYPE, SELF_REMOVE_PROPOSAL_TYPE),
             )

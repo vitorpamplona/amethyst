@@ -107,23 +107,29 @@ amy marmot stream watch GID --stream-id …
 amy marmot stream finish GID --stream-id … --transcript-hash … --chunk-count N "hello"
 ```
 
-## Not wired into the app
+## Advertised, but not started
 
 The implementation is complete and tested, and nothing in the app starts it.
 
-Nothing in the deployed network publishes agent text stream previews, so the
-Android chat screen no longer builds a watcher and dials the brokers a kind:1200
-advertises, and our published KeyPackage no longer advertises component `0x8006`
-or the `receive`/`send`/`fanout` role capabilities. A capability is a standing
-promise to every peer that reads the KeyPackage; making one for a path nobody
-exercises costs something and buys nothing.
+Those are two separate things, and conflating them broke interop once. Our
+KeyPackage **does** advertise component `0x8006` and the `0xF2D1` receive role,
+because the reference client installs `agent-text-stream.quic.v1` with
+`required_member_roles = receive` into the required set of **every group it
+creates**, and refuses an invitee whose leaf omits either. Dropping the
+advertisement on the grounds that "nothing publishes previews" made an Amethyst
+user un-addable to any group a White Noise user started — the traffic claim was
+right, the capability claim was not. A capability says "this client can handle
+it", never "this group uses it".
 
-What that leaves: the codecs, this module, the CLI (`amy marmot stream …`) and
-the interop tests all still work and still run. Turning the feature back on is
-re-adding `AppComponentIds.AGENT_TEXT_STREAM_QUIC_V1` to
-`CurrentProfileGroupFactory.SUPPORTED_COMPONENTS`, the three roles to
-`MlsGroup.currentProfileLeafCapabilities()`, and the watcher to
-`MarmotGroupChatView`.
+What we do NOT advertise is `send` (`0xF2D2`) and `fanout` (`0xF2D4`): we can be
+shown a preview, we do not originate one. A group that requires either refuses
+us, and `CurrentProfileWelcomeTest` asserts that refusal so widening the default
+stays a deliberate decision.
+
+What is not started: the Android chat screen builds no watcher and dials no
+broker a kind:1200 advertises. The codecs, this module, the CLI
+(`amy marmot stream …`) and the interop tests all still work and still run.
+Turning the live path on is re-adding the watcher to `MarmotGroupChatView`.
 
 ## Not done
 
