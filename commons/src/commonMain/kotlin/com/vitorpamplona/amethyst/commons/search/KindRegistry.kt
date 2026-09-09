@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -63,6 +64,20 @@ data class ContentPreset(
             kinds.isNotEmpty() && queryKinds.containsAll(kinds)
         }
 }
+
+/**
+ * One `kind:` value the picker offers.
+ *
+ * [kinds] is what the token will actually ask a relay for, so the row can say it — the difference
+ * between `kind:video` and `kind:21` is worth seeing before picking. A pseudo-kind asks for no
+ * kinds at all: it is a post-filter over whatever else the query matched.
+ */
+@Immutable
+data class KindCandidate(
+    val alias: String,
+    val kinds: List<Int>,
+    val isPseudo: Boolean = false,
+)
 
 object KindRegistry {
     val aliases: Map<String, List<Int>> =
@@ -109,6 +124,36 @@ object KindRegistry {
     fun isPseudoKind(alias: String): Boolean = alias.lowercase() in pseudoKinds
 
     fun nameFor(kind: Int): String? = aliases.entries.find { kind in it.value }?.key
+
+    /** Is this exactly one name the registry knows, rather than a prefix of one? */
+    fun isExactAlias(value: String?): Boolean {
+        val v = value?.lowercase() ?: return false
+        return v in aliases || v in pseudoKinds
+    }
+
+    /**
+     * The `kind:` values worth offering for a half-written one, aliases before pseudo-kinds and
+     * alphabetical within each.
+     *
+     * The whole vocabulary is here in the registry, which is what makes this picker different
+     * from the others: people and groups are account-scoped, relay-backed questions, while
+     * "which kinds are there" is a constant. An empty [prefix] offers everything, because a bare
+     * `kind:` is a reader asking what the options are.
+     */
+    fun candidates(prefix: String): List<KindCandidate> {
+        val p = prefix.lowercase()
+        val named =
+            aliases.keys
+                .filter { it.startsWith(p) }
+                .sorted()
+                .map { KindCandidate(it, resolve(it).orEmpty()) }
+        val pseudo =
+            pseudoKinds
+                .filter { it.startsWith(p) }
+                .sorted()
+                .map { KindCandidate(it, emptyList(), isPseudo = true) }
+        return named + pseudo
+    }
 
     /**
      * A kind window written back as `kind:` token values: the aliases that cover it, plus a bare

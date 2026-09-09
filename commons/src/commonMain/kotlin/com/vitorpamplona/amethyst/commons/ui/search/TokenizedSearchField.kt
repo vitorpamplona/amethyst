@@ -50,8 +50,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.search.ActivePicker
+import com.vitorpamplona.amethyst.commons.search.KindCandidate
+import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 /**
  * The search box: a plain text field that draws the tokens it holds as chips, with the picker
@@ -68,7 +71,9 @@ import kotlinx.collections.immutable.persistentListOf
  * The rows are supplied by the caller — as [people]/[groups], or as a whole [peoplePicker] slot —
  * because resolving a name to a key is an account-scoped, relay-backed question that `commons`
  * has no business answering. This component only says *when* to ask, via [onPeopleQuery] and
- * [onGroupQuery], and what a pick splices into the text.
+ * [onGroupQuery], and what a pick splices into the text. The `kind:` picker is the exception: the
+ * kind vocabulary is a constant in `KindRegistry`, so this component fills those rows in itself
+ * and every caller gets the picker for free.
  */
 @Composable
 fun TokenizedSearchField(
@@ -113,6 +118,13 @@ fun TokenizedSearchField(
     val picker = state.activePicker
     var highlighted by rememberSaveable(picker?.token?.start) { mutableIntStateOf(0) }
 
+    // The one picker whose rows this component fills in itself: the kind vocabulary is a
+    // constant in KindRegistry, so there is nothing account-scoped to ask a caller for.
+    val kinds =
+        remember(picker) {
+            (picker as? ActivePicker.Kind)?.let { KindRegistry.candidates(it.token.partial).toImmutableList() } ?: persistentListOf()
+        }
+
     // Asking is driven by the token under the caret, so a blur-and-return re-asks the same
     // question rather than leaving the last answer on screen for a token that has moved on.
     LaunchedQuery(picker, onPeopleQuery, onGroupQuery)
@@ -122,6 +134,7 @@ fun TokenizedSearchField(
             // A slot's rows are not this component's to walk.
             is ActivePicker.People -> if (peoplePicker != null) 0 else people.size
             is ActivePicker.Group -> groups.size
+            is ActivePicker.Kind -> kinds.size
             else -> 0
         }
 
@@ -135,13 +148,13 @@ fun TokenizedSearchField(
                     .onFocusChanged { state.onFocusChanged(it.isFocused) }
                     .onPreviewKeyEvent { event ->
                         if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                        handleKey(event.key, state, picker, highlighted, rows, people, groups, onSubmit) { highlighted = it }
+                        handleKey(event.key, state, picker, highlighted, rows, people, groups, kinds, onSubmit) { highlighted = it }
                     },
             textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
             singleLine = true,
             interactionSource = interactionSource,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { if (!takeEnter(state, picker, highlighted, people, groups)) onSubmit() }),
+            keyboardActions = KeyboardActions(onSearch = { if (!takeEnter(state, picker, highlighted, people, groups, kinds)) onSubmit() }),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             visualTransformation = remember(state.settleCaret, styles, displayName, groupName, scopeName) { SearchTokenTransformation(state.settleCaret, styles, displayName, groupName, scopeName) },
             decorationBox = { inner ->
@@ -192,6 +205,13 @@ fun TokenizedSearchField(
                     }
                 }
 
+            is ActivePicker.Kind ->
+                if (kinds.isNotEmpty()) {
+                    SearchPickerSurface(Modifier.padding(top = 4.dp).fillMaxWidth()) {
+                        SearchKindPicker(kinds, highlighted, onPick = { state.pickKind(picker, it.alias) })
+                    }
+                }
+
             null -> Unit
         }
     }
@@ -222,6 +242,7 @@ private fun takeEnter(
     highlighted: Int,
     people: ImmutableList<PersonCandidate>,
     groups: ImmutableList<GroupCandidate>,
+    kinds: ImmutableList<KindCandidate>,
 ): Boolean =
     when (picker) {
         is ActivePicker.Calendar ->
@@ -239,6 +260,11 @@ private fun takeEnter(
                 state.pickGroup(picker, it.id)
                 true
             } ?: false
+        is ActivePicker.Kind ->
+            kinds.getOrNull(highlighted)?.let {
+                state.pickKind(picker, it.alias)
+                true
+            } ?: false
         null -> false
     }
 
@@ -251,6 +277,7 @@ private fun handleKey(
     rows: Int,
     people: ImmutableList<PersonCandidate>,
     groups: ImmutableList<GroupCandidate>,
+    kinds: ImmutableList<KindCandidate>,
     onSubmit: () -> Unit,
     setHighlighted: (Int) -> Unit,
 ): Boolean {
@@ -261,7 +288,7 @@ private fun handleKey(
     }
 
     if (key == Key.Enter || key == Key.NumPadEnter) {
-        if (takeEnter(state, picker, highlighted, people, groups)) return true
+        if (takeEnter(state, picker, highlighted, people, groups, kinds)) return true
         onSubmit()
         return true
     }

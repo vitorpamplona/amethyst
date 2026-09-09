@@ -67,6 +67,12 @@ sealed interface ActivePicker {
     data class Group(
         override val token: PartialToken,
     ) : ActivePicker
+
+    /** `kind:` — the kind vocabulary, which is a constant rather than something to look up. */
+    @Immutable
+    data class Kind(
+        override val token: PartialToken,
+    ) : ActivePicker
 }
 
 /**
@@ -80,13 +86,14 @@ object PartialTokens {
     private val MENTION_PREFIXES = listOf("from:", "to:")
     private val DATE_PREFIXES = listOf("since:", "until:")
     private val GROUP_PREFIXES = listOf("group:")
+    private val KIND_PREFIXES = listOf("kind:")
 
     /** A `to:` that has begun a NIP-19 pointer names no person, so the people picker stands down. */
     private val POINTER_PREFIXES = listOf("note1", "nevent1", "naddr1")
 
     /**
      * At most one picker can be open, and the order here is the order the prefixes are tried:
-     * the calendar first (its prefixes are unambiguous), then groups, then people.
+     * the calendar first (its prefixes are unambiguous), then kinds, then groups, then people.
      */
     fun activePicker(
         text: String,
@@ -95,6 +102,10 @@ object PartialTokens {
         dateAt(text, caret)?.let { token ->
             if (token.complete) return null
             return DateField.of(token.field)?.let { ActivePicker.Calendar(token, it) }
+        }
+        kindAt(text, caret)?.let { token ->
+            if (token.complete) return null
+            return ActivePicker.Kind(token)
         }
         // Never complete: `group:gen` is a plausible id and a prefix of `general`, so only a
         // space ends a group token — which means the picker stays up until the reader leaves it.
@@ -123,6 +134,20 @@ object PartialTokens {
     ): PartialToken? {
         val token = partialAt(text, caret, DATE_PREFIXES) ?: return null
         return token.copy(complete = SearchDate.parse(token.partial) != null)
+    }
+
+    /**
+     * The `kind:` token the caret is inside; complete once it names a kind exactly.
+     *
+     * Unlike a group id, the kind vocabulary is closed, so an exact match really is finished and
+     * the picker stands down — there is nothing left to offer for `kind:article`.
+     */
+    fun kindAt(
+        text: String,
+        caret: Int,
+    ): PartialToken? {
+        val token = partialAt(text, caret, KIND_PREFIXES) ?: return null
+        return token.copy(complete = KindRegistry.isExactAlias(token.partial))
     }
 
     /** The `group:` token the caret is inside, which the group picker asks. */

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.search
 import com.vitorpamplona.amethyst.commons.search.calendar.DateField
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -122,5 +123,53 @@ class PartialTokensTest {
         // Hex stays unfinished, so the picker resolves it and writes the npub back in its place.
         assertTrue(!PartialTokens.isKey("a".repeat(64)))
         assertTrue(!PartialTokens.isKey("npub1notarealkey"))
+    }
+
+    // ---- the kind picker ------------------------------------------------------------------
+
+    @Test
+    fun aBareKindOpensThePickerOnTheWholeVocabulary() {
+        val picker = PartialTokens.activePicker("kind:", 5)
+        assertTrue(picker is ActivePicker.Kind)
+        assertEquals("", picker.token.partial)
+        // A reader who typed `kind:` and stopped is asking what the options are.
+        assertEquals(KindRegistry.aliases.size + KindRegistry.pseudoKinds.size, KindRegistry.candidates("").size)
+    }
+
+    @Test
+    fun aHalfWrittenKindOffersOnlyWhatItCouldBecome() {
+        val picker = PartialTokens.activePicker("kind:art", 8)
+        assertTrue(picker is ActivePicker.Kind)
+        assertEquals(listOf("article"), KindRegistry.candidates(picker.token.partial).map { it.alias })
+    }
+
+    @Test
+    fun aFinishedKindClosesThePicker() {
+        // The vocabulary is closed, so an exact match really is finished — unlike a group id,
+        // where `gen` is both plausible and a prefix of `general`.
+        assertNull(PartialTokens.activePicker("kind:article", 12))
+        assertNull(PartialTokens.activePicker("kind:media", 10))
+    }
+
+    @Test
+    fun theKindPickerSaysWhatEachRowWillActuallyAskFor() {
+        val video = KindRegistry.candidates("video").single()
+        assertEquals(listOf(21, 22, 34235, 34236), video.kinds)
+        assertFalse(video.isPseudo)
+        // A pseudo-kind asks a relay for no kinds at all; it filters what came back.
+        assertTrue(KindRegistry.candidates("media").single().isPseudo)
+    }
+
+    @Test
+    fun theKindPickerIsCaseInsensitiveAndPrefixOnly() {
+        assertEquals(listOf("article"), KindRegistry.candidates("ART").map { it.alias })
+        // Not a substring match: `ideo` must not find `video`, or the list would be noise.
+        assertTrue(KindRegistry.candidates("ideo").isEmpty())
+    }
+
+    @Test
+    fun aKindTokenTheCaretIsNotAtTheEndOfOpensNothing() {
+        // Standing in the middle of a finished token is editing it, not writing it.
+        assertNull(PartialTokens.activePicker("kind:article extra", 8))
     }
 }
