@@ -680,13 +680,22 @@ test we have.
   harness-relay flake, not a protocol failure, and it costs whichever test is
   running at the time. Worth making the CLI's publish confirmation tolerate a
   reconnect rather than papering over it in the tests.
-- **Agent-text-stream is receive-only.** We decode the `0x8006` policy, derive
-  per-stream record keys, open records and fold the transcript, and we advertise
-  the `0xF2D1` receive capability. We do NOT advertise `send` (`0xF2D2`) or
-  `fanout` (`0xF2D4`): publishing needs durable per-stream sequence state to
-  avoid reusing an AEAD nonce across a restart, and there is none. A group whose
-  policy requires `send` is refused at join rather than joined into a state
-  every peer would reject us from.
+- **Agent-text-stream publishes records but has nowhere to send them.** We
+  decode the `0x8006` policy, derive per-stream record keys, open records and
+  fold the transcript, we advertise the `0xF2D1` receive capability, and
+  `AgentTextStreamPublisher` now seals records under the sequence discipline the
+  spec demands: values reserved durably ahead of use (in windows, so the hot
+  path is not a write per record), never restarted or replayed across a crash,
+  and a publisher that cannot prove which value is next refuses to publish at
+  all rather than colliding a ChaCha20-Poly1305 (key, nonce) pair. Only an
+  in-memory `AgentTextStreamSequenceStore` exists; a platform-backed one lands
+  with the transport that needs it.
+
+  We still do NOT advertise `send` (`0xF2D2`) or `fanout` (`0xF2D4`), because
+  there is no data plane behind them yet and a role we cannot serve is worse for
+  the group than a role we do not claim. A group whose policy requires `send` is
+  refused at join rather than joined into a state every peer would reject us
+  from.
 - **The QUIC transport for agent text streams is not wired.** The record layer
   and the kind-1200 anchor are implemented; nothing yet opens a WebTransport
   session to a broker and feeds it records.
