@@ -27,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.commons.search.ActivePicker
-import com.vitorpamplona.amethyst.commons.search.EditableToken
 import com.vitorpamplona.amethyst.commons.search.PartialToken
 import com.vitorpamplona.amethyst.commons.search.PartialTokens
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
@@ -69,21 +68,6 @@ class SearchFieldState(
      * null once they have left, so every token pills.
      */
     val settleCaret: Int? get() = if (focused && value.selection.collapsed) value.selection.start else null
-
-    /**
-     * The finished token the caret is on, which the field offers to change or remove.
-     *
-     * Never both this and [activePicker]: a picker is for a token still being written, this is
-     * for one already written. Suppressed while a picker is up so the two cannot argue over the
-     * space under the field.
-     */
-    val editableToken: EditableToken?
-        get() =
-            if (!focused || !value.selection.collapsed || activePicker != null) {
-                null
-            } else {
-                PartialTokens.tokenAt(value.text, value.selection.start)
-            }
 
     /** Which picker the caret's position calls for, or null. */
     val activePicker: ActivePicker?
@@ -162,48 +146,6 @@ class SearchFieldState(
         picker: ActivePicker.Kind,
         alias: String,
     ) = replace(picker.token, "kind:$alias")
-
-    // ---- changing and removing a token that is already written ------------------------------
-
-    /**
-     * Drop [token] and the one space it leaves behind.
-     *
-     * The space matters: removing `kind:article` from `a kind:article b` has to leave `a b`, not
-     * `a  b`, or every removal widens the gap a little more and a round trip through the parser
-     * starts producing different text than it was given.
-     */
-    fun removeToken(token: EditableToken) {
-        val text = value.text
-        var start = token.start
-        var end = token.end.coerceAtMost(text.length)
-        if (end < text.length && text[end] == ' ') {
-            end++
-        } else if (start > 0 && text[start - 1] == ' ') {
-            start--
-        }
-        setText(text.substring(0, start) + text.substring(end), start)
-    }
-
-    /**
-     * Ask to change [token]: cut it back to its prefix so its picker opens on the spot, or — for
-     * a token with no picker — select it so the next keystroke replaces it.
-     *
-     * Reopening by truncation rather than by a separate "edit mode" is what keeps this honest:
-     * the field ends up in exactly the state it would be in had the reader typed `kind:` and
-     * stopped, so every rule about what a picker offers and what a pick splices in still holds.
-     */
-    fun changeToken(token: EditableToken) {
-        val text = value.text
-        val end = token.end.coerceAtMost(text.length)
-        val prefix = token.editPrefix
-        if (prefix == null) {
-            value = TextFieldValue(text, TextRange(token.start, end))
-            resetCalendar()
-            return
-        }
-        val next = text.substring(0, token.start) + prefix + text.substring(end)
-        setText(next, token.start + prefix.length)
-    }
 
     // ---- walking the calendar with the keyboard --------------------------------------------
 
