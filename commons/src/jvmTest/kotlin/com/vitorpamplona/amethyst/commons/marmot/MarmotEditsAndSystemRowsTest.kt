@@ -23,10 +23,7 @@ package com.vitorpamplona.amethyst.commons.marmot
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemType
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -186,80 +183,4 @@ class MarmotEditsAndSystemRowsTest {
             val rows = restarted.loadStoredMessages(nostrGroupId).mapNotNull { Event.fromJsonOrNull(it) }.filter { it.kind == MarmotAppEvent.KIND_SYSTEM }
             assertEquals(1, rows.size)
         }
-}
-
-/** Stands in for a relay that accepts every commit, so epochs actually advance. */
-private val ACCEPTING_RELAY = MarmotPublisher { _, _ -> true }
-
-private class SnapshotStateStore : MlsGroupStateStore {
-    private val states = mutableMapOf<String, ByteArray>()
-    private val retained = mutableMapOf<String, List<ByteArray>>()
-
-    override suspend fun save(
-        nostrGroupId: String,
-        state: ByteArray,
-    ) {
-        states[nostrGroupId] = state
-    }
-
-    override suspend fun load(nostrGroupId: String): ByteArray? = states[nostrGroupId]
-
-    override suspend fun delete(nostrGroupId: String) {
-        states.remove(nostrGroupId)
-        retained.remove(nostrGroupId)
-    }
-
-    override suspend fun listGroups(): List<String> = states.keys.toList()
-
-    override suspend fun saveRetainedEpochs(
-        nostrGroupId: String,
-        retainedSecrets: List<ByteArray>,
-    ) {
-        retained[nostrGroupId] = retainedSecrets
-    }
-
-    override suspend fun loadRetainedEpochs(nostrGroupId: String): List<ByteArray> = retained[nostrGroupId] ?: emptyList()
-}
-
-private class SnapshotMessageStore : MarmotMessageStore {
-    private val messages = mutableMapOf<String, MutableList<String>>()
-    private val snapshots = mutableMapOf<String, String>()
-
-    override suspend fun appendMessage(
-        nostrGroupId: String,
-        innerEventJson: String,
-    ) {
-        val log = messages.getOrPut(nostrGroupId) { mutableListOf() }
-        if (innerEventJson !in log) log.add(innerEventJson)
-    }
-
-    override suspend fun loadMessages(nostrGroupId: String): List<String> = messages[nostrGroupId]?.toList() ?: emptyList()
-
-    override suspend fun delete(nostrGroupId: String) {
-        messages.remove(nostrGroupId)
-        snapshots.remove(nostrGroupId)
-    }
-
-    override suspend fun recordGroupSnapshot(
-        nostrGroupId: String,
-        snapshotJson: String,
-    ) {
-        snapshots[nostrGroupId] = snapshotJson
-    }
-
-    override suspend fun loadGroupSnapshot(nostrGroupId: String): String? = snapshots[nostrGroupId]
-}
-
-private class SnapshotBundleStore : KeyPackageBundleStore {
-    private var snapshot: ByteArray? = null
-
-    override suspend fun save(snapshot: ByteArray) {
-        this.snapshot = snapshot
-    }
-
-    override suspend fun load(): ByteArray? = snapshot
-
-    override suspend fun delete() {
-        snapshot = null
-    }
 }

@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.TokenTagData
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -29,18 +29,17 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * Marmot Token List Response Event (MIP-05) — kind 448.
+ * Marmot push token list response — kind 448
+ * (`features/push-notifications.md`, "List response").
  *
- * Unsigned application message sent inside a GroupEvent (kind:445) in response
- * to a TokenRequestEvent (kind:447). Contains the responder's complete view
- * of all active encrypted device tokens in the group.
+ * The responder's view of the group's active records, INCLUDING records it
+ * learned from other members. Relaying is the point: each entry keeps its
+ * original owner's `owner_sig` and `owner_ts` unchanged, so a member who has
+ * been offline can be brought up to date by anyone. A responder cannot mint a
+ * record for a member whose signature it does not hold, and cannot advance or
+ * rewind one it merely carries.
  *
- * Token tags include a leaf_index field (4th value) to identify which
- * MLS leaf owns each token. An "e" tag references the kind:447 event
- * this is responding to.
- *
- * Members SHOULD add random delay (0-2s) before responding.
- * MUST remain unsigned (no sig field) per MIP-03 security requirements.
+ * Unsigned, like every inner app payload.
  */
 @Immutable
 class TokenListEvent(
@@ -51,23 +50,17 @@ class TokenListEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    /** All known encrypted tokens with their leaf indices */
-    fun tokens() = tags.tokens()
-
-    /** Event ID of the kind:447 request this responds to */
-    fun requestEventId() = tags.firstOrNull { it.size >= 2 && it[0] == "e" }?.get(1)
+    fun entries() = PushGossip.decodeTokens(content)
 
     companion object {
         const val KIND = 448
 
         fun build(
-            allTokens: List<TokenTagData>,
-            requestEventId: HexKey,
+            entries: List<PushTokenEntry>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<TokenListEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
-            tokens(allTokens)
-            add(arrayOf("e", requestEventId))
+        ) = eventTemplate(KIND, PushGossip.encodeTokens(entries), createdAt) {
+            addUnique(VersionTag.assemble())
             initializer()
         }
     }

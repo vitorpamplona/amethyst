@@ -20,13 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.TokenTag
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 fun TagArray.notificationVersion() = firstNotNullOfOrNull(VersionTag::parse)
-
-fun TagArray.notificationEncoding() = firstNotNullOfOrNull(EncodingTag::parse)
-
-fun TagArray.tokens() = mapNotNull(TokenTag::parse)

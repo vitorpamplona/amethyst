@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /** The two record shapes an owner proof can cover. */
 enum class PushRecordKind(
@@ -227,6 +228,12 @@ object PushOwnerProof {
      * every leaf carries a `0x8009` identity proof, accepting a weaker legacy
      * form would let anyone who can produce one bypass the stronger binding the
      * group already guarantees.
+     *
+     * A legacy group accepts two more forms, both verification-only and never
+     * produced: the transitional kind [LEGACY_KIND] event deployed before `451`
+     * was allocated, and the raw proof — a signature directly over the 32-byte
+     * `SHA-256(SignedRecord)` digest. [signedRecord] supplies those canonical
+     * bytes lazily, so a current-profile group never computes them at all.
      */
     fun verifyRecord(
         ownerSig: ByteArray,
@@ -241,6 +248,7 @@ object PushOwnerProof {
         relayHint: String = "",
         encryptedTokenBase64: String = "",
         currentProfileGroup: Boolean,
+        signedRecord: (() -> ByteArray)? = null,
     ): Boolean {
         val builtTags =
             tags(
@@ -257,7 +265,31 @@ object PushOwnerProof {
         val content = if (record == PushRecordKind.REMOVAL) "" else encryptedTokenBase64
         if (verify(ownerSig, memberIdHex, builtTags, content, KIND)) return true
         if (currentProfileGroup) return false
-        return verify(ownerSig, memberIdHex, builtTags, content, LEGACY_KIND)
+        if (verify(ownerSig, memberIdHex, builtTags, content, LEGACY_KIND)) return true
+        val canonical = signedRecord?.invoke() ?: return false
+        return verifyRawDigest(ownerSig, memberIdHex, canonical)
+    }
+
+    /**
+     * The oldest accepted form: a BIP-340 signature straight over
+     * `SHA-256(SignedRecord)`, with no event around it.
+     *
+     * Verification-only, and only in a legacy group. A producer MUST NOT create
+     * it — it binds the same fields, but through a digest an external signer
+     * cannot be asked to sign without handing it raw bytes, which is why the
+     * current form is an event id instead.
+     */
+    fun verifyRawDigest(
+        ownerSig: ByteArray,
+        memberIdHex: HexKey,
+        signedRecord: ByteArray,
+    ): Boolean {
+        if (ownerSig.size != 64) return false
+        return try {
+            Nip01Crypto.verify(ownerSig, sha256(signedRecord), memberIdHex.hexToByteArray())
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /** Hex form, for embedding in a gossip record. */

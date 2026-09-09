@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -30,18 +29,21 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * Marmot Notification Request Event (MIP-05) — kind 446.
+ * Marmot push notification trigger — kind 446
+ * (`features/push-notifications.md`, "Notification trigger").
  *
- * An unsigned rumor event delivered via NIP-59 gift wrap to the notification server.
- * Contains concatenated EncryptedTokens (each 280 bytes), base64-encoded.
+ * The rumor inside a gift wrap addressed to a notification server's inbox. It
+ * is NOT an inner group payload: kinds 447-449 travel inside group messages,
+ * this one leaves the group entirely, so the Nostr binding owns its seal, wrap
+ * and publish targets.
  *
- * Flow: Rumor(kind:446) → Seal(kind:13) → GiftWrap(kind:1059) → notification server
+ * `pubkey` MUST be a fresh ephemeral key. That is also why a server cannot
+ * deduplicate on the outer event id — a replayer re-wraps freely — and must key
+ * on the content hash instead.
  *
- * The pubkey MUST be a fresh ephemeral key (not the sender's identity)
- * to prevent the notification server from linking events to users.
- *
- * Content includes real group tokens plus decoy tokens from other groups
- * (shuffled) to obscure group size and prevent social graph inference.
+ * The only tag is `v`. The earlier exploratory shape also required an
+ * `["encoding", "base64"]` tag; the adopted rumor does not carry one, because
+ * the transport's byte-encoding rule already fixes standard padded base64.
  */
 @Immutable
 class NotificationRequestEvent(
@@ -53,31 +55,57 @@ class NotificationRequestEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     /**
-     * Base64-encoded concatenation of EncryptedTokens.
-     * Each token is exactly 280 bytes when decoded.
-     * Total decoded length MUST be a multiple of 280.
+     * Base64 of 1 to 32 concatenated 1084-byte chunks, each an `EncryptedToken`
+     * or random padding.
      */
     fun tokensBase64() = content
 
-    /** Notification protocol version (must be "mip05-v1") */
+    /** Must be [PushGossip.VERSION]; anything else is not this protocol. */
     fun version() = tags.notificationVersion()
 
-    /** Content encoding (must be "base64") */
-    fun encoding() = tags.notificationEncoding()
+    /**
+     * The chunks, or null when the trigger is structurally malformed.
+     *
+     * The length check happens before any ECDH or AEAD work, which is the point:
+     * a server must be able to discard an oversized trigger without doing the
+     * expensive part.
+     */
+    fun chunks(): List<ByteArray>? {
+        val decoded = PushBase64.decodeOrNull(content) ?: return null
+        if (decoded.isEmpty()) return null
+        if (decoded.size % PushSignedRecord.ENCRYPTED_TOKEN_BYTES != 0) return null
+        val count = decoded.size / PushSignedRecord.ENCRYPTED_TOKEN_BYTES
+        if (count > MAX_CHUNKS) return null
+        return List(count) {
+            decoded.copyOfRange(it * PushSignedRecord.ENCRYPTED_TOKEN_BYTES, (it + 1) * PushSignedRecord.ENCRYPTED_TOKEN_BYTES)
+        }
+    }
 
     override fun isContentEncoded() = true
 
     companion object {
         const val KIND = 446
 
+        /** Includes padding: padding cannot create unbounded server work. */
+        const val MAX_CHUNKS = 32
+
         fun build(
-            tokensBase64: String,
+            chunks: List<ByteArray>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NotificationRequestEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, tokensBase64, createdAt) {
-            addUnique(VersionTag.assemble())
-            addUnique(EncodingTag.assemble())
-            initializer()
+        ): com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<NotificationRequestEvent> {
+            require(chunks.isNotEmpty() && chunks.size <= MAX_CHUNKS) {
+                "a push trigger carries 1..$MAX_CHUNKS chunks, got ${chunks.size}"
+            }
+            require(chunks.all { it.size == PushSignedRecord.ENCRYPTED_TOKEN_BYTES }) {
+                "every push trigger chunk is exactly ${PushSignedRecord.ENCRYPTED_TOKEN_BYTES} bytes"
+            }
+            val joined = ByteArray(chunks.size * PushSignedRecord.ENCRYPTED_TOKEN_BYTES)
+            chunks.forEachIndexed { index, chunk -> chunk.copyInto(joined, index * PushSignedRecord.ENCRYPTED_TOKEN_BYTES) }
+            return eventTemplate(KIND, PushBase64.encode(joined), createdAt) {
+                addUnique(VersionTag.assemble())
+                initializer()
+            }
         }
     }
 }

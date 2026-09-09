@@ -696,6 +696,36 @@ class GroupEventHandler(
                         }
                     }
 
+                    // Push token gossip (kinds 447/448/449) is routing data for
+                    // a notification server, addressed to the other members'
+                    // clients rather than to the people in the room. It still
+                    // reaches the feed's dedupe and cache paths above like any
+                    // inner event — `MarmotGroupList` is what keeps it off the
+                    // screen — but its meaning is applied here.
+                    //
+                    // Everything this call does is advisory: a malformed entry,
+                    // a signature that does not verify, a list that lost its
+                    // ordering race are all dropped on their own and none of
+                    // them may reach the validity of the kind:445 that carried
+                    // them. That is why it neither throws nor is checked.
+                    account.marmotPushCoordinator?.let { push ->
+                        push.apply(result.groupId, innerEvent)
+                        // A peer asking for records gets our view, once. We
+                        // answer with the records we hold — including other
+                        // members' — with their owner signatures untouched, so
+                        // a member who has been offline can be caught up by
+                        // whoever happens to be around.
+                        if (push.isTokenRequest(innerEvent) && innerEvent.pubKey != account.signer.pubKey) {
+                            push.buildTokenList(result.groupId)?.let { response ->
+                                account.marmot.sendMarmotGroupMessage(
+                                    result.groupId,
+                                    response,
+                                    account.marmot.marmotGroupRelays(result.groupId),
+                                )
+                            }
+                        }
+                    }
+
                     // Track the message in the Marmot group chatroom
                     account.marmotGroupList.addMessage(result.groupId, innerNote)
 

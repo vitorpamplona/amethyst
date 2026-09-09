@@ -155,12 +155,22 @@ class MarmotGroupList(
         private const val MARMOT_INNER_KIND_EDIT = 1009
         private const val MARMOT_INNER_KIND_STREAM_START = 1200
 
+        // Push token gossip. Routing data for a notification server, addressed
+        // to the other members' clients rather than to the people in the room —
+        // a reader must never see a row for one.
+        private const val MARMOT_INNER_KIND_PUSH_TOKEN_UPDATE = 447
+        private const val MARMOT_INNER_KIND_PUSH_TOKEN_LIST = 448
+        private const val MARMOT_INNER_KIND_PUSH_TOKEN_REMOVAL = 449
+
         private val NON_CHAT_INNER_KINDS =
             setOf(
                 MARMOT_INNER_KIND_DELETION,
                 MARMOT_INNER_KIND_REACTION,
                 MARMOT_INNER_KIND_EDIT,
                 MARMOT_INNER_KIND_STREAM_START,
+                MARMOT_INNER_KIND_PUSH_TOKEN_UPDATE,
+                MARMOT_INNER_KIND_PUSH_TOKEN_LIST,
+                MARMOT_INNER_KIND_PUSH_TOKEN_REMOVAL,
             )
     }
 }

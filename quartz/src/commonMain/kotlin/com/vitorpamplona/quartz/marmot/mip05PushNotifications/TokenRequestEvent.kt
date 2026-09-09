@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.TokenTagData
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -29,16 +29,16 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * Marmot Token Request Event (MIP-05) — kind 447.
+ * Marmot push token request / self-update — kind 447
+ * (`features/push-notifications.md`, "Request and update").
  *
- * Unsigned application message sent inside a GroupEvent (kind:445) when a device
- * joins a group, needs to refresh its token view, or has a token change.
+ * One kind carries two intents, told apart by the array alone: a non-empty
+ * `tokens` array announces the sender's own current record, an empty one asks
+ * everyone else to share theirs. An empty request changes no state anywhere, so
+ * nothing has to distinguish them beyond counting.
  *
- * Includes the sender's own encrypted token in "token" tags to bootstrap
- * the device into the group's notification system immediately.
- *
- * The MLS leaf index is implicit from the MLS sender identity.
- * MUST remain unsigned (no sig field) per MIP-03 security requirements.
+ * An unsigned Marmot app payload like every other inner event — it MUST NOT
+ * carry a `sig`. Its authority lives entirely in each entry's `owner_sig`.
  */
 @Immutable
 class TokenRequestEvent(
@@ -49,19 +49,27 @@ class TokenRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    /** Encrypted tokens included with this request (sender's own tokens) */
-    fun tokens() = tags.tokens()
+    /** The records this event announces; empty for a request. */
+    fun entries() = PushGossip.decodeTokens(content)
+
+    fun isRequest() = entries().isEmpty()
 
     companion object {
         const val KIND = 447
 
         fun build(
-            ownTokens: List<TokenTagData>,
+            entries: List<PushTokenEntry>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<TokenRequestEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
-            tokens(ownTokens)
+        ) = eventTemplate(KIND, PushGossip.encodeTokens(entries), createdAt) {
+            addUnique(VersionTag.assemble())
             initializer()
         }
+
+        /** The empty form: "share your records with me." */
+        fun buildRequest(
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<TokenRequestEvent>.() -> Unit = {},
+        ) = build(emptyList(), createdAt, initializer)
     }
 }

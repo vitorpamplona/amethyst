@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -152,6 +154,65 @@ class PushOwnerProofTest {
     }
 
     /** A removal carries no relay hint and no token, whatever the caller passes. */
+    @Test
+    fun aLegacyGroupAcceptsTheRawDigestProofAndACurrentOneDoesNot() {
+        // The oldest form: a signature straight over SHA-256(SignedRecord),
+        // with no event around it. Verification-only and never produced — but a
+        // legacy group can still hold a member that only ever made these, and
+        // refusing them there would silently strand that member's routing.
+        val priv = ByteArray(32).also { it[31] = 3 }
+        val signedRecord = {
+            PushSignedRecord.encode(
+                record = PushRecordKind.REMOVAL,
+                groupIdHex = groupId,
+                memberIdHex = member,
+                leafIndex = 3,
+                platform = PushPlatform.APNS,
+                serverPubKeyHex = serverPubKey,
+                tokenFingerprint = fingerprint,
+                ownerTsMillis = ownerTs,
+            )
+        }
+        val ownerSig = Nip01Crypto.sign(sha256(signedRecord()), priv)
+
+        fun verify(currentProfileGroup: Boolean) =
+            PushOwnerProof.verifyRecord(
+                ownerSig = ownerSig,
+                record = PushRecordKind.REMOVAL,
+                groupIdHex = groupId,
+                memberIdHex = member,
+                leafIndex = 3,
+                platform = "apns",
+                serverPubKeyHex = serverPubKey,
+                tokenFingerprint = fingerprint,
+                ownerTsMillis = ownerTs,
+                currentProfileGroup = currentProfileGroup,
+                signedRecord = signedRecord,
+            )
+
+        assertTrue(verify(currentProfileGroup = false))
+        // In a group where every leaf already carries a 0x8009 identity proof,
+        // accepting the weaker form would throw away a binding the group
+        // otherwise guarantees.
+        assertFalse(verify(currentProfileGroup = true))
+        // And without the canonical bytes there is nothing to check it against,
+        // so a caller that does not supply them simply gets a no.
+        assertFalse(
+            PushOwnerProof.verifyRecord(
+                ownerSig = ownerSig,
+                record = PushRecordKind.REMOVAL,
+                groupIdHex = groupId,
+                memberIdHex = member,
+                leafIndex = 3,
+                platform = "apns",
+                serverPubKeyHex = serverPubKey,
+                tokenFingerprint = fingerprint,
+                ownerTsMillis = ownerTs,
+                currentProfileGroup = false,
+            ),
+        )
+    }
+
     @Test
     fun aRemovalAlwaysEncodesAnEmptyRelayHint() {
         val withHint =

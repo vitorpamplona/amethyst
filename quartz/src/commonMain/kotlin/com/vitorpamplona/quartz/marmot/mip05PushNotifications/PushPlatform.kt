@@ -18,32 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags
-
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.PushGossip
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
 /**
- * The `v` tag every push event carries — kinds 446, 447, 448 and 449.
+ * The platform a push token belongs to (`features/push-notifications.md`).
  *
- * A recipient MUST reject any other value. `marmot-push-v1` is not a rename of
- * the earlier exploratory `mip05-v1`: that version carried tokens in tags with
- * an empty content, left the sender's leaf implicit, defined no removals and
- * predated owner authentication entirely. The two are not interoperable, and
- * refusing the old string is how they stay apart.
+ * Two encodings for the same thing, and both are load-bearing: [wireName] is
+ * what a gossip entry's `platform` member and the owner-proof tag carry, while
+ * [byte] is what goes into the encrypted token plaintext, the fingerprint
+ * preimage and the canonical [PushSignedRecord]. Keeping them on one type is
+ * what stops a signer and a verifier from disagreeing about which is which.
  */
-class VersionTag {
+enum class PushPlatform(
+    val wireName: String,
+    val byte: Byte,
+) {
+    APNS("apns", 0x01),
+    FCM("fcm", 0x02),
+    ;
+
     companion object {
-        const val TAG_NAME = "v"
-        const val CURRENT_VERSION = PushGossip.VERSION
+        /** Null for an unknown platform — the entry is then advisory-invalid, not an error. */
+        fun fromWireName(name: String): PushPlatform? = entries.firstOrNull { it.wireName == name }
 
-        fun parse(tag: Array<String>): String? {
-            ensure(tag.has(1) && tag[0] == TAG_NAME) { return null }
-            ensure(tag[1] == CURRENT_VERSION) { return null }
-            return tag[1]
-        }
-
-        fun assemble() = arrayOf(TAG_NAME, CURRENT_VERSION)
+        fun fromByte(value: Byte): PushPlatform? = entries.firstOrNull { it.byte == value }
     }
 }

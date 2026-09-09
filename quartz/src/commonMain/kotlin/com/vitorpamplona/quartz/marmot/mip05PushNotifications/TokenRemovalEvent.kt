@@ -21,23 +21,25 @@
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * Marmot Token Removal Event (MIP-05) — kind 449.
+ * Marmot push token removal — kind 449
+ * (`features/push-notifications.md`, "Removal").
  *
- * Unsigned application message sent inside a GroupEvent (kind:445) when a device
- * leaves a group or wants to disable push notifications.
+ * A removal names one device's record exactly: the `leaf_index` in each entry
+ * is what stops a revocation from taking a sibling device's live token with it.
+ * A winning removal does not just delete — it leaves a tombstone at its own
+ * stamp, so a token list assembled before the removal cannot resurrect the
+ * revoked token when it finally arrives.
  *
- * Per MIP-05 this event MUST have **no tags**. The MLS leaf index is implicit
- * from the MLS sender identity; receiving clients MUST remove the token for
- * the identified leaf. Adding extra tags could leak metadata or be rejected
- * by strict MIP-05 validators (e.g. the MDK reference).
- *
- * MUST remain unsigned (no sig field) per MIP-03 security requirements.
+ * Unsigned, like every inner app payload; each entry carries its own
+ * `owner_sig`.
  */
 @Immutable
 class TokenRemovalEvent(
@@ -48,9 +50,18 @@ class TokenRemovalEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun entries() = PushGossip.decodeRemovals(content)
+
     companion object {
         const val KIND = 449
 
-        fun build(createdAt: Long = TimeUtils.now()) = eventTemplate<TokenRemovalEvent>(KIND, "", createdAt)
+        fun build(
+            entries: List<PushRemovalEntry>,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<TokenRemovalEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, PushGossip.encodeRemovals(entries), createdAt) {
+            addUnique(VersionTag.assemble())
+            initializer()
+        }
     }
 }

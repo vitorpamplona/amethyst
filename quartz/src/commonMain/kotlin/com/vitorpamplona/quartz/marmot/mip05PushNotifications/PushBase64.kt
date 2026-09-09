@@ -20,11 +20,27 @@
  */
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.TokenTag
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.TokenTagData
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
-fun <T : Event> TagArrayBuilder<T>.tokens(tokens: List<TokenTagData>) = addAll(TokenTag.assemble(tokens))
+/**
+ * Standard base64 with padding — the encoding push uses for an `EncryptedToken`
+ * and for the kind `446` trigger content.
+ *
+ * Wrapped rather than called directly so that "standard, padded, and it either
+ * decodes or the datum is dropped" is stated once. Everything push decodes is
+ * advisory: a bad entry is discarded, and nothing about it may reach the
+ * validity of the group message that carried it.
+ */
+@OptIn(ExperimentalEncodingApi::class)
+object PushBase64 {
+    fun encode(bytes: ByteArray): String = Base64.encode(bytes)
 
-fun <T : Event> TagArrayBuilder<T>.token(data: TokenTagData) = add(TokenTag.assemble(data))
+    /** Null when [text] is not valid standard base64. */
+    fun decodeOrNull(text: String): ByteArray? =
+        try {
+            Base64.decode(text)
+        } catch (_: Exception) {
+            null
+        }
+}

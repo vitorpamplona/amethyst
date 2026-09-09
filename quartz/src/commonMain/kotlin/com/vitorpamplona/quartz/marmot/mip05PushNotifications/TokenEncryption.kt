@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenEncryption.PLATFORM_APNS
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenEncryption.PLATFORM_FCM
-import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.TokenTag
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
@@ -41,11 +38,11 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  *
  * Key derivation (MIP-05 §"Key Derivation"):
  *   1. ECDH: shared_x = secp256k1_ecdh(ephemeral_privkey, server_pubkey)  — raw 32-byte x
- *   2. PRK = HKDF-Extract(salt="mip05-v1", IKM=shared_x)
- *   3. encryption_key = HKDF-Expand(PRK, info="mip05-token-encryption", 32)
+ *   2. PRK = HKDF-Extract(salt="marmot-push-token-v1", IKM=shared_x)
+ *   3. encryption_key = HKDF-Expand(PRK, info="marmot-push-token-encryption", 32)
  *   4. Encrypt padded plaintext with ChaCha20-Poly1305(key, nonce, plaintext, aad="")
  *
- * Platform values: 0x01 = APNs, 0x02 = FCM
+ * Platform values live on [PushPlatform].
  */
 object TokenEncryption {
     /** Token plaintext MUST be exactly 1024 bytes per MIP-05. */
@@ -55,35 +52,32 @@ object TokenEncryption {
     private const val HEADER_SIZE = 3 // platform(1) + token_length(2)
     private const val MAX_TOKEN_SIZE = PADDED_PAYLOAD_SIZE - HEADER_SIZE
 
-    private val HKDF_SALT = "mip05-v1".encodeToByteArray()
-    private val HKDF_INFO = "mip05-token-encryption".encodeToByteArray()
+    private val HKDF_SALT = "marmot-push-token-v1".encodeToByteArray()
+    private val HKDF_INFO = "marmot-push-token-encryption".encodeToByteArray()
     private val EMPTY_AAD = ByteArray(0)
-
-    const val PLATFORM_APNS: Byte = 0x01
-    const val PLATFORM_FCM: Byte = 0x02
 
     /**
      * Encrypts a device token for a notification server.
      *
-     * @param platform platform identifier (PLATFORM_APNS or PLATFORM_FCM)
-     * @param deviceToken raw device token bytes
+     * @param platform the owning platform
+     * @param deviceToken raw device token bytes, 1..1021
      * @param serverPubKey 32-byte notification server public key
-     * @return base64-encoded EncryptedToken (280 bytes when decoded)
+     * @return base64-encoded EncryptedToken (1084 bytes when decoded)
      */
     @OptIn(ExperimentalEncodingApi::class)
     fun encrypt(
-        platform: Byte,
+        platform: PushPlatform,
         deviceToken: ByteArray,
         serverPubKey: ByteArray,
     ): String {
-        require(deviceToken.size <= MAX_TOKEN_SIZE) {
-            "Device token too large: ${deviceToken.size} bytes, max $MAX_TOKEN_SIZE"
+        require(deviceToken.size in 1..MAX_TOKEN_SIZE) {
+            "Device token must be 1..$MAX_TOKEN_SIZE bytes, got ${deviceToken.size}"
         }
         require(serverPubKey.size == PUBKEY_SIZE) { "Server pubkey must be $PUBKEY_SIZE bytes" }
 
         // Build padded payload: platform(1) || token_length(2 BE) || token || random_padding
         val payload = ByteArray(PADDED_PAYLOAD_SIZE)
-        payload[0] = platform
+        payload[0] = platform.byte
         payload[1] = (deviceToken.size ushr 8 and 0xFF).toByte()
         payload[2] = (deviceToken.size and 0xFF).toByte()
         deviceToken.copyInto(payload, HEADER_SIZE)
@@ -110,7 +104,7 @@ object TokenEncryption {
         val ciphertextWithTag = ChaCha20Poly1305.encrypt(payload, EMPTY_AAD, nonce, encryptionKey)
 
         // Assemble: ephemeral_pubkey(32) || nonce(12) || ciphertext+tag(1040)
-        val result = ByteArray(TokenTag.ENCRYPTED_TOKEN_SIZE)
+        val result = ByteArray(PushSignedRecord.ENCRYPTED_TOKEN_BYTES)
         ephemeralPubKey.copyInto(result, 0)
         nonce.copyInto(result, PUBKEY_SIZE)
         ciphertextWithTag.copyInto(result, PUBKEY_SIZE + NONCE_SIZE)
@@ -132,8 +126,8 @@ object TokenEncryption {
         serverPrivKey: ByteArray,
     ): DecryptedToken {
         val data = Base64.decode(encryptedTokenBase64)
-        require(data.size == TokenTag.ENCRYPTED_TOKEN_SIZE) {
-            "EncryptedToken must be ${TokenTag.ENCRYPTED_TOKEN_SIZE} bytes, got ${data.size}"
+        require(data.size == PushSignedRecord.ENCRYPTED_TOKEN_BYTES) {
+            "EncryptedToken must be ${PushSignedRecord.ENCRYPTED_TOKEN_BYTES} bytes, got ${data.size}"
         }
 
         // Parse components
@@ -154,11 +148,14 @@ object TokenEncryption {
         // Parse payload: platform(1) || token_length(2 BE) || token || padding
         val platform = payload[0]
         val tokenLength = ((payload[1].toInt() and 0xFF) shl 8) or (payload[2].toInt() and 0xFF)
-        require(tokenLength in 0..MAX_TOKEN_SIZE) { "Invalid token length: $tokenLength" }
+        require(tokenLength in 1..MAX_TOKEN_SIZE) { "Invalid token length: $tokenLength" }
 
         val deviceToken = payload.copyOfRange(HEADER_SIZE, HEADER_SIZE + tokenLength)
 
-        return DecryptedToken(platform, deviceToken)
+        return DecryptedToken(
+            requireNotNull(PushPlatform.fromByte(platform)) { "Invalid platform byte: $platform" },
+            deviceToken,
+        )
     }
 
     /**
@@ -181,8 +178,7 @@ object TokenEncryption {
      * Result of decrypting an EncryptedToken.
      */
     data class DecryptedToken(
-        /** Platform identifier: [PLATFORM_APNS] or [PLATFORM_FCM] */
-        val platform: Byte,
+        val platform: PushPlatform,
         /** Raw device token bytes */
         val deviceToken: ByteArray,
     ) {
@@ -193,7 +189,7 @@ object TokenEncryption {
         }
 
         override fun hashCode(): Int {
-            var result = platform.toInt()
+            var result = platform.hashCode()
             result = 31 * result + deviceToken.contentHashCode()
             return result
         }

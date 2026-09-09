@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
+import com.vitorpamplona.amethyst.commons.marmot.MarmotPushCoordinator
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -390,6 +391,12 @@ class Account(
      * backdated gift wrap is re-unwrapped on every sync.
      */
     val marmotIngestDedupStore: com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore? = null,
+    /**
+     * Durable push token records, stamps and tombstones. Null means a restart
+     * forgets every tombstone, so a relayed but revoked token record can win
+     * once and start waking a device its owner asked to be forgotten.
+     */
+    val marmotPushStateStore: com.vitorpamplona.quartz.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
@@ -954,6 +961,20 @@ class Account(
                 marmotIngestDedupStore,
                 scope = scope,
             )
+        }
+
+    /**
+     * Push token gossip (`features/push-notifications.md`) for the groups this
+     * account is in.
+     *
+     * Present whenever Marmot itself is, because CONSUMING gossip costs nothing
+     * and is what lets this client answer a peer's kind:447 later. Producing a
+     * record of our own is a separate decision: it needs a device token and a
+     * notification server public key, neither of which the protocol discovers.
+     */
+    val marmotPushCoordinator: MarmotPushCoordinator? =
+        marmotManager?.let {
+            marmotPushStateStore?.let { store -> MarmotPushCoordinator(it, store) } ?: MarmotPushCoordinator(it)
         }
 
     /**
