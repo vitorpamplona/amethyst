@@ -1094,9 +1094,14 @@ class MarmotManager(
     ) {
         try {
             messageStore?.appendMessage(nostrGroupId, innerEventJson)
-            if (epoch != null) {
-                Event.fromJsonOrNull(innerEventJson)?.let { messageStore?.recordEpoch(nostrGroupId, it.id, epoch) }
+            val parsed = Event.fromJsonOrNull(innerEventJson)
+            if (epoch != null && parsed != null) {
+                messageStore?.recordEpoch(nostrGroupId, parsed.id, epoch)
             }
+            // Pinned here, at the moment the message enters the log, because
+            // this is the last point at which the retention of its delivering
+            // epoch is still the group's current retention.
+            parsed?.let { pinExpiry(nostrGroupId, it) }
         } catch (e: Exception) {
             Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId", e)
         }
@@ -1238,11 +1243,88 @@ class MarmotManager(
      */
     suspend fun loadStoredMessages(nostrGroupId: HexKey): List<String> =
         try {
-            messageStore?.loadMessages(nostrGroupId) ?: emptyList()
+            val store = messageStore ?: return emptyList()
+            // Prune before reading, so a restart cannot show a message that
+            // expired while the app was closed. Filtering the read alone would
+            // leave it on disk, and disk is the whole point: the ratchet moved
+            // past the ciphertext long ago, so this store is the only copy.
+            pruneExpiredMessages(nostrGroupId)
+            store.loadMessages(nostrGroupId)
         } catch (e: Exception) {
             Log.w("MarmotManager", "Failed to load persisted messages for $nostrGroupId", e)
             emptyList()
         }
+
+    /**
+     * The group's disappearing-message duration in seconds, or 0 when off.
+     *
+     * Read from the current profile's `0x8005` component, falling back to a
+     * legacy group's `0xF2EE` field — a legacy group carries the same setting
+     * in the monolithic blob, and reading only the component would silently
+     * treat every legacy group as having no expiry at all.
+     */
+    fun retentionSeconds(nostrGroupId: HexKey): Long {
+        val fromComponent = groupState(nostrGroupId)?.retention?.disappearingMessageSecs
+        if (fromComponent != null) return fromComponent.toLong()
+        return groupMetadata(nostrGroupId)?.disappearingMessageSecs?.toLong() ?: 0L
+    }
+
+    /**
+     * Pin when [innerEvent] stops being displayable, if this group expires
+     * messages at all.
+     *
+     * Pinned at persist time and never recomputed, because the component says
+     * a message keeps the retention of its OWN source epoch: a later change to
+     * the setting must not shorten, extend, or restore the expiry of a message
+     * that already exists.
+     *
+     * The base is the sender's own `created_at`, which the component
+     * acknowledges is only as trustworthy as the MLS-authenticated sender —
+     * expiry is advisory, not a deletion guarantee against a hostile member.
+     */
+    private suspend fun pinExpiry(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ) {
+        val seconds = retentionSeconds(nostrGroupId)
+        if (seconds <= 0L) return
+        try {
+            messageStore?.recordExpiry(nostrGroupId, innerEvent.id, innerEvent.createdAt + seconds)
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to pin expiry for ${innerEvent.id} in $nostrGroupId", e)
+        }
+    }
+
+    /**
+     * Delete every message whose pinned expiry has passed.
+     *
+     * @return the inner event ids that were removed, so a front end can drop
+     *   them from a conversation it is already showing rather than waiting for
+     *   the next read.
+     */
+    suspend fun pruneExpiredMessages(
+        nostrGroupId: HexKey,
+        nowSecs: Long = TimeUtils.now(),
+    ): Set<HexKey> {
+        val store = messageStore ?: return emptySet()
+        return try {
+            val expired = store.loadExpiries(nostrGroupId).filterValues { it <= nowSecs }.keys
+            if (expired.isEmpty()) return emptySet()
+            store.removeMessages(nostrGroupId, expired)
+            Log.d("MarmotManager") { "expired ${expired.size} message(s) in ${nostrGroupId.take(8)}…" }
+            onMessagesExpired?.invoke(nostrGroupId, expired)
+            expired
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to expire messages for $nostrGroupId", e)
+            emptySet()
+        }
+    }
+
+    /**
+     * Called for every message this client expires, so a front end can drop it
+     * from a conversation that is already on screen.
+     */
+    var onMessagesExpired: ((nostrGroupId: HexKey, innerEventIds: Set<HexKey>) -> Unit)? = null
 
     /**
      * Remove a member from a group.

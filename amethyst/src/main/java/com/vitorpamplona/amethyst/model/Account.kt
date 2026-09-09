@@ -3800,6 +3800,15 @@ class Account(
                 marmotGroupList.addMessage(groupId, note)
             }
 
+            // A disappearing message that is gone from disk but still on screen
+            // has not disappeared. Drop it from the conversation as it expires,
+            // rather than waiting for the next read to omit it.
+            marmotManager.onMessagesExpired = { groupId, expiredIds ->
+                expiredIds.forEach { id ->
+                    cache.getNoteIfExists(id)?.let { marmotGroupList.removeMessage(groupId, it) }
+                }
+            }
+
             scope.launch(Dispatchers.IO) {
                 marmotManager.restoreAll()
 

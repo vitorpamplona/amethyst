@@ -168,6 +168,9 @@ private suspend fun MarmotManager.ingestGroupEvent(ge: GroupEvent): MarmotIngest
             // MLS ratchets once we decrypt; future reads of the same ciphertext
             // would fail — persist the plaintext now so restarts/replays see it.
             persistDecryptedMessage(result.groupId, result.innerEventJson, result.epoch)
+            // Traffic is the natural clock for expiry: a group that is being
+            // read is a group whose expired messages should already be gone.
+            pruneExpiredMessages(result.groupId)
             MarmotIngestResult.Message(result)
         }
 

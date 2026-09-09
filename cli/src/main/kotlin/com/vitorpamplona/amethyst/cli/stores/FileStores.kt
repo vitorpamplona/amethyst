@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -153,6 +154,7 @@ class FileMarmotMessageStore(
         file(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group messages")
         epochFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message epochs")
         snapshotFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group system-row baseline")
+        expiryFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message expiries")
     }
 
     private fun snapshotFile(id: String) = File(dir, "$id.snapshot")
@@ -166,6 +168,56 @@ class FileMarmotMessageStore(
     }
 
     override suspend fun loadGroupSnapshot(nostrGroupId: String): String? = snapshotFile(nostrGroupId).takeIf { it.exists() }?.readText()
+
+    private fun expiryFile(id: String) = File(dir, "$id.expiries")
+
+    /**
+     * First write wins: an expiry is pinned to the retention of the message's
+     * own source epoch, so re-persisting the same message after a replay must
+     * not re-time it under a setting that has since changed.
+     */
+    override suspend fun recordExpiry(
+        nostrGroupId: String,
+        innerEventId: String,
+        expiresAtSecs: Long,
+    ) {
+        val target = expiryFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it.substringBefore(' ') == innerEventId }) return
+        SecureFileIO.appendText(target, "$innerEventId $expiresAtSecs\n")
+    }
+
+    override suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> =
+        expiryFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                val at = parts[1].toLongOrNull() ?: return@mapNotNull null
+                parts[0] to at
+            }?.toMap()
+            ?: emptyMap()
+
+    /** Rewrites both logs: a disappearing message has to actually leave the disk. */
+    override suspend fun removeMessages(
+        nostrGroupId: String,
+        innerEventIds: Set<String>,
+    ) {
+        if (innerEventIds.isEmpty()) return
+        val target = file(nostrGroupId)
+        if (target.exists()) {
+            val kept =
+                target.readLines().filter { line ->
+                    line.isNotBlank() && Event.fromJsonOrNull(line)?.id !in innerEventIds
+                }
+            SecureFileIO.writeBytesAtomic(target, (kept.joinToString("\n") + if (kept.isEmpty()) "" else "\n").encodeToByteArray())
+        }
+        val expiries = expiryFile(nostrGroupId)
+        if (expiries.exists()) {
+            val kept = expiries.readLines().filter { it.isNotBlank() && it.substringBefore(' ') !in innerEventIds }
+            SecureFileIO.writeBytesAtomic(expiries, (kept.joinToString("\n") + if (kept.isEmpty()) "" else "\n").encodeToByteArray())
+        }
+    }
 
     private fun epochFile(id: String) = File(dir, "$id.epochs")
 

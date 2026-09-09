@@ -731,6 +731,11 @@ class GroupEventHandler(
                     // `MarmotGroupList.isDisplayableFeedMessage`.
                     account.marmotGroupList.addMessage(result.groupId, innerNote)
 
+                    // Traffic is the natural clock for disappearing messages: a
+                    // group being read is a group whose expired messages should
+                    // already be gone.
+                    manager.pruneExpiredMessages(result.groupId)
+
                     // Persist the decrypted plaintext so the message
                     // survives an app restart. Marmot/MLS application
                     // messages cannot be re-decrypted once the ratchet

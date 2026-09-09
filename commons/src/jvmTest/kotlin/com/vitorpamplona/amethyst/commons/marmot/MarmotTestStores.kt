@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.marmot
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 // In-memory stand-ins for the durable stores a MarmotManager needs.
 //
@@ -67,6 +68,7 @@ class SnapshotStateStore : MlsGroupStateStore {
 class SnapshotMessageStore : MarmotMessageStore {
     private val messages = mutableMapOf<String, MutableList<String>>()
     private val snapshots = mutableMapOf<String, String>()
+    private val expiries = mutableMapOf<String, MutableMap<String, Long>>()
 
     override suspend fun appendMessage(
         nostrGroupId: String,
@@ -81,6 +83,7 @@ class SnapshotMessageStore : MarmotMessageStore {
     override suspend fun delete(nostrGroupId: String) {
         messages.remove(nostrGroupId)
         snapshots.remove(nostrGroupId)
+        expiries.remove(nostrGroupId)
     }
 
     override suspend fun recordGroupSnapshot(
@@ -91,6 +94,27 @@ class SnapshotMessageStore : MarmotMessageStore {
     }
 
     override suspend fun loadGroupSnapshot(nostrGroupId: String): String? = snapshots[nostrGroupId]
+
+    // Disappearing messages. First write wins, mirroring the durable stores:
+    // an expiry is pinned to its message's own source epoch and a replay must
+    // not re-time it.
+    override suspend fun recordExpiry(
+        nostrGroupId: String,
+        innerEventId: String,
+        expiresAtSecs: Long,
+    ) {
+        expiries.getOrPut(nostrGroupId) { mutableMapOf() }.putIfAbsent(innerEventId, expiresAtSecs)
+    }
+
+    override suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> = expiries[nostrGroupId]?.toMap() ?: emptyMap()
+
+    override suspend fun removeMessages(
+        nostrGroupId: String,
+        innerEventIds: Set<String>,
+    ) {
+        messages[nostrGroupId]?.removeAll { json -> Event.fromJsonOrNull(json)?.id in innerEventIds }
+        expiries[nostrGroupId]?.keys?.removeAll(innerEventIds)
+    }
 }
 
 class SnapshotBundleStore : KeyPackageBundleStore {

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.marmot
 
 import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -111,7 +112,7 @@ class AndroidMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             writeMutex.withLock {
-                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId))) {
+                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId))) {
                     if (file.exists() && !file.delete()) {
                         Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
                     }
@@ -165,6 +166,82 @@ class AndroidMarmotMessageStore(
                 emptyMap()
             }
         }
+
+    private fun expiriesFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "expiries")
+
+    /**
+     * When a message stops being displayable, for a group that expires them.
+     *
+     * Encrypted like the messages: an expiry names an inner event id and says
+     * roughly when it was sent, which is conversation metadata.
+     *
+     * First write wins. The expiry is pinned to the retention of the message's
+     * own source epoch, so re-persisting the same message after a restart —
+     * which happens, because the ratchet rewinds and relays replay — must not
+     * re-time it under whatever the setting has since become.
+     */
+    override suspend fun recordExpiry(
+        nostrGroupId: String,
+        innerEventId: String,
+        expiresAtSecs: Long,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            try {
+                val existing = readAllFrom(expiriesFile(nostrGroupId)).toMutableList()
+                if (existing.any { it.substringBefore(' ') == innerEventId }) return@withLock
+                existing.add("$innerEventId $expiresAtSecs")
+                writeAllTo(expiriesFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordExpiry($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> =
+        withContext(Dispatchers.IO) {
+            try {
+                readAllFrom(expiriesFile(nostrGroupId))
+                    .mapNotNull { line ->
+                        val parts = line.trim().split(' ')
+                        if (parts.size != 2) return@mapNotNull null
+                        val at = parts[1].toLongOrNull() ?: return@mapNotNull null
+                        parts[0] to at
+                    }.toMap()
+            } catch (e: Exception) {
+                Log.e(TAG, "loadExpiries($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
+
+    /**
+     * Delete messages and forget their expiries, rewriting both logs.
+     *
+     * A rewrite rather than a tombstone: the point of a disappearing message
+     * is that the plaintext is gone from disk, and this store holds the only
+     * copy — the ratchet moved past the ciphertext it came from long ago.
+     */
+    override suspend fun removeMessages(
+        nostrGroupId: String,
+        innerEventIds: Set<String>,
+    ) = withContext(Dispatchers.IO) {
+        if (innerEventIds.isEmpty()) return@withContext
+        writeMutex.withLock {
+            try {
+                val kept =
+                    readAll(nostrGroupId).filter { json ->
+                        val id = Event.fromJsonOrNull(json)?.id
+                        id == null || id !in innerEventIds
+                    }
+                writeAll(nostrGroupId, kept)
+
+                val keptExpiries =
+                    readAllFrom(expiriesFile(nostrGroupId)).filter { it.substringBefore(' ') !in innerEventIds }
+                writeAllTo(expiriesFile(nostrGroupId), keptExpiries)
+            } catch (e: Exception) {
+                Log.e(TAG, "removeMessages($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
 
     private fun snapshotFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "snapshot")
 

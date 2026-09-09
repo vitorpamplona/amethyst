@@ -111,4 +111,43 @@ interface MarmotMessageStore {
 
     /** The last recorded snapshot, or null when there is no baseline yet. */
     suspend fun loadGroupSnapshot(nostrGroupId: String): String? = null
+
+    // ── Disappearing messages ────────────────────────────────────────────────
+    //
+    // The three members below are one feature and are implemented together or
+    // not at all: expiries that are never recorded read back empty, and an
+    // empty set is never removed. A store that implements none of them simply
+    // keeps every message forever, which is a client that cannot honour
+    // `marmot.group.message-retention.v1` — degraded, not broken, and the same
+    // shape of optionality as [recordEpoch].
+    //
+    // Expiry is pinned per message rather than recomputed: the component says
+    // a message keeps the retention of its OWN source epoch, so a later change
+    // must not re-time a message that already exists.
+
+    /**
+     * Remember when [innerEventId] stops being displayable.
+     *
+     * @param expiresAtSecs absolute Unix seconds, already `created_at + secs`.
+     */
+    suspend fun recordExpiry(
+        nostrGroupId: String,
+        innerEventId: String,
+        expiresAtSecs: Long,
+    ) = Unit
+
+    /** Inner event id → its pinned expiry, for what was recorded. */
+    suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> = emptyMap()
+
+    /**
+     * Delete these messages, and any expiry recorded for them, permanently.
+     *
+     * The deletion is the feature: a disappearing message that is merely
+     * hidden is still on disk, and this store is the only durable copy — the
+     * MLS ratchet has long since moved past the ciphertext it came from.
+     */
+    suspend fun removeMessages(
+        nostrGroupId: String,
+        innerEventIds: Set<String>,
+    ) = Unit
 }
