@@ -113,7 +113,7 @@ class RelaySubscriptionsCoordinator(
     val home = HomeFilterAssembler(client)
     val chatroomList = ChatroomListFilterAssembler(client)
     val video = VideoFilterAssembler(client)
-    val discovery = DiscoveryFilterAssembler(client)
+    val discovery = DiscoveryFilterAssembler(client, cache)
 
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.

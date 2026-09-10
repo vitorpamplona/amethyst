@@ -98,6 +98,17 @@ since = now - 420`. The home top-bar chips live for the whole session, so they d
 the session-scoped watcher for pinned DVMs. Traffic is negligible (a few pinned DVMs ×
 1 event / 5 min).
 
+**Outbox fetcher (added after field testing).** The global REQ above only sees beats that
+reach the *user's* discovery relays — but DVMs publish beats to their own write relays, and
+relays don't gossip, so alive DVMs whose beats never overlap the user's relay set stayed
+invisible (their detail screens proved the beats existed on the outbox). `DiscoveryDvmHeartbeatSubAssembler`
+joins the discovery assembler group and, while Discover is composed, batches the DVM list's
+announcement authors per **DVM outbox relay** (`kinds = [11998], authors = [those pubkeys],
+since = now - 420`, coverage-ranked and capped at 12 relays; authors with unknown outboxes
+rely on the global REQ as fallback). It re-issues when the DVM list's membership changes and
+unwraps `FeedState.Loaded` to the inner feed flow (the wrapper is reused, so only the inner
+flow emits real list changes).
+
 ## 6. Invalidation — closing the two silent gaps
 
 1. **A new heartbeat does not re-rank the list.** The additive feed path
