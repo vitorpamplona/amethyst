@@ -135,14 +135,46 @@ internal object Curve25519Field {
     val GF0 = LongArray(16)
     val GF1 = gf(1)
 
-    /** Carry and reduce a field element. */
+    /**
+     * Carry and reduce a field element.
+     *
+     * TweetNaCl writes the loop over all 16 limbs and folds the wrap-around
+     * into the body as `o[(i + 1) % 16]` plus an `if (i == 15)`, so a modulo
+     * and a branch ride along on all 16 iterations to serve the one that needs
+     * them. Peeling the last limb out takes both off the loop: limbs 0..14
+     * carry into their neighbour, and limb 15 wraps into limb 0 scaled by 38,
+     * which is the `c - 1` plus the `37 * (c - 1)` of the original folded into
+     * one term.
+     *
+     * Measured honestly, this bought **nothing** on HotSpot — C2 was already
+     * strength-reducing the modulo and hoisting the branch. It is kept because
+     * it is strictly less work for a weaker JIT to undo, and ART on a phone is
+     * the target that matters, but no speedup is claimed for it here: the
+     * benchmark on this machine could not tell the two apart.
+     *
+     * That measurement is also the reason not to trust a CPU profile of this
+     * file. JFR's execution sampler is safepoint-biased, and the counted loops
+     * in this object carry no safepoint polls, so samples pile onto whichever
+     * method follows the poll. It attributed 75% of all `create_group` samples
+     * to this function; rewriting it changed nothing, which is the profiler
+     * telling on itself. Time the primitives end to end instead — see
+     * `marmotBench`'s `x25519_dh` and friends.
+     *
+     * The `+ (1 shl 16)` / `- 1` dance is TweetNaCl's, and stays: it biases the
+     * limb so an arithmetic shift floors correctly for negative limbs, which is
+     * what makes the carry branch-free for the sign as well.
+     */
     fun car25519(o: LongArray) {
-        for (i in 0 until 16) {
+        for (i in 0 until 15) {
             o[i] += (1L shl 16)
             val c = o[i] shr 16
-            o[(i + 1) % 16] += c - 1 + (if (i == 15) 37 * (c - 1) else 0)
+            o[i + 1] += c - 1
             o[i] -= c shl 16
         }
+        o[15] += (1L shl 16)
+        val c = o[15] shr 16
+        o[0] += 38 * (c - 1)
+        o[15] -= c shl 16
     }
 
     /** Conditional swap: if b=1, swap p and q element-wise. */
@@ -292,14 +324,51 @@ internal object Curve25519Field {
     }
 
     /** Field squaring: o = a^2 (mod p). */
-    fun sqr(a: LongArray): LongArray = mul(a, a)
+    fun sqr(a: LongArray): LongArray {
+        val o = LongArray(16)
+        sqrInto(o, a, LongArray(31))
+        return o
+    }
 
-    /** Field squaring into [o]. See [mulInto] for the [t] contract. */
+    /**
+     * Field squaring into [o]. See [mulInto] for the [t] contract.
+     *
+     * A square is not just `mulInto(o, a, a, t)`: in `a[i] * a[j]` every
+     * off-diagonal pair is computed twice, once as (i,j) and once as (j,i).
+     * Taking each pair once and doubling it turns the 256 multiplications of
+     * the schoolbook into 136 — the 16 diagonal squares plus 120 cross terms.
+     *
+     * That is worth having because squarings are not a rare case: the
+     * Montgomery ladder squares four times per bit out of ten field
+     * multiplications, and [inv25519Into] is 254 squarings against ~250
+     * multiplications.
+     *
+     * Doubling costs no headroom. Limbs reaching here are bounded well under
+     * 2^18 even after an unreduced add or subtract, so a doubled cross term
+     * stays under 2^37 and a full 16-term column under 2^41 — far from
+     * overflowing the signed 64-bit accumulator.
+     */
     fun sqrInto(
         o: LongArray,
         a: LongArray,
         t: LongArray,
-    ) = mulInto(o, a, a, t)
+    ) {
+        t.fill(0L)
+        for (i in 0 until 16) {
+            val ai = a[i]
+            t[i + i] += ai * ai
+            val twice = ai + ai
+            for (j in i + 1 until 16) {
+                t[i + j] += twice * a[j]
+            }
+        }
+        for (i in 0 until 15) {
+            t[i] += 38 * t[i + 16]
+        }
+        for (i in 0 until 16) o[i] = t[i]
+        car25519(o)
+        car25519(o)
+    }
 
     /** Field inversion: o = a^(-1) (mod p) using Fermat's little theorem. */
     fun inv25519(a: LongArray): LongArray {

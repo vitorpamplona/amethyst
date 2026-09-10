@@ -30,13 +30,18 @@ private fun kb(bytes: Long) = bytes / 1024.0
 fun main(args: Array<String>) {
     val json = args.contains("--json")
 
+    // `--only=<substring>` narrows the run to matching rows. Mostly for
+    // profiling, where mixing every benchmark's samples into one recording
+    // hides the operation you are actually asking about.
+    val only = args.firstOrNull { it.startsWith("--only=") }?.substringAfter("=")
+
     // Quartz logs at DEBUG by default, and those lines land INSIDE the measured
     // window: they cost time, and the string building they do is charged to the
     // benchmark thread's allocation counter. Measuring the logger instead of
     // the engine would make every number here fiction.
     Log.minLevel = LogLevel.ERROR
 
-    val results = allBenchmarks()
+    val results = allBenchmarks(only)
 
     if (json) {
         println("[")

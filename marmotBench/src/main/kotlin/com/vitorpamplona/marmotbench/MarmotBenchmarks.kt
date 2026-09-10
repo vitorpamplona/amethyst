@@ -159,12 +159,26 @@ fun benchIngestAppMessage(): BenchResult =
 
 private const val PAYLOAD = "marmot benchmark payload — the same 64-ish byte body both sides send"
 
-fun allBenchmarks(): List<BenchResult> =
+/**
+ * Every benchmark, as name -> thunk, so a run can be narrowed to one row.
+ *
+ * Narrowing matters for profiling: a CPU profile of the whole suite mixes
+ * `create_group` samples with everything else, and the interesting question
+ * is usually about one operation at a time.
+ */
+private val ALL: List<Pair<String, () -> BenchResult>> =
     buildList {
         // The same invitee counts MDK's `bench_create_group` uses, plus 0 as
         // the founding-only baseline, so the rows line up for comparison.
-        listOf(0, 1, 8, 32).forEach { add(benchCreateGroup(it)) }
-        add(benchJoinWelcome())
-        add(benchSendAppMessage())
-        add(benchIngestAppMessage())
+        listOf(0, 1, 8, 32).forEach { n -> add("create_group/$n" to { benchCreateGroup(n) }) }
+        add("join_welcome" to { benchJoinWelcome() })
+        add("send_app_message" to { benchSendAppMessage() })
+        add("ingest_app_message" to { benchIngestAppMessage() })
+        addAll(primitiveBenchmarks())
     }
+
+/** Runs every benchmark whose name contains [only], or all of them when null. */
+fun allBenchmarks(only: String? = null): List<BenchResult> =
+    ALL
+        .filter { (name, _) -> only == null || name.contains(only) }
+        .map { (_, run) -> run() }
