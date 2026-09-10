@@ -173,14 +173,14 @@ class MlsGroupStateTest {
         val state = group.saveState()
         val bytes = state.encodeTls()
 
-        // First two bytes are the state version (uint16). v3 appends the
-        // direct-path node private keys; older blobs still decode, so the
-        // version only ever moves forward when the layout gains a field.
+        // First two bytes are the state version (uint16). v4 appends the
+        // staged-proposal pool; older blobs still decode, so the version only
+        // ever moves forward when the layout gains a field.
         val reader =
             com.vitorpamplona.quartz.marmot.mls.codec
                 .TlsReader(bytes)
         val version = reader.readUint16()
-        assertEquals(3, version)
+        assertEquals(4, version)
     }
 
     @Test
