@@ -74,11 +74,13 @@ import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
@@ -179,6 +181,10 @@ class SearchBarViewModel(
 
     val queryAsksNothing get() = state.asksNothing
     val searchSettled get() = state.settled
+
+    /** Relays this query went to, and the ones still to answer. Drives the waiting popup. */
+    val relaysAsked get() = searchDataSourceState.asked
+    val relaysAnswered get() = searchDataSourceState.answered
     val scopePinnedToNotes get() = state.scopePinnedToNotes
     val scope get() = state.scope
 
@@ -526,10 +532,32 @@ class SearchBarViewModel(
      * been correct, which is why "nothing found" timed out while the spinner did not.
      */
     private var settled by mutableStateOf(false)
+    private var relaysAskedNow by mutableStateOf<Set<NormalizedRelayUrl>>(emptySet())
+    private var relaysAnsweredNow by mutableStateOf<Set<NormalizedRelayUrl>>(emptySet())
+
+    /**
+     * Stops the spinner claiming to wait forever on a relay that will never answer.
+     *
+     * Some relays simply never send EOSE. Without a ceiling the spinner would turn for the life
+     * of the screen, which is the behaviour this was meant to end.
+     */
+    private var pastDeadline by mutableStateOf(false)
 
     init {
         viewModelScope.launch { state.settled.collect { settled = it } }
+        viewModelScope.launch { searchDataSourceState.asked.collect { relaysAskedNow = it } }
+        viewModelScope.launch { searchDataSourceState.answered.collect { relaysAnsweredNow = it } }
+        viewModelScope.launch {
+            state.text.collectLatest {
+                pastDeadline = false
+                delay(RELAY_WAIT_CEILING_MS)
+                pastDeadline = true
+            }
+        }
     }
+
+    /** The relays this query went to that have not sent EOSE yet. */
+    val relaysWaiting = derivedStateOf { relaysAskedNow - relaysAnsweredNow }
 
     /**
      * True while a search is actually under way.
@@ -543,7 +571,14 @@ class SearchBarViewModel(
      * No EOSE from the search subscription reaches this screen, so "under way" is the same
      * heuristic the empty state already trusts: the grace window since the query last changed.
      */
-    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() && !settled }
+    override val isRefreshing =
+        derivedStateOf {
+            // The timer is the floor -- something has to show in the moment before any relay can
+            // possibly reply. After that the real signal takes over: a relay that has not sent
+            // EOSE is one the results are still missing, and the popup on the spinner names it.
+            searchValue.isNotBlank() &&
+                (!settled || (relaysWaiting.value.isNotEmpty() && !pastDeadline))
+        }
 
     /**
      * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex
@@ -587,6 +622,9 @@ class SearchBarViewModel(
     fun isSearchingFun() = searchValue.isNotBlank()
 
     companion object {
+        /** How long the spinner will admit to waiting on a relay that has gone quiet. */
+        private const val RELAY_WAIT_CEILING_MS = 12_000L
+
         /**
          * At most one cache-driven rescan per this long.
          *

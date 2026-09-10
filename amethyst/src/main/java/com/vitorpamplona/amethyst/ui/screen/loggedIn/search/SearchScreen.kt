@@ -45,6 +45,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -106,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.resources.search_source_local
 import com.vitorpamplona.amethyst.commons.resources.search_source_relays
 import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin
 import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin_explainer
+import com.vitorpamplona.amethyst.commons.resources.search_waiting_on_relays
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
@@ -139,7 +142,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -683,11 +688,7 @@ private fun SearchTextField(
                                 // that is still running is exactly when a reader wants to abandon
                                 // it.
                                 if (searchBarViewModel.isRefreshing.value) {
-                                    CircularProgressIndicator(
-                                        modifier = Size20Modifier,
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.placeholderText,
-                                    )
+                                    RelayWaitProgress(searchBarViewModel)
                                 }
                                 IconButton(onClick = { searchBarViewModel.clear() }) {
                                     ClearTextIcon()
@@ -966,6 +967,64 @@ fun HashtagLine(
                 stringRes(Res.string.search_by_hashtag, tag),
                 fontWeight = FontWeight.Bold,
             )
+        }
+    }
+}
+
+/**
+ * The search spinner, and what it is waiting on.
+ *
+ * The spinner alone can only say "still going", and it says that off a timer -- there is no EOSE
+ * on this path, so `settled` means "long enough since you typed", not "the relays answered". The
+ * sub-assemblers do know which relays were asked and which have sent EOSE, so tapping the spinner
+ * shows exactly that, and a search that looks stuck names the relay it is stuck on.
+ *
+ * Relays that never send EOSE stay in the waiting list, which is the true answer rather than a
+ * tidy one.
+ */
+@Composable
+private fun RelayWaitProgress(viewModel: SearchBarViewModel) {
+    var showing by remember { mutableStateOf(false) }
+
+    val waiting = viewModel.relaysWaiting.value
+    val asked by viewModel.relaysAsked.collectAsStateWithLifecycle()
+    val answered by viewModel.relaysAnswered.collectAsStateWithLifecycle()
+
+    Box {
+        CircularProgressIndicator(
+            modifier = Size20Modifier.clickable { showing = true },
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+
+        DropdownMenu(expanded = showing, onDismissRequest = { showing = false }) {
+            Text(
+                text = stringRes(Res.string.search_waiting_on_relays, waiting.size, asked.size),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = Size10dp, vertical = Size5dp),
+            )
+
+            waiting.sortedBy { it.url }.forEach { relay ->
+                DropdownMenuItem(
+                    text = { Text(relay.displayUrl(), style = MaterialTheme.typography.bodySmall) },
+                    onClick = { showing = false },
+                )
+            }
+
+            // The ones already in, dimmed: "three of eight" is easier to read against the list it
+            // came from than on its own.
+            (asked intersect answered).sortedBy { it.url }.forEach { relay ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = relay.displayUrl(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    onClick = { showing = false },
+                )
+            }
         }
     }
 }
