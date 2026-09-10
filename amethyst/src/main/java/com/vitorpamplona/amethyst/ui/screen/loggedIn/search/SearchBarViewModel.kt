@@ -33,15 +33,13 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
-import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
-import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.amethyst.commons.search.SearchPipeline
 import com.vitorpamplona.amethyst.commons.search.SearchResultKind
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
-import com.vitorpamplona.amethyst.commons.search.nameSearchTerms
+import com.vitorpamplona.amethyst.commons.search.SearchState
 import com.vitorpamplona.amethyst.commons.search.wholeInputNip19
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
@@ -72,21 +70,17 @@ import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 
 @Stable
@@ -106,10 +100,19 @@ class SearchBarViewModel(
     var searchValue by mutableStateOf(initialQuery.orEmpty())
 
     val invalidations = MutableStateFlow(0)
-    val searchValueFlow = MutableStateFlow(searchValue)
 
     /**
-     * True while a token picker is open under the field.
+     * What is being searched, and everything about it that is not Android's: the text, its parse,
+     * the two debounce windows, the scope, the sort orders. Shared with Desktop, which had grown
+     * its own copy of all of it.
+     *
+     * What stays here is what a shared holder cannot own: a `LazyListState`, a `FocusRequester`,
+     * invite-link routing, NIP-05 resolution, and the seven result flows — the *acquisition* of
+     * results, which on Android is a cache scan and on Desktop is a relay callback.
+     */
+    val state = SearchState(viewModelScope, initialText = initialQuery.orEmpty())
+
+    /** True while a token picker is open under the field.
      *
      * The search screen pins its bars on this. A picker is a scrollable inside the *top bar*, and
      * [com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarNestedScroll] moves the bars
@@ -119,75 +122,27 @@ class SearchBarViewModel(
      */
     val pickerOpen = MutableStateFlow(false)
 
-    /**
-     * True when the box holds filters but none a relay can be asked for.
-     *
-     * A bare `kind:` window is the case that matters: [SearchFilterBuilder] refuses it, because
-     * "every recent article" is an unbounded REQ rather than a search. A screen that seeds its
-     * kind therefore opens holding a chip and showing nothing, which looks broken unless the box
-     * says what it is waiting for.
-     */
-    val queryAsksNothing: StateFlow<Boolean> =
-        searchValueFlow
-            .map { text ->
-                val query = QueryParser.parse(text)
-                !query.isEmpty && SearchFilterBuilder.build(query).isEmpty()
-            }.distinctUntilChanged()
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val queryAsksNothing get() = state.asksNothing
+    val searchSettled get() = state.settled
+    val scopePinnedToNotes get() = state.scopePinnedToNotes
+    val scope get() = state.scope
 
-    /**
-     * True once enough time has passed since the query last changed that "nothing found" is a
-     * fair thing to say.
-     *
-     * A heuristic, and deliberately so: no EOSE from the search subscription reaches this screen,
-     * so there is nothing that actually knows the relays have finished. Without the delay an
-     * empty list would announce failure in the gap before the first event arrives — which is
-     * every search, for a moment.
-     */
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val searchSettled: StateFlow<Boolean> =
-        searchValueFlow
-            .transformLatest {
-                emit(false)
-                delay(NO_RESULTS_GRACE_MS)
-                emit(true)
-            }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val source get() = state.source
+    val followsOnly get() = state.followsOnly
+    val sortOrder get() = state.eventSortOrder
 
-    /** The scope the reader picked, which is not always the one that applies — see [scope]. */
-    private val pickedScope = MutableStateFlow(SearchScope.ALL)
-
-    /**
-     * True while the query names a `kind:`, which only an event can have.
-     *
-     * The People half of the toggle cannot answer such a query — a person is not an event of any
-     * kind — so leaving it selectable offers the reader a scope guaranteed to come back empty.
-     */
-    val scopePinnedToNotes: StateFlow<Boolean> =
-        searchValueFlow
-            .map { QueryParser.parse(it).isEventOnly }
-            .distinctUntilChanged()
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    /**
-     * The scope that actually applies: the reader's pick, unless the query names a kind.
-     *
-     * Derived rather than written back over [pickedScope] on purpose — dropping the `kind:` chip
-     * has to give the reader the scope they chose before, not leave them pinned to Notes by a
-     * filter that is no longer there.
-     */
-    val scope: StateFlow<SearchScope> =
-        combine(pickedScope, scopePinnedToNotes) { picked, pinned ->
-            if (pinned) SearchScope.NOTES else picked
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, SearchScope.ALL)
-
-    val source = MutableStateFlow(SearchSource.RELAYS)
-    val followsOnly = MutableStateFlow(false)
-    val sortOrder = MutableStateFlow(SearchSortOrder.EVENT_DEFAULT)
+    // Declared before every Eagerly-shared collector that calls `updateDataSource`, and it must
+    // stay there: `updateDataSource` scrolls this list, and Kotlin initialises properties in
+    // declaration order, so from below it would still be null. It never showed while the box
+    // opened empty, because a blank term returns before the scroll; seeding the field from the
+    // screen's filter made the term non-blank on the very first pass and turned that into an NPE
+    // the moment search opened. `state.debouncedForRelays` is a StateFlow with a seeded value, so
+    // the collector below no longer waits out a debounce window before the first call either.
+    val listState: LazyListState = LazyListState(0, 0)
 
     val searchTerm =
-        searchValueFlow
-            .debounce(300)
-            .distinctUntilChanged()
+        state.debouncedForRelays
+            .map { it.text }
             .onEach(::updateDataSource)
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
@@ -199,14 +154,6 @@ class SearchBarViewModel(
             indexerRelays = account.indexerRelayList.flow,
             followPlusAllMineWithSearchRelays = account.followPlusAllMineWithSearch.flow,
         )
-
-    // Declared before [sourceWatcher], and it must stay there. That collector is Eagerly
-    // shared, so it runs `updateDataSource` during construction, and `updateDataSource` scrolls
-    // this list -- Kotlin initialises properties in declaration order, so from below it would
-    // still be null. It never showed while the box opened empty, because a blank term returns
-    // before the scroll; seeding the field from the screen's filter made the term non-blank on
-    // the very first pass and turned that into an NPE the moment search opened.
-    val listState: LazyListState = LazyListState(0, 0)
 
     @Suppress("unused")
     val sourceWatcher =
@@ -335,14 +282,14 @@ class SearchBarViewModel(
 
     val searchResultsUsers =
         combine(
-            searchValueFlow.debounce(100),
+            state.debounced,
             invalidations.debounce(100),
             directNip05Resolver,
             scope,
             combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
                 if (only) follows.authorsPlusMe else null
             },
-        ) { term, _, nip05Resolver, currentScope, follows ->
+        ) { input, _, nip05Resolver, currentScope, follows ->
             if (!currentScope.shows(SearchResultKind.PEOPLE)) return@combine emptyList<User>()
 
             if (nip05Resolver != null) {
@@ -359,12 +306,12 @@ class SearchBarViewModel(
             // A pasted npub/nprofile resolves to its owner even when the cache has never seen
             // them — this is what the auto-navigation used to do, minus the navigation.
             val direct =
-                (directEntity(term) as? IPubKeyEntity)?.let {
+                (directEntity(input.text) as? IPubKeyEntity)?.let {
                     LocalCache.consume(it)
                     LocalCache.getUserIfExists(it.hex) ?: LocalCache.getOrCreateUser(it.hex)
                 }
 
-            val nameTerm = plainTerms(term)
+            val nameTerm = input.nameTerms
             val found =
                 if (nameTerm.isBlank()) emptyList() else LocalCache.search.findUsersStartingWith(nameTerm, account)
             val users = (listOfNotNull(direct) + found).distinctBy { it.pubkeyHex }
@@ -374,25 +321,25 @@ class SearchBarViewModel(
 
     val searchResultsNotes =
         combine(
-            searchValueFlow.debounce(100),
+            state.debounced,
             invalidations,
             scope,
             sortOrder,
             combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
                 if (only) follows.authorsPlusMe else null
             },
-        ) { term, _, currentScope, order, follows ->
+        ) { input, _, currentScope, order, follows ->
             if (!currentScope.shows(SearchResultKind.NOTES)) return@combine emptyList()
 
             // The same filters the REQ carries, run against the cache — so `from:`, `to:`,
             // `since:`, `#t` and the rest narrow local results exactly as they narrow relay
             // results. A bech32 id typed in full is a lookup, not a search, and keeps its own
             // path through findNotesStartingWith.
-            val parsed = QueryParser.parse(term)
+            val parsed = input.query
             // A pasted note/nevent/naddr resolves even when the cache has never seen it —
             // what the auto-navigation used to do, minus the navigation.
             val direct =
-                when (val entity = directEntity(term)) {
+                when (val entity = directEntity(input.text)) {
                     is NNote -> LocalCache.consume(entity).let { LocalCache.getOrCreateNote(entity.hex) }
                     is NEvent -> LocalCache.consume(entity).let { LocalCache.getOrCreateNote(entity.hex) }
                     is NAddress -> LocalCache.consume(entity).let { LocalCache.getOrCreateAddressableNote(entity.address()) }
@@ -406,7 +353,7 @@ class SearchBarViewModel(
                     // `idHex`, which is not content and so nothing a filter's `search` can reach.
                     // Routed to the scan that knows how to resolve it — and only for text that
                     // could actually be one, so an ordinary query never pays for two scans.
-                    looksLikeAnEventId(term) -> LocalCache.findNotesStartingWith(term, account.hiddenUsers.flow.value)
+                    looksLikeAnEventId(input.text) -> LocalCache.findNotesStartingWith(input.text, account.hiddenUsers.flow.value)
                     else ->
                         // The same filters the REQ carries, over the same kind window. Built by
                         // the pipeline rather than here, so the cache is asked exactly what the
@@ -437,51 +384,52 @@ class SearchBarViewModel(
 
     val searchResultsPublicChatChannels =
         combine(
-            searchValueFlow.debounce(100),
+            state.debounced,
             invalidations,
             scope,
-        ) { term, _, currentScope ->
-            if (!currentScope.shows(SearchResultKind.PUBLIC_CHATS)) emptyList() else LocalCache.findPublicChatChannelsStartingWith(plainTerms(term))
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.PUBLIC_CHATS)) emptyList() else LocalCache.findPublicChatChannelsStartingWith(input.nameTerms)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsEphemeralChannels =
         combine(
-            searchValueFlow.debounce(100),
+            state.debounced,
             invalidations,
             scope,
-        ) { term, _, currentScope ->
-            if (!currentScope.shows(SearchResultKind.EPHEMERAL_CHATS)) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(plainTerms(term))
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.EPHEMERAL_CHATS)) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(input.nameTerms)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsLiveActivityChannels =
         combine(
-            searchValueFlow.debounce(100),
+            state.debounced,
             invalidations,
             scope,
-        ) { term, _, currentScope ->
-            if (!currentScope.shows(SearchResultKind.LIVE_ACTIVITIES)) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(plainTerms(term))
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.LIVE_ACTIVITIES)) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(input.nameTerms)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val hashtagResults =
         combine(
-            searchValueFlow.debounce(100),
+            state.debounced,
             invalidations,
             scope,
-        ) { term, _, currentScope ->
-            if (!currentScope.shows(SearchResultKind.HASHTAGS)) emptyList() else findHashtags(term)
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.HASHTAGS)) emptyList() else findHashtags(input.text)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val relayResults =
         combine(
-            searchValueFlow.debounce(100),
+            state.debounced,
             invalidations,
             scope,
-        ) { term, _, currentScope ->
+        ) { input, _, currentScope ->
             if (!currentScope.shows(SearchResultKind.RELAYS)) return@combine emptyList()
+            val term = input.text
             if (term.length > 1) {
                 val isTypingRelay = term.length > 7 && (term.startsWith("wss://") || term.startsWith("ws://"))
                 val relayUrl =
@@ -511,14 +459,6 @@ class SearchBarViewModel(
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
 
     /**
-     * The single word a name search should be given — see [nameSearchTerms]. Not simply the
-     * leftover text: a query that is nothing but `#bitcoin` leaves no leftovers, and handing the
-     * finders an empty string means they answer with nobody rather than with the channel called
-     * "Bitcoin" that the reader was plainly looking for.
-     */
-    private fun plainTerms(term: String): String = QueryParser.parse(term).nameSearchTerms()
-
-    /**
      * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex
      * long enough that it is nobody's search term.
      */
@@ -536,7 +476,7 @@ class SearchBarViewModel(
 
     fun updateSearchValue(newValue: String) {
         searchValue = newValue
-        searchValueFlow.tryEmit(newValue)
+        state.updateText(newValue)
     }
 
     fun clear() = updateSearchValue("")
@@ -550,28 +490,15 @@ class SearchBarViewModel(
         }
     }
 
-    fun updateScope(newScope: SearchScope) {
-        pickedScope.value = newScope
-    }
+    fun updateScope(newScope: SearchScope) = state.updateScope(newScope)
 
-    fun updateSource(newSource: SearchSource) {
-        source.value = newSource
-    }
+    fun updateSource(newSource: SearchSource) = state.updateSource(newSource)
 
-    fun updateFollowsOnly(value: Boolean) {
-        followsOnly.value = value
-    }
+    fun updateFollowsOnly(value: Boolean) = state.updateFollowsOnly(value)
 
-    fun updateSortOrder(order: SearchSortOrder) {
-        sortOrder.value = order
-    }
+    fun updateSortOrder(order: SearchSortOrder) = state.updateEventSortOrder(order)
 
     fun isSearchingFun() = searchValue.isNotBlank()
-
-    companion object {
-        /** How long after the last keystroke an empty result list is allowed to say so. */
-        private const val NO_RESULTS_GRACE_MS = 1200L
-    }
 
     class Factory(
         val account: Account,
