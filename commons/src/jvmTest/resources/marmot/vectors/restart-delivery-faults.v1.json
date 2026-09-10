@@ -1,0 +1,114 @@
+{
+  "scenario_name": "restart-delivery-faults/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "restart-delivery-faults/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "restart-delivery-faults",
+        "invitees": [
+          "bob",
+          "carol"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "bob:restart-delivery"
+      },
+      {
+        "type": "withhold_message",
+        "selector": { "sender": "bob", "class": "application" },
+        "label": "restart-delayed"
+      },
+      {
+        "type": "restart_client",
+        "client": "alice"
+      },
+      {
+        "type": "release_withheld",
+        "label": "restart-delayed"
+      },
+      {
+        "type": "duplicate_message",
+        "selector": { "sender": "bob", "class": "application" }
+      },
+      {
+        "type": "reorder_messages",
+        "order": [
+          { "sender": "bob", "class": "application", "occurrence": 1 },
+          { "sender": "bob", "class": "application" }
+        ]
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "alice"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 1,
+      "member_count": 3,
+      "received_payloads": [
+        "bob:restart-delivery"
+      ]
+    }
+  ]
+}

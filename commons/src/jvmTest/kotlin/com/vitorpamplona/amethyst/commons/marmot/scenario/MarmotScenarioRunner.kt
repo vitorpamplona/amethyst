@@ -107,6 +107,7 @@ class MarmotScenarioRunner(
         val signer = NostrSignerInternal(KeyPair())
         val mlsStore = SnapshotStateStore()
         val messageStore = SnapshotMessageStore()
+        val bundleStore = SnapshotBundleStore()
         lateinit var manager: MarmotManager
 
         /** Delivered but not yet processed — `tick` is what processes. */
@@ -118,6 +119,9 @@ class MarmotScenarioRunner(
 
         /** Members this client watched join, by pubkey, since the last `clear_events`. */
         val sawJoin = mutableListOf<HexKey>()
+
+        /** Members this client watched leave, by pubkey, since the last `clear_events`. */
+        val sawLeave = mutableListOf<HexKey>()
     }
 
     /**
@@ -156,25 +160,33 @@ class MarmotScenarioRunner(
         return accepted
     }
 
+    /**
+     * A manager over this client's stores.
+     *
+     * Built through a function rather than inline so `restart_client` can make
+     * a SECOND one over the SAME stores — which is exactly what a restart is:
+     * every in-memory ratchet, retained epoch and pending pool is gone, and
+     * whatever the client still knows has to come back off durable state.
+     */
+    private fun buildManager(client: VectorClient) =
+        MarmotManager(
+            client.signer,
+            client.mlsStore,
+            client.messageStore,
+            client.bundleStore,
+            publisher =
+                MarmotPublisher { event, _ ->
+                    val label = peekLabel(client.name)
+                    val accepted = nextOutcome(client.name)
+                    if (accepted) inFlight.add(Queued(client.name, event, COMMIT_CLASS, label))
+                    accepted
+                },
+        )
+
     suspend fun run() {
         vector.unmodelledOutcomes.firstOrNull()?.let { throw UnsupportedScenarioOutcome(it.type) }
         preScanPublishOutcomes()
-        clients.values.forEach { client ->
-            client.manager =
-                MarmotManager(
-                    client.signer,
-                    client.mlsStore,
-                    client.messageStore,
-                    SnapshotBundleStore(),
-                    publisher =
-                        MarmotPublisher { event, _ ->
-                            val label = peekLabel(client.name)
-                            val accepted = nextOutcome(client.name)
-                            if (accepted) inFlight.add(Queued(client.name, event, COMMIT_CLASS, label))
-                            accepted
-                        },
-                )
-        }
+        clients.values.forEach { client -> client.manager = buildManager(client) }
 
         vector.steps.forEach { step -> execute(step) }
         verify()
@@ -197,6 +209,8 @@ class MarmotScenarioRunner(
             "reorder_messages" -> reorderMessages(step)
             "withhold_message" -> withholdMessage(step)
             "release_withheld" -> releaseWithheld(step)
+            "restart_client" -> restartClient(step)
+            "leave" -> leave(step)
             // The publication's outcome was consumed when it was made; the step
             // itself carries no further state change.
             "acknowledge_outbound" -> Unit
@@ -230,6 +244,7 @@ class MarmotScenarioRunner(
         step.strings("clients").ifEmpty { vector.clients }.forEach {
             client(it).received.clear()
             client(it).sawJoin.clear()
+            client(it).sawLeave.clear()
         }
     }
 
@@ -370,6 +385,11 @@ class MarmotScenarioRunner(
                 "Remove at a time and the vector's single acknowledgement would not line up"
         }
         remover.manager.removeMember(groupId, leaves.single(), emptyList())
+        // The evictor watched this departure too. Only ticks diff membership,
+        // and an eviction the client commits itself never passes through one —
+        // so without this the actor is the one participant who does not
+        // remember doing it.
+        remover.sawLeave.addAll(targets)
     }
 
     /**
@@ -450,6 +470,41 @@ class MarmotScenarioRunner(
         inFlight.addAll(held)
     }
 
+    /**
+     * Drop the client's process and bring it back over the same stores.
+     *
+     * The point is what does NOT survive: the ratchet position, the retained
+     * epoch window, any staged commit. A client that reads the same traffic
+     * correctly only because it kept those in memory is not durable, and the
+     * fault vectors pair a restart with a replayed queue to catch exactly
+     * that.
+     */
+    private suspend fun restartClient(step: ScenarioVector.Step) {
+        val client = client(step.string("client") ?: error("restart_client without a client"))
+        client.manager = buildManager(client)
+        // A fresh manager knows nothing until it reads its stores — the same
+        // call `Account` makes at startup. Skipping it would model a client
+        // that lost its groups, not one that restarted.
+        client.manager.restoreAll()
+    }
+
+    /**
+     * A member departs: a standalone SelfRemove PROPOSAL, not a commit.
+     *
+     * The leaver does not advance the group — another authorized member
+     * commits the proposal — so this queues the proposal for delivery and
+     * nothing else. It deliberately does not consume a publication outcome:
+     * the vectors never acknowledge a leave, because there is no commit to
+     * acknowledge.
+     */
+    private suspend fun leave(step: ScenarioVector.Step) {
+        val who = client(step.string("client") ?: error("leave without a client"))
+        val groupId = who.groups[currentGroup] ?: error("${who.name} left a group it is not in")
+        val proposal = who.manager.leaveGroup(groupId)
+        inFlight.add(Queued(who.name, proposal.signedEvent, PROPOSAL_CLASS, null))
+        who.groups.remove(currentGroup)
+    }
+
     private suspend fun sendAppMessage(step: ScenarioVector.Step) {
         val sender = client(step.string("sender") ?: error("send_app_message without a sender"))
         val groupId = sender.groups[currentGroup] ?: error("${sender.name} sent before joining a group")
@@ -499,8 +554,29 @@ class MarmotScenarioRunner(
             }
         }
 
+        // A standalone proposal advances nothing on its own. The reference
+        // commits what it staged as part of processing, and so must we — a
+        // SelfRemove nobody commits leaves the departing member in the tree,
+        // still reading the group. Only an admin may do it; a non-admin's
+        // commit would be rejected by every peer.
+        client.groups.values.forEach { groupId ->
+            val admins =
+                client.manager
+                    .groupView(groupId)
+                    ?.adminPubkeys
+                    .orEmpty()
+            if (client.signer.pubKey in admins) {
+                runCatching { client.manager.commitPendingProposals(groupId, emptyList()) }
+            }
+        }
+
         before.forEach { (groupId, was) ->
-            client.sawJoin.addAll(membersOf(client, groupId) - was)
+            val now = membersOf(client, groupId)
+            client.sawJoin.addAll(now - was)
+            // A client evicted from the group reads an empty roster, which
+            // would otherwise look like watching everybody leave at once. It
+            // did not watch anything: it lost the group.
+            if (now.isNotEmpty()) client.sawLeave.addAll(was - now)
         }
     }
 
@@ -580,9 +656,15 @@ class MarmotScenarioRunner(
                 if (got != want) failures.add("${expected.client} received $got, expected $want")
             }
             expected.addedMembers?.let { want ->
-                val got = client.sawJoin.mapNotNull { pubkey -> clients.values.firstOrNull { it.signer.pubKey == pubkey }?.name }
+                val got = names(client.sawJoin)
                 if (got.sorted() != want.sorted()) {
                     failures.add("${expected.client} saw $got join, expected $want")
+                }
+            }
+            expected.removedMembers?.let { want ->
+                val got = names(client.sawLeave)
+                if (got.sorted() != want.sorted()) {
+                    failures.add("${expected.client} saw $got leave, expected $want")
                 }
             }
         }
@@ -593,12 +675,16 @@ class MarmotScenarioRunner(
 
     private fun client(name: String) = clients[name] ?: error("vector names a client '$name' that its roster does not list")
 
+    /** Client names for a list of pubkeys; the vectors talk about people. */
+    private fun names(pubkeys: List<HexKey>) = pubkeys.mapNotNull { key -> clients.values.firstOrNull { it.signer.pubKey == key }?.name }
+
     private companion object {
         const val CHAT_KIND = 9
 
         /** The two message classes a fault selector distinguishes. */
         const val APPLICATION_CLASS = "application"
         const val COMMIT_CLASS = "commit"
+        const val PROPOSAL_CLASS = "proposal"
 
         /** The label for a vector that never says `in_group` — most of them. */
         const val DEFAULT_GROUP = "default"

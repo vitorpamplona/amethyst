@@ -177,6 +177,32 @@ class MlsGroup private constructor(
     internal fun pendingProposalsSnapshot(): List<PendingProposal> = pendingProposals.toList()
 
     /**
+     * Whether any proposal is staged and waiting for a Commit.
+     *
+     * Public where [pendingProposalsSnapshot] is internal: a caller outside
+     * this module has no business reading the proposals, but it does need to
+     * know there is work to commit. A standalone `SelfRemove` from a departing
+     * member sits here until an authorized member commits it — and until then
+     * the leaver is still in the tree and still reading the group.
+     */
+    fun hasPendingProposals(): Boolean = pendingProposals.isNotEmpty()
+
+    /**
+     * Replace this group's staged-proposal pool with [proposals].
+     *
+     * Exists for one reason: [saveState] does NOT serialize the pool, so a
+     * clone made for staging a commit starts empty, and `commit()` on it
+     * produces an EMPTY commit — the epoch advances and every proposal the
+     * commit was meant to apply is silently dropped. A departing member's
+     * `SelfRemove` is the case that bites: the group looks like it processed
+     * the departure, and the leaver is still in the tree holding the keys.
+     */
+    internal fun adoptPendingProposals(proposals: List<PendingProposal>) {
+        pendingProposals.clear()
+        pendingProposals.addAll(proposals)
+    }
+
+    /**
      * The GroupContext extension list as it stands. Test-only: callers
      * that want the dictionary should use [appDataDictionary], which
      * cannot distinguish an absent extension from an empty one — a

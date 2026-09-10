@@ -118,6 +118,41 @@ class MarmotScenarioVectorTest {
     fun readdAfterEviction() = replay("readd-after-eviction.v1.json")
 
     /**
+     * A restart in the middle of a replayed, duplicated, reordered queue.
+     * Nothing may depend on state that only lived in memory.
+     */
+    @Test
+    fun restartDeliveryFaults() = replay("restart-delivery-faults.v1.json")
+
+    /**
+     * `leaver-removal-secrecy` gets most of the way and stops at a narrower
+     * bug than the one it found.
+     *
+     * It surfaced that a departing member's `SelfRemove` was staged, committed,
+     * and then NOT applied — `MlsGroup.saveState()` does not carry the
+     * staged-proposal pool, so the staging clone committed an empty proposal
+     * list, advanced the epoch, and left the leaver in the tree with the keys.
+     * That is fixed (see `MarmotLeaveProposalTest`), and the committer now
+     * reaches the expected epoch and membership.
+     *
+     * What remains: a PEER that has the same proposal staged does not apply the
+     * commit carrying it inline — bob stays an epoch behind and cannot read
+     * what follows. Asserted rather than deleted so it stays visible; the day
+     * that is fixed this test fails and the vector moves up to [replay].
+     */
+    @Test
+    fun aPeerWithTheSameProposalStagedStillMissesTheCommit() {
+        val thrown =
+            assertFailsWith<IllegalStateException> {
+                runBlocking { MarmotScenarioRunner(load("leaver-removal-secrecy.v1.json")).run() }
+            }
+        assertTrue(
+            thrown.message.orEmpty().contains("bob[default] epoch 2, expected 3"),
+            "the remaining divergence must still be the peer left behind: ${thrown.message}",
+        )
+    }
+
+    /**
      * `convergence-committer-selected` concludes with a `convergence_decision`
      * — which tip the client picked, under which rule, and whether the witness
      * quorum was met. Our convergence engine makes that decision but does not
@@ -189,6 +224,8 @@ class MarmotScenarioVectorTest {
                 "queue-faults.v1.json",
                 "delayed-past-epoch-app-message.v1.json",
                 "readd-after-eviction.v1.json",
+                "restart-delivery-faults.v1.json",
+                "leaver-removal-secrecy.v1.json",
             )
     }
 }

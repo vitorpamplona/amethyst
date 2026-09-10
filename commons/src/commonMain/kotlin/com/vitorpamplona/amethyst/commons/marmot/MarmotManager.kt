@@ -1593,6 +1593,29 @@ class MarmotManager(
     }
 
     /**
+     * Commit whatever proposals are staged for this group, if any.
+     *
+     * The case that matters is a departing member's standalone `SelfRemove`
+     * (MIP-03): the leaver cannot evict themselves — a proposal advances
+     * nothing — so it sits in the pool until an authorized member commits it.
+     * Until that happens the leaver is STILL IN THE TREE and still able to
+     * decrypt everything the group sends, which is the opposite of what
+     * leaving is for.
+     *
+     * Returns null when there is nothing staged, so a caller can drive this
+     * unconditionally after ingest without checking first.
+     */
+    suspend fun commitPendingProposals(
+        nostrGroupId: HexKey,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent? {
+        if (!groupManager.hasPendingProposals(nostrGroupId)) return null
+        return commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageCommit(nostrGroupId)
+        }.event
+    }
+
+    /**
      * Disband the group: write `marmot.group.lifecycle.v1` (`0x800c`) as
      * `disbanded` in a Commit every member replays.
      *

@@ -468,8 +468,28 @@ class MlsGroupManager(
         }
     }
 
-    /** Stage a self-update / empty Commit. See [StagedCommit]. */
-    suspend fun stageCommit(nostrGroupId: HexKey): StagedCommit = stage(nostrGroupId) { it.commit() }
+    /** Whether [nostrGroupId] has a staged proposal waiting for a Commit. */
+    fun hasPendingProposals(nostrGroupId: HexKey): Boolean = groups[nostrGroupId]?.hasPendingProposals() == true
+
+    /**
+     * Stage a Commit over whatever proposals are already staged.
+     *
+     * Unlike every other `stage*` entry point this one has nothing of its own
+     * to propose — the proposals are already in the LIVE group's pool, put
+     * there by ingesting a peer's standalone proposal. [MlsGroup.saveState]
+     * does not carry that pool, so the clone must be handed it explicitly;
+     * without that this commits an empty proposal list, advances the epoch,
+     * and drops the very proposal it was called to apply.
+     */
+    suspend fun stageCommit(nostrGroupId: HexKey): StagedCommit =
+        mutex.withLock {
+            val live = requireGroup(nostrGroupId)
+            val priorState = live.saveState()
+            val clone = MlsGroup.restore(priorState)
+            clone.adoptPendingProposals(live.pendingProposalsSnapshot())
+            val result = clone.commit()
+            StagedCommit(result, priorState, clone.saveState())
+        }
 
     /**
      * Process a received Commit, advancing the epoch.

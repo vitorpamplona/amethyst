@@ -106,6 +106,12 @@ class ScenarioVector(
         val addedMembers: List<String>? = null,
         /** The group description the vector states, when it states one. */
         val groupDescription: String? = null,
+        /**
+         * Members this client must have seen LEAVE, by client name. Same
+         * null-vs-empty distinction as [addedMembers]: an empty list is the
+         * assertion that nobody left.
+         */
+        val removedMembers: List<String>? = null,
     )
 
     /**
@@ -235,6 +241,9 @@ class ScenarioVector(
                         .orEmpty(),
                 addedMembers =
                     (obj["added_members"] as? JsonArray)
+                        ?.mapNotNull { (it as? JsonPrimitive)?.content },
+                removedMembers =
+                    (obj["removed_members"] as? JsonArray)
                         ?.mapNotNull { (it as? JsonPrimitive)?.content },
             )
     }
