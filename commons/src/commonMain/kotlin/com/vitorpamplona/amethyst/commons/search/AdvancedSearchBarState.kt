@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -36,44 +37,52 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
-enum class ChangeSource {
-    TEXT,
-    FORM,
-    INIT,
-}
-
+/**
+ * Desktop's search: the relay traffic, the results it produces, and the panel around them.
+ *
+ * Everything about *what is being searched* — the text, its parse, the debounce, the scope, the
+ * sort orders — is [state], shared with Android. This class used to own its own copy of all of
+ * it, which is how it came to rank Relevance against the whole box (chips included, so a query
+ * with a `from:` in it scored on the literal text of its own tokens) while Android ranked against
+ * the leftover words.
+ *
+ * What is left here is genuinely Desktop's: results arrive as relay callbacks rather than from a
+ * cache scan, and are held as raw [Event]s because Desktop renders them that way. Per-relay sync
+ * status and the expanded form panel have no Android counterpart at all.
+ */
 @OptIn(FlowPreview::class)
 class AdvancedSearchBarState(
     private val scope: CoroutineScope,
-    private val debounceMs: Long = 300L,
 ) {
-    private val _query = MutableStateFlow(SearchQuery.EMPTY)
-    val query: StateFlow<SearchQuery> = _query.asStateFlow()
+    /** What is being searched. Shared. */
+    val state = SearchState(scope)
 
-    private var _changeSource: ChangeSource = ChangeSource.INIT
-    val changeSource get() = _changeSource
-
-    private val _rawText = MutableStateFlow("")
-    val rawText: StateFlow<String> = _rawText.asStateFlow()
-
-    val displayText: StateFlow<String> =
-        combine(_query, _rawText) { query, raw ->
-            if (_changeSource == ChangeSource.TEXT) {
-                raw
-            } else {
-                QuerySerializer.serialize(query)
-            }
-        }.stateIn(scope, SharingStarted.Eagerly, "")
+    val query: StateFlow<SearchQuery> =
+        state.current
+            .map { it.query }
+            .stateIn(scope, SharingStarted.Eagerly, state.query)
 
     val debouncedQuery: StateFlow<SearchQuery> =
-        _query
-            .debounce(debounceMs)
+        state.debouncedForRelays
+            .map { it.query }
             .stateIn(scope, SharingStarted.Eagerly, SearchQuery.EMPTY)
+
+    /**
+     * What the field shows, which is simply the box.
+     *
+     * There used to be a `ChangeSource` flag here deciding whether to show the raw text or the
+     * serialized query, because a form edit wrote to the query and typing wrote to the text and
+     * the two could disagree. [SearchState.edit] writes the token into the box instead, so a
+     * button press and a typed token are the same thing and there is nothing left to decide.
+     */
+    val displayText: StateFlow<String> get() = state.text
+
+    val eventSortOrder: StateFlow<SearchSortOrder> get() = state.eventSortOrder
+    val peopleSortOrder: StateFlow<SearchSortOrder> get() = state.peopleSortOrder
 
     // People search results (from cache + relay)
     private val _peopleResults = MutableStateFlow<ImmutableList<User>>(persistentListOf())
@@ -83,21 +92,20 @@ class AdvancedSearchBarState(
     private val _noteResults = MutableStateFlow<ImmutableList<Event>>(persistentListOf())
     val noteResults: StateFlow<ImmutableList<Event>> = _noteResults.asStateFlow()
 
-    // Sort orders
-    private val _eventSortOrder = MutableStateFlow(SearchSortOrder.EVENT_DEFAULT)
-    val eventSortOrder: StateFlow<SearchSortOrder> = _eventSortOrder.asStateFlow()
-
-    private val _peopleSortOrder = MutableStateFlow(SearchSortOrder.PEOPLE_DEFAULT)
-    val peopleSortOrder: StateFlow<SearchSortOrder> = _peopleSortOrder.asStateFlow()
-
-    // Derived sorted results
+    /**
+     * The results in the order the reader asked for, through the shared pipeline.
+     *
+     * Ranked on the query's *leftover* terms rather than on the whole box: `from:npub1…` and
+     * `kind:article` are filters, and hunting for their literal text inside an event's content
+     * ranks on noise. This was scoring the raw field text until the pipeline took the job over.
+     */
     val sortedNoteResults: StateFlow<ImmutableList<Event>> =
-        combine(_noteResults, _eventSortOrder, _rawText) { notes, order, text ->
-            SearchResultSorter.sortEvents(notes, order, text).toImmutableList()
+        combine(_noteResults, state.eventSortOrder, query) { notes, order, q ->
+            SearchPipeline.rank(notes, order, q.text, { it }).toImmutableList()
         }.stateIn(scope, SharingStarted.Eagerly, persistentListOf())
 
     val sortedPeopleResults: StateFlow<ImmutableList<User>> =
-        combine(_peopleResults, _peopleSortOrder) { people, order ->
+        combine(_peopleResults, state.peopleSortOrder) { people, order ->
             SearchResultSorter.sortPeople(people, order).toImmutableList()
         }.stateIn(scope, SharingStarted.Eagerly, persistentListOf())
 
@@ -118,91 +126,53 @@ class AdvancedSearchBarState(
     val relayStates: StateFlow<ImmutableList<RelaySyncState>> = _relayStates.asStateFlow()
 
     // Text bar input
-    fun updateFromText(rawText: String) {
-        _changeSource = ChangeSource.TEXT
-        _rawText.value = rawText
-        _query.value = QueryParser.parse(rawText)
-    }
+    fun updateFromText(rawText: String) = state.updateText(rawText)
 
-    // Form panel inputs
-    fun updateKinds(kinds: List<Int>) {
-        _changeSource = ChangeSource.FORM
-        _query.value = _query.value.copy(kinds = kinds.toImmutableList())
-    }
+    // Form panel inputs. Each writes its token into the box; see SearchState.edit.
 
-    fun updatePseudoKinds(pseudoKinds: List<String>) {
-        _changeSource = ChangeSource.FORM
-        _query.value = _query.value.copy(pseudoKinds = pseudoKinds.toImmutableList())
-    }
+    fun updateKinds(kinds: List<Int>) = state.edit { it.copy(kinds = kinds.toImmutableList()) }
 
-    fun addAuthor(hexOrName: String) {
-        _changeSource = ChangeSource.FORM
-        val current = _query.value
-        val hex =
-            com.vitorpamplona.quartz.nip19Bech32
-                .decodePublicKeyAsHexOrNull(hexOrName)
-        if (hex != null) {
-            if (hex !in current.authors) {
-                _query.value = current.copy(authors = (current.authors + hex).toImmutableList())
-            }
-        } else {
-            if (hexOrName !in current.authorNames) {
-                _query.value = current.copy(authorNames = (current.authorNames + hexOrName).toImmutableList())
+    fun updatePseudoKinds(pseudoKinds: List<String>) = state.edit { it.copy(pseudoKinds = pseudoKinds.toImmutableList()) }
+
+    fun addAuthor(hexOrName: String) =
+        state.edit { current ->
+            val hex = decodePublicKeyAsHexOrNull(hexOrName)
+            when {
+                hex != null && hex !in current.authors -> current.copy(authors = (current.authors + hex).toImmutableList())
+                hex == null && hexOrName !in current.authorNames -> current.copy(authorNames = (current.authorNames + hexOrName).toImmutableList())
+                else -> current
             }
         }
-    }
 
-    fun removeAuthor(hex: String) {
-        _changeSource = ChangeSource.FORM
-        val current = _query.value
-        _query.value =
-            current.copy(
-                authors = current.authors.filter { it != hex }.toImmutableList(),
-                authorNames = current.authorNames.filter { it != hex }.toImmutableList(),
+    fun removeAuthor(hex: String) =
+        state.edit {
+            it.copy(
+                authors = it.authors.filter { author -> author != hex }.toImmutableList(),
+                authorNames = it.authorNames.filter { name -> name != hex }.toImmutableList(),
             )
-    }
+        }
 
     fun updateDateRange(
         since: Long?,
         until: Long?,
-    ) {
-        _changeSource = ChangeSource.FORM
-        _query.value = _query.value.copy(since = since, until = until)
-    }
+    ) = state.edit { it.copy(since = since, until = until) }
 
-    fun addHashtag(tag: String) {
-        _changeSource = ChangeSource.FORM
-        val current = _query.value
-        val cleaned = tag.removePrefix("#")
-        if (cleaned !in current.hashtags) {
-            _query.value = current.copy(hashtags = (current.hashtags + cleaned).toImmutableList())
+    fun addHashtag(tag: String) =
+        state.edit { current ->
+            val cleaned = tag.removePrefix("#")
+            if (cleaned in current.hashtags) current else current.copy(hashtags = (current.hashtags + cleaned).toImmutableList())
         }
-    }
 
-    fun removeHashtag(tag: String) {
-        _changeSource = ChangeSource.FORM
-        val current = _query.value
-        _query.value = current.copy(hashtags = current.hashtags.filter { it != tag }.toImmutableList())
-    }
+    fun removeHashtag(tag: String) = state.edit { it.copy(hashtags = it.hashtags.filter { h -> h != tag }.toImmutableList()) }
 
-    fun addExcludeTerm(term: String) {
-        _changeSource = ChangeSource.FORM
-        val current = _query.value
-        if (term !in current.excludeTerms) {
-            _query.value = current.copy(excludeTerms = (current.excludeTerms + term).toImmutableList())
+    fun addExcludeTerm(term: String) =
+        state.edit { current ->
+            if (term in current.excludeTerms) current else current.copy(excludeTerms = (current.excludeTerms + term).toImmutableList())
         }
-    }
 
-    fun removeExcludeTerm(term: String) {
-        _changeSource = ChangeSource.FORM
-        val current = _query.value
-        _query.value = current.copy(excludeTerms = current.excludeTerms.filter { it != term }.toImmutableList())
-    }
+    fun removeExcludeTerm(term: String) = state.edit { it.copy(excludeTerms = it.excludeTerms.filter { t -> t != term }.toImmutableList()) }
 
-    fun updateLanguage(lang: String?) {
-        _changeSource = ChangeSource.FORM
-        _query.value = _query.value.copy(language = lang)
-    }
+    fun updateLanguage(lang: String?) = state.edit { it.copy(language = lang) }
 
     fun initRelayStates(relays: Set<NormalizedRelayUrl>) {
         _relayStates.value =
@@ -251,23 +221,15 @@ class AdvancedSearchBarState(
         _panelExpanded.value = !_panelExpanded.value
     }
 
-    fun updateEventSortOrder(order: SearchSortOrder) {
-        _eventSortOrder.value = order
-    }
+    fun updateEventSortOrder(order: SearchSortOrder) = state.updateEventSortOrder(order)
 
-    fun updatePeopleSortOrder(order: SearchSortOrder) {
-        _peopleSortOrder.value = order
-    }
+    fun updatePeopleSortOrder(order: SearchSortOrder) = state.updatePeopleSortOrder(order)
 
     fun clearSearch() {
-        _changeSource = ChangeSource.INIT
-        _rawText.value = ""
-        _query.value = SearchQuery.EMPTY
+        state.clear()
         _peopleResults.value = persistentListOf()
         _noteResults.value = persistentListOf()
         _relayStates.value = persistentListOf()
-        _eventSortOrder.value = SearchSortOrder.EVENT_DEFAULT
-        _peopleSortOrder.value = SearchSortOrder.PEOPLE_DEFAULT
         activeSubIds.value = emptySet()
         eventDeduplicator.clear()
     }

@@ -27,39 +27,6 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.currentTimeSeconds
 
 object SearchResultSorter {
-    fun sortEvents(
-        events: List<Event>,
-        order: SearchSortOrder,
-        searchText: String,
-    ): List<Event> =
-        when (order) {
-            SearchSortOrder.NEWEST -> {
-                events.sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id })
-            }
-
-            SearchSortOrder.OLDEST -> {
-                events.sortedWith(compareBy<Event> { it.createdAt }.thenBy { it.id })
-            }
-
-            SearchSortOrder.RELEVANCE -> {
-                if (searchText.isBlank()) {
-                    events.sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id })
-                } else {
-                    events.sortedByDescending { scoreEvent(it, searchText) }
-                }
-            }
-
-            SearchSortOrder.POPULAR -> {
-                // Raw Event has no zap-total; callers that hold Note objects should sort by
-                // zapsAmount directly. Fall back to newest so the option is still harmless here.
-                events.sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id })
-            }
-
-            else -> {
-                events
-            }
-        }
-
     fun sortPeople(
         people: List<User>,
         order: SearchSortOrder,

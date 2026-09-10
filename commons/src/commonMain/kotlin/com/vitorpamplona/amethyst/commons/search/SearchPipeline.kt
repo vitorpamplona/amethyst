@@ -96,8 +96,7 @@ object SearchPipeline {
      * double holds every sat total exactly up to 2^53, which is past any zap that will exist.
      *
      * A front end holding raw events has no zap totals and leaves it at zero, which collapses
-     * POPULAR into newest for that caller — the same thing [SearchResultSorter.sortEvents]
-     * already does, said once instead of twice.
+     * POPULAR into newest for that caller — the only honest answer a raw `Event` can give.
      *
      * Sort keys are snapshotted per item before comparing. A `Note` is a mutable box: a newer
      * addressable event arriving from a relay mid-sort changes `createdAt` under the comparator,
