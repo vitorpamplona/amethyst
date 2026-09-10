@@ -1,6 +1,7 @@
 # Search state unification
 
-*Status: proposal — needs maintainer input on sequencing (see §3 and §9).*
+*Status: done, by order (b). Phases 1 and 2 both landed; §9's questions are answered
+below from what shipped rather than left open.*
 
 ## 1. Why
 
@@ -146,25 +147,42 @@ Do not attempt to unify these; they are real differences, not drift:
    nothing ever indexes them. That last one is a quartz bug, filed here rather
    than fixed: it is not search's to make.
 
-4. One debounce policy, stated once.
+4. **One debounce policy, stated once.** *(Done — two windows on `SearchState`,
+   named for what they protect: 100 ms before a cache scan, 300 ms before a REQ.
+   Eight collectors had been declaring the 100 separately.)*
 
 *Size: ~400 lines moved/added, ~200 deleted. No module boundaries crossed.*
 *Risk: low. Both callers keep their current shape.*
 
-### Phase 2 — one state holder *(gated on §3)*
+### Phase 2 — one state holder *(done, by order (b))*
 
-5. Extend `ICacheProvider` with the five search entry points `CacheSearch`
-   already implements: `findNotesMatching`, `findNotesStartingWith`,
-   `findPublicChatChannelsStartingWith`, `findEphemeralChatChannelsStartingWith`,
-   `findLiveActivityChannelsStartingWith`. *(Skip entirely under order (a).)*
-6. `SearchState` in commons; `SearchBarViewModel` and `AdvancedSearchBarState`
-   become shells over it.
-7. Collapse the 7 scope guards into one filter over the shared result set.
-8. Port history + saved searches to Android for free — they become a property of
-   `SearchState`, not of desktop.
+5. **The five search entry points on `ICacheProvider`.** *(Done.)* They default
+   to returning nothing rather than being abstract: Desktop's cache holds notes
+   and live channels but no public-chat or ephemeral store, and a port that
+   forced it to implement those would be asking it to lie. `CacheSearch` now
+   takes `LiveHiddenUsers` rather than the `HiddenUsersState` holder, which
+   also fixed `findNotesStartingWith` re-reading `.flow.value` five times down
+   one scan.
+6. **`SearchState` in commons.** *(Done.)* `SearchBarViewModel` 615 → 508 lines;
+   `AdvancedSearchBarState` delegates its text, parse, debounce and sort orders.
+   `SearchInput` carries the text and its parse as one value, so a collector
+   cannot pair one keystroke's characters with another's parse — and carries
+   `nameTerms`, the most-repeated parse of all.
+7. **One scope table.** *(Done — `SearchScope.shows(SearchResultKind)`.)* The
+   seven guards disagreed: the note flow let hashtags through under Notes, the
+   channel flows did not, and nothing said which was intended. The pinned test
+   is written from the old guards, not the new enum.
+8. **History and saved searches shared.** *(Done, and Android has both now.)*
+   `SearchHistory` + a two-method `SearchHistoryStorage`; Desktop keeps its
+   `Preferences` node, Android gets a DataStore file and a recent-searches list
+   in what used to be a blank screen.
 
-*Size: ~600 lines net reduction across the three files.*
-*Risk: medium — this is where behaviour can shift.*
+Two bugs surfaced only once the behaviour was under test: a saved search whose
+label contained a tab lost the query it named, and re-running a query typed in a
+different token order made a second history entry.
+
+*Risk realised: none observed. Both front ends compile and the parity test below
+passes; the behaviour changes are the ones named above.*
 
 ## 6. Non-goals
 
@@ -191,18 +209,38 @@ The pure layer is already well covered (`SearchFilterBuilderTest`,
 `SearchResultSorterTest`, `SearchSeedTest`, `SearchTokenizerTest`). Add before
 refactoring, not after:
 
-- **A parity table**: one query × both front ends → same filters, same kept set,
-  same order. This is the test that would have caught all four bugs.
-- **Scope × result-type**: the current 7 guards, pinned, before they collapse.
+- **A parity table**: one query × both front ends → same filters. *(Done:
+  `desktopApp`'s `SearchFilterParityTest`, 16 query shapes. It lives there
+  because that is the only module that can see both paths.)* This is the test
+  that would have caught all four bugs.
+- **Scope × result-type**: the 7 guards, pinned. *(Done: `SearchScopeTest`.)*
 - **Kind-set parity**: relay allowlist == local allowlist, and every kind in it
   is one `SearchableEvent` covers. *(Done: `RenderableKindsTest`.)*
+- Also added: `SearchPipelineTest` (one case per shipped bug), `SearchStateTest`,
+  `SearchHistoryTest`, and quartz's `SearchableKindsTest`.
 
-## 9. Open questions for the maintainer
+## 9. Questions, and what shipped
 
-1. Sequencing — order (a) or (b) in §3? (b) is additive to the sweep and
-   unblocks now; (a) is less total work but waits on step 3.
-2. Should `AdvancedSearchBarState` be deleted outright in Phase 2, or kept as a
-   desktop-side shell? It is in `commons/` but desktop-only today, which is
-   itself a naming problem.
-3. Is Android's 7-result-type surface wanted on desktop eventually? If yes, the
-   shared result map is the right shape; if no, it stays a front-end concern.
+1. **Sequencing — (a) or (b)?** (b). The five entry points are additive to the
+   sweep rather than parallel to it, and they survive the `LocalCache` move
+   unchanged: when step 3 lands, `DesktopLocalCache` starts answering the same
+   methods instead of inheriting the empty defaults, and nothing above the port
+   changes.
+2. **Delete `AdvancedSearchBarState` or keep it?** Kept, as Desktop's shell. What
+   is left in it is genuinely Desktop's — relay callbacks, raw `Event` results,
+   per-relay sync status, the form panel — so deleting it would only move that
+   code, not remove it. It is still in `commons/` while being desktop-only,
+   which remains a naming problem worth fixing on its own.
+3. **Is Android's 7-result-type surface wanted on Desktop?** Left open — it is a
+   product question, not a structural one. `SearchResultKind` now names the seven
+   in commons, so the answer can be acted on without another refactor.
+
+## 10. What is left
+
+- Pagination past the 100/200 cap (§6, still a non-goal here).
+- `FeedDefinitionEvent` and eleven other event classes are missing from
+  `EventFactory`, so their events parse as a plain `Event` and nothing indexes
+  them. A quartz bug, found by the kind sweep, not fixed here.
+- `.claude/skills/searchable-events/references/searchable-kinds.md` is stale
+  (133 kinds recorded, 142 reachable) and now has a machine-checked list to be
+  reconciled against.
