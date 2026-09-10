@@ -380,6 +380,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
@@ -3742,6 +3743,9 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is CommunityDefinitionEvent,
                 is CommunityListEvent,
                 is ContactListEvent,
+                // DVM heartbeat (11998): stored per Address(11998, author, d) so liveness checks find the
+                // beat at the announcement's mirror address (amethyst/plans/2026-09-10-dvm-heartbeat-liveness.md).
+                is DvmHeartbeatEvent,
                 is EmojiPackEvent,
                 is EmojiPackSelectionEvent,
                 is EphemeralChatListEvent,
