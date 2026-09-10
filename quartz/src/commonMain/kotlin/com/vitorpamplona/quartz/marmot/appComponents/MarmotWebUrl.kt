@@ -140,9 +140,68 @@ object MarmotWebUrl {
             }
         if (host == "localhost" || host.endsWith(".localhost")) return false
         if (host.startsWith("[")) return !isNonRoutableIpv6(host.trim('[', ']'))
-        val v4 = host.split('.').mapNotNull { it.toIntOrNull() }
-        if (v4.size == 4 && v4.all { it in 0..255 }) return !isNonRoutableIpv4(v4)
+        // A trailing dot is the same host ("example.com." == "example.com"),
+        // and would otherwise leave an empty last label below.
+        val bare = host.removeSuffix(".")
+        val packed = packIpv4(bare)
+        if (packed != null) return !isNonRoutableIpv4(packed)
+        // Not a name, and not an address shape we could evaluate. Refusing is
+        // the only safe answer: something like `0x7f.1` is an address to the
+        // resolver and a mystery to us, and "we could not tell" must not mean
+        // "go ahead".
+        if (looksNumeric(bare)) return false
         return true
+    }
+
+    /** True when the last label is numeric, which no registrable name may be. */
+    private fun looksNumeric(host: String): Boolean {
+        val last = host.substringAfterLast('.')
+        if (last.isEmpty()) return false
+        if (last.startsWith("0x") || last.startsWith("0X")) return true
+        return last.all { it in '0'..'9' }
+    }
+
+    /**
+     * Pack an IPv4 literal in ANY of the notations a resolver accepts into its
+     * 32-bit value, or null when [host] is not one.
+     *
+     * `inet_aton` — which is what the platform resolver ultimately uses — does
+     * not require four parts. `127.1` is 127.0.0.1, so is the bare integer
+     * `2130706433`, and `0x7f.0.0.1` is too; a leading zero means octal. An
+     * earlier version of this check only recognised four decimal parts, so
+     * every one of those forms walked past the loopback guard and was fetched.
+     *
+     * With N parts the LAST part is not one byte but all the bytes the earlier
+     * parts did not cover: `a.b` is a.(24 bits), `a.b.c` is a.b.(16 bits).
+     */
+    private fun packIpv4(host: String): Long? {
+        val parts = host.split('.')
+        if (parts.isEmpty() || parts.size > 4) return null
+        val values = parts.map { parseIpv4Part(it) ?: return null }
+        val lastWidth = 8 * (5 - parts.size)
+        val last = values.last()
+        if (lastWidth < 32 && last >= (1L shl lastWidth)) return null
+        var packed = last
+        // Every part but the last contributes exactly one byte, most
+        // significant first.
+        values.dropLast(1).forEachIndexed { i, v ->
+            if (v > 255L) return null
+            packed = packed or (v shl (8 * (3 - i)))
+        }
+        return packed
+    }
+
+    /** One `inet_aton` part: 0x-hex, leading-zero octal, or decimal. */
+    private fun parseIpv4Part(part: String): Long? {
+        if (part.isEmpty()) return null
+        val value =
+            when {
+                part.startsWith("0x") || part.startsWith("0X") ->
+                    part.substring(2).takeIf { it.isNotEmpty() }?.toLongOrNull(16)
+                part.length > 1 && part[0] == '0' -> part.substring(1).toLongOrNull(8)
+                else -> part.toLongOrNull(10)
+            }
+        return value?.takeIf { it in 0..0xFFFFFFFFL }
     }
 
     private fun hostOf(normalized: String): String {
@@ -151,15 +210,19 @@ object MarmotWebUrl {
         return splitHostPort(rest.substring(0, end)).first
     }
 
-    private fun isNonRoutableIpv4(o: List<Int>): Boolean =
-        o[0] == 0 ||
-            o[0] == 127 ||
-            o[0] == 10 ||
-            (o[0] == 172 && o[1] in 16..31) ||
-            (o[0] == 192 && o[1] == 168) ||
-            (o[0] == 169 && o[1] == 254) ||
-            (o[0] == 100 && o[1] in 64..127) ||
-            o[0] >= 224
+    /** Takes the packed 32-bit address so every notation is judged the same. */
+    private fun isNonRoutableIpv4(packed: Long): Boolean {
+        val a = ((packed shr 24) and 0xFF).toInt()
+        val b = ((packed shr 16) and 0xFF).toInt()
+        return a == 0 ||
+            a == 127 ||
+            a == 10 ||
+            (a == 172 && b in 16..31) ||
+            (a == 192 && b == 168) ||
+            (a == 169 && b == 254) ||
+            (a == 100 && b in 64..127) ||
+            a >= 224
+    }
 
     private fun isNonRoutableIpv6(addr: String): Boolean {
         val a = addr.lowercase()

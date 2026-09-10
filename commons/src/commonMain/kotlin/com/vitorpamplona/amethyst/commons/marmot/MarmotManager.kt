@@ -58,7 +58,9 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
+import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
@@ -66,6 +68,7 @@ import com.vitorpamplona.quartz.marmot.mls.tree.Credential
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishGate
+import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligation
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.marmot.protocolCore.PublishOutcome
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -81,6 +84,7 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -270,12 +274,66 @@ class MarmotManager(
                     obligation.obligationId,
                     if (confirmed) PublishOutcome.CONFIRMED else PublishOutcome.UNKNOWN,
                 )
+            // A confirmed retry makes the commit canonical exactly as
+            // [commitAndPublish] would, so it owes the same follow-up. Resolving
+            // the obligation and stopping there was enough to install the state
+            // and no more: the relay's echo of THIS event was never marked
+            // processed, so the inbound pipeline met an unknown kind:445 at an
+            // epoch we had already merged and opened a convergence pass against
+            // ourselves — a restart could put a healthy group into Recovering
+            // purely by succeeding.
+            if (confirmed) {
+                val framedCommit = framedCommitOf(obligation, event)
+                if (framedCommit != null) {
+                    inboundProcessor.markMessageProcessed(sha256(framedCommit).toHexKey())
+                    inboundProcessor.recordLocalCommit(
+                        groupId = obligation.groupId,
+                        framedCommitBytes = framedCommit,
+                        sourceEpoch = obligation.priorState.groupContext.epoch,
+                        preState = obligation.priorState,
+                    )
+                }
+                recordRetentionForCurrentEpoch(obligation.groupId)
+                syncGroupSystemRows(obligation.groupId, actor = signer.pubKey)
+            }
             Log.d("MarmotManager") {
                 "retryPendingPublishObligations(): ${obligation.groupId.take(8)}… " +
                     "confirmed=$confirmed lifecycle=$state"
             }
         }
     }
+
+    /**
+     * Recover the framed MLS commit from a stored obligation.
+     *
+     * The obligation keeps the signed kind:445 and the PRE-commit state, not
+     * the commit bytes — but that is enough, because the outer envelope was
+     * sealed under the pre-commit exporter secret and the pre-commit state
+     * derives it. Storing the commit bytes as well would say the same thing
+     * twice and change a persisted record's layout for it.
+     *
+     * Null when the envelope cannot be opened, which should not happen for our
+     * own event: the caller then skips the dedup and fork-window bookkeeping
+     * rather than guessing at an id.
+     */
+    private fun framedCommitOf(
+        obligation: MarmotPublishObligation,
+        event: Event,
+    ): ByteArray? =
+        try {
+            val preCommitKey =
+                MlsGroup
+                    .restore(obligation.priorState)
+                    .exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+            GroupEventEncryption.decrypt(event.content, preCommitKey)
+        } catch (e: Exception) {
+            Log.w(
+                "MarmotManager",
+                "could not reopen retried commit for ${obligation.groupId.take(8)}: ${e.message}",
+                e,
+            )
+            null
+        }
 
     /**
      * Computes a per-group kind:445 subscription `since` from the newest
@@ -1092,9 +1150,24 @@ class MarmotManager(
         if (!settlerRunning.compareAndSet(expect = false, update = true)) return
         runner.launch {
             try {
-                driveConvergenceToSettlement()
-            } finally {
+                // Re-check under the flag before releasing it. Between the loop
+                // deciding it has nothing left and the flag being cleared, a new
+                // pass can open and its startConvergenceSettler() lose the
+                // compareAndSet — leaving an open pass with no carrier until
+                // unrelated traffic happened to start another. Looping here
+                // closes that window: whoever holds the flag keeps working until
+                // a check finds nothing left AFTER the flag has been given up.
+                do {
+                    driveConvergenceToSettlement()
+                    settlerRunning.value = false
+                    if (inboundProcessor.openConvergencePasses().isEmpty()) break
+                    // Something arrived in the gap. Take the flag again if it is
+                    // still free; if another carrier got it first, it now owns
+                    // the work and this one can stop.
+                } while (settlerRunning.compareAndSet(expect = false, update = true))
+            } catch (e: Exception) {
                 settlerRunning.value = false
+                throw e
             }
         }
     }

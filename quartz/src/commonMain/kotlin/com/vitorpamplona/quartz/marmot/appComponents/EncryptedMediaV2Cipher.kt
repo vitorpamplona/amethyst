@@ -53,6 +53,24 @@ class EncryptedMediaV2Cipher(
     var ciphertextSha256: ByteArray = ByteArray(0)
         private set
 
+    /**
+     * The RECEIVING side, where the nonce and the plaintext hash arrive in the
+     * `imeta` tag instead of being produced by [encrypt].
+     *
+     * Without this the object could only ever decrypt what the same instance
+     * had just encrypted, which is the sender's case and nobody else's — the
+     * primary constructor leaves both fields empty and [decrypt] would fail on
+     * the length check.
+     */
+    constructor(
+        mediaSecret: ByteArray,
+        reference: EncryptedMediaReferenceV2,
+    ) : this(mediaSecret, reference.mediaType, reference.filename) {
+        nonce = reference.nonce
+        plaintextSha256 = reference.plaintextSha256
+        ciphertextSha256 = reference.ciphertextSha256
+    }
+
     override fun name(): String = EncryptedMediaV2.VERSION
 
     override fun encrypt(bytesToEncrypt: ByteArray): ByteArray {

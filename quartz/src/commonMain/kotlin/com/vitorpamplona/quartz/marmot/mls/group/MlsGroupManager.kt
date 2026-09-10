@@ -105,6 +105,20 @@ class MlsGroupManager(
     private val retainedEpochs = mutableMapOf<HexKey, MutableList<RetainedEpochSecrets>>()
 
     /**
+     * Bumped whenever a group's retained-epoch window changes, and compared
+     * against what was last written in [persistGroup].
+     *
+     * The window only moves when an epoch advances, but [persistGroup] runs on
+     * every application message too — sending one advances the sender's ratchet
+     * and that has to be durable. Re-encoding and rewriting an unchanged
+     * retention window on each of those was measurable: it is one TlsWriter and
+     * one byte array per retained epoch, plus a store write, for bytes
+     * identical to the ones already there.
+     */
+    private val retainedEpochRevision = mutableMapOf<HexKey, Long>()
+    private val retainedEpochPersisted = mutableMapOf<HexKey, Long>()
+
+    /**
      * Restore all groups from persistent storage on startup.
      * Call this once during Account initialization.
      */
@@ -130,6 +144,9 @@ class MlsGroupManager(
                             retained
                                 .map { RetainedEpochSecrets.decodeTls(TlsReader(it)) }
                                 .toMutableList()
+                        // What was just loaded is by definition what is on
+                        // disk, so the first persist has nothing to rewrite.
+                        retainedEpochPersisted[nostrGroupId] = retainedEpochRevision[nostrGroupId] ?: 0L
                         Log.d(TAG) { "restoreAll(): restored ${retained.size} retained epochs for $nostrGroupId" }
                     }
                 } catch (e: Exception) {
@@ -749,6 +766,8 @@ class MlsGroupManager(
     private suspend fun removeGroupStateUnlocked(nostrGroupId: HexKey) {
         groups.remove(nostrGroupId)
         retainedEpochs.remove(nostrGroupId)
+        retainedEpochRevision.remove(nostrGroupId)
+        retainedEpochPersisted.remove(nostrGroupId)
         store.delete(nostrGroupId)
     }
 
@@ -776,6 +795,8 @@ class MlsGroupManager(
             }
             groups.clear()
             retainedEpochs.clear()
+            retainedEpochRevision.clear()
+            retainedEpochPersisted.clear()
         }
 
     // --- Key Export ---
@@ -861,9 +882,11 @@ class MlsGroupManager(
             Log.d(TAG) { "persistGroup($nostrGroupId): serialized ${encoded.size} bytes, calling store.save" }
             store.save(nostrGroupId, encoded)
 
-            // Also persist retained epochs
+            // Also persist retained epochs — but only when the window actually
+            // moved. See [retainedEpochRevision].
             val retained = retainedEpochs[nostrGroupId]
-            if (retained != null) {
+            val revision = retainedEpochRevision[nostrGroupId] ?: 0L
+            if (retained != null && retainedEpochPersisted[nostrGroupId] != revision) {
                 val retainedBytes =
                     retained.map { epoch ->
                         val writer = TlsWriter()
@@ -871,6 +894,7 @@ class MlsGroupManager(
                         writer.toByteArray()
                     }
                 store.saveRetainedEpochs(nostrGroupId, retainedBytes)
+                retainedEpochPersisted[nostrGroupId] = revision
                 Log.d(TAG) { "persistGroup($nostrGroupId): persisted ${retainedBytes.size} retained epochs" }
             }
         } catch (e: Exception) {
@@ -896,6 +920,7 @@ class MlsGroupManager(
         while (retained.size > EPOCH_RETENTION_WINDOW) {
             retained.removeAt(0)
         }
+        retainedEpochRevision[nostrGroupId] = (retainedEpochRevision[nostrGroupId] ?: 0L) + 1
     }
 
     private fun tryDecryptWithRetainedEpoch(

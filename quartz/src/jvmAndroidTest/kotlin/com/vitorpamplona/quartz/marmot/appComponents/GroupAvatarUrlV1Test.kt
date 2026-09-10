@@ -130,6 +130,34 @@ class GroupAvatarUrlV1Test {
         assertTrue(!MarmotWebUrl.isSafeToContact("https://10.0.0.1/a.png"))
         assertTrue(!MarmotWebUrl.isSafeToContact("https://192.168.1.1/a.png"))
         assertTrue(!MarmotWebUrl.isSafeToContact("https://[::1]/a.png"))
+
+        // Loopback in every notation a resolver accepts, not just the dotted
+        // quad. `inet_aton` takes 1, 2, 3 or 4 parts, hex and octal included,
+        // so each of these reaches 127.0.0.1 — and each of them used to walk
+        // straight past this guard and be fetched.
+        assertTrue("two-part shorthand", !MarmotWebUrl.isSafeToContact("https://127.1/a.png"))
+        assertTrue("three-part shorthand", !MarmotWebUrl.isSafeToContact("https://127.0.1/a.png"))
+        assertTrue("bare 32-bit integer", !MarmotWebUrl.isSafeToContact("https://2130706433/a.png"))
+        assertTrue("hex first part", !MarmotWebUrl.isSafeToContact("https://0x7f.0.0.1/a.png"))
+        assertTrue("hex 32-bit", !MarmotWebUrl.isSafeToContact("https://0x7f000001/a.png"))
+        assertTrue("octal first part", !MarmotWebUrl.isSafeToContact("https://0177.0.0.1/a.png"))
+        assertTrue("trailing dot", !MarmotWebUrl.isSafeToContact("https://127.0.0.1./a.png"))
+        // Other private ranges in shorthand too.
+        assertTrue("10/8 shorthand", !MarmotWebUrl.isSafeToContact("https://10.1/a.png"))
+        assertTrue("169.254.0.1 as an integer", !MarmotWebUrl.isSafeToContact("https://2851995649/a.png"))
+
+        // A numeric-looking host we cannot evaluate is refused rather than
+        // allowed: "we could not tell" must not mean "go ahead".
+        assertTrue("out of range", !MarmotWebUrl.isSafeToContact("https://999999999999/a.png"))
+        assertTrue("too many parts", !MarmotWebUrl.isSafeToContact("https://1.2.3.4.5/a.png"))
+
+        // Ordinary names still resolve as safe, including ones with digits in
+        // them — only an all-numeric LAST label marks an address literal.
+        assertTrue(MarmotWebUrl.isSafeToContact("https://1.2.3.4.example.com/a.png"))
+        assertTrue(MarmotWebUrl.isSafeToContact("https://cdn2.example.com/a.png"))
+        assertTrue(MarmotWebUrl.isSafeToContact("https://example.com./a.png"))
+        // And a public address is still reachable.
+        assertTrue(MarmotWebUrl.isSafeToContact("https://8.8.8.8/a.png"))
     }
 
     @Test
