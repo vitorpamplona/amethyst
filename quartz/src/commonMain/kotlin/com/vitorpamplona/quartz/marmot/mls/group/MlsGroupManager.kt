@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.marmot.mls.group
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager.Companion.EPOCH_RETENTION_WINDOW
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.messages.ExternalJoinResult
@@ -468,6 +469,24 @@ class MlsGroupManager(
         }
     }
 
+    /**
+     * Stage a peer's standalone proposal and PERSIST the group.
+     *
+     * Staging alone only mutates memory, and a staged proposal is an
+     * obligation rather than a message: a departing member's `SelfRemove` sits
+     * in the pool until someone commits it. Losing it to a restart leaves the
+     * leaver in the tree, still holding the group's keys, with nobody holding
+     * the proposal that would evict them — so this writes through the same way
+     * an epoch change does.
+     */
+    suspend fun receiveStandaloneProposal(
+        nostrGroupId: HexKey,
+        pubMsg: PublicMessage,
+    ) = mutex.withLock {
+        requireGroup(nostrGroupId).receivePublicMessageProposal(pubMsg)
+        persistGroup(nostrGroupId)
+    }
+
     /** Whether [nostrGroupId] has a staged proposal waiting for a Commit. */
     fun hasPendingProposals(nostrGroupId: HexKey): Boolean = groups[nostrGroupId]?.hasPendingProposals() == true
 
@@ -476,20 +495,12 @@ class MlsGroupManager(
      *
      * Unlike every other `stage*` entry point this one has nothing of its own
      * to propose — the proposals are already in the LIVE group's pool, put
-     * there by ingesting a peer's standalone proposal. [MlsGroup.saveState]
-     * does not carry that pool, so the clone must be handed it explicitly;
-     * without that this commits an empty proposal list, advances the epoch,
-     * and drops the very proposal it was called to apply.
+     * there by ingesting a peer's standalone proposal. That pool travels with
+     * [MlsGroup.saveState], so the clone inherits it; when it did not, this
+     * committed an empty proposal list, advanced the epoch, and dropped the
+     * very proposal it was called to apply.
      */
-    suspend fun stageCommit(nostrGroupId: HexKey): StagedCommit =
-        mutex.withLock {
-            val live = requireGroup(nostrGroupId)
-            val priorState = live.saveState()
-            val clone = MlsGroup.restore(priorState)
-            clone.adoptPendingProposals(live.pendingProposalsSnapshot())
-            val result = clone.commit()
-            StagedCommit(result, priorState, clone.saveState())
-        }
+    suspend fun stageCommit(nostrGroupId: HexKey): StagedCommit = stage(nostrGroupId) { it.commit() }
 
     /**
      * Process a received Commit, advancing the epoch.

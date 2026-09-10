@@ -27,6 +27,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -44,14 +45,18 @@ class MarmotLeaveProposalTest {
 
     private class Fixture {
         val signer = NostrSignerInternal(KeyPair())
-        val manager =
-            MarmotManager(
-                signer,
-                SnapshotStateStore(),
-                SnapshotMessageStore(),
-                SnapshotBundleStore(),
-                publisher = ACCEPTING_RELAY,
-            )
+        val mlsStore = SnapshotStateStore()
+        val messageStore = SnapshotMessageStore()
+        val bundleStore = SnapshotBundleStore()
+        var manager = build()
+
+        private fun build() = MarmotManager(signer, mlsStore, messageStore, bundleStore, publisher = ACCEPTING_RELAY)
+
+        /** Drop the process and come back over the same durable stores. */
+        suspend fun restart() {
+            manager = build()
+            manager.restoreAll()
+        }
     }
 
     @Test
@@ -95,5 +100,102 @@ class MarmotLeaveProposalTest {
                 "committing a SelfRemove must actually evict the leaver — otherwise they keep " +
                     "the group's keys and keep reading everything sent after they left",
             )
+        }
+
+    @Test
+    fun `every member applies the commit that evicts the leaver, not just the committer`() =
+        runBlocking {
+            // Three members, because the bug only shows with a WITNESS: alice
+            // commits carol's departure, and bob has to reach the same state
+            // from the commit alone.
+            val alice = Fixture()
+            val bob = Fixture()
+            val carol = Fixture()
+            alice.manager.createCurrentProfileGroup(
+                nostrGroupId = nostrGroupId,
+                relays = listOf("wss://relay.invalid"),
+                profile = GroupProfileV1("departures", ""),
+            )
+
+            val (commit, welcomes) =
+                alice.manager.addMembers(
+                    nostrGroupId,
+                    listOf(
+                        bob.manager.generateKeyPackageEvent(relays = emptyList()),
+                        carol.manager.generateKeyPackageEvent(relays = emptyList()),
+                    ),
+                    emptyList(),
+                )
+            welcomes.forEach { delivery ->
+                when (delivery.recipientPubKey) {
+                    bob.signer.pubKey -> bob.manager.ingest(delivery.giftWrapEvent)
+                    carol.signer.pubKey -> carol.manager.ingest(delivery.giftWrapEvent)
+                }
+            }
+            alice.manager.ingest(commit.signedEvent)
+            assertEquals(3, alice.manager.memberCount(nostrGroupId))
+
+            // Carol departs. Her proposal reaches everyone, as it does on the
+            // wire — it is published as its own group event.
+            val proposal = carol.manager.leaveGroup(nostrGroupId)
+            alice.manager.ingest(proposal.signedEvent)
+            bob.manager.ingest(proposal.signedEvent)
+
+            // Alice, the admin, commits it.
+            val eviction = alice.manager.commitPendingProposals(nostrGroupId, emptyList())
+            assertNotNull(eviction, "the staged SelfRemove must produce a commit")
+            assertEquals(2, alice.manager.memberCount(nostrGroupId))
+
+            // Bob applies that commit. He must land exactly where alice is.
+            bob.manager.ingest(eviction.signedEvent)
+
+            assertEquals(
+                alice.manager.groupEpoch(nostrGroupId),
+                bob.manager.groupEpoch(nostrGroupId),
+                "a witness that stays an epoch behind cannot read anything the group sends next",
+            )
+            assertEquals(2, bob.manager.memberCount(nostrGroupId))
+
+            // And the right person left. An inline SelfRemove is attributed to
+            // whoever committed it, so getting this wrong evicts the COMMITTER.
+            val remaining =
+                bob.manager
+                    .memberPubkeys(nostrGroupId)
+                    .map { it.pubkey }
+                    .toSet()
+            assertEquals(setOf(alice.signer.pubKey, bob.signer.pubKey), remaining)
+        }
+
+    @Test
+    fun `a staged SelfRemove survives a restart`() =
+        runBlocking {
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.manager.createCurrentProfileGroup(
+                nostrGroupId = nostrGroupId,
+                relays = listOf("wss://relay.invalid"),
+                profile = GroupProfileV1("durable departures", ""),
+            )
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (commit, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+            alice.manager.ingest(commit.signedEvent)
+
+            // Bob departs and alice stages his proposal — then alice's process
+            // dies before anyone commits it.
+            alice.manager.ingest(bob.manager.leaveGroup(nostrGroupId).signedEvent)
+            assertTrue(alice.manager.groupManager.hasPendingProposals(nostrGroupId))
+
+            alice.restart()
+
+            // The obligation has to come back. Losing it is not losing a
+            // message — it leaves bob in the tree holding the group's keys,
+            // with nobody holding the proposal that evicts him.
+            assertTrue(
+                alice.manager.groupManager.hasPendingProposals(nostrGroupId),
+                "a staged SelfRemove must survive a restart, or the leaver never leaves",
+            )
+            assertNotNull(alice.manager.commitPendingProposals(nostrGroupId, emptyList()))
+            assertEquals(1, alice.manager.memberCount(nostrGroupId))
         }
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.marmot.mls.group
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.messages.GroupContext
+import com.vitorpamplona.quartz.marmot.mls.messages.Proposal
 import com.vitorpamplona.quartz.marmot.mls.schedule.EpochSecrets
 import com.vitorpamplona.quartz.marmot.mls.schedule.SenderRatchetState
 
@@ -71,6 +72,16 @@ data class MlsGroupState(
      * across a restart makes the same group undecryptable on relaunch.
      */
     val pathPrivateKeys: Map<Int, ByteArray> = emptyMap(),
+    /**
+     * Proposals staged but not yet committed (STATE_VERSION 4+).
+     *
+     * Mostly this pool holds a departing member's standalone `SelfRemove`,
+     * waiting for an authorized member to commit it. Dropping it on restart
+     * does not lose a message — it loses the OBLIGATION: the leaver stays in
+     * the tree, still holding the group's keys, and nobody is left holding
+     * the proposal that would evict them.
+     */
+    val pendingProposals: List<PendingProposal> = emptyList(),
 ) {
     fun encodeTls(): ByteArray {
         val writer = TlsWriter()
@@ -133,6 +144,17 @@ data class MlsGroupState(
             writer.putOpaqueVarInt(key)
         }
 
+        // Staged proposals (STATE_VERSION 4+). The AuthenticatedContent bytes
+        // travel with each entry because they, not the bare proposal, are what
+        // a later `ProposalRef` hashes (RFC 9420 §5.2) — a restored pool that
+        // lost them could no longer be matched by a commit that references it.
+        writer.putUint32(pendingProposals.size.toLong())
+        for (pending in pendingProposals) {
+            writer.putUint32(pending.senderLeafIndex.toLong())
+            writer.putOpaqueVarInt(pending.proposal.toTlsBytes())
+            writer.putOpaqueVarInt(pending.authenticatedContentBytes ?: ByteArray(0))
+        }
+
         return writer.toByteArray()
     }
 
@@ -156,8 +178,11 @@ data class MlsGroupState(
          * v3: appends [pathPrivateKeys] so a restore can still decrypt an
          *     UpdatePath addressed at one of our ancestors. Older blobs decode
          *     with an empty map and refill on the next commit we process.
+         * v4: appends [pendingProposals] so a departing member's staged
+         *     `SelfRemove` survives a restart instead of leaving them in the
+         *     tree. Older blobs decode with an empty pool.
          */
-        private const val STATE_VERSION = 3
+        private const val STATE_VERSION = 4
 
         fun decodeTls(data: ByteArray): MlsGroupState {
             val reader = TlsReader(data)
@@ -234,6 +259,30 @@ data class MlsGroupState(
                     emptyMap()
                 }
 
+            // v4+: proposals staged and not yet committed. Absent for older
+            // blobs, which restore with an empty pool — the same behaviour
+            // every version before this one had.
+            val pendingProposals =
+                if (version >= 4 && reader.hasRemaining) {
+                    val count = reader.readUint32().toInt()
+                    buildList {
+                        repeat(count) {
+                            val senderLeafIndex = reader.readUint32().toInt()
+                            val proposal = Proposal.decodeTls(TlsReader(reader.readOpaqueVarInt()))
+                            val authenticatedContentBytes = reader.readOpaqueVarInt()
+                            add(
+                                PendingProposal(
+                                    proposal = proposal,
+                                    senderLeafIndex = senderLeafIndex,
+                                    authenticatedContentBytes = authenticatedContentBytes.takeIf { it.isNotEmpty() },
+                                ),
+                            )
+                        }
+                    }
+                } else {
+                    emptyList()
+                }
+
             return MlsGroupState(
                 groupContext = groupContext,
                 treeBytes = treeBytes,
@@ -246,6 +295,7 @@ data class MlsGroupState(
                 encryptionSecret = encryptionSecret,
                 senderRatchetStates = senderRatchetStates,
                 pathPrivateKeys = pathPrivateKeys,
+                pendingProposals = pendingProposals,
             )
         }
     }

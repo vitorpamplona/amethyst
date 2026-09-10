@@ -125,32 +125,19 @@ class MarmotScenarioVectorTest {
     fun restartDeliveryFaults() = replay("restart-delivery-faults.v1.json")
 
     /**
-     * `leaver-removal-secrecy` gets most of the way and stops at a narrower
-     * bug than the one it found.
+     * A leaver stops being able to read the group at the commit that evicts
+     * them — and every OTHER member applies that commit too.
      *
-     * It surfaced that a departing member's `SelfRemove` was staged, committed,
-     * and then NOT applied — `MlsGroup.saveState()` does not carry the
-     * staged-proposal pool, so the staging clone committed an empty proposal
-     * list, advanced the epoch, and left the leaver in the tree with the keys.
-     * That is fixed (see `MarmotLeaveProposalTest`), and the committer now
-     * reaches the expected epoch and membership.
-     *
-     * What remains: a PEER that has the same proposal staged does not apply the
-     * commit carrying it inline — bob stays an epoch behind and cannot read
-     * what follows. Asserted rather than deleted so it stays visible; the day
-     * that is fixed this test fails and the vector moves up to [replay].
+     * This vector found two real defects. The staged-proposal pool did not
+     * travel with the group state, so the commit meant to evict the leaver
+     * carried an empty proposal list and left them in the tree with the keys.
+     * And a peer's proposal was inlined into that commit, which attributes it
+     * to the committer, while the committer derived a path-based commit secret
+     * for a commit that carries no path — so every witness rejected it and
+     * fell an epoch behind.
      */
     @Test
-    fun aPeerWithTheSameProposalStagedStillMissesTheCommit() {
-        val thrown =
-            assertFailsWith<IllegalStateException> {
-                runBlocking { MarmotScenarioRunner(load("leaver-removal-secrecy.v1.json")).run() }
-            }
-        assertTrue(
-            thrown.message.orEmpty().contains("bob[default] epoch 2, expected 3"),
-            "the remaining divergence must still be the peer left behind: ${thrown.message}",
-        )
-    }
+    fun leaverRemovalSecrecy() = replay("leaver-removal-secrecy.v1.json")
 
     /**
      * `convergence-committer-selected` concludes with a `convergence_decision`

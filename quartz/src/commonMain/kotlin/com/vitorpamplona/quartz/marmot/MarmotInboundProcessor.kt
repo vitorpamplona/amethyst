@@ -666,11 +666,13 @@ class MarmotInboundProcessor(
                 // without this every other member silently dropped the
                 // proposal and the admin's commit then failed with "Commit
                 // references unknown proposal" (marmot-interop test 15).
-                val group =
-                    groupManager.getGroup(groupId)
-                        ?: return GroupEventResult.Error(groupId, "Group not found")
+                if (groupManager.getGroup(groupId) == null) {
+                    return GroupEventResult.Error(groupId, "Group not found")
+                }
                 try {
-                    group.receivePublicMessageProposal(pubMsg)
+                    // Staged AND persisted: the pool is an obligation to
+                    // commit, so it has to outlive this process.
+                    groupManager.receiveStandaloneProposal(groupId, pubMsg)
                     GroupEventResult.ProposalStaged(groupId, pubMsg.sender.leafIndex)
                 } catch (e: Exception) {
                     GroupEventResult.Error(

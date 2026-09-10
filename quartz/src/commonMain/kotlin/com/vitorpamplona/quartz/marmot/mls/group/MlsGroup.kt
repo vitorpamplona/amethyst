@@ -188,21 +188,6 @@ class MlsGroup private constructor(
     fun hasPendingProposals(): Boolean = pendingProposals.isNotEmpty()
 
     /**
-     * Replace this group's staged-proposal pool with [proposals].
-     *
-     * Exists for one reason: [saveState] does NOT serialize the pool, so a
-     * clone made for staging a commit starts empty, and `commit()` on it
-     * produces an EMPTY commit — the epoch advances and every proposal the
-     * commit was meant to apply is silently dropped. A departing member's
-     * `SelfRemove` is the case that bites: the group looks like it processed
-     * the departure, and the leaver is still in the tree holding the keys.
-     */
-    internal fun adoptPendingProposals(proposals: List<PendingProposal>) {
-        pendingProposals.clear()
-        pendingProposals.addAll(proposals)
-    }
-
-    /**
      * The GroupContext extension list as it stands. Test-only: callers
      * that want the dictionary should use [appDataDictionary], which
      * cannot distinguish an absent extension from an empty one — a
@@ -337,6 +322,11 @@ class MlsGroup private constructor(
             // key+nonce within this epoch (RFC 9420 §9).
             senderRatchetStates = secretTree.exportSenderStates(),
             pathPrivateKeys = pathPrivateKeys.toMap(),
+            // A staged proposal is an obligation, not a message: a departing
+            // member's SelfRemove sits here until someone commits it, and a
+            // restart that forgot it would leave the leaver in the tree with
+            // the group's keys and nobody holding the proposal to evict them.
+            pendingProposals = pendingProposals.toList(),
         )
     }
 
@@ -668,7 +658,27 @@ class MlsGroup private constructor(
         // `ValidationError(InvalidMembershipTag)`.
         val preCommitExtensions = groupContext.extensions
 
-        val proposalOrRefs = proposals.map { ProposalOrRef.Inline(it.proposal) }
+        // Inline only what WE authored. A proposal from another member has to
+        // go in by REFERENCE, because an inline proposal carries no sender: a
+        // receiving peer attributes it to the committer (see the
+        // `ProposalOrRef.Inline` branch of `processCommitInner`). For a
+        // `SelfRemove` that is not a cosmetic difference — the proposal means
+        // "remove my leaf", so inlining someone else's says "remove the
+        // committer's leaf", and every witness either evicts the wrong member
+        // or refuses the commit outright and falls an epoch behind.
+        //
+        // A reference resolves against the receiver's own pending pool, which
+        // is where their copy of the same standalone proposal already sits,
+        // carrying the ORIGINAL proposer's leaf index.
+        val proposalOrRefs =
+            proposals.map { pending ->
+                if (pending.senderLeafIndex == myLeafIndex) {
+                    ProposalOrRef.Inline(pending.proposal)
+                } else {
+                    val refValue = pending.authenticatedContentBytes ?: pending.proposal.toTlsBytes()
+                    ProposalOrRef.Reference(MlsCryptoProvider.refHash("MLS 1.0 Proposal Reference", refValue))
+                }
+            }
 
         // Check if we need an UpdatePath. RFC 9420 §12.4.1: the path value
         // MUST be populated if the proposal list is empty (pure forward-
@@ -707,7 +717,13 @@ class MlsGroup private constructor(
         // We just minted the keys for our whole direct path. Keep the private
         // halves: the next committer will address us at one of these nodes,
         // not at our leaf, as soon as our subtree is merged.
-        run {
+        //
+        // ONLY when this commit actually carries the path. A commit that omits
+        // the UpdatePath never publishes these public halves, so the tree keeps
+        // the old keys and a peer still encrypts to those — storing the fresh
+        // private halves here would overwrite the ones that can actually
+        // decrypt the next commit addressed to our ancestors.
+        if (needsPath && pathSecrets.isNotEmpty()) {
             val fullPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
             pathPrivateKeys.keys.retainAll(fullPath.toSet())
             for ((i, nodeIdx) in fullPath.withIndex()) {
@@ -890,8 +906,19 @@ class MlsGroup private constructor(
         // encryption-key seed rather than the key-schedule contribution. That
         // one-step gap silently diverged the two sides' epoch_secret and made
         // every cross-impl commit fail `ConfirmationTagMismatch`.
+        //
+        // Keyed on whether the commit CARRIES a path, not on whether we happened
+        // to derive path secrets. RFC 9420 §12.4.2: a commit with no
+        // `update_path` contributes a zero commit_secret, which is exactly what
+        // every receiver uses (see the `commit.updatePath != null` branch of
+        // `processCommitInner`). We derive `pathSecrets` unconditionally to
+        // build the path when it is needed; using them for the key schedule
+        // when the path was OMITTED gives the committer an epoch secret nobody
+        // else can reach, and every member rejects the commit with a
+        // confirmation-tag mismatch. A SelfRemove-only commit — a departing
+        // member's eviction — is precisely the case that omits the path.
         val commitSecret =
-            if (pathSecrets.isNotEmpty()) {
+            if (updatePath != null && pathSecrets.isNotEmpty()) {
                 MlsCryptoProvider.deriveSecret(pathSecrets.last().pathSecret, "path")
             } else {
                 ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
@@ -4133,6 +4160,7 @@ class MlsGroup private constructor(
                 encryptionPrivateKey = state.encryptionPrivateKey,
                 interimTranscriptHash = state.interimTranscriptHash,
                 pathPrivateKeys = state.pathPrivateKeys.toMutableMap(),
+                pendingProposals = state.pendingProposals.toMutableList(),
             )
         }
 
