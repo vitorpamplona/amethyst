@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.communities.list.CommunitiesListFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.DvmHeartbeatSources
 import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.followPacks.FollowPacksFilterAssembler
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.video.VideoFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.wallet.OnchainZapsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.workouts.WorkoutsFilterAssembler
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.cachedDvmAnnouncements
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblyGroup
@@ -94,6 +96,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomLi
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.CoroutineScope
 
 class RelaySubscriptionsCoordinator(
@@ -113,7 +118,25 @@ class RelaySubscriptionsCoordinator(
     val home = HomeFilterAssembler(client)
     val chatroomList = ChatroomListFilterAssembler(client)
     val video = VideoFilterAssembler(client)
-    val discovery = DiscoveryFilterAssembler(client)
+    val discovery =
+        DiscoveryFilterAssembler(
+            client,
+            dvmHeartbeat =
+                DvmHeartbeatSources(
+                    announcements = cache::cachedDvmAnnouncements,
+                    outboxRelaysFor = { pubkey ->
+                        buildSet {
+                            cache.getUserIfExists(pubkey)?.outboxRelays()?.let { addAll(it) }
+                            addAll(cache.relayHints.hintsForKey(pubkey))
+                        }
+                    },
+                    changes =
+                        listOf(
+                            cache.observeNotes(Filter(kinds = listOf(AppDefinitionEvent.KIND))),
+                            cache.observeNotes(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND))),
+                        ),
+                ),
+        )
 
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.

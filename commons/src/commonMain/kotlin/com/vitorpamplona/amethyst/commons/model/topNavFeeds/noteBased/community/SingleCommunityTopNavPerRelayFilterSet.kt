@@ -27,4 +27,6 @@ class SingleCommunityTopNavPerRelayFilterSet(
     val set: Map<NormalizedRelayUrl, SingleCommunityTopNavPerRelayFilter>,
 ) : IFeedTopNavPerRelayFilterSet {
     override fun scopeFor(relay: NormalizedRelayUrl) = set[relay]
+
+    override fun relays() = set.keys
 }

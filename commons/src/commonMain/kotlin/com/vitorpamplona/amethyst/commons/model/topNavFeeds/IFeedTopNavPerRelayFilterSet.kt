@@ -35,4 +35,15 @@ interface IFeedTopNavPerRelayFilterSet {
      * so it carries only the slice that applies to it.
      */
     fun scopeFor(relay: NormalizedRelayUrl): IFeedTopNavPerRelayFilter?
+
+    /**
+     * The relays this selection's subscriptions should be issued on, regardless of whether the
+     * selection's per-kind filter dispatch produces a filter for each of them.
+     *
+     * Consumers that must stay alive across every selection — the DVM heartbeat REQ, whose beats
+     * keep the cached discovery list's liveness gate fresh — read this instead of deriving relays
+     * from the per-kind filters, which silently skip relays whose per-relay slice is empty and
+     * whole selections (the Relay variant) that dispatch no content filters at all.
+     */
+    fun relays(): Set<NormalizedRelayUrl>
 }

@@ -27,4 +27,6 @@ class LocationTopNavPerRelayFilterSet(
     val set: Map<NormalizedRelayUrl, LocationTopNavPerRelayFilter>,
 ) : IFeedTopNavPerRelayFilterSet {
     override fun scopeFor(relay: NormalizedRelayUrl) = set[relay]
+
+    override fun relays() = set.keys
 }

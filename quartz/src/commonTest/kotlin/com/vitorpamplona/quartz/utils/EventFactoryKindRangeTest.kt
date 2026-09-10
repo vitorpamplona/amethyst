@@ -73,6 +73,9 @@ class EventFactoryKindRangeTest {
             10090,
             10101,
             10102,
+            // DVM heartbeat: the d tag is the DVM's NIP-89 DTAG and keys its client-side
+            // cache address (relay storage stays plain-replaceable per the kind range).
+            11998,
         )
 
     private val probeDTag = "probe-d-tag"

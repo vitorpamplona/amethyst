@@ -131,6 +131,9 @@ fun DvmContentDiscoveryScreen(
 ) {
     val noteAuthor = appDefinition.author ?: return
 
+    val appDef = appDefinition.event as? AppDefinitionEvent
+    val heartbeatFresh = if (appDef != null) rememberDvmHeartbeatFresh(appDef.address(), accountViewModel) else null
+
     var requestEventID by
         remember(appDefinition) {
             mutableStateOf<Note?>(null)
@@ -151,22 +154,18 @@ fun DvmContentDiscoveryScreen(
         }
     }
 
-    RefresheableBox(
-        onRefresh = onRefresh,
-    ) {
-        val myRequestEventID = requestEventID
-        if (myRequestEventID != null) {
-            ObserverContentDiscoveryResponse(
-                appDefinition,
-                myRequestEventID,
-                onRefresh,
-                accountViewModel,
-                nav,
-            )
-        } else {
-            // TODO: Make a good splash screen with loading animation for this DVM.
-            // FeedDVM(appDefinition, null, accountViewModel, nav)
-            FeedEmptyWithStatus(appDefinition, stringRes(Res.string.dvm_requesting_job), accountViewModel, nav)
+    RefresheableBox(onRefresh = onRefresh) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            val myRequestEventID = requestEventID
+            if (myRequestEventID != null) {
+                ObserverContentDiscoveryResponse(appDefinition, myRequestEventID, onRefresh, accountViewModel, nav)
+            } else {
+                // TODO: Make a good splash screen with loading animation for this DVM.
+                FeedEmptyWithStatus(appDefinition, stringRes(Res.string.dvm_requesting_job), accountViewModel, nav)
+            }
+            if (heartbeatFresh?.value == false) {
+                DvmOfflineBanner(modifier = Modifier.align(Alignment.TopCenter))
+            }
         }
     }
 }

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.relayClient.discover
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.DiscoveryDvmHeartbeatSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.DvmHeartbeatSources
 import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedQueryState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
@@ -56,10 +58,12 @@ class DiscoveryQueryState(
 
 class DiscoveryFilterAssembler(
     client: INostrClient,
+    dvmHeartbeat: DvmHeartbeatSources,
 ) : TopNavFeedFilterAssembler<DiscoveryQueryState>({ keys ->
         listOf(
             DiscoveryLongFormClassifiedsAndDVMSubAssembler1(client, keys),
             DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(client, keys),
             DiscoveryPublicChatsAndCommunitiesSubAssembler3(client, keys),
+            DiscoveryDvmHeartbeatSubAssembler(client, keys, dvmHeartbeat),
         )
     })

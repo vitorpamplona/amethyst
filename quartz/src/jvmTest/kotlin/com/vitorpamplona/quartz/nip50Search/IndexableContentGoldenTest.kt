@@ -107,7 +107,9 @@ class IndexableContentGoldenTest {
             "a kind's indexed text changed. If deliberate: rerun with -Dgolden=write, update " +
                 "references/searchable-kinds.md in the same commit, and schedule a reindex " +
                 "(IEventStore.reindexFullTextSearch) — existing databases keep their old text.",
-            golden.readText().trim(),
+            // Normalize CRLF: Windows checkouts (autocrlf) would otherwise fail this comparison
+            // on invisible line endings alone.
+            golden.readText().replace("\r\n", "\n").trim(),
             actual.trim(),
         )
     }
@@ -160,6 +162,11 @@ class IndexableContentGoldenTest {
          * This was a list of its own until it drifted: seventeen searchable kinds — every video
          * kind among them — were absent and so were never pinned by any of the tests below, and
          * one entry (31890) was a kind the factory does not build at all.
+         *
+         * It holds only *searchable* kinds now, so a kind pinned here as `<not searchable>` — 11998,
+         * the heartbeat, was one — drops out of the golden. Nothing is lost by that: pinning the
+         * row caught a kind that started being indexed, and `SearchableKindsTest` catches the same
+         * thing across the whole 16-bit space rather than for the kinds someone remembered to list.
          */
         val KINDS = SearchableKinds.ALL
     }

@@ -2226,6 +2226,8 @@
     <string name="dvm_home_status_payment_required">This feed algorithm requires payment</string>
     <string name="dvm_home_status_error">The feed algorithm returned an error</string>
     <string name="dvm_home_retry">Retry</string>
+    <string name="dvm_offline">Offline</string>
+    <string name="dvm_offline_banner">This feed algorithm has not sent a heartbeat recently and may be down</string>
     <string name="temporary_account">Log off on device lock</string>
     <string name="group_relay">Chat Relay</string>
     <string name="share_image">Share image…</string>
