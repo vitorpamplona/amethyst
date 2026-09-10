@@ -2251,6 +2251,7 @@ class MarmotManager(
             // Drives which actions a front end may offer at all — a legacy
             // group has no carrier for lifecycle, URL avatar or media policy.
             chatroom.isCurrentProfile.value = view.isCurrentProfile
+            chatroom.hasEncryptedMediaPolicy.value = encryptedMediaPolicy(nostrGroupId) != null
         }
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)

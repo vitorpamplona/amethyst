@@ -89,6 +89,15 @@ class MarmotGroupChatroom(
      */
     var isCurrentProfile = MutableStateFlow(true)
 
+    /**
+     * True once the group carries the `encrypted-media-v2` policy (`0x800b`).
+     *
+     * Attachments fall back to MIP-04 without it, so a front end needs this to
+     * tell an admin the group can be upgraded — and to stop offering the
+     * upgrade once it has been.
+     */
+    var hasEncryptedMediaPolicy = MutableStateFlow(false)
+
     var adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
     var relays = MutableStateFlow<List<String>>(emptyList())
     var memberCount = MutableStateFlow(0)

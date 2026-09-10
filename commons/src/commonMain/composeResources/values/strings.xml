@@ -2645,6 +2645,8 @@
     <string name="marmot_avatar_url_placeholder">https://example.com/avatar.png</string>
     <string name="marmot_avatar_url_footer">An https link every member can load. Leave it empty to use the uploaded image instead.</string>
     <string name="marmot_legacy_group_no_avatar_url">This group was created before link avatars were supported, so it can only use an uploaded image. Existing groups cannot be upgraded — create a new group to use a link.</string>
+    <string name="marmot_enable_encrypted_media">Use encrypted attachments</string>
+    <string name="marmot_enable_encrypted_media_explainer">Attachments in this group use the older format. Switching adds the encrypted-media component to the group, and every member sees the change. It cannot be switched back.</string>
     <string name="marmot_legacy_group_no_disband">This group was created before disbanding was supported and cannot be disbanded. You can still leave it, or remove every other member. Existing groups cannot be upgraded.</string>
     <string name="marmot_group_default_name">Marmot Group</string>
     <string name="marmot_group_fallback_name">Group %1$s…</string>

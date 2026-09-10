@@ -2465,6 +2465,15 @@ class AccountViewModel(
      */
     fun marmotUsesEncryptedMediaV2(nostrGroupId: String): Boolean = account.marmotManager?.encryptedMediaPolicy(nostrGroupId) != null
 
+    /** True when this account has somewhere to upload a group's encrypted media. */
+    fun hasBlossomServers(): Boolean =
+        account.blossomServers.flow.value
+            .isNotEmpty()
+
+    suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: String) {
+        account.marmot.enableMarmotEncryptedMediaV2(nostrGroupId)
+    }
+
     /** Post the kind:9 carrying an `encrypted-media-v2` attachment. */
     suspend fun sendMarmotGroupEncryptedMediaV2(
         nostrGroupId: String,

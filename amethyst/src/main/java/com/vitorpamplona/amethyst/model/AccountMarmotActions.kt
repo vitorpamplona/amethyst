@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
@@ -584,6 +586,47 @@ class AccountMarmotActions(
         if (!account.isWriteable()) return
 
         manager.disbandGroup(nostrGroupId, groupRelays.toList())
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
+    }
+
+    /**
+     * Commit the `encrypted-media-v2` policy (`0x800b`) for a group.
+     *
+     * Creation deliberately leaves this off — `CurrentProfileGroupFactory`
+     * explains why: carrying it at epoch 0 would make our GroupContext differ
+     * from the reference's for the same inputs, and would force every joiner to
+     * advertise `0x800b` before it could be added. The spec's answer is that "a
+     * group that wants a media policy commits one", and until now nothing on
+     * Android could, so `marmotUsesEncryptedMediaV2` was false for every group
+     * this app created and attachments always fell back to MIP-04.
+     *
+     * Enable-only on purpose. Changing the policy later is the same commit;
+     * REMOVING it is a different question the component does not answer, and
+     * inventing a removal that strands members mid-upload is not something to
+     * guess at.
+     *
+     * The endpoints come from the account's own Blossom server list, because a
+     * policy naming servers the uploader does not use would describe a group
+     * nobody can actually post media to.
+     */
+    suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: HexKey) {
+        val manager = account.marmotManager ?: return
+        if (!account.isWriteable()) return
+
+        val servers = account.blossomServers.flow.value
+        require(servers.isNotEmpty()) {
+            "Cannot enable encrypted media without at least one Blossom server configured"
+        }
+        val policy =
+            EncryptedMediaPolicyV2(
+                allowedLocatorKinds = listOf(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND),
+                defaultBlobEndpoints =
+                    servers.map {
+                        BlobStoreEndpointV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, it)
+                    },
+            )
+        manager.setEncryptedMediaPolicy(nostrGroupId, policy, marmotGroupRelays(nostrGroupId).toList())
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
     }

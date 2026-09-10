@@ -2696,6 +2696,9 @@
     <string name="marmot_failed_to_update">Failed to update: %1$s</string>
     <string name="marmot_failed_to_create_group">Failed to create group: %1$s</string>
     <string name="marmot_failed_to_leave_group">Failed to leave group: %1$s</string>
+    <string name="marmot_enable_encrypted_media_needs_server">Add a Blossom media server in Settings first — the group needs somewhere to upload attachments to.</string>
+    <string name="marmot_encrypted_media_enabled_toast">This group now uses encrypted attachments</string>
+    <string name="marmot_failed_to_enable_encrypted_media">Could not switch this group to encrypted attachments: %1$s</string>
     <string name="marmot_group_disbanded_toast">Group disbanded</string>
     <string name="marmot_failed_to_disband">Could not disband the group: %1$s</string>
     <string name="marmot_adding_user">Adding %1$s…</string>

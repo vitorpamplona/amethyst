@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -79,6 +80,8 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group_action
 import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_edit_group_info
+import com.vitorpamplona.amethyst.commons.resources.marmot_enable_encrypted_media
+import com.vitorpamplona.amethyst.commons.resources.marmot_enable_encrypted_media_explainer
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_privileges
@@ -146,10 +149,12 @@ fun MarmotGroupInfoScreen(
     val relayActivity by chatroom.relayActivity.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
     val isCurrentProfile by chatroom.isCurrentProfile.collectAsStateWithLifecycle()
+    val hasEncryptedMedia by chatroom.hasEncryptedMediaPolicy.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDisbandDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
     var isDisbanding by remember { mutableStateOf(false) }
+    var isEnablingMedia by remember { mutableStateOf(false) }
     var memberToRemove by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var memberToPromote by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var memberToDemote by remember { mutableStateOf<GroupMemberInfo?>(null) }
@@ -298,6 +303,69 @@ fun MarmotGroupInfoScreen(
                             nav = nav,
                         )
                         HorizontalDivider()
+                    }
+                }
+
+                // Groups are created WITHOUT the encrypted-media component so
+                // that epoch 0 matches the reference implementation's byte for
+                // byte; the spec's answer is that a group which wants one
+                // commits it. This is where an admin does that. Offered only
+                // while the group lacks it, because the component has no
+                // defined removal and this is a one-way change.
+                if (isCurrentProfile && !hasEncryptedMedia && myPubkey in adminPubkeys) {
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            Button(
+                                onClick = {
+                                    if (!accountViewModel.hasBlossomServers()) {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                stringRes(context, R.string.marmot_enable_encrypted_media_needs_server),
+                                                Toast.LENGTH_LONG,
+                                            ).show()
+                                        return@Button
+                                    }
+                                    isEnablingMedia = true
+                                    scope.launch(Dispatchers.IO) {
+                                        try {
+                                            accountViewModel.enableMarmotEncryptedMediaV2(nostrGroupId)
+                                            launch(Dispatchers.Main) {
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        stringRes(context, R.string.marmot_encrypted_media_enabled_toast),
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            launch(Dispatchers.Main) {
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        stringRes(
+                                                            context,
+                                                            R.string.marmot_failed_to_enable_encrypted_media,
+                                                            e.message,
+                                                        ),
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                            }
+                                        } finally {
+                                            isEnablingMedia = false
+                                        }
+                                    }
+                                },
+                                enabled = !isEnablingMedia && !isLeaving && !isDisbanding,
+                            ) {
+                                Text(stringRes(Res.string.marmot_enable_encrypted_media))
+                            }
+                            Text(
+                                text = stringRes(Res.string.marmot_enable_encrypted_media_explainer),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
 
