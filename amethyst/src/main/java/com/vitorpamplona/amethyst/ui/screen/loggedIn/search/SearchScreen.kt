@@ -70,6 +70,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -91,6 +92,8 @@ import com.vitorpamplona.amethyst.commons.resources.search_filters_title
 import com.vitorpamplona.amethyst.commons.resources.search_follows_only
 import com.vitorpamplona.amethyst.commons.resources.search_no_results
 import com.vitorpamplona.amethyst.commons.resources.search_no_results_explainer
+import com.vitorpamplona.amethyst.commons.resources.search_recent
+import com.vitorpamplona.amethyst.commons.resources.search_recent_clear
 import com.vitorpamplona.amethyst.commons.resources.search_scope_all
 import com.vitorpamplona.amethyst.commons.resources.search_scope_notes
 import com.vitorpamplona.amethyst.commons.resources.search_scope_people
@@ -102,6 +105,7 @@ import com.vitorpamplona.amethyst.commons.resources.search_source_local
 import com.vitorpamplona.amethyst.commons.resources.search_source_relays
 import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin
 import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin_explainer
+import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -112,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
 import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.model.preferences.DataStoreSearchHistoryStorage
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
@@ -156,6 +161,7 @@ fun SearchScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val historyStorage = LocalContext.current.let { context -> remember(context) { DataStoreSearchHistoryStorage(context) } }
     val searchBarViewModel: SearchBarViewModel =
         viewModel(
             // Keyed on the seed: navigating from one screen's search button to another's has to
@@ -165,6 +171,7 @@ fun SearchScreen(
                 SearchBarViewModel.Factory(
                     accountViewModel.account,
                     accountViewModel.nip05ClientBuilder(),
+                    historyStorage,
                     initialQuery,
                 ),
         )
@@ -638,6 +645,9 @@ private fun SearchTextField(
             groups = groupCandidates,
             onPeopleQuery = { userSuggestions.processCurrentWord(it) },
             onGroupQuery = { partial -> groupQuery = partial },
+            // The Enter key is what says a search was meant, rather than passed through on the way
+            // to a longer word. Recording every pause in typing would fill the list with prefixes.
+            onSubmit = { searchBarViewModel.remember() },
             peoplePicker = { _, onPick ->
                 ShowUserSuggestionList(
                     userSuggestions = userSuggestions,
@@ -698,6 +708,7 @@ private fun DisplaySearchResults(
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
     val asksNothing by searchBarViewModel.queryAsksNothing.collectAsStateWithLifecycle()
     val settled by searchBarViewModel.searchSettled.collectAsStateWithLifecycle()
+    val recent by searchBarViewModel.history.recent.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
@@ -706,7 +717,43 @@ private fun DisplaySearchResults(
     ) {
         item(key = "scaffold-header") { headerContent() }
 
-        if (!isRefreshing) return@LazyColumn
+        if (!isRefreshing) {
+            // An empty box used to render nothing at all. What a reader searched for before is
+            // the one thing worth offering there, and it is one tap from being re-run because a
+            // history entry is stored as the same text the box holds.
+            if (recent.isNotEmpty()) {
+                item(key = "recent-header") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringRes(Res.string.search_recent),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                        TextButton(onClick = { searchBarViewModel.history.clearRecent() }) {
+                            Text(stringRes(Res.string.search_recent_clear))
+                        }
+                    }
+                }
+                itemsIndexed(recent, key = { _, item -> "recent-${QuerySerializer.serialize(item)}" }) { _, item ->
+                    val asText = remember(item) { QuerySerializer.serialize(item) }
+                    Text(
+                        text = asText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { searchBarViewModel.updateSearchValue(asText) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                    HorizontalDivider(thickness = DividerThickness)
+                }
+            }
+            return@LazyColumn
+        }
 
         // Every result list is empty. Which of the two things that means is not cosmetic: a box
         // holding only a seeded `kind:` never asked a relay anything, and telling that reader

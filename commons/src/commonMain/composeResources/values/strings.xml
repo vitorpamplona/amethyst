@@ -2246,6 +2246,8 @@
     <string name="search_no_results_explainer">Try fewer filters, or a different word.</string>
     <string name="search_type_to_begin">Type something to search</string>
     <string name="search_type_to_begin_explainer">The filters above narrow what is searched — they do not search on their own.</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_recent_clear">Clear</string>
     <string name="search_filters_reset">Reset</string>
     <string name="search_filters_section_source">Source</string>
     <string name="search_filters_section_sort">Sort by</string>

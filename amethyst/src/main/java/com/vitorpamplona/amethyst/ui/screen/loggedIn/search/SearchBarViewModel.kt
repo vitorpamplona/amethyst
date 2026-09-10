@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
+import com.vitorpamplona.amethyst.commons.search.SearchHistory
+import com.vitorpamplona.amethyst.commons.search.SearchHistoryStorage
 import com.vitorpamplona.amethyst.commons.search.SearchPipeline
 import com.vitorpamplona.amethyst.commons.search.SearchResultKind
 import com.vitorpamplona.amethyst.commons.search.SearchScope
@@ -88,6 +90,8 @@ import kotlinx.coroutines.flow.update
 class SearchBarViewModel(
     val account: Account,
     val nip05Client: INip05Client,
+    /** Where this device keeps what has been searched for; see [history]. */
+    historyStorage: SearchHistoryStorage,
     /**
      * The query the calling screen seeded the box with — `from:<npub>` off a profile,
      * `kind:article` off the articles feed. It is ordinary field text from here on: the reader
@@ -121,6 +125,18 @@ class SearchBarViewModel(
      * the list of kinds slid the whole chrome away with it. The scaffold has to be told instead.
      */
     val pickerOpen = MutableStateFlow(false)
+
+    /**
+     * What has been searched for on this device, and what has been kept.
+     *
+     * Desktop has had this since the advanced bar was written; Android never did, because the
+     * code sat in a desktop object on `java.util.prefs`. Nothing about it was desktop-specific,
+     * so the move to commons is the whole of the port.
+     */
+    val history = SearchHistory(historyStorage, viewModelScope)
+
+    /** Records the query the reader actually ran — the Enter key, not every pause in typing. */
+    fun remember() = history.remember(state.query)
 
     val queryAsksNothing get() = state.asksNothing
     val searchSettled get() = state.settled
@@ -503,9 +519,10 @@ class SearchBarViewModel(
     class Factory(
         val account: Account,
         val nip05: INip05Client,
+        val historyStorage: SearchHistoryStorage,
         val initialQuery: String? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05, initialQuery) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05, historyStorage, initialQuery) as T
     }
 }
