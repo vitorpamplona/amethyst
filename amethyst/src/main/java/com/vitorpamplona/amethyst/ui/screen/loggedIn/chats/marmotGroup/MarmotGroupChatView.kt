@@ -333,7 +333,6 @@ private fun MarmotGroupFileUploadDialog(
                         }
                     },
                     context = context,
-                    useEncryptedMediaV2 = accountViewModel.marmotUsesEncryptedMediaV2(nostrGroupId),
                     onceUploaded = { uploads ->
                         MarmotFileSender(nostrGroupId, accountViewModel).send(uploads)
                         onUpload()

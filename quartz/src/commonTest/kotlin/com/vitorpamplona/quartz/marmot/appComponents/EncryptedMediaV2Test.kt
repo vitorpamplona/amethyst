@@ -243,6 +243,37 @@ class EncryptedMediaV2Test {
             filename = "marmot.jpg",
         )
 
+    /**
+     * The tag we WRITE, field for field, against MDK's own accepted fixture
+     * (`crates/marmot-app/src/media/tests.rs`, `valid_v2_imeta_tag`).
+     *
+     * Round-tripping through our own parser cannot catch a dialect drift,
+     * because both ends drift together -- which is exactly what happened: the
+     * app shipped MIP-era `url`/`x`/`n`/`v mip04-v2` tags that our reader
+     * accepted and every other implementation dropped at its typed parser,
+     * silently, so an attachment simply did not appear. Pinning the names and
+     * their order against the reference implementation's fixture is what makes
+     * that visible here instead of on someone's screen.
+     */
+    @Test
+    fun theWrittenTagMatchesTheReferenceImplementationsFixture() {
+        val tag = reference().toImetaTag()
+
+        assertEquals("imeta", tag[0])
+        assertEquals("v encrypted-media-v2", tag[1])
+        assertEquals("locator blossom-v1 https://blossom.primal.net/" + "ab".repeat(32), tag[2])
+        assertEquals("ciphertext_sha256 " + "01".repeat(32), tag[3])
+        assertEquals("plaintext_sha256 " + "02".repeat(32), tag[4])
+        assertEquals("nonce " + "03".repeat(12), tag[5])
+        assertEquals("m image/jpeg", tag[6])
+        assertEquals("filename marmot.jpg", tag[7])
+
+        // None of the MIP-era field names may appear: a receiver keys on the
+        // first token of each field, so `url`/`x`/`n` are simply unknown to it.
+        val names = tag.drop(1).map { it.substringBefore(' ') }
+        assertTrue(names.none { it == "url" || it == "x" || it == "n" }, "MIP-era field names must not be written: $names")
+    }
+
     @Test
     fun anImetaTagRoundTrips() {
         val parsed = EncryptedMediaV2.parseImetaTag(reference().toImetaTag())

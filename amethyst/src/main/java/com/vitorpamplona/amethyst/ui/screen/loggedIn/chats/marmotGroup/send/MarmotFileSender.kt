@@ -28,11 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * Sends uploaded encrypted media as Marmot group messages. Each upload result
  * becomes a separate kind:9 with an `imeta` tag.
  *
- * Which reference format the tag carries is the GROUP's decision, made when the
- * upload was encrypted: a group carrying the `encrypted-media-v2` policy
- * (`0x800b`) gets a v2 reference, and one that does not gets the MIP-04 shape.
- * The frozen v1 policy at `0x8008` is a different component and is never
- * reinterpreted as v2, so there is no third case here.
+ * Every upload now carries an `encrypted-media-v2` reference, whatever policy
+ * the group holds -- see [MarmotFileUploader]. The MIP-04 branch below is kept
+ * because the result type still allows a null reference, but nothing this app
+ * writes takes it; the MIP-era shape survives only on the READ side, for
+ * messages older builds already sent.
  */
 class MarmotFileSender(
     val nostrGroupId: HexKey,

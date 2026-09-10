@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2Cipher
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotMediaType
 import com.vitorpamplona.quartz.marmot.appComponents.MediaLocatorV2
-import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04NostrCipher
 
 /**
  * MIP-04 upload result containing all info needed to build the imeta tag.
@@ -61,11 +60,14 @@ class Mip04UploadResult(
     val encryptedMediaV2: EncryptedMediaReferenceV2? = null,
 )
 
+/** What an unparseable media type becomes, so a file is never described in a dialect nobody reads. */
+private const val GENERIC_MEDIA_TYPE = "application/octet-stream"
+
 /**
- * Handles MIP-04 encrypted media upload for Marmot groups.
+ * Handles encrypted media upload for Marmot groups.
  *
  * Uses the existing [UploadOrchestrator.uploadEncrypted] pipeline but
- * provides a per-file [Mip04NostrCipher] for MIP-04 key derivation.
+ * provides a per-file [EncryptedMediaV2Cipher] for key derivation.
  */
 class MarmotFileUploader(
     val account: Account,
@@ -79,7 +81,6 @@ class MarmotFileUploader(
          * Produce `encrypted-media-v2` references instead of MIP-04 ones.
          * Decided by the group's policy component, not by the uploader.
          */
-        useEncryptedMediaV2: Boolean = false,
         onceUploaded: suspend (List<Mip04UploadResult>) -> Unit,
     ) {
         val multiOrchestrator = viewState.multiOrchestrator ?: return
@@ -97,12 +98,28 @@ class MarmotFileUploader(
 
             // v2 puts `m` inside both the key derivation and the AEAD
             // associated data, so it has to be the canonical form and not
-            // whatever the content resolver reported. A type that will not
-            // canonicalize falls back to MIP-04 for this file rather than
-            // producing a reference no receiver can key.
-            val canonicalMediaType = if (useEncryptedMediaV2) MarmotMediaType.canonicalize(mimeType) else null
-            val v2Cipher = canonicalMediaType?.let { EncryptedMediaV2Cipher(exporterSecret, it, filename) }
-            val cipher = v2Cipher ?: Mip04NostrCipher(exporterSecret, mimeType, filename)
+            // whatever the content resolver reported.
+            //
+            // Always v2, whatever the group carries. This used to be gated on
+            // the group holding the `encrypted-media-v2` policy, and groups are
+            // created without it on purpose (epoch 0 has to match the reference
+            // implementation byte for byte), so in practice every attachment
+            // went out in the MIP-era dialect -- `url`/`x`/`n`/`v mip04-v2` --
+            // which no shipping Marmot implementation reads: MDK 0.9.21 knows
+            // only `encrypted-media-v1|v2` and drops anything else at the
+            // typed parser, silently. Receivers do not gate on the policy
+            // either (MDK's own test pins that an out-of-policy locator is
+            // "kept, not dropped on ingest"), so writing v2 into a group that
+            // never committed the component is read correctly; it is only the
+            // SENDER's own policy validation that a component would constrain.
+            //
+            // A media type too malformed to canonicalize becomes the generic
+            // octet-stream rather than falling back to the old dialect: an
+            // attachment nobody can render is worse than one labelled
+            // imprecisely.
+            val canonicalMediaType = MarmotMediaType.canonicalize(mimeType) ?: GENERIC_MEDIA_TYPE
+            val cipher = EncryptedMediaV2Cipher(exporterSecret, canonicalMediaType, filename)
+            val v2Cipher = cipher
 
             item.orchestrator.uploadEncrypted(
                 uri = media.uri,
@@ -145,8 +162,12 @@ class MarmotFileUploader(
                         url = serverResult.url,
                         mimeType = mimeType,
                         filename = filename,
-                        originalFileHash = (cipher as? Mip04NostrCipher)?.originalFileHash ?: ByteArray(0),
-                        nonce = (cipher as? Mip04NostrCipher)?.nonce ?: ByteArray(0),
+                        // Empty now that nothing is encrypted with the MIP-era
+                        // scheme. The fields stay on the result type because the
+                        // reader still accepts that shape for messages older
+                        // builds already sent.
+                        originalFileHash = ByteArray(0),
+                        nonce = ByteArray(0),
                         dimensions = serverResult.fileHeader.dim?.toString(),
                         blurhash = serverResult.fileHeader.blurHash?.blurhash,
                         caption = viewState.caption.ifEmpty { null },
