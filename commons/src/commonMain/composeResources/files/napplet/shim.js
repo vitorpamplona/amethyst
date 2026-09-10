@@ -812,11 +812,20 @@
   // window.__nappletNip07 synchronously before this shim). Lets standard Nostr web apps "log in with
   // Amethyst" and sign, bridged to the same consent-gated signer: getPublicKey + getRelays reuse the
   // identity reads; signEvent is sign-only (no publish) and honors the app's created_at.
+  // nip44 is optional in NIP-07 but not optional in practice: a kind:13 seal is NIP-44 ciphertext
+  // authored by the real key, so without it a page can sign yet cannot build a NIP-59 gift wrap —
+  // NIP-17 DMs and every gift-wrapped app protocol are simply unreachable. The shell does the crypto
+  // and returns only the result; the key never enters the page. nip04 stays deliberately absent
+  // (deprecated, and nothing that still needs it should be encouraged).
   if (window.__nappletNip07 && !window.nostr) {
     window.nostr = Object.freeze({
       getPublicKey: function(){ return field(call('identity.getPublicKey'), 'pubkey'); },
       getRelays: function(){ return field(call('identity.getRelays'), 'relays'); },
-      signEvent: function(event){ return field(call('nostr.signEvent', { event: event }), 'event'); }
+      signEvent: function(event){ return field(call('nostr.signEvent', { event: event }), 'event'); },
+      nip44: Object.freeze({
+        encrypt: function(peer, plaintext){ return field(call('nostr.nip44Encrypt', { peer: peer, plaintext: String(plaintext) }), 'value'); },
+        decrypt: function(peer, ciphertext){ return field(call('nostr.nip44Decrypt', { peer: peer, ciphertext: String(ciphertext) }), 'value'); }
+      })
     });
   }
 })();

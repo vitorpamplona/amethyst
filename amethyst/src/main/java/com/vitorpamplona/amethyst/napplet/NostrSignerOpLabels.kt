@@ -84,6 +84,10 @@ fun buildSignerConsentInfo(
             is NappletRequest.Publish -> request.content.take(160).trim()
             is NappletRequest.SignEvent -> request.content.take(160).trim()
             is NappletRequest.PublishEncrypted -> request.content.take(160).trim()
+            // Encryption shows the plaintext the page wants sealed; decryption has only ciphertext,
+            // which tells the user nothing, so its preview stays empty and the counterparty in
+            // rawData carries the meaning.
+            is NappletRequest.Nip44Encrypt -> request.plaintext.take(160).trim()
             else -> ""
         }
     val rawData =
@@ -103,6 +107,20 @@ fun buildSignerConsentInfo(
                     for (item in tag) tagNode.add(item)
                 }
                 node.put("content", request.content)
+                JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+            }
+            is NappletRequest.Nip44Encrypt -> {
+                val node = JacksonMapper.mapper.createObjectNode()
+                node.put("operation", "nip44.encrypt")
+                node.put("peer", request.peer)
+                node.put("plaintext", request.plaintext)
+                JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+            }
+            is NappletRequest.Nip44Decrypt -> {
+                val node = JacksonMapper.mapper.createObjectNode()
+                node.put("operation", "nip44.decrypt")
+                node.put("peer", request.peer)
+                node.put("ciphertext", request.ciphertext)
                 JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
             }
             else -> ""

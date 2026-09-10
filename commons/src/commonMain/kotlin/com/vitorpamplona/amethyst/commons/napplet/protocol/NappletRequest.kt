@@ -175,6 +175,41 @@ sealed interface NappletRequest {
         }
     }
 
+    /**
+     * NIP-07 `window.nostr.nip44.encrypt`: NIP-44 encrypt [plaintext] to [peer] with the user's key
+     * and return the ciphertext **without publishing it**. This is what lets a web app build its own
+     * NIP-59 seals (a kind:13 seal is NIP-44 ciphertext authored by the real key, so `signEvent`
+     * alone cannot produce one) — NIP-17 DMs and every gift-wrapped app protocol need it.
+     *
+     * The page never touches the key: the shell encrypts and hands back only the result.
+     *
+     * [signsAsUser] stays false — this produces no event and no signature; the gate that matters is
+     * the [NostrSignerOp][com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp]
+     * mapping in `toSignerOp`.
+     */
+    data class Nip44Encrypt(
+        val peer: HexKey,
+        val plaintext: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.SIGNER
+    }
+
+    /**
+     * NIP-07 `window.nostr.nip44.decrypt`: NIP-44 decrypt [ciphertext] from [peer] with the user's
+     * key and return the plaintext. The counterpart of [Nip44Encrypt] — a NIP-17 client needs it to
+     * open incoming seals.
+     *
+     * Strictly more dangerous than encryption (it reads, rather than writes, private content), so it
+     * maps to [NostrSignerOp.Decrypt][com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp.Decrypt],
+     * which always asks under the REASONABLE policy instead of auto-approving.
+     */
+    data class Nip44Decrypt(
+        val peer: HexKey,
+        val ciphertext: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.SIGNER
+    }
+
     /** Read events matching [filters] (from the cache and/or a bounded relay fetch). */
     data class QueryEvents(
         val filters: List<Filter>,

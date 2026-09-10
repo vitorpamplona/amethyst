@@ -401,6 +401,7 @@
     <string name="napplet_cap_identity">Identity</string>
     <string name="napplet_cap_keys">Keyboard actions</string>
     <string name="napplet_cap_relay">Relays</string>
+    <string name="napplet_cap_signer">Encryption</string>
     <string name="napplet_cap_storage">Storage</string>
     <string name="napplet_cap_value">Payments</string>
     <string name="napplet_cap_resource">Network</string>
@@ -409,6 +410,7 @@
     <string name="napplet_cap_identity_desc">Read your public key</string>
     <string name="napplet_cap_keys_desc">Bind keyboard shortcuts</string>
     <string name="napplet_cap_relay_desc">Read, and sign &amp; publish your events</string>
+    <string name="napplet_cap_signer_desc">Encrypt and decrypt private messages with your key</string>
     <string name="napplet_cap_storage_desc">Its own private storage</string>
     <string name="napplet_cap_value_desc">Pay Lightning invoices</string>
     <string name="napplet_cap_resource_desc">Fetch web and Blossom resources</string>
@@ -426,6 +428,8 @@
     <string name="napplet_consent_publish">This nApplet wants to sign and publish a kind %1$d event as you.</string>
     <string name="napplet_consent_publish_preview">This nApplet wants to sign and publish a kind %1$d event as you:</string>
     <string name="napplet_consent_publish_encrypted">This nApplet wants to send an encrypted event as you.</string>
+    <string name="napplet_consent_nip44_encrypt">This site wants to encrypt a message to %1$s with your Nostr key.</string>
+    <string name="napplet_consent_nip44_decrypt">This site wants to decrypt a message from %1$s with your Nostr key.</string>
     <string name="napplet_consent_query">This nApplet wants to read events from your relays.</string>
     <string name="napplet_consent_storage">This nApplet wants to use its private storage.</string>
     <string name="napplet_consent_pay">This nApplet wants to pay a Lightning invoice.</string>

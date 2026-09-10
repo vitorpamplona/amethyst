@@ -245,6 +245,12 @@ class NappletBroker(
                 signAndPublish(request.kind, withRecipientTag(request.tags, request.recipient), ciphertext)
             }
 
+            // NIP-07 nip44.encrypt/decrypt: the shell runs the crypto with the real key and hands back
+            // only the result, so the page can build its own NIP-59 seals without ever seeing the key.
+            is NappletRequest.Nip44Encrypt -> NappletResponse.Text(signer.nip44Encrypt(request.plaintext, request.peer))
+
+            is NappletRequest.Nip44Decrypt -> NappletResponse.Text(signer.nip44Decrypt(request.ciphertext, request.peer))
+
             is NappletRequest.QueryEvents -> {
                 val gateway = relay ?: return NappletResponse.Unsupported("relay.query")
                 NappletResponse.Events(gateway.query(request.filters))

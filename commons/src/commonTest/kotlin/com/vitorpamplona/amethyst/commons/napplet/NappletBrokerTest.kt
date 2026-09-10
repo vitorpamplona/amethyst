@@ -745,4 +745,109 @@ class NappletBrokerTest {
             assertIs<NappletResponse.ResourceFailure>(tooLarge)
             assertEquals("too-large", tooLarge.error)
         }
+
+    // ---- NIP-44 (window.nostr.nip44) ------------------------------------------------------------
+    //
+    // The gap these close: a page could sign but not encrypt, so it could not build a kind:13 seal
+    // and every NIP-59 / NIP-17 flow was unreachable through the in-app browser.
+
+    @Test
+    fun nip44RoundTripsThroughTheBrokerWithoutExposingTheKey() =
+        runTest {
+            val peer = NostrSignerInternal(KeyPair("11".repeat(32).hexToByteArray()))
+            val broker = broker(ScriptedPrompt(GrantState.ALLOW_ALWAYS))
+
+            val encrypted =
+                broker.handle(applet, NappletRequest.Nip44Encrypt(peer.pubKey, "gm from the nsite"), allDeclared)
+            assertIs<NappletResponse.Text>(encrypted)
+
+            // The peer decrypts it with its own key: proof this is real NIP-44 to that pubkey and
+            // not some shell-local encoding.
+            assertEquals("gm from the nsite", peer.nip44Decrypt(encrypted.value, signer.pubKey))
+
+            // ...and back the other way, which is what an inbound seal needs.
+            val sealed = peer.nip44Encrypt("hello back", signer.pubKey)
+            val decrypted = broker.handle(applet, NappletRequest.Nip44Decrypt(peer.pubKey, sealed), allDeclared)
+            assertIs<NappletResponse.Text>(decrypted)
+            assertEquals("hello back", decrypted.value)
+        }
+
+    @Test
+    fun nip44IsRefusedWhenTheHostDidNotDeclareTheSignerCapability() =
+        runTest {
+            val prompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS)
+            val broker = broker(prompt)
+
+            // A locked napplet's declared set can never contain SIGNER (no NAP domain maps to it),
+            // so the request must die at the capability gate without ever reaching a prompt.
+            val response =
+                broker.handle(
+                    applet,
+                    NappletRequest.Nip44Decrypt("bb".repeat(32), "cipher"),
+                    setOf(NappletCapability.IDENTITY, NappletCapability.RELAY),
+                )
+
+            assertIs<NappletResponse.Denied>(response)
+            assertEquals(NappletCapability.SIGNER, response.capability)
+            assertEquals(0, prompt.calls)
+        }
+
+    @Test
+    fun noNapDomainCanEverGrantTheSignerCapability() {
+        // The website-only guarantee is structural, not a policy someone can misconfigure: if any
+        // domain string ever mapped to SIGNER, a manifest could ask for the user's decryption.
+        assertNull(NappletCapability.fromNapDomain("signer"))
+        assertTrue(NappletCapability.supportedNapDomains.none { NappletCapability.fromNapDomain(it) == NappletCapability.SIGNER })
+    }
+
+    @Test
+    fun decryptAsksEveryTimeUnderTheReasonablePolicyWhileEncryptDoesNot() =
+        runTest {
+            // The asymmetry is the point: encrypting writes content the user is already composing,
+            // decrypting reads private content, so only the latter keeps prompting.
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.REASONABLE)
+
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowOnce)
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+
+            val peer = NostrSignerInternal(KeyPair("22".repeat(32).hexToByteArray()))
+            broker.handle(applet, NappletRequest.Nip44Encrypt(peer.pubKey, "a"), allDeclared)
+            broker.handle(applet, NappletRequest.Nip44Encrypt(peer.pubKey, "b"), allDeclared)
+            assertEquals(0, opPrompt.calls)
+
+            val sealed = peer.nip44Encrypt("secret", signer.pubKey)
+            broker.handle(applet, NappletRequest.Nip44Decrypt(peer.pubKey, sealed), allDeclared)
+            broker.handle(applet, NappletRequest.Nip44Decrypt(peer.pubKey, sealed), allDeclared)
+            assertEquals(2, opPrompt.calls)
+        }
+
+    @Test
+    fun aDeclinedDecryptReturnsNoPlaintext() =
+        runTest {
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = ScriptedSignerPrompt(SignerOpGrant.DenyOnce),
+                )
+
+            val peer = NostrSignerInternal(KeyPair("33".repeat(32).hexToByteArray()))
+            val sealed = peer.nip44Encrypt("secret", signer.pubKey)
+
+            val response = broker.handle(applet, NappletRequest.Nip44Decrypt(peer.pubKey, sealed), allDeclared)
+            assertIs<NappletResponse.Denied>(response)
+        }
 }

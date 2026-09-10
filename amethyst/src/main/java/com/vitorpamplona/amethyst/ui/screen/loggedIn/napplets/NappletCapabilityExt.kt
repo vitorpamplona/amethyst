@@ -29,6 +29,7 @@ internal fun NappletCapability.symbol(): MaterialSymbol =
         NappletCapability.IDENTITY -> MaterialSymbols.AccountCircle
         NappletCapability.KEYS -> MaterialSymbols.Key
         NappletCapability.RELAY -> MaterialSymbols.Public
+        NappletCapability.SIGNER -> MaterialSymbols.Lock
         NappletCapability.STORAGE -> MaterialSymbols.Storage
         NappletCapability.VALUE -> MaterialSymbols.Bolt
         NappletCapability.RESOURCE -> MaterialSymbols.Language

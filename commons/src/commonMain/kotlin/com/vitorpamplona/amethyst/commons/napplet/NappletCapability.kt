@@ -44,6 +44,21 @@ enum class NappletCapability {
     /** `relay` — publish (shell-signed), query, and subscribe to the user's relays. */
     RELAY,
 
+    /**
+     * NIP-44 encrypt/decrypt with the user's key, returning the ciphertext/plaintext to the caller
+     * instead of publishing it. Needed by any standard Nostr web app that builds NIP-59 seals
+     * itself (NIP-17 DMs, gift-wrapped app protocols) — signing alone cannot produce a seal.
+     *
+     * Deliberately **not** in [fromNapDomain]: no NIP-5D domain maps here, so a locked napplet can
+     * never declare it. It is granted only to the website posture (the NIP-07 `window.nostr`
+     * surface), where the page is already trusted with `signEvent`. Every individual call still
+     * passes the per-operation signer ledger
+     * ([Encrypt][com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp.Encrypt] /
+     * [Decrypt][com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp.Decrypt]),
+     * which is what actually keeps decryption behind a prompt.
+     */
+    SIGNER,
+
     /** `storage` — a per-applet sandboxed key-value store, namespaced by applet identity. */
     STORAGE,
 

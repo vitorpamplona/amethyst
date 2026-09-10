@@ -34,5 +34,10 @@ fun NappletRequest.toSignerOp(): NostrSignerOp? =
         is NappletRequest.Publish -> NostrSignerOp.SignKind(kind)
         is NappletRequest.SignEvent -> NostrSignerOp.SignKind(kind)
         is NappletRequest.PublishEncrypted -> NostrSignerOp.Encrypt
+        is NappletRequest.Nip44Encrypt -> NostrSignerOp.Encrypt
+        // The broad grant, matching what NIP-46's nip44_decrypt maps to. The narrower
+        // DecryptFrom(peer) exists, but only the NIP-46 authorizer honours it today; recording one
+        // here would be a grant this broker never reads back, so the user would re-prompt forever.
+        is NappletRequest.Nip44Decrypt -> NostrSignerOp.Decrypt
         else -> null
     }
