@@ -1,6 +1,6 @@
 # DVM heartbeat liveness — only show DVMs with a fresh kind-11998 heartbeat
 
-_Status: **design approved, not implemented**._
+_Status: **implemented** (Android; desktop wiring deliberately out of scope — §8)._
 
 ## 0. The shape of the thing
 
