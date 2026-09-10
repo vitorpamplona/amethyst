@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import kotlinx.collections.immutable.persistentListOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -37,6 +38,7 @@ import kotlin.test.assertTrue
 class SearchSeedTest {
     private companion object {
         const val PUBKEY = "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"
+        const val NPUB = "npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6"
     }
 
     /** The seed as the search screen actually receives it: serialized, then read back. */
@@ -172,24 +174,41 @@ class SearchSeedTest {
     }
 
     @Test
-    fun aKindWindowMakesTheQueryEventOnly() {
-        // A person is not an event of any kind, so a `kind:` query cannot return people — the
-        // search screen pins its scope to Notes on the strength of this.
-        assertTrue(QueryParser.parse("kind:article bitcoin").isEventOnly)
-        assertTrue(QueryParser.parse("kind:20").isEventOnly)
-        assertTrue(QueryParser.parse("kind:reply").isEventOnly, "a pseudo-kind is still a kind")
-        assertTrue(QueryParser.parse("kind:media").isEventOnly)
+    fun everyTokenPinsTheScopeToNotes() {
+        // The people search is one NIP-50 string against kind 0, so every one of these would be
+        // dropped without a word if All or People stayed selectable. One case per field: a field
+        // added to SearchQuery and forgotten here is a token that silently does nothing again.
+        assertTrue(QueryParser.parse("kind:article bitcoin").pinsToNotes)
+        assertTrue(QueryParser.parse("kind:20").pinsToNotes)
+        assertTrue(QueryParser.parse("kind:reply").pinsToNotes, "a pseudo-kind is still a kind")
+        assertTrue(QueryParser.parse("kind:media").pinsToNotes)
+        assertTrue(QueryParser.parse("from:$NPUB").pinsToNotes, "authors")
+        assertTrue(QueryParser.parse("from:vitor").pinsToNotes, "an unresolved name")
+        assertTrue(QueryParser.parse("since:2025-01-01").pinsToNotes)
+        assertTrue(QueryParser.parse("until:2025-01-01").pinsToNotes)
+        assertTrue(QueryParser.parse("#nostr").pinsToNotes)
+        assertTrue(QueryParser.parse("lang:en bitcoin").pinsToNotes)
+        assertTrue(QueryParser.parse("domain:nostr.com").pinsToNotes)
+        assertTrue(QueryParser.parse("to:$NPUB").pinsToNotes, "mentions")
+        assertTrue(SearchQuery(cites = persistentListOf("abc")).pinsToNotes)
+        assertTrue(SearchQuery(addrs = persistentListOf("30023:$PUBKEY:d")).pinsToNotes)
+        assertTrue(SearchQuery(labels = persistentListOf("nsfw")).pinsToNotes)
+        assertTrue(SearchQuery(scopes = persistentListOf(ExternalScope("isbn", "123"))).pinsToNotes)
+        assertTrue(SearchQuery(groups = persistentListOf("abc")).pinsToNotes)
         // Every seeded feed window pins it too.
-        assertTrue(SearchSeed.ofKinds(LongTextNoteEvent.KIND).isEventOnly)
+        assertTrue(SearchSeed.ofKinds(LongTextNoteEvent.KIND).pinsToNotes)
     }
 
     @Test
-    fun aQueryWithoutAKindLeavesTheScopeAlone() {
-        assertFalse(QueryParser.parse("bitcoin").isEventOnly)
-        assertFalse(QueryParser.parse("from:npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6").isEventOnly)
-        assertFalse(QueryParser.parse("#nostr").isEventOnly)
-        assertFalse(SearchQuery.EMPTY.isEventOnly)
+    fun freeTextAndItsOperatorsLeaveTheScopeAlone() {
+        // Words, and the three ways of writing words: nothing here is a filter a person cannot be
+        // matched against, so the reader keeps All and People.
+        assertFalse(QueryParser.parse("bitcoin").pinsToNotes)
+        assertFalse(QueryParser.parse("\"hal finney\"").pinsToNotes)
+        assertFalse(QueryParser.parse("bitcoin OR lightning").pinsToNotes)
+        assertFalse(QueryParser.parse("bitcoin -spam").pinsToNotes)
+        assertFalse(SearchQuery.EMPTY.pinsToNotes)
         // A `kind:` the registry cannot resolve never became a filter, so it pins nothing either.
-        assertFalse(QueryParser.parse("kind:banana").isEventOnly)
+        assertFalse(QueryParser.parse("kind:banana").pinsToNotes)
     }
 }

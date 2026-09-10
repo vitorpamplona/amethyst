@@ -157,14 +157,16 @@ class SearchState(
     val pickedScope: StateFlow<SearchScope> = _pickedScope.asStateFlow()
 
     /**
-     * True while the query names a `kind:`, which only an event can have.
+     * True while the box holds any filter beyond its free text — see [SearchQuery.pinsToNotes].
      *
-     * The People half of the toggle cannot answer such a query — a person is not an event of any
-     * kind — so leaving it selectable offers the reader a scope guaranteed to come back empty.
+     * The People half of the toggle answers one NIP-50 string against kind 0 and nothing else, so
+     * a scope that includes People drops every token the reader typed without saying so. Both All
+     * and People are therefore taken away while a token is in the box, and given back the moment
+     * the last chip goes.
      */
     val scopePinnedToNotes: StateFlow<Boolean> =
         current
-            .map { it.query.isEventOnly }
+            .map { it.query.pinsToNotes }
             .distinctUntilChanged()
             .stateIn(coroutineScope, SharingStarted.Eagerly, false)
 

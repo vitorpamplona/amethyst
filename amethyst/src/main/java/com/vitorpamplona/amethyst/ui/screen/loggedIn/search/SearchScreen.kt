@@ -336,9 +336,10 @@ private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
                     selected = currentScope == s,
                     onClick = { searchBarViewModel.updateScope(s) },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = scopes.size),
-                    // A `kind:` in the box makes this an event-only query, so All and People are
-                    // greyed rather than merely unselected: they would return nothing, and a
-                    // toggle that offers an empty answer reads as the search being broken.
+                    // Any token in the box beyond its free text is something the people search
+                    // cannot be asked, so All and People are greyed rather than merely
+                    // unselected: they would answer a narrower question than the one on screen,
+                    // silently dropping the chips the reader can still see.
                     enabled = !pinnedToNotes || s == SearchScope.NOTES,
                 ) {
                     Text(
