@@ -165,8 +165,16 @@ reproduces to four significant figures):
 | `create_group/8`     |  9.93 ms   | 51.47 ms      | 16.23 - 16.87 ms| 1.7x slower  |
 | `create_group/32`    | 31.64 ms   | 190.08 ms     | 77.5 - 195.7 ms | 2.5x - 6x (see below) |
 | `join_welcome`       |  4.77 ms   |  6.22 ms      | 1.89 - 1.93 ms  | **2.5x faster** |
-| `send_app_message`   |  4.28 ms   |  1.72 ms      | 0.63 - 0.68 ms  | **6.5x faster** |
-| `ingest_app_message` |  (n/a)     |  3.11 ms      | 0.90 - 0.95 ms  | —            |
+| `send_app_message/0` |  4.28 ms   |  1.72 ms      | 0.55 - 0.60 ms  | **7.1x faster** |
+| `ingest_app_message/1`| (n/a)     |  3.11 ms      | 0.88 - 0.95 ms  | —            |
+
+`send_app_message/0` is the row that lines up with MDK, not a flattering pick:
+their `prepare_app_send` builds the group with `create_request(vec![])`, so
+their sender is alone in it too. The `/1`, `/8` and `/32` rows have no MDK
+counterpart. `ingest_app_message` has none either — MDK's bench binary panics
+in `bench_deferred_outbound_preflight_matrix` before reaching
+`bench_app_message_ingest`, so there is no reference number to compare against
+rather than one we chose not to use.
 
 `create_group` remains the weakest row, and `create_group/32` is not just the
 noisiest in the suite — it is the one number here that should not be quoted as
