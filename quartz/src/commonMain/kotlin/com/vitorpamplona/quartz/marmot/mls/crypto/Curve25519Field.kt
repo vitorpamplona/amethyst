@@ -195,14 +195,43 @@ internal object Curve25519Field {
         return o
     }
 
+    // Allocating vs in-place.
+    //
+    // Each `add`/`sub`/`mul`/`sqr` below returns a NEW field element, which
+    // reads well and is what the TweetNaCl reference does. Inside a scalar
+    // multiplication it is also ~1.3 MB of garbage per call: a Montgomery
+    // ladder runs 255 iterations of ten muls and eight add/subs, and every one
+    // of them allocated. An allocation profile of the Marmot benchmarks put
+    // 93% of ALL sampled allocation in these three functions.
+    //
+    // So each one has an `*Into` twin that writes into a caller-owned output.
+    // The hot paths (X25519 and Ed25519 scalar multiplication) allocate
+    // their working set once and then run allocation-free.
+    //
+    // Both forms stay: the allocating ones are used off the hot path, where
+    // the clarity is worth more than the bytes, and keeping them means the
+    // in-place versions can be differentially tested against them.
+    //
+    // Every `*Into` is safe when the output aliases an input — the ladder
+    // relies on that.
+
     /** Field addition: o = a + b. */
     fun add(
         a: LongArray,
         b: LongArray,
     ): LongArray {
         val o = LongArray(16)
-        for (i in 0 until 16) o[i] = a[i] + b[i]
+        addInto(o, a, b)
         return o
+    }
+
+    /** Field addition into [o]. Safe when [o] aliases [a] or [b]. */
+    fun addInto(
+        o: LongArray,
+        a: LongArray,
+        b: LongArray,
+    ) {
+        for (i in 0 until 16) o[i] = a[i] + b[i]
     }
 
     /** Field subtraction: o = a - b. */
@@ -211,8 +240,17 @@ internal object Curve25519Field {
         b: LongArray,
     ): LongArray {
         val o = LongArray(16)
-        for (i in 0 until 16) o[i] = a[i] - b[i]
+        subInto(o, a, b)
         return o
+    }
+
+    /** Field subtraction into [o]. Safe when [o] aliases [a] or [b]. */
+    fun subInto(
+        o: LongArray,
+        a: LongArray,
+        b: LongArray,
+    ) {
+        for (i in 0 until 16) o[i] = a[i] - b[i]
     }
 
     /** Field multiplication: o = a * b (mod p). */
@@ -220,33 +258,76 @@ internal object Curve25519Field {
         a: LongArray,
         b: LongArray,
     ): LongArray {
-        val t = LongArray(31)
+        val o = LongArray(16)
+        mulInto(o, a, b, LongArray(31))
+        return o
+    }
+
+    /**
+     * Field multiplication into [o], using [t] as the 31-limb accumulator.
+     *
+     * [t] is caller-owned so a loop can reuse one across thousands of calls;
+     * it is zeroed here, so callers never have to. Safe when [o] aliases [a]
+     * or [b]: the product is fully accumulated in [t] before [o] is touched.
+     */
+    fun mulInto(
+        o: LongArray,
+        a: LongArray,
+        b: LongArray,
+        t: LongArray,
+    ) {
+        t.fill(0L)
         for (i in 0 until 16) {
+            val ai = a[i]
             for (j in 0 until 16) {
-                t[i + j] += a[i] * b[j]
+                t[i + j] += ai * b[j]
             }
         }
         for (i in 0 until 15) {
             t[i] += 38 * t[i + 16]
         }
-        val o = LongArray(16)
         for (i in 0 until 16) o[i] = t[i]
         car25519(o)
         car25519(o)
-        return o
     }
 
     /** Field squaring: o = a^2 (mod p). */
     fun sqr(a: LongArray): LongArray = mul(a, a)
 
+    /** Field squaring into [o]. See [mulInto] for the [t] contract. */
+    fun sqrInto(
+        o: LongArray,
+        a: LongArray,
+        t: LongArray,
+    ) = mulInto(o, a, a, t)
+
     /** Field inversion: o = a^(-1) (mod p) using Fermat's little theorem. */
     fun inv25519(a: LongArray): LongArray {
-        var c = a.copyOf()
+        val o = LongArray(16)
+        inv25519Into(o, a, LongArray(16), LongArray(31))
+        return o
+    }
+
+    /**
+     * Field inversion into [o], allocation-free.
+     *
+     * 254 squarings and ~250 multiplications, which is why this one matters:
+     * on the allocating path it was the single largest contributor after the
+     * ladder itself. [c] is a scratch field element and [t] the [mulInto]
+     * accumulator; [o] may alias [a].
+     */
+    fun inv25519Into(
+        o: LongArray,
+        a: LongArray,
+        c: LongArray,
+        t: LongArray,
+    ) {
+        a.copyInto(c)
         for (i in 253 downTo 0) {
-            c = sqr(c)
-            if (i != 2 && i != 4) c = mul(c, a)
+            sqrInto(c, c, t)
+            if (i != 2 && i != 4) mulInto(c, c, a, t)
         }
-        return c
+        c.copyInto(o)
     }
 
     /** Parity of a field element (lowest bit after reduction). */
@@ -257,10 +338,11 @@ internal object Curve25519Field {
 
     /** Raise a field element to the power (2^252 - 3), used in sqrt. */
     fun pow2523(a: LongArray): LongArray {
-        var c = a.copyOf()
+        val c = a.copyOf()
+        val t = LongArray(31)
         for (i in 250 downTo 0) {
-            c = sqr(c)
-            if (i != 1) c = mul(c, a)
+            sqrInto(c, c, t)
+            if (i != 1) mulInto(c, c, a, t)
         }
         return c
     }

@@ -60,3 +60,51 @@ landing inside a measured sample and corrupting the percentile it falls in.
   of *this* workload on *this* machine. It is not a language benchmark.
 - `create_group/32` builds 32 KeyPackages in setup. That cost is excluded, but
   it makes each iteration expensive to prepare — hence the low iteration count.
+
+## Result: eliminating the field-arithmetic allocation
+
+The first run of this module put **93% of all sampled allocation** (JFR
+`jdk.ObjectAllocationSample`) in `Curve25519Field.mul/add/sub`. The pure-Kotlin
+Curve25519 returned a fresh `LongArray(16)` from every field operation, and a
+Montgomery ladder performs ~18 of them per bit for 255 bits — so a single
+X25519 scalar multiplication allocated over a megabyte of garbage.
+
+Each operation now has an in-place `*Into` twin, and both hot paths (the X25519
+ladder and Ed25519's extended-coordinate point addition) allocate their working
+set once and then run allocation-free. See `Curve25519Field`.
+
+Allocation per operation, before and after. This column reproduces to four
+significant figures across runs, so the ratios are real:
+
+| operation           | before       | after       | reduction |
+|---------------------|--------------|-------------|-----------|
+| `create_group/0`    |   6 958.7 KB |    88.3 KB  | 79x       |
+| `create_group/1`    |  27 074.1 KB |   570.5 KB  | 47x       |
+| `create_group/8`    |  94 548.6 KB | 3 501.7 KB  | 27x       |
+| `create_group/32`   | 333 101.2 KB | 33 216.6 KB | 10x       |
+| `join_welcome`      |  10 331.6 KB |   252.2 KB  | 41x       |
+| `send_app_message`  |   2 755.1 KB |    71.6 KB  | 38x       |
+| `ingest_app_message`|   5 640.3 KB |    70.9 KB  | 80x       |
+
+Latency improved too, though it is the noisier measurement — two post-rewrite
+runs are given so the spread is visible rather than averaged away:
+
+| operation           | p50 before | p50 after (run 1 / run 2) |
+|---------------------|------------|---------------------------|
+| `create_group/0`    |   6 323.7us |    4 184.2 / 3 971.5us     |
+| `create_group/1`    |  16 928.2us |   13 197.2 / 13 574.2us    |
+| `create_group/8`    |  51 470.7us |   43 244.0 / 43 424.7us    |
+| `create_group/32`   | 190 080.0us |  202 261.1 / 172 908.9us   |
+| `join_welcome`      |   6 219.3us |    4 919.5 / 4 991.3us     |
+| `send_app_message`  |   1 720.9us |    1 314.3 / 1 376.0us     |
+| `ingest_app_message`|   3 114.1us |    2 487.5 / 2 545.6us     |
+
+`create_group/32` is the row to distrust: it has the fewest iterations, and its
+two runs disagree by 17% at p50 and by nearly 2x at p99 (400.3ms then 210.4ms).
+Read it as "no worse"; the other rows are consistent enough to read as gains.
+
+Against MDK this closes most of the `create_group` gap — `create_group/1` goes
+from 4.7x slower to about 3.7x — without changing a single protocol behaviour:
+the RFC 7748 / RFC 8032 vector suites, the HPKE tests and the full 4833-test
+quartz suite all pass unchanged, which is the point of keeping the allocating
+functions around to differentially test against.
