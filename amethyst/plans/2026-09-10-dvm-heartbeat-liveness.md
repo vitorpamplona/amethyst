@@ -1,0 +1,144 @@
+# DVM heartbeat liveness — only show DVMs with a fresh kind-11998 heartbeat
+
+_Status: **design approved, not implemented**._
+
+## 0. The shape of the thing
+
+Amethyst shows Data Vending Machines (DVMs) in three places: the Discover "Content" tab
+(kind 31990 NIP-89 announcements advertising kind 5300), DVM feeds pinned to the top-nav
+(`FavoriteAlgoFeedsOrchestrator`), and the per-DVM content-discovery screen. Today all of
+these treat every announced DVM as alive, forever — a DVM that went down months ago still
+renders as a usable feed.
+
+DVM operators are now sending a **heartbeat event (kind 11998) every 300 seconds**. The
+event is plain-text (`content = "Alive and kicking"`) with three tags:
+
+- `status` — free-text status line (e.g. "My heart keeps beating like a hammer")
+- `d` — the DVM's **NIP-89 DTAG**, tying the heartbeat to the announcement's address
+- `expiration` — `createdAt + 300` (NIP-40), so relays drop the beat once the next one lands
+
+Kind 11998 sits in the replaceable range (10000–19999), so relays keep only the latest beat
+per author. There is no NIP for this yet — the shape above comes from the operator-side
+builder and is treated as the wire contract.
+
+The feature: **a DVM counts as alive only if its latest heartbeat is at most 420 seconds
+old** (one missed 300s beat plus slack). Dead DVMs disappear from the Discover list; pinned
+feeds and the detail surface show an offline state instead.
+
+## 1. Decisions taken
+
+1. **Approach: cache-backed heartbeats.** The heartbeat is a real event class stored through
+   the standard replaceable path in `LocalCache` (newest per address, standard invalidation).
+   Rejected alternatives: a side-state registry (duplicates invalidation plumbing) and
+   regular-note storage (no address matching, pollutes the notes index).
+2. **Scope: all three surfaces** — Discover list (hide), pinned feeds (offline state, chip
+   stays), DVM detail screen (offline banner, requesting still allowed). The manage screen
+   (`FavoriteAlgoFeedsListScreen`) also gets the badge.
+3. **Pinned chips stay when offline** — the user pinned them deliberately; they gray out
+   with an offline badge rather than vanishing, and tapping still opens the feed.
+4. **Threshold: 420 seconds**, a named constant. Exactly 420s old counts as fresh.
+5. **Strict from cold start.** No grace period: the Discover list starts empty and fills
+   within ~1–2s as heartbeat REQs return (same behavior as the existing 31990 load).
+
+## 2. Event model (quartz)
+
+New `quartz/.../nip90Dvms/heartbeat/DvmHeartbeatEvent.kt`:
+
+- `class DvmHeartbeatEvent(...) : BaseReplaceableEvent(...)`, `KIND = 11998`
+- **Overrides `dTag()`** to read the event's actual `d` tag — `BaseReplaceableEvent.dTag()`
+  returns a fixed `""`, so without the override the cache address could not match the
+  announcement. With it, the cache address is `Address(11998, dvmPubkey, dTag)`, the exact
+  mirror of the announcement's `Address(31990, dvmPubkey, dTag)`.
+- Accessors: `statusTag()`, and `expiration()` via the existing NIP-40 extension.
+- Registered in `EventFactory` (kind → constructor).
+
+## 3. Cache consumption (LocalCache)
+
+One routing line in `LocalCache.justConsumeInnerInner`: `is DvmHeartbeatEvent ->`
+`consumeBaseReplaceable(event, relay, wasVerified)`. This yields newest-per-address
+replacement, relay tracking, and `LocalCacheFlow` invalidation for free. Unlisted kinds fall
+into the `else` branch and are rejected, so the routing line is mandatory.
+
+Stale beats simply sit at their address until overwritten; the age check (§4) makes them
+invisible. The cache pruner removes old entries on its own schedule.
+
+## 4. Freshness core (amethyst)
+
+Small helper file in `amethyst/.../dvms/`:
+
+- `const val DVM_HEARTBEAT_MAX_AGE_SECONDS = 420`
+- `LocalCache.dvmHeartbeatOf(appDef: AppDefinitionEvent): DvmHeartbeatEvent?` — address
+  lookup `Address(DvmHeartbeatEvent.KIND, appDef.pubKey, appDef.dTag())`
+- `DvmHeartbeatEvent.isFreshAt(now: Long): Boolean` — `createdAt >= now - 420`
+- `@Composable fun rememberDvmHeartbeat(address: Address): State<DvmHeartbeatEvent?>` —
+  composable-scoped subscription (§5) + staleness re-check tick (§6), shared by every
+  surface that renders liveness.
+
+## 5. Subscriptions
+
+**Discover screen — all DVM heartbeats.** In
+`commons/.../relayClient/discover/nip90DVMs/SubAssemblyHelper.kt`, `makeContentDVMsFilter`
+unconditionally appends one filter for every top-filter variant:
+`kinds = [11998], since = TimeUtils.now() - 420` — no authors, no tags, scoped to the same
+relay set as the 31990 REQs. It deliberately ignores the 31990 `since`-cursor (heartbeats
+are a rolling window, not a cursor stream — the cursor would miss re-opened tabs after the
+beats expired). It rides the existing assembler lifecycle: subscribes on entering Discover,
+closes on leaving.
+
+**Per-surface — pinned chips, home banner, detail screen.** `rememberDvmHeartbeat` opens a
+tiny composable-scoped subscription: `kinds = [11998], authors = [dvm pubkey], limit = 1,
+since = now - 420`. The home top-bar chips live for the whole session, so they double as
+the session-scoped watcher for pinned DVMs. Traffic is negligible (a few pinned DVMs ×
+1 event / 5 min).
+
+## 6. Invalidation — closing the two silent gaps
+
+1. **A new heartbeat does not re-rank the list.** The additive feed path
+   (`FeedContentState.updateFeedWith`) re-filters only the *new* notes, and a heartbeat
+   note is never a list row — the affected 31990 card would not be re-evaluated. Fix: in
+   `AccountFeedContentStates.updateFeedsWith`, branch on
+   `newNotes.any { it.event is DvmHeartbeatEvent }` → `discoverDVMs.invalidateData()`
+   (full rebuild re-runs the freshness check on every announcement); otherwise the normal
+   additive path.
+2. **Expiry produces no event.** A 60s timer collector in `AccountFeedContentStates`
+   (alongside the existing `scope.launch { flows.collect { … } }` observers) calls
+   `discoverDVMs.invalidateData()` every minute. The rebuild is a cheap scan (≤ a few
+   hundred 31990s) and `refreshSuspended()` no-ops when the list is unchanged. Composables
+   using `rememberDvmHeartbeat` tick on a 30s cadence internally.
+
+## 7. UI surfaces
+
+1. **Discover "Content" tab** — `DiscoverNIP89FeedFilter.acceptApp` adds
+   `dvmHeartbeatOf(noteEvent)?.isFreshAt(now) == true`. No fresh beat → card hidden.
+2. **Pinned top-nav chips** — chip stays; when the heartbeat is stale or absent the chip is
+   grayed out with a small offline dot appended to its label. Tapping still opens the feed.
+3. **Pinned feed view** — new branch in `HomeAlgoFeedStatusBanner`: when the selected
+   pinned feed's heartbeat is stale, show an offline banner above the last known content,
+   shown *even when content exists* (the current banner only handles empty/error states).
+   Single-feed and all-feeds variants both covered.
+4. **DVM detail screen** (`DvmContentDiscoveryScreen`) — same offline banner; requesting is
+   still allowed (informational, not a block).
+5. **`FavoriteAlgoFeedsListScreen`** — offline badge per row so users can spot dead pins.
+6. New English string resources (`dvm_offline`, `dvm_offline_banner`); translations flow
+   via Crowdin.
+
+## 8. Edge cases (accepted limitations)
+
+- Heartbeat without a `d` tag → cache address dTag `""` → matches nothing → DVM hidden
+  (strict; the wire contract always sends `d`).
+- Device/DVM clock skew > 7 min → wrongly hidden (inherent to timestamp-based liveness).
+- DVM beats that never reach the relays we query → shows offline (that is the feature).
+- One keypair running multiple DVMs → relays keep only the latest beat per (kind, author);
+  per-d-tag cache slots help only across relays. Most DVMs use one key each.
+- **Desktop app: out of scope this round.** The commons subscription helper is shared-ready
+  and the desktop relay assembler will pick up heartbeat REQs harmlessly (cache fills,
+  nothing renders), but all UI wiring is Android-only.
+
+## 9. Testing
+
+- **quartz**: parse/build `DvmHeartbeatEvent` — `dTag()` override, `statusTag()`,
+  `expiration()`, address assembly.
+- **amethyst**: `DiscoverNIP89FeedFilter.acceptApp` matrix — no beat → reject; fresh beat →
+  accept; 421s-old beat → reject. The `updateFeedsWith` heartbeat branch triggers a full
+  rebuild. `isFreshAt` boundary (420s fresh, 421s stale).
+- Verify with `./gradlew :quartz:test :amethyst:test`, then `./gradlew spotlessApply`.
