@@ -107,7 +107,9 @@ class IndexableContentGoldenTest {
             "a kind's indexed text changed. If deliberate: rerun with -Dgolden=write, update " +
                 "references/searchable-kinds.md in the same commit, and schedule a reindex " +
                 "(IEventStore.reindexFullTextSearch) — existing databases keep their old text.",
-            golden.readText().trim(),
+            // Normalize CRLF: Windows checkouts (autocrlf) would otherwise fail this comparison
+            // on invisible line endings alone.
+            golden.readText().replace("\r\n", "\n").trim(),
             actual.trim(),
         )
     }
@@ -211,6 +213,7 @@ class IndexableContentGoldenTest {
                 10100,
                 10154,
                 11871,
+                11998,
                 12473,
                 15128,
                 15129,

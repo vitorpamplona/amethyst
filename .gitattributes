@@ -2,3 +2,7 @@
 # binary so git never applies CRLF/text normalization or textual diff/merge, which
 # would corrupt the compressed stream (important on Windows checkouts).
 *.gz binary
+
+# Golden test resources are compared byte-for-byte against generated strings:
+# force LF everywhere so a Windows CRLF checkout cannot break the comparison.
+*.golden text eol=lf
