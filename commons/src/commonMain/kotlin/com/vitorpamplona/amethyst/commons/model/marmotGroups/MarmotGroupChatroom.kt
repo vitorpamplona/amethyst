@@ -64,6 +64,31 @@ class MarmotGroupChatroom(
      * once this is cleared.
      */
     var avatarUrl = MutableStateFlow<GroupAvatarUrlV1?>(null)
+
+    /**
+     * False for a legacy MIP-01 group — one that predates the current profile
+     * and requires `0xf2f1` instead of the `0x8009` account identity proof.
+     *
+     * Front ends need this because a legacy group has nowhere to PUT several
+     * components: lifecycle (`0x800c`, so no disband), the URL avatar
+     * (`0x8007`), and the encrypted-media policy (`0x800b`) are all
+     * GroupContext state a legacy group never carried. Offering those actions
+     * on one produces a commit that is refused before it is built, so the
+     * honest thing is not to offer them.
+     *
+     * Nor can that be fixed by upgrading the group: the identity proof lives in
+     * each member's own LeafNode and covers that leaf's signature key, so it
+     * cannot be added to leaves that already exist. See `AccountIdentityProofV2`
+     * — "There is no fallback and no in-place migration". A legacy room stays a
+     * legacy room; a new group is the only route.
+     *
+     * Defaults to TRUE so a group that has just been created shows its full
+     * feature set immediately: creation does not run a metadata sync, and every
+     * group created now is a current-profile one. A restored legacy group is
+     * corrected by the startup sync before any screen reads this.
+     */
+    var isCurrentProfile = MutableStateFlow(true)
+
     var adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
     var relays = MutableStateFlow<List<String>>(emptyList())
     var memberCount = MutableStateFlow(0)

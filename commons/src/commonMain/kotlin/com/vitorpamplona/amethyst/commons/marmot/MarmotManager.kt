@@ -2175,6 +2175,9 @@ class MarmotManager(
             chatroom.relays.value = view.relays
             chatroom.image.value = view.image
             chatroom.avatarUrl.value = view.avatarUrl
+            // Drives which actions a front end may offer at all — a legacy
+            // group has no carrier for lifecycle, URL avatar or media policy.
+            chatroom.isCurrentProfile.value = view.isCurrentProfile
         }
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)

@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_edit_info_footer
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_description_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholder
+import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_avatar_url
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -75,6 +76,7 @@ fun EditGroupInfoScreen(
     val currentDescription by chatroom.description.collectAsStateWithLifecycle()
     val currentImage by chatroom.image.collectAsStateWithLifecycle()
     val currentAvatarUrl by chatroom.avatarUrl.collectAsStateWithLifecycle()
+    val isCurrentProfile by chatroom.isCurrentProfile.collectAsStateWithLifecycle()
 
     var name by remember(currentName) { mutableStateOf(currentName ?: "") }
     var description by remember(currentDescription) { mutableStateOf(currentDescription ?: "") }
@@ -118,7 +120,12 @@ fun EditGroupInfoScreen(
                             // separate commit — only made when it actually
                             // changed, so saving a rename does not also
                             // rewrite the avatar state.
-                            if (avatarUrlChanged) {
+                            // `isCurrentProfile` is belt-and-braces: the field
+                            // is not shown on a legacy group, so the value
+                            // cannot have changed. Guarding the call as well
+                            // means a future edit to the form cannot turn a
+                            // hidden field into a refused commit on save.
+                            if (avatarUrlChanged && isCurrentProfile) {
                                 accountViewModel.setMarmotGroupAvatarUrl(nostrGroupId, avatarUrl.trim())
                             }
                             launch(Dispatchers.Main) {
@@ -202,16 +209,31 @@ fun EditGroupInfoScreen(
             // Blossom image while it is set, and clearing it falls the group
             // back to that image — so the two fields are not alternatives to
             // choose between, they stack.
-            OutlinedTextField(
-                value = avatarUrl,
-                onValueChange = { avatarUrl = it },
-                label = { Text(stringRes(Res.string.marmot_avatar_url)) },
-                placeholder = { Text(stringRes(Res.string.marmot_avatar_url_placeholder)) },
-                supportingText = { Text(stringRes(Res.string.marmot_avatar_url_footer)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !isSaving,
-            )
+            //
+            // A legacy group has no carrier for `0x8007` at all, and cannot be
+            // upgraded to one, so the field is replaced by the reason rather
+            // than shown and then rejected on save. The uploaded image above
+            // still works there, which is what makes this a missing option
+            // rather than a missing feature.
+            if (isCurrentProfile) {
+                OutlinedTextField(
+                    value = avatarUrl,
+                    onValueChange = { avatarUrl = it },
+                    label = { Text(stringRes(Res.string.marmot_avatar_url)) },
+                    placeholder = { Text(stringRes(Res.string.marmot_avatar_url_placeholder)) },
+                    supportingText = { Text(stringRes(Res.string.marmot_avatar_url_footer)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = !isSaving,
+                )
+            } else {
+                Text(
+                    text = stringRes(Res.string.marmot_legacy_group_no_avatar_url),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 

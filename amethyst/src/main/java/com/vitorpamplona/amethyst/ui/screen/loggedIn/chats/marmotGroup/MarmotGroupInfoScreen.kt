@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_info_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_required
 import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group_confirm
+import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_disband
 import com.vitorpamplona.amethyst.commons.resources.marmot_member_suffix_admin
 import com.vitorpamplona.amethyst.commons.resources.marmot_member_suffix_you
 import com.vitorpamplona.amethyst.commons.resources.marmot_relay_last_event
@@ -144,6 +145,7 @@ fun MarmotGroupInfoScreen(
     val groupRelays by chatroom.relays.collectAsStateWithLifecycle()
     val relayActivity by chatroom.relayActivity.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
+    val isCurrentProfile by chatroom.isCurrentProfile.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDisbandDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
@@ -191,7 +193,12 @@ fun MarmotGroupInfoScreen(
                     // admin sees it and it sits behind its own confirmation.
                     // Peers reject a non-admin's lifecycle commit anyway; not
                     // offering it is what keeps a member from trying.
-                    if (myPubkey in adminPubkeys) {
+                    //
+                    // A legacy group is hidden for a different reason: it has
+                    // no carrier for the lifecycle component at all, so the
+                    // commit is refused before it is built. The room says why
+                    // further down rather than leaving the absence unexplained.
+                    if (myPubkey in adminPubkeys && isCurrentProfile) {
                         IconButton(
                             onClick = { showDisbandDialog = true },
                             enabled = !isLeaving && !isDisbanding,
@@ -291,6 +298,21 @@ fun MarmotGroupInfoScreen(
                             nav = nav,
                         )
                         HorizontalDivider()
+                    }
+                }
+
+                // An admin of a legacy group would otherwise just find the
+                // disband action missing. Say why, and say that it cannot be
+                // fixed by waiting for an update, so the only surprising part
+                // — that a NEW group would have it — is the part explained.
+                if (!isCurrentProfile && myPubkey in adminPubkeys) {
+                    item {
+                        Text(
+                            text = stringRes(Res.string.marmot_legacy_group_no_disband),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        )
                     }
                 }
 
