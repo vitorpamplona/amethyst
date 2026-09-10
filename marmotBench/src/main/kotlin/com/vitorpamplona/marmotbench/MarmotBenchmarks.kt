@@ -146,9 +146,10 @@ fun benchIngestAppMessage(): BenchResult =
                 val groupId = newGroupId()
                 alice.manager.createCurrentProfileGroup(groupId, listOf("wss://bench.invalid"), GroupProfileV1("bench", ""))
                 val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
-                val (commit, welcome) = alice.manager.addMember(groupId, kp, emptyList())
+                // A founding add publishes no commit, so there is no echo for
+                // Alice to re-ingest — the Welcome is the whole delivery.
+                val (_, welcome) = alice.manager.addMember(groupId, kp, emptyList())
                 bob.manager.ingest(welcome!!.giftWrapEvent)
-                alice.manager.ingest(commit.signedEvent)
                 val sent = alice.manager.buildTextMessage(groupId, PAYLOAD, persistOwn = false)
                 bob to sent.outbound.signedEvent
             }

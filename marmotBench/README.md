@@ -30,11 +30,13 @@ both sides — criterion's `iter_batched(.., PerIteration)` there, an explicit
 
 **On the shape of `create_group/N`.** An earlier version of this file claimed
 we spend "one more commit" than MDK's founding creation. That was wrong, and
-`--epoch-probe` exists to keep it honest: our `create` publishes nothing and
-leaves epoch 0, `addMember` produces exactly one commit, and the invitee joins
-at epoch 1. MLS permits nothing else — RFC 9420 section 11 requires a group to
-be created with a single member — so MDK commits its founding Adds internally
-too. Both sides do one commit's worth of ratchet work.
+`--epoch-probe` exists to keep it honest. It reported, before the founding-add
+fix below: `create` publishes nothing and leaves epoch 0, `addMember` produces
+exactly one commit, and the invitee joins at epoch 1. MLS permits nothing else
+— RFC 9420 section 11 requires a group to be created with a single member — so
+MDK commits its founding Adds internally too. Both sides do one commit's worth
+of ratchet work. It now reports zero commits published for that same step, for
+the reason in the next paragraph; re-run it rather than trusting this text.
 
 What did differ is that we PUBLISHED that founding commit and MDK does not.
 `protocol-core/publish-lifecycle.md` gives the founding Add an empty
@@ -148,22 +150,44 @@ At 121us the scalar multiplication is now faster than SunEC's 160us, which is
 the useful sanity check on the result: it lands where a good managed-language
 implementation should, rather than somewhere suspiciously better.
 
-Against MDK, over the whole suite (both post-rewrite runs shown where they
-differ; `alloc/op` reproduces to four significant figures):
+Against MDK, over the whole suite (two runs shown where they differ; `alloc/op`
+reproduces to four significant figures):
 
 | operation            | MDK (Rust) | quartz before | quartz now      | vs MDK       |
 |----------------------|------------|---------------|-----------------|--------------|
-| `create_group/1`     |  3.61 ms   | 16.93 ms      | 5.42 - 5.88 ms  | 1.5-1.6x slower |
-| `create_group/8`     |  9.93 ms   | 51.47 ms      | 17.27 - 17.60 ms| 1.8x slower  |
-| `create_group/32`    | 31.64 ms   | 190.08 ms     | 77.53 - 81.47 ms| 2.5x slower  |
-| `join_welcome`       |  4.77 ms   |  6.22 ms      | 1.82 - 2.00 ms  | **2.5x faster** |
-| `send_app_message`   |  4.28 ms   |  1.72 ms      | 0.61 - 0.71 ms  | **6.5x faster** |
-| `ingest_app_message` |  (n/a)     |  3.11 ms      | 0.88 - 0.90 ms  | —            |
+| `create_group/1`     |  3.61 ms   | 16.93 ms      | 5.25 - 5.85 ms  | 1.5-1.6x slower |
+| `create_group/8`     |  9.93 ms   | 51.47 ms      | 16.23 - 16.87 ms| 1.7x slower  |
+| `create_group/32`    | 31.64 ms   | 190.08 ms     | 82.49 - 86.31 ms| 2.6x slower  |
+| `join_welcome`       |  4.77 ms   |  6.22 ms      | 1.89 - 1.93 ms  | **2.5x faster** |
+| `send_app_message`   |  4.28 ms   |  1.72 ms      | 0.63 - 0.68 ms  | **6.5x faster** |
+| `ingest_app_message` |  (n/a)     |  3.11 ms      | 0.90 - 0.95 ms  | —            |
 
-`create_group` remains the weakest row. Both sides do the same one commit (see
-"What is compared"); what we additionally carried was publishing it, which the
-founding-add fix has since removed. `create_group/32` is also still the noisiest
-row in the suite.
+`create_group` remains the weakest row, and `create_group/32` is still the
+noisiest in the suite — its two runs here disagree by nearly 2.4x at p99.
+
+### What not publishing the founding commit was worth
+
+The founding-add fix removed a commit event that `create_group/N` used to
+build, sign, outer-encrypt and publish for an audience of nobody. It is a
+correctness fix first (see the commit), but it is also the one change in this
+file whose benchmark effect is worth stating precisely, because it is smaller
+than it sounds:
+
+| row               | alloc before | alloc now | change |
+|-------------------|--------------|-----------|--------|
+| `create_group/0`  |    81.3 KB   |  81.3 KB  | none   |
+| `create_group/1`  |   543.6 KB   | 482.5 KB  | -11%   |
+| `create_group/8`  | ~3 445 KB    | 3 240 KB  | -6%    |
+| `create_group/32` |  32 825 KB   | 32 355 KB | -1.4%  |
+
+`create_group/0` is unchanged and must be: with no invitees there is no
+founding Add to skip publishing. The saving grows in absolute terms with the
+invitee count (~61 KB, ~205 KB, ~470 KB) because the commit not being built
+carries N Add proposals, but shrinks as a fraction because everything else in
+the operation grows faster. Latency moved within run-to-run noise, so no
+latency claim is made for it: the reason to want this change is that a group
+creation no longer depends on a relay acknowledgement the spec never asked
+for.
 
 ### Why the constants can be trusted
 

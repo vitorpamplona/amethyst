@@ -40,7 +40,10 @@ fun epochProbe() =
         val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
         val (commit, welcome) = alice.manager.addMember(groupId, kp, emptyList())
         println("after addMember:                 epoch=${alice.manager.groupEpoch(groupId)}")
-        println("commits published by addMember:  1 (kind ${commit.signedEvent.kind})")
+        println(
+            "commits published by addMember:  " +
+                (commit?.let { "1 (kind ${it.signedEvent.kind})" } ?: "0 (founding add, merged locally)"),
+        )
         println("welcome produced:                ${welcome != null}")
 
         bob.manager.ingest(welcome!!.giftWrapEvent)
