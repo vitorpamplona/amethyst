@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
 import com.vitorpamplona.amethyst.commons.search.QueryParser
+import com.vitorpamplona.amethyst.commons.search.RenderableKinds
 import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.amethyst.commons.search.SearchPipeline
 import com.vitorpamplona.amethyst.commons.search.SearchScope
@@ -406,9 +407,16 @@ class SearchBarViewModel(
                     // could actually be one, so an ordinary query never pays for two scans.
                     looksLikeAnEventId(term) -> LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
                     else ->
-                        // The same filters the REQ carries. Built by the pipeline rather than
-                        // here, so the cache is asked exactly what the relays are asked.
-                        LocalCache.search.findNotesMatching(SearchPipeline.filters(parsed, limit = 200), account.hiddenUsers)
+                        // The same filters the REQ carries, over the same kind window. Built by
+                        // the pipeline rather than here, so the cache is asked exactly what the
+                        // relays are asked — the window was the last thing the two disagreed on,
+                        // the local scan having had none at all and so matching kinds no relay was
+                        // ever asked for. Asked flat rather than in RenderableKinds.GROUPS: the
+                        // groups exist for a relay's per-filter cap, and a cache has none.
+                        LocalCache.search.findNotesMatching(
+                            SearchPipeline.filters(parsed, RenderableKinds.ALL, limit = 200),
+                            account.hiddenUsers,
+                        )
                 }
             val withDirect = (listOfNotNull(direct) + raw).distinctBy { it.idHex }
             val followed = if (follows != null) withDirect.filter { it.author?.pubkeyHex in follows } else withDirect

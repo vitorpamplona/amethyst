@@ -20,93 +20,21 @@
  */
 package com.vitorpamplona.amethyst.desktop.subscriptions
 
+import com.vitorpamplona.amethyst.commons.search.RenderableKinds
 import com.vitorpamplona.amethyst.commons.search.SearchPipeline
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
-import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.nns.NNSEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 object SearchFilterFactory {
-    // Default kind groups (ported from Android SearchPostsByText)
-    private val defaultKindGroup1 =
-        listOf(
-            TextNoteEvent.KIND,
-            LongTextNoteEvent.KIND,
-            BadgeDefinitionEvent.KIND,
-            PeopleListEvent.KIND,
-            BookmarkListEvent.KIND,
-            OldBookmarkListEvent.KIND,
-            AudioHeaderEvent.KIND,
-            AudioTrackEvent.KIND,
-            MusicTrackEvent.KIND,
-            MusicPlaylistEvent.KIND,
-            PinListEvent.KIND,
-            ZapPollEvent.KIND,
-            ChannelCreateEvent.KIND,
-        )
-
-    private val defaultKindGroup2 =
-        listOf(
-            ChannelMetadataEvent.KIND,
-            ClassifiedsEvent.KIND,
-            CommunityDefinitionEvent.KIND,
-            EmojiPackEvent.KIND,
-            HighlightEvent.KIND,
-            LiveActivitiesEvent.KIND,
-            PublicMessageEvent.KIND,
-            NNSEvent.KIND,
-            WikiNoteEvent.KIND,
-            CommentEvent.KIND,
-        )
-
-    private val defaultKindGroup3 =
-        listOf(
-            InteractiveStoryPrologueEvent.KIND,
-            InteractiveStorySceneEvent.KIND,
-            FollowListEvent.KIND,
-            NipTextEvent.KIND,
-            PollEvent.KIND,
-            PollResponseEvent.KIND,
-        )
-
-    private val DEFAULT_KIND_GROUPS = listOf(defaultKindGroup1, defaultKindGroup2, defaultKindGroup3)
-
     /**
      * The filters a query sends, per the shared search language — see
      * [com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder], which owns how each token
      * becomes a NIP-01 filter field and how a hashtag or a scope fans out into a union.
      *
-     * The only thing this layer adds is the kind window. A query that names no kind still cannot
-     * ask a relay for "everything": the kinds Amethyst can render are listed explicitly, and
-     * there are more of them than most relays accept in one filter, so they are asked in three
-     * groups and the union is merged client-side.
+     * The only thing this layer adds is the kind window, and it no longer keeps its own copy of
+     * one: the list lived here and in Android's `searchPostsByText`, and the copy here had lost
+     * the calendar slots and code snippets, so the same query returned different kinds on the two
+     * platforms. Both now read [RenderableKinds].
      */
     fun createFilters(
         query: SearchQuery,
@@ -116,6 +44,6 @@ object SearchFilterFactory {
         // SearchPipeline.filters lets the query's own `kind:` win over the window passed here, so
         // a named kind collapses the fan-out to one group on its own.
         if (query.kinds.isNotEmpty()) return SearchPipeline.filters(query, limit = limit)
-        return DEFAULT_KIND_GROUPS.flatMap { SearchPipeline.filters(query, it, limit) }
+        return RenderableKinds.GROUPS.flatMap { SearchPipeline.filters(query, it, limit) }
     }
 }

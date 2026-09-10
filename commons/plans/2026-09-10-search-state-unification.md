@@ -35,8 +35,8 @@ Supporting measurements, taken 2026-09-10:
   inside result flows.
 - Four hand-maintained answers to "which kinds are searchable": the relay
   allowlist (34), the local denylist (13), `KindRegistry.aliases` (33), and
-  quartz's `SearchableEvent` — **139 implementors, referenced 0 times by the
-  client**.
+  quartz's `SearchableEvent` — 142 reachable kinds, **referenced 0 times by the
+  client**. *(The first two are now one list; see Phase 1 step 3.)*
 
 ## 2. The real blocker (it is not laziness)
 
@@ -128,10 +128,24 @@ Do not attempt to unify these; they are real differences, not drift:
    one object, with the ordering documented and tested.
 2. Repoint both `SearchBarViewModel` and `AdvancedSearchBarState` at it. No
    behaviour change intended — this is the regression-test bed for Phase 2.
-3. **One kind-set source.** Derive the relay allowlist from quartz's
-   `SearchableEvent` rather than the hand-kept `SearchPostsByTextKinds1/2/3`,
-   and make the local denylist the *same* set expressed once. Fixes the
-   pictures/video/git/workout gap found on 2026-09-09 and stops it recurring.
+3. **One kind-set source.** *(Done — `RenderableKinds` in `commons/search/`,
+   checked against `SearchableKinds` in quartz.)* The relay allowlist, desktop's
+   copy of it, and the local scan's absent window are now one list. Quartz gained
+   `SearchableKinds.ALL`, the 142 kinds `EventFactory` builds a `SearchableEvent`
+   for, verified by sweeping the whole 16-bit kind space in a test rather than
+   kept by hand; `RenderableKinds` is the 46 of those Amethyst has a card
+   for, plus three that match on `content` alone, and a test pins the rest so a new
+   searchable kind in quartz arrives as a decision.
+
+   The audit that produced it found fifteen searchable, renderable kinds the
+   search never asked for — pictures, all four video kinds, workouts, git repos,
+   sites, napplets, meetings, calendar events, software apps. It also found that
+   quartz's own golden test was pinning 126 kinds when 142 were searchable, and
+   that twelve event classes (`FeedDefinitionEvent` among them) are never
+   registered in `EventFactory`, so their events parse as plain `Event` and
+   nothing ever indexes them. That last one is a quartz bug, filed here rather
+   than fixed: it is not search's to make.
+
 4. One debounce policy, stated once.
 
 *Size: ~400 lines moved/added, ~200 deleted. No module boundaries crossed.*
@@ -180,7 +194,8 @@ refactoring, not after:
 - **A parity table**: one query × both front ends → same filters, same kept set,
   same order. This is the test that would have caught all four bugs.
 - **Scope × result-type**: the current 7 guards, pinned, before they collapse.
-- **Kind-set parity**: relay allowlist == local allowlist == `SearchableEvent`.
+- **Kind-set parity**: relay allowlist == local allowlist, and every kind in it
+  is one `SearchableEvent` covers. *(Done: `RenderableKindsTest`.)*
 
 ## 9. Open questions for the maintainer
 
