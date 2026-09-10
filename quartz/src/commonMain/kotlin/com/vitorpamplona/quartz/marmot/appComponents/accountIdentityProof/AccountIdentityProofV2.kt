@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -151,7 +152,15 @@ object AccountIdentityProofV2 {
             "account identity proof created_at must be in 1..${MarmotAuthorizationProof.MAX_CREATED_AT}"
         }
         val template = signingTemplate(ciphersuite, mlsSignatureKey, createdAt)
-        val signed: Event = signer.sign(template)
+        // Signed by the bare signer, never by a decorating wrapper. Amethyst's account signer
+        // appends the NIP-89 `client` tag to everything it signs (the setting defaults to on), and
+        // the check below -- which exists so a substituting external signer cannot authorize a key
+        // the caller never asked to authorize -- cannot tell that addition apart from a hostile
+        // one. Every KeyPackage mint on Android therefore threw "signer altered the account
+        // identity proof event tags", so no KeyPackage was ever published and no group could be
+        // created. A proof is a fixed set of bytes about a key, not a post: it carries no client
+        // attribution, and the tag would have to be stripped again by every verifier anyway.
+        val signed: Event = signer.withoutClientTag().sign(template)
 
         require(signed.pubKey == signer.pubKey) {
             "signer returned an account identity proof event authored by a different account"

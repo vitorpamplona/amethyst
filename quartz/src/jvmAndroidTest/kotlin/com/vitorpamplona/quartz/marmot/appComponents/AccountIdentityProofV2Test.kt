@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -279,6 +280,34 @@ class AccountIdentityProofV2Test {
                     ciphersuite,
                 ),
             )
+        }
+
+    @Test
+    fun aClientTaggedSignerStillMintsAValidProof() =
+        runBlocking {
+            // Amethyst's account signer appends the NIP-89 client tag to everything it signs, and
+            // the setting is on by default, so this is the ordinary path on Android rather than an
+            // exotic one. Signing the proof through the decorator produced tags that did not match
+            // the template, and `create` -- which cannot tell a decorator's addition from a hostile
+            // substitution -- threw. Every KeyPackage mint on device died there.
+            val keyPair = KeyPair()
+            val leafKey = ByteArray(32) { (it + 7).toByte() }
+            val tagged = NostrSignerWithClientTag(NostrSignerInternal(keyPair), "Amethyst")
+
+            val proof = AccountIdentityProofV2.create(tagged, ciphersuite, leafKey, createdAt)
+
+            assertEquals(
+                AccountIdentityProofV2.Result.VALID,
+                AccountIdentityProofV2.validate(proof.encode(), keyPair.pubKey, leafKey, ciphersuite),
+            )
+            // Everything the proof commits to, except the signature: the decorator must not reach
+            // the signed bytes at all. Not compared byte-for-byte against a bare-signer proof --
+            // BIP-340 signs with auxiliary randomness, so two signatures over the same message
+            // differ by design and such an assertion would fail for a reason that is not this bug.
+            val bare = AccountIdentityProofV2.create(NostrSignerInternal(keyPair), ciphersuite, leafKey, createdAt)
+            assertContentEquals(bare.encode().copyOfRange(0, 40), proof.encode().copyOfRange(0, 40))
+            assertEquals(bare.signerPubKeyHex, proof.signerPubKeyHex)
+            assertEquals(bare.createdAt, proof.createdAt)
         }
 
     @Test
