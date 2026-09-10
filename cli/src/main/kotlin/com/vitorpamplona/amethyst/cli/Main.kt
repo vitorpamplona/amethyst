@@ -848,8 +848,10 @@ private fun printUsage() {
         |  marmot group rename GID NAME               commit a rename
         |  marmot group promote GID NPUB              add admin
         |  marmot group demote GID NPUB               remove admin
+        |  marmot group set-retention GID SECS        set disappearing messages (0 disables)
         |  marmot group remove GID NPUB               remove member
         |  marmot group leave GID                     self-remove
+        |  marmot group disband GID --yes             end the group for everyone (irreversible)
         |
         |  marmot message send GID TEXT               publish kind:9 inner event into the group
         |  marmot message list GID [--limit N]        dump decrypted inner events

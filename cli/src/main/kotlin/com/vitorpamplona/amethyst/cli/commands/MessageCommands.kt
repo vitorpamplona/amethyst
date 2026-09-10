@@ -104,11 +104,20 @@ object MessageCommands {
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
             val raw = ctx.marmot.loadStoredMessages(gid)
+            val parsed = raw.mapNotNull { Event.fromJsonOrNull(it) }
             // An edit is not its own row: it replaces the target's text in
             // place. Resolving the overlay here rather than in the renderer is
             // what keeps every front end from re-deriving the authorship and
             // tie-break rules, and getting one of them subtly different.
-            val overlays = ctx.marmot.editOverlays(raw.mapNotNull { Event.fromJsonOrNull(it) })
+            val overlays = ctx.marmot.editOverlays(parsed)
+            // A deletion is not its own row either. The retracted body is
+            // blanked rather than the row dropped, so a harness (or a reader
+            // paging back) can tell "retracted" from "never arrived".
+            val deleted = ctx.marmot.deletedIds(parsed)
+            // Pinned at persist time from the retention of the epoch that
+            // DELIVERED each message, so it is the message's own expiry and not
+            // a recomputation against whatever the group's setting is now.
+            val expiries = ctx.marmot.messageExpiries(gid)
             val items =
                 raw
                     .map { line ->
@@ -117,12 +126,15 @@ object MessageCommands {
                             val obj = Output.mapper.readValue<Map<String, Any?>>(line)
                             val id = obj["id"] as? String
                             val edited = overlays[id]
+                            val retracted = id != null && id in deleted
                             mapOf(
                                 "event_id" to obj["id"],
                                 "author" to obj["pubkey"],
                                 "kind" to obj["kind"],
-                                "content" to (edited ?: obj["content"]),
-                                "edited" to (edited != null),
+                                "content" to if (retracted) "" else (edited ?: obj["content"]),
+                                "edited" to (edited != null && !retracted),
+                                "deleted" to retracted,
+                                "expires_at" to expiries[id],
                                 "created_at" to obj["created_at"],
                             )
                         } catch (_: Exception) {

@@ -78,8 +78,19 @@ sealed class MarmotIngestResult {
         val retainedEpochCount: Int,
     ) : MarmotIngestResult()
 
-    /** Deduplicate / out-of-order commits / unsupported content. Not an error. */
-    data object Ignored : MarmotIngestResult()
+    /**
+     * Deduplicate / out-of-order commits / unsupported content. Not an error.
+     *
+     * [reason] names the branch that produced it. Several very different
+     * situations land here — a replayed event we already merged, a commit held
+     * for convergence, an app message decrypted on a losing branch, traffic in
+     * a group we have terminalized — and collapsing them into one unlabelled
+     * result made a stuck client indistinguishable from a quiet one in the
+     * logs.
+     */
+    data class Ignored(
+        val reason: String,
+    ) : MarmotIngestResult()
 
     /** Something blew up. Callers log. */
     data class Failure(
@@ -102,14 +113,14 @@ suspend fun MarmotManager.ingest(event: Event): MarmotIngestResult =
     when (event) {
         is GiftWrapEvent -> ingestGiftWrap(event)
         is GroupEvent -> ingestGroupEvent(event)
-        else -> MarmotIngestResult.Ignored
+        else -> MarmotIngestResult.Ignored("unhandled kind ${event.kind}")
     }
 
 private suspend fun MarmotManager.ingestGiftWrap(wrap: GiftWrapEvent): MarmotIngestResult {
     // A relay `since` cursor cannot skip a backdated event, and NIP-59 wraps
     // are backdated by up to two days on purpose — so without a durable marker
     // every wrap in that band is unwrapped and re-decided on every single sync.
-    if (isTerminallyIngested(wrap.id)) return MarmotIngestResult.Ignored
+    if (isTerminallyIngested(wrap.id)) return MarmotIngestResult.Ignored("already ingested")
     val result = ingestGiftWrapUncached(wrap)
     when (result) {
         // Joined, or already in the group: nothing more can come of this wrap.
@@ -133,9 +144,9 @@ private suspend fun MarmotManager.ingestGiftWrapUncached(wrap: GiftWrapEvent): M
         // kind:444 Welcome rumor. Checking `isWelcomeEvent` on the seal itself
         // (the old bug) always took the Ignored branch and silently dropped
         // every inbound Welcome.
-        val rumor = wrap.unwrapAndUnsealOrNull(signer) ?: return MarmotIngestResult.Ignored
+        val rumor = wrap.unwrapAndUnsealOrNull(signer) ?: return MarmotIngestResult.Ignored("gift wrap is not for us")
         if (!MarmotInboundProcessor.isWelcomeEvent(rumor) || rumor !is WelcomeEvent) {
-            return MarmotIngestResult.Ignored
+            return MarmotIngestResult.Ignored("gift wrap does not carry a Welcome")
         }
         when (val result = processWelcome(rumor, rumor.nostrGroupId())) {
             is WelcomeResult.Joined -> {
@@ -190,17 +201,24 @@ private suspend fun MarmotManager.ingestGroupEvent(ge: GroupEvent): MarmotIngest
             MarmotIngestResult.ProposalStaged(result.groupId, result.senderLeafIndex)
         }
 
-        is GroupEventResult.Duplicate,
-        is GroupEventResult.CommitPending,
+        is GroupEventResult.Duplicate -> MarmotIngestResult.Ignored("already merged")
+
+        // Held, not dropped: a commit we cannot advance onto linearly is
+        // candidate material for a convergence pass that has to settle before
+        // it can be applied. Saying so matters — this is the one Ignored that
+        // means "come back", and a client that never settles repeats it
+        // forever while looking idle.
+        is GroupEventResult.CommitPending -> MarmotIngestResult.Ignored("commit held for convergence")
+
         // Decrypted only on a losing branch: real protocol input (it may have
         // witnessed for that branch), but never application output.
-        is GroupEventResult.AppMessageOnCandidateBranch,
+        is GroupEventResult.AppMessageOnCandidateBranch ->
+            MarmotIngestResult.Ignored("app message on a candidate branch")
+
         // Disbanded or locally unrecoverable — refused before decryption, so
         // there is nothing to deliver and nothing to retain.
-        is GroupEventResult.RefusedByLifecycle,
-        -> {
-            MarmotIngestResult.Ignored
-        }
+        is GroupEventResult.RefusedByLifecycle ->
+            MarmotIngestResult.Ignored("refused by lifecycle ${result.lifecycle}")
 
         is GroupEventResult.UndecryptableOuterLayer -> {
             MarmotIngestResult.UndecryptableOuter(result.groupId, result.retainedEpochCount)

@@ -89,6 +89,13 @@ object GroupReadCommands {
                             ?.decodeToString(),
                     "members" to members,
                     "is_admin" to (meta?.adminPubkeys?.contains(ctx.identity.pubKeyHex) == true),
+                    // Disappearing messages, in seconds; 0 means off.
+                    "disappearing_secs" to ctx.marmot.retentionSeconds(gid),
+                    // The terminal state has no way back, so it is worth
+                    // saying out loud rather than leaving a caller to infer it
+                    // from a group that quietly refuses every verb.
+                    "disbanded" to (ctx.marmot.groupState(gid)?.isDisbanded == true),
+                    "lifecycle" to ctx.marmot.lifecycle(gid).name,
                 ),
             )
             return 0

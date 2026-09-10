@@ -177,6 +177,31 @@ object GroupMetadataCommands {
         }
     }
 
+    /**
+     * Set the disappearing-message duration. `group set-retention <gid> <secs>`
+     *
+     * `0` turns disappearing messages off. The change is not retroactive:
+     * every message already carries the expiry pinned from the epoch that
+     * delivered it, so this only governs what arrives after the commit.
+     */
+    suspend fun setRetention(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val gid = args.positional(0, "gid")
+        val raw = args.positional(1, "secs")
+        args.rejectUnknown()
+
+        val secs =
+            raw.toULongOrNull()
+                ?: return Output.error("bad_args", "secs must be a whole number of seconds (0 disables)")
+
+        return commit(dataDir, gid, mapOf("disappearing_secs" to secs.toString())) { ctx, resolved, _ ->
+            ctx.marmot.setMessageRetention(resolved, secs)
+        }
+    }
+
     /** Remove the https avatar link. `group clear-avatar-url <gid>` */
     suspend fun clearAvatarUrl(
         dataDir: DataDir,

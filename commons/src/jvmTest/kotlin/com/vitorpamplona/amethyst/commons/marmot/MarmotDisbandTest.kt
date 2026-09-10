@@ -98,6 +98,60 @@ class MarmotDisbandTest {
         }
 
     @Test
+    fun `the disband commit carries the whole shape the spec fixes`() =
+        runBlocking {
+            // `group-lifecycle-v1.md` fixes every part of this Commit, and a
+            // peer validates the whole set: the lifecycle update alone — which
+            // is what this used to send — reads as an unsupported transition
+            // and is rejected, leaving the group live for everyone else while
+            // reading as ended here.
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.createCurrentProfile()
+
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+            assertEquals(2, alice.manager.memberCount(nostrGroupId))
+
+            alice.manager.disbandGroup(nostrGroupId)
+
+            assertTrue(alice.manager.groupState(nostrGroupId)?.isDisbanded == true)
+            // Every leaf but the committer's is gone, and the admin policy is a
+            // full replacement naming only the committer.
+            assertEquals(1, alice.manager.memberCount(nostrGroupId))
+            assertEquals(
+                listOf(alice.signer.pubKey),
+                alice.manager.groupView(nostrGroupId)?.adminPubkeys,
+            )
+        }
+
+    @Test
+    fun `a witness applies the disband and lands terminal`() =
+        runBlocking {
+            // The half that matters for interop: the removed member has to be
+            // able to APPLY the commit that removes them, read the terminal
+            // state out of it, and stop — not reject it and sit at the old
+            // epoch believing the group is still live.
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.createCurrentProfile()
+
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+
+            val commit = alice.manager.disbandGroup(nostrGroupId)
+            bob.manager.ingest(commit.signedEvent)
+
+            assertEquals(GroupLifecycleState.DISBANDED, bob.manager.lifecycle(nostrGroupId))
+            assertFailsWith<IllegalStateException> {
+                bob.manager.buildTextMessage(nostrGroupId, "still here?")
+            }
+            Unit
+        }
+
+    @Test
     fun `a non-admin member cannot disband`() =
         runBlocking {
             // Two clients: the creator is the admin, the invitee is not. Peers

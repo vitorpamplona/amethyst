@@ -80,8 +80,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -507,8 +509,7 @@ class MarmotManager(
                     }
                 }
         val innerEvent =
-            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-                .assembleRumor<Event>(signer.pubKey, template)
+            RumorAssembler.assembleRumor<Event>(signer.pubKey, template)
         val outbound = buildGroupMessage(nostrGroupId, innerEvent)
         if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
         return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
@@ -700,15 +701,8 @@ class MarmotManager(
         persistOwn: Boolean = true,
     ): TextMessageBundle {
         require(targetEvents.isNotEmpty()) { "buildDeletionMessage: targetEvents must not be empty" }
-        val template =
-            com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-                .build(targetEvents)
-        val innerEvent =
-            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-                .assembleRumor<com.vitorpamplona.quartz.nip09Deletions.DeletionEvent>(
-                    signer.pubKey,
-                    template,
-                )
+        val template = DeletionEvent.build(targetEvents)
+        val innerEvent = RumorAssembler.assembleRumor<DeletionEvent>(signer.pubKey, template)
         val outbound = buildGroupMessage(nostrGroupId, innerEvent)
         if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
         return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
@@ -1390,6 +1384,50 @@ class MarmotManager(
     }
 
     /**
+     * The ids of messages a kind:5 in [messages] retracted.
+     *
+     * Deletion is the mirror of [editOverlays] and follows the same authorship
+     * rule, for the same reason: a retraction is authorized by Marmot ACCOUNT
+     * identity, so a second device of the same account may retract its own
+     * account's message and no other account's deletion is honoured. Without
+     * that check any member could erase anyone's words by publishing a kind:5
+     * naming them.
+     *
+     * MDK additionally honours an *admin moderation* delete when the deleter
+     * held an authenticated moderation grant frozen at ingest. We do not issue
+     * or track that grant, so a cross-author delete is ignored here rather than
+     * guessed at — ignoring one MDK would have applied hides a message less
+     * often than applying one it would have rejected erases a message wrongly.
+     *
+     * A deletion naming a message this client does not hold contributes
+     * nothing: it is not invalid, the target may simply not have arrived yet,
+     * and this is recomputed from the whole stored log on every read, so it
+     * resolves as soon as the target lands.
+     *
+     * [messages] is the group's decrypted app events — the deletions and their
+     * targets together, since a deletion is only authorized against the message
+     * it names.
+     */
+    fun deletedIds(messages: List<Event>): Set<HexKey> {
+        val authorOf = HashMap<HexKey, HexKey>(messages.size)
+        val claims = ArrayList<Pair<HexKey, HexKey>>()
+        for (event in messages) {
+            if (event.kind == DeletionEvent.KIND) {
+                for (tag in event.tags) {
+                    if (tag.size >= 2 && tag[0] == "e") claims.add(tag[1] to event.pubKey)
+                }
+            } else {
+                authorOf[event.id] = event.pubKey
+            }
+        }
+        val deleted = HashSet<HexKey>(claims.size)
+        for ((targetId, deleter) in claims) {
+            if (authorOf[targetId] == deleter) deleted.add(targetId)
+        }
+        return deleted
+    }
+
+    /**
      * The slice of canonical group state that kind:1210 rows are derived from,
      * or null when this client is not in the group.
      */
@@ -1576,6 +1614,20 @@ class MarmotManager(
     }
 
     /**
+     * Every pinned expiry in the group, keyed by inner event id.
+     *
+     * Messages with no entry never expire — either the group has no retention
+     * policy or none applied at the epoch that delivered them.
+     */
+    suspend fun messageExpiries(nostrGroupId: HexKey): Map<HexKey, Long> =
+        try {
+            messageStore?.loadExpiries(nostrGroupId) ?: emptyMap()
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to read expiries for $nostrGroupId", e)
+            emptyMap()
+        }
+
+    /**
      * Delete every message whose pinned expiry has passed.
      *
      * @return the inner event ids that were removed, so a front end can drop
@@ -1729,6 +1781,48 @@ class MarmotManager(
     }
 
     /**
+     * Set the group's disappearing-message duration, in seconds. `0` disables.
+     *
+     * Admin-only, both here and at every peer. Changing it is explicitly a
+     * mid-life operation the component allows, and it is NOT retroactive: each
+     * message already pins the retention of the epoch that delivered it, so a
+     * change from here only governs messages delivered by the epoch this
+     * commit opens. [commitAndPublish] records the new value against that epoch
+     * on confirmation, which is what later arrivals under it read.
+     *
+     * A legacy group carries the same setting inside the monolithic `0xF2EE`
+     * blob, so it is rewritten whole there — with the MIP-01 spelling, where
+     * "off" is an absent field rather than a zero.
+     */
+    suspend fun setMessageRetention(
+        nostrGroupId: HexKey,
+        disappearingMessageSecs: ULong,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent {
+        val view = groupView(nostrGroupId) ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        check(signer.pubKey in view.adminPubkeys) {
+            "Only an admin of group $nostrGroupId can change its message retention"
+        }
+        if (!view.isCurrentProfile) {
+            val legacy =
+                groupMetadata(nostrGroupId)
+                    ?: throw IllegalStateException("Legacy group $nostrGroupId has no MarmotGroupData")
+            return updateGroupMetadata(
+                nostrGroupId,
+                legacy.copy(disappearingMessageSecs = disappearingMessageSecs.takeIf { it > 0uL }),
+                relays,
+            )
+        }
+        return commitAndPublish(nostrGroupId, relays) {
+            groupManager.stageAppDataUpdate(
+                nostrGroupId,
+                MessageRetentionV1.COMPONENT_ID,
+                MessageRetentionV1(disappearingMessageSecs).encode(),
+            )
+        }.event
+    }
+
+    /**
      * Replace the group's admin set, writing to whichever carrier the group uses.
      *
      * Refuses an empty set. Both profiles reject a group with no admins — a
@@ -1803,6 +1897,12 @@ class MarmotManager(
      * no relay acknowledged does not terminalize the group locally either —
      * exactly the outcome we want, since a locally-disbanded group nobody else
      * heard about would be unreachable state.
+     *
+     * The Commit itself is not a bare lifecycle update: `group-lifecycle-v1.md`
+     * fixes its whole shape — the lifecycle update, a full admin-policy
+     * replacement naming only the committer, and a Remove for every other leaf
+     * — and a peer rejects anything else as an unsupported lifecycle
+     * transition. See [MlsGroupManager.stageDisband].
      */
     suspend fun disbandGroup(
         nostrGroupId: HexKey,
@@ -1822,14 +1922,21 @@ class MarmotManager(
         // the point: disbanding from state we do not trust would publish a
         // terminal commit off a fork.
         requireOutboundAllowed(nostrGroupId, "disband the group")
-        val publication =
-            commitAndPublish(nostrGroupId, relays) {
-                groupManager.stageAppDataUpdate(
-                    nostrGroupId,
-                    GroupLifecycleV1.COMPONENT_ID,
-                    GroupLifecycleV1.DISBANDED.encode(),
-                )
+
+        // The disband Commit is only valid when `0x800c` is ALREADY required in
+        // the candidate parent, so a group that predates the component needs
+        // the enablement Commit of its own first. Every group this client
+        // creates requires it from epoch 0, so this is the older-group and
+        // other-implementation path, not the common one.
+        if (groupState(nostrGroupId)?.requires(GroupLifecycleV1.COMPONENT_ID) != true) {
+            val enablement = commitAndPublish(nostrGroupId, relays) { groupManager.stageEnableDisbanding(nostrGroupId) }
+            check(enablement.confirmed) {
+                "Could not enable disbanding on group $nostrGroupId: no relay acknowledged the enablement " +
+                    "commit, so the group is unchanged and still live"
             }
+        }
+
+        val publication = commitAndPublish(nostrGroupId, relays) { groupManager.stageDisband(nostrGroupId) }
         // Every other setter is content to leave an unacknowledged commit as a
         // retryable obligation and say nothing, because a later retry lands the
         // same state. This one cannot: the caller is about to tell a human the

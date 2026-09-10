@@ -31,6 +31,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -235,6 +236,51 @@ class MarmotRetentionTest {
                 setOf(sent.innerEvent.id),
                 f.manager.pruneExpiredMessages(nostrGroupId, sent.innerEvent.createdAt + 121),
             )
+        }
+
+    @Test
+    fun `setMessageRetention commits the component and only governs later messages`() =
+        runBlocking {
+            // The current profile's mid-life setter. The component explicitly
+            // allows the change; what it forbids is letting the change reach
+            // backwards, so the message sent before it must still expire on the
+            // old duration while the one sent after takes the new one.
+            val f = Fixture()
+            f.manager.createCurrentProfileGroup(
+                nostrGroupId = nostrGroupId,
+                relays = listOf("wss://relay.invalid"),
+                retention = MessageRetentionV1(60uL),
+            )
+            val early = f.manager.buildTextMessage(nostrGroupId, "sixty")
+
+            f.manager.setMessageRetention(nostrGroupId, 86_400uL)
+            assertEquals(86_400L, f.manager.retentionSeconds(nostrGroupId))
+
+            val late = f.manager.buildTextMessage(nostrGroupId, "a day")
+
+            val expiries = f.manager.messageExpiries(nostrGroupId)
+            assertEquals(early.innerEvent.createdAt + 60, expiries[early.innerEvent.id])
+            assertEquals(late.innerEvent.createdAt + 86_400, expiries[late.innerEvent.id])
+        }
+
+    @Test
+    fun `setMessageRetention with zero turns disappearing messages off`() =
+        runBlocking {
+            // Removal is equivalent to zero, and zero means disabled — so a
+            // message sent after the change carries no expiry at all rather
+            // than one that fires immediately.
+            val f = Fixture()
+            f.manager.createCurrentProfileGroup(
+                nostrGroupId = nostrGroupId,
+                relays = listOf("wss://relay.invalid"),
+                retention = MessageRetentionV1(60uL),
+            )
+            f.manager.setMessageRetention(nostrGroupId, 0uL)
+            assertEquals(0L, f.manager.retentionSeconds(nostrGroupId))
+
+            val sent = f.manager.buildTextMessage(nostrGroupId, "kept")
+            assertNull(f.manager.messageExpiries(nostrGroupId)[sent.innerEvent.id])
+            assertTrue(f.manager.pruneExpiredMessages(nostrGroupId, sent.innerEvent.createdAt + 86_400).isEmpty())
         }
 
     @Test

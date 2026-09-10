@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -99,6 +100,82 @@ class MarmotEditsAndSystemRowsTest {
             f.manager.persistDecryptedMessage(nostrGroupId, forged.toJson().dropLast(1) + ",\"sig\":\"\"}")
 
             assertNull(f.manager.editOverlays(f.manager.storedEvents())[original.innerEvent.id])
+        }
+
+    @Test
+    fun `an author's own kind 5 retracts their message`() =
+        runBlocking {
+            val f = Fixture()
+            f.createGroup()
+            val doomed = f.manager.buildTextMessage(nostrGroupId, "delete me")
+            f.manager.buildDeletionMessage(nostrGroupId, listOf(doomed.innerEvent))
+
+            assertTrue(doomed.innerEvent.id in f.manager.deletedIds(f.manager.storedEvents()))
+        }
+
+    @Test
+    fun `a deletion from another account is ignored`() =
+        runBlocking {
+            val f = Fixture()
+            f.createGroup()
+            val mine = f.manager.buildTextMessage(nostrGroupId, "mine")
+
+            // Same shape as the forged edit above, and the same reason: the
+            // transport lets any member publish a well-formed kind:5 naming
+            // someone else's message, so the reader is the only place that can
+            // refuse it. MDK additionally honours an authenticated admin
+            // moderation grant here; we issue none, so every cross-author
+            // delete is ignored.
+            val impostor = "f".repeat(64)
+            val forged =
+                MarmotAppEvent.build(
+                    pubKey = impostor,
+                    kind = DeletionEvent.KIND,
+                    content = "",
+                    createdAt = 1_800_000_000L,
+                    tags = arrayOf(arrayOf("e", mine.innerEvent.id)),
+                )
+            f.manager.persistDecryptedMessage(nostrGroupId, forged.toJson().dropLast(1) + ",\"sig\":\"\"}")
+
+            assertTrue(mine.innerEvent.id !in f.manager.deletedIds(f.manager.storedEvents()))
+        }
+
+    @Test
+    fun `one kind 5 retracts every message it names`() =
+        runBlocking {
+            val f = Fixture()
+            f.createGroup()
+            val first = f.manager.buildTextMessage(nostrGroupId, "one")
+            val second = f.manager.buildTextMessage(nostrGroupId, "two")
+            val spared = f.manager.buildTextMessage(nostrGroupId, "three")
+            f.manager.buildDeletionMessage(nostrGroupId, listOf(first.innerEvent, second.innerEvent))
+
+            val deleted = f.manager.deletedIds(f.manager.storedEvents())
+            assertEquals(setOf(first.innerEvent.id, second.innerEvent.id), deleted)
+            assertTrue(spared.innerEvent.id !in deleted)
+        }
+
+    @Test
+    fun `a deletion naming a message we do not hold retracts nothing`() =
+        runBlocking {
+            // Not invalid — the target may simply not have arrived yet — so it
+            // contributes nothing rather than being treated as an error. The
+            // overlay is recomputed from the whole log on every read, so it
+            // resolves as soon as the target lands.
+            val f = Fixture()
+            f.createGroup()
+            val absent = "9".repeat(64)
+            val forged =
+                MarmotAppEvent.build(
+                    pubKey = f.signer.pubKey,
+                    kind = DeletionEvent.KIND,
+                    content = "",
+                    createdAt = 1_800_000_000L,
+                    tags = arrayOf(arrayOf("e", absent)),
+                )
+            f.manager.persistDecryptedMessage(nostrGroupId, forged.toJson().dropLast(1) + ",\"sig\":\"\"}")
+
+            assertTrue(f.manager.deletedIds(f.manager.storedEvents()).isEmpty())
         }
 
     @Test

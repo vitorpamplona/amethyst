@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.quartz.marmot.mls.group
 
+import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.GroupLifecycleV1
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.marmot.mls.components.ComponentsList
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager.Companion.EPOCH_RETENTION_WINDOW
@@ -482,6 +485,73 @@ class MlsGroupManager(
         requireAdminForExtensionChange(requireGroup(nostrGroupId))
         return stage(nostrGroupId) { clone ->
             if (data == null) clone.proposeAppDataRemoval(componentId) else clone.proposeAppDataUpdate(componentId, data)
+            clone.commit()
+        }
+    }
+
+    /**
+     * Stage the enablement Commit that makes `marmot.group.lifecycle.v1`
+     * (`0x800c`) required, per `app-components/group-lifecycle-v1.md`
+     * ("Enablement for existing groups").
+     *
+     * One Commit that adds the `active` state when it is absent and adds
+     * `0x800c` to the required `app_components` list, and carries nothing else
+     * — a peer validates the enablement shape and rejects a Commit that folds
+     * unrelated proposals into it. Enablement does not disband the group.
+     *
+     * A group that already requires the component needs no enablement; callers
+     * check [MarmotGroupState.requires] first rather than committing a no-op
+     * epoch.
+     */
+    suspend fun stageEnableDisbanding(nostrGroupId: HexKey): StagedCommit {
+        requireAdminForExtensionChange(requireGroup(nostrGroupId))
+        return stage(nostrGroupId) { clone ->
+            val dictionary = clone.appDataDictionary()
+            val required = ComponentsList.supportedOrRequired(dictionary).toMutableSet()
+            required.add(GroupLifecycleV1.COMPONENT_ID)
+            clone.proposeAppDataUpdate(ComponentsList.APP_COMPONENTS_ID, ComponentsList.encode(required))
+            if (dictionary[GroupLifecycleV1.COMPONENT_ID] == null) {
+                clone.proposeAppDataUpdate(GroupLifecycleV1.COMPONENT_ID, GroupLifecycleV1.ACTIVE.encode())
+            }
+            clone.commit()
+        }
+    }
+
+    /**
+     * Stage the terminal disband Commit, in the exact shape
+     * `app-components/group-lifecycle-v1.md` ("Disband update and Commit
+     * shape") requires:
+     *
+     * - exactly one lifecycle update, to `disbanded`;
+     * - exactly one admin-policy replacement naming ONLY the committer's
+     *   account — carried even when the committer was already the sole admin;
+     * - a Remove for every candidate-parent leaf except the committing leaf,
+     *   including the committer's own other devices; and
+     * - nothing else, all inline.
+     *
+     * A peer validates the whole set, so a Commit that carries only the
+     * lifecycle update — which is what this used to stage — is rejected
+     * outright as an unsupported lifecycle transition. The group would stay
+     * live for every other member while reading as ended here, which is the
+     * one outcome a terminal state must never produce.
+     *
+     * A single-leaf group therefore still produces a valid disband Commit,
+     * with no Remove proposals at all.
+     */
+    suspend fun stageDisband(nostrGroupId: HexKey): StagedCommit {
+        requireAdminForExtensionChange(requireGroup(nostrGroupId))
+        return stage(nostrGroupId) { clone ->
+            val committer =
+                clone.memberIdentity(clone.leafIndex)
+                    ?: throw IllegalStateException("Group $nostrGroupId has no identity for the local leaf")
+            clone.proposeAppDataUpdate(GroupLifecycleV1.COMPONENT_ID, GroupLifecycleV1.DISBANDED.encode())
+            clone.proposeAppDataUpdate(AdminPolicyV1.COMPONENT_ID, AdminPolicyV1(listOf(committer)).encode())
+            // Every other leaf, not every other ACCOUNT: the spec removes the
+            // committer's own remaining devices too, so the final tree holds
+            // the one committing leaf and nothing else.
+            for ((leafIndex, _) in clone.members()) {
+                if (leafIndex != clone.leafIndex) clone.proposeRemove(leafIndex)
+            }
             clone.commit()
         }
     }

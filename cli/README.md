@@ -565,9 +565,11 @@ kind:10040 out-of-band.
 | `amy marmot group add GID NPUB [NPUB…]` | Fetch KeyPackages and invite. |
 | `amy marmot group rename GID NAME` | Commit a metadata change. |
 | `amy marmot group promote / demote / remove GID NPUB` | Admin verbs. |
+| `amy marmot group set-retention GID SECS` | Disappearing messages, in seconds (`0` disables). Not retroactive: each message keeps the expiry pinned from the epoch that delivered it. |
 | `amy marmot group leave GID` | Self-remove. |
+| `amy marmot group disband GID --yes` | End the group for every member. Terminal and irreversible — a replacement conversation is a new group with a new id — so `--yes` is required. |
 | `amy marmot message send GID TEXT` | Publish a kind:9 inner event into the group. |
-| `amy marmot message list GID [--limit N]` | Decrypted inner events, oldest first. Default `--limit 50`. |
+| `amy marmot message list GID [--limit N]` | Decrypted inner events, oldest first. Default `--limit 50`. Each row carries `edited`, `deleted` and the pinned `expires_at`. |
 | `amy marmot message react GID EVENT_ID EMOJI` | Publish a kind:7 reaction. |
 | `amy marmot message delete GID EVENT_ID …` | Publish a kind:5 deletion. |
 

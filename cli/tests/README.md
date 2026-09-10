@@ -28,6 +28,8 @@ cli/tests/
 │   ├── tests-create.sh             # tests 01–05
 │   ├── tests-manage.sh             # tests 06–08, 11
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
+│   ├── tests-media.sh              # tests 20-29 (avatar, edits, deletions,
+│   │                               #   media v2, retention, disband)
 ├── nests/                 # Audio-rooms interop (Amethyst ↔ nostrnests.com)
 │   ├── nests-interop.sh            # 47-test manual harness
 │   └── README.md                   # operator brief + per-test matrix
@@ -90,6 +92,24 @@ The Marmot harnesses come in two flavours, same scenarios:
   scenario end-to-end and exits with a pass/fail summary. Use this for CI
   and for iterating on the Nostr/Marmot plumbing without needing to touch a
   phone.
+
+  Most features are covered in BOTH directions — founding (02/03), adding
+  (04/05), removal (06/14), leaving (11/15), keypackage rotation (13/16),
+  agent streams (18/19), avatar URL (20/21), encrypted media v2 (24/25),
+  deletion (23/27), retention (26/28). Three gaps are the reference CLI's,
+  not ours, and cannot be closed from here:
+
+  - **edits wn→amy.** `wn messages` has no `edit` verb, and MDK reserves
+    kind 1009 so `messages send-event` refuses to forge one. MDK's runtime
+    has `edit_message` and its uniffi surface exposes it; only the CLI
+    does not.
+  - **setting retention from wn.** `wn groups` has no retention verb and
+    `groups create` has no flag for it, so test 28 has amy own the setting
+    and wn own the sending — which is the half that was untested anyway,
+    since inbound messages are where the epoch-pinning rule lives.
+  - **disband wn→amy.** Same shape: `disband_group` exists on MDK's runtime
+    and uniffi surface (the apps call it) but has no `wn groups` verb, so
+    test 29 runs one way only.
 
 A third, slimmer harness covers the NIP-17 DM surface:
 

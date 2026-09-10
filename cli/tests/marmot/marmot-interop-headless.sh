@@ -208,6 +208,9 @@ ALL_TESTS=(
   test_24_media_v2_amy_to_wn
   test_25_media_v2_wn_to_amy
   test_26_retention_amy_to_wn
+  test_27_deletion_wn_to_amy
+  test_28_retention_wn_to_amy
+  test_29_disband_amy_to_wn
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous
