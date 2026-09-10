@@ -3744,8 +3744,14 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is CommunityListEvent,
                 is ContactListEvent,
                 // DVM heartbeat (11998): stored per Address(11998, author, d) so liveness checks find the
-                // beat at the announcement's mirror address (amethyst/plans/2026-09-10-dvm-heartbeat-liveness.md).
+                // beat at the announcement's mirror address (amethyst/plans/2026-09-10-dvm-heartbeat-liveness.md),
+                // AND recorded into the strong registry — beat notes are WeakReference-held with no strong
+                // holder on the Discover screen, so the gate must not depend on them surviving GC.
                 is DvmHeartbeatEvent,
+                ->
+                    consumeBaseReplaceable(event, relay, wasVerified).also {
+                        DvmHeartbeatRegistry.record(event.address(), event.createdAt)
+                    }
                 is EmojiPackEvent,
                 is EmojiPackSelectionEvent,
                 is EphemeralChatListEvent,

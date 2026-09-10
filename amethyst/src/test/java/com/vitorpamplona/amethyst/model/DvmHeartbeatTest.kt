@@ -122,6 +122,18 @@ class DvmHeartbeatTest {
     }
 
     @Test
+    fun theGateSurvivesWeakCacheEvictionOfTheBeatNote() {
+        // Beat notes live in LocalCache's WeakReference store with no strong holder on the
+        // Discover screen — a GC sweep clears them all at once and the list collapses. The
+        // freshness gate must therefore read the strong registry, not the evictable note.
+        val app = appDef("dvm-registry")
+        DvmHeartbeatRegistry.record(Address(DvmHeartbeatEvent.KIND, appDefPubKey, "dvm-registry"), 1_760_000_000L - 100)
+
+        assertTrue("registry alone proves liveness", LocalCache.hasFreshDvmHeartbeat(app, 1_760_000_000L))
+        assertTrue("no entry for dvm-never", DvmHeartbeatRegistry.latestAt(Address(DvmHeartbeatEvent.KIND, appDefPubKey, "dvm-never")) == null)
+    }
+
+    @Test
     fun theUngatedAnnouncementScanKeepsDvmsTheGateWouldHide() {
         // The outbox fetcher must source announcements from the cache, NOT from the gated feed
         // list: a DVM dropped for a stale beat must keep receiving outbox beats or it can never

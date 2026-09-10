@@ -39,8 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dvm_offline_banner
+import com.vitorpamplona.amethyst.model.DvmHeartbeatRegistry
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -81,6 +83,11 @@ fun rememberDvmHeartbeatFresh(
     val observed =
         heartbeatNote?.let { observeNoteAndMap(it, accountViewModel) { it.event as? DvmHeartbeatEvent } }
 
+    // The registry is the eviction-proof freshness source (beat notes are WeakReference-held);
+    // the observed note is the secondary source and also drives the outbox fetch.
+    val registryBeat by
+        DvmHeartbeatRegistry.flowForPublic(appDefinitionAddress).collectAsStateWithLifecycle()
+
     var now by remember(heartbeatNote) { mutableLongStateOf(TimeUtils.now()) }
     LaunchedEffect(heartbeatNote) {
         while (isActive) {
@@ -90,7 +97,8 @@ fun rememberDvmHeartbeatFresh(
     }
 
     val beat = observed?.value
-    return rememberUpdatedState(beat != null && beat.isFreshAt(now))
+    val bestBeat = maxOf(beat?.createdAt ?: 0L, registryBeat)
+    return rememberUpdatedState(bestBeat > 0L && bestBeat >= now - DvmHeartbeatEvent.MAX_AGE_SECONDS)
 }
 
 /** Floating "DVM is offline" banner, mirroring the Home status banner's card style. */

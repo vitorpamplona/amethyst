@@ -30,11 +30,18 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 /** The cache slot a DVM's heartbeat lives in: the announcement's own address, kind 11998. */
 fun LocalCache.dvmHeartbeatOf(appDef: AppDefinitionEvent): DvmHeartbeatEvent? = getAddressableNoteIfExists(Address(DvmHeartbeatEvent.KIND, appDef.pubKey, appDef.dTag()))?.event as? DvmHeartbeatEvent
 
-/** A DVM counts as alive only if its latest heartbeat is at most 420s old. */
+/**
+ * A DVM counts as alive only if its latest heartbeat is at most 900s old. The registry (not the
+ * WeakReference-held beat note) is the freshness source: beat notes have no strong holder on the
+ * Discover screen, and a GC sweep cleared them all at once, collapsing the list.
+ */
 fun LocalCache.hasFreshDvmHeartbeat(
     appDef: AppDefinitionEvent,
     now: Long = TimeUtils.now(),
-): Boolean = dvmHeartbeatOf(appDef)?.isFreshAt(now) == true
+): Boolean =
+    DvmHeartbeatRegistry
+        .latestAt(Address(DvmHeartbeatEvent.KIND, appDef.pubKey, appDef.dTag()))
+        ?.let { it >= now - DvmHeartbeatEvent.MAX_AGE_SECONDS } == true
 
 /**
  * Every cached content-discovery announcement, WITHOUT the freshness gate — this is the source the
