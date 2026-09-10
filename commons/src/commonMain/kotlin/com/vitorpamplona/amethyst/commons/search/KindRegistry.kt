@@ -26,9 +26,7 @@ import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -95,8 +93,10 @@ object KindRegistry {
         mapOf(
             "note" to listOf(TextNoteEvent.KIND),
             "article" to listOf(LongTextNoteEvent.KIND),
-            "repost" to listOf(RepostEvent.KIND),
-            "profile" to listOf(MetadataEvent.KIND),
+            // No `repost` or `profile` here on purpose: both name kinds in
+            // [RenderableKinds.NEVER_IN_RESULTS], so the chip drew and the list stayed empty
+            // forever. `kind:profile` was the worse of the two — it pinned the scope to Notes,
+            // taking away the People scope, which is the only place a profile is ever found.
             "channel" to listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND),
             "live" to listOf(LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
             "community" to listOf(CommunityDefinitionEvent.KIND),

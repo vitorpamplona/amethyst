@@ -44,6 +44,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -674,9 +675,23 @@ private fun SearchTextField(
                         )
                     },
                     trailingIcon = {
-                        if (searchBarViewModel.isRefreshing.value) {
-                            IconButton(onClick = { searchBarViewModel.clear() }) {
-                                ClearTextIcon()
+                        if (searchBarViewModel.hasQuery.value) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Android had no way of saying results were still coming, so an
+                                // empty list part-way through a search looked like the answer.
+                                // Beside the clear button rather than in place of it: a search
+                                // that is still running is exactly when a reader wants to abandon
+                                // it.
+                                if (searchBarViewModel.isRefreshing.value) {
+                                    CircularProgressIndicator(
+                                        modifier = Size20Modifier,
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.placeholderText,
+                                    )
+                                }
+                                IconButton(onClick = { searchBarViewModel.clear() }) {
+                                    ClearTextIcon()
+                                }
                             }
                         }
                     },
@@ -698,7 +713,7 @@ private fun DisplaySearchResults(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val isRefreshing by searchBarViewModel.isRefreshing
+    val hasQuery by searchBarViewModel.hasQuery
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
     val relays by searchBarViewModel.relayResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
@@ -717,7 +732,7 @@ private fun DisplaySearchResults(
     ) {
         item(key = "scaffold-header") { headerContent() }
 
-        if (!isRefreshing) {
+        if (!hasQuery) {
             // An empty box used to render nothing at all. What a reader searched for before is
             // the one thing worth offering there, and it is one tap from being re-run because a
             // history entry is stored as the same text the box holds.

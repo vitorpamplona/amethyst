@@ -187,4 +187,15 @@ class RenderableKindsTest {
         assertTrue(sizes.all { it <= RenderableKinds.MAX_KINDS_PER_FILTER }, "$sizes")
         assertTrue(sizes.max() - sizes.min() <= 1, "groups are lopsided: $sizes")
     }
+
+    @Test
+    fun theWindowNeverAsksForAKindResultsWouldDrop() {
+        // The two lists answer different questions — "what does a query without a kind ask for"
+        // and "what can a result never be" — but an overlap would mean a REQ arm spent on events
+        // the scan throws away on arrival.
+        assertEquals(
+            emptySet(),
+            RenderableKinds.ALL.toSet() intersect RenderableKinds.NEVER_IN_RESULTS,
+        )
+    }
 }

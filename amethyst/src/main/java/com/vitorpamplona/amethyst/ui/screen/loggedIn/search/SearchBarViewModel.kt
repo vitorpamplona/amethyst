@@ -76,12 +76,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
@@ -103,7 +107,8 @@ class SearchBarViewModel(
     val focusRequester = FocusRequester()
     var searchValue by mutableStateOf(initialQuery.orEmpty())
 
-    val invalidations = MutableStateFlow(0)
+    /** A refresh the app asked for: the screen was composed, or the reader came back to it. */
+    private val manualInvalidations = MutableStateFlow(0)
 
     /**
      * What is being searched, and everything about it that is not Android's: the text, its parse,
@@ -115,6 +120,30 @@ class SearchBarViewModel(
      * results, which on Android is a cache scan and on Desktop is a relay callback.
      */
     val state = SearchState(viewModelScope, initialText = initialQuery.orEmpty())
+
+    /**
+     * When the results are worth recomputing.
+     *
+     * This used to be a counter that only the lifecycle touched, which meant the result lists were
+     * computed once per keystroke and then frozen: the REQ went out, relays answered a few hundred
+     * milliseconds later, `LocalCache` filled up — and nothing re-ran the scan, so what the reader
+     * saw was whatever had already been cached when they stopped typing. Everything that arrived
+     * because of their search only appeared if they typed another character or left the screen and
+     * came back.
+     *
+     * The cache already publishes what it takes in, so the fix is to listen: a lifecycle refresh
+     * and an arriving bundle are the same event to a result list. Merged and debounced once, so a
+     * burst of relay traffic costs one rescan rather than one per bundle.
+     */
+    private val refreshes: StateFlow<Int> =
+        merge(
+            manualInvalidations,
+            merge(
+                account.cache.getEventStream().newEventBundles,
+                account.cache.getEventStream().deletedEventBundles,
+            ).sample(RESCAN_INTERVAL_MS),
+        ).scan(0) { count, _ -> count + 1 }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     /** True while a token picker is open under the field.
      *
@@ -299,7 +328,7 @@ class SearchBarViewModel(
     val searchResultsUsers =
         combine(
             state.debounced,
-            invalidations.debounce(100),
+            refreshes,
             directNip05Resolver,
             scope,
             combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
@@ -338,7 +367,7 @@ class SearchBarViewModel(
     val searchResultsNotes =
         combine(
             state.debounced,
-            invalidations,
+            refreshes,
             scope,
             sortOrder,
             combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
@@ -401,7 +430,7 @@ class SearchBarViewModel(
     val searchResultsPublicChatChannels =
         combine(
             state.debounced,
-            invalidations,
+            refreshes,
             scope,
         ) { input, _, currentScope ->
             if (!currentScope.shows(SearchResultKind.PUBLIC_CHATS)) emptyList() else LocalCache.findPublicChatChannelsStartingWith(input.nameTerms)
@@ -411,7 +440,7 @@ class SearchBarViewModel(
     val searchResultsEphemeralChannels =
         combine(
             state.debounced,
-            invalidations,
+            refreshes,
             scope,
         ) { input, _, currentScope ->
             if (!currentScope.shows(SearchResultKind.EPHEMERAL_CHATS)) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(input.nameTerms)
@@ -421,7 +450,7 @@ class SearchBarViewModel(
     val searchResultsLiveActivityChannels =
         combine(
             state.debounced,
-            invalidations,
+            refreshes,
             scope,
         ) { input, _, currentScope ->
             if (!currentScope.shows(SearchResultKind.LIVE_ACTIVITIES)) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(input.nameTerms)
@@ -431,7 +460,7 @@ class SearchBarViewModel(
     val hashtagResults =
         combine(
             state.debounced,
-            invalidations,
+            refreshes,
             scope,
         ) { input, _, currentScope ->
             if (!currentScope.shows(SearchResultKind.HASHTAGS)) emptyList() else findHashtags(input.text)
@@ -441,7 +470,7 @@ class SearchBarViewModel(
     val relayResults =
         combine(
             state.debounced,
-            invalidations,
+            refreshes,
             scope,
         ) { input, _, currentScope ->
             if (!currentScope.shows(SearchResultKind.RELAYS)) return@combine emptyList()
@@ -472,7 +501,22 @@ class SearchBarViewModel(
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
-    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
+    /** True when the box holds something to search for — which is not the same as searching. */
+    val hasQuery = derivedStateOf { searchValue.isNotBlank() }
+
+    /**
+     * True while a search is actually under way.
+     *
+     * This is [InvalidatableContent]'s contract, and every other implementor uses it to mean "a
+     * refresh is running". Search had it returning `searchValue.isNotBlank()` — "the box has
+     * text" — so three call sites read a name that said one thing and meant another, and nothing
+     * on screen could say whether results were still coming. Both meanings now exist under their
+     * own names, and the field shows this one as a spinner.
+     *
+     * No EOSE from the search subscription reaches this screen, so "under way" is the same
+     * heuristic the empty state already trusts: the grace window since the query last changed.
+     */
+    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() && !state.settled.value }
 
     /**
      * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex
@@ -486,8 +530,7 @@ class SearchBarViewModel(
     }
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        // force new query
-        invalidations.update { it + 1 }
+        manualInvalidations.update { it + 1 }
     }
 
     fun updateSearchValue(newValue: String) {
@@ -515,6 +558,22 @@ class SearchBarViewModel(
     fun updateSortOrder(order: SearchSortOrder) = state.updateEventSortOrder(order)
 
     fun isSearchingFun() = searchValue.isNotBlank()
+
+    companion object {
+        /**
+         * At most one cache-driven rescan per this long.
+         *
+         * Sampled rather than debounced, and that distinction is the whole of it: a debounce waits
+         * for quiet, and a cache taking in a search's own results — plus whatever the rest of the
+         * app is subscribed to — may not go quiet for seconds. The list would have stalled exactly
+         * when it had the most to show. Sampling caps the cost instead, and guarantees the scan
+         * runs while events are still arriving.
+         *
+         * Wider than [SearchState.LOCAL_DEBOUNCE_MS] because this one walks the cache without the
+         * reader having asked for anything.
+         */
+        private const val RESCAN_INTERVAL_MS = 400L
+    }
 
     class Factory(
         val account: Account,

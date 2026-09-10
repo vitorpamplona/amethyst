@@ -27,33 +27,22 @@ import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.search.RenderableKinds
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip50Search.EventSearchMatcher
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CancellationException
 
@@ -121,24 +110,14 @@ class CacheSearch(
     }
 
     /**
-     * Will return true if supplied note is one of events to be excluded from
-     * search results.
+     * True when the note is one of the kinds a search never returns.
+     *
+     * The list is [RenderableKinds.NEVER_IN_RESULTS], not a chain of `is` checks here: it is the
+     * reader's policy rather than the cache's, and the `kind:` vocabulary has to be able to read
+     * it — offering `kind:repost` while dropping every repost from results is a filter that draws
+     * a chip and can never return anything, which is exactly what it did.
      */
-    private fun excludeNoteEventFromSearchResults(note: Note): Boolean =
-        (
-            note.event is GenericRepostEvent ||
-                note.event is RepostEvent ||
-                note.event is CommunityPostApprovalEvent ||
-                note.event is ReactionEvent ||
-                note.event is LnZapEvent ||
-                note.event is LnZapRequestEvent ||
-                note.event is FileHeaderEvent ||
-                note.event is MetadataEvent ||
-                note.event is ContactListEvent ||
-                note.event is AppSpecificDataEvent ||
-                note.event is DeletionEvent ||
-                note.event is RequestToVanishEvent
-        )
+    private fun excludeNoteEventFromSearchResults(note: Note): Boolean = note.event?.kind in RenderableKinds.NEVER_IN_RESULTS
 
     /**
      * Tag names whose values should not match text searches: the `client` tag
