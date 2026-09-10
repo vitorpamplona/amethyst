@@ -1309,6 +1309,23 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="home_content_type_music">Muzyka &amp; audio</string>
     <string name="home_content_type_podcasts">Podcasty</string>
     <string name="home_content_type_fundraisers">Zbiórki funduszy</string>
+    <string name="home_content_type_ratings">Oceny i recenzje</string>
+    <string name="rating_stars_out_of_five">Ocena: %1$s na 5</string>
+    <string name="library_learning_resource">Materiały edukacyjne</string>
+    <string name="library_directory">Katalog</string>
+    <string name="library_blossom_piece">Zapis pliku</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d element</item>
+        <item quantity="few">%1$d elementów</item>
+        <item quantity="many">%1$d elementów</item>
+        <item quantity="other">%1$d elementy</item>
+    </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">Jeszcze %1$d pozycja</item>
+        <item quantity="few">Jeszcze %1$d pozycji</item>
+        <item quantity="many">Jeszcze %1$d pozycji</item>
+        <item quantity="other">Jeszcze %1$d pozycje</item>
+    </plurals>
     <string name="settings_section_reminders">Przypomnienia</string>
     <string name="wallet_connect">Podłącz portfel</string>
     <string name="theme">Motyw</string>
