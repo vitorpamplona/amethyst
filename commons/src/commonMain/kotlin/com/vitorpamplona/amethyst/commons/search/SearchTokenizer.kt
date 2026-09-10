@@ -29,11 +29,13 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import kotlinx.collections.immutable.toImmutableList
 
 /**
  * The search field's own small language, scanned in one place: `from:`/`to:` (a person, an event
- * or an address), `since:`/`until:`, `#hashtag`, `label:<mark>`, `group:<id>` and the NIP-73
- * scopes (`site:`, `isbn:`, `geo:`, `isan:`, `doi:`, `podcast:*`).
+ * or an address), `since:`/`until:`, `#hashtag`, `label:<mark>`, `group:<id>`, `kind:`, `lang:`,
+ * `domain:`, `-term`, `"a phrase"` and the NIP-73 scopes (`site:`, `isbn:`, `geo:`, `isan:`,
+ * `doi:`, `podcast:*`).
  *
  * All of these become NIP-01 filter fields, never NIP-50 extensions, so they compose with a
  * relay's own ranking instead of competing with it. The field renderer and the filter builder
@@ -52,6 +54,15 @@ object SearchTokenizer {
 
     private val POINTER_PREFIXES = listOf("nevent1", "naddr1", "note1")
 
+    /** The kind numbers a NIP-01 filter can carry, so `kind:99999` stays a search term. */
+    private val KIND_RANGE = 0..65535
+
+    /** An ISO 639 code with an optional region: `en`, `pt-BR`, `zh-Hant`. */
+    private val LANGUAGE = Regex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$")
+
+    /** A bare hostname. A scheme or a path belongs to `site:`, which asks a different tag. */
+    private val HOSTNAME = Regex("^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$")
+
     // The token types that only pill once the caret has left them: while a word is half-typed,
     // a chip forming under the caret would move the text out from under it.
     private val SETTLES =
@@ -61,6 +72,11 @@ object SearchTokenizer {
             SearchSegment.Scope::class,
             SearchSegment.Group::class,
             SearchSegment.Label::class,
+            SearchSegment.Kind::class,
+            SearchSegment.Language::class,
+            SearchSegment.Domain::class,
+            SearchSegment.Exclusion::class,
+            SearchSegment.Phrase::class,
         )
 
     private fun isBech32(c: Char) = c in BECH32
@@ -156,6 +172,11 @@ object SearchTokenizer {
             ?: scopeAt(s, i)
             ?: labelAt(s, i)
             ?: groupAt(s, i)
+            ?: kindAt(s, i)
+            ?: languageAt(s, i)
+            ?: domainAt(s, i)
+            ?: exclusionAt(s, i)
+            ?: phraseAt(s, i)
 
     /** `from:<npub>`, `to:<npub>`, or a bare `npub1…` that stays a search term. */
     private fun keyAt(
@@ -260,6 +281,88 @@ object SearchTokenizer {
         val prefix = prefixAt(s, i, listOf("group:")) ?: return null
         val value = valueAt(s, i + prefix.length) ?: return null
         return SearchSegment.Group(raw = s.substring(i, i + prefix.length + value.length), id = value)
+    }
+
+    /**
+     * `kind:<alias|number>` — an alias the registry knows, one of the pseudo-kinds, or a plain
+     * kind number.
+     *
+     * Anything else is deliberately not a token. `kind:banana` resolves to no window at all, and
+     * [QueryParser]'s second pass already drops it back into the search terms; a chip over it
+     * would be the field claiming a filter the REQ never carries.
+     */
+    private fun kindAt(
+        s: String,
+        i: Int,
+    ): SearchSegment.Kind? {
+        val prefix = prefixAt(s, i, listOf("kind:")) ?: return null
+        val value = valueAt(s, i + prefix.length) ?: return null
+        val raw = s.substring(i, i + prefix.length + value.length)
+
+        if (KindRegistry.isPseudoKind(value)) {
+            return SearchSegment.Kind(raw = raw, alias = value.lowercase(), pseudoKind = value.lowercase())
+        }
+        val resolved = KindRegistry.resolve(value) ?: value.toIntOrNull()?.takeIf { it in KIND_RANGE }?.let { listOf(it) } ?: return null
+        return SearchSegment.Kind(raw = raw, alias = value.lowercase(), kinds = resolved.toImmutableList())
+    }
+
+    /** `lang:<code>` — an ISO 639 code, optionally with a region (`pt`, `pt-BR`). */
+    private fun languageAt(
+        s: String,
+        i: Int,
+    ): SearchSegment.Language? {
+        val prefix = prefixAt(s, i, listOf("lang:")) ?: return null
+        val value = valueAt(s, i + prefix.length) ?: return null
+        if (!LANGUAGE.matches(value)) return null
+        return SearchSegment.Language(raw = s.substring(i, i + prefix.length + value.length), code = value.lowercase())
+    }
+
+    /** `domain:<host>` — a bare hostname, which is the only spelling NIP-50 takes. */
+    private fun domainAt(
+        s: String,
+        i: Int,
+    ): SearchSegment.Domain? {
+        val prefix = prefixAt(s, i, listOf("domain:")) ?: return null
+        val value = valueAt(s, i + prefix.length) ?: return null
+        if (!HOSTNAME.matches(value)) return null
+        return SearchSegment.Domain(raw = s.substring(i, i + prefix.length + value.length), host = value.lowercase())
+    }
+
+    /**
+     * `-term` — read exactly as [QueryParser]'s own negation scanner reads it, because that is
+     * still the pass that turns it into a filter. A `-` with nothing after it is not an
+     * exclusion, and neither is a bare `-` before a space.
+     *
+     * `-#tag` is left alone deliberately: the hashtag splitter already claims it, and taking it
+     * here would quietly turn "the bitcoin hashtag" into "not the word #bitcoin". Changing that
+     * is a decision about the language, not about how it is drawn.
+     */
+    private fun exclusionAt(
+        s: String,
+        i: Int,
+    ): SearchSegment.Exclusion? {
+        if (s[i] != '-') return null
+        val start = i + 1
+        if (start >= s.length || s[start].isWhitespace() || s[start] == '#') return null
+        var end = start
+        while (end < s.length && !s[end].isWhitespace()) end++
+        return SearchSegment.Exclusion(raw = s.substring(i, end), term = s.substring(start, end))
+    }
+
+    /**
+     * `"a phrase"`, including an unterminated one, which [QueryParser] reads to the end of the
+     * input — so the chip covers the same characters the filter does.
+     */
+    private fun phraseAt(
+        s: String,
+        i: Int,
+    ): SearchSegment.Phrase? {
+        if (s[i] != '"') return null
+        var end = i + 1
+        while (end < s.length && s[end] != '"') end++
+        val text = s.substring(i + 1, end)
+        if (end < s.length) end++
+        return SearchSegment.Phrase(raw = s.substring(i, end), text = text)
     }
 
     private fun prefixAt(

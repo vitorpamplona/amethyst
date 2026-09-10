@@ -47,7 +47,7 @@ object QuerySerializer {
         query.cites.forEach { id -> noteOrNull(id)?.let { parts.add("to:$it") } }
         query.addrs.forEach { aTag -> naddrOrNull(aTag)?.let { parts.add("to:$it") } }
 
-        query.kinds.forEach { kind -> parts.add("kind:${KindRegistry.nameFor(kind) ?: kind}") }
+        KindRegistry.tokenize(query.kinds).forEach { kind -> parts.add("kind:$kind") }
         query.pseudoKinds.forEach { pseudo -> parts.add("kind:$pseudo") }
 
         // The local day the bound falls on, which is the day the reader picked in the calendar.

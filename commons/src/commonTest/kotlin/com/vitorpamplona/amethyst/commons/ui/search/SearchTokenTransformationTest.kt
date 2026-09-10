@@ -44,6 +44,10 @@ class SearchTokenTransformationTest {
                 label = SpanStyle(),
                 scope = SpanStyle(),
                 group = SpanStyle(),
+                kind = SpanStyle(),
+                extension = SpanStyle(),
+                exclusion = SpanStyle(),
+                phrase = SpanStyle(),
             )
     }
 
@@ -175,5 +179,47 @@ class SearchTokenTransformationTest {
     fun aSettlingTokenUnderTheCaretIsDrawnAsPlainText() {
         val text = "#bitcoin"
         assertEquals(text, transform(text, caret = text.length).text.text)
+    }
+
+    @Test
+    fun aNumericKindDrawsUnderItsName() {
+        // A length-changing rewrite, which is exactly the case the offset mapping must survive.
+        assertEquals("kind:picture", transform("kind:20").text.text)
+        assertMapsSafely("kind:20")
+        assertMapsSafely("from:$NPUB kind:20 #bitcoin lang:en ")
+    }
+
+    @Test
+    fun aKindThatAlreadyNamesItselfIsDrawnAsTyped() {
+        assertEquals("kind:article", transform("kind:article").text.text)
+        assertEquals("kind:media", transform("kind:media").text.text)
+        // 30312 alone is not the whole `live` group, so it keeps its number.
+        assertEquals("kind:30312", transform("kind:30312").text.text)
+    }
+
+    @Test
+    fun languageAndDomainDrawAsTyped() {
+        assertEquals("lang:en domain:nostr.com", transform("lang:en domain:nostr.com").text.text)
+        assertMapsSafely("lang:en domain:nostr.com")
+    }
+
+    @Test
+    fun aPhraseDrawsWithoutItsQuotesAndStillMapsSafely() {
+        assertEquals("hello world", transform("\"hello world\"").text.text)
+        assertMapsSafely("\"hello world\"")
+        assertMapsSafely("bitcoin \"hello world\" -scam")
+    }
+
+    @Test
+    fun anExclusionKeepsItsMinusSoItStillReadsAsOne() {
+        assertEquals("-scam", transform("-scam").text.text)
+        assertMapsSafely("bitcoin -scam -airdrop")
+    }
+
+    @Test
+    fun anUnterminatedQuoteDrawsTheRestOfTheLine() {
+        // The parser reads it to the end of the input, so the chip has to cover the same span.
+        assertEquals("hello world", transform("\"hello world").text.text)
+        assertMapsSafely("\"hello world")
     }
 }

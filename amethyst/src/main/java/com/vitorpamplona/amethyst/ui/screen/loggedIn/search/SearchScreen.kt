@@ -44,6 +44,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -70,8 +73,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -88,6 +93,10 @@ import com.vitorpamplona.amethyst.commons.resources.search_filters_section_sort
 import com.vitorpamplona.amethyst.commons.resources.search_filters_section_source
 import com.vitorpamplona.amethyst.commons.resources.search_filters_title
 import com.vitorpamplona.amethyst.commons.resources.search_follows_only
+import com.vitorpamplona.amethyst.commons.resources.search_no_results
+import com.vitorpamplona.amethyst.commons.resources.search_no_results_explainer
+import com.vitorpamplona.amethyst.commons.resources.search_recent
+import com.vitorpamplona.amethyst.commons.resources.search_recent_clear
 import com.vitorpamplona.amethyst.commons.resources.search_scope_all
 import com.vitorpamplona.amethyst.commons.resources.search_scope_notes
 import com.vitorpamplona.amethyst.commons.resources.search_scope_people
@@ -97,6 +106,10 @@ import com.vitorpamplona.amethyst.commons.resources.search_sort_popular
 import com.vitorpamplona.amethyst.commons.resources.search_sort_relevance
 import com.vitorpamplona.amethyst.commons.resources.search_source_local
 import com.vitorpamplona.amethyst.commons.resources.search_source_relays
+import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin
+import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin_explainer
+import com.vitorpamplona.amethyst.commons.resources.search_waiting_on_relays
+import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -107,6 +120,7 @@ import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
 import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.model.preferences.DataStoreSearchHistoryStorage
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
@@ -128,7 +142,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -138,18 +154,31 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
+/**
+ * The search screen, opened either bare or with the calling screen's own filter already in the
+ * box — see [Route.Search.of].
+ *
+ * [initialQuery] is seeded straight into the field rather than held beside it, so the tokens it
+ * contains draw as chips through the same path as anything typed, and a backspace drops them.
+ */
 @Composable
 fun SearchScreen(
+    initialQuery: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val historyStorage = LocalContext.current.let { context -> remember(context) { DataStoreSearchHistoryStorage(context) } }
     val searchBarViewModel: SearchBarViewModel =
         viewModel(
-            key = "SearchBarViewModel",
+            // Keyed on the seed: navigating from one screen's search button to another's has to
+            // build a model holding that screen's filter, not hand back the previous one.
+            key = "SearchBarViewModel${initialQuery?.let { " $it" }.orEmpty()}",
             factory =
                 SearchBarViewModel.Factory(
                     accountViewModel.account,
                     accountViewModel.nip05ClientBuilder(),
+                    historyStorage,
+                    initialQuery,
                 ),
         )
 
@@ -170,13 +199,19 @@ fun SearchScreen(
         }
     }
 
+    // A picker is a scrollable living inside the top bar, and the scaffold moves its bars on any
+    // scroll in its subtree. Pin them while one is open, or paging through the kinds drags the
+    // whole chrome up with it.
+    val pickerOpen by searchBarViewModel.pickerOpen.collectAsStateWithLifecycle()
+
     DisappearingScaffold(
         isInvertedLayout = false,
+        allowBarHide = !pickerOpen,
         topBar = {
             SearchBar(searchBarViewModel, accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Search, nav, accountViewModel) { route ->
+            AppBottomBar(Route.Search(), nav, accountViewModel) { route ->
                 nav.navBottomBar(route)
             }
         },
@@ -279,6 +314,7 @@ private fun hasNonDefaultFilters(
 @Composable
 private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
     val currentScope by searchBarViewModel.scope.collectAsStateWithLifecycle()
+    val pinnedToNotes by searchBarViewModel.scopePinnedToNotes.collectAsStateWithLifecycle()
     val currentSource by searchBarViewModel.source.collectAsStateWithLifecycle()
     val currentFollowsOnly by searchBarViewModel.followsOnly.collectAsStateWithLifecycle()
     val currentSort by searchBarViewModel.sortOrder.collectAsStateWithLifecycle()
@@ -300,6 +336,11 @@ private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
                     selected = currentScope == s,
                     onClick = { searchBarViewModel.updateScope(s) },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = scopes.size),
+                    // Any token in the box beyond its free text is something the people search
+                    // cannot be asked, so All and People are greyed rather than merely
+                    // unselected: they would answer a narrower question than the one on screen,
+                    // silently dropping the chips the reader can still see.
+                    enabled = !pinnedToNotes || s == SearchScope.NOTES,
                 ) {
                     Text(
                         text =
@@ -493,6 +534,38 @@ private fun sortLabel(opt: SearchSortOrder): String =
         SearchSortOrder.NAME_AZ, SearchSortOrder.NAME_ZA -> opt.label
     }
 
+/**
+ * What the results area says when it has nothing to show.
+ *
+ * The main search box was the only search surface in the app without one — settings, git
+ * repositories, the location picker and app recommendations all say something — and it is the one
+ * that needs it most, because a seeded query legitimately returns nothing until a word is typed.
+ */
+@Composable
+private fun SearchEmptyState(
+    title: String,
+    explainer: String,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = explainer,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.placeholderText,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
 @Composable
 private fun SearchTextField(
     searchBarViewModel: SearchBarViewModel,
@@ -509,6 +582,11 @@ private fun SearchTextField(
         // fields rather than search terms. The value stays the plain text, so a query can still
         // be copied out and pasted back.
         val fieldState = remember { SearchFieldState(searchBarViewModel.searchValue) }
+
+        // Reported up rather than read down: the scaffold that has to stop moving is composed
+        // above this field, and it is the only thing that can keep a picker's scroll off the bars.
+        val hasPicker = fieldState.activePicker != null
+        LaunchedEffect(hasPicker) { searchBarViewModel.pickerOpen.value = hasPicker }
         val interactionSource = remember { MutableInteractionSource() }
 
         // The composer's own mention picker, reused verbatim: it already resolves NIP-05, asks
@@ -574,6 +652,9 @@ private fun SearchTextField(
             groups = groupCandidates,
             onPeopleQuery = { userSuggestions.processCurrentWord(it) },
             onGroupQuery = { partial -> groupQuery = partial },
+            // The Enter key is what says a search was meant, rather than passed through on the way
+            // to a longer word. Recording every pause in typing would fill the list with prefixes.
+            onSubmit = { searchBarViewModel.remember() },
             peoplePicker = { _, onPick ->
                 ShowUserSuggestionList(
                     userSuggestions = userSuggestions,
@@ -600,9 +681,19 @@ private fun SearchTextField(
                         )
                     },
                     trailingIcon = {
-                        if (searchBarViewModel.isRefreshing.value) {
-                            IconButton(onClick = { searchBarViewModel.clear() }) {
-                                ClearTextIcon()
+                        if (searchBarViewModel.hasQuery.value) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Android had no way of saying results were still coming, so an
+                                // empty list part-way through a search looked like the answer.
+                                // Beside the clear button rather than in place of it: a search
+                                // that is still running is exactly when a reader wants to abandon
+                                // it.
+                                if (searchBarViewModel.isRefreshing.value) {
+                                    RelayWaitProgress(searchBarViewModel)
+                                }
+                                IconButton(onClick = { searchBarViewModel.clear() }) {
+                                    ClearTextIcon()
+                                }
                             }
                         }
                     },
@@ -624,7 +715,7 @@ private fun DisplaySearchResults(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val isRefreshing by searchBarViewModel.isRefreshing
+    val hasQuery by searchBarViewModel.hasQuery
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
     val relays by searchBarViewModel.relayResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
@@ -632,6 +723,13 @@ private fun DisplaySearchResults(
     val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
     val liveActivityChannels by searchBarViewModel.searchResultsLiveActivityChannels.collectAsStateWithLifecycle()
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
+    val asksNothing by searchBarViewModel.queryAsksNothing.collectAsStateWithLifecycle()
+    val settled by searchBarViewModel.searchSettled.collectAsStateWithLifecycle()
+    val recent by searchBarViewModel.history.recent.collectAsStateWithLifecycle()
+
+    // Serialized once per change of the list rather than twice per row per recomposition: the row
+    // draws it, and the lazy list keys on it.
+    val recentText = remember(recent) { recent.map { QuerySerializer.serialize(it) } }
 
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
@@ -640,7 +738,59 @@ private fun DisplaySearchResults(
     ) {
         item(key = "scaffold-header") { headerContent() }
 
-        if (!isRefreshing) return@LazyColumn
+        if (!hasQuery) {
+            // An empty box used to render nothing at all. What a reader searched for before is
+            // the one thing worth offering there, and it is one tap from being re-run because a
+            // history entry is stored as the same text the box holds.
+            if (recent.isNotEmpty()) {
+                item(key = "recent-header") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringRes(Res.string.search_recent),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                        TextButton(onClick = { searchBarViewModel.history.clearRecent() }) {
+                            Text(stringRes(Res.string.search_recent_clear))
+                        }
+                    }
+                }
+                itemsIndexed(recentText, key = { _, item -> "recent-$item" }) { _, asText ->
+                    Text(
+                        text = asText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { searchBarViewModel.updateSearchValue(asText) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                    HorizontalDivider(thickness = DividerThickness)
+                }
+            }
+            return@LazyColumn
+        }
+
+        // Every result list is empty. Which of the two things that means is not cosmetic: a box
+        // holding only a seeded `kind:` never asked a relay anything, and telling that reader
+        // "no results" would blame the network for a search they have not written yet.
+        val foundNothing =
+            hashTags.isEmpty() && relays.isEmpty() && users.isEmpty() && notes.isEmpty() &&
+                publicChatChannels.isEmpty() && ephemeralChannels.isEmpty() && liveActivityChannels.isEmpty()
+
+        if (foundNothing && (asksNothing || settled)) {
+            item(key = "empty-state") {
+                SearchEmptyState(
+                    title = stringRes(if (asksNothing) Res.string.search_type_to_begin else Res.string.search_no_results),
+                    explainer = stringRes(if (asksNothing) Res.string.search_type_to_begin_explainer else Res.string.search_no_results_explainer),
+                )
+            }
+            return@LazyColumn
+        }
 
         itemsIndexed(
             hashTags,
@@ -818,6 +968,64 @@ fun HashtagLine(
                 stringRes(Res.string.search_by_hashtag, tag),
                 fontWeight = FontWeight.Bold,
             )
+        }
+    }
+}
+
+/**
+ * The search spinner, and what it is waiting on.
+ *
+ * The spinner alone can only say "still going", and it says that off a timer -- there is no EOSE
+ * on this path, so `settled` means "long enough since you typed", not "the relays answered". The
+ * sub-assemblers do know which relays were asked and which have sent EOSE, so tapping the spinner
+ * shows exactly that, and a search that looks stuck names the relay it is stuck on.
+ *
+ * Relays that never send EOSE stay in the waiting list, which is the true answer rather than a
+ * tidy one.
+ */
+@Composable
+private fun RelayWaitProgress(viewModel: SearchBarViewModel) {
+    var showing by remember { mutableStateOf(false) }
+
+    val waiting = viewModel.relaysWaiting.value
+    val asked by viewModel.relaysAsked.collectAsStateWithLifecycle()
+    val answered by viewModel.relaysAnswered.collectAsStateWithLifecycle()
+
+    Box {
+        CircularProgressIndicator(
+            modifier = Size20Modifier.clickable { showing = true },
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+
+        DropdownMenu(expanded = showing, onDismissRequest = { showing = false }) {
+            Text(
+                text = stringRes(Res.string.search_waiting_on_relays, waiting.size, asked.size),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = Size10dp, vertical = Size5dp),
+            )
+
+            waiting.sortedBy { it.url }.forEach { relay ->
+                DropdownMenuItem(
+                    text = { Text(relay.displayUrl(), style = MaterialTheme.typography.bodySmall) },
+                    onClick = { showing = false },
+                )
+            }
+
+            // The ones already in, dimmed: "three of eight" is easier to read against the list it
+            // came from than on its own.
+            (asked intersect answered).sortedBy { it.url }.forEach { relay ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = relay.displayUrl(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    onClick = { showing = false },
+                )
+            }
         }
     }
 }

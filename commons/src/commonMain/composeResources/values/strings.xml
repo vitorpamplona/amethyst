@@ -1396,6 +1396,7 @@
     <string name="external_id_scope">Comment on an external resource</string>
     <string name="url_preview_open_in_browser">Open in browser</string>
     <string name="long_form_reading_minutes">%1$d min read</string>
+    <string name="search_waiting_on_relays">Waiting on %1$d of %2$d relays</string>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d section</item>
         <item quantity="other">%1$d sections</item>
@@ -2244,6 +2245,12 @@
     <string name="search_sort_relevance">Relevance</string>
     <string name="search_sort_popular">Popular</string>
     <string name="search_filters_title">Filters</string>
+    <string name="search_no_results">No results found</string>
+    <string name="search_no_results_explainer">Try fewer filters, or a different word.</string>
+    <string name="search_type_to_begin">Type something to search</string>
+    <string name="search_type_to_begin_explainer">The filters above narrow what is searched — they do not search on their own.</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_recent_clear">Clear</string>
     <string name="search_filters_reset">Reset</string>
     <string name="search_filters_section_source">Source</string>
     <string name="search_filters_section_sort">Sort by</string>

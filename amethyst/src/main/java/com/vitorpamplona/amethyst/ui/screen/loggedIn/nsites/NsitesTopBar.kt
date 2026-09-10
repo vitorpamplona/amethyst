@@ -26,12 +26,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
+import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 
 /**
  * Top bar for the nSites browse screen, matching the other feed screens (Pictures, nApplets, …): the
@@ -43,7 +46,7 @@ fun NsitesTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
+    UserDrawerSearchTopBar(accountViewModel, nav, SearchSeed.ofKinds(RootSiteEvent.KIND, NamedSiteEvent.KIND)) {
         val listName: TopFilter by accountViewModel.account.settings.defaultNsitesFollowList
             .collectAsStateWithLifecycle()
         val allLists by accountViewModel.feedStates.feedListOptions.authorOnlyRoutes

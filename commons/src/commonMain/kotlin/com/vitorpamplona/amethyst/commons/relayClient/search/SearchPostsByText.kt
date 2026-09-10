@@ -23,92 +23,10 @@ package com.vitorpamplona.amethyst.commons.relayClient.search
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.search.QueryParser
-import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
-import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.nns.NNSEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.amethyst.commons.search.RenderableKinds
+import com.vitorpamplona.amethyst.commons.search.SearchPipeline
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
-import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-
-val SearchPostsByTextKinds1 =
-    listOf(
-        TextNoteEvent.KIND,
-        LongTextNoteEvent.KIND,
-        BadgeDefinitionEvent.KIND,
-        PeopleListEvent.KIND,
-        BookmarkListEvent.KIND,
-        OldBookmarkListEvent.KIND,
-        AudioHeaderEvent.KIND,
-        AudioTrackEvent.KIND,
-        MusicTrackEvent.KIND,
-        MusicPlaylistEvent.KIND,
-        PodcastEpisodeEvent.KIND,
-        PodcastMetadataEvent.KIND,
-        PinListEvent.KIND,
-        ZapPollEvent.KIND,
-        ChannelCreateEvent.KIND,
-    )
-
-val SearchPostsByTextKinds2 =
-    listOf(
-        ChannelMetadataEvent.KIND,
-        ClassifiedsEvent.KIND,
-        CommunityDefinitionEvent.KIND,
-        EmojiPackEvent.KIND,
-        HighlightEvent.KIND,
-        LiveActivitiesEvent.KIND,
-        PublicMessageEvent.KIND,
-        NNSEvent.KIND,
-        WikiNoteEvent.KIND,
-        CommentEvent.KIND,
-    )
-
-val SearchPostsByTextKinds3 =
-    listOf(
-        InteractiveStoryPrologueEvent.KIND,
-        InteractiveStorySceneEvent.KIND,
-        FollowListEvent.KIND,
-        NipTextEvent.KIND,
-        PollEvent.KIND,
-        PollResponseEvent.KIND,
-        CalendarTimeSlotEvent.KIND,
-        CalendarDateSlotEvent.KIND,
-        CodeSnippetEvent.KIND,
-    )
-
-private val SearchPostsByTextKindGroups =
-    listOf(SearchPostsByTextKinds1, SearchPostsByTextKinds2, SearchPostsByTextKinds3)
 
 /**
  * The REQs a search sends, from the text the reader typed.
@@ -119,8 +37,11 @@ private val SearchPostsByTextKindGroups =
  * went into `search`, so a query like `from:npub1… bitcoin` asked relays for the literal text of
  * its own tokens and matched nothing.
  *
- * Kinds are asked in three groups because the set Amethyst can render is larger than most relays
- * accept in one filter; the union is merged client-side.
+ * A `kind:` token names the window itself, and is asked as the one group it says. Only a query
+ * that names no kind falls back to [RenderableKinds] — the kinds Amethyst can put on screen,
+ * which is more than most relays accept in one filter, so it is asked in groups and the union
+ * merged client-side. That list used to be spelled out here, and separately in desktop's filter
+ * factory, and the two had already drifted apart.
  */
 fun searchPostsByText(
     searchString: String,
@@ -129,8 +50,13 @@ fun searchPostsByText(
     val query = QueryParser.parse(searchString)
     if (query.isEmpty) return emptyList()
 
-    return SearchPostsByTextKindGroups.flatMap { kinds ->
-        SearchFilterBuilder.build(query, kinds, limit = 100).map { filter ->
+    // One group when the query names its own window — SearchPipeline.filters lets a `kind:` win
+    // over the caller's fallback, so passing the groups here would be asking for a narrowing the
+    // pipeline has already decided against.
+    val kindGroups = if (query.kinds.isNotEmpty()) listOf(null) else RenderableKinds.GROUPS
+
+    return kindGroups.flatMap { kinds ->
+        SearchPipeline.filters(query, kinds, limit = 100).map { filter ->
             RelayBasedFilter(
                 relay = relay,
                 filter =

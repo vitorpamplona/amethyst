@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
+import com.vitorpamplona.amethyst.commons.search.QuerySerializer
+import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -336,7 +338,29 @@ sealed class Route {
         val btcAddressOverride: String? = null,
     ) : Route()
 
-    @Serializable object Search : Route()
+    /**
+     * The search screen, optionally opened with the calling screen's own filter already in the
+     * box: `from:<npub>` from a profile, `kind:article` from the articles feed, `geo:<geohash>`
+     * from a location channel.
+     *
+     * [query] is the query written in the field's own token language rather than a structured
+     * object, because that is what the field actually holds. It parses back to the same
+     * [SearchQuery] through `QueryParser`, draws as chips through `SearchTokenTransformation`,
+     * and stays editable — the reader can drop the seeded filter with a backspace, which a
+     * separately-held base filter would not let them do.
+     */
+    @Serializable data class Search(
+        val query: String? = null,
+    ) : Route() {
+        companion object {
+            /**
+             * The search screen seeded with [base]. The trailing space matters: a token only
+             * settles into a chip once the caret has left it, and the caret opens at the end of
+             * the seeded text.
+             */
+            fun of(base: SearchQuery): Search = Search(QuerySerializer.serialize(base).takeIf { it.isNotBlank() }?.plus(" "))
+        }
+    }
 
     @Serializable object SecurityFilters : Route()
 

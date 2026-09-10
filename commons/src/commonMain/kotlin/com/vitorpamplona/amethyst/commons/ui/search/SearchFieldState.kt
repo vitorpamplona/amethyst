@@ -142,6 +142,11 @@ class SearchFieldState(
         id: String,
     ) = replace(picker.token, "group:$id")
 
+    fun pickKind(
+        picker: ActivePicker.Kind,
+        alias: String,
+    ) = replace(picker.token, "kind:$alias")
+
     // ---- walking the calendar with the keyboard --------------------------------------------
 
     fun stepMonth(

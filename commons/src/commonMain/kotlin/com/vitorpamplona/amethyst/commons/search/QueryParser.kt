@@ -58,10 +58,11 @@ sealed interface Token {
  * as chips, so parsing them here rather than a second time is what keeps the chip and the filter
  * from ever disagreeing.
  *
- * What is left is plain text, and this second pass reads the looser operators out of it:
- * `kind:`, `lang:`, `domain:`, the `OR` chain, `-exclusions`, `"quoted phrases"`, and the
- * spellings of `from:`/`since:`/`until:` the tokenizer deliberately refuses (a hex key, a bare
- * year) because they have no single unambiguous rendering as a chip.
+ * What is left is plain text, and this second pass reads the looser operators out of it: the
+ * `OR` chain, `-exclusions`, `"quoted phrases"`, and the spellings the tokenizer deliberately
+ * refuses because they have no single unambiguous rendering as a chip — a hex `from:`, a bare
+ * `since:` year, a `kind:` the registry cannot resolve, a `lang:`/`domain:` that is not one.
+ * Those keep working as filters; they just do not pill.
  */
 object QueryParser {
     private val KNOWN_OPERATORS = setOf("from", "to", "kind", "since", "until", "lang", "domain")
@@ -84,6 +85,20 @@ object QueryParser {
                     if (seg.tag == "e") builder.cites.addDistinct(seg.value) else builder.addrs.addDistinct(seg.value)
 
                 is SearchSegment.DateBound -> builder.narrow(seg.field, seg.at)
+                is SearchSegment.Kind ->
+                    if (seg.pseudoKind != null) {
+                        builder.pseudoKinds.addDistinct(seg.pseudoKind)
+                    } else {
+                        seg.kinds.forEach { builder.kinds.addDistinct(it) }
+                    }
+
+                is SearchSegment.Language -> builder.language = seg.code
+                is SearchSegment.Domain -> builder.domain = seg.host
+                // Drawn only. These two exist so the field can chip them; the pass below still
+                // owns what they mean, so their text goes through untouched rather than being
+                // read twice in two places that could drift apart.
+                is SearchSegment.Exclusion -> leftover.append(seg.raw)
+                is SearchSegment.Phrase -> leftover.append(seg.raw)
                 is SearchSegment.Key ->
                     when (seg.field) {
                         KeyField.FROM -> builder.authors.addDistinct(seg.pubkey)

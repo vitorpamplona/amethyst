@@ -574,7 +574,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.TopUpMint> { TopUpMintScreen(it.mintUrl, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
-        composableCapped<Route.Search> { SearchScreen(accountViewModel, nav) }
+        composableCappedArgs<Route.Search> { SearchScreen(it.query, accountViewModel, nav) }
 
         composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }

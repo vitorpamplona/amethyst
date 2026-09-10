@@ -48,4 +48,46 @@ class SearchQueryState(
 ) : MutableQueryState,
     AccountScopedQuery {
     override fun flow(): Flow<String> = searchQuery
+
+    /**
+     * Which relays this query went to, and which have answered.
+     *
+     * The screen otherwise has no idea: it guesses a search is done by waiting a fixed moment
+     * after the last keystroke, because nothing told it otherwise. The sub-assemblers know both
+     * halves already -- they build the per-relay filters, and they are handed every EOSE -- so
+     * they record it here rather than keeping it to themselves.
+     *
+     * "Waiting on" is [asked] minus [answered]. A relay that never sends EOSE simply stays in it,
+     * which is the honest answer and the reason the timer stays as a backstop rather than being
+     * replaced by this.
+     */
+    val asked = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+    val answered = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /** The query the two sets describe, so a new one starts from nothing. */
+    private var askedFor: String? = null
+
+    /**
+     * Records the relays one sub-assembler is about to ask for [query].
+     *
+     * Additive, and reset by the query changing rather than by being called: the posts and the
+     * people assemblers both rebuild off this same state, so a call that replaced the set would
+     * leave whichever ran second looking like the only one that asked anything.
+     */
+    fun startedAsking(
+        query: String,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        if (askedFor != query) {
+            askedFor = query
+            asked.value = relays
+            answered.value = emptySet()
+        } else {
+            asked.value = asked.value + relays
+        }
+    }
+
+    fun answeredBy(relay: NormalizedRelayUrl) {
+        answered.value = answered.value + relay
+    }
 }

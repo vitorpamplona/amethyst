@@ -37,17 +37,21 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_manage_permissions
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
+import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarNavigationIcon
+import com.vitorpamplona.amethyst.ui.navigation.topbars.searchRouteFor
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 
 /**
  * Top bar for the Napplets browse screen, matching the other feed screens (Pictures, Articles, …): a
@@ -75,7 +79,7 @@ fun NappletsTopBar(
             IconButton(onClick = { nav.nav(Route.ConnectedApps) }) {
                 Icon(MaterialSymbols.Tune, contentDescription = stringRes(Res.string.napplet_manage_permissions))
             }
-            IconButton(onClick = { nav.nav(Route.Search) }) {
+            IconButton(onClick = { nav.nav(searchRouteFor(SearchSeed.ofKinds(RootNappletEvent.KIND, NamedNappletEvent.KIND))) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }
         },

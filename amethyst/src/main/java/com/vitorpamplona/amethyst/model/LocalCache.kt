@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Dao
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.RelayGroupTargetCandidate
@@ -554,6 +555,25 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
     /** Prefix/content search over users, notes, and channels. */
     val search = CacheSearch(this)
+
+    // The search entry points of ICacheProvider, so a shared state holder can ask a cache what it
+    // holds without naming this module. The policy stays in CacheSearch; these are the door.
+
+    override fun findNotesMatching(
+        filters: List<Filter>,
+        hidden: LiveHiddenUsers,
+    ) = search.findNotesMatching(filters, hidden)
+
+    override fun findNotesStartingWith(
+        text: String,
+        hidden: LiveHiddenUsers,
+    ) = search.findNotesStartingWith(text, hidden)
+
+    override fun findPublicChatChannelsStartingWith(text: String) = search.findPublicChatChannelsStartingWith(text)
+
+    override fun findEphemeralChatChannelsStartingWith(text: String) = search.findEphemeralChatChannelsStartingWith(text)
+
+    override fun findLiveActivityChannelsStartingWith(text: String) = search.findLiveActivityChannelsStartingWith(text)
 
     fun Filter.match(note: Note): Boolean {
         val event = note.event

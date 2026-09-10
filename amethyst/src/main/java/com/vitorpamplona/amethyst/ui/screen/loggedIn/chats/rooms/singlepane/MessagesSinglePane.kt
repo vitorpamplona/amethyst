@@ -76,7 +76,9 @@ fun MessagesSinglePane(
         isInvertedLayout = false,
         topBar = {
             Column {
-                UserDrawerSearchTopBar(accountViewModel, nav) { AmethystClickableIcon() }
+                // No seed: NIP-17 messages are encrypted, so no relay can search them and no
+                // kind window would return anything the reader could read.
+                UserDrawerSearchTopBar(accountViewModel, nav, null) { AmethystClickableIcon() }
                 MessagesTabHeader(
                     pagerState,
                     tabs,

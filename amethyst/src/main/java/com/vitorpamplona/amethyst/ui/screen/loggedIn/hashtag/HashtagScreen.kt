@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.mute_hashtag
 import com.vitorpamplona.amethyst.commons.resources.unmute_hashtag
+import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsMutingHashtag
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SearchTopBarAction
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -113,6 +115,8 @@ fun HashtagScreen(
                     Text("#${tag.hashtag}", modifier = Modifier.weight(1f))
                     HashtagActionOptions(tag.hashtag, accountViewModel)
                 },
+                // Search this topic rather than everything: the box opens holding `#tag`.
+                actions = { SearchTopBarAction(SearchSeed.byHashtag(tag.hashtag), nav) },
                 popBack = nav::popBack,
             )
         },

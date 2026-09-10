@@ -91,6 +91,42 @@ data class SearchQuery(
                 scopes.isEmpty() &&
                 groups.isEmpty()
 
+    /**
+     * Does this query carry anything a people search cannot be asked?
+     *
+     * Everything below the free text describes an *event*: a kind, a window in time, a tag, a
+     * mention, a group. A person has none of those, and the people search is one NIP-50 string
+     * against kind 0 ([NameSearchTerms]) — so every one of these tokens is silently dropped the
+     * moment the scope includes People. `#bitcoin since:2025-01-01` came back with people named
+     * "bitcoin" and no hint that the date had been thrown away.
+     *
+     * So the rule is the widest one that cannot lie: free text and its operators (`OR`,
+     * `-exclude`, quoted phrases) leave the toggle alone, and *anything* else pins it to Notes,
+     * which is the only scope that answers what was actually asked. It used to be `kind:` alone,
+     * which meant the other fourteen fields kept the toggle enabled while doing nothing.
+     *
+     * A few of them — `domain:` against a nip05, an npub `from:` — could be answered by a people
+     * search that was built to. None are today, and offering a scope that ignores half the box is
+     * worse than not offering it.
+     */
+    val pinsToNotes
+        get() =
+            authors.isNotEmpty() ||
+                authorNames.isNotEmpty() ||
+                kinds.isNotEmpty() ||
+                since != null ||
+                until != null ||
+                hashtags.isNotEmpty() ||
+                pseudoKinds.isNotEmpty() ||
+                language != null ||
+                domain != null ||
+                mentions.isNotEmpty() ||
+                cites.isNotEmpty() ||
+                addrs.isNotEmpty() ||
+                labels.isNotEmpty() ||
+                scopes.isNotEmpty() ||
+                groups.isNotEmpty()
+
     companion object {
         val EMPTY = SearchQuery()
     }

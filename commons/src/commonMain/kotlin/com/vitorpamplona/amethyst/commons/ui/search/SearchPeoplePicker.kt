@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.search.KindCandidate
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import kotlinx.collections.immutable.ImmutableList
 
@@ -111,6 +112,39 @@ fun SearchGroupPicker(
                 title = candidate.name,
                 subtitle = candidate.subtitle,
                 trailing = if (candidate.ambiguous) "shared id" else null,
+            )
+        }
+    }
+}
+
+/**
+ * The kind picker that opens under a half-written `kind:` token.
+ *
+ * The only picker whose rows `commons` can fill in itself: "which kinds are there" is a constant
+ * in [KindRegistry], not an account-scoped question, so there is no query callback to answer.
+ */
+@Composable
+fun SearchKindPicker(
+    candidates: ImmutableList<KindCandidate>,
+    highlighted: Int,
+    onPick: (KindCandidate) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (candidates.isEmpty()) return
+    LazyColumn(modifier.heightIn(max = 280.dp)) {
+        items(candidates, key = { it.alias }) { candidate ->
+            PickerRow(
+                highlighted = candidates.indexOf(candidate) == highlighted,
+                onClick = { onPick(candidate) },
+                title = candidate.alias,
+                // What the token will actually ask for. `kind:video` is four kinds and
+                // `kind:21` is one; a reader picking between them deserves to see which.
+                subtitle =
+                    if (candidate.isPseudo) {
+                        "filtered on results"
+                    } else {
+                        candidate.kinds.joinToString(", ")
+                    },
             )
         }
     }

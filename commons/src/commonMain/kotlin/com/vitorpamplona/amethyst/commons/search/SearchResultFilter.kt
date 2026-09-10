@@ -23,38 +23,34 @@ package com.vitorpamplona.amethyst.commons.search
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 object SearchResultFilter {
+    /**
+     * Does this event survive the parts of [query] no relay can be asked about?
+     *
+     * `-term` and the `kind:reply`/`kind:media` pseudo-kinds are the query's post-filters: NIP-50
+     * has no negation operator, and "is a reply" is a shape of the event's tags rather than
+     * anything a relay indexes. So they are applied here, over whatever came back — which means
+     * every front end has to remember to call this. One did not, and both features silently did
+     * nothing there; hence this predicate, so a caller with its own list type can apply the same
+     * rules without going through [filter].
+     */
+    fun matches(
+        event: Event,
+        query: SearchQuery,
+    ): Boolean {
+        if (query.excludeTerms.any { event.content.contains(it, ignoreCase = true) }) return false
+        if ("reply" in query.pseudoKinds && !isReply(event)) return false
+        if ("media" in query.pseudoKinds && !isMedia(event)) return false
+        return true
+    }
+
     fun filter(
         events: List<Event>,
         query: SearchQuery,
-    ): List<Event> {
-        var result = events
-
-        // Dedup by event ID
-        result = result.distinctBy { it.id }
-
-        // Exclusion terms (client-side)
-        if (query.excludeTerms.isNotEmpty()) {
-            result =
-                result.filter { event ->
-                    query.excludeTerms.none { term ->
-                        event.content.contains(term, ignoreCase = true)
-                    }
-                }
-        }
-
-        // Pseudo-kind: reply (kind 1 with e tag)
-        if ("reply" in query.pseudoKinds) {
-            result = result.filter { event -> isReply(event) }
-        }
-
-        // Pseudo-kind: media (kind 1 with imeta tag or image URLs)
-        if ("media" in query.pseudoKinds) {
-            result = result.filter { event -> isMedia(event) }
-        }
-
-        // Sort by createdAt descending
-        return result.sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id })
-    }
+    ): List<Event> =
+        events
+            .distinctBy { it.id }
+            .filter { matches(it, query) }
+            .sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id })
 
     fun isReply(event: Event): Boolean = event.kind == 1 && event.tags.any { it.size >= 2 && it[0] == "e" }
 

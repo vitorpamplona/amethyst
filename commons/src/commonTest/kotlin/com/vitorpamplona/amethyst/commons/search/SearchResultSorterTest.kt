@@ -89,24 +89,26 @@ class SearchResultSorterTest {
 
     // --- Event sorting ---
 
+    private val asEvent: (Event) -> Event? = { it }
+
     @Test
     fun newestSortsDescending() {
         val events = listOf(event("a", 100), event("b", 300), event("c", 200))
-        val sorted = SearchResultSorter.sortEvents(events, SearchSortOrder.NEWEST, "")
+        val sorted = SearchPipeline.rank(events, SearchSortOrder.NEWEST, "", asEvent)
         assertEquals(listOf("b", "c", "a"), sorted.map { it.id })
     }
 
     @Test
     fun oldestSortsAscending() {
         val events = listOf(event("a", 300), event("b", 100), event("c", 200))
-        val sorted = SearchResultSorter.sortEvents(events, SearchSortOrder.OLDEST, "")
+        val sorted = SearchPipeline.rank(events, SearchSortOrder.OLDEST, "", asEvent)
         assertEquals(listOf("b", "c", "a"), sorted.map { it.id })
     }
 
     @Test
     fun relevanceEmptyQueryFallsBackToRecency() {
         val events = listOf(event("a", 100), event("b", 300), event("c", 200))
-        val sorted = SearchResultSorter.sortEvents(events, SearchSortOrder.RELEVANCE, "")
+        val sorted = SearchPipeline.rank(events, SearchSortOrder.RELEVANCE, "", asEvent)
         assertEquals(listOf("b", "c", "a"), sorted.map { it.id })
     }
 
@@ -114,7 +116,7 @@ class SearchResultSorterTest {
     fun relevanceExactMatchBeatsPartial() {
         val exact = event("exact", 100, content = "bitcoin is great")
         val partial = event("partial", 100, content = "bit of something")
-        val sorted = SearchResultSorter.sortEvents(listOf(partial, exact), SearchSortOrder.RELEVANCE, "bitcoin")
+        val sorted = SearchPipeline.rank(listOf(partial, exact), SearchSortOrder.RELEVANCE, "bitcoin", asEvent)
         assertEquals("exact", sorted.first().id)
     }
 
@@ -122,7 +124,7 @@ class SearchResultSorterTest {
     fun relevanceWordBoundaryBeatsSubstring() {
         val boundary = event("boundary", 100, content = "I love bitcoin and lightning")
         val substring = event("substr", 100, content = "bitcoinery is not a word")
-        val sorted = SearchResultSorter.sortEvents(listOf(substring, boundary), SearchSortOrder.RELEVANCE, "bitcoin")
+        val sorted = SearchPipeline.rank(listOf(substring, boundary), SearchSortOrder.RELEVANCE, "bitcoin", asEvent)
         assertEquals("boundary", sorted.first().id)
     }
 
@@ -130,7 +132,7 @@ class SearchResultSorterTest {
     fun relevanceArticleTitleBoost() {
         val withTitle = article("titled", 100, content = "some content", title = "Bitcoin Guide")
         val withoutTitle = event("notitle", 100, content = "bitcoin bitcoin bitcoin")
-        val sorted = SearchResultSorter.sortEvents(listOf(withoutTitle, withTitle), SearchSortOrder.RELEVANCE, "bitcoin")
+        val sorted = SearchPipeline.rank(listOf(withoutTitle, withTitle), SearchSortOrder.RELEVANCE, "bitcoin", asEvent)
         assertEquals("titled", sorted.first().id)
     }
 
@@ -139,10 +141,11 @@ class SearchResultSorterTest {
         val multi = event("multi", 100, content = "bitcoin and lightning network")
         val single = event("single", 100, content = "bitcoin only here")
         val sorted =
-            SearchResultSorter.sortEvents(
+            SearchPipeline.rank(
                 listOf(single, multi),
                 SearchSortOrder.RELEVANCE,
                 "bitcoin lightning",
+                asEvent,
             )
         assertEquals("multi", sorted.first().id)
     }

@@ -33,22 +33,26 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
-import com.vitorpamplona.amethyst.commons.search.QueryParser
-import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
+import com.vitorpamplona.amethyst.commons.search.RenderableKinds
+import com.vitorpamplona.amethyst.commons.search.SearchHistory
+import com.vitorpamplona.amethyst.commons.search.SearchHistoryStorage
+import com.vitorpamplona.amethyst.commons.search.SearchPipeline
+import com.vitorpamplona.amethyst.commons.search.SearchResultKind
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
-import com.vitorpamplona.amethyst.commons.search.nameSearchTerms
+import com.vitorpamplona.amethyst.commons.search.SearchState
 import com.vitorpamplona.amethyst.commons.search.wholeInputNip19
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
@@ -70,43 +74,133 @@ import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @Stable
 @OptIn(FlowPreview::class)
 class SearchBarViewModel(
     val account: Account,
     val nip05Client: INip05Client,
+    /** Where this device keeps what has been searched for; see [history]. */
+    historyStorage: SearchHistoryStorage,
+    /**
+     * The query the calling screen seeded the box with — `from:<npub>` off a profile,
+     * `kind:article` off the articles feed. It is ordinary field text from here on: the reader
+     * can edit or delete it like anything they typed themselves.
+     */
+    initialQuery: String? = null,
 ) : ViewModel(),
     InvalidatableContent {
     val focusRequester = FocusRequester()
-    var searchValue by mutableStateOf("")
+    var searchValue by mutableStateOf(initialQuery.orEmpty())
 
-    val invalidations = MutableStateFlow(0)
-    val searchValueFlow = MutableStateFlow("")
+    /** A refresh the app asked for: the screen was composed, or the reader came back to it. */
+    private val manualInvalidations = MutableStateFlow(0)
 
-    val scope = MutableStateFlow(SearchScope.ALL)
-    val source = MutableStateFlow(SearchSource.RELAYS)
-    val followsOnly = MutableStateFlow(false)
-    val sortOrder = MutableStateFlow(SearchSortOrder.EVENT_DEFAULT)
+    /**
+     * What is being searched, and everything about it that is not Android's: the text, its parse,
+     * the two debounce windows, the scope, the sort orders. Shared with Desktop, which had grown
+     * its own copy of all of it.
+     *
+     * What stays here is what a shared holder cannot own: a `LazyListState`, a `FocusRequester`,
+     * invite-link routing, NIP-05 resolution, and the seven result flows — the *acquisition* of
+     * results, which on Android is a cache scan and on Desktop is a relay callback.
+     */
+    val state = SearchState(viewModelScope, initialText = initialQuery.orEmpty())
 
-    val searchTerm =
-        searchValueFlow
-            .debounce(300)
-            .distinctUntilChanged()
-            .onEach(::updateDataSource)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
+    /**
+     * When the results are worth recomputing.
+     *
+     * This used to be a counter that only the lifecycle touched, which meant the result lists were
+     * computed once per keystroke and then frozen: the REQ went out, relays answered a few hundred
+     * milliseconds later, `LocalCache` filled up — and nothing re-ran the scan, so what the reader
+     * saw was whatever had already been cached when they stopped typing. Everything that arrived
+     * because of their search only appeared if they typed another character or left the screen and
+     * came back.
+     *
+     * The cache already publishes what it takes in, so the fix is to listen: a lifecycle refresh
+     * and an arriving bundle are the same event to a result list.
+     *
+     * Two things keep that affordable. Bundles carrying nothing a result list could show are
+     * dropped outright — the cache takes in chat, DMs, reactions and zap receipts all day, and
+     * none of them can appear in search — and what survives is sampled rather than debounced, so
+     * the cost is capped at one rescan per [RESCAN_INTERVAL_MS] however hard the relays push.
+     * A lifecycle refresh skips both and applies at once.
+     */
+    private val refreshes: StateFlow<Int> =
+        merge(
+            manualInvalidations,
+            merge(
+                account.cache.getEventStream().newEventBundles,
+                account.cache.getEventStream().deletedEventBundles,
+            ).filter { bundle -> bundle.any { it.event?.kind in WATCHED_KINDS } }
+                .sample(RESCAN_INTERVAL_MS),
+        ).scan(0) { count, _ -> count + 1 }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    /** True while a token picker is open under the field.
+     *
+     * The search screen pins its bars on this. A picker is a scrollable inside the *top bar*, and
+     * [com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarNestedScroll] moves the bars
+     * on `consumed + available` — a sum that is conserved as a scroll walks up the nested-scroll
+     * chain, so no connection under the picker can hide its scrolling from the scaffold. Scrolling
+     * the list of kinds slid the whole chrome away with it. The scaffold has to be told instead.
+     */
+    val pickerOpen = MutableStateFlow(false)
+
+    /**
+     * What has been searched for on this device, and what has been kept.
+     *
+     * Desktop has had this since the advanced bar was written; Android never did, because the
+     * code sat in a desktop object on `java.util.prefs`. Nothing about it was desktop-specific,
+     * so the move to commons is the whole of the port.
+     */
+    val history = SearchHistory(historyStorage, viewModelScope)
+
+    /** Records the query the reader actually ran — the Enter key, not every pause in typing. */
+    fun remember() = history.remember(state.query)
+
+    val queryAsksNothing get() = state.asksNothing
+    val searchSettled get() = state.settled
+
+    /** Relays this query went to, and the ones still to answer. Drives the waiting popup. */
+    val relaysAsked get() = searchDataSourceState.asked
+    val relaysAnswered get() = searchDataSourceState.answered
+    val scopePinnedToNotes get() = state.scopePinnedToNotes
+    val scope get() = state.scope
+
+    val source get() = state.source
+    val followsOnly get() = state.followsOnly
+    val sortOrder get() = state.eventSortOrder
+
+    // EVERYTHING `updateDataSource` TOUCHES MUST BE DECLARED ABOVE THIS LINE.
+    //
+    // `searchTerm` and `sourceWatcher` below are both shared `Eagerly`, so they call
+    // `updateDataSource` while the constructor is still running. Kotlin initialises properties in
+    // declaration order, so anything that function reads from further down the class is still
+    // null at that moment and the app dies opening search. It has happened twice now -- once on
+    // `listState`, once on `searchDataSourceState` when a refactor moved it below -- so the two
+    // fields it needs live here, above the collectors, and should stay here.
+    val listState: LazyListState = LazyListState(0, 0)
 
     val searchDataSourceState =
         SearchQueryState(
@@ -117,13 +211,17 @@ class SearchBarViewModel(
             followPlusAllMineWithSearchRelays = account.followPlusAllMineWithSearch.flow,
         )
 
+    val searchTerm =
+        state.debouncedForRelays
+            .map { it.text }
+            .onEach(::updateDataSource)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
+
     @Suppress("unused")
     val sourceWatcher =
         source
             .onEach { updateDataSource(searchValue) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, SearchSource.RELAYS)
-
-    val listState: LazyListState = LazyListState(0, 0)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val directNip05Resolver: Flow<User?> =
@@ -246,15 +344,15 @@ class SearchBarViewModel(
 
     val searchResultsUsers =
         combine(
-            searchValueFlow.debounce(100),
-            invalidations.debounce(100),
+            state.debounced,
+            refreshes,
             directNip05Resolver,
             scope,
             combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
                 if (only) follows.authorsPlusMe else null
             },
-        ) { term, _, nip05Resolver, currentScope, follows ->
-            if (currentScope == SearchScope.NOTES) return@combine emptyList<User>()
+        ) { input, _, nip05Resolver, currentScope, follows ->
+            if (!currentScope.shows(SearchResultKind.PEOPLE)) return@combine emptyList<User>()
 
             if (nip05Resolver != null) {
                 return@combine if (follows == null || nip05Resolver.pubkeyHex in follows) {
@@ -270,12 +368,12 @@ class SearchBarViewModel(
             // A pasted npub/nprofile resolves to its owner even when the cache has never seen
             // them — this is what the auto-navigation used to do, minus the navigation.
             val direct =
-                (directEntity(term) as? IPubKeyEntity)?.let {
+                (directEntity(input.text) as? IPubKeyEntity)?.let {
                     LocalCache.consume(it)
                     LocalCache.getUserIfExists(it.hex) ?: LocalCache.getOrCreateUser(it.hex)
                 }
 
-            val nameTerm = plainTerms(term)
+            val nameTerm = input.nameTerms
             val found =
                 if (nameTerm.isBlank()) emptyList() else LocalCache.search.findUsersStartingWith(nameTerm, account)
             val users = (listOfNotNull(direct) + found).distinctBy { it.pubkeyHex }
@@ -285,25 +383,25 @@ class SearchBarViewModel(
 
     val searchResultsNotes =
         combine(
-            searchValueFlow.debounce(100),
-            invalidations,
+            state.debounced,
+            refreshes,
             scope,
             sortOrder,
             combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
                 if (only) follows.authorsPlusMe else null
             },
-        ) { term, _, currentScope, order, follows ->
-            if (currentScope == SearchScope.PEOPLE) return@combine emptyList()
+        ) { input, _, currentScope, order, follows ->
+            if (!currentScope.shows(SearchResultKind.NOTES)) return@combine emptyList()
 
             // The same filters the REQ carries, run against the cache — so `from:`, `to:`,
             // `since:`, `#t` and the rest narrow local results exactly as they narrow relay
             // results. A bech32 id typed in full is a lookup, not a search, and keeps its own
             // path through findNotesStartingWith.
-            val parsed = QueryParser.parse(term)
+            val parsed = input.query
             // A pasted note/nevent/naddr resolves even when the cache has never seen it —
             // what the auto-navigation used to do, minus the navigation.
             val direct =
-                when (val entity = directEntity(term)) {
+                when (val entity = directEntity(input.text)) {
                     is NNote -> LocalCache.consume(entity).let { LocalCache.getOrCreateNote(entity.hex) }
                     is NEvent -> LocalCache.consume(entity).let { LocalCache.getOrCreateNote(entity.hex) }
                     is NAddress -> LocalCache.consume(entity).let { LocalCache.getOrCreateAddressableNote(entity.address()) }
@@ -317,86 +415,83 @@ class SearchBarViewModel(
                     // `idHex`, which is not content and so nothing a filter's `search` can reach.
                     // Routed to the scan that knows how to resolve it — and only for text that
                     // could actually be one, so an ordinary query never pays for two scans.
-                    looksLikeAnEventId(term) -> LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
+                    looksLikeAnEventId(input.text) -> LocalCache.findNotesStartingWith(input.text, account.hiddenUsers.flow.value)
                     else ->
-                        LocalCache.search.findNotesMatching(
-                            SearchFilterBuilder.build(parsed, limit = 200),
-                            account.hiddenUsers,
+                        // The same filters the REQ carries, over the same kind window. Built by
+                        // the pipeline rather than here, so the cache is asked exactly what the
+                        // relays are asked — the window was the last thing the two disagreed on,
+                        // the local scan having had none at all and so matching kinds no relay was
+                        // ever asked for. Asked flat rather than in RenderableKinds.GROUPS: the
+                        // groups exist for a relay's per-filter cap, and a cache has none.
+                        LocalCache.findNotesMatching(
+                            SearchPipeline.filters(parsed, RenderableKinds.ALL, limit = 200),
+                            account.hiddenUsers.flow.value,
                         )
                 }
             val withDirect = (listOfNotNull(direct) + raw).distinctBy { it.idHex }
-            val filtered = if (follows != null) withDirect.filter { it.author?.pubkeyHex in follows } else withDirect
+            val followed = if (follows != null) withDirect.filter { it.author?.pubkeyHex in follows } else withDirect
 
-            when (order) {
-                SearchSortOrder.POPULAR -> {
-                    filtered.sortedWith(
-                        compareByDescending<com.vitorpamplona.amethyst.commons.model.Note> { it.zapsAmount }
-                            .thenByDescending { it.createdAt() ?: 0L },
-                    )
-                }
-
-                SearchSortOrder.OLDEST -> {
-                    filtered.sortedBy { it.createdAt() ?: 0L }
-                }
-
-                SearchSortOrder.RELEVANCE, SearchSortOrder.NEWEST -> {
-                    filtered.sortedByDefaultFeedOrder()
-                }
-
-                else -> {
-                    filtered.sortedByDefaultFeedOrder()
-                }
-            }
+            // The post-filters and the ordering, in that order, from the one place that owns
+            // both. Doing it by hand here is what let `-term` and Relevance quietly do nothing:
+            // there was no sequence to be missing a step from.
+            SearchPipeline.narrowAndOrder(
+                items = followed,
+                query = parsed,
+                order = order,
+                event = { it.event },
+                zapTotal = { it.zapsAmount.toDouble() },
+            )
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsPublicChatChannels =
         combine(
-            searchValueFlow.debounce(100),
-            invalidations,
+            state.debounced,
+            refreshes,
             scope,
-        ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findPublicChatChannelsStartingWith(plainTerms(term))
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.PUBLIC_CHATS)) emptyList() else LocalCache.findPublicChatChannelsStartingWith(input.nameTerms)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsEphemeralChannels =
         combine(
-            searchValueFlow.debounce(100),
-            invalidations,
+            state.debounced,
+            refreshes,
             scope,
-        ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findEphemeralChatChannelsStartingWith(plainTerms(term))
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.EPHEMERAL_CHATS)) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(input.nameTerms)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsLiveActivityChannels =
         combine(
-            searchValueFlow.debounce(100),
-            invalidations,
+            state.debounced,
+            refreshes,
             scope,
-        ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findLiveActivityChannelsStartingWith(plainTerms(term))
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.LIVE_ACTIVITIES)) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(input.nameTerms)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val hashtagResults =
         combine(
-            searchValueFlow.debounce(100),
-            invalidations,
+            state.debounced,
+            refreshes,
             scope,
-        ) { term, _, currentScope ->
-            if (currentScope == SearchScope.PEOPLE) emptyList() else findHashtags(term)
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.HASHTAGS)) emptyList() else findHashtags(input.text)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val relayResults =
         combine(
-            searchValueFlow.debounce(100),
-            invalidations,
+            state.debounced,
+            refreshes,
             scope,
-        ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) return@combine emptyList()
+        ) { input, _, currentScope ->
+            if (!currentScope.shows(SearchResultKind.RELAYS)) return@combine emptyList()
+            val term = input.text
             if (term.length > 1) {
                 val isTypingRelay = term.length > 7 && (term.startsWith("wss://") || term.startsWith("ws://"))
                 val relayUrl =
@@ -423,15 +518,67 @@ class SearchBarViewModel(
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
-    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
+    /** True when the box holds something to search for — which is not the same as searching. */
+    val hasQuery = derivedStateOf { searchValue.isNotBlank() }
 
     /**
-     * The single word a name search should be given — see [nameSearchTerms]. Not simply the
-     * leftover text: a query that is nothing but `#bitcoin` leaves no leftovers, and handing the
-     * finders an empty string means they answer with nobody rather than with the channel called
-     * "Bitcoin" that the reader was plainly looking for.
+     * [state]'s `settled`, mirrored into snapshot state.
+     *
+     * Reading `state.settled.value` inside [derivedStateOf] looked right and could never work: a
+     * StateFlow read is invisible to the snapshot system, so the derivation only re-ran when
+     * `searchValue` changed. The spinner therefore started on the first keystroke and stayed lit
+     * for as long as the box had text, long after the results were on screen. The empty state two
+     * hundred lines down reads the same flow through `collectAsStateWithLifecycle` and has always
+     * been correct, which is why "nothing found" timed out while the spinner did not.
      */
-    private fun plainTerms(term: String): String = QueryParser.parse(term).nameSearchTerms()
+    private var settled by mutableStateOf(false)
+    private var relaysAskedNow by mutableStateOf<Set<NormalizedRelayUrl>>(emptySet())
+    private var relaysAnsweredNow by mutableStateOf<Set<NormalizedRelayUrl>>(emptySet())
+
+    /**
+     * Stops the spinner claiming to wait forever on a relay that will never answer.
+     *
+     * Some relays simply never send EOSE. Without a ceiling the spinner would turn for the life
+     * of the screen, which is the behaviour this was meant to end.
+     */
+    private var pastDeadline by mutableStateOf(false)
+
+    init {
+        viewModelScope.launch { state.settled.collect { settled = it } }
+        viewModelScope.launch { searchDataSourceState.asked.collect { relaysAskedNow = it } }
+        viewModelScope.launch { searchDataSourceState.answered.collect { relaysAnsweredNow = it } }
+        viewModelScope.launch {
+            state.text.collectLatest {
+                pastDeadline = false
+                delay(RELAY_WAIT_CEILING_MS)
+                pastDeadline = true
+            }
+        }
+    }
+
+    /** The relays this query went to that have not sent EOSE yet. */
+    val relaysWaiting = derivedStateOf { relaysAskedNow - relaysAnsweredNow }
+
+    /**
+     * True while a search is actually under way.
+     *
+     * This is [InvalidatableContent]'s contract, and every other implementor uses it to mean "a
+     * refresh is running". Search had it returning `searchValue.isNotBlank()` — "the box has
+     * text" — so three call sites read a name that said one thing and meant another, and nothing
+     * on screen could say whether results were still coming. Both meanings now exist under their
+     * own names, and the field shows this one as a spinner.
+     *
+     * No EOSE from the search subscription reaches this screen, so "under way" is the same
+     * heuristic the empty state already trusts: the grace window since the query last changed.
+     */
+    override val isRefreshing =
+        derivedStateOf {
+            // The timer is the floor -- something has to show in the moment before any relay can
+            // possibly reply. After that the real signal takes over: a relay that has not sent
+            // EOSE is one the results are still missing, and the popup on the spinner names it.
+            searchValue.isNotBlank() &&
+                (!settled || (relaysWaiting.value.isNotEmpty() && !pastDeadline))
+        }
 
     /**
      * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex
@@ -445,13 +592,12 @@ class SearchBarViewModel(
     }
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        // force new query
-        invalidations.update { it + 1 }
+        manualInvalidations.update { it + 1 }
     }
 
     fun updateSearchValue(newValue: String) {
         searchValue = newValue
-        searchValueFlow.tryEmit(newValue)
+        state.updateText(newValue)
     }
 
     fun clear() = updateSearchValue("")
@@ -465,29 +611,58 @@ class SearchBarViewModel(
         }
     }
 
-    fun updateScope(newScope: SearchScope) {
-        scope.value = newScope
-    }
+    fun updateScope(newScope: SearchScope) = state.updateScope(newScope)
 
-    fun updateSource(newSource: SearchSource) {
-        source.value = newSource
-    }
+    fun updateSource(newSource: SearchSource) = state.updateSource(newSource)
 
-    fun updateFollowsOnly(value: Boolean) {
-        followsOnly.value = value
-    }
+    fun updateFollowsOnly(value: Boolean) = state.updateFollowsOnly(value)
 
-    fun updateSortOrder(order: SearchSortOrder) {
-        sortOrder.value = order
-    }
+    fun updateSortOrder(order: SearchSortOrder) = state.updateEventSortOrder(order)
 
     fun isSearchingFun() = searchValue.isNotBlank()
+
+    companion object {
+        /** How long the spinner will admit to waiting on a relay that has gone quiet. */
+        private const val RELAY_WAIT_CEILING_MS = 12_000L
+
+        /**
+         * At most one cache-driven rescan per this long.
+         *
+         * Sampled rather than debounced, and that distinction is the whole of it: a debounce waits
+         * for quiet, and a cache taking in a search's own results — plus whatever the rest of the
+         * app is subscribed to — may not go quiet for seconds. The list would have stalled exactly
+         * when it had the most to show. Sampling caps the cost instead, and guarantees the scan
+         * runs while events are still arriving.
+         *
+         * Wider than [SearchState.LOCAL_DEBOUNCE_MS] because this one walks the cache without the
+         * reader having asked for anything.
+         */
+        private const val RESCAN_INTERVAL_MS = 400L
+
+        /**
+         * The kinds an arriving bundle has to contain before it is worth looking again.
+         *
+         * Everything the seven result lists are built from: [RenderableKinds.ALL] for notes and
+         * for the public-chat and live-activity channels, `kind 0` for people, and the ephemeral
+         * chat kind for the rooms that have no definition event of their own. A relay delivering
+         * anything else — a chat message, a DM, a reaction, a zap receipt, which is most of what
+         * a running app takes in — cannot change what this screen shows, and a rescan for it is a
+         * walk of the whole cache for nothing.
+         *
+         * Add to this when a result list starts reading a new kind. Getting it wrong costs a late
+         * update rather than a wrong one: the next keystroke, or the next relevant bundle,
+         * recomputes everything anyway.
+         */
+        private val WATCHED_KINDS = RenderableKinds.ALL.toSet() + MetadataEvent.KIND + EphemeralChatEvent.KIND
+    }
 
     class Factory(
         val account: Account,
         val nip05: INip05Client,
+        val historyStorage: SearchHistoryStorage,
+        val initialQuery: String? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05, historyStorage, initialQuery) as T
     }
 }

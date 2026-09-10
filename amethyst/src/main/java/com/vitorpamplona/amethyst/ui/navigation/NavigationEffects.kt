@@ -86,6 +86,13 @@ inline fun <reified T : Any> NavGraphBuilder.composableCapped(noinline content: 
     }
 }
 
+/** [composableCapped], for a route that carries arguments. */
+inline fun <reified T : Any> NavGraphBuilder.composableCappedArgs(noinline content: @Composable AnimatedContentScope.(T) -> Unit) {
+    composable<T> { entry ->
+        CappedScreenContent { content(entry.toRoute()) }
+    }
+}
+
 inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(
     capWidth: Boolean = true,
     noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,

@@ -22,13 +22,18 @@ package com.vitorpamplona.amethyst.commons.model.cache
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -51,6 +56,15 @@ import com.vitorpamplona.quartz.utils.Log
  * - Dependency injection instead of singleton coupling
  * - Testable (can mock for unit tests)
  * - Platform-agnostic model layer
+ *
+ * ## The search entry points
+ *
+ * The `find*` methods default to returning nothing rather than being abstract, because that is
+ * the honest answer for a cache that has no index for the question: Desktop holds notes but no
+ * public-chat or ephemeral-channel store, and a port that forced it to implement those would be
+ * asking it to lie. A front end therefore renders the result kinds its cache can actually
+ * answer, and gains the rest when its cache does — which is the shape the `LocalCache` move in
+ * `commons/plans/2026-08-30-commons-migration-sweep.md` step 3 arrives at anyway.
  */
 interface ICacheProvider {
     /**
@@ -156,6 +170,45 @@ interface ICacheProvider {
         prefix: String,
         limit: Int = 50,
     ): List<User> = emptyList()
+
+    /**
+     * Every note in the cache matching [filters], as a search asks for them.
+     *
+     * The same `Filter`s the REQ carries, run against the cache, so `from:`, `to:`, `since:`,
+     * `#t` and the rest narrow local results exactly as they narrow relay results — and so the
+     * NIP-50 `search` string, which a `Filter` cannot express and `FilterMatcher` does not read,
+     * is applied by the implementation.
+     *
+     * [hidden] is the reader's mute list, passed as the value rather than the state holder it
+     * comes from: the holder lives in the Android module and a port cannot name it.
+     *
+     * @return the matching notes, in no particular order — ranking is
+     *   [com.vitorpamplona.amethyst.commons.search.SearchPipeline]'s job, not a cache's.
+     */
+    fun findNotesMatching(
+        filters: List<Filter>,
+        hidden: LiveHiddenUsers,
+    ): List<Note> = emptyList()
+
+    /**
+     * Notes reachable from a literal: an event id, or text appearing in a note's content or tags.
+     *
+     * Separate from [findNotesMatching] because an id is not a query — it resolves to one note,
+     * through the addressable indirection if the id names a replaceable event's current version.
+     */
+    fun findNotesStartingWith(
+        text: String,
+        hidden: LiveHiddenUsers,
+    ): List<Note> = emptyList()
+
+    /** NIP-28 public chats whose name, about or picture begins with [text]. */
+    fun findPublicChatChannelsStartingWith(text: String): List<PublicChatChannel> = emptyList()
+
+    /** NIP-C7 ephemeral relay chats whose name begins with [text]. */
+    fun findEphemeralChatChannelsStartingWith(text: String): List<EphemeralChatChannel> = emptyList()
+
+    /** NIP-53 live activities whose title begins with [text], or that [text] names as an naddr. */
+    fun findLiveActivityChannelsStartingWith(text: String): List<LiveActivitiesChannel> = emptyList()
 
     /**
      * Gets or creates a User by public key hex.

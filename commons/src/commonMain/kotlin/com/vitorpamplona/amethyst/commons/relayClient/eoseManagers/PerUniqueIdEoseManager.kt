@@ -56,7 +56,8 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
 
     fun since(key: T) = latestEOSEs.since(id(key))
 
-    fun newEose(
+    /** Open so a subclass can also record who answered, not just when. */
+    open fun newEose(
         key: T,
         relayUrl: NormalizedRelayUrl,
         time: Long,

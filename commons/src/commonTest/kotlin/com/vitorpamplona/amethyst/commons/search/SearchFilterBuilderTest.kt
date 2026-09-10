@@ -164,4 +164,38 @@ class SearchFilterBuilderTest {
         assertTrue(filters.size > 1)
         assertTrue(filters.all { it.authors?.size == 1 && it.tag("e")?.size == 1 })
     }
+
+    // ---- what the search screen's empty state reads ----------------------------------------
+    //
+    // A query that asks nothing gets "type something to search"; one that asks and comes back
+    // with nothing gets "no results". Telling those apart is this method's answer, so the two
+    // messages cannot swap places without one of these failing.
+
+    @Test
+    fun aBareKindWindowAsksNothing() {
+        // "Every recent article" is an unbounded REQ, not a search — which is why a screen that
+        // seeds only its kind opens with a chip and no results.
+        assertTrue(build("kind:article").isEmpty())
+        assertTrue(build("kind:picture").isEmpty())
+        assertTrue(build("kind:reply").isEmpty())
+    }
+
+    @Test
+    fun aKindWithAnythingElseAsksSomething() {
+        assertTrue(build("kind:article bitcoin").isNotEmpty())
+        assertTrue(build("kind:article from:$NPUB").isNotEmpty())
+        assertTrue(build("kind:article #nostr").isNotEmpty())
+        assertTrue(build("kind:article since:2026-01-01").isNotEmpty())
+    }
+
+    @Test
+    fun theOtherSeededWindowsAllAskSomethingOnTheirOwn() {
+        // Only a kind window is unaskable alone; every other seed a screen can hand over names
+        // something a relay indexes, so those open with results rather than a hint.
+        assertTrue(build("from:$NPUB").isNotEmpty())
+        assertTrue(build("#nostr").isNotEmpty())
+        assertTrue(build("geo:9q8yy").isNotEmpty())
+        assertTrue(build("group:dev").isNotEmpty())
+        assertTrue(build("to:$NPUB").isNotEmpty())
+    }
 }

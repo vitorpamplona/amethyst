@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
+import com.vitorpamplona.amethyst.commons.search.asSearchQuery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
@@ -39,10 +41,16 @@ fun HomeTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultHomeFollowList
-            .collectAsStateWithLifecycle()
+    val list by accountViewModel.account.settings.defaultHomeFollowList
+        .collectAsStateWithLifecycle()
 
+    // No kind seed: the home feed spans every kind Amethyst can render, so there is no one
+    // window to hand over. What the list spinner narrowed to still seeds, when the token
+    // language can say it.
+    val me = accountViewModel.userProfile().pubkeyHex
+    val seed = remember(list, me) { list.asSearchQuery(me) }
+
+    UserDrawerSearchTopBar(accountViewModel, nav, seed) {
         TopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
