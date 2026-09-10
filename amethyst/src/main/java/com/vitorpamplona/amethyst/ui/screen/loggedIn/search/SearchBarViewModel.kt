@@ -405,7 +405,7 @@ class SearchBarViewModel(
                     // `idHex`, which is not content and so nothing a filter's `search` can reach.
                     // Routed to the scan that knows how to resolve it — and only for text that
                     // could actually be one, so an ordinary query never pays for two scans.
-                    looksLikeAnEventId(term) -> LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
+                    looksLikeAnEventId(term) -> LocalCache.findNotesStartingWith(term, account.hiddenUsers.flow.value)
                     else ->
                         // The same filters the REQ carries, over the same kind window. Built by
                         // the pipeline rather than here, so the cache is asked exactly what the
@@ -413,9 +413,9 @@ class SearchBarViewModel(
                         // the local scan having had none at all and so matching kinds no relay was
                         // ever asked for. Asked flat rather than in RenderableKinds.GROUPS: the
                         // groups exist for a relay's per-filter cap, and a cache has none.
-                        LocalCache.search.findNotesMatching(
+                        LocalCache.findNotesMatching(
                             SearchPipeline.filters(parsed, RenderableKinds.ALL, limit = 200),
-                            account.hiddenUsers,
+                            account.hiddenUsers.flow.value,
                         )
                 }
             val withDirect = (listOfNotNull(direct) + raw).distinctBy { it.idHex }
@@ -440,7 +440,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findPublicChatChannelsStartingWith(plainTerms(term))
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findPublicChatChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -450,7 +450,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findEphemeralChatChannelsStartingWith(plainTerms(term))
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -460,7 +460,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findLiveActivityChannelsStartingWith(plainTerms(term))
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 

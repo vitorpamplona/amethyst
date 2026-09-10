@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
@@ -172,12 +171,11 @@ class CacheSearch(
      */
     fun findNotesMatching(
         filters: List<Filter>,
-        hiddenUsers: HiddenUsersState,
+        hidden: LiveHiddenUsers,
     ): List<Note> {
         checkNotInMainThread()
 
         if (filters.isEmpty()) return emptyList()
-        val hidden = hiddenUsers.flow.value
 
         // Distinct across filters: a union of arms (a hashtag asks #t, #l and the comment tags)
         // routinely returns the same note down more than one of them.
@@ -210,7 +208,7 @@ class CacheSearch(
 
     fun findNotesStartingWith(
         text: String,
-        hiddenUsers: HiddenUsersState,
+        hidden: LiveHiddenUsers,
     ): List<Note> {
         checkNotInMainThread()
 
@@ -250,11 +248,11 @@ class CacheSearch(
             if (note.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
                 note.idHex.startsWith(text, true)
             ) {
-                return@filter !note.isHiddenFor(hiddenUsers.flow.value)
+                return@filter !note.isHiddenFor(hidden)
             }
 
             if (note.event?.isContentEncoded() == false) {
-                return@filter if (!note.isHiddenFor(hiddenUsers.flow.value)) {
+                return@filter if (!note.isHiddenFor(hidden)) {
                     note.event?.content?.contains(text, true) ?: false
                 } else {
                     false
@@ -271,11 +269,11 @@ class CacheSearch(
                 if (addressable.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
-                    return@filter !addressable.isHiddenFor(hiddenUsers.flow.value)
+                    return@filter !addressable.isHiddenFor(hidden)
                 }
 
                 if (addressable.event?.isContentEncoded() == false) {
-                    return@filter if (!addressable.isHiddenFor(hiddenUsers.flow.value)) {
+                    return@filter if (!addressable.isHiddenFor(hidden)) {
                         addressable.event?.content?.contains(text, true) ?: false
                     } else {
                         false
