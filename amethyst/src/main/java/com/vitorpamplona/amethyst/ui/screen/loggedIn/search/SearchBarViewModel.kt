@@ -88,6 +88,7 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @Stable
 @OptIn(FlowPreview::class)
@@ -506,6 +507,22 @@ class SearchBarViewModel(
     val hasQuery = derivedStateOf { searchValue.isNotBlank() }
 
     /**
+     * [state]'s `settled`, mirrored into snapshot state.
+     *
+     * Reading `state.settled.value` inside [derivedStateOf] looked right and could never work: a
+     * StateFlow read is invisible to the snapshot system, so the derivation only re-ran when
+     * `searchValue` changed. The spinner therefore started on the first keystroke and stayed lit
+     * for as long as the box had text, long after the results were on screen. The empty state two
+     * hundred lines down reads the same flow through `collectAsStateWithLifecycle` and has always
+     * been correct, which is why "nothing found" timed out while the spinner did not.
+     */
+    private var settled by mutableStateOf(false)
+
+    init {
+        viewModelScope.launch { state.settled.collect { settled = it } }
+    }
+
+    /**
      * True while a search is actually under way.
      *
      * This is [InvalidatableContent]'s contract, and every other implementor uses it to mean "a
@@ -517,7 +534,7 @@ class SearchBarViewModel(
      * No EOSE from the search subscription reaches this screen, so "under way" is the same
      * heuristic the empty state already trusts: the grace window since the query last changed.
      */
-    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() && !state.settled.value }
+    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() && !settled }
 
     /**
      * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex
