@@ -73,9 +73,13 @@ Small helper file in `amethyst/.../dvms/`:
 - `LocalCache.dvmHeartbeatOf(appDef: AppDefinitionEvent): DvmHeartbeatEvent?` — address
   lookup `Address(DvmHeartbeatEvent.KIND, appDef.pubKey, appDef.dTag())`
 - `DvmHeartbeatEvent.isFreshAt(now: Long): Boolean` — `createdAt >= now - 420`
-- `@Composable fun rememberDvmHeartbeat(address: Address): State<DvmHeartbeatEvent?>` —
-  composable-scoped subscription (§5) + staleness re-check tick (§6), shared by every
-  surface that renders liveness.
+- `@Composable fun rememberDvmHeartbeatFresh(address: Address, accountViewModel: AccountViewModel): State<Boolean>` —
+  as built (uniform-strict ruling): returns true while the DVM has a heartbeat at most 420s
+  old; an unresolved/absent beat counts as offline (`false`) on every surface. The returned
+  `State` identity is stable for the lifetime of the call site (one unconditional
+  `rememberUpdatedState`), so callers may capture it across recompositions. Composable-scoped
+  subscription (§5) + staleness re-check tick (§6), shared by every surface that renders
+  liveness.
 
 ## 5. Subscriptions
 
@@ -107,7 +111,7 @@ the session-scoped watcher for pinned DVMs. Traffic is negligible (a few pinned 
    (alongside the existing `scope.launch { flows.collect { … } }` observers) calls
    `discoverDVMs.invalidateData()` every minute. The rebuild is a cheap scan (≤ a few
    hundred 31990s) and `refreshSuspended()` no-ops when the list is unchanged. Composables
-   using `rememberDvmHeartbeat` tick on a 30s cadence internally.
+   using `rememberDvmHeartbeatFresh` tick on a 30s cadence internally.
 
 ## 7. UI surfaces
 

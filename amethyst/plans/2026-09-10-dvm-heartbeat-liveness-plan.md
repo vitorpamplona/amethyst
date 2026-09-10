@@ -943,7 +943,7 @@ RefresheableBox(onRefresh = onRefresh) {
 }
 ```
 
-Notes: `heartbeatFresh?.value == false` deliberately shows the banner only when a note object exists and is stale — an unresolved heartbeat note (surfaces that never subscribed) shows nothing rather than a false "offline". `AppDefinitionEvent` is already imported in this file; add `androidx.compose.foundation.layout.Box`, `androidx.compose.foundation.layout.fillMaxSize`, `androidx.compose.ui.Alignment`, `com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmOfflineBanner` (same package — no import needed) and `rememberDvmHeartbeatFresh` (same package — no import needed).
+Notes: `heartbeatFresh?.value == false` exists only because `appDef` itself may be null. Per human ruling (uniform-strict), unresolved heartbeat beats count as offline on every surface — chips, home banners, and the detail screen all show the offline indicator once the beat is unresolved/stale, rather than showing nothing. `AppDefinitionEvent` is already imported in this file; add `androidx.compose.foundation.layout.Box`, `androidx.compose.foundation.layout.fillMaxSize`, `androidx.compose.ui.Alignment`, `com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmOfflineBanner` (same package — no import needed) and `rememberDvmHeartbeatFresh` (same package — no import needed).
 
 - [ ] **Step 5: Manage screen rows**
 
