@@ -145,6 +145,12 @@
         <item quantity="many">Birdex · %1$d gatunków</item>
         <item quantity="other">Birdex · %1$d gatunki</item>
     </plurals>
+    <plurals name="birdex_species_more">
+        <item quantity="one">+%1$d więcej</item>
+        <item quantity="few">+%1$d więcej</item>
+        <item quantity="many">+%1$d więcej</item>
+        <item quantity="other">+%1$d więcej</item>
+    </plurals>
     <string name="ps1_save_title">Zapis karty pamięci PS1</string>
     <string name="ps1_save_block">blok %1$d</string>
     <string name="ps1_save_empty_slot">Pusty slot</string>
@@ -246,6 +252,7 @@
     <string name="number_followers">%1$s Obserwujących</string>
     <string name="log_out">Wyloguj się</string>
     <string name="show_more">Pokaż Więcej</string>
+    <string name="show_less">Pokaż mniej</string>
     <string name="lightning_invoice">Faktura LN</string>
     <string name="invoice_expired">Wygasła</string>
     <string name="clink_lightning_offer">Oferta CLINK</string>
@@ -1286,6 +1293,8 @@
     <string name="admission">Wstęp</string>
     <string name="subscription">Subskrypcja</string>
     <string name="publication">Publikacja</string>
+    <string name="publication_untitled_section">Sekcja bez tytułu</string>
+    <string name="publication_contents">Spis treści</string>
     <string name="payments_url">Adres URL płatności</string>
     <string name="target_audience">Odbiorcy docelowi</string>
     <string name="policies_and_links">Zasady i linki</string>
@@ -1380,6 +1389,18 @@
     <string name="external_id_scope">Skomentuj na zewnętrznym serwisie</string>
     <string name="url_preview_open_in_browser">Otwórz w przeglądarce</string>
     <string name="long_form_reading_minutes">Czas czytania: %1$d min.</string>
+    <plurals name="publication_section_count">
+        <item quantity="one">%1$d sekcja</item>
+        <item quantity="few">%1$d sekcji</item>
+        <item quantity="many">%1$d sekcji</item>
+        <item quantity="other">%1$d sekcje</item>
+    </plurals>
+    <plurals name="publication_more_sections">
+        <item quantity="one">%1$d sekcja więcej</item>
+        <item quantity="few">%1$d sekcji więcej</item>
+        <item quantity="many">%1$d sekcji więcej</item>
+        <item quantity="other">Jeszcze %1$d sekcje</item>
+    </plurals>
     <string name="music_playlist_collaborative">Współtworzona</string>
     <string name="music_playlist_private">Prywatna</string>
     <string name="music_playlist_unknown_track">Nieznany utwór</string>
