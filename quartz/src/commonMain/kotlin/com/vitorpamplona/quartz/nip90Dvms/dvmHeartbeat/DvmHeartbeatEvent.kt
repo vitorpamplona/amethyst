@@ -61,8 +61,13 @@ class DvmHeartbeatEvent(
         const val STATUS_TAG = "status"
         const val CONTENT = "Alive and kicking"
 
-        /** A beat older than this no longer proves liveness (one missed 300s beat + slack). */
-        const val MAX_AGE_SECONDS = 420
+        /**
+         * A beat older than this no longer proves liveness. Beats arrive every 300s, so this
+         * window deliberately tolerates several missed deliveries (relay reconnects, REQ churn)
+         * before a DVM is dropped — hysteresis against transient delivery gaps, at the cost of a
+         * dead DVM lingering this long before disappearing.
+         */
+        const val MAX_AGE_SECONDS = 900
 
         fun build(
             dTag: String,

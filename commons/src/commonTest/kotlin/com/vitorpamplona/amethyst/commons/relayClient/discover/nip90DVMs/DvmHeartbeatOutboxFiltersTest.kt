@@ -82,7 +82,7 @@ class DvmHeartbeatOutboxFiltersTest {
 
         filters.forEach {
             assertEquals(listOf(DvmHeartbeatEvent.KIND), it.filter.kinds)
-            assertEquals(1_760_000_000L, it.filter.since, "rolling window: now - MAX_AGE_SECONDS")
+            assertEquals(1_759_999_520L, it.filter.since, "rolling window: now - MAX_AGE_SECONDS")
         }
     }
 

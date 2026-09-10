@@ -90,8 +90,8 @@ class DvmHeartbeatEventTest {
     @Test
     fun freshnessBoundary() {
         val event = heartbeat()
-        assertTrue(event.isFreshAt(beatTime + 420))
-        assertFalse(event.isFreshAt(beatTime + 421))
+        assertTrue(event.isFreshAt(beatTime + 900))
+        assertFalse(event.isFreshAt(beatTime + 901))
     }
 
     @Test

@@ -83,16 +83,16 @@ class DvmHeartbeatTest {
     fun aFreshHeartbeatPassesTheGateAndAStaleOneDoesNot() {
         val now = 1_760_000_000L
         // Separate dTags: consumeBaseReplaceable only accepts NEWER beats per address, so a
-        // 421s-old beat could never supersede the 420s one within a single address slot.
+        // 901s-old beat could never supersede the 900s one within a single address slot.
         val freshApp = appDef("dvm-two-fresh")
         val staleApp = appDef("dvm-two-stale")
         assertNull("no beat yet", LocalCache.dvmHeartbeatOf(freshApp))
 
-        LocalCache.justConsume(beat("dvm-two-fresh", createdAt = now - 420, id = "f4".repeat(32)), null, true)
-        LocalCache.justConsume(beat("dvm-two-stale", createdAt = now - 421, id = "f5".repeat(32)), null, true)
+        LocalCache.justConsume(beat("dvm-two-fresh", createdAt = now - 900, id = "f4".repeat(32)), null, true)
+        LocalCache.justConsume(beat("dvm-two-stale", createdAt = now - 901, id = "f5".repeat(32)), null, true)
 
-        assertTrue("exactly 420s old counts as fresh", LocalCache.hasFreshDvmHeartbeat(freshApp, now))
-        assertFalse("421s old is stale", LocalCache.hasFreshDvmHeartbeat(staleApp, now))
+        assertTrue("exactly 900s old counts as fresh", LocalCache.hasFreshDvmHeartbeat(freshApp, now))
+        assertFalse("901s old is stale", LocalCache.hasFreshDvmHeartbeat(staleApp, now))
     }
 
     @Test
