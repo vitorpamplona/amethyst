@@ -228,6 +228,10 @@ kotlin {
 
                 // SQLite bundled driver for JVM tests
                 implementation(libs.androidx.sqlite.bundled.jvm)
+
+                // org.json — the JSON library whitenoise-android uses. Test-only,
+                // for the head-to-head parser benchmark.
+                implementation(libs.org.json)
             }
         }
 

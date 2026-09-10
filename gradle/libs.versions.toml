@@ -57,6 +57,9 @@ kotlinx-coroutines-test = "1.11.0"
 negentropyKmp = "v1.2.0"
 navigationCompose = "2.9.8"
 okhttp = "5.5.0"
+# Test-only: the JSON library whitenoise-android uses, for head-to-head benchmarks.
+# License: Public Domain (per the published POM).
+orgJson = "20260814"
 osmdroid = "6.1.20"
 runner = "1.7.0"
 secp256k1KmpJniAndroid = "0.24.0"
@@ -209,6 +212,7 @@ mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "moc
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
 negentropy-kmp = { module = "com.vitorpamplona.negentropy:kmp-negentropy", version.ref = "negentropyKmp" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+org-json = { group = "org.json", name = "json", version.ref = "orgJson" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
