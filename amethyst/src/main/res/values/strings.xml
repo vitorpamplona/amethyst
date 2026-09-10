@@ -2696,6 +2696,8 @@
     <string name="marmot_failed_to_update">Failed to update: %1$s</string>
     <string name="marmot_failed_to_create_group">Failed to create group: %1$s</string>
     <string name="marmot_failed_to_leave_group">Failed to leave group: %1$s</string>
+    <string name="marmot_group_disbanded_toast">Group disbanded</string>
+    <string name="marmot_failed_to_disband">Could not disband the group: %1$s</string>
     <string name="marmot_adding_user">Adding %1$s…</string>
     <string name="marmot_failed_to_add_user">Failed to add %1$s: %2$s</string>
     <string name="marmot_unknown_error">unknown error</string>

@@ -1,0 +1,95 @@
+{
+  "scenario_name": "drop-queued/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "drop-queued/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "drop",
+        "invitees": [
+          "bob"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "bob:dropped"
+      },
+      {
+        "type": "omit_message",
+        "selector": { "sender": "bob", "class": "application" }
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "bob:delivered"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "alice"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 1,
+      "member_count": 2,
+      "received_payloads": [
+        "bob:delivered"
+      ]
+    }
+  ]
+}

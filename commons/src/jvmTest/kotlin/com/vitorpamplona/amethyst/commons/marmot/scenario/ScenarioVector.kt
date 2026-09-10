@@ -76,6 +76,19 @@ class ScenarioVector(
 
         /** A nested object read as a [Step] so the same accessors work on it. */
         fun obj(key: String): Step? = (raw[key] as? JsonObject)?.let { Step(key, it) }
+
+        /** A nested array of objects, each read as a [Step]. */
+        fun steps(key: String): List<Step> =
+            (raw[key] as? JsonArray)
+                ?.mapNotNull { element ->
+                    (element as? JsonObject)?.let { Step((it["type"] as? JsonPrimitive)?.content.orEmpty(), it) }
+                }.orEmpty()
+
+        /**
+         * The keys this object carries. A fault selector is checked key by key
+         * so an unknown one can be refused rather than quietly widening it.
+         */
+        fun keys(): Set<String> = raw.keys
     }
 
     /** What one client's state must look like when the script says to look. */
@@ -91,6 +104,8 @@ class ScenarioVector(
          * list, and an empty list is itself an assertion.
          */
         val addedMembers: List<String>? = null,
+        /** The group description the vector states, when it states one. */
+        val groupDescription: String? = null,
     )
 
     /**
@@ -159,6 +174,21 @@ class ScenarioVector(
                                 ),
                             )
                         }
+
+                    // A profile assertion is per-client state like any other,
+                    // just stated separately because it is about the group's
+                    // metadata rather than its membership.
+                    "group_profile" ->
+                        stated.add(
+                            Observation(
+                                client = obj.getValue("client").jsonPrimitive.content,
+                                epoch = null,
+                                memberCount = null,
+                                groupName = (obj["name"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+                                receivedPayloads = emptyList(),
+                                groupDescription = (obj["description"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+                            ),
+                        )
 
                     "pending_resolution" ->
                         resolutions.add(

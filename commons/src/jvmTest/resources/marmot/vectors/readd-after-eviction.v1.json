@@ -1,0 +1,37 @@
+{
+  "scenario_name": "readd-after-eviction/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "readd-after-eviction/v1",
+    "spec_version": "2",
+    "clients": ["alice", "bob", "carol"],
+    "steps": [
+      {"type": "create_group", "creator": "alice", "name": "readd", "invitees": ["bob", "carol"], "required_features": [], "pending": "create"},
+      {"type": "acknowledge_outbound", "client": "alice", "publication": "create", "outcome": "accepted"},
+      {"type": "deliver_all"},
+      {"type": "tick", "clients": ["bob", "carol"]},
+      {"type": "clear_events", "clients": ["alice", "bob", "carol"]},
+      {"type": "remove_members", "remover": "alice", "members": ["carol"], "pending": "remove-carol"},
+      {"type": "acknowledge_outbound", "client": "alice", "publication": "remove-carol", "outcome": "accepted"},
+      {"type": "deliver_all"},
+      {"type": "tick", "clients": ["bob", "carol"]},
+      {"type": "invite_members", "inviter": "alice", "invitees": ["carol"], "pending": "readd-carol"},
+      {"type": "acknowledge_outbound", "client": "alice", "publication": "readd-carol", "outcome": "accepted"},
+      {"type": "deliver_all"},
+      {"type": "tick", "clients": ["bob", "carol"]},
+      {"type": "send_app_message", "sender": "carol", "payload": "carol:back"},
+      {"type": "deliver_all"},
+      {"type": "tick", "clients": ["alice", "bob"]},
+      {"type": "observe", "clients": ["alice", "bob", "carol"]}
+    ]
+  },
+  "expected_outcomes": [
+    {"type": "pending_resolution", "step_index": 6, "client": "alice", "pending": "remove-carol", "resolution": "confirmed"},
+    {"type": "pending_resolution", "step_index": 10, "client": "alice", "pending": "readd-carol", "resolution": "confirmed"},
+    {"type": "client_state", "client": "alice", "epoch": 3, "member_count": 3, "received_payloads": ["carol:back"]},
+    {"type": "client_state", "client": "bob", "epoch": 3, "member_count": 3, "received_payloads": ["carol:back"]},
+    {"type": "client_state", "client": "carol", "epoch": 3, "member_count": 3, "received_payloads": []}
+  ]
+}

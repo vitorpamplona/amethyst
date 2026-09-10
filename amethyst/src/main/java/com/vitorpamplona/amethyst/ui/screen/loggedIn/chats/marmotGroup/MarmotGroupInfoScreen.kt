@@ -75,6 +75,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_member
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_member_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_to_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group_action
+import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_edit_group_info
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_confirm
@@ -142,7 +145,9 @@ fun MarmotGroupInfoScreen(
     val relayActivity by chatroom.relayActivity.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var showDisbandDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
+    var isDisbanding by remember { mutableStateOf(false) }
     var memberToRemove by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var memberToPromote by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var memberToDemote by remember { mutableStateOf<GroupMemberInfo?>(null) }
@@ -182,9 +187,25 @@ fun MarmotGroupInfoScreen(
                             contentDescription = stringRes(Res.string.marmot_edit_group_info),
                         )
                     }
+                    // Disband ends the conversation for EVERYONE, so only an
+                    // admin sees it and it sits behind its own confirmation.
+                    // Peers reject a non-admin's lifecycle commit anyway; not
+                    // offering it is what keeps a member from trying.
+                    if (myPubkey in adminPubkeys) {
+                        IconButton(
+                            onClick = { showDisbandDialog = true },
+                            enabled = !isLeaving && !isDisbanding,
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.DeleteForever,
+                                contentDescription = stringRes(Res.string.marmot_disband_group),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = { showLeaveDialog = true },
-                        enabled = !isLeaving,
+                        enabled = !isLeaving && !isDisbanding,
                     ) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ExitToApp,
@@ -385,6 +406,41 @@ fun MarmotGroupInfoScreen(
                 }
             },
             onDismiss = { showLeaveDialog = false },
+        )
+    }
+
+    if (showDisbandDialog) {
+        DisbandGroupDialog(
+            groupName = displayName ?: stringRes(Res.string.marmot_this_group),
+            onConfirm = {
+                showDisbandDialog = false
+                isDisbanding = true
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        accountViewModel.disbandMarmotGroup(nostrGroupId)
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(context, stringRes(context, R.string.marmot_group_disbanded_toast), Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                        nav.nav(Route.Message)
+                    } catch (e: Exception) {
+                        // A disband that reached no relay leaves the group
+                        // live, so the screen must stay usable rather than
+                        // navigate away on a change that did not happen.
+                        isDisbanding = false
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(
+                                    context,
+                                    stringRes(context, R.string.marmot_failed_to_disband, e.message),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                        }
+                    }
+                }
+            },
+            onDismiss = { showDisbandDialog = false },
         )
     }
 
@@ -640,6 +696,38 @@ fun LeaveGroupDialog(
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.cancel))
+            }
+        },
+    )
+}
+
+/**
+ * Confirmation for the one group action that cannot be undone.
+ *
+ * Disband is absorbing: every member's copy terminalizes and no commit walks it
+ * back, so the wording says "for everyone" and "cannot be reopened" rather than
+ * the usual "are you sure".
+ */
+@Composable
+fun DisbandGroupDialog(
+    groupName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.marmot_disband_group)) },
+        text = {
+            Text(stringRes(Res.string.marmot_disband_group_confirm, groupName))
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(Res.string.marmot_disband_group_action), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {

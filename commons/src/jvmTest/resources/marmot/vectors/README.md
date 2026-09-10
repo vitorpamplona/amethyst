@@ -11,13 +11,36 @@ fixtures we already consume from `quartz/src/commonTest/resources/marmot/
 conformance/`. The rest are **scenario scripts**: a client roster, a step
 list, and an expected trace.
 
-These nine are the subset whose steps `MarmotScenarioRunner` implements —
-`create_group`, `invite_members`, `send_app_message`, `deliver_all`, `tick`,
-`acknowledge_outbound`, `observe`, `in_group`, `assert`, `clear_events`. The
-other nineteen need fault injection (withhold/release, partition, duplicate,
-reorder, restart) or group-data and admin-policy steps; the runner refuses
+These sixteen are the subset whose steps `MarmotScenarioRunner` implements:
+`create_group`, `invite_members`, `remove_members`, `send_app_message`,
+`update_group_data`, `deliver_all`, `tick`, `acknowledge_outbound`, `observe`,
+`in_group`, `assert`, `clear_events`, and the queue faults `omit_message`,
+`duplicate_message`, `reorder_messages`, `withhold_message`,
+`release_withheld`. The rest need `restart_client`, `set_partition`, `leave`,
+admin-policy steps, or the `convergence_decision` outcome; the runner refuses
 them by name rather than skipping quietly, so adding a step type is what
 widens the set.
+
+## Two expectation shapes
+
+A vector states what must be true in one of two ways, and BOTH have to be
+read:
+
+- `expected_trace.observations` — the older shape (`publish-fail`,
+  `three-client-message-exchange`).
+- `expected_outcomes` — a list of typed entries: `client_state`,
+  `clients_converged`, `group_profile`, `pending_resolution`,
+  `no_pending_work`, and `convergence_decision`. Everything else here uses
+  this one.
+
+Reading only the first is not a partial check, it is no check: a vector whose
+expectations all live in the other shape replays its steps and reports green
+having compared nothing. `MarmotScenarioVectorTest.everyVectorStatesSomethingToCheck`
+exists to make that failure loud rather than invisible.
+
+An outcome type the runner cannot evaluate raises `UnsupportedScenarioOutcome`
+and the vector is refused — `convergence-committer-selected` is refused today
+for exactly that reason.
 
 ## Refreshing
 

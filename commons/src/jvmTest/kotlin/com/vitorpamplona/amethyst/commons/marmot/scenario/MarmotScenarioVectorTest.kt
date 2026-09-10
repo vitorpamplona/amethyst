@@ -86,6 +86,37 @@ class MarmotScenarioVectorTest {
     @Test
     fun conversation() = replay("conversation.v1.json")
 
+    /** A rename lands on every member as a commit, not as a hint. */
+    @Test
+    fun groupDataUpdate() = replay("group-data-update.v1.json")
+
+    /** A client that missed several rounds catches up on one tick. */
+    @Test
+    fun deferredTickCatchup() = replay("deferred-tick-catchup.v1.json")
+
+    /** Members added at each step see only what came after them. */
+    @Test
+    fun incrementalGrowth() = replay("incremental-growth.v1.json")
+
+    /**
+     * The delivery-fault family: a dropped message, and a queue that duplicates
+     * and reorders before it delivers. What arrives twice must be acted on
+     * once, and out-of-order arrival must not change the end state.
+     */
+    @Test
+    fun dropQueued() = replay("drop-queued.v1.json")
+
+    @Test
+    fun queueFaults() = replay("queue-faults.v1.json")
+
+    /** An application message from an epoch the group has already left. */
+    @Test
+    fun delayedPastEpochAppMessage() = replay("delayed-past-epoch-app-message.v1.json")
+
+    /** Evicted and invited back: the second membership is not the first. */
+    @Test
+    fun readdAfterEviction() = replay("readd-after-eviction.v1.json")
+
     /**
      * `convergence-committer-selected` concludes with a `convergence_decision`
      * — which tip the client picked, under which rule, and whether the witness
@@ -151,6 +182,13 @@ class MarmotScenarioVectorTest {
                 "three-client-message-exchange.v1.json",
                 "conversation.v1.json",
                 "convergence-committer-selected.v1.json",
+                "group-data-update.v1.json",
+                "deferred-tick-catchup.v1.json",
+                "incremental-growth.v1.json",
+                "drop-queued.v1.json",
+                "queue-faults.v1.json",
+                "delayed-past-epoch-app-message.v1.json",
+                "readd-after-eviction.v1.json",
             )
     }
 }

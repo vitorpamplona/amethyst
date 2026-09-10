@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_avatar_url
+import com.vitorpamplona.amethyst.commons.resources.marmot_avatar_url_footer
+import com.vitorpamplona.amethyst.commons.resources.marmot_avatar_url_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_edit_info_footer
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_description_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
@@ -71,9 +74,11 @@ fun EditGroupInfoScreen(
     val currentName by chatroom.displayName.collectAsStateWithLifecycle()
     val currentDescription by chatroom.description.collectAsStateWithLifecycle()
     val currentImage by chatroom.image.collectAsStateWithLifecycle()
+    val currentAvatarUrl by chatroom.avatarUrl.collectAsStateWithLifecycle()
 
     var name by remember(currentName) { mutableStateOf(currentName ?: "") }
     var description by remember(currentDescription) { mutableStateOf(currentDescription ?: "") }
+    var avatarUrl by remember(currentAvatarUrl) { mutableStateOf(currentAvatarUrl?.url.orEmpty()) }
     var pickedIcon by remember { mutableStateOf<SelectedMedia?>(null) }
     var removeIcon by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
@@ -81,7 +86,12 @@ fun EditGroupInfoScreen(
     val context = LocalContext.current
 
     val iconChanged = pickedIcon != null || removeIcon
-    val hasChanges = name != (currentName ?: "") || description != (currentDescription ?: "") || iconChanged
+    val avatarUrlChanged = avatarUrl.trim() != currentAvatarUrl?.url.orEmpty()
+    val hasChanges =
+        name != (currentName ?: "") ||
+            description != (currentDescription ?: "") ||
+            iconChanged ||
+            avatarUrlChanged
 
     Scaffold(
         topBar = {
@@ -104,6 +114,13 @@ fun EditGroupInfoScreen(
                                 description = description.trim(),
                                 icon = iconChange,
                             )
+                            // A separate component (`0x8007`) and therefore a
+                            // separate commit — only made when it actually
+                            // changed, so saving a rename does not also
+                            // rewrite the avatar state.
+                            if (avatarUrlChanged) {
+                                accountViewModel.setMarmotGroupAvatarUrl(nostrGroupId, avatarUrl.trim())
+                            }
                             launch(Dispatchers.Main) {
                                 Toast
                                     .makeText(context, stringRes(context, R.string.marmot_group_info_updated), Toast.LENGTH_SHORT)
@@ -176,6 +193,23 @@ fun EditGroupInfoScreen(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
+                enabled = !isSaving,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // The plain-https avatar carrier. It wins over the uploaded
+            // Blossom image while it is set, and clearing it falls the group
+            // back to that image — so the two fields are not alternatives to
+            // choose between, they stack.
+            OutlinedTextField(
+                value = avatarUrl,
+                onValueChange = { avatarUrl = it },
+                label = { Text(stringRes(Res.string.marmot_avatar_url)) },
+                placeholder = { Text(stringRes(Res.string.marmot_avatar_url_placeholder)) },
+                supportingText = { Text(stringRes(Res.string.marmot_avatar_url_footer)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
                 enabled = !isSaving,
             )
 

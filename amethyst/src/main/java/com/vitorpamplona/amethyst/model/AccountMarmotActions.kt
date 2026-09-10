@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
@@ -549,6 +551,54 @@ class AccountMarmotActions(
         // The commit was published and acknowledged before it became canonical,
         // so the local state is already the one peers will see — surface it now
         // rather than waiting for our own event to loop back.
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
+    }
+
+    /**
+     * Disband a Marmot MLS group (`marmot.group.lifecycle.v1`, `0x800c`).
+     *
+     * Irreversible and absorbing: every member's copy terminalizes when they
+     * apply the commit, and there is no commit that walks it back. The caller
+     * MUST have confirmed with a human first — this layer only refuses what is
+     * structurally impossible (a non-admin, a legacy group, a second disband),
+     * which is not the same as asking.
+     *
+     * Deliberately NOT silent on failure the way the other actions here are: a
+     * disband that did not happen must not look like one that did, so the
+     * exception propagates to the caller's error path.
+     */
+    suspend fun disbandMarmotGroup(
+        nostrGroupId: HexKey,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = account.marmotManager ?: return
+        if (!account.isWriteable()) return
+
+        manager.disbandGroup(nostrGroupId, groupRelays.toList())
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
+    }
+
+    /**
+     * Set or clear the group's plain-`https` avatar link
+     * (`marmot.group.avatar-url.v1`, `0x8007`).
+     *
+     * The lightweight avatar carrier: no Blossom upload, no key material, just
+     * a URL every Marmot client can render. A blank [url] clears it, which
+     * falls the group back to its encrypted Blossom image if it has one — the
+     * two carriers coexist and this one wins while it is set.
+     */
+    suspend fun setMarmotGroupAvatarUrl(
+        nostrGroupId: HexKey,
+        url: String,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = account.marmotManager ?: return
+        if (!account.isWriteable()) return
+
+        val avatar = url.trim().takeIf { it.isNotEmpty() }?.let { GroupAvatarUrlV1(MarmotWebUrl.normalize(it, label = "avatar URL")) }
+        manager.setGroupAvatarUrl(nostrGroupId, avatar, groupRelays.toList())
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
     }

@@ -70,8 +70,23 @@ class MarmotScenarioRunner(
 ) {
     private val clients = vector.clients.associateWith { VectorClient(it) }
 
-    /** Queued outbound events: (sender, event). Drained by `deliver_all`. */
-    private val inFlight = mutableListOf<Pair<String, Event>>()
+    /** Queued outbound events, drained by `deliver_all`. */
+    private val inFlight = mutableListOf<Queued>()
+
+    /** Messages pulled out of the queue by `withhold_message`, by label. */
+    private val withheld = mutableMapOf<String, MutableList<Queued>>()
+
+    /**
+     * One event sitting in the delivery queue, with the facts a fault selector
+     * matches on: who sent it, whether it is an application message or a
+     * commit, and — for a commit — the publication label the vector gave it.
+     */
+    private class Queued(
+        val sender: String,
+        val event: Event,
+        val messageClass: String,
+        val publication: String?,
+    )
 
     /**
      * The group label the current step runs against.
@@ -130,6 +145,9 @@ class MarmotScenarioRunner(
         }
     }
 
+    /** The publication label the NEXT publish by this client carries, if any. */
+    private fun peekLabel(client: String): String? = publishOutcomes[client]?.firstOrNull()?.first?.takeIf { it.isNotEmpty() }
+
     private fun nextOutcome(client: String): Boolean {
         val queue = publishOutcomes[client] ?: return true
         if (queue.isEmpty()) return true
@@ -150,8 +168,9 @@ class MarmotScenarioRunner(
                     SnapshotBundleStore(),
                     publisher =
                         MarmotPublisher { event, _ ->
+                            val label = peekLabel(client.name)
                             val accepted = nextOutcome(client.name)
-                            if (accepted) inFlight.add(client.name to event)
+                            if (accepted) inFlight.add(Queued(client.name, event, COMMIT_CLASS, label))
                             accepted
                         },
                 )
@@ -171,6 +190,13 @@ class MarmotScenarioRunner(
             "in_group" -> inGroup(step)
             "clear_events" -> clearEvents(step)
             "assert" -> assertPredicate(step)
+            "update_group_data" -> updateGroupData(step)
+            "remove_members" -> removeMembers(step)
+            "omit_message" -> omitMessage(step)
+            "duplicate_message" -> duplicateMessage(step)
+            "reorder_messages" -> reorderMessages(step)
+            "withhold_message" -> withholdMessage(step)
+            "release_withheld" -> releaseWithheld(step)
             // The publication's outcome was consumed when it was made; the step
             // itself carries no further state change.
             "acknowledge_outbound" -> Unit
@@ -218,6 +244,11 @@ class MarmotScenarioRunner(
      */
     private fun assertPredicate(step: ScenarioVector.Step) {
         val assertion = step.obj("assertion") ?: error("assert without an assertion")
+        // `exactly` is the only mode in this set. A different one would mean a
+        // different comparison (at-least, at-most), so refuse rather than
+        // silently applying equality to it.
+        val mode = assertion.string("mode") ?: "exactly"
+        if (mode != "exactly") throw UnsupportedScenarioStep("assert/mode=$mode")
         val predicate = assertion.step("predicate") ?: error("assertion without a predicate")
         when (predicate.type) {
             "payload_count" -> {
@@ -294,6 +325,131 @@ class MarmotScenarioRunner(
         }
     }
 
+    /**
+     * Rename the group — the vector's `update_group_data`.
+     *
+     * Only `name` ever appears in these vectors, and the current profile keeps
+     * it in `marmot.group.profile.v1` (`0x8001`), so this is a profile commit
+     * that preserves the description rather than a blanket metadata replace.
+     */
+    private suspend fun updateGroupData(step: ScenarioVector.Step) {
+        val who = client(step.string("client") ?: error("update_group_data without a client"))
+        val groupId = who.groups[currentGroup] ?: error("${who.name} renamed a group it is not in")
+        val name = step.string("name").orEmpty()
+        val description =
+            who.manager
+                .groupView(groupId)
+                ?.description
+                .orEmpty()
+        who.manager.setGroupProfile(groupId, name, description, emptyList())
+    }
+
+    /**
+     * Evict members by name. The vector names people; MLS removes leaves, so
+     * the pubkey is resolved to the leaf index the group actually holds.
+     */
+    private suspend fun removeMembers(step: ScenarioVector.Step) {
+        val remover = client(step.string("remover") ?: error("remove_members without a remover"))
+        val groupId = remover.groups[currentGroup] ?: error("${remover.name} evicted from a group it is not in")
+        val targets = step.strings("members").map { client(it).signer.pubKey }.toSet()
+        val leaves =
+            remover.manager
+                .memberPubkeys(groupId)
+                .filter { it.pubkey in targets }
+                .map { it.leafIndex }
+        check(leaves.size == targets.size) {
+            "remove_members names ${targets.size} members but only ${leaves.size} are in the group"
+        }
+        // One Remove per commit. Every vector in this set evicts exactly one
+        // member per step, and the step names ONE publication — so a
+        // multi-member step would publish N commits against one
+        // acknowledgement and silently mis-align every outcome after it.
+        // Refuse instead, the same way an unimplemented step is refused.
+        check(leaves.size == 1) {
+            "remove_members evicts ${leaves.size} members in one step; this runner commits one " +
+                "Remove at a time and the vector's single acknowledgement would not line up"
+        }
+        remover.manager.removeMember(groupId, leaves.single(), emptyList())
+    }
+
+    /**
+     * Does this queued event match a fault selector?
+     *
+     * Every key is a conjunct and an unknown key is refused rather than
+     * ignored — a selector we silently widen would inject a different fault
+     * from the one the vector scripted, and still report on the vector's name.
+     */
+    private fun matches(
+        queued: Queued,
+        selector: ScenarioVector.Step,
+    ): Boolean {
+        selector.keys().forEach { key ->
+            when (key) {
+                "sender" -> if (selector.string("sender") != queued.sender) return false
+                "class" -> if (selector.string("class") != queued.messageClass) return false
+                "publication" -> if (selector.string("publication") != queued.publication) return false
+                // Handled by the caller: it picks which of the matches to act on.
+                "occurrence" -> Unit
+                else -> throw UnsupportedScenarioStep("selector/$key")
+            }
+        }
+        return true
+    }
+
+    /** Indices in [inFlight] the selector names, honouring `occurrence`. */
+    private fun select(selector: ScenarioVector.Step): List<Int> {
+        val all = inFlight.indices.filter { matches(inFlight[it], selector) }
+        val occurrence = selector.int("occurrence") ?: return all
+        return listOfNotNull(all.getOrNull(occurrence))
+    }
+
+    private fun selectorOf(step: ScenarioVector.Step) = step.obj("selector") ?: error("${step.type} without a selector")
+
+    /** Drop a queued message entirely — it never reaches anyone. */
+    private fun omitMessage(step: ScenarioVector.Step) {
+        val hit = select(selectorOf(step))
+        check(hit.isNotEmpty()) { "omit_message matched nothing in a queue of ${inFlight.size}" }
+        hit.sortedDescending().forEach { inFlight.removeAt(it) }
+    }
+
+    /** Deliver a queued message twice. The receiver must not act on it twice. */
+    private fun duplicateMessage(step: ScenarioVector.Step) {
+        val hit = select(selectorOf(step))
+        check(hit.isNotEmpty()) { "duplicate_message matched nothing in a queue of ${inFlight.size}" }
+        hit.sortedDescending().forEach { inFlight.add(it + 1, inFlight[it]) }
+    }
+
+    /** Deliver the queue in the order the vector names, not the order it was sent. */
+    private fun reorderMessages(step: ScenarioVector.Step) {
+        val order = step.steps("order")
+        val taken = mutableSetOf<Int>()
+        val reordered = mutableListOf<Queued>()
+        order.forEach { selector ->
+            val index = select(selector).firstOrNull { it !in taken }
+            checkNotNull(index) { "reorder_messages names a message that is not queued" }
+            taken.add(index)
+            reordered.add(inFlight[index])
+        }
+        inFlight.indices.filter { it !in taken }.forEach { reordered.add(inFlight[it]) }
+        inFlight.clear()
+        inFlight.addAll(reordered)
+    }
+
+    /** Hold a message back under a label; `release_withheld` puts it back. */
+    private fun withholdMessage(step: ScenarioVector.Step) {
+        val label = step.string("label") ?: error("withhold_message without a label")
+        val hit = select(selectorOf(step))
+        check(hit.isNotEmpty()) { "withhold_message matched nothing in a queue of ${inFlight.size}" }
+        val held = withheld.getOrPut(label) { mutableListOf() }
+        hit.sortedDescending().forEach { held.add(0, inFlight.removeAt(it)) }
+    }
+
+    private fun releaseWithheld(step: ScenarioVector.Step) {
+        val label = step.string("label") ?: error("release_withheld without a label")
+        val held = withheld.remove(label) ?: error("release_withheld names an unknown label '$label'")
+        inFlight.addAll(held)
+    }
+
     private suspend fun sendAppMessage(step: ScenarioVector.Step) {
         val sender = client(step.string("sender") ?: error("send_app_message without a sender"))
         val groupId = sender.groups[currentGroup] ?: error("${sender.name} sent before joining a group")
@@ -303,17 +459,17 @@ class MarmotScenarioRunner(
         // it itself. Leaving that out meant every `send_app_message` built an
         // event nobody ever delivered.
         val bundle = sender.manager.buildTextMessage(groupId, payload, persistOwn = false)
-        inFlight.add(sender.name to bundle.outbound.signedEvent)
+        inFlight.add(Queued(sender.name, bundle.outbound.signedEvent, APPLICATION_CLASS, null))
     }
 
     private fun deliverAll() {
         val batch = inFlight.toList()
         inFlight.clear()
-        batch.forEach { (senderName, event) ->
+        batch.forEach { queued ->
             // Broadcast to everyone else, including clients who are not in the
             // sending group. Their engine refusing that traffic is precisely
             // what multigroup isolation asserts.
-            clients.values.filter { it.name != senderName }.forEach { it.inbox.add(event) }
+            clients.values.filter { it.name != queued.sender }.forEach { it.inbox.add(queued.event) }
         }
     }
 
@@ -348,14 +504,23 @@ class MarmotScenarioRunner(
         }
     }
 
+    /**
+     * The membership this client currently sees, or empty when it can no
+     * longer see the group at all — a client that was just evicted has no
+     * roster to read, and the vectors reach that state on purpose.
+     */
     private fun membersOf(
         client: VectorClient,
         groupId: HexKey,
     ): Set<HexKey> =
-        client.manager
-            .memberPubkeys(groupId)
-            .map { it.pubkey }
-            .toSet()
+        try {
+            client.manager
+                .memberPubkeys(groupId)
+                .map { it.pubkey }
+                .toSet()
+        } catch (_: Exception) {
+            emptySet()
+        }
 
     /** Compare every client's end state against the vector's expected trace. */
     private fun verify() {
@@ -404,6 +569,10 @@ class MarmotScenarioRunner(
                     val got = client.manager.groupView(groupId)?.name
                     if (got != want) failures.add("${expected.client}[$label] group name '$got', expected '$want'")
                 }
+                expected.groupDescription?.let { want ->
+                    val got = client.manager.groupView(groupId)?.description
+                    if (got != want) failures.add("${expected.client}[$label] group description '$got', expected '$want'")
+                }
             }
             if (expected.receivedPayloads.isNotEmpty()) {
                 val got = client.received.sorted()
@@ -426,6 +595,10 @@ class MarmotScenarioRunner(
 
     private companion object {
         const val CHAT_KIND = 9
+
+        /** The two message classes a fault selector distinguishes. */
+        const val APPLICATION_CLASS = "application"
+        const val COMMIT_CLASS = "commit"
 
         /** The label for a vector that never says `in_group` — most of them. */
         const val DEFAULT_GROUP = "default"

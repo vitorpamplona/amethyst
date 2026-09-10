@@ -2638,6 +2638,12 @@
     <string name="marmot_retention_1w">1 week</string>
     <string name="marmot_retention_active">Messages disappear after %1$s</string>
     <string name="marmot_retention_footer">Messages are deleted from every member\'s device after this long. It cannot be changed later.</string>
+    <string name="marmot_disband_group">Disband group</string>
+    <string name="marmot_disband_group_confirm">Disband "%1$s" for everyone? The conversation ends for every member and cannot be reopened — a new group would have to be created.</string>
+    <string name="marmot_disband_group_action">Disband</string>
+    <string name="marmot_avatar_url">Avatar link</string>
+    <string name="marmot_avatar_url_placeholder">https://example.com/avatar.png</string>
+    <string name="marmot_avatar_url_footer">An https link every member can load. Leave it empty to use the uploaded image instead.</string>
     <string name="marmot_group_default_name">Marmot Group</string>
     <string name="marmot_group_fallback_name">Group %1$s…</string>
     <string name="marmot_user_fallback_name">%1$s…</string>

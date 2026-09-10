@@ -1,0 +1,376 @@
+{
+  "scenario_name": "incremental-growth/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "incremental-growth/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol",
+      "dave"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "growth-2",
+        "invitees": [
+          "bob"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "growth:p0:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "growth:p0:bob"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob"
+        ]
+      },
+      {
+        "type": "invite_members",
+        "inviter": "alice",
+        "invitees": [
+          "carol"
+        ],
+        "pending": "invite-carol"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "invite-carol",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "update_group_data",
+        "client": "alice",
+        "name": "growth-3",
+        "pending": "rename-3"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "rename-3",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "growth:p1:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "growth:p1:bob"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "growth:p1:carol"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "invite_members",
+        "inviter": "alice",
+        "invitees": [
+          "dave"
+        ],
+        "pending": "invite-dave"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "invite-dave",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "update_group_data",
+        "client": "alice",
+        "name": "growth-4",
+        "pending": "rename-4"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "rename-4",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "growth:p2:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "growth:p2:bob"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "growth:p2:carol"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "dave",
+        "payload": "growth:p2:dave"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "carol",
+            "payload": "growth:p0:alice",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "dave",
+            "payload": "growth:p0:alice",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "dave",
+            "payload": "growth:p1:alice",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "observe_exact",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 10,
+      "client": "alice",
+      "pending": "invite-carol",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 14,
+      "client": "alice",
+      "pending": "rename-3",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 23,
+      "client": "alice",
+      "pending": "invite-dave",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 27,
+      "client": "alice",
+      "pending": "rename-4",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 5,
+      "member_count": 4,
+      "received_payloads": [
+        "growth:p0:bob",
+        "growth:p1:bob",
+        "growth:p1:carol",
+        "growth:p2:bob",
+        "growth:p2:carol",
+        "growth:p2:dave"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "bob",
+      "epoch": 5,
+      "member_count": 4,
+      "received_payloads": [
+        "growth:p0:alice",
+        "growth:p1:alice",
+        "growth:p1:carol",
+        "growth:p2:alice",
+        "growth:p2:carol",
+        "growth:p2:dave"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "carol",
+      "epoch": 5,
+      "member_count": 4,
+      "received_payloads": [
+        "growth:p1:alice",
+        "growth:p1:bob",
+        "growth:p2:alice",
+        "growth:p2:bob",
+        "growth:p2:dave"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "dave",
+      "epoch": 5,
+      "member_count": 4,
+      "received_payloads": [
+        "growth:p2:alice",
+        "growth:p2:bob",
+        "growth:p2:carol"
+      ]
+    },
+    {
+      "type": "clients_converged",
+      "clients": [
+        "alice",
+        "bob",
+        "carol",
+        "dave"
+      ],
+      "epoch": 5,
+      "member_count": 4
+    },
+    {
+      "type": "no_pending_work",
+      "clients": [
+        "alice",
+        "bob"
+      ]
+    }
+  ]
+}

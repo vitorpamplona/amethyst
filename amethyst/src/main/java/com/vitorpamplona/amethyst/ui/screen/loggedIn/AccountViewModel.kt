@@ -2521,6 +2521,24 @@ class AccountViewModel(
         account.marmot.leaveMarmotGroup(nostrGroupId, relays)
     }
 
+    /**
+     * Disband the group for everyone. Irreversible — the caller is responsible
+     * for confirming with the user before this is reached.
+     */
+    suspend fun disbandMarmotGroup(nostrGroupId: String) {
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.disbandMarmotGroup(nostrGroupId, relays)
+    }
+
+    /** Set (or, with a blank string, clear) the group's plain-https avatar link. */
+    suspend fun setMarmotGroupAvatarUrl(
+        nostrGroupId: String,
+        url: String,
+    ) {
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.setMarmotGroupAvatarUrl(nostrGroupId, url, relays)
+    }
+
     suspend fun resetMarmotState() {
         account.marmot.resetMarmotState()
     }

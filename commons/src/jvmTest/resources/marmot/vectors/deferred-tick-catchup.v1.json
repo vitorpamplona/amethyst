@@ -1,0 +1,272 @@
+{
+  "scenario_name": "deferred-tick-catchup/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "deferred-tick-catchup/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol",
+      "dave"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "reconnect",
+        "invitees": [
+          "bob",
+          "carol",
+          "dave"
+        ],
+        "required_features": [],
+        "pending": "create",
+        "initial_admins": [
+          "alice"
+        ]
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "reconnect:warm:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "reconnect:warm:bob"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "reconnect:warm:carol"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "dave",
+        "payload": "reconnect:warm:dave"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "reconnect:away:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "reconnect:away:bob"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "reconnect:away:carol"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "update_group_data",
+        "client": "alice",
+        "name": "reconnect-renamed",
+        "pending": "rename"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "rename",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "reconnect:back:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "reconnect:back:bob"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "reconnect:back:carol"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "dave"
+        ]
+      },
+      {
+        "type": "observe_exact",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 17,
+      "client": "alice",
+      "pending": "rename",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "dave",
+      "epoch": 2,
+      "member_count": 4,
+      "received_payloads": [
+        "reconnect:warm:alice",
+        "reconnect:warm:bob",
+        "reconnect:warm:carol",
+        "reconnect:away:alice",
+        "reconnect:away:bob",
+        "reconnect:away:carol",
+        "reconnect:back:alice",
+        "reconnect:back:bob",
+        "reconnect:back:carol"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 2,
+      "member_count": 4,
+      "received_payloads": [
+        "reconnect:warm:bob",
+        "reconnect:warm:carol",
+        "reconnect:warm:dave",
+        "reconnect:away:bob",
+        "reconnect:away:carol",
+        "reconnect:back:bob",
+        "reconnect:back:carol"
+      ]
+    },
+    {
+      "type": "group_profile",
+      "client": "alice",
+      "name": "reconnect-renamed",
+      "description": ""
+    },
+    {
+      "type": "group_profile",
+      "client": "bob",
+      "name": "reconnect-renamed",
+      "description": ""
+    },
+    {
+      "type": "group_profile",
+      "client": "carol",
+      "name": "reconnect-renamed",
+      "description": ""
+    },
+    {
+      "type": "group_profile",
+      "client": "dave",
+      "name": "reconnect-renamed",
+      "description": ""
+    },
+    {
+      "type": "clients_converged",
+      "clients": [
+        "alice",
+        "bob",
+        "carol",
+        "dave"
+      ],
+      "epoch": 2,
+      "member_count": 4
+    },
+    {
+      "type": "no_pending_work",
+      "clients": [
+        "alice",
+        "bob",
+        "carol",
+        "dave"
+      ]
+    }
+  ]
+}

@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
+import com.vitorpamplona.quartz.marmot.appComponents.GroupLifecycleV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
@@ -1589,6 +1590,69 @@ class MarmotManager(
                 AdminPolicyV1.ofHex(admins).encode(),
             )
         }.event
+    }
+
+    /**
+     * Disband the group: write `marmot.group.lifecycle.v1` (`0x800c`) as
+     * `disbanded` in a Commit every member replays.
+     *
+     * Disband is ABSORBING and irreversible. There is no un-disband commit and
+     * no later branch that supersedes it — a replacement conversation is a new
+     * MLS group with a new id. So this is deliberately the only writer of that
+     * component, it refuses to run twice, and the caller is expected to have
+     * confirmed with a human first.
+     *
+     * Only an admin may do it. The check is local *as well as* remote: peers
+     * reject a non-admin's lifecycle change anyway, but a non-admin who got
+     * this far would burn an epoch and desync themselves for a commit nobody
+     * applies, which is a worse failure than an exception.
+     *
+     * Current profile only — MIP-01's `0xF2EE` blob has no lifecycle field, so
+     * a legacy group genuinely cannot express "disbanded" and this refuses
+     * rather than writing the state somewhere no peer reads.
+     *
+     * The commit takes the normal publish-before-apply path, so a disband that
+     * no relay acknowledged does not terminalize the group locally either —
+     * exactly the outcome we want, since a locally-disbanded group nobody else
+     * heard about would be unreachable state.
+     */
+    suspend fun disbandGroup(
+        nostrGroupId: HexKey,
+        relays: List<NormalizedRelayUrl> = groupRelays(nostrGroupId),
+    ): OutboundGroupEvent {
+        val view = groupView(nostrGroupId) ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        check(view.isCurrentProfile) {
+            "Group $nostrGroupId is a legacy MIP-01 group and has no carrier for a lifecycle state"
+        }
+        check(signer.pubKey in view.adminPubkeys) {
+            "Only an admin of group $nostrGroupId can disband it"
+        }
+        check(groupManager.getGroup(nostrGroupId)?.currentGroupState()?.isDisbanded != true) {
+            "Group $nostrGroupId is already disbanded"
+        }
+        // requireOutboundAllowed also refuses an Unrecoverable group, which is
+        // the point: disbanding from state we do not trust would publish a
+        // terminal commit off a fork.
+        requireOutboundAllowed(nostrGroupId, "disband the group")
+        val publication =
+            commitAndPublish(nostrGroupId, relays) {
+                groupManager.stageAppDataUpdate(
+                    nostrGroupId,
+                    GroupLifecycleV1.COMPONENT_ID,
+                    GroupLifecycleV1.DISBANDED.encode(),
+                )
+            }
+        // Every other setter is content to leave an unacknowledged commit as a
+        // retryable obligation and say nothing, because a later retry lands the
+        // same state. This one cannot: the caller is about to tell a human the
+        // conversation is over, and a group that is still live for everyone
+        // else must not be reported as ended. The obligation IS still queued —
+        // the message says so — but the answer to "did it happen" is no.
+        check(publication.confirmed) {
+            "Disband of group $nostrGroupId reached no relay; it stays queued as a pending " +
+                "publish and the group is still live until one acknowledges it"
+        }
+        return publication.event
     }
 
     /**
