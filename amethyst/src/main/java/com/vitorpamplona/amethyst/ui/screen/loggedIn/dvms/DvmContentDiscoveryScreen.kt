@@ -160,6 +160,7 @@ fun DvmContentDiscoveryScreen(
             if (myRequestEventID != null) {
                 ObserverContentDiscoveryResponse(appDefinition, myRequestEventID, onRefresh, accountViewModel, nav)
             } else {
+                // TODO: Make a good splash screen with loading animation for this DVM.
                 FeedEmptyWithStatus(appDefinition, stringRes(Res.string.dvm_requesting_job), accountViewModel, nav)
             }
             if (heartbeatFresh?.value == false) {
