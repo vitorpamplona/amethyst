@@ -325,12 +325,41 @@ class MarmotScenarioRunner(
         // single Commit and a single Welcome carrying N EncryptedGroupSecrets.
         // Adding them one at a time would burn an epoch per invitee and the
         // traces would no longer line up.
-        val (_, deliveries) =
+        val (commit, deliveries) =
             inviter.manager.addMembers(
                 nostrGroupId = groupId,
                 keyPackageEvents = bundles.map { it.second },
                 relays = emptyList(),
             )
+
+        // A FOUNDING add publishes no commit, so the publisher stub — which is
+        // what normally consumes a step's outcome — is never called. The vector
+        // still labels this step (`pending: "create"`) and acknowledges it,
+        // because the obligation founding creation owes is the per-invitee
+        // WELCOME delivery, not a group message: publish-lifecycle.md makes the
+        // founding Add Commit's own obligation empty and each Welcome a separate
+        // retryable delivery. Consume the outcome here so it resolves against
+        // the right label — and so every later publication still lines up with
+        // its own, since the queue is consumed in order.
+        val accepted =
+            if (commit == null) {
+                nextOutcome(inviter.name)
+            } else {
+                true
+            }
+        if (!accepted) {
+            // The founding creation's outbound was rejected. Under the legacy
+            // profile these vectors are written for, the founding Add is
+            // publish-gated and the group would stay at epoch 0 with one
+            // member; under ours it is already canonical and only the Welcome
+            // delivery failed. That is the single point where the two creation
+            // lifecycles disagree, so the vector is refused by name instead of
+            // being replayed into an expectation it cannot meet.
+            throw LegacyOnlyScenario(
+                "the founding creation's outbound was rejected, which only holds the group at " +
+                    "epoch 0 under the legacy publish-gated creation lifecycle",
+            )
+        }
 
         val byPubKey = bundles.associate { (invitee, _) -> invitee.signer.pubKey to invitee }
         deliveries.forEach { delivery ->

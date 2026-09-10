@@ -70,7 +70,32 @@ class MarmotPublishBeforeApplyTest {
         val groupId: String,
         val bobKeyPackage: ByteArray,
         val bobPubKey: String,
+        val carolKeyPackage: ByteArray,
+        val carolPubKey: String,
     )
+
+    /**
+     * A group with one founding member already added, so the NEXT commit is an
+     * ordinary one.
+     *
+     * Publish-before-apply governs every commit except creation and the
+     * founding Add that may follow it, so a test of the rule has to get past
+     * both first — otherwise it measures the exception it is not about. The
+     * founding add publishes nothing, so [RecordingPublisher.published] is
+     * cleared and every later assertion counts only ordinary commits.
+     */
+    private suspend fun foundedFixture(accepts: Boolean): Fixture {
+        val fx = fixture(accepts)
+        fx.manager.addMember(
+            nostrGroupId = fx.groupId,
+            memberPubKey = fx.bobPubKey,
+            keyPackageBytes = fx.bobKeyPackage,
+            keyPackageEventId = "c".repeat(64),
+            relays = listOf(relay),
+        )
+        fx.publisher.published.clear()
+        return fx
+    }
 
     private suspend fun fixture(accepts: Boolean): Fixture {
         val publisher = RecordingPublisher(accepts)
@@ -96,7 +121,20 @@ class MarmotPublishBeforeApplyTest {
             manager.groupManager
                 .getGroup(groupId)!!
                 .createKeyPackage(bob.pubKey, ByteArray(0))
-        return Fixture(manager, publisher, groupId, bundle.keyPackage.toTlsBytes(), bob.pubKey.toHexKey())
+        val carol = KeyPair()
+        val carolBundle =
+            manager.groupManager
+                .getGroup(groupId)!!
+                .createKeyPackage(carol.pubKey, ByteArray(0))
+        return Fixture(
+            manager,
+            publisher,
+            groupId,
+            bundle.keyPackage.toTlsBytes(),
+            bob.pubKey.toHexKey(),
+            carolBundle.keyPackage.toTlsBytes(),
+            carol.pubKey.toHexKey(),
+        )
     }
 
     /**
@@ -118,11 +156,98 @@ class MarmotPublishBeforeApplyTest {
             assertTrue(fx.publisher.published.isEmpty(), "creating a group publishes no group message")
         }
 
+    /**
+     * The founding Add is the second half of the creation exception: it is
+     * merged locally and NOTHING is published, even though a member is joining.
+     *
+     * `protocol-core/publish-lifecycle.md`: "When founding creation includes
+     * initial invitees, the creator next prepares and locally merges one
+     * founding Add Commit from epoch 0 to epoch 1. That Commit also has an
+     * empty group-message publication obligation: the creator is the only
+     * pre-existing member, so no peer can be forked by failure to publish it."
+     *
+     * The publisher here REJECTS everything, which is the point: a relay that
+     * accepts nothing must not be able to stop a group from being founded with
+     * its initial members.
+     */
+    @Test
+    fun theFoundingAddMergesLocallyEvenWhenNoRelayAcceptsAnything() =
+        runBlocking<Unit> {
+            val fx = fixture(accepts = false)
+
+            val (commit, welcome) =
+                fx.manager.addMember(
+                    nostrGroupId = fx.groupId,
+                    memberPubKey = fx.bobPubKey,
+                    keyPackageBytes = fx.bobKeyPackage,
+                    keyPackageEventId = "c".repeat(64),
+                    relays = listOf(relay),
+                )
+
+            assertEquals(null, commit, "a founding add publishes no commit")
+            assertTrue(fx.publisher.published.isEmpty(), "and offers none to a relay")
+            assertEquals(
+                1L,
+                fx.manager.groupManager
+                    .getGroup(fx.groupId)!!
+                    .epoch,
+                "the founding add is canonical regardless of the relay",
+            )
+            assertEquals(
+                setOf(fx.manager.signer.pubKey, fx.bobPubKey),
+                fx.manager.groupManager
+                    .getGroup(fx.groupId)!!
+                    .currentMemberIdentities(),
+            )
+            // The Welcome is the delivery, and it is produced unconditionally:
+            // the Add is already canonical, so there is no "epoch nobody
+            // accepted" that it could be inviting someone into.
+            assertTrue(welcome != null, "the invitee still gets a Welcome")
+            assertEquals(GroupLifecycleState.STABLE, fx.manager.lifecycle(fx.groupId))
+            assertTrue(
+                fx.manager.publishGate
+                    .pendingFor(fx.groupId)
+                    .isEmpty(),
+                "no obligation is left behind for a commit that was never owed",
+            )
+        }
+
+    /**
+     * The exception stops after the founding Add. The very next commit is
+     * ordinary and must be published before it applies.
+     */
+    @Test
+    fun theCommitAfterTheFoundingAddIsOrdinary() =
+        runBlocking<Unit> {
+            val fx = foundedFixture(accepts = false)
+
+            val (commit, welcome) =
+                fx.manager.addMember(
+                    nostrGroupId = fx.groupId,
+                    memberPubKey = fx.carolPubKey,
+                    keyPackageBytes = fx.carolKeyPackage,
+                    keyPackageEventId = "d".repeat(64),
+                    relays = listOf(relay),
+                )
+
+            assertTrue(commit != null, "an ordinary add builds a commit to publish")
+            assertEquals(1, fx.publisher.published.size, "and offers it to the relay")
+            assertEquals(
+                1L,
+                fx.manager.groupManager
+                    .getGroup(fx.groupId)!!
+                    .epoch,
+                "which no relay accepted, so the group did not move",
+            )
+            assertEquals(null, welcome)
+            assertEquals(GroupLifecycleState.PENDING_PUBLISH, fx.manager.lifecycle(fx.groupId))
+        }
+
     /** An acknowledged commit becomes canonical and the group returns to Stable. */
     @Test
     fun anAcknowledgedCommitBecomesCanonical() =
         runBlocking<Unit> {
-            val fx = fixture(accepts = true)
+            val fx = foundedFixture(accepts = true)
             val before =
                 fx.manager.groupManager
                     .getGroup(fx.groupId)!!
@@ -130,9 +255,9 @@ class MarmotPublishBeforeApplyTest {
 
             fx.manager.addMember(
                 nostrGroupId = fx.groupId,
-                memberPubKey = fx.bobPubKey,
-                keyPackageBytes = fx.bobKeyPackage,
-                keyPackageEventId = "c".repeat(64),
+                memberPubKey = fx.carolPubKey,
+                keyPackageBytes = fx.carolKeyPackage,
+                keyPackageEventId = "d".repeat(64),
                 relays = listOf(relay),
             )
 
@@ -158,7 +283,7 @@ class MarmotPublishBeforeApplyTest {
     @Test
     fun anUnacknowledgedCommitNeverBecomesCanonical() =
         runBlocking<Unit> {
-            val fx = fixture(accepts = false)
+            val fx = foundedFixture(accepts = false)
             val beforeEpoch =
                 fx.manager.groupManager
                     .getGroup(fx.groupId)!!
@@ -172,9 +297,9 @@ class MarmotPublishBeforeApplyTest {
             val (_, welcome) =
                 fx.manager.addMember(
                     nostrGroupId = fx.groupId,
-                    memberPubKey = fx.bobPubKey,
-                    keyPackageBytes = fx.bobKeyPackage,
-                    keyPackageEventId = "c".repeat(64),
+                    memberPubKey = fx.carolPubKey,
+                    keyPackageBytes = fx.carolKeyPackage,
+                    keyPackageEventId = "d".repeat(64),
                     relays = listOf(relay),
                 )
 
@@ -209,7 +334,7 @@ class MarmotPublishBeforeApplyTest {
     @Test
     fun anOutboundGateBlocksNewCommits() =
         runBlocking<Unit> {
-            val fx = fixture(accepts = true)
+            val fx = foundedFixture(accepts = true)
             assertTrue(fx.manager.publishGate.canPrepareLocalCommit(fx.groupId))
 
             fx.manager.publishGate.raiseGate(fx.groupId, LocalOutboundGate.LEAVING)
@@ -249,12 +374,16 @@ class MarmotPublishBeforeApplyTest {
     @Test
     fun anUnconfirmedPublishHoldsTheGroupInsteadOfStartingOver() =
         runBlocking<Unit> {
-            val fx = fixture(accepts = false)
+            val fx = foundedFixture(accepts = false)
+            val heldEpoch =
+                fx.manager.groupManager
+                    .getGroup(fx.groupId)!!
+                    .epoch
             fx.manager.addMember(
                 nostrGroupId = fx.groupId,
-                memberPubKey = fx.bobPubKey,
-                keyPackageBytes = fx.bobKeyPackage,
-                keyPackageEventId = "c".repeat(64),
+                memberPubKey = fx.carolPubKey,
+                keyPackageBytes = fx.carolKeyPackage,
+                keyPackageEventId = "d".repeat(64),
                 relays = listOf(relay),
             )
 
@@ -268,7 +397,7 @@ class MarmotPublishBeforeApplyTest {
             )
             // Reading is unaffected; only advancing the group is blocked.
             assertEquals(
-                0L,
+                heldEpoch,
                 fx.manager.groupManager
                     .getGroup(fx.groupId)!!
                     .epoch,
@@ -278,9 +407,9 @@ class MarmotPublishBeforeApplyTest {
             assertFailsWith<IllegalStateException> {
                 fx.manager.addMember(
                     nostrGroupId = fx.groupId,
-                    memberPubKey = fx.bobPubKey,
-                    keyPackageBytes = fx.bobKeyPackage,
-                    keyPackageEventId = "c".repeat(64),
+                    memberPubKey = fx.carolPubKey,
+                    keyPackageBytes = fx.carolKeyPackage,
+                    keyPackageEventId = "d".repeat(64),
                     relays = listOf(relay),
                 )
             }

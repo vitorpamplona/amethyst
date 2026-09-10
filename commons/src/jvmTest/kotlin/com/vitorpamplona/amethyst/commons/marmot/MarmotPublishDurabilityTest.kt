@@ -143,6 +143,27 @@ class MarmotPublishDurabilityTest {
                     relays = listOf(relay.url),
                 ),
             )
+
+            // Get past the FOUNDING add first. It merges locally under the
+            // empty publication obligation (`publish-lifecycle.md`) and
+            // publishes nothing, so it is not a commit publish-before-apply
+            // governs — a durability test that used it would be testing the
+            // exception instead of the rule.
+            val founder = KeyPair()
+            first.addMember(
+                nostrGroupId = groupId,
+                memberPubKey = founder.pubKey.toHexKey(),
+                keyPackageBytes =
+                    first.groupManager
+                        .getGroup(groupId)!!
+                        .createKeyPackage(founder.pubKey, ByteArray(0))
+                        .keyPackage
+                        .toTlsBytes(),
+                keyPackageEventId = "f".repeat(64),
+                relays = listOf(relay),
+            )
+            publisher.published.clear()
+
             val bob = KeyPair()
             val bundle =
                 first.groupManager
@@ -161,7 +182,7 @@ class MarmotPublishDurabilityTest {
                 )
             }
             assertEquals(GroupLifecycleState.PENDING_PUBLISH, first.lifecycle(groupId))
-            assertEquals(0L, first.groupManager.getGroup(groupId)!!.epoch)
+            assertEquals(1L, first.groupManager.getGroup(groupId)!!.epoch, "the founding add stands; the refused one did not apply")
             assertEquals(1, obligations.entries.size, "an unacknowledged commit leaves its obligation durable")
             val recordedBytes =
                 obligations.entries.values
@@ -181,7 +202,7 @@ class MarmotPublishDurabilityTest {
                 "the retry republishes the same event, not a replacement commit for the same epoch",
             )
             assertEquals(GroupLifecycleState.STABLE, second.lifecycle(groupId))
-            assertEquals(1L, second.groupManager.getGroup(groupId)!!.epoch, "the acknowledged commit applies")
+            assertEquals(2L, second.groupManager.getGroup(groupId)!!.epoch, "the acknowledged commit applies")
             assertTrue(obligations.entries.isEmpty(), "a resolved obligation is deleted")
             assertTrue(recordedBytes.isNotEmpty())
         }
@@ -204,6 +225,27 @@ class MarmotPublishDurabilityTest {
                     relays = listOf(relay.url),
                 ),
             )
+
+            // Get past the FOUNDING add first. It merges locally under the
+            // empty publication obligation (`publish-lifecycle.md`) and
+            // publishes nothing, so it is not a commit publish-before-apply
+            // governs — a durability test that used it would be testing the
+            // exception instead of the rule.
+            val founder = KeyPair()
+            first.addMember(
+                nostrGroupId = groupId,
+                memberPubKey = founder.pubKey.toHexKey(),
+                keyPackageBytes =
+                    first.groupManager
+                        .getGroup(groupId)!!
+                        .createKeyPackage(founder.pubKey, ByteArray(0))
+                        .keyPackage
+                        .toTlsBytes(),
+                keyPackageEventId = "f".repeat(64),
+                relays = listOf(relay),
+            )
+            publisher.published.clear()
+
             val carol = KeyPair()
             val bundle =
                 first.groupManager
@@ -226,7 +268,7 @@ class MarmotPublishDurabilityTest {
             // on, which is what stops a new commit stacking on an epoch peers
             // never accepted.
             assertEquals(GroupLifecycleState.PENDING_PUBLISH, second.lifecycle(groupId))
-            assertEquals(0L, second.groupManager.getGroup(groupId)!!.epoch)
+            assertEquals(1L, second.groupManager.getGroup(groupId)!!.epoch, "still held at the founding epoch")
             assertEquals(1, obligations.entries.size)
             assertTrue(bundle.keyPackage.toTlsBytes().isNotEmpty())
         }

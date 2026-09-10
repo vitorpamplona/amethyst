@@ -271,3 +271,29 @@ class UnsupportedScenarioOutcome(
         "expected outcome '$outcomeType' has no check in this runner — the vector is refused " +
             "rather than passed on the outcomes that happen to be modelled",
     )
+
+/**
+ * Raised when a vector encodes the LEGACY creation lifecycle, which a
+ * current-profile client cannot exhibit.
+ *
+ * MDK picks the profile from the vector's `application_profile`, and
+ * `None | Some("legacy")` means legacy. Under that profile `create_group`
+ * returns `GroupCreated { pending }` and the founding Add is publish-gated, so
+ * a rejected creation leaves the group at epoch 0 with one member. Under the
+ * current profile it returns `FoundingGroupCreated` with no pending
+ * publication at all: `protocol-core/publish-lifecycle.md` gives the founding
+ * Add an empty group-message obligation, so it is canonical whatever happens
+ * to the Welcomes.
+ *
+ * Almost every vector here declares no profile and is therefore legacy, but
+ * the two only disagree observably when the FOUNDING creation's outbound
+ * fails — every other vector replays identically. Rather than weaken the
+ * implementation to match a profile we do not run, or quietly drop the vector,
+ * the runner refuses it by name and the test asserts the refusal.
+ */
+class LegacyOnlyScenario(
+    val reason: String,
+) : IllegalStateException(
+        "this vector encodes the legacy creation lifecycle and cannot be replayed by a " +
+            "current-profile client: $reason",
+    )

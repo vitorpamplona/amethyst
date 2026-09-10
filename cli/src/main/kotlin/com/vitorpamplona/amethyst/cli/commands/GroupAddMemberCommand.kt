@@ -111,9 +111,20 @@ object GroupAddMemberCommand {
                         relays = groupRelays.toList(),
                     )
 
-                // Order matters: commit first (so invitee doesn't join at a future epoch),
-                // then welcome.
-                val commitAck = ctx.publish(commitEvent.signedEvent, groupRelays)
+                // Order matters: commit first (so invitee doesn't join at a future
+                // epoch), then welcome.
+                //
+                // A FOUNDING add returns no commit at all: the creator was the
+                // group's only member, so the Add is merged locally under the
+                // empty publication obligation and the invitee learns epoch 1
+                // from the Welcome's own GroupInfo. There is nothing to send
+                // first, and nothing whose acknowledgement to wait for.
+                val commitAck =
+                    if (commitEvent != null) {
+                        ctx.publish(commitEvent.signedEvent, groupRelays)
+                    } else {
+                        emptyMap()
+                    }
                 val welcomeTargets: Set<NormalizedRelayUrl> =
                     if (welcomeDelivery != null) {
                         // Welcome gift wrap (kind:1059 wrapping kind:444) must
@@ -157,7 +168,10 @@ object GroupAddMemberCommand {
                         "pubkey" to pub,
                         "status" to "invited",
                         "key_package_event_id" to kpEvent.id,
-                        "commit_event_id" to commitEvent.signedEvent.id,
+                        "commit_event_id" to commitEvent?.signedEvent?.id,
+                        // Null commit_event_id is not a failure — it is the
+                        // founding add, which publishes no group message.
+                        "founding_local_merge" to (commitEvent == null),
                         "welcome_event_id" to welcomeDelivery?.giftWrapEvent?.id,
                         "commit_accepted_by" to commitAck.filterValues { it.accepted }.keys.map { it.url },
                         "welcome_accepted_by" to welcomeAck.filterValues { it.accepted }.keys.map { it.url },

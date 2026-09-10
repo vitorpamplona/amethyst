@@ -28,11 +28,22 @@ measured is the engine's own CPU cost. Setup is outside the measured window on
 both sides — criterion's `iter_batched(.., PerIteration)` there, an explicit
 `setup` lambda here.
 
-**One shape difference, deliberately not hidden:** MDK folds invitees into the
-founding group (`FoundingGroupCreated`), while we create at epoch 0 and add in
-a second commit to epoch 1. `create_group/N` therefore includes one more commit
-on our side. That is a real cost, and averaging it away would be the wrong kind
-of favourable.
+**On the shape of `create_group/N`.** An earlier version of this file claimed
+we spend "one more commit" than MDK's founding creation. That was wrong, and
+`--epoch-probe` exists to keep it honest: our `create` publishes nothing and
+leaves epoch 0, `addMember` produces exactly one commit, and the invitee joins
+at epoch 1. MLS permits nothing else — RFC 9420 section 11 requires a group to
+be created with a single member — so MDK commits its founding Adds internally
+too. Both sides do one commit's worth of ratchet work.
+
+What did differ is that we PUBLISHED that founding commit and MDK does not.
+`protocol-core/publish-lifecycle.md` gives the founding Add an empty
+group-message publication obligation, because the creator is the only
+pre-existing member and no peer can be forked by failing to publish it. We
+implemented that exception for the epoch-0 creation and missed that it extends
+to the Add immediately after. It is fixed now: the founding Add merges locally
+and only the Welcomes go out, which is both what the spec says and what the
+reference implementation does.
 
 ## Why allocation is reported next to latency
 
@@ -149,10 +160,10 @@ differ; `alloc/op` reproduces to four significant figures):
 | `send_app_message`   |  4.28 ms   |  1.72 ms      | 0.61 - 0.71 ms  | **6.5x faster** |
 | `ingest_app_message` |  (n/a)     |  3.11 ms      | 0.88 - 0.90 ms  | —            |
 
-`create_group` remains the weakest row, and the shape difference in "What is
-compared" is part of why: we create at epoch 0 and add in a second commit,
-where MDK folds invitees into the founding group. `create_group/32` is also
-still the noisiest row in the suite.
+`create_group` remains the weakest row. Both sides do the same one commit (see
+"What is compared"); what we additionally carried was publishing it, which the
+founding-add fix has since removed. `create_group/32` is also still the noisiest
+row in the suite.
 
 ### Why the constants can be trusted
 

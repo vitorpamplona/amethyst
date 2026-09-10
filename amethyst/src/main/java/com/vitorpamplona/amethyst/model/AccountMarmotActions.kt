@@ -222,15 +222,23 @@ class AccountMarmotActions(
         manager.syncMetadataTo(nostrGroupId, chatroom)
 
         Log.d("MarmotDbg") {
-            "addMarmotGroupMember: built commit kind=${commitEvent.signedEvent.kind} id=${commitEvent.signedEvent.id.take(8)}… " +
+            val commit =
+                commitEvent?.let { "kind=${it.signedEvent.kind} id=${it.signedEvent.id.take(8)}…" }
+                    ?: "none (founding add, merged locally)"
+            "addMarmotGroupMember: built commit $commit " +
                 "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
         }
 
-        // The commit was published by the manager, which only advances the
-        // group once a relay acknowledged it (publish-before-apply). Publishing
-        // it again here would just duplicate the event.
+        // Nothing to publish here either way. A normal commit was already
+        // published by the manager, which only advances the group once a relay
+        // acknowledged it (publish-before-apply); publishing it again would
+        // just duplicate the event. A FOUNDING add has no commit at all — the
+        // creator was the group's only member, so it merges locally under the
+        // empty publication obligation and the invitee gets epoch 1 from the
+        // Welcome.
         Log.d("MarmotDbg") {
-            "addMarmotGroupMember: commit kind:${commitEvent.signedEvent.kind} published to ${groupRelays.size} relay(s)"
+            commitEvent?.let { "addMarmotGroupMember: commit kind:${it.signedEvent.kind} published to ${groupRelays.size} relay(s)" }
+                ?: "addMarmotGroupMember: founding add merged locally, no commit published"
         }
 
         // Then send the Welcome gift wrap to the new member.

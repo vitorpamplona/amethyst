@@ -678,7 +678,7 @@ class MarmotManager(
         nostrGroupId: HexKey,
         keyPackageEvent: KeyPackageEvent,
         relays: List<NormalizedRelayUrl>,
-    ): Pair<OutboundGroupEvent, WelcomeDelivery?> {
+    ): Pair<OutboundGroupEvent?, WelcomeDelivery?> {
         val (event, welcomes) = addMembers(nostrGroupId, listOf(keyPackageEvent), relays)
         return Pair(event, welcomes.firstOrNull())
     }
@@ -693,7 +693,7 @@ class MarmotManager(
         keyPackageBytes: ByteArray,
         keyPackageEventId: HexKey,
         relays: List<NormalizedRelayUrl>,
-    ): Pair<OutboundGroupEvent, WelcomeDelivery?> {
+    ): Pair<OutboundGroupEvent?, WelcomeDelivery?> {
         val (event, welcomes) =
             addMemberInvites(
                 nostrGroupId,
@@ -712,7 +712,7 @@ class MarmotManager(
         nostrGroupId: HexKey,
         keyPackageEvents: List<KeyPackageEvent>,
         relays: List<NormalizedRelayUrl>,
-    ): Pair<OutboundGroupEvent, List<WelcomeDelivery>> =
+    ): Pair<OutboundGroupEvent?, List<WelcomeDelivery>> =
         addMemberInvites(
             nostrGroupId = nostrGroupId,
             invites =
@@ -739,14 +739,18 @@ class MarmotManager(
      * Noise) batches this way, so a per-invitee commit loop would diverge from
      * the reference on epoch numbers and round trips alike.
      *
-     * Returns the single commit GroupEvent to publish, and one WelcomeDelivery
+     * Returns the commit GroupEvent that was published, and one WelcomeDelivery
      * per invitee — empty if the commit was not confirmed by any relay.
+     *
+     * The event is NULL for a founding add, which publishes no commit at all;
+     * see [isFoundingAdd]. Callers must treat null as "there is nothing to
+     * deliver to peers", not as failure — the Welcomes are the delivery.
      */
     suspend fun addMemberInvites(
         nostrGroupId: HexKey,
         invites: List<MemberInvite>,
         relays: List<NormalizedRelayUrl>,
-    ): Pair<OutboundGroupEvent, List<WelcomeDelivery>> {
+    ): Pair<OutboundGroupEvent?, List<WelcomeDelivery>> {
         require(invites.isNotEmpty()) { "addMemberInvites: invites must not be empty" }
         require(invites.map { it.memberPubKey }.toSet().size == invites.size) {
             "addMemberInvites: the same member appears twice in one commit"
@@ -769,6 +773,14 @@ class MarmotManager(
                 kp
             }
 
+        // The BARE KeyPackages, not the bytes as published. Transport framing
+        // is the Marmot layer's business; MLS takes the struct.
+        val keyPackageBytes = decoded.map { it.toTlsBytes() }
+
+        if (isFoundingAdd(nostrGroupId)) {
+            return commitFoundingAdd(nostrGroupId, invites, relays, keyPackageBytes)
+        }
+
         // Per RFC 9420 §12.4 (and MDK), the outbound kind:445 MUST be
         // outer-encrypted with the pre-commit (epoch-N) exporter secret so
         // that other existing members still at epoch N can decrypt and
@@ -776,9 +788,7 @@ class MarmotManager(
         // that key.
         val publication =
             commitAndPublish(nostrGroupId, relays) {
-                // The BARE KeyPackages, not the bytes as published. Transport
-                // framing is the Marmot layer's business; MLS takes the struct.
-                groupManager.stageAddMembers(nostrGroupId, decoded.map { it.toTlsBytes() })
+                groupManager.stageAddMembers(nostrGroupId, keyPackageBytes)
             }
 
         // The Welcomes are SEPARATE, retryable per-invitee delivery obligations
@@ -801,6 +811,88 @@ class MarmotManager(
             }
 
         return Pair(publication.event, welcomeDeliveries)
+    }
+
+    /**
+     * Is the next Add the group's FOUNDING Add — the one immediately after
+     * one-member epoch-0 creation?
+     *
+     * True only while the group is at epoch 0 and the creator is its sole
+     * member. Both conditions matter: epoch 0 alone is not enough, because a
+     * group that has already merged its founding Add is at epoch 1, and a
+     * sole-member group at a later epoch (everyone else removed) is an
+     * ordinary group whose commits peers may still be waiting for.
+     */
+    private fun isFoundingAdd(nostrGroupId: HexKey): Boolean {
+        val group = groupManager.getGroup(nostrGroupId) ?: return false
+        return group.epoch == 0L && group.currentMemberIdentities().size == 1
+    }
+
+    /**
+     * Merge the founding Add Commit locally and send only the Welcomes.
+     *
+     * `protocol-core/publish-lifecycle.md`: "When founding creation includes
+     * initial invitees, the creator next prepares and locally merges one
+     * founding Add Commit from epoch 0 to epoch 1. That Commit also has an
+     * empty group-message publication obligation: the creator is the only
+     * pre-existing member, so no peer can be forked by failure to publish it."
+     *
+     * So this is NOT publish-before-apply. There is no peer at epoch 0 to fork,
+     * and every invitee learns the epoch-1 state from the Welcome's GroupInfo
+     * and ratchet tree rather than from the commit. Publishing it anyway did
+     * three bad things: it made group creation with invitees depend on a relay
+     * acknowledgement that the spec does not require, so a creation against an
+     * unreachable relay silently produced an empty epoch-0 group; it spent a
+     * signature and an outer encryption on bytes with no audience; and it left
+     * a kind:445 on relays that a joiner can receive BEFORE its Welcome, which
+     * the reference implementation calls a "welcome-before-commit AlreadyAtEpoch
+     * bounce" and avoids for the same reason.
+     *
+     * The exception stops here. This is the last commit that skips the publish
+     * obligation; every later one takes [commitAndPublish].
+     */
+    private suspend fun commitFoundingAdd(
+        nostrGroupId: HexKey,
+        invites: List<MemberInvite>,
+        relays: List<NormalizedRelayUrl>,
+        keyPackageBytes: List<ByteArray>,
+    ): Pair<OutboundGroupEvent?, List<WelcomeDelivery>> {
+        requireOutboundAllowed(nostrGroupId, "add the founding members")
+        Log.d("MarmotManager") {
+            "commitFoundingAdd($nostrGroupId): ${invites.size} founding invitee(s), merging locally"
+        }
+
+        val staged = groupManager.stageAddMembers(nostrGroupId, keyPackageBytes)
+
+        // Straight to canonical. No obligation is prepared, so there is no
+        // record that could later be retried or resolved — which is the point:
+        // an obligation with no recipients is one the gate would have to
+        // invent an outcome for.
+        groupManager.installState(nostrGroupId, staged.pendingState)
+        publishGate.satisfyEmptyObligation(nostrGroupId)
+
+        // The same derived rows a confirmed commit gets. Deliberately WITHOUT
+        // recordLocalCommit and markMessageProcessed: both exist to reconcile
+        // a commit that went to relays, and this one never did.
+        recordRetentionForCurrentEpoch(nostrGroupId)
+        syncGroupSystemRows(nostrGroupId, actor = signer.pubKey)
+
+        // Each Welcome is its own retryable per-invitee delivery obligation,
+        // and unlike the published path they are sent unconditionally: the Add
+        // is already canonical, so there is no "commit nobody accepted" case in
+        // which a Welcome would invite someone into a group that exists nowhere.
+        val welcomeDeliveries =
+            invites.mapNotNull { invite ->
+                welcomeSender.wrapWelcome(
+                    commitResult = staged.result,
+                    recipientPubKey = invite.memberPubKey,
+                    keyPackageEventId = invite.keyPackageEventId,
+                    relays = relays,
+                    nostrGroupId = nostrGroupId,
+                )
+            }
+
+        return Pair(null, welcomeDeliveries)
     }
 
     /**

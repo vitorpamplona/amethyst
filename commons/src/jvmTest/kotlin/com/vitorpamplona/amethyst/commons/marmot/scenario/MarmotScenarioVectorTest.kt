@@ -68,8 +68,35 @@ class MarmotScenarioVectorTest {
     @Test
     fun multigroupIsolation() = replay("multigroup-isolation.v1.json")
 
+    /**
+     * `publish-fail/v1` is the one vector our creation lifecycle cannot
+     * replay, and that is a profile difference rather than a defect.
+     *
+     * It fails the FOUNDING creation's outbound and then expects alice at
+     * epoch 0 with one member. That is the legacy lifecycle: MDK resolves a
+     * vector's profile from `application_profile`, this vector declares none,
+     * and `None | Some("legacy")` means legacy — where `create_group` returns
+     * `GroupCreated { pending }` and the founding Add waits on the publish.
+     * A current-profile client returns `FoundingGroupCreated` with no pending
+     * publication, because `protocol-core/publish-lifecycle.md` gives the
+     * founding Add an empty group-message obligation and makes each Welcome an
+     * independent delivery that "does not affect canonical group state".
+     *
+     * So the vector is asserted to be REFUSED, by name and for that reason.
+     * The alternative — publish-gating our founding Add so this vector passes
+     * — would mean a group creation that an unreachable relay can silently
+     * turn into an empty epoch-0 group, which is the bug this fix removed.
+     * `invite-publish-fail/v1` still runs: a rejected LATER invite is an
+     * ordinary commit and behaves identically under both profiles.
+     */
     @Test
-    fun publishFail() = replay("publish-fail.v1.json")
+    fun publishFailIsLegacyOnlyAndIsRefused() {
+        val failure = assertFailsWith<LegacyOnlyScenario> { replay("publish-fail.v1.json") }
+        assertTrue(
+            failure.message!!.contains("founding creation"),
+            "the refusal must name the founding creation, not just fail",
+        )
+    }
 
     @Test
     fun invitePublishFail() = replay("invite-publish-fail.v1.json")

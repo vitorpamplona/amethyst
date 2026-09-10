@@ -28,6 +28,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -71,9 +72,11 @@ class MarmotLeaveProposalTest {
             )
 
             val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            // A founding add publishes no commit, so there is no echo for
+            // Alice to re-ingest: the Welcome is the whole delivery.
             val (commit, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            assertNull(commit, "the founding add publishes no commit")
             bob.manager.ingest(welcome!!.giftWrapEvent)
-            alice.manager.ingest(commit.signedEvent)
             assertEquals(2, alice.manager.memberCount(nostrGroupId))
 
             // Bob departs. The proposal is all he can produce.
@@ -126,13 +129,13 @@ class MarmotLeaveProposalTest {
                     ),
                     emptyList(),
                 )
+            assertNull(commit, "the founding add publishes no commit, however many invitees it carries")
             welcomes.forEach { delivery ->
                 when (delivery.recipientPubKey) {
                     bob.signer.pubKey -> bob.manager.ingest(delivery.giftWrapEvent)
                     carol.signer.pubKey -> carol.manager.ingest(delivery.giftWrapEvent)
                 }
             }
-            alice.manager.ingest(commit.signedEvent)
             assertEquals(3, alice.manager.memberCount(nostrGroupId))
 
             // Carol departs. Her proposal reaches everyone, as it does on the
@@ -178,8 +181,8 @@ class MarmotLeaveProposalTest {
             )
             val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
             val (commit, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            assertNull(commit, "the founding add publishes no commit")
             bob.manager.ingest(welcome!!.giftWrapEvent)
-            alice.manager.ingest(commit.signedEvent)
 
             // Bob departs and alice stages his proposal — then alice's process
             // dies before anyone commits it.
