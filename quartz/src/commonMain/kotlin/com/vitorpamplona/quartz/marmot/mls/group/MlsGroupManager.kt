@@ -397,7 +397,13 @@ class MlsGroupManager(
     suspend fun stageAddMember(
         nostrGroupId: HexKey,
         keyPackageBytes: ByteArray,
-    ): StagedCommit = stage(nostrGroupId) { it.addMember(keyPackageBytes) }
+    ): StagedCommit = stageAddMembers(nostrGroupId, listOf(keyPackageBytes))
+
+    /** Stage several Adds as ONE commit. See [MlsGroup.addMembers]. */
+    suspend fun stageAddMembers(
+        nostrGroupId: HexKey,
+        keyPackagesBytes: List<ByteArray>,
+    ): StagedCommit = stage(nostrGroupId) { it.addMembers(keyPackagesBytes) }
 
     /** Stage a Remove. See [StagedCommit] for why this does not apply. */
     suspend fun stageRemoveMember(

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.marmot.scenario
 
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -74,32 +75,53 @@ class MarmotScenarioVectorTest {
     fun invitePublishFail() = replay("invite-publish-fail.v1.json")
 
     /**
-     * The two vectors we cannot replay, and exactly why.
-     *
-     * Both create a group with several invitees. The reference adds them in one
-     * commit, so the group is at epoch 1; our `addMember` stages one Add per
-     * commit, so we would reach epoch 2. Neither is a protocol error — a commit
-     * per Add is valid MLS and any peer processes it — but the traces cannot
-     * match until we can commit several Adds together, and creating a group
-     * costs us an extra round trip per invitee until then.
-     *
-     * Asserted rather than deleted so the divergence stays visible: the day
-     * batched adds land, this test fails and these two move up to [replay].
+     * The vectors whose `create_group` names several invitees. The reference
+     * adds them all in ONE commit — epoch 1, one Welcome carrying an
+     * EncryptedGroupSecrets per invitee — and so do we now, so the traces line
+     * up. They were refused as a batching divergence until batched Adds landed.
      */
     @Test
-    fun aMultiInviteeCreateStillDivergesOnBatching() {
-        listOf(
-            "three-client-message-exchange.v1.json",
-            "convergence-committer-selected.v1.json",
-            "conversation.v1.json",
-        ).forEach { name ->
-            val thrown =
-                assertFailsWith<ScenarioBatchingDivergence>("$name should still diverge on batching") {
-                    runBlocking { MarmotScenarioRunner(load(name)).run() }
-                }
+    fun threeClientMessageExchange() = replay("three-client-message-exchange.v1.json")
+
+    @Test
+    fun conversation() = replay("conversation.v1.json")
+
+    /**
+     * `convergence-committer-selected` concludes with a `convergence_decision`
+     * — which tip the client picked, under which rule, and whether the witness
+     * quorum was met. Our convergence engine makes that decision but does not
+     * report it in those terms, so there is nothing to compare against and the
+     * runner refuses the vector rather than passing it on the observations it
+     * can check.
+     *
+     * Asserted rather than deleted so the gap stays visible: the day the engine
+     * exposes its decision, this test fails and the vector moves up to [replay].
+     */
+    @Test
+    fun aConvergenceDecisionIsStillUnmodelled() {
+        val thrown =
+            assertFailsWith<UnsupportedScenarioOutcome> {
+                runBlocking { MarmotScenarioRunner(load("convergence-committer-selected.v1.json")).run() }
+            }
+        assertEquals("convergence_decision", thrown.outcomeType)
+    }
+
+    /**
+     * Every vector must parse to at least one thing to check.
+     *
+     * Two expectation shapes ship in this set — `expected_trace.observations`
+     * and `expected_outcomes` — and reading only the first left seven of the
+     * nine vectors with nothing to compare against, replaying their steps and
+     * reporting green. A vector that asserts nothing is worse than a missing
+     * vector, so this guards the parser rather than any one scenario.
+     */
+    @Test
+    fun everyVectorStatesSomethingToCheck() {
+        VECTORS.forEach { name ->
+            val vector = load(name)
             assertTrue(
-                thrown.message.orEmpty().contains("one commit"),
-                "the divergence must say what it is: ${thrown.message}",
+                vector.observations.isNotEmpty() || vector.unmodelledOutcomes.isNotEmpty(),
+                "$name parsed to zero expectations — it would pass without checking anything",
             )
         }
     }
@@ -114,5 +136,21 @@ class MarmotScenarioVectorTest {
             vector.conformanceVersion.startsWith("0.9."),
             "unexpected conformance version ${vector.conformanceVersion}",
         )
+    }
+
+    private companion object {
+        /** Every vector this suite ships, so the parser guard covers them all. */
+        val VECTORS =
+            listOf(
+                "invite-member.v1.json",
+                "current-profile-required-set.v1.json",
+                "latecomer-forward-secrecy.v1.json",
+                "multigroup-isolation.v1.json",
+                "publish-fail.v1.json",
+                "invite-publish-fail.v1.json",
+                "three-client-message-exchange.v1.json",
+                "conversation.v1.json",
+                "convergence-committer-selected.v1.json",
+            )
     }
 }

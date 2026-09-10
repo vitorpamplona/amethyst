@@ -45,6 +45,9 @@ class ScenarioVector(
     val clients: List<String>,
     val steps: List<Step>,
     val observations: List<Observation>,
+    val pendingResolutions: List<PendingResolution> = emptyList(),
+    val quiescentClients: List<String> = emptyList(),
+    val unmodelledOutcomes: List<UnmodelledOutcome> = emptyList(),
 ) {
     class Step(
         val type: String,
@@ -52,10 +55,27 @@ class ScenarioVector(
     ) {
         fun string(key: String): String? = (raw[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
+        fun int(key: String): Int? = (raw[key] as? JsonPrimitive)?.content?.toIntOrNull()
+
         fun strings(key: String): List<String> =
             (raw[key] as? JsonArray)
                 ?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
                 .orEmpty()
+
+        /**
+         * A step nested inside this one, as its own [Step].
+         *
+         * `in_group` is a wrapper: it names a group label and carries the real
+         * step under `action`. Treating it as a leaf silently skipped every
+         * create and every message inside it.
+         */
+        fun step(key: String): Step? =
+            (raw[key] as? JsonObject)?.let {
+                Step((it["type"] as? JsonPrimitive)?.content.orEmpty(), it)
+            }
+
+        /** A nested object read as a [Step] so the same accessors work on it. */
+        fun obj(key: String): Step? = (raw[key] as? JsonObject)?.let { Step(key, it) }
     }
 
     /** What one client's state must look like when the script says to look. */
@@ -65,6 +85,31 @@ class ScenarioVector(
         val memberCount: Int?,
         val groupName: String?,
         val receivedPayloads: List<String>,
+        /**
+         * Members this client must have SEEN JOIN, by client name. Null when
+         * the vector does not state it — which is not the same as an empty
+         * list, and an empty list is itself an assertion.
+         */
+        val addedMembers: List<String>? = null,
+    )
+
+    /**
+     * A publication the script named, and how the reference says it ended.
+     *
+     * `confirmed` means the relay accepted it and the commit became canonical;
+     * `rolled_back` means it did not and the committer stayed where it was.
+     * Checking these is the only thing that proves our publish-before-apply
+     * gate resolved the same way the reference's did.
+     */
+    class PendingResolution(
+        val client: String,
+        val publication: String,
+        val resolution: String,
+    )
+
+    /** The outcome types this runner has no check for, named so it can refuse. */
+    class UnmodelledOutcome(
+        val type: String,
     )
 
     companion object {
@@ -78,29 +123,90 @@ class ScenarioVector(
                     val obj = element as JsonObject
                     Step(obj.getValue("type").jsonPrimitive.content, obj)
                 }
-            val observations =
+            // TWO vector shapes ship side by side. The older one nests a
+            // trace under `expected_trace.observations`; the newer one lists
+            // typed entries under `expected_outcomes`. Reading only the first
+            // meant SEVEN of the nine vectors here parsed to zero expectations
+            // and "passed" without checking anything — the exact failure this
+            // runner exists to avoid.
+            val traced =
                 ((root["expected_trace"] as? JsonObject)?.get("observations") as? JsonArray)
-                    ?.map { element ->
-                        val obj = element as JsonObject
-                        Observation(
-                            client = obj.getValue("client").jsonPrimitive.content,
-                            epoch = (obj["epoch"] as? JsonPrimitive)?.content?.toLongOrNull(),
-                            memberCount = (obj["member_count"] as? JsonPrimitive)?.content?.toIntOrNull(),
-                            groupName = (obj["group_name"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
-                            receivedPayloads =
-                                (obj["received_payloads"] as? JsonArray)
-                                    ?.mapNotNull { (it as? JsonPrimitive)?.content }
-                                    .orEmpty(),
+                    ?.map { observationOf(it as JsonObject) }
+                    .orEmpty()
+
+            val outcomes = (root["expected_outcomes"] as? JsonArray).orEmpty()
+            val stated = mutableListOf<Observation>()
+            val resolutions = mutableListOf<PendingResolution>()
+            val quiescent = mutableListOf<String>()
+            val unmodelled = mutableListOf<UnmodelledOutcome>()
+
+            outcomes.forEach { element ->
+                val obj = element as JsonObject
+                when ((obj["type"] as? JsonPrimitive)?.content) {
+                    "client_state" -> stated.add(observationOf(obj))
+
+                    // A converged set states the same per-client facts for
+                    // several clients at once.
+                    "clients_converged" ->
+                        (obj["clients"] as? JsonArray).orEmpty().forEach { name ->
+                            stated.add(
+                                Observation(
+                                    client = (name as JsonPrimitive).content,
+                                    epoch = (obj["epoch"] as? JsonPrimitive)?.content?.toLongOrNull(),
+                                    memberCount = (obj["member_count"] as? JsonPrimitive)?.content?.toIntOrNull(),
+                                    groupName = null,
+                                    receivedPayloads = emptyList(),
+                                ),
+                            )
+                        }
+
+                    "pending_resolution" ->
+                        resolutions.add(
+                            PendingResolution(
+                                client = obj.getValue("client").jsonPrimitive.content,
+                                publication = obj.getValue("pending").jsonPrimitive.content,
+                                resolution = obj.getValue("resolution").jsonPrimitive.content,
+                            ),
                         )
-                    }.orEmpty()
+
+                    "no_pending_work" ->
+                        (obj["clients"] as? JsonArray).orEmpty().forEach {
+                            quiescent.add((it as JsonPrimitive).content)
+                        }
+
+                    else ->
+                        unmodelled.add(
+                            UnmodelledOutcome((obj["type"] as? JsonPrimitive)?.content.orEmpty()),
+                        )
+                }
+            }
+
             return ScenarioVector(
                 name = (root["scenario_name"] as JsonPrimitive).content,
                 conformanceVersion = (root["conformance_version"] as? JsonPrimitive)?.content.orEmpty(),
                 clients = (scenario["clients"] as JsonArray).map { (it as JsonPrimitive).content },
                 steps = steps,
-                observations = observations,
+                observations = traced + stated,
+                pendingResolutions = resolutions,
+                quiescentClients = quiescent,
+                unmodelledOutcomes = unmodelled,
             )
         }
+
+        private fun observationOf(obj: JsonObject) =
+            Observation(
+                client = obj.getValue("client").jsonPrimitive.content,
+                epoch = (obj["epoch"] as? JsonPrimitive)?.content?.toLongOrNull(),
+                memberCount = (obj["member_count"] as? JsonPrimitive)?.content?.toIntOrNull(),
+                groupName = (obj["group_name"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+                receivedPayloads =
+                    (obj["received_payloads"] as? JsonArray)
+                        ?.mapNotNull { (it as? JsonPrimitive)?.content }
+                        .orEmpty(),
+                addedMembers =
+                    (obj["added_members"] as? JsonArray)
+                        ?.mapNotNull { (it as? JsonPrimitive)?.content },
+            )
     }
 }
 
@@ -113,20 +219,16 @@ class UnsupportedScenarioStep(
     )
 
 /**
- * Raised where our engine cannot reach the vector's trace because it batches
- * differently, not because either side is wrong.
+ * Raised when a vector states an expected outcome this runner cannot check.
  *
- * The one case today: the reference adds every invitee named by `create_group`
- * in a SINGLE commit, so a group created with two invitees is at epoch 1. Our
- * `MarmotManager.addMember` stages one Add per commit, so the same group
- * reaches epoch 2. Both are valid MLS — a commit per Add is not a protocol
- * error, and a peer processes either — but the epoch numbers differ, and so
- * does the round-trip cost of creating a group.
- *
- * Kept as its own signal rather than folded into a trace mismatch: a divergence
- * we understand and have chosen not to fix yet should not read like a bug we
- * have not noticed.
+ * Same contract as [UnsupportedScenarioStep], one level up: a vector whose
+ * conclusion we cannot evaluate has not been conformed to, however cleanly its
+ * steps replayed. Silently dropping the outcome would turn the vector into an
+ * expensive no-op that reports green.
  */
-class ScenarioBatchingDivergence(
-    message: String,
-) : IllegalStateException(message)
+class UnsupportedScenarioOutcome(
+    val outcomeType: String,
+) : IllegalStateException(
+        "expected outcome '$outcomeType' has no check in this runner — the vector is refused " +
+            "rather than passed on the outcomes that happen to be modelled",
+    )

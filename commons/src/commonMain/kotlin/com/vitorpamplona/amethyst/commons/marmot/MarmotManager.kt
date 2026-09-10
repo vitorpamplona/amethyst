@@ -656,27 +656,31 @@ class MarmotManager(
     }
 
     /**
+     * A single invitee for [addMemberInvites]: whose KeyPackage is consumed, the bare
+     * KeyPackage bytes as published, and the id of the event that carried them
+     * (the Welcome must reference it so the invitee can retire that KeyPackage).
+     */
+    data class MemberInvite(
+        val memberPubKey: HexKey,
+        val keyPackageBytes: ByteArray,
+        val keyPackageEventId: HexKey,
+    )
+
+    /**
      * Add a member to a group by consuming their published [KeyPackageEvent].
      *
      * Convenience over [addMember] that handles base64 decoding and lifts the
      * event id into the WelcomeDelivery. Prefer this overload — both the UI's
      * `Account.addMarmotGroupMember` and the CLI's `group add` command call it.
      */
-    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
     suspend fun addMember(
         nostrGroupId: HexKey,
         keyPackageEvent: KeyPackageEvent,
         relays: List<NormalizedRelayUrl>,
-    ): Pair<OutboundGroupEvent, WelcomeDelivery?> =
-        addMember(
-            nostrGroupId = nostrGroupId,
-            memberPubKey = keyPackageEvent.pubKey,
-            keyPackageBytes =
-                kotlin.io.encoding.Base64
-                    .decode(keyPackageEvent.keyPackageBase64()),
-            keyPackageEventId = keyPackageEvent.id,
-            relays = relays,
-        )
+    ): Pair<OutboundGroupEvent, WelcomeDelivery?> {
+        val (event, welcomes) = addMembers(nostrGroupId, listOf(keyPackageEvent), relays)
+        return Pair(event, welcomes.firstOrNull())
+    }
 
     /**
      * Add a member to a group.
@@ -689,18 +693,80 @@ class MarmotManager(
         keyPackageEventId: HexKey,
         relays: List<NormalizedRelayUrl>,
     ): Pair<OutboundGroupEvent, WelcomeDelivery?> {
-        // Verify that the KeyPackage credential matches the expected member
+        val (event, welcomes) =
+            addMemberInvites(
+                nostrGroupId,
+                listOf(MemberInvite(memberPubKey, keyPackageBytes, keyPackageEventId)),
+                relays,
+            )
+        return Pair(event, welcomes.firstOrNull())
+    }
+
+    /**
+     * Add several members to a group in a SINGLE commit, from their published
+     * [KeyPackageEvent]s. See [addMemberInvites] for the batching contract.
+     */
+    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+    suspend fun addMembers(
+        nostrGroupId: HexKey,
+        keyPackageEvents: List<KeyPackageEvent>,
+        relays: List<NormalizedRelayUrl>,
+    ): Pair<OutboundGroupEvent, List<WelcomeDelivery>> =
+        addMemberInvites(
+            nostrGroupId = nostrGroupId,
+            invites =
+                keyPackageEvents.map {
+                    MemberInvite(
+                        memberPubKey = it.pubKey,
+                        keyPackageBytes =
+                            kotlin.io.encoding.Base64
+                                .decode(it.keyPackageBase64()),
+                        keyPackageEventId = it.id,
+                    )
+                },
+            relays = relays,
+        )
+
+    /**
+     * Add several members to a group in a SINGLE commit.
+     *
+     * RFC 9420 §12.4.3.1 lets one Commit carry N Add proposals and one Welcome
+     * holding N `EncryptedGroupSecrets`, one per added member keyed by their
+     * KeyPackage reference. So the group advances by exactly ONE epoch no
+     * matter how many people join, and every invitee receives the SAME Welcome
+     * bytes — each finds its own secrets entry. MDK (and therefore White
+     * Noise) batches this way, so a per-invitee commit loop would diverge from
+     * the reference on epoch numbers and round trips alike.
+     *
+     * Returns the single commit GroupEvent to publish, and one WelcomeDelivery
+     * per invitee — empty if the commit was not confirmed by any relay.
+     */
+    suspend fun addMemberInvites(
+        nostrGroupId: HexKey,
+        invites: List<MemberInvite>,
+        relays: List<NormalizedRelayUrl>,
+    ): Pair<OutboundGroupEvent, List<WelcomeDelivery>> {
+        require(invites.isNotEmpty()) { "addMemberInvites: invites must not be empty" }
+        require(invites.map { it.memberPubKey }.toSet().size == invites.size) {
+            "addMemberInvites: the same member appears twice in one commit"
+        }
+
+        // Verify that each KeyPackage credential matches the expected member
         // pubkey. Accepts either framing — a peer's published KeyPackage is an
         // MLSMessage, and bare bytes still arrive from our own pre-fix
         // publications sitting on relays.
-        val kp = KeyPackageUtils.decodeKeyPackage(keyPackageBytes)
-        val credential = kp.leafNode.credential
-        require(credential is Credential.Basic) {
-            "KeyPackage must use BasicCredential"
-        }
-        require(credential.identity.toHexKey() == memberPubKey) {
-            "KeyPackage credential identity does not match memberPubKey"
-        }
+        val decoded =
+            invites.map { invite ->
+                val kp = KeyPackageUtils.decodeKeyPackage(invite.keyPackageBytes)
+                val credential = kp.leafNode.credential
+                require(credential is Credential.Basic) {
+                    "KeyPackage must use BasicCredential"
+                }
+                require(credential.identity.toHexKey() == invite.memberPubKey) {
+                    "KeyPackage credential identity does not match memberPubKey"
+                }
+                kp
+            }
 
         // Per RFC 9420 §12.4 (and MDK), the outbound kind:445 MUST be
         // outer-encrypted with the pre-commit (epoch-N) exporter secret so
@@ -709,29 +775,31 @@ class MarmotManager(
         // that key.
         val publication =
             commitAndPublish(nostrGroupId, relays) {
-                // The BARE KeyPackage, not the bytes as published. Transport
+                // The BARE KeyPackages, not the bytes as published. Transport
                 // framing is the Marmot layer's business; MLS takes the struct.
-                groupManager.stageAddMember(nostrGroupId, kp.toTlsBytes())
+                groupManager.stageAddMembers(nostrGroupId, decoded.map { it.toTlsBytes() })
             }
 
-        // The Welcome is a SEPARATE, retryable per-invitee delivery obligation
-        // that only exists once the Add is canonical. A Welcome for an epoch
+        // The Welcomes are SEPARATE, retryable per-invitee delivery obligations
+        // that only exist once the Add is canonical. A Welcome for an epoch
         // no relay accepted would invite someone into a group that does not
         // exist anywhere else.
-        val welcomeDelivery =
+        val welcomeDeliveries =
             if (publication.confirmed) {
-                welcomeSender.wrapWelcome(
-                    commitResult = publication.commitResult,
-                    recipientPubKey = memberPubKey,
-                    keyPackageEventId = keyPackageEventId,
-                    relays = relays,
-                    nostrGroupId = nostrGroupId,
-                )
+                invites.mapNotNull { invite ->
+                    welcomeSender.wrapWelcome(
+                        commitResult = publication.commitResult,
+                        recipientPubKey = invite.memberPubKey,
+                        keyPackageEventId = invite.keyPackageEventId,
+                        relays = relays,
+                        nostrGroupId = nostrGroupId,
+                    )
+                }
             } else {
-                null
+                emptyList()
             }
 
-        return Pair(publication.event, welcomeDelivery)
+        return Pair(publication.event, welcomeDeliveries)
     }
 
     /**

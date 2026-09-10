@@ -4167,8 +4167,24 @@ class MlsGroup private constructor(
      * [CommitResult.preCommitExporterSecret] is the key the outer kind:445
      * MUST be encrypted with (RFC 9420 §12.4 + MDK parity).
      */
-    fun addMember(keyPackageBytes: ByteArray): CommitResult {
-        proposeAdd(keyPackageBytes)
+    fun addMember(keyPackageBytes: ByteArray): CommitResult = addMembers(listOf(keyPackageBytes))
+
+    /**
+     * Add several members in ONE commit.
+     *
+     * Not a convenience wrapper over [addMember] — a commit per Add costs an
+     * epoch and a publish round trip each, and every existing member processes
+     * each one. The Welcome already carries a separate `EncryptedGroupSecrets`
+     * per added member, keyed by KeyPackage reference (RFC 9420 §12.4.3.1), so
+     * one commit serves all of them and each joiner finds its own secrets.
+     *
+     * The reference implementation adds every invitee named at group creation
+     * this way, which is why a group it creates with two invitees sits at epoch
+     * 1 while ours used to reach epoch 2.
+     */
+    fun addMembers(keyPackagesBytes: List<ByteArray>): CommitResult {
+        require(keyPackagesBytes.isNotEmpty()) { "addMembers needs at least one KeyPackage" }
+        keyPackagesBytes.forEach { proposeAdd(it) }
         return commit()
     }
 

@@ -56,11 +56,14 @@ import com.vitorpamplona.quartz.utils.RandomInstance
  *
  * ## Refusing rather than skipping
  *
- * A step type the runner does not implement throws [UnsupportedScenarioStep].
+ * A step type the runner does not implement throws [UnsupportedScenarioStep],
+ * and an expected outcome it cannot check throws [UnsupportedScenarioOutcome].
  * Nineteen of the portable vectors need fault injection or group-data steps we
  * have not modelled, and a runner that quietly ignored those steps would report
  * a pass for a script it did not execute — worse than no coverage, because it
- * would look like coverage.
+ * would look like coverage. The same is true one level up: a vector whose
+ * conclusion is a `convergence_decision` we do not model is refused, not passed
+ * on the parts that happen to be checkable.
  */
 class MarmotScenarioRunner(
     private val vector: ScenarioVector,
@@ -69,6 +72,19 @@ class MarmotScenarioRunner(
 
     /** Queued outbound events: (sender, event). Drained by `deliver_all`. */
     private val inFlight = mutableListOf<Pair<String, Event>>()
+
+    /**
+     * The group label the current step runs against.
+     *
+     * `in_group` wraps a step and names a label; everything else runs against
+     * [DEFAULT_GROUP]. A client can be in several groups at once and the
+     * isolation vectors are entirely about what does NOT cross between them,
+     * so a single group per client would test the opposite of the point.
+     */
+    private var currentGroup = DEFAULT_GROUP
+
+    /** Which label each created group id belongs to, so joiners can be filed. */
+    private val labelByGroupId = mutableMapOf<HexKey, String>()
 
     private class VectorClient(
         val name: String,
@@ -81,7 +97,12 @@ class MarmotScenarioRunner(
         /** Delivered but not yet processed — `tick` is what processes. */
         val inbox = mutableListOf<Event>()
         val received = mutableListOf<String>()
-        var groupId: HexKey? = null
+
+        /** Group label -> nostr group id, for every group this client is in. */
+        val groups = mutableMapOf<String, HexKey>()
+
+        /** Members this client watched join, by pubkey, since the last `clear_events`. */
+        val sawJoin = mutableListOf<HexKey>()
     }
 
     /**
@@ -94,22 +115,31 @@ class MarmotScenarioRunner(
      * step. It is the same information in the same order, just consulted when
      * this implementation needs it.
      */
-    private val publishOutcomes = mutableMapOf<String, MutableList<Boolean>>()
+    private val publishOutcomes = mutableMapOf<String, MutableList<Pair<String, Boolean>>>()
+
+    /** Publication label -> whether OUR gate confirmed it, for `pending_resolution`. */
+    private val resolved = mutableMapOf<String, Boolean>()
 
     private fun preScanPublishOutcomes() {
         vector.steps.filter { it.type == "acknowledge_outbound" }.forEach { step ->
             val client = step.string("client") ?: return@forEach
             val accepted = step.string("outcome") == "accepted"
-            publishOutcomes.getOrPut(client) { mutableListOf() }.add(accepted)
+            publishOutcomes
+                .getOrPut(client) { mutableListOf() }
+                .add(step.string("publication").orEmpty() to accepted)
         }
     }
 
     private fun nextOutcome(client: String): Boolean {
         val queue = publishOutcomes[client] ?: return true
-        return if (queue.isEmpty()) true else queue.removeAt(0)
+        if (queue.isEmpty()) return true
+        val (label, accepted) = queue.removeAt(0)
+        if (label.isNotEmpty()) resolved[label] = accepted
+        return accepted
     }
 
     suspend fun run() {
+        vector.unmodelledOutcomes.firstOrNull()?.let { throw UnsupportedScenarioOutcome(it.type) }
         preScanPublishOutcomes()
         clients.values.forEach { client ->
             client.manager =
@@ -138,13 +168,69 @@ class MarmotScenarioRunner(
             "send_app_message" -> sendAppMessage(step)
             "deliver_all" -> deliverAll()
             "tick" -> step.strings("clients").ifEmpty { vector.clients }.forEach { tick(it) }
+            "in_group" -> inGroup(step)
+            "clear_events" -> clearEvents(step)
+            "assert" -> assertPredicate(step)
             // The publication's outcome was consumed when it was made; the step
             // itself carries no further state change.
             "acknowledge_outbound" -> Unit
             // Assertions the trace re-states; `verify()` checks them from the
             // expected observations, which is the same information.
-            "observe", "observe_exact", "in_group", "assert", "clear_events", "await_quiescence" -> Unit
+            "observe", "observe_exact", "await_quiescence" -> Unit
             else -> throw UnsupportedScenarioStep(step.type)
+        }
+    }
+
+    /** Run the wrapped step against the named group label. */
+    private suspend fun inGroup(step: ScenarioVector.Step) {
+        val action = step.step("action") ?: error("in_group without an action")
+        val previous = currentGroup
+        currentGroup = step.string("group") ?: DEFAULT_GROUP
+        try {
+            execute(action)
+        } finally {
+            currentGroup = previous
+        }
+    }
+
+    /**
+     * Reset the observation counters, as the reference's `clear_events` does.
+     *
+     * It is what makes a later `received_payloads` mean "since this point"
+     * rather than "ever", so dropping it would make every post-clear
+     * expectation fail against a list that still holds the setup traffic.
+     */
+    private fun clearEvents(step: ScenarioVector.Step) {
+        step.strings("clients").ifEmpty { vector.clients }.forEach {
+            client(it).received.clear()
+            client(it).sawJoin.clear()
+        }
+    }
+
+    /**
+     * Check an inline `assert` predicate.
+     *
+     * The only predicate our vectors use is `payload_count`, and every one of
+     * them asserts a count of ZERO: it is how forward secrecy and multigroup
+     * isolation are stated — a payload this client must NOT hold. That makes it
+     * the highest-value assertion in the set and the last one that should be
+     * skipped.
+     */
+    private fun assertPredicate(step: ScenarioVector.Step) {
+        val assertion = step.obj("assertion") ?: error("assert without an assertion")
+        val predicate = assertion.step("predicate") ?: error("assertion without a predicate")
+        when (predicate.type) {
+            "payload_count" -> {
+                val who = predicate.string("client") ?: error("payload_count without a client")
+                val payload = predicate.string("payload").orEmpty()
+                val want = predicate.int("count") ?: 0
+                val got = client(who).received.count { it == payload }
+                check(got == want) {
+                    "vector ${vector.name}: $who holds $got copies of '$payload', expected $want"
+                }
+            }
+
+            else -> throw UnsupportedScenarioStep("assert/${predicate.type}")
         }
     }
 
@@ -153,15 +239,6 @@ class MarmotScenarioRunner(
         val name = step.string("name").orEmpty()
         val groupId = RandomInstance.bytes(32).toHexKey()
         val invitees = step.strings("invitees")
-
-        if (invitees.size > 1) {
-            throw ScenarioBatchingDivergence(
-                "create_group names ${invitees.size} invitees and the reference adds them in one " +
-                    "commit (epoch 1); MarmotManager.addMember stages one Add per commit, so we " +
-                    "would reach epoch ${invitees.size}. Both are valid MLS; the traces cannot match " +
-                    "until we can commit several Adds together.",
-            )
-        }
 
         creator.manager.createCurrentProfileGroup(
             nostrGroupId = groupId,
@@ -172,13 +249,14 @@ class MarmotScenarioRunner(
                     client(admin).signer.pubKey.hexToByteArray()
                 },
         )
-        creator.groupId = groupId
+        labelByGroupId[groupId] = currentGroup
+        creator.groups[currentGroup] = groupId
         addMembers(creator, groupId, invitees)
     }
 
     private suspend fun inviteMembers(step: ScenarioVector.Step) {
         val inviter = client(step.string("inviter") ?: error("invite_members without an inviter"))
-        val groupId = inviter.groupId ?: error("${inviter.name} invited before joining a group")
+        val groupId = inviter.groups[currentGroup] ?: error("${inviter.name} invited before joining a group")
         addMembers(inviter, groupId, step.strings("invitees"))
     }
 
@@ -187,35 +265,54 @@ class MarmotScenarioRunner(
         groupId: HexKey,
         invitees: List<String>,
     ) {
-        invitees.forEach { inviteeName ->
-            val invitee = client(inviteeName)
-            // A KeyPackage per invitee, minted on demand: the vector names
-            // members, not key material.
-            val bundle = invitee.manager.generateKeyPackageEvent(relays = emptyList())
-            val (_, delivery) =
-                inviter.manager.addMember(
-                    nostrGroupId = groupId,
-                    keyPackageEvent = bundle,
-                    relays = emptyList(),
-                )
+        if (invitees.isEmpty()) return
+
+        // A KeyPackage per invitee, minted on demand: the vector names
+        // members, not key material.
+        val bundles =
+            invitees.map { inviteeName ->
+                val invitee = client(inviteeName)
+                invitee to invitee.manager.generateKeyPackageEvent(relays = emptyList())
+            }
+
+        // ONE commit for the whole batch, as the reference does — N Adds in a
+        // single Commit and a single Welcome carrying N EncryptedGroupSecrets.
+        // Adding them one at a time would burn an epoch per invitee and the
+        // traces would no longer line up.
+        val (_, deliveries) =
+            inviter.manager.addMembers(
+                nostrGroupId = groupId,
+                keyPackageEvents = bundles.map { it.second },
+                relays = emptyList(),
+            )
+
+        val byPubKey = bundles.associate { (invitee, _) -> invitee.signer.pubKey to invitee }
+        deliveries.forEach { delivery ->
             // The Welcome goes straight to its recipient's inbox. Gift-wrap
             // addressing is the transport's job and the interop harness's test.
-            delivery?.let { invitee.inbox.add(it.giftWrapEvent) }
-            invitee.groupId = groupId
+            byPubKey[delivery.recipientPubKey]?.inbox?.add(delivery.giftWrapEvent)
         }
     }
 
     private suspend fun sendAppMessage(step: ScenarioVector.Step) {
         val sender = client(step.string("sender") ?: error("send_app_message without a sender"))
-        val groupId = sender.groupId ?: error("${sender.name} sent before joining a group")
+        val groupId = sender.groups[currentGroup] ?: error("${sender.name} sent before joining a group")
         val payload = step.string("payload").orEmpty()
-        sender.manager.buildTextMessage(groupId, payload, persistOwn = false)
+        // An application message does NOT go through the publish gate — it
+        // advances nothing and has nothing to roll back — so the runner queues
+        // it itself. Leaving that out meant every `send_app_message` built an
+        // event nobody ever delivered.
+        val bundle = sender.manager.buildTextMessage(groupId, payload, persistOwn = false)
+        inFlight.add(sender.name to bundle.outbound.signedEvent)
     }
 
     private fun deliverAll() {
         val batch = inFlight.toList()
         inFlight.clear()
         batch.forEach { (senderName, event) ->
+            // Broadcast to everyone else, including clients who are not in the
+            // sending group. Their engine refusing that traffic is precisely
+            // what multigroup isolation asserts.
             clients.values.filter { it.name != senderName }.forEach { it.inbox.add(event) }
         }
     }
@@ -224,9 +321,18 @@ class MarmotScenarioRunner(
         val client = client(clientName)
         val batch = client.inbox.toList()
         client.inbox.clear()
+
+        // Snapshot membership of the groups this client is ALREADY in, so a
+        // commit processed below can be attributed as "saw N join". A group
+        // joined during this tick has no before-state and contributes nothing:
+        // the joiner did not watch anyone join, it arrived to a membership.
+        val before = client.groups.values.associateWith { membersOf(client, it) }
+
         batch.forEach { event ->
             when (val result = client.manager.ingest(event)) {
-                is MarmotIngestResult.JoinedGroup -> client.groupId = result.nostrGroupId
+                is MarmotIngestResult.JoinedGroup ->
+                    client.groups[labelByGroupId[result.nostrGroupId] ?: DEFAULT_GROUP] = result.nostrGroupId
+
                 is MarmotIngestResult.Message ->
                     Event
                         .fromJsonOrNull(result.inner.innerEventJson)
@@ -236,34 +342,79 @@ class MarmotScenarioRunner(
                 else -> Unit
             }
         }
+
+        before.forEach { (groupId, was) ->
+            client.sawJoin.addAll(membersOf(client, groupId) - was)
+        }
     }
+
+    private fun membersOf(
+        client: VectorClient,
+        groupId: HexKey,
+    ): Set<HexKey> =
+        client.manager
+            .memberPubkeys(groupId)
+            .map { it.pubkey }
+            .toSet()
 
     /** Compare every client's end state against the vector's expected trace. */
     private fun verify() {
         val failures = mutableListOf<String>()
+
+        vector.pendingResolutions.forEach { expected ->
+            val confirmed = resolved[expected.publication]
+            val want = expected.resolution == "confirmed"
+            if (confirmed == null) {
+                failures.add("publication '${expected.publication}' never happened")
+            } else if (confirmed != want) {
+                failures.add(
+                    "publication '${expected.publication}' resolved " +
+                        "${if (confirmed) "confirmed" else "rolled_back"}, expected ${expected.resolution}",
+                )
+            }
+        }
+
+        vector.quiescentClients.forEach { name ->
+            val client = clients[name] ?: return@forEach
+            if (client.inbox.isNotEmpty()) failures.add("$name still has ${client.inbox.size} events unprocessed")
+        }
+        if (vector.quiescentClients.isNotEmpty() && inFlight.isNotEmpty()) {
+            failures.add("${inFlight.size} events are still undelivered")
+        }
+
         vector.observations.forEach { expected ->
             val client = clients[expected.client] ?: return@forEach
-            val groupId = client.groupId
-            if (groupId == null) {
+            if (client.groups.isEmpty()) {
                 failures.add("${expected.client} is in no group")
                 return@forEach
             }
-            expected.epoch?.let { want ->
-                val got = client.manager.groupEpoch(groupId)
-                if (got != want) failures.add("${expected.client} epoch $got, expected $want")
-            }
-            expected.memberCount?.let { want ->
-                val got = client.manager.memberCount(groupId)
-                if (got != want) failures.add("${expected.client} has $got members, expected $want")
-            }
-            expected.groupName?.let { want ->
-                val got = client.manager.groupView(groupId)?.name
-                if (got != want) failures.add("${expected.client} group name '$got', expected '$want'")
+            // A per-group fact stated once applies to EVERY group the client
+            // holds — the isolation vectors put a client in several groups and
+            // state one epoch and one member count for all of them.
+            client.groups.forEach { (label, groupId) ->
+                expected.epoch?.let { want ->
+                    val got = client.manager.groupEpoch(groupId)
+                    if (got != want) failures.add("${expected.client}[$label] epoch $got, expected $want")
+                }
+                expected.memberCount?.let { want ->
+                    val got = client.manager.memberCount(groupId)
+                    if (got != want) failures.add("${expected.client}[$label] has $got members, expected $want")
+                }
+                expected.groupName?.let { want ->
+                    val got = client.manager.groupView(groupId)?.name
+                    if (got != want) failures.add("${expected.client}[$label] group name '$got', expected '$want'")
+                }
             }
             if (expected.receivedPayloads.isNotEmpty()) {
                 val got = client.received.sorted()
                 val want = expected.receivedPayloads.sorted()
                 if (got != want) failures.add("${expected.client} received $got, expected $want")
+            }
+            expected.addedMembers?.let { want ->
+                val got = client.sawJoin.mapNotNull { pubkey -> clients.values.firstOrNull { it.signer.pubKey == pubkey }?.name }
+                if (got.sorted() != want.sorted()) {
+                    failures.add("${expected.client} saw $got join, expected $want")
+                }
             }
         }
         check(failures.isEmpty()) {
@@ -275,5 +426,8 @@ class MarmotScenarioRunner(
 
     private companion object {
         const val CHAT_KIND = 9
+
+        /** The label for a vector that never says `in_group` — most of them. */
+        const val DEFAULT_GROUP = "default"
     }
 }
