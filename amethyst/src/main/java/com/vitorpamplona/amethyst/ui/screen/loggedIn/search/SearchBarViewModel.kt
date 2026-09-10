@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
 import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
+import com.vitorpamplona.amethyst.commons.search.SearchResultSorter
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -71,6 +72,7 @@ import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -84,6 +86,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 
 @Stable
@@ -115,6 +118,40 @@ class SearchBarViewModel(
      * the list of kinds slid the whole chrome away with it. The scaffold has to be told instead.
      */
     val pickerOpen = MutableStateFlow(false)
+
+    /**
+     * True when the box holds filters but none a relay can be asked for.
+     *
+     * A bare `kind:` window is the case that matters: [SearchFilterBuilder] refuses it, because
+     * "every recent article" is an unbounded REQ rather than a search. A screen that seeds its
+     * kind therefore opens holding a chip and showing nothing, which looks broken unless the box
+     * says what it is waiting for.
+     */
+    val queryAsksNothing: StateFlow<Boolean> =
+        searchValueFlow
+            .map { text ->
+                val query = QueryParser.parse(text)
+                !query.isEmpty && SearchFilterBuilder.build(query).isEmpty()
+            }.distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /**
+     * True once enough time has passed since the query last changed that "nothing found" is a
+     * fair thing to say.
+     *
+     * A heuristic, and deliberately so: no EOSE from the search subscription reaches this screen,
+     * so there is nothing that actually knows the relays have finished. Without the delay an
+     * empty list would announce failure in the gap before the first event arrives — which is
+     * every search, for a moment.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val searchSettled: StateFlow<Boolean> =
+        searchValueFlow
+            .transformLatest {
+                emit(false)
+                delay(NO_RESULTS_GRACE_MS)
+                emit(true)
+            }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** The scope the reader picked, which is not always the one that applies — see [scope]. */
     private val pickedScope = MutableStateFlow(SearchScope.ALL)
@@ -387,6 +424,10 @@ class SearchBarViewModel(
             // screen never did, which left an exclusion the reader typed doing nothing at all.
             val filtered = followed.filter { note -> note.event?.let { SearchResultFilter.matches(it, parsed) } != false }
 
+            // Sorted here rather than through SearchResultSorter.sortEvents because POPULAR ranks
+            // on a note's zap total, which a raw Event cannot see — the sorter says so itself and
+            // falls back to newest. RELEVANCE still borrows its scorer, so the two front ends rank
+            // the same way.
             when (order) {
                 SearchSortOrder.POPULAR -> {
                     filtered.sortedWith(
@@ -399,7 +440,22 @@ class SearchBarViewModel(
                     filtered.sortedBy { it.createdAt() ?: 0L }
                 }
 
-                SearchSortOrder.RELEVANCE, SearchSortOrder.NEWEST -> {
+                SearchSortOrder.RELEVANCE -> {
+                    // Scored on the leftover terms, not the whole box: `from:npub1…` and
+                    // `kind:article` are filters, and looking for their literal text inside an
+                    // event's content ranks on noise. Blank leftovers mean the query is all
+                    // chips, and there is nothing to be more or less relevant to — newest then.
+                    val terms = parsed.text
+                    if (terms.isBlank()) {
+                        filtered.sortedByDefaultFeedOrder()
+                    } else {
+                        filtered.sortedByDescending { note ->
+                            note.event?.let { SearchResultSorter.scoreEvent(it, terms) } ?: 0.0
+                        }
+                    }
+                }
+
+                SearchSortOrder.NEWEST -> {
                     filtered.sortedByDefaultFeedOrder()
                 }
 
@@ -542,6 +598,11 @@ class SearchBarViewModel(
     }
 
     fun isSearchingFun() = searchValue.isNotBlank()
+
+    companion object {
+        /** How long after the last keystroke an empty result list is allowed to say so. */
+        private const val NO_RESULTS_GRACE_MS = 1200L
+    }
 
     class Factory(
         val account: Account,

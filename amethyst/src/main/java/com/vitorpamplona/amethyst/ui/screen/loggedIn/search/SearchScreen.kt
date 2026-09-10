@@ -72,6 +72,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -88,6 +89,8 @@ import com.vitorpamplona.amethyst.commons.resources.search_filters_section_sort
 import com.vitorpamplona.amethyst.commons.resources.search_filters_section_source
 import com.vitorpamplona.amethyst.commons.resources.search_filters_title
 import com.vitorpamplona.amethyst.commons.resources.search_follows_only
+import com.vitorpamplona.amethyst.commons.resources.search_no_results
+import com.vitorpamplona.amethyst.commons.resources.search_no_results_explainer
 import com.vitorpamplona.amethyst.commons.resources.search_scope_all
 import com.vitorpamplona.amethyst.commons.resources.search_scope_notes
 import com.vitorpamplona.amethyst.commons.resources.search_scope_people
@@ -97,6 +100,8 @@ import com.vitorpamplona.amethyst.commons.resources.search_sort_popular
 import com.vitorpamplona.amethyst.commons.resources.search_sort_relevance
 import com.vitorpamplona.amethyst.commons.resources.search_source_local
 import com.vitorpamplona.amethyst.commons.resources.search_source_relays
+import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin
+import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin_explainer
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -515,6 +520,38 @@ private fun sortLabel(opt: SearchSortOrder): String =
         SearchSortOrder.NAME_AZ, SearchSortOrder.NAME_ZA -> opt.label
     }
 
+/**
+ * What the results area says when it has nothing to show.
+ *
+ * The main search box was the only search surface in the app without one — settings, git
+ * repositories, the location picker and app recommendations all say something — and it is the one
+ * that needs it most, because a seeded query legitimately returns nothing until a word is typed.
+ */
+@Composable
+private fun SearchEmptyState(
+    title: String,
+    explainer: String,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = explainer,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.placeholderText,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
 @Composable
 private fun SearchTextField(
     searchBarViewModel: SearchBarViewModel,
@@ -659,6 +696,8 @@ private fun DisplaySearchResults(
     val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
     val liveActivityChannels by searchBarViewModel.searchResultsLiveActivityChannels.collectAsStateWithLifecycle()
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
+    val asksNothing by searchBarViewModel.queryAsksNothing.collectAsStateWithLifecycle()
+    val settled by searchBarViewModel.searchSettled.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
@@ -668,6 +707,23 @@ private fun DisplaySearchResults(
         item(key = "scaffold-header") { headerContent() }
 
         if (!isRefreshing) return@LazyColumn
+
+        // Every result list is empty. Which of the two things that means is not cosmetic: a box
+        // holding only a seeded `kind:` never asked a relay anything, and telling that reader
+        // "no results" would blame the network for a search they have not written yet.
+        val foundNothing =
+            hashTags.isEmpty() && relays.isEmpty() && users.isEmpty() && notes.isEmpty() &&
+                publicChatChannels.isEmpty() && ephemeralChannels.isEmpty() && liveActivityChannels.isEmpty()
+
+        if (foundNothing && (asksNothing || settled)) {
+            item(key = "empty-state") {
+                SearchEmptyState(
+                    title = stringRes(if (asksNothing) Res.string.search_type_to_begin else Res.string.search_no_results),
+                    explainer = stringRes(if (asksNothing) Res.string.search_type_to_begin_explainer else Res.string.search_no_results_explainer),
+                )
+            }
+            return@LazyColumn
+        }
 
         itemsIndexed(
             hashTags,
