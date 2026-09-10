@@ -59,17 +59,25 @@ fun makeContentDVMsFilter(
         is MutedAuthorsTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterContentDVMsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
-    }.plusHeartbeatFilter()
-        .scopedTo(feedSettings)
+    }.let { contentDvmFilters ->
+        plusHeartbeatFilter(feedSettings, contentDvmFilters)
+    }.scopedTo(feedSettings)
 
 /**
  * The 31990 announcements say what a DVM advertises; kind-11998 heartbeats say whether it is
- * still alive (amethyst/plans/2026-09-10-dvm-heartbeat-liveness.md). Ask on the same relays the
- * announcements were asked on, with a rolling window instead of the announcement cursor: beats
- * expire (NIP-40) every 5 minutes, so a stored `since` would miss beats on re-opened tabs.
+ * still alive (amethyst/plans/2026-09-10-dvm-heartbeat-liveness.md). Ask on the selection's own
+ * relays — NOT the 31990 filters' relays, which skip relays whose per-relay slice is empty and
+ * whole selections (the Relay variant) that dispatch no 31990 filters at all; there the cached
+ * DVM list would lose its beat stream and the staleness timer would drop every DVM within ~7
+ * minutes. Rolling window instead of the announcement cursor: beats expire (NIP-40) every 5
+ * minutes, so a stored `since` would miss beats on re-opened tabs.
  */
-private fun List<RelayBasedFilter>.plusHeartbeatFilter(): List<RelayBasedFilter> {
-    if (isEmpty()) return this
+private fun plusHeartbeatFilter(
+    feedSettings: IFeedTopNavPerRelayFilterSet,
+    contentDvmFilters: List<RelayBasedFilter>,
+): List<RelayBasedFilter> {
+    val relays = feedSettings.relays()
+    if (relays.isEmpty()) return contentDvmFilters
     val heartbeatFilter =
         ExplainedFilter(
             purpose = SubPurpose.DISCOVER_FEED,
@@ -77,8 +85,8 @@ private fun List<RelayBasedFilter>.plusHeartbeatFilter(): List<RelayBasedFilter>
             limit = 100,
             since = TimeUtils.now() - DvmHeartbeatEvent.MAX_AGE_SECONDS,
         )
-    return this +
-        map { it.relay }.distinct().map { relay ->
+    return contentDvmFilters +
+        relays.map { relay ->
             RelayBasedFilter(relay = relay, filter = heartbeatFilter)
         }
 }

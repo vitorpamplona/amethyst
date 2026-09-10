@@ -30,4 +30,6 @@ class RelayTopNavPerRelayFilterSet(
     // The relay *is* the whole selection here, so there is nothing per-relay left to say — the
     // filter's own relay already carries it.
     override fun scopeFor(relay: NormalizedRelayUrl): IFeedTopNavPerRelayFilter? = null
+
+    override fun relays() = setOf(relayUrl)
 }
