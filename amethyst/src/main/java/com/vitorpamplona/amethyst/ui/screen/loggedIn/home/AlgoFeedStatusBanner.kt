@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_payment_requ
 import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_processing
 import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_requesting
 import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_requesting_all
+import com.vitorpamplona.amethyst.commons.resources.dvm_offline_banner
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsSnapshot
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
@@ -55,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmPaymentActions
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -86,6 +88,20 @@ private fun SingleAlgoFeedBanner(
     val snapshot by accountViewModel.account.favoriteAlgoFeedsOrchestrator
         .observe(favFeed.address)
         .collectAsStateWithLifecycle()
+
+    val heartbeatFresh by rememberDvmHeartbeatFresh(favFeed.address, accountViewModel)
+
+    // The DVM is down (or its beats never reach us): the offline banner supersedes the
+    // requesting/error/payment banner, and shows even when last-known content is on screen.
+    if (!heartbeatFresh) {
+        BannerCard(modifier) {
+            BannerMessageRow(
+                message = stringRes(Res.string.dvm_offline_banner),
+                showSpinner = false,
+            )
+        }
+        return
+    }
 
     // Hide the banner when the feed is already populated.
     if (snapshot.ids.isNotEmpty() || snapshot.addresses.isNotEmpty()) return
@@ -183,6 +199,20 @@ private fun AllFavoriteAlgoFeedsBanner(
         .collectAsStateWithLifecycle()
 
     if (addresses.isEmpty()) return
+
+    val anyHeartbeatFresh =
+        addresses.any { address ->
+            rememberDvmHeartbeatFresh(address, accountViewModel).value
+        }
+    if (!anyHeartbeatFresh) {
+        BannerCard(modifier) {
+            BannerMessageRow(
+                message = stringRes(Res.string.dvm_offline_banner),
+                showSpinner = false,
+            )
+        }
+        return
+    }
 
     // Observe each DVM's snapshot so we can decide whether to hide the banner
     // based on the aggregate state. Hide it as soon as any DVM has produced a

@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -282,8 +283,10 @@ private fun FavoriteAlgoFeedRow(
         Column(
             modifier = Modifier.weight(1f),
         ) {
+            val heartbeatFresh by rememberDvmHeartbeatFresh(feedNote.address, accountViewModel)
+            val displayName = card.name.ifBlank { feedNote.dTag() }
             Text(
-                text = card.name.ifBlank { feedNote.dTag() },
+                text = if (heartbeatFresh) displayName else "$displayName \u2022",
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.screen.PeopleListName
 import com.vitorpamplona.amethyst.ui.screen.RelayName
 import com.vitorpamplona.amethyst.ui.screen.ResourceName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -177,11 +178,22 @@ fun FeedFilterSpinner(
                             )
                         }
                     } else {
-                        Text(
-                            text = currentText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        val favoriteAlgoFeedAddress = (selected?.name as? FavoriteAlgoFeedName)?.note?.address
+                        if (favoriteAlgoFeedAddress != null) {
+                            val heartbeatFresh by rememberDvmHeartbeatFresh(favoriteAlgoFeedAddress, accountViewModel)
+                            Text(
+                                text = if (heartbeatFresh) currentText else "$currentText \u2022",
+                                color = if (heartbeatFresh) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        } else {
+                            Text(
+                                text = currentText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
 
                     if (filter is TopFilter.AroundMe) {
@@ -371,7 +383,23 @@ fun RenderOption(
             val backed = option as NoteBackedName
             val noteState by observeNote(backed.note, accountViewModel)
             val name = remember(noteState) { option.name(context) }
-            Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
+            val appDefAddress = (option as? FavoriteAlgoFeedName)?.note?.address
+            val heartbeatFresh =
+                if (appDefAddress != null) {
+                    rememberDvmHeartbeatFresh(appDefAddress, accountViewModel).value
+                } else {
+                    true
+                }
+            Text(
+                text = if (heartbeatFresh) name else "$name \u2022",
+                fontSize = Font14SP,
+                color =
+                    if (heartbeatFresh) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+            )
         }
 
         // Pure names: no relay subscription needed.
