@@ -42,15 +42,18 @@ feeds and the detail surface show an offline state instead.
 
 ## 2. Event model (quartz)
 
-New `quartz/.../nip90Dvms/heartbeat/DvmHeartbeatEvent.kt`:
+New `quartz/.../nip90Dvms/dvmHeartbeat/DvmHeartbeatEvent.kt`:
 
-- `class DvmHeartbeatEvent(...) : BaseReplaceableEvent(...)`, `KIND = 11998`
-- **Overrides `dTag()`** to read the event's actual `d` tag — `BaseReplaceableEvent.dTag()`
-  returns a fixed `""`, so without the override the cache address could not match the
-  announcement. With it, the cache address is `Address(11998, dvmPubkey, dTag)`, the exact
-  mirror of the announcement's `Address(31990, dvmPubkey, dTag)`.
-- Accessors: `statusTag()`, and `expiration()` via the existing NIP-40 extension.
-- Registered in `EventFactory` (kind → constructor).
+- `class DvmHeartbeatEvent(...) : BaseAddressableEvent(...)`, `KIND = 11998` — the codebase
+  convention for 10xxx events with real `d` tags (e.g. `FollowListEvent`), so `dTag()` /
+  `address()` / `addressTag()` come from the base. The cache address is
+  `Address(11998, dvmPubkey, dTag)`, the exact mirror of the announcement's
+  `Address(31990, dvmPubkey, dTag)`.
+- Accessors: `status()`, and `expiration()` via the existing NIP-40 extension.
+- `MAX_AGE_SECONDS = 420` and `isFreshAt(now)` live in quartz too (commons imports them).
+- Registered in `EventFactory` (kind → constructor) and allowlisted in
+  `EventFactoryKindRangeTest.knownDTagReaders`: the `d` tag keys the client-side address
+  while relay storage stays plain-replaceable per the kind range.
 
 ## 3. Cache consumption (LocalCache)
 
