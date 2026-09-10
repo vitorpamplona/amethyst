@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
@@ -93,7 +95,20 @@ class SearchUserWatcherSubAssembler(
                 searchPeopleByName(mySearchString, it)
             }
 
-        return directFilters + searchFilters
+        val filters = directFilters + searchFilters
+        key.startedAsking(mySearchString, filters.mapTo(mutableSetOf()) { it.relay })
+        return filters
+    }
+
+    // See the posts assembler: the screen needs to know who has answered, not just when.
+    override fun newEose(
+        key: SearchQueryState,
+        relayUrl: NormalizedRelayUrl,
+        time: Long,
+        filters: List<Filter>?,
+    ) {
+        super.newEose(key, relayUrl, time, filters)
+        key.answeredBy(relayUrl)
     }
 
     override fun id(key: SearchQueryState) = key.searchQuery.hashCode()

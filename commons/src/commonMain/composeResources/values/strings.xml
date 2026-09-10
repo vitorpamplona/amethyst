@@ -1396,6 +1396,7 @@
     <string name="external_id_scope">Comment on an external resource</string>
     <string name="url_preview_open_in_browser">Open in browser</string>
     <string name="long_form_reading_minutes">%1$d min read</string>
+    <string name="search_waiting_on_relays">Waiting on %1$d of %2$d relays</string>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d section</item>
         <item quantity="other">%1$d sections</item>
