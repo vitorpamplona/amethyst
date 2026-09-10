@@ -271,7 +271,7 @@ description = "Loopback relay for marmot-interop-headless.sh — do not use for 
 data_directory = "$RELAY_DATA"
 
 [network]
-address = "${RELAY_HOST:-127.0.0.1}"
+address = "${RELAY_BIND:-${RELAY_HOST:-127.0.0.1}}"
 port = $RELAY_PORT
 
 [options]
