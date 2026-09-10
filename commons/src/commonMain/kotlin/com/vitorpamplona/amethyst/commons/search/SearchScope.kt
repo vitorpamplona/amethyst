@@ -20,8 +20,44 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
-enum class SearchScope {
-    ALL,
+/** One of the kinds of thing a search can come back with. */
+enum class SearchResultKind {
     PEOPLE,
     NOTES,
+    HASHTAGS,
+    RELAYS,
+    PUBLIC_CHATS,
+    EPHEMERAL_CHATS,
+    LIVE_ACTIVITIES,
+}
+
+/**
+ * Which of those the reader asked to see.
+ *
+ * [shows] is the whole of it, in one table, because it used to be seven separate
+ * `if (scope == …) return emptyList()` guards written into seven result flows — and being spelled
+ * out seven times is how `ALL` came to mean "everything" in six of them and "everything except
+ * hashtags" in the seventh. A new result kind now answers the question by appearing in the
+ * `when`, rather than by someone remembering to guard it.
+ */
+enum class SearchScope {
+    /** Everything the front end can render. */
+    ALL,
+
+    /** People only — a hashtag or a relay is not a person, and neither is a note. */
+    PEOPLE,
+
+    /**
+     * Notes only. Hashtags stay: `#bitcoin` in the box is a note filter, and the tag chip is how
+     * the reader applies it, so hiding it here would take away the control the scope needs.
+     */
+    NOTES,
+    ;
+
+    fun shows(kind: SearchResultKind): Boolean =
+        when (this) {
+            ALL -> true
+            PEOPLE -> kind == SearchResultKind.PEOPLE
+            NOTES -> kind == SearchResultKind.NOTES || kind == SearchResultKind.HASHTAGS
+        }
 }

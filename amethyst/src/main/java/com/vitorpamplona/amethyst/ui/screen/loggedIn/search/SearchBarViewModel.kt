@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
 import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
 import com.vitorpamplona.amethyst.commons.search.SearchPipeline
+import com.vitorpamplona.amethyst.commons.search.SearchResultKind
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -342,7 +343,7 @@ class SearchBarViewModel(
                 if (only) follows.authorsPlusMe else null
             },
         ) { term, _, nip05Resolver, currentScope, follows ->
-            if (currentScope == SearchScope.NOTES) return@combine emptyList<User>()
+            if (!currentScope.shows(SearchResultKind.PEOPLE)) return@combine emptyList<User>()
 
             if (nip05Resolver != null) {
                 return@combine if (follows == null || nip05Resolver.pubkeyHex in follows) {
@@ -381,7 +382,7 @@ class SearchBarViewModel(
                 if (only) follows.authorsPlusMe else null
             },
         ) { term, _, currentScope, order, follows ->
-            if (currentScope == SearchScope.PEOPLE) return@combine emptyList()
+            if (!currentScope.shows(SearchResultKind.NOTES)) return@combine emptyList()
 
             // The same filters the REQ carries, run against the cache — so `from:`, `to:`,
             // `since:`, `#t` and the rest narrow local results exactly as they narrow relay
@@ -440,7 +441,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findPublicChatChannelsStartingWith(plainTerms(term))
+            if (!currentScope.shows(SearchResultKind.PUBLIC_CHATS)) emptyList() else LocalCache.findPublicChatChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -450,7 +451,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(plainTerms(term))
+            if (!currentScope.shows(SearchResultKind.EPHEMERAL_CHATS)) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -460,7 +461,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(plainTerms(term))
+            if (!currentScope.shows(SearchResultKind.LIVE_ACTIVITIES)) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(plainTerms(term))
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -470,7 +471,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope == SearchScope.PEOPLE) emptyList() else findHashtags(term)
+            if (!currentScope.shows(SearchResultKind.HASHTAGS)) emptyList() else findHashtags(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -480,7 +481,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) return@combine emptyList()
+            if (!currentScope.shows(SearchResultKind.RELAYS)) return@combine emptyList()
             if (term.length > 1) {
                 val isTypingRelay = term.length > 7 && (term.startsWith("wss://") || term.startsWith("ws://"))
                 val relayUrl =
