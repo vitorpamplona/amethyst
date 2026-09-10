@@ -35,13 +35,13 @@ import org.junit.Test
  * uses its own pubkeys/dTags/ids (same discipline as ReportNamingIndexIngestionTest).
  */
 class DvmHeartbeatTest {
-    private val appDefPubKey = "aa".repeat(32)
+    private val appDefPubKey = "f1".repeat(32)
 
     private fun appDef(
         dTag: String,
         pubKey: String = appDefPubKey,
     ) = AppDefinitionEvent(
-        id = "b0".repeat(32),
+        id = "f2".repeat(32),
         pubKey = pubKey,
         createdAt = 1_760_000_000L,
         tags = arrayOf(arrayOf("d", dTag), arrayOf("k", "5300")),
@@ -71,7 +71,7 @@ class DvmHeartbeatTest {
     @Test
     fun aConsumedHeartbeatLandsAtTheAnnouncementMirrorAddress() {
         val app = appDef("dvm-one")
-        LocalCache.justConsume(beat("dvm-one", createdAt = 1_760_000_100L, id = "e0".repeat(32)), null, true)
+        LocalCache.justConsume(beat("dvm-one", createdAt = 1_760_000_100L, id = "f3".repeat(32)), null, true)
 
         val found = LocalCache.dvmHeartbeatOf(app)
         assertTrue("heartbeat should be found via the announcement's address", found != null)
@@ -88,8 +88,8 @@ class DvmHeartbeatTest {
         val staleApp = appDef("dvm-two-stale")
         assertNull("no beat yet", LocalCache.dvmHeartbeatOf(freshApp))
 
-        LocalCache.justConsume(beat("dvm-two-fresh", createdAt = now - 420, id = "e1".repeat(32)), null, true)
-        LocalCache.justConsume(beat("dvm-two-stale", createdAt = now - 421, id = "e2".repeat(32)), null, true)
+        LocalCache.justConsume(beat("dvm-two-fresh", createdAt = now - 420, id = "f4".repeat(32)), null, true)
+        LocalCache.justConsume(beat("dvm-two-stale", createdAt = now - 421, id = "f5".repeat(32)), null, true)
 
         assertTrue("exactly 420s old counts as fresh", LocalCache.hasFreshDvmHeartbeat(freshApp, now))
         assertFalse("421s old is stale", LocalCache.hasFreshDvmHeartbeat(staleApp, now))
@@ -99,8 +99,8 @@ class DvmHeartbeatTest {
     fun theNewestBeatPerAddressWins() {
         val now = 1_760_000_000L
         val app = appDef("dvm-three")
-        LocalCache.justConsume(beat("dvm-three", createdAt = now - 600, id = "e3".repeat(32)), null, true)
-        LocalCache.justConsume(beat("dvm-three", createdAt = now - 60, id = "e4".repeat(32)), null, true)
+        LocalCache.justConsume(beat("dvm-three", createdAt = now - 600, id = "f6".repeat(32)), null, true)
+        LocalCache.justConsume(beat("dvm-three", createdAt = now - 60, id = "f7".repeat(32)), null, true)
 
         assertEquals(now - 60, LocalCache.dvmHeartbeatOf(app)?.createdAt)
     }
@@ -110,7 +110,7 @@ class DvmHeartbeatTest {
         val now = 1_760_000_000L
         val appA = appDef("dvm-a")
         val appB = appDef("dvm-b")
-        LocalCache.justConsume(beat("dvm-a", createdAt = now - 60, id = "e5".repeat(32)), null, true)
+        LocalCache.justConsume(beat("dvm-a", createdAt = now - 60, id = "f8".repeat(32)), null, true)
 
         assertTrue(LocalCache.hasFreshDvmHeartbeat(appA, now))
         assertFalse("no beat for dvm-b", LocalCache.hasFreshDvmHeartbeat(appB, now))
