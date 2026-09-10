@@ -16,12 +16,18 @@ cd <mdk> && cargo bench -p cgka-engine --bench group_lifecycle
 
 ## What is compared
 
-| this module           | MDK bench                   |
-|-----------------------|-----------------------------|
-| `create_group/N`      | `bench_create_group`        |
-| `join_welcome`        | `bench_join_welcome`        |
-| `send_app_message`    | `bench_app_message_send`    |
-| `ingest_app_message`  | `bench_app_message_ingest`  |
+| this module              | MDK bench                   |
+|--------------------------|-----------------------------|
+| `create_group/N`         | `bench_create_group`        |
+| `join_welcome`           | `bench_join_welcome`        |
+| `send_app_message/N`     | `bench_app_message_send`    |
+| `ingest_app_message/N`   | `bench_app_message_ingest`  |
+| `ingest_commit/N`        | (no counterpart)            |
+
+`ingest_commit` has no MDK counterpart because neither suite had one. It is the
+operation every member pays on every membership or settings change, and the
+only one whose cost is supposed to grow with the group, so leaving it
+unmeasured left the most load-bearing path in the protocol untested.
 
 Both sides exclude transport crypto and run over in-memory storage, so what is
 measured is the engine's own CPU cost. Setup is outside the measured window on
@@ -157,13 +163,20 @@ reproduces to four significant figures):
 |----------------------|------------|---------------|-----------------|--------------|
 | `create_group/1`     |  3.61 ms   | 16.93 ms      | 5.25 - 5.85 ms  | 1.5-1.6x slower |
 | `create_group/8`     |  9.93 ms   | 51.47 ms      | 16.23 - 16.87 ms| 1.7x slower  |
-| `create_group/32`    | 31.64 ms   | 190.08 ms     | 82.49 - 86.31 ms| 2.6x slower  |
+| `create_group/32`    | 31.64 ms   | 190.08 ms     | 77.5 - 195.7 ms | 2.5x - 6x (see below) |
 | `join_welcome`       |  4.77 ms   |  6.22 ms      | 1.89 - 1.93 ms  | **2.5x faster** |
 | `send_app_message`   |  4.28 ms   |  1.72 ms      | 0.63 - 0.68 ms  | **6.5x faster** |
 | `ingest_app_message` |  (n/a)     |  3.11 ms      | 0.90 - 0.95 ms  | —            |
 
-`create_group` remains the weakest row, and `create_group/32` is still the
-noisiest in the suite — its two runs here disagree by nearly 2.4x at p99.
+`create_group` remains the weakest row, and `create_group/32` is not just the
+noisiest in the suite — it is the one number here that should not be quoted as
+a single figure at all. Across five post-rewrite runs on this host its p50 came
+out 77.5, 81.5, 82.5, 86.3 and 195.7 ms: four clustered within 11% of each
+other and one more than twice the rest. The row has the fewest iterations in
+the suite (each one has to build a 32-member group in setup) and this is a
+shared cloud vCPU, so a single noisy neighbour moves it in a way it cannot move
+the 300-iteration rows. Treat "roughly 2.5x MDK, occasionally much worse" as
+the honest reading, and re-run before believing any movement in it.
 
 ### What not publishing the founding commit was worth
 
@@ -204,3 +217,72 @@ non-canonical inputs such as `p` itself.
 
 The RFC 7748 and RFC 8032 vector suites, HPKE, the MDK crypto-interop vectors
 and the full quartz + commons suites all pass unchanged.
+
+## Group-size scaling: what the one-member benchmarks were hiding
+
+The original `send_app_message` and `ingest_app_message` rows ran on groups of
+one and two members. That is the flattering case, and it hid a real asymmetry.
+
+Numbers from one full-suite run:
+
+| benchmark                    | p50     | alloc/op   |
+|------------------------------|---------|------------|
+| `send_app_message/0 members` |  601 us |   68.7 KB  |
+| `send_app_message/1 members` |  553 us |   73.8 KB  |
+| `send_app_message/8 members` |  602 us |  117.1 KB  |
+| `send_app_message/32 members`|  691 us |  253.1 KB  |
+| `ingest_app_message/1`       |  877 us |   61.5 KB  |
+| `ingest_app_message/8`       |  951 us |   65.1 KB  |
+| `ingest_app_message/32`      |  966 us |   67.4 KB  |
+
+**Latency is flat**, which is what MLS promises: an application message is
+sealed under the sender's own ratchet and never touches the tree, so the
+cryptography does not care how many members there are. The comparison against
+MDK's `send_app_message` therefore survives the parameterisation.
+
+**Allocation is not flat on the send side** — 3.5x from 0 to 32 members, while
+the receive side barely moves. The cause is not subtle once looked at:
+
+- `MlsGroupManager.encrypt` calls `persistGroup` **unconditionally**, so the
+  whole group state, ratchet tree included, is serialised on every message
+  sent.
+- `MlsGroupManager.decrypt` calls it **only** when the message was a Commit
+  that advanced the epoch. Decrypting an application message persists nothing.
+
+So a 32-member group allocates 252.8 KB to send a message and 67.1 KB to
+receive one, and the difference is a full state serialisation performed to
+record what amounts to a generation-counter bump. The write itself is
+necessary — a sender generation reused after a crash is a nonce-reuse-class
+problem — but writing the entire group state for it is heavier than the
+invariant requires. Left as a finding rather than a change: send-path
+persistence is security-sensitive and deserves its own decision, not a
+drive-by.
+
+## `ingest_commit`: logarithmic in time, linear in allocation
+
+Receiving someone else's Commit, from one full-suite run:
+
+| benchmark                  | p50      | alloc/op    |
+|----------------------------|----------|-------------|
+| `ingest_commit/1 members`  | 1 950 us |   242.8 KB  |
+| `ingest_commit/8 members`  | 2 367 us |   523.0 KB  |
+| `ingest_commit/32 members` | 3 009 us | 1 390.0 KB  |
+
+Latency grows, but far slower than the member count: 1.5x for a 32x bigger
+group. That is the shape MLS predicts. The UpdatePath a Commit carries has one
+node per LEVEL of the ratchet tree, so the receiver goes from roughly one HPKE
+open at two members to roughly five at thirty-three — a log2 curve, not a
+linear one.
+
+Allocation grows 5.7x, tracking the size of the tree being parsed, rebuilt and
+persisted rather than the number of curve operations. So `ingest_commit` is
+mostly an allocation story, and it is the row to watch on a phone: every member
+performs it on every membership or settings change, and at 1.4 MB it is by some
+distance the largest single allocator in the suite.
+
+A caution about isolated runs of this row. A `--only=ingest_commit` run
+reported 3 995 / 2 905 / 3 182 us — no trend at all, and the one-member case
+SLOWEST. That was JIT warm-up: `ingest_commit/1` runs first and pays for
+compiling the shared group builder. The monotonic full-suite numbers above are
+the trustworthy ones, which is the general rule here — prefer a full run, and
+distrust whichever row happens to go first.

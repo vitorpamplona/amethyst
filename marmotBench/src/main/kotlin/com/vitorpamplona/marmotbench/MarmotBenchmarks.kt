@@ -94,6 +94,64 @@ fun benchCreateGroup(invitees: Int): BenchResult =
         }
     }
 
+/**
+ * A group with [members] invitees already joined, at epoch 1.
+ *
+ * Built once per benchmark rather than per iteration where the operation under
+ * test does not consume it, because assembling a 32-member group costs more
+ * than everything being measured.
+ */
+private suspend fun groupWithMembers(members: Int): Triple<Client, List<Client>, HexKey> {
+    val alice = Client("alice")
+    val groupId = newGroupId()
+    alice.manager.createCurrentProfileGroup(groupId, listOf("wss://bench.invalid"), GroupProfileV1("bench", ""))
+    val invitees = (0 until members).map { Client("member-$it") }
+    if (invitees.isNotEmpty()) {
+        val kps = invitees.map { it.manager.generateKeyPackageEvent(relays = emptyList()) }
+        val (_, welcomes) = alice.manager.addMembers(groupId, kps, emptyList())
+        welcomes.forEach { delivery ->
+            invitees
+                .first { it.signer.pubKey == delivery.recipientPubKey }
+                .manager
+                .ingest(delivery.giftWrapEvent)
+        }
+    }
+    return Triple(alice, invitees, groupId)
+}
+
+/**
+ * `ingest_commit/N` — receiving someone else's Commit.
+ *
+ * Nothing in this suite measured this, and neither does MDK's. It is the one
+ * operation every member pays on every membership or settings change, and the
+ * one that genuinely scales with group size: the UpdatePath it carries has a
+ * node per level of the ratchet tree, so the receiver's cost grows with
+ * log2(N) HPKE opens on top of the tree bookkeeping.
+ *
+ * Setup produces a FRESH commit per iteration — the group is built once, then
+ * Alice changes the profile each time — because ingesting the same commit
+ * twice is a no-op and would measure the dedup path instead.
+ */
+fun benchIngestCommit(members: Int): BenchResult {
+    val (alice, invitees, groupId) =
+        runBlocking { groupWithMembers(members) }
+    val bob = invitees.first()
+    var round = 0
+    return measure(
+        name = "ingest_commit/$members members",
+        iterations = if (members >= 32) 40 else 100,
+        warmup = if (members >= 32) 10 else 30,
+        setup = {
+            runBlocking {
+                round++
+                alice.manager.setGroupProfile(groupId, "bench-$round", "", emptyList())
+            }
+        },
+    ) { commit ->
+        runBlocking { bob.manager.ingest(commit.signedEvent) }
+    }
+}
+
 /** `join_welcome` — MDK's `bench_join_welcome`. The invitee's side of the add. */
 fun benchJoinWelcome(): BenchResult =
     measure(
@@ -115,17 +173,28 @@ fun benchJoinWelcome(): BenchResult =
         runBlocking { bob.manager.ingest(wrap as GiftWrapEvent) }
     }
 
-/** `send_app_message` — MDK's `bench_app_message_send`. Encrypt + persist. */
-fun benchSendAppMessage(): BenchResult =
+/**
+ * `send_app_message/N` — MDK's `bench_app_message_send`. Encrypt + persist.
+ *
+ * Parameterised by group size, which the single-member version of this
+ * benchmark hid. The MLS half is O(1) in the member count — an application
+ * message is sealed under the sender's own ratchet and never touches the tree
+ * — but `MlsGroupManager.encrypt` calls `persistGroup`, and THAT serialises
+ * the whole group state, ratchet tree included, on every send. So the cost per
+ * message has a term that grows with the group while the cryptography does
+ * not, and a one-member number is the flattering one.
+ *
+ * A fresh group per iteration, as before: sending accumulates rows in the
+ * message store, and reusing one group would measure that growth instead.
+ */
+fun benchSendAppMessage(members: Int): BenchResult =
     measure(
-        name = "send_app_message",
-        iterations = 300,
-        warmup = 100,
+        name = "send_app_message/$members members",
+        iterations = if (members >= 32) 50 else 300,
+        warmup = if (members >= 32) 15 else 100,
         setup = {
             runBlocking {
-                val alice = Client("alice")
-                val groupId = newGroupId()
-                alice.manager.createCurrentProfileGroup(groupId, listOf("wss://bench.invalid"), GroupProfileV1("bench", ""))
+                val (alice, _, groupId) = groupWithMembers(members)
                 alice to groupId
             }
         },
@@ -133,23 +202,22 @@ fun benchSendAppMessage(): BenchResult =
         runBlocking { alice.manager.buildTextMessage(groupId, PAYLOAD) }
     }
 
-/** `ingest_app_message` — MDK's `bench_app_message_ingest`. Decrypt + persist. */
-fun benchIngestAppMessage(): BenchResult =
+/**
+ * `ingest_app_message/N` — MDK's `bench_app_message_ingest`. Decrypt + persist.
+ *
+ * Parameterised for the same reason as [benchSendAppMessage]: decryption is
+ * O(1) in the member count, but the receiver persists its group state too, and
+ * that is not.
+ */
+fun benchIngestAppMessage(members: Int): BenchResult =
     measure(
-        name = "ingest_app_message",
-        iterations = 200,
-        warmup = 60,
+        name = "ingest_app_message/$members members",
+        iterations = if (members >= 32) 50 else 200,
+        warmup = if (members >= 32) 15 else 60,
         setup = {
             runBlocking {
-                val alice = Client("alice")
-                val bob = Client("bob")
-                val groupId = newGroupId()
-                alice.manager.createCurrentProfileGroup(groupId, listOf("wss://bench.invalid"), GroupProfileV1("bench", ""))
-                val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
-                // A founding add publishes no commit, so there is no echo for
-                // Alice to re-ingest — the Welcome is the whole delivery.
-                val (_, welcome) = alice.manager.addMember(groupId, kp, emptyList())
-                bob.manager.ingest(welcome!!.giftWrapEvent)
+                val (alice, invitees, groupId) = groupWithMembers(members)
+                val bob = invitees.first()
                 val sent = alice.manager.buildTextMessage(groupId, PAYLOAD, persistOwn = false)
                 bob to sent.outbound.signedEvent
             }
@@ -173,8 +241,11 @@ private val ALL: List<Pair<String, () -> BenchResult>> =
         // the founding-only baseline, so the rows line up for comparison.
         listOf(0, 1, 8, 32).forEach { n -> add("create_group/$n" to { benchCreateGroup(n) }) }
         add("join_welcome" to { benchJoinWelcome() })
-        add("send_app_message" to { benchSendAppMessage() })
-        add("ingest_app_message" to { benchIngestAppMessage() })
+        // Group sizes on the message path, because its persistence cost scales
+        // with the member count even though its cryptography does not.
+        listOf(0, 1, 8, 32).forEach { n -> add("send_app_message/$n" to { benchSendAppMessage(n) }) }
+        listOf(1, 8, 32).forEach { n -> add("ingest_app_message/$n" to { benchIngestAppMessage(n) }) }
+        listOf(1, 8, 32).forEach { n -> add("ingest_commit/$n" to { benchIngestCommit(n) }) }
         addAll(primitiveBenchmarks())
     }
 
