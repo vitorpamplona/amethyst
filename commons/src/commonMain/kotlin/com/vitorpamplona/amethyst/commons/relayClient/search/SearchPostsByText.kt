@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.search
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.search.QueryParser
-import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
+import com.vitorpamplona.amethyst.commons.search.SearchPipeline
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
@@ -130,13 +130,13 @@ fun searchPostsByText(
     val query = QueryParser.parse(searchString)
     if (query.isEmpty) return emptyList()
 
-    // The window the query itself named, else the everything-we-can-render fallback. Without
-    // this a `kind:` chip drew on screen while the REQ still asked for all three groups — the
-    // field promising a narrowing that never reached the relay.
-    val kindGroups = query.kinds.takeIf { it.isNotEmpty() }?.let { listOf(it.toList()) } ?: SearchPostsByTextKindGroups
+    // One group when the query names its own window — SearchPipeline.filters lets a `kind:` win
+    // over the caller's fallback, so passing the groups here would be asking for a narrowing the
+    // pipeline has already decided against.
+    val kindGroups = if (query.kinds.isNotEmpty()) listOf(null) else SearchPostsByTextKindGroups
 
     return kindGroups.flatMap { kinds ->
-        SearchFilterBuilder.build(query, kinds, limit = 100).map { filter ->
+        SearchPipeline.filters(query, kinds, limit = 100).map { filter ->
             RelayBasedFilter(
                 relay = relay,
                 filter =

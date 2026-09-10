@@ -35,8 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
 import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
-import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
-import com.vitorpamplona.amethyst.commons.search.SearchResultSorter
+import com.vitorpamplona.amethyst.commons.search.SearchPipeline
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -45,7 +44,6 @@ import com.vitorpamplona.amethyst.commons.search.wholeInputNip19
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
@@ -408,61 +406,23 @@ class SearchBarViewModel(
                     // could actually be one, so an ordinary query never pays for two scans.
                     looksLikeAnEventId(term) -> LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
                     else ->
-                        LocalCache.search.findNotesMatching(
-                            // The kind window the query named, so a `kind:` chip narrows the
-                            // local results exactly as it narrows the relay's. Null asks every
-                            // kind, which is what a query naming none means.
-                            SearchFilterBuilder.build(parsed, parsed.kinds.takeIf { it.isNotEmpty() }?.toList(), limit = 200),
-                            account.hiddenUsers,
-                        )
+                        // The same filters the REQ carries. Built by the pipeline rather than
+                        // here, so the cache is asked exactly what the relays are asked.
+                        LocalCache.search.findNotesMatching(SearchPipeline.filters(parsed, limit = 200), account.hiddenUsers)
                 }
             val withDirect = (listOfNotNull(direct) + raw).distinctBy { it.idHex }
             val followed = if (follows != null) withDirect.filter { it.author?.pubkeyHex in follows } else withDirect
-            // `-term` and the `kind:reply`/`kind:media` pseudo-kinds cannot be asked of a relay —
-            // NIP-50 has no negation, and "is a reply" is a tag shape rather than an index — so
-            // they are applied over the results instead. Desktop has always done this; this
-            // screen never did, which left an exclusion the reader typed doing nothing at all.
-            val filtered = followed.filter { note -> note.event?.let { SearchResultFilter.matches(it, parsed) } != false }
 
-            // Sorted here rather than through SearchResultSorter.sortEvents because POPULAR ranks
-            // on a note's zap total, which a raw Event cannot see — the sorter says so itself and
-            // falls back to newest. RELEVANCE still borrows its scorer, so the two front ends rank
-            // the same way.
-            when (order) {
-                SearchSortOrder.POPULAR -> {
-                    filtered.sortedWith(
-                        compareByDescending<com.vitorpamplona.amethyst.commons.model.Note> { it.zapsAmount }
-                            .thenByDescending { it.createdAt() ?: 0L },
-                    )
-                }
-
-                SearchSortOrder.OLDEST -> {
-                    filtered.sortedBy { it.createdAt() ?: 0L }
-                }
-
-                SearchSortOrder.RELEVANCE -> {
-                    // Scored on the leftover terms, not the whole box: `from:npub1…` and
-                    // `kind:article` are filters, and looking for their literal text inside an
-                    // event's content ranks on noise. Blank leftovers mean the query is all
-                    // chips, and there is nothing to be more or less relevant to — newest then.
-                    val terms = parsed.text
-                    if (terms.isBlank()) {
-                        filtered.sortedByDefaultFeedOrder()
-                    } else {
-                        filtered.sortedByDescending { note ->
-                            note.event?.let { SearchResultSorter.scoreEvent(it, terms) } ?: 0.0
-                        }
-                    }
-                }
-
-                SearchSortOrder.NEWEST -> {
-                    filtered.sortedByDefaultFeedOrder()
-                }
-
-                else -> {
-                    filtered.sortedByDefaultFeedOrder()
-                }
-            }
+            // The post-filters and the ordering, in that order, from the one place that owns
+            // both. Doing it by hand here is what let `-term` and Relevance quietly do nothing:
+            // there was no sequence to be missing a step from.
+            SearchPipeline.narrowAndOrder(
+                items = followed,
+                query = parsed,
+                order = order,
+                event = { it.event },
+                zapTotal = { it.zapsAmount.toDouble() },
+            )
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 

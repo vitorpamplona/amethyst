@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.subscriptions
 
-import com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder
+import com.vitorpamplona.amethyst.commons.search.SearchPipeline
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -113,7 +113,9 @@ object SearchFilterFactory {
         limit: Int = 100,
     ): List<Filter> {
         if (query.isEmpty) return emptyList()
-        if (query.kinds.isNotEmpty()) return SearchFilterBuilder.build(query, query.kinds.toList(), limit)
-        return DEFAULT_KIND_GROUPS.flatMap { SearchFilterBuilder.build(query, it, limit) }
+        // SearchPipeline.filters lets the query's own `kind:` win over the window passed here, so
+        // a named kind collapses the fan-out to one group on its own.
+        if (query.kinds.isNotEmpty()) return SearchPipeline.filters(query, limit = limit)
+        return DEFAULT_KIND_GROUPS.flatMap { SearchPipeline.filters(query, it, limit) }
     }
 }
