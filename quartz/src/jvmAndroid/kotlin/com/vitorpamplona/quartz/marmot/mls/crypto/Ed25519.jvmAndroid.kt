@@ -131,10 +131,10 @@ actual object Ed25519 {
 
     private fun newPoint(): Array<LongArray> =
         arrayOf(
-            LongArray(16),
-            LongArray(16),
-            LongArray(16),
-            LongArray(16),
+            LongArray(10),
+            LongArray(10),
+            LongArray(10),
+            LongArray(10),
         )
 
     private fun identityPoint(): Array<LongArray> {
@@ -172,19 +172,16 @@ actual object Ed25519 {
      * step, so the loop allocates nothing.
      */
     private class PointAddScratch {
-        val a = LongArray(16)
-        val b = LongArray(16)
-        val c = LongArray(16)
-        val d = LongArray(16)
-        val e = LongArray(16)
-        val f = LongArray(16)
-        val g = LongArray(16)
-        val h = LongArray(16)
-        val t1 = LongArray(16)
-        val t2 = LongArray(16)
-
-        /** The 31-limb accumulator every [Curve25519Field.mulInto] here shares. */
-        val mulT = LongArray(31)
+        val a = LongArray(10)
+        val b = LongArray(10)
+        val c = LongArray(10)
+        val d = LongArray(10)
+        val e = LongArray(10)
+        val f = LongArray(10)
+        val g = LongArray(10)
+        val h = LongArray(10)
+        val t1 = LongArray(10)
+        val t2 = LongArray(10)
     }
 
     private fun addPointInPlace(
@@ -197,13 +194,13 @@ actual object Ed25519 {
         // be written back until these are done.
         Curve25519Field.subInto(s.a, p[1], p[0])
         Curve25519Field.subInto(s.t1, q[1], q[0])
-        Curve25519Field.mulInto(s.a, s.a, s.t1, s.mulT)
+        Curve25519Field.mulInto(s.a, s.a, s.t1)
         Curve25519Field.addInto(s.b, p[0], p[1])
         Curve25519Field.addInto(s.t2, q[0], q[1])
-        Curve25519Field.mulInto(s.b, s.b, s.t2, s.mulT)
-        Curve25519Field.mulInto(s.c, p[3], q[3], s.mulT)
-        Curve25519Field.mulInto(s.c, s.c, Curve25519Field.D2, s.mulT)
-        Curve25519Field.mulInto(s.d, p[2], q[2], s.mulT)
+        Curve25519Field.mulInto(s.b, s.b, s.t2)
+        Curve25519Field.mulInto(s.c, p[3], q[3])
+        Curve25519Field.mulInto(s.c, s.c, Curve25519Field.D2)
+        Curve25519Field.mulInto(s.d, p[2], q[2])
         Curve25519Field.addInto(s.d, s.d, s.d)
 
         Curve25519Field.subInto(s.e, s.b, s.a)
@@ -213,10 +210,10 @@ actual object Ed25519 {
 
         // Safe to write p now: e, f, g and h are scratch, so no later product
         // reads anything we are about to overwrite.
-        Curve25519Field.mulInto(p[0], s.e, s.f, s.mulT)
-        Curve25519Field.mulInto(p[1], s.h, s.g, s.mulT)
-        Curve25519Field.mulInto(p[2], s.g, s.f, s.mulT)
-        Curve25519Field.mulInto(p[3], s.e, s.h, s.mulT)
+        Curve25519Field.mulInto(p[0], s.e, s.f)
+        Curve25519Field.mulInto(p[1], s.h, s.g)
+        Curve25519Field.mulInto(p[2], s.g, s.f)
+        Curve25519Field.mulInto(p[3], s.e, s.h)
     }
 
     private fun negatePoint(p: Array<LongArray>): Array<LongArray> {
@@ -287,25 +284,7 @@ actual object Ed25519 {
         Curve25519Field.GF1.copyInto(p[2])
 
         val y2 = Curve25519Field.sqr(r)
-        val d =
-            Curve25519Field.gf(
-                0x78A3,
-                0x1359,
-                0x4DCA,
-                0x75EB,
-                0xD8AB,
-                0x4141,
-                0x0A4D,
-                0x0070,
-                0xE898,
-                0x7779,
-                0x4079,
-                0x8CC7,
-                0xFE73,
-                0x2B6F,
-                0x6CEE,
-                0x5203,
-            )
+        val d = Curve25519Field.D
         val num = Curve25519Field.sub(y2, Curve25519Field.GF1)
         val den = Curve25519Field.add(Curve25519Field.mul(d, y2), Curve25519Field.GF1)
         val denInv = Curve25519Field.inv25519(den)

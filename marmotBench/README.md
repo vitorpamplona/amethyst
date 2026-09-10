@@ -108,3 +108,64 @@ from 4.7x slower to about 3.7x — without changing a single protocol behaviour:
 the RFC 7748 / RFC 8032 vector suites, the HPKE tests and the full 4833-test
 quartz suite all pass unchanged, which is the point of keeping the allocating
 functions around to differentially test against.
+
+## Result: 10 limbs instead of 16
+
+The allocation work above left `create_group` still ~3.9x slower than MDK, and
+the primitive benchmarks said why: one X25519 scalar multiplication cost 541us,
+and `create_group/1` is about two dozen of them. Curve work *was* the operation.
+
+The cause was the representation, not the language. `Curve25519Field` used
+TweetNaCl's 16 limbs of radix 2^16, so a schoolbook field multiply spent 256
+limb products. SunEC's X25519 — also pure Java, same JIT, same machine — ran
+the same operation in 160us using ~26-bit limbs in 10 words, which is 100
+products. The ratio of products matched the ratio of times.
+
+So the field was rewritten to 10 limbs of radix 2^25.5, the layout ref10,
+curve25519-donna and SunEC all use: 100 products per multiply, 55 per square
+(each off-diagonal pair once, doubled), and a dedicated scalar multiply for the
+ladder's a24 constant instead of a general multiply against nine zero limbs.
+
+| primitive        | 16 limbs | 10 limbs | speedup |
+|------------------|----------|----------|---------|
+| `x25519_dh`      |  541us   |  121us   | 4.5x    |
+| `x25519_base`    |  535us   |  121us   | 4.4x    |
+| `ed25519_sign`   | 1018us   |  259us   | 3.9x    |
+| `ed25519_verify` | 2113us   |  536us   | 3.9x    |
+
+At 121us the scalar multiplication is now faster than SunEC's 160us, which is
+the useful sanity check on the result: it lands where a good managed-language
+implementation should, rather than somewhere suspiciously better.
+
+Against MDK, over the whole suite (both post-rewrite runs shown where they
+differ; `alloc/op` reproduces to four significant figures):
+
+| operation            | MDK (Rust) | quartz before | quartz now      | vs MDK       |
+|----------------------|------------|---------------|-----------------|--------------|
+| `create_group/1`     |  3.61 ms   | 16.93 ms      | 5.42 - 5.88 ms  | 1.5-1.6x slower |
+| `create_group/8`     |  9.93 ms   | 51.47 ms      | 17.27 - 17.60 ms| 1.8x slower  |
+| `create_group/32`    | 31.64 ms   | 190.08 ms     | 77.53 - 81.47 ms| 2.5x slower  |
+| `join_welcome`       |  4.77 ms   |  6.22 ms      | 1.82 - 2.00 ms  | **2.5x faster** |
+| `send_app_message`   |  4.28 ms   |  1.72 ms      | 0.61 - 0.71 ms  | **6.5x faster** |
+| `ingest_app_message` |  (n/a)     |  3.11 ms      | 0.88 - 0.90 ms  | —            |
+
+`create_group` remains the weakest row, and the shape difference in "What is
+compared" is part of why: we create at epoch 0 and add in a second commit,
+where MDK folds invitees into the founding group. `create_group/32` is also
+still the noisiest row in the suite.
+
+### Why the constants can be trusted
+
+Changing the representation re-encodes every curve constant, which is exactly
+the kind of change where a single mistyped limb produces code that still runs
+and is still wrong. None of them were transcribed by hand: each was re-derived
+from its existing 16-bit encoding and then checked against its mathematical
+definition — `d == -121665/121666`, `d2 == 2d`, `By == 4/5`, `I^2 == -1` — and
+the multiply and square formulas were generated from the representation's
+weight bookkeeping and diffed against an independent reference over 20 000
+random limb vectors before any Kotlin was written. The carry chain and the
+canonical encoder were validated the same way, including at `p`, `p-1`, and on
+non-canonical inputs such as `p` itself.
+
+The RFC 7748 and RFC 8032 vector suites, HPKE, the MDK crypto-interop vectors
+and the full quartz + commons suites all pass unchanged.

@@ -82,17 +82,16 @@ actual object X25519 {
         // operation in the loop writes into one of these, so 255 iterations
         // allocate nothing at all — where the allocating form produced a fresh
         // element per operation, about 1.3 MB of garbage per call.
-        val e = LongArray(16)
-        val f = LongArray(16)
-        val g = LongArray(16)
-        val h = LongArray(16)
-        val dd = LongArray(16)
-        val ff = LongArray(16)
-        val da = LongArray(16)
-        val cb = LongArray(16)
-        val cc = LongArray(16)
-        val tmp = LongArray(16)
-        val t = LongArray(31)
+        val e = LongArray(10)
+        val f = LongArray(10)
+        val g = LongArray(10)
+        val h = LongArray(10)
+        val dd = LongArray(10)
+        val ff = LongArray(10)
+        val da = LongArray(10)
+        val cb = LongArray(10)
+        val cc = LongArray(10)
+        val tmp = LongArray(10)
 
         for (i in 254 downTo 0) {
             val r = ((z[i shr 3].toLong() shr (i and 7)) and 1)
@@ -106,25 +105,25 @@ actual object X25519 {
             Curve25519Field.addInto(f, b, d)
             Curve25519Field.subInto(h, b, d)
 
-            Curve25519Field.sqrInto(dd, e, t)
-            Curve25519Field.sqrInto(ff, g, t)
-            Curve25519Field.mulInto(da, h, e, t)
-            Curve25519Field.mulInto(cb, f, g, t)
+            Curve25519Field.sqrInto(dd, e)
+            Curve25519Field.sqrInto(ff, g)
+            Curve25519Field.mulInto(da, h, e)
+            Curve25519Field.mulInto(cb, f, g)
 
             // e := da + cb and g := da - cb. Reusing e and g is safe: both
             // held inputs to the four products above, which are now computed.
             Curve25519Field.addInto(e, da, cb)
             Curve25519Field.subInto(g, da, cb)
 
-            Curve25519Field.sqrInto(b, e, t)
-            Curve25519Field.sqrInto(g, g, t)
-            Curve25519Field.mulInto(d, g, x, t)
+            Curve25519Field.sqrInto(b, e)
+            Curve25519Field.sqrInto(g, g)
+            Curve25519Field.mulInto(d, g, x)
 
-            Curve25519Field.mulInto(a, dd, ff, t)
+            Curve25519Field.mulInto(a, dd, ff)
             Curve25519Field.subInto(cc, dd, ff)
-            Curve25519Field.mulInto(tmp, cc, Curve25519Field.A24, t)
+            Curve25519Field.mulA24Into(tmp, cc)
             Curve25519Field.addInto(tmp, dd, tmp)
-            Curve25519Field.mulInto(c, cc, tmp, t)
+            Curve25519Field.mulInto(c, cc, tmp)
 
             Curve25519Field.sel25519(a, b, r)
             Curve25519Field.sel25519(c, d, r)
@@ -132,8 +131,8 @@ actual object X25519 {
 
         // c := 1/c, then a := a/c. `tmp` is free again and serves as the
         // inversion's scratch element.
-        Curve25519Field.inv25519Into(c, c, tmp, t)
-        Curve25519Field.mulInto(a, a, c, t)
+        Curve25519Field.inv25519Into(c, c, tmp)
+        Curve25519Field.mulInto(a, a, c)
         return Curve25519Field.pack25519(a)
     }
 }
