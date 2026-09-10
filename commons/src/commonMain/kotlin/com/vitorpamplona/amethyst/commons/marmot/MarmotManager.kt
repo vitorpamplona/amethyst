@@ -759,6 +759,7 @@ class MarmotManager(
         // immediately satisfied. Every LATER commit takes the normal
         // publish-before-apply path.
         publishGate.satisfyEmptyObligation(nostrGroupId)
+        recordRetentionForCurrentEpoch(nostrGroupId)
         inboundProcessor.trackGroup(nostrGroupId)
         subscriptionManager.subscribeGroup(nostrGroupId)
         Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
@@ -800,6 +801,7 @@ class MarmotManager(
         // Same empty-obligation exception as [createGroup]: a one-member
         // epoch-0 group has no peer that failure to publish could fork.
         publishGate.satisfyEmptyObligation(nostrGroupId)
+        recordRetentionForCurrentEpoch(nostrGroupId)
         inboundProcessor.trackGroup(nostrGroupId)
         subscriptionManager.subscribeGroup(nostrGroupId)
         return nostrGroupId
@@ -891,6 +893,7 @@ class MarmotManager(
             // derived rows a peer's commit would. The actor is known here in a
             // way it is not for an inbound commit, which is what lets a
             // self-removal read as "left" rather than "removed".
+            recordRetentionForCurrentEpoch(nostrGroupId)
             syncGroupSystemRows(nostrGroupId, actor = signer.pubKey)
         } else {
             Log.w("MarmotManager") {
@@ -1101,7 +1104,7 @@ class MarmotManager(
             // Pinned here, at the moment the message enters the log, because
             // this is the last point at which the retention of its delivering
             // epoch is still the group's current retention.
-            parsed?.let { pinExpiry(nostrGroupId, it) }
+            parsed?.let { pinExpiry(nostrGroupId, it, epoch) }
         } catch (e: Exception) {
             Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId", e)
         }
@@ -1285,13 +1288,56 @@ class MarmotManager(
     private suspend fun pinExpiry(
         nostrGroupId: HexKey,
         innerEvent: Event,
+        sourceEpoch: Long?,
     ) {
-        val seconds = retentionSeconds(nostrGroupId)
+        val seconds = retentionForEpoch(nostrGroupId, sourceEpoch)
         if (seconds <= 0L) return
         try {
             messageStore?.recordExpiry(nostrGroupId, innerEvent.id, innerEvent.createdAt + seconds)
         } catch (e: Exception) {
             Log.w("MarmotManager", "Failed to pin expiry for ${innerEvent.id} in $nostrGroupId", e)
+        }
+    }
+
+    /**
+     * The retention that applied at [sourceEpoch] — the epoch that DELIVERED
+     * the message — falling back to the group's current value.
+     *
+     * The distinction only shows up on a message decrypted late: a retained
+     * candidate, or a replay after a restart, arrives under an epoch the group
+     * has since moved past. Pinning it to today's setting is exactly what the
+     * component forbids, so the recorded history wins whenever it has an entry
+     * for that epoch. The fallback is not a shrug — a group whose setting never
+     * changed has one value at every epoch, and that is the overwhelmingly
+     * common case.
+     */
+    private suspend fun retentionForEpoch(
+        nostrGroupId: HexKey,
+        sourceEpoch: Long?,
+    ): Long {
+        if (sourceEpoch != null) {
+            try {
+                messageStore?.loadEpochRetentions(nostrGroupId)?.get(sourceEpoch)?.let { return it }
+            } catch (e: Exception) {
+                Log.w("MarmotManager", "Failed to read epoch retentions for $nostrGroupId", e)
+            }
+        }
+        return retentionSeconds(nostrGroupId)
+    }
+
+    /**
+     * Write down what this group's retention is at its current epoch.
+     *
+     * Called wherever the epoch may just have advanced, so the history has an
+     * entry before any message delivered under that epoch needs one.
+     */
+    suspend fun recordRetentionForCurrentEpoch(nostrGroupId: HexKey) {
+        val store = messageStore ?: return
+        val epoch = currentEpoch(nostrGroupId) ?: return
+        try {
+            store.recordEpochRetention(nostrGroupId, epoch, retentionSeconds(nostrGroupId))
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to record retention at epoch $epoch for $nostrGroupId", e)
         }
     }
 

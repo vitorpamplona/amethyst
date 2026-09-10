@@ -140,6 +140,28 @@ interface MarmotMessageStore {
     suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> = emptyMap()
 
     /**
+     * Remember the retention this group required AT [epoch].
+     *
+     * Kept because a message pins the retention of its own source epoch, and
+     * the source epoch is not always the current one: a kind:445 held back as a
+     * retained candidate, or replayed after a restart, is decrypted under an
+     * epoch the group has since moved past. Without this history such a message
+     * would be pinned to whatever the setting happens to be at decrypt time —
+     * which is the one thing the component says must not happen.
+     *
+     * Small and append-only: one entry per epoch that changed it, not one per
+     * message.
+     */
+    suspend fun recordEpochRetention(
+        nostrGroupId: String,
+        epoch: Long,
+        retentionSecs: Long,
+    ) = Unit
+
+    /** MLS epoch → the retention it required, for what was recorded. */
+    suspend fun loadEpochRetentions(nostrGroupId: String): Map<Long, Long> = emptyMap()
+
+    /**
      * Delete these messages, and any expiry recorded for them, permanently.
      *
      * The deletion is the feature: a disappearing message that is merely

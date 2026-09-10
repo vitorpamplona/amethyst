@@ -776,6 +776,7 @@ class GroupEventHandler(
                     // row is derived from. Deriving here covers OTHER members'
                     // commits; our own are derived by `commitAndPublish`. Both
                     // reach the feed through `onSystemRowDerived`.
+                    manager.recordRetentionForCurrentEpoch(result.groupId)
                     manager.syncGroupSystemRows(result.groupId)
                     // Epoch just advanced — drain any kind:445 events that
                     // previously failed as UndecryptableOuterLayer for this

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -37,6 +38,21 @@ object GroupCreateCommand {
         val args = Args(rest)
         val name = args.flag("name", "")!!
         val legacy = args.bool("legacy")
+        // Disappearing messages (`marmot.group.message-retention.v1`, 0x8005).
+        // Fixed at creation: promoting a component to required later needs its
+        // state installed first, which is a second commit this command does not
+        // make.
+        val disappearing = args.flag("disappearing-secs", "")!!
+        val disappearingSecs =
+            if (disappearing.isEmpty()) {
+                null
+            } else {
+                disappearing.toULongOrNull()?.takeIf { it > 0uL }
+                    ?: return Output.error(
+                        "bad_args",
+                        "--disappearing-secs must be a positive whole number of seconds",
+                    )
+            }
         args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -53,13 +69,23 @@ object GroupCreateCommand {
                 // so later invitees receive a pre-populated group from the
                 // welcome and never have to chase an undecryptable bootstrap
                 // commit that predates their membership.
+                // The legacy blob only carries `disappearing_message_secs`
+                // from v3 on, so asking for it bumps the version — v1/v2 stays
+                // byte-for-byte what MDK's older parser accepts.
                 val metadata =
-                    MarmotGroupData.bootstrap(
-                        nostrGroupId = gid,
-                        creatorPubKey = ctx.identity.pubKeyHex,
-                        outboxRelays = outboxUrls,
-                        name = name,
-                    )
+                    MarmotGroupData
+                        .bootstrap(
+                            nostrGroupId = gid,
+                            creatorPubKey = ctx.identity.pubKeyHex,
+                            outboxRelays = outboxUrls,
+                            name = name,
+                        ).let {
+                            if (disappearingSecs == null) {
+                                it
+                            } else {
+                                it.copy(disappearingMessageSecs = disappearingSecs, version = 3)
+                            }
+                        }
                 ctx.marmot.createGroup(gid, initialMetadata = metadata)
             } else {
                 // Current profile by default. The difference is what the group
@@ -72,6 +98,7 @@ object GroupCreateCommand {
                     nostrGroupId = gid,
                     relays = outboxUrls,
                     profile = if (name.isEmpty()) null else GroupProfileV1(name, ""),
+                    retention = disappearingSecs?.let { MessageRetentionV1(it) },
                 )
             }
 

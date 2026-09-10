@@ -112,7 +112,7 @@ class AndroidMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             writeMutex.withLock {
-                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId))) {
+                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId))) {
                     if (file.exists() && !file.delete()) {
                         Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
                     }
@@ -242,6 +242,49 @@ class AndroidMarmotMessageStore(
             }
         }
     }
+
+    private fun epochRetentionsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epoch_retentions")
+
+    /**
+     * What retention this group required at each epoch.
+     *
+     * First write wins per epoch: an epoch's required components are fixed the
+     * moment it exists, so a second answer for the same epoch would be a bug
+     * rather than an update.
+     */
+    override suspend fun recordEpochRetention(
+        nostrGroupId: String,
+        epoch: Long,
+        retentionSecs: Long,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            try {
+                val existing = readAllFrom(epochRetentionsFile(nostrGroupId)).toMutableList()
+                if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
+                existing.add("$epoch $retentionSecs")
+                writeAllTo(epochRetentionsFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordEpochRetention($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadEpochRetentions(nostrGroupId: String): Map<Long, Long> =
+        withContext(Dispatchers.IO) {
+            try {
+                readAllFrom(epochRetentionsFile(nostrGroupId))
+                    .mapNotNull { line ->
+                        val parts = line.trim().split(' ')
+                        if (parts.size != 2) return@mapNotNull null
+                        val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
+                        val secs = parts[1].toLongOrNull() ?: return@mapNotNull null
+                        epoch to secs
+                    }.toMap()
+            } catch (e: Exception) {
+                Log.e(TAG, "loadEpochRetentions($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
 
     private fun snapshotFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "snapshot")
 

@@ -30,6 +30,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -234,5 +235,71 @@ class MarmotRetentionTest {
                 setOf(sent.innerEvent.id),
                 f.manager.pruneExpiredMessages(nostrGroupId, sent.innerEvent.createdAt + 121),
             )
+        }
+
+    @Test
+    fun `a message delivered under an older epoch keeps that epoch's retention`() =
+        runBlocking {
+            // The case the fallback used to get wrong. A kind:445 held back as
+            // a retained candidate is decrypted under an epoch the group has
+            // since moved past; pinning it to today's setting is exactly what
+            // the component forbids.
+            val f = Fixture()
+            f.createGroup(60uL)
+            val epochZero = assertNotNull(f.manager.currentEpoch(nostrGroupId))
+
+            f.manager.updateGroupMetadata(
+                nostrGroupId,
+                MarmotGroupData(
+                    nostrGroupId = nostrGroupId,
+                    name = "retention",
+                    relays = listOf("wss://relay.invalid"),
+                    disappearingMessageSecs = 86_400uL,
+                    version = 3,
+                ),
+            )
+            assertEquals(86_400L, f.manager.retentionSeconds(nostrGroupId))
+            assertTrue(f.manager.currentEpoch(nostrGroupId)!! > epochZero, "the rename must advance the epoch")
+
+            // Arrives now, but was delivered by the epoch that still said 60s.
+            val late =
+                Event(
+                    id = "2".repeat(64),
+                    pubKey = f.signer.pubKey,
+                    createdAt = TimeUtils.now(),
+                    kind = 9,
+                    tags = emptyArray(),
+                    content = "decrypted late",
+                    sig = "",
+                )
+            f.manager.persistDecryptedMessage(nostrGroupId, late.toJson(), epoch = epochZero)
+
+            assertEquals(
+                late.createdAt + 60,
+                f.messageStore.loadExpiries(nostrGroupId)[late.id],
+                "a late message must keep its source epoch's retention, not the current one",
+            )
+        }
+
+    @Test
+    fun `an unknown epoch falls back to the current retention`() =
+        runBlocking {
+            // Not a shrug: a group whose setting never changed has one value at
+            // every epoch, and that is the overwhelmingly common case.
+            val f = Fixture()
+            f.createGroup(60uL)
+            val orphan =
+                Event(
+                    id = "3".repeat(64),
+                    pubKey = f.signer.pubKey,
+                    createdAt = TimeUtils.now(),
+                    kind = 9,
+                    tags = emptyArray(),
+                    content = "no history for this epoch",
+                    sig = "",
+                )
+            f.manager.persistDecryptedMessage(nostrGroupId, orphan.toJson(), epoch = 9_999L)
+
+            assertEquals(orphan.createdAt + 60, f.messageStore.loadExpiries(nostrGroupId)[orphan.id])
         }
 }

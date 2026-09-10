@@ -155,6 +155,7 @@ class FileMarmotMessageStore(
         epochFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message epochs")
         snapshotFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group system-row baseline")
         expiryFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message expiries")
+        epochRetentionFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group epoch retentions")
     }
 
     private fun snapshotFile(id: String) = File(dir, "$id.snapshot")
@@ -218,6 +219,32 @@ class FileMarmotMessageStore(
             SecureFileIO.writeBytesAtomic(expiries, (kept.joinToString("\n") + if (kept.isEmpty()) "" else "\n").encodeToByteArray())
         }
     }
+
+    private fun epochRetentionFile(id: String) = File(dir, "$id.epoch-retentions")
+
+    /** First write wins: an epoch's required components are fixed once it exists. */
+    override suspend fun recordEpochRetention(
+        nostrGroupId: String,
+        epoch: Long,
+        retentionSecs: Long,
+    ) {
+        val target = epochRetentionFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it.substringBefore(' ') == epoch.toString() }) return
+        SecureFileIO.appendText(target, "$epoch $retentionSecs\n")
+    }
+
+    override suspend fun loadEpochRetentions(nostrGroupId: String): Map<Long, Long> =
+        epochRetentionFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
+                val secs = parts[1].toLongOrNull() ?: return@mapNotNull null
+                epoch to secs
+            }?.toMap()
+            ?: emptyMap()
 
     private fun epochFile(id: String) = File(dir, "$id.epochs")
 

@@ -69,6 +69,7 @@ class SnapshotMessageStore : MarmotMessageStore {
     private val messages = mutableMapOf<String, MutableList<String>>()
     private val snapshots = mutableMapOf<String, String>()
     private val expiries = mutableMapOf<String, MutableMap<String, Long>>()
+    private val epochRetentions = mutableMapOf<String, MutableMap<Long, Long>>()
 
     override suspend fun appendMessage(
         nostrGroupId: String,
@@ -84,6 +85,7 @@ class SnapshotMessageStore : MarmotMessageStore {
         messages.remove(nostrGroupId)
         snapshots.remove(nostrGroupId)
         expiries.remove(nostrGroupId)
+        epochRetentions.remove(nostrGroupId)
     }
 
     override suspend fun recordGroupSnapshot(
@@ -115,6 +117,16 @@ class SnapshotMessageStore : MarmotMessageStore {
         messages[nostrGroupId]?.removeAll { json -> Event.fromJsonOrNull(json)?.id in innerEventIds }
         expiries[nostrGroupId]?.keys?.removeAll(innerEventIds)
     }
+
+    override suspend fun recordEpochRetention(
+        nostrGroupId: String,
+        epoch: Long,
+        retentionSecs: Long,
+    ) {
+        epochRetentions.getOrPut(nostrGroupId) { mutableMapOf() }.putIfAbsent(epoch, retentionSecs)
+    }
+
+    override suspend fun loadEpochRetentions(nostrGroupId: String): Map<Long, Long> = epochRetentions[nostrGroupId]?.toMap() ?: emptyMap()
 }
 
 class SnapshotBundleStore : KeyPackageBundleStore {

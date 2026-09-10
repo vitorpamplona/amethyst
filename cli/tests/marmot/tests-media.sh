@@ -342,3 +342,65 @@ test_25_media_v2_wn_to_amy() {
     record_result "$id" fail "amy decrypted different bytes than wn sent"
   fi
 }
+
+# --- 26: disappearing messages ------------------------------------------------
+# `marmot.group.message-retention.v1` (0x8005) has the nastiest encoding in the
+# component set: eight big-endian bytes with NO length prefix, unlike almost
+# every other Marmot field, and MIP-01 spelled it differently. Nothing else
+# proves MDK accepts a GroupContext that REQUIRES it with our bytes — and if it
+# does not, the failure is not cosmetic: wn cannot read the group at all.
+#
+# One-directional on purpose. `wn` has no command that sets retention
+# (`wn groups` is list/create/show/add-members/remove-members/members/admins/
+# relays/leave/rename/set-avatar-url), so the reverse direction is untestable
+# here. The encode side is the one that can be wrong anyway. What amy DOES with
+# the expiry once it holds one is unit-tested in `MarmotRetentionTest`; this is
+# purely "does the other implementation accept and read what we wrote".
+test_26_retention_amy_to_wn() {
+  banner "Test 26 — amy creates a group with disappearing messages; wn reads the policy"
+  local id="26 retention amy->wn"
+
+  local want=3600
+  local out gid mls_gid
+  out=$(amy_json marmot group create --name "Interop-Retention" --disappearing-secs "$want") || {
+    record_result "$id" fail "amy group create --disappearing-secs failed"; return
+  }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  if [[ -z "$gid" || "$gid" == "null" ]]; then
+    record_result "$id" fail "amy reported no group id"; return
+  fi
+
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || {
+    record_result "$id" fail "amy could not invite wn"; return
+  }
+
+  # The Welcome is the real assertion: a group requiring a component wn cannot
+  # decode is a group wn refuses to join.
+  local b_gid
+  b_gid=$(wait_for_invite B 60) || {
+    record_result "$id" fail "wn never received a Welcome for a group requiring 0x8005"; return
+  }
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+
+  # wn's CLI `group_json` does not surface the retention value — it is on the
+  # uniffi group struct the apps consume, not this surface — so the assertion
+  # is acceptance rather than read-back. That is still the encoding test: the
+  # group REQUIRES 0x8005, and a required component whose bytes wn cannot
+  # decode makes the group unreadable, so `groups show` returning it at all
+  # means our eight big-endian bytes parsed.
+  if ! wn_group_field_becomes "$mls_gid" '.group.group_id // empty' "$mls_gid" 120; then
+    record_result "$id" fail "wn never surfaced a group that requires 0x8005"; return
+  fi
+
+  # And the group still works: a required component that decodes but breaks
+  # messaging would pass the check above and still be useless.
+  wn_b messages send "$mls_gid" "retention round trip" >/dev/null 2>&1 || {
+    record_result "$id" fail "wn could not send into the retention group"; return
+  }
+  if amy_json marmot await message "$gid" --match "retention round trip" --timeout 90 >/dev/null; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "amy never received wn's message in the retention group"
+  fi
+}

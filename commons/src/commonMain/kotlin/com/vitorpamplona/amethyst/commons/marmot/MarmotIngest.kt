@@ -143,6 +143,7 @@ private suspend fun MarmotManager.ingestGiftWrapUncached(wrap: GiftWrapEvent): M
                 // writing any: a joiner announcing every existing member as
                 // newly added would be a timeline full of events that never
                 // happened.
+                recordRetentionForCurrentEpoch(result.nostrGroupId)
                 syncGroupSystemRows(result.nostrGroupId)
                 MarmotIngestResult.JoinedGroup(
                     nostrGroupId = result.nostrGroupId,
@@ -180,6 +181,7 @@ private suspend fun MarmotManager.ingestGroupEvent(ge: GroupEvent): MarmotIngest
             // kind:1210 row is derived from. Deriving here rather than at
             // render time means the rows land in the same log as the messages
             // they sit between, in the order they happened.
+            recordRetentionForCurrentEpoch(result.groupId)
             syncGroupSystemRows(result.groupId)
             MarmotIngestResult.Commit(result)
         }
