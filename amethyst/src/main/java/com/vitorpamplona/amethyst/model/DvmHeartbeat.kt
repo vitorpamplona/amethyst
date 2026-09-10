@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -33,3 +35,20 @@ fun LocalCache.hasFreshDvmHeartbeat(
     appDef: AppDefinitionEvent,
     now: Long = TimeUtils.now(),
 ): Boolean = dvmHeartbeatOf(appDef)?.isFreshAt(now) == true
+
+/**
+ * Every cached content-discovery announcement, WITHOUT the freshness gate — this is the source the
+ * heartbeat outbox fetcher must use. Sourcing from the gated feed list would drop a DVM the moment
+ * its beat went stale, remove it from the fetch batch, and make the drop permanent (the fetcher
+ * could only ever help DVMs that were already visible). Applies the gate's other eligibility
+ * checks (a real content-discovery DVM, not a paid subscription app), newest first, capped.
+ */
+fun LocalCache.cachedDvmAnnouncements(limit: Int = 100): List<AppDefinitionEvent> =
+    addressables
+        .filterIntoSet(AppDefinitionEvent.KIND) { _, note ->
+            (note.event as? AppDefinitionEvent)?.let {
+                it.appMetaData()?.subscription != true && it.includeKind(NIP90ContentDiscoveryRequestEvent.KIND)
+            } == true
+        }.mapNotNull { it.event as? AppDefinitionEvent }
+        .sortedByDescending { it.createdAt }
+        .take(limit)

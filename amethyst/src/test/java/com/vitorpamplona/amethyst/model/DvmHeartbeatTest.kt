@@ -120,4 +120,51 @@ class DvmHeartbeatTest {
     fun noHeartbeatMeansNoLiveness() {
         assertFalse(LocalCache.hasFreshDvmHeartbeat(appDef("dvm-never"), TimeUtils.now()))
     }
+
+    @Test
+    fun theUngatedAnnouncementScanKeepsDvmsTheGateWouldHide() {
+        // The outbox fetcher must source announcements from the cache, NOT from the gated feed
+        // list: a DVM dropped for a stale beat must keep receiving outbox beats or it can never
+        // come back. Subscription apps and non-content-discovery apps stay excluded.
+        val alive = appDef("scan-dvm")
+        val subscriptionApp =
+            AppDefinitionEvent(
+                id = "c0".repeat(32),
+                pubKey = "ab".repeat(32),
+                createdAt = 1_760_000_500L,
+                tags = arrayOf(arrayOf("d", "subs"), arrayOf("k", "5300")),
+                content = """{"name":"Paid","subscription":true}""",
+                sig = "cc".repeat(64),
+            )
+        val nonDiscoveryApp =
+            AppDefinitionEvent(
+                id = "c1".repeat(32),
+                pubKey = "cb".repeat(32),
+                createdAt = 1_760_000_100L,
+                tags = arrayOf(arrayOf("d", "other"), arrayOf("k", "9999")),
+                content = """{"name":"Other"}""",
+                sig = "cc".repeat(64),
+            )
+
+        LocalCache.justConsume(appDef("dvm-x"), null, true)
+        LocalCache.justConsume(nonDiscoveryApp, null, true)
+        val consumed =
+            AppDefinitionEvent(
+                id = "c2".repeat(32),
+                pubKey = appDefPubKey,
+                createdAt = 1_760_000_000L,
+                tags = arrayOf(arrayOf("d", "subs2"), arrayOf("k", "5300")),
+                content = """{"name":"Paid2","subscription":true}""",
+                sig = "cc".repeat(64),
+            )
+        LocalCache.justConsume(consumed, null, true)
+
+        val scanned = LocalCache.cachedDvmAnnouncements()
+
+        assertTrue("dvm-x is not yet visible (no beat) but must still be sourced", scanned.any { it.dTag() == "dvm-x" })
+        assertFalse("subscription apps are not content-discovery DVMs", scanned.any { it.dTag() == "subs" })
+        assertFalse("k=9999 apps are not content-discovery DVMs", scanned.any { it.dTag() == "other" })
+        assertEquals("newest-first so the cap keeps the most relevant announcements", scanned.sortedByDescending { it.createdAt }, scanned)
+        assertTrue("capped", scanned.size <= 100)
+    }
 }

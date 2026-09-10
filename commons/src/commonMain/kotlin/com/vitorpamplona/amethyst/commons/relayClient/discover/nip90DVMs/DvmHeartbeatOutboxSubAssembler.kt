@@ -20,13 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs
 
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedSubAssembler
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -34,11 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 
 /** How many DVM outbox relays the fetcher may open at once; coverage-ranked, so the top relays carry most authors. */
 private const val MAX_OUTBOX_RELAYS = 12
@@ -94,47 +89,50 @@ fun dvmHeartbeatOutboxFilters(
 }
 
 /**
- * The discovery-side subscription that runs [dvmHeartbeatOutboxFilters] for the DVM list's current
- * announcement set, alive while the Discover screen is composed (it joins the same assembler group
- * and lifecycle as the other discovery sub-assemblers).
+ * Cache-backed inputs the outbox fetcher needs, provided by the front end (the cache query and
+ * relay-hint surface are platform caches, not commons).
  *
- * Re-issues when the DVM list's membership changes: [FeedState.Loaded] reuses its wrapper, so the
- * invalidator unwraps to the inner feed flow, which emits on every real list change. No floor
- * collectors ([floors] is empty) — the announcement set is the driver, not note timestamps.
+ * [announcements] MUST be the ungated announcement set (every cached content-discovery DVM). The
+ * gated feed list would turn any transient staleness into a permanent drop: a DVM leaves the
+ * gated list the moment its beat ages out, the fetcher would stop covering it, and no beat would
+ * ever arrive to bring it back.
+ *
+ * [outboxRelaysFor] resolves where a DVM publishes its beats — NIP-65 outbox relays plus any
+ * relay hints for the author (the same mix the event finder uses).
+ *
+ * [changes] drive re-issues: when the cached announcement set or the outbox data moves, the
+ * batches are recomputed.
+ */
+class DvmHeartbeatSources(
+    val announcements: () -> List<AppDefinitionEvent>,
+    val outboxRelaysFor: (HexKey) -> Collection<NormalizedRelayUrl>,
+    val changes: List<Flow<*>>,
+)
+
+/**
+ * The discovery-side subscription that runs [dvmHeartbeatOutboxFilters] for the cached
+ * announcement set, alive while the Discover screen is composed (it joins the same assembler
+ * group and lifecycle as the other discovery sub-assemblers).
+ *
+ * No floor collectors ([floors] is empty) — the announcement set and outbox data ([changes]) are
+ * the drivers, not note timestamps.
  */
 class DiscoveryDvmHeartbeatSubAssembler(
     client: INostrClient,
-    private val cache: ICacheProvider,
     allKeys: () -> Set<DiscoveryQueryState>,
+    private val sources: DvmHeartbeatSources,
 ) : TopNavFeedSubAssembler<DiscoveryQueryState>(client, allKeys) {
     override fun updateFilter(
         key: DiscoveryQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> {
-        val announcements =
-            (key.dvms.feedContent.value as? FeedState.Loaded)
-                ?.feed
-                ?.value
-                ?.list
-                ?.mapNotNull { it.event as? AppDefinitionEvent }
-                .orEmpty()
-
-        return dvmHeartbeatOutboxFilters(
-            announcements,
-            outboxRelaysFor = { pubkey ->
-                cache.getUserIfExists(pubkey)?.outboxRelays().orEmpty()
-            },
+    ): List<RelayBasedFilter> =
+        dvmHeartbeatOutboxFilters(
+            sources.announcements(),
+            outboxRelaysFor = sources.outboxRelaysFor,
             now = TimeUtils.now(),
         )
-    }
 
     override fun floors(key: DiscoveryQueryState): List<StateFlow<Long?>> = emptyList()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override fun extraInvalidators(key: DiscoveryQueryState): List<Flow<*>> =
-        listOf(
-            key.dvms.feedContent.flatMapLatest { state ->
-                (state as? FeedState.Loaded)?.feed ?: flowOf(null)
-            },
-        )
+    override fun extraInvalidators(key: DiscoveryQueryState): List<Flow<*>> = sources.changes
 }

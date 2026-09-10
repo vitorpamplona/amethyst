@@ -102,12 +102,19 @@ the session-scoped watcher for pinned DVMs. Traffic is negligible (a few pinned 
 reach the *user's* discovery relays — but DVMs publish beats to their own write relays, and
 relays don't gossip, so alive DVMs whose beats never overlap the user's relay set stayed
 invisible (their detail screens proved the beats existed on the outbox). `DiscoveryDvmHeartbeatSubAssembler`
-joins the discovery assembler group and, while Discover is composed, batches the DVM list's
-announcement authors per **DVM outbox relay** (`kinds = [11998], authors = [those pubkeys],
-since = now - 420`, coverage-ranked and capped at 12 relays; authors with unknown outboxes
-rely on the global REQ as fallback). It re-issues when the DVM list's membership changes and
-unwraps `FeedState.Loaded` to the inner feed flow (the wrapper is reused, so only the inner
-flow emits real list changes).
+joins the discovery assembler group and, while Discover is composed, batches the cached
+content-discovery announcements' authors per **DVM outbox relay** (`kinds = [11998],
+authors = [those pubkeys], since = now - 420`, coverage-ranked and capped at 12 relays;
+authors with unknown outboxes/hints rely on the global REQ as fallback). It re-issues when
+the cached announcement set or the NIP-65 relay lists move.
+
+The announcement source MUST be the **ungated cache scan**
+(`LocalCache.cachedDvmAnnouncements` — every cached k=5300 announcement, newest first, capped
+at 100), not the gated feed list. Sourcing from the gated list is a death spiral: a DVM
+leaves the gated list the moment its beat ages out, the fetcher would stop covering it, and
+no beat would ever arrive to bring it back — any transient staleness becomes a permanent
+drop. The relay lookup unions the author's NIP-65 outbox with the cached relay hints for the
+author (the same mix the event finder's `potentialRelaysToFindAddress` uses).
 
 ## 6. Invalidation — closing the two silent gaps
 
