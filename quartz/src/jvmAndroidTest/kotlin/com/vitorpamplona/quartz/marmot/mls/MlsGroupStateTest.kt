@@ -300,6 +300,48 @@ class MlsGroupStateTest {
     }
 
     /**
+     * The upgrade case that matters right now: a blob written by the build
+     * people are running today (STATE_VERSION 3) must still load.
+     *
+     * v4 only APPENDS the staged-proposal pool, so for a group with nothing
+     * staged that section is exactly one uint32 zero — which makes a genuine v3
+     * blob obtainable by stripping those four bytes and moving the version word
+     * back. That is byte-for-byte what the previous build would have written,
+     * rather than a re-implementation of the old encoder that could drift from
+     * it.
+     */
+    @Test
+    fun testDecodeV3StateBlobWrittenByThePreviousBuild() {
+        val group = MlsGroup.create("alice".encodeToByteArray())
+        group.encrypt("advance the ratchet".encodeToByteArray())
+        val state = group.saveState()
+        assertTrue(state.pendingProposals.isEmpty(), "nothing staged, so the v4 section is just a zero count")
+
+        val v4Bytes = state.encodeTls()
+        val tail = v4Bytes.copyOfRange(v4Bytes.size - 4, v4Bytes.size)
+        assertContentEquals(byteArrayOf(0, 0, 0, 0), tail, "the empty staged-proposal pool is a uint32 zero")
+
+        val v3Bytes = v4Bytes.copyOfRange(0, v4Bytes.size - 4)
+        // Move the version word back to 3.
+        v3Bytes[0] = 0
+        v3Bytes[1] = 3
+
+        val decoded = MlsGroupState.decodeTls(v3Bytes)
+        assertTrue(decoded.pendingProposals.isEmpty(), "a v3 blob has no staged pool and must not invent one")
+        assertEquals(state.groupContext.epoch, decoded.groupContext.epoch)
+
+        // And it is a working group afterwards, not just a parse that succeeded.
+        val restored = MlsGroup.restore(decoded)
+        val ct = restored.encrypt("post-upgrade".encodeToByteArray())
+        assertContentEquals("post-upgrade".encodeToByteArray(), restored.decrypt(ct).content)
+        assertContentEquals(
+            group.exporterSecret("marmot", "test".encodeToByteArray(), 32),
+            restored.exporterSecret("marmot", "test".encodeToByteArray(), 32),
+            "the upgrade must not change any derived secret",
+        )
+    }
+
+    /**
      * Re-encode a state in the original STATE_VERSION 1 layout: identical to
      * v2 but with the version tag set to 1 and no trailing ratchet section.
      */
