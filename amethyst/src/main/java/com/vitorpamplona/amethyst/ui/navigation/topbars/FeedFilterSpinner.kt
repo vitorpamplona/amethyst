@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dvm_offline
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_select_an_option
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_selected
 import com.vitorpamplona.amethyst.commons.resources.lack_location_permissions
@@ -95,6 +97,7 @@ import com.vitorpamplona.amethyst.ui.screen.PeopleListName
 import com.vitorpamplona.amethyst.ui.screen.RelayName
 import com.vitorpamplona.amethyst.ui.screen.ResourceName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -177,11 +180,29 @@ fun FeedFilterSpinner(
                             )
                         }
                     } else {
-                        Text(
-                            text = currentText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        val favoriteAlgoFeedAddress = (selected?.name as? FavoriteAlgoFeedName)?.note?.address
+                        if (favoriteAlgoFeedAddress != null) {
+                            val heartbeatFresh by rememberDvmHeartbeatFresh(favoriteAlgoFeedAddress, accountViewModel)
+                            val offlineLabel = stringRes(Res.string.dvm_offline)
+                            Text(
+                                text = if (heartbeatFresh) currentText else "$currentText \u2022",
+                                color = if (heartbeatFresh) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier =
+                                    if (heartbeatFresh) {
+                                        Modifier
+                                    } else {
+                                        Modifier.semantics { contentDescription = "$currentText, $offlineLabel" }
+                                    },
+                            )
+                        } else {
+                            Text(
+                                text = currentText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
 
                     if (filter is TopFilter.AroundMe) {
@@ -371,7 +392,30 @@ fun RenderOption(
             val backed = option as NoteBackedName
             val noteState by observeNote(backed.note, accountViewModel)
             val name = remember(noteState) { option.name(context) }
-            Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
+            val appDefAddress = (option as? FavoriteAlgoFeedName)?.note?.address
+            val heartbeatFresh =
+                if (appDefAddress != null) {
+                    rememberDvmHeartbeatFresh(appDefAddress, accountViewModel).value
+                } else {
+                    true
+                }
+            val offlineLabel = stringRes(Res.string.dvm_offline)
+            Text(
+                text = if (heartbeatFresh) name else "$name \u2022",
+                fontSize = Font14SP,
+                color =
+                    if (heartbeatFresh) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                modifier =
+                    if (heartbeatFresh) {
+                        Modifier
+                    } else {
+                        Modifier.semantics { contentDescription = "$name, $offlineLabel" }
+                    },
+            )
         }
 
         // Pure names: no relay subscription needed.

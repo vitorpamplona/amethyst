@@ -26,4 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 object UnknownTopNavPerRelayFilterSet : IFeedTopNavPerRelayFilterSet {
     override fun scopeFor(relay: NormalizedRelayUrl): IFeedTopNavPerRelayFilter? = null
+
+    override fun relays() = emptySet<NormalizedRelayUrl>()
 }

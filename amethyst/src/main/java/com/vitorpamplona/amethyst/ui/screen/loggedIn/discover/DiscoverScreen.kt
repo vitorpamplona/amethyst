@@ -278,7 +278,18 @@ private fun DiscoverPages(
         HorizontalPager(state = pagerState) { page ->
             if (page >= 0 && page < feedTabs.size) {
                 val tab = feedTabs[page]
-                RefresheableBox(tab.feedState, true) {
+                RefresheableBox(
+                    onRefresh = {
+                        tab.feedState.invalidateData()
+                        // The DVM tab's freshness gate lives or dies with beat delivery, and
+                        // invalidateData only re-reads the cache — re-issue the discovery REQs
+                        // (31990 + both heartbeat streams) with fresh rolling windows so refresh
+                        // actually fetches.
+                        if (tab.feedState == accountViewModel.feedStates.discoverDVMs) {
+                            accountViewModel.dataSources().discovery.invalidateFilters()
+                        }
+                    },
+                ) {
                     if (tab.useGridLayout) {
                         SaveableGridFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey) { listState ->
                             RenderDiscoverFeed(

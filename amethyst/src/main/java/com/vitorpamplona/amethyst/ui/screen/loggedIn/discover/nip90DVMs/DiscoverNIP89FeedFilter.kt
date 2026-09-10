@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
+import com.vitorpamplona.amethyst.model.hasFreshDvmHeartbeat
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -93,7 +94,8 @@ open class DiscoverNIP89FeedFilter(
         return noteEvent.appMetaData()?.subscription != true &&
             filterParams.match(noteEvent, relays) &&
             noteEvent.includeKind(targetKind) &&
-            noteEvent.createdAt > lastAnnounced
+            noteEvent.createdAt > lastAnnounced &&
+            LocalCache.hasFreshDvmHeartbeat(noteEvent)
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> =

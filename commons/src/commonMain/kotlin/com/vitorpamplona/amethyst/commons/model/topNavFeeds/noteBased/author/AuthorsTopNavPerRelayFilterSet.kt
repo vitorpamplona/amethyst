@@ -27,4 +27,6 @@ class AuthorsTopNavPerRelayFilterSet(
     val set: Map<NormalizedRelayUrl, AuthorsTopNavPerRelayFilter>,
 ) : IFeedTopNavPerRelayFilterSet {
     override fun scopeFor(relay: NormalizedRelayUrl) = set[relay]
+
+    override fun relays() = set.keys
 }

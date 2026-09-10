@@ -358,6 +358,7 @@ import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDi
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationRequestEvent
@@ -734,6 +735,7 @@ class EventFactory {
                 NutzapRedemptionEvent.KIND -> NutzapRedemptionEvent(id, pubKey, createdAt, tags, content, sig)
                 NostrConnectEvent.KIND -> NostrConnectEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90StatusEvent.KIND -> NIP90StatusEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmHeartbeatEvent.KIND -> DvmHeartbeatEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90TextExtractionRequestEvent.KIND -> NIP90TextExtractionRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90TextExtractionResponseEvent.KIND -> NIP90TextExtractionResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90SummarizationRequestEvent.KIND -> NIP90SummarizationRequestEvent(id, pubKey, createdAt, tags, content, sig)
