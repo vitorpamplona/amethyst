@@ -176,20 +176,15 @@ class SearchBarViewModel(
     val followsOnly get() = state.followsOnly
     val sortOrder get() = state.eventSortOrder
 
-    // Declared before every Eagerly-shared collector that calls `updateDataSource`, and it must
-    // stay there: `updateDataSource` scrolls this list, and Kotlin initialises properties in
-    // declaration order, so from below it would still be null. It never showed while the box
-    // opened empty, because a blank term returns before the scroll; seeding the field from the
-    // screen's filter made the term non-blank on the very first pass and turned that into an NPE
-    // the moment search opened. `state.debouncedForRelays` is a StateFlow with a seeded value, so
-    // the collector below no longer waits out a debounce window before the first call either.
+    // EVERYTHING `updateDataSource` TOUCHES MUST BE DECLARED ABOVE THIS LINE.
+    //
+    // `searchTerm` and `sourceWatcher` below are both shared `Eagerly`, so they call
+    // `updateDataSource` while the constructor is still running. Kotlin initialises properties in
+    // declaration order, so anything that function reads from further down the class is still
+    // null at that moment and the app dies opening search. It has happened twice now -- once on
+    // `listState`, once on `searchDataSourceState` when a refactor moved it below -- so the two
+    // fields it needs live here, above the collectors, and should stay here.
     val listState: LazyListState = LazyListState(0, 0)
-
-    val searchTerm =
-        state.debouncedForRelays
-            .map { it.text }
-            .onEach(::updateDataSource)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
     val searchDataSourceState =
         SearchQueryState(
@@ -199,6 +194,12 @@ class SearchBarViewModel(
             indexerRelays = account.indexerRelayList.flow,
             followPlusAllMineWithSearchRelays = account.followPlusAllMineWithSearch.flow,
         )
+
+    val searchTerm =
+        state.debouncedForRelays
+            .map { it.text }
+            .onEach(::updateDataSource)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
     @Suppress("unused")
     val sourceWatcher =
