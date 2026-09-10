@@ -86,10 +86,21 @@ fun CreateGroupScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    fun proceedWithCreate() {
+    /**
+     * Create the group, optionally after [prepare].
+     *
+     * [prepare] runs *inside* the same coroutine and is awaited, which is the whole point: the
+     * KeyPackage relay list it writes is what the creation below depends on. Launching the two
+     * side by side raced them, and the loser was silent -- `isCreating` had already latched true,
+     * so the top bar's `isActive` gate left Create inert with no error and no group, and only
+     * Cancel could leave the screen. Awaiting also puts a failure to save on the same Toast path
+     * as a failure to create, instead of dropping it in a coroutine nobody reads.
+     */
+    fun proceedWithCreate(prepare: (suspend () -> Unit)? = null) {
         isCreating = true
         scope.launch(Dispatchers.IO) {
             try {
+                prepare?.invoke()
                 val nostrGroupId = RandomInstance.bytes(32).toHexKey()
                 accountViewModel.createMarmotGroup(
                     nostrGroupId,
@@ -219,10 +230,7 @@ fun CreateGroupScreen(
         MissingKeyPackageRelayListDialog(
             onConfirm = {
                 showKeyPackageRelayDialog = false
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.saveKeyPackageRelayListFromOutbox()
-                }
-                proceedWithCreate()
+                proceedWithCreate { accountViewModel.saveKeyPackageRelayListFromOutbox() }
             },
             onDismiss = {
                 showKeyPackageRelayDialog = false
