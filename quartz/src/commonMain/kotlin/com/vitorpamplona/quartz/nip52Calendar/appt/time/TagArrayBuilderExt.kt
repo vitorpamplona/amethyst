@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.DayIndexTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.LocationTag
 
 fun TagArrayBuilder<CalendarTimeSlotEvent>.titleTime(title: String) = addUnique(TitleTag.assemble(title))
@@ -33,6 +34,16 @@ fun TagArrayBuilder<CalendarTimeSlotEvent>.titleTime(title: String) = addUnique(
 fun TagArrayBuilder<CalendarTimeSlotEvent>.startTimestamp(timestamp: Long) = addUnique(arrayOf("start", timestamp.toString()))
 
 fun TagArrayBuilder<CalendarTimeSlotEvent>.endTimestamp(timestamp: Long) = addUnique(arrayOf("end", timestamp.toString()))
+
+/**
+ * Replaces the `D` day-index set with the one [start]..[end] spans (NIP-52). Removing first is what
+ * makes an edit correct: shortening an event that used to run three days must drop the two days it
+ * no longer covers, and appending alone would leave them claiming it forever.
+ */
+fun TagArrayBuilder<CalendarTimeSlotEvent>.dayIndexes(
+    start: Long,
+    end: Long? = null,
+) = remove(DayIndexTag.TAG_NAME).addAll(DayIndexTag.assembleAll(start, end))
 
 fun TagArrayBuilder<CalendarTimeSlotEvent>.startTzId(tzId: String) = addUnique(arrayOf("start_tzid", tzId))
 
