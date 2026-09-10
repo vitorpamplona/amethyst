@@ -91,6 +91,7 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @Stable
 @OptIn(FlowPreview::class)
@@ -109,20 +110,6 @@ class SearchBarViewModel(
     InvalidatableContent {
     val focusRequester = FocusRequester()
     var searchValue by mutableStateOf(initialQuery.orEmpty())
-
-    /**
-     * [SearchState.settled] as Compose state.
-     *
-     * Mirrored rather than read through `settled.value` inside [isRefreshing]: `derivedStateOf`
-     * invalidates on snapshot reads, and a `StateFlow`'s `value` is a plain field. Reading it
-     * there computed the right answer once and then never recomputed until `searchValue` changed
-     * — so the spinner appeared on the first keystroke and stayed up for as long as there was
-     * text in the box.
-     *
-     * Declared above [settledWatcher] and it must stay there: that collector is Eagerly shared
-     * and can run inside the constructor, and Kotlin initialises properties in declaration order.
-     */
-    private var settled by mutableStateOf(false)
 
     /** A refresh the app asked for: the screen was composed, or the reader came back to it. */
     private val manualInvalidations = MutableStateFlow(0)
@@ -199,26 +186,15 @@ class SearchBarViewModel(
     val followsOnly get() = state.followsOnly
     val sortOrder get() = state.eventSortOrder
 
-    // Declared before every Eagerly-shared collector that calls `updateDataSource`, and it must
-    // stay there: `updateDataSource` scrolls this list, and Kotlin initialises properties in
-    // declaration order, so from below it would still be null. It never showed while the box
-    // opened empty, because a blank term returns before the scroll; seeding the field from the
-    // screen's filter made the term non-blank on the very first pass and turned that into an NPE
-    // the moment search opened. `state.debouncedForRelays` is a StateFlow with a seeded value, so
-    // the collector below no longer waits out a debounce window before the first call either.
+    // EVERYTHING `updateDataSource` TOUCHES MUST BE DECLARED ABOVE THIS LINE.
+    //
+    // `searchTerm` and `sourceWatcher` below are both shared `Eagerly`, so they call
+    // `updateDataSource` while the constructor is still running. Kotlin initialises properties in
+    // declaration order, so anything that function reads from further down the class is still
+    // null at that moment and the app dies opening search. It has happened twice now -- once on
+    // `listState`, once on `searchDataSourceState` when a refactor moved it below -- so the two
+    // fields it needs live here, above the collectors, and should stay here.
     val listState: LazyListState = LazyListState(0, 0)
-
-    @Suppress("unused")
-    val settledWatcher =
-        state.settled
-            .onEach { settled = it }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    val searchTerm =
-        state.debouncedForRelays
-            .map { it.text }
-            .onEach(::updateDataSource)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
     val searchDataSourceState =
         SearchQueryState(
@@ -228,6 +204,12 @@ class SearchBarViewModel(
             indexerRelays = account.indexerRelayList.flow,
             followPlusAllMineWithSearchRelays = account.followPlusAllMineWithSearch.flow,
         )
+
+    val searchTerm =
+        state.debouncedForRelays
+            .map { it.text }
+            .onEach(::updateDataSource)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
     @Suppress("unused")
     val sourceWatcher =
@@ -532,6 +514,22 @@ class SearchBarViewModel(
 
     /** True when the box holds something to search for — which is not the same as searching. */
     val hasQuery = derivedStateOf { searchValue.isNotBlank() }
+
+    /**
+     * [state]'s `settled`, mirrored into snapshot state.
+     *
+     * Reading `state.settled.value` inside [derivedStateOf] looked right and could never work: a
+     * StateFlow read is invisible to the snapshot system, so the derivation only re-ran when
+     * `searchValue` changed. The spinner therefore started on the first keystroke and stayed lit
+     * for as long as the box had text, long after the results were on screen. The empty state two
+     * hundred lines down reads the same flow through `collectAsStateWithLifecycle` and has always
+     * been correct, which is why "nothing found" timed out while the spinner did not.
+     */
+    private var settled by mutableStateOf(false)
+
+    init {
+        viewModelScope.launch { state.settled.collect { settled = it } }
+    }
 
     /**
      * True while a search is actually under way.
