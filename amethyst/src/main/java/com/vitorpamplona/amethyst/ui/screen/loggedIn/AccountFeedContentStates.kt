@@ -76,11 +76,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.dal.SoftwareAp
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.dal.WorkoutFeedFilter
+import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class AccountFeedContentStates(
@@ -313,6 +316,15 @@ class AccountFeedContentStates(
                 notificationsEveryone.invalidateData()
             }
         }
+
+        // Heartbeat staleness produces no cache event (a beat just ages past 420s), so re-check
+        // the DVM discovery feed on a timer. refreshSuspended() no-ops when nothing changed.
+        scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(60_000)
+                discoverDVMs.invalidateData()
+            }
+        }
     }
 
     suspend fun init() {
@@ -335,7 +347,13 @@ class AccountFeedContentStates(
         discoverMarketplace.updateFeedWith(newNotes)
         discoverFollowSets.updateFeedWith(newNotes)
         discoverReads.updateFeedWith(newNotes)
-        discoverDVMs.updateFeedWith(newNotes)
+        if (newNotes.any { it.event is DvmHeartbeatEvent }) {
+            // A heartbeat is never a feed row, so the additive path would graft nothing and never
+            // re-evaluate the announcement it just validated. Rebuild instead.
+            discoverDVMs.invalidateData()
+        } else {
+            discoverDVMs.updateFeedWith(newNotes)
+        }
         discoverLive.updateFeedWith(newNotes)
         discoverCommunities.updateFeedWith(newNotes)
         discoverPublicChats.updateFeedWith(newNotes)
