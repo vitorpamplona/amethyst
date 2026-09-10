@@ -200,10 +200,13 @@ private fun AllFavoriteAlgoFeedsBanner(
 
     if (addresses.isEmpty()) return
 
+    // Map every address to its freshness first (non-short-circuiting) so per-address
+    // composable call sites stay stable instead of appearing/disappearing with freshness.
     val anyHeartbeatFresh =
-        addresses.any { address ->
-            rememberDvmHeartbeatFresh(address, accountViewModel).value
-        }
+        addresses
+            .map { address ->
+                rememberDvmHeartbeatFresh(address, accountViewModel).value
+            }.any { it }
     if (!anyHeartbeatFresh) {
         BannerCard(modifier) {
             BannerMessageRow(

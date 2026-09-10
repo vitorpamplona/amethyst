@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dvm_offline
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_add_more
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_cta
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_headline
@@ -285,12 +287,19 @@ private fun FavoriteAlgoFeedRow(
         ) {
             val heartbeatFresh by rememberDvmHeartbeatFresh(feedNote.address, accountViewModel)
             val displayName = card.name.ifBlank { feedNote.dTag() }
+            val offlineLabel = stringRes(Res.string.dvm_offline)
             Text(
                 text = if (heartbeatFresh) displayName else "$displayName \u2022",
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyLarge,
+                modifier =
+                    if (heartbeatFresh) {
+                        Modifier
+                    } else {
+                        Modifier.semantics { contentDescription = "$displayName, $offlineLabel" }
+                    },
             )
             card.description?.takeIf { it.isNotBlank() }?.let {
                 Spacer(modifier = StdVertSpacer)

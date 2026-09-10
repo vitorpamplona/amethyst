@@ -78,19 +78,18 @@ fun rememberDvmHeartbeatFresh(
         }
     }
 
-    val resolved = heartbeatNote ?: return remember(heartbeatAddressTag) { mutableStateOf(false) }
+    val observed =
+        heartbeatNote?.let { observeNoteAndMap(it, accountViewModel) { it.event as? DvmHeartbeatEvent } }
 
-    val heartbeat by observeNoteAndMap(resolved, accountViewModel) { it.event as? DvmHeartbeatEvent }
-
-    var now by remember(resolved) { mutableLongStateOf(TimeUtils.now()) }
-    LaunchedEffect(resolved) {
+    var now by remember(heartbeatNote) { mutableLongStateOf(TimeUtils.now()) }
+    LaunchedEffect(heartbeatNote) {
         while (isActive) {
             delay(HEARTBEAT_RECHECK_MILLIS)
             now = TimeUtils.now()
         }
     }
 
-    val beat = heartbeat
+    val beat = observed?.value
     return rememberUpdatedState(beat != null && beat.isFreshAt(now))
 }
 

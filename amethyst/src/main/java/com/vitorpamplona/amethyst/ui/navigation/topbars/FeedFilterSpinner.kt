@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dvm_offline
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_select_an_option
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_selected
 import com.vitorpamplona.amethyst.commons.resources.lack_location_permissions
@@ -181,11 +183,18 @@ fun FeedFilterSpinner(
                         val favoriteAlgoFeedAddress = (selected?.name as? FavoriteAlgoFeedName)?.note?.address
                         if (favoriteAlgoFeedAddress != null) {
                             val heartbeatFresh by rememberDvmHeartbeatFresh(favoriteAlgoFeedAddress, accountViewModel)
+                            val offlineLabel = stringRes(Res.string.dvm_offline)
                             Text(
                                 text = if (heartbeatFresh) currentText else "$currentText \u2022",
                                 color = if (heartbeatFresh) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                modifier =
+                                    if (heartbeatFresh) {
+                                        Modifier
+                                    } else {
+                                        Modifier.semantics { contentDescription = "$currentText, $offlineLabel" }
+                                    },
                             )
                         } else {
                             Text(
@@ -390,6 +399,7 @@ fun RenderOption(
                 } else {
                     true
                 }
+            val offlineLabel = stringRes(Res.string.dvm_offline)
             Text(
                 text = if (heartbeatFresh) name else "$name \u2022",
                 fontSize = Font14SP,
@@ -398,6 +408,12 @@ fun RenderOption(
                         MaterialTheme.colorScheme.onSurface
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                modifier =
+                    if (heartbeatFresh) {
+                        Modifier
+                    } else {
+                        Modifier.semantics { contentDescription = "$name, $offlineLabel" }
                     },
             )
         }
