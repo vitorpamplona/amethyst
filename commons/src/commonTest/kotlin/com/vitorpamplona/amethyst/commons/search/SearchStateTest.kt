@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
@@ -153,5 +154,17 @@ class SearchStateTest {
             assertEquals(SearchScope.ALL, s.scope.value)
             assertFalse(s.followsOnly.value)
             assertEquals(SearchSortOrder.EVENT_DEFAULT, s.eventSortOrder.value)
+        }
+
+    @Test
+    fun aKeystrokeIsParsedOnceAndSharedByEveryWindow() =
+        runTest {
+            // The debounced views are debounces of the parse, not of the text. Parsing per window
+            // was three parses for one answer, and this is the cheapest way to say which it is.
+            val s = SearchState(backgroundScope)
+            s.updateText("kind:article bitcoin")
+            advanceTimeBy(SearchState.RELAY_DEBOUNCE_MS + 1)
+            assertSame(s.current.value, s.debounced.value)
+            assertSame(s.current.value, s.debouncedForRelays.value)
         }
 }

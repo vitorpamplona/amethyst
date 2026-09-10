@@ -84,6 +84,10 @@ class SearchState(
      * here, including the ones that only want the leftover words
      * (`current.value.query.nameSearchTerms()`) — which is what the front ends were re-parsing
      * the whole box to get, about nine times per keystroke on Android.
+     *
+     * The debounced views below are debounces *of this flow* rather than of the text, so a
+     * keystroke is parsed once and the same [SearchInput] instance reaches all three. Debouncing
+     * the text and parsing again per window was three parses for one answer.
      */
     val current: StateFlow<SearchInput> =
         _text
@@ -98,11 +102,9 @@ class SearchState(
      * is not eight policies but one policy said eight times, and so one policy that could drift.
      */
     val debounced: StateFlow<SearchInput> =
-        _text
+        current
             .debounce(localDebounceMs)
-            .distinctUntilChanged()
-            .map { SearchInput(it) }
-            .stateIn(coroutineScope, SharingStarted.Eagerly, SearchInput(initialText))
+            .stateIn(coroutineScope, SharingStarted.Eagerly, current.value)
 
     /**
      * [current] once the reader has paused longer, for answers that cost a round trip.
@@ -112,11 +114,9 @@ class SearchState(
      * to read.
      */
     val debouncedForRelays: StateFlow<SearchInput> =
-        _text
+        current
             .debounce(relayDebounceMs)
-            .distinctUntilChanged()
-            .map { SearchInput(it) }
-            .stateIn(coroutineScope, SharingStarted.Eagerly, SearchInput(initialText))
+            .stateIn(coroutineScope, SharingStarted.Eagerly, current.value)
 
     /** Shorthand for `current.value.query`, which is what most callers mean. */
     val query: SearchQuery get() = current.value.query

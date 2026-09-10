@@ -725,6 +725,10 @@ private fun DisplaySearchResults(
     val settled by searchBarViewModel.searchSettled.collectAsStateWithLifecycle()
     val recent by searchBarViewModel.history.recent.collectAsStateWithLifecycle()
 
+    // Serialized once per change of the list rather than twice per row per recomposition: the row
+    // draws it, and the lazy list keys on it.
+    val recentText = remember(recent) { recent.map { QuerySerializer.serialize(it) } }
+
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -753,8 +757,7 @@ private fun DisplaySearchResults(
                         }
                     }
                 }
-                itemsIndexed(recent, key = { _, item -> "recent-${QuerySerializer.serialize(item)}" }) { _, item ->
-                    val asText = remember(item) { QuerySerializer.serialize(item) }
+                itemsIndexed(recentText, key = { _, item -> "recent-$item" }) { _, asText ->
                     Text(
                         text = asText,
                         style = MaterialTheme.typography.bodyLarge,

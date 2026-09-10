@@ -50,7 +50,9 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
@@ -79,6 +81,7 @@ import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -107,6 +110,20 @@ class SearchBarViewModel(
     val focusRequester = FocusRequester()
     var searchValue by mutableStateOf(initialQuery.orEmpty())
 
+    /**
+     * [SearchState.settled] as Compose state.
+     *
+     * Mirrored rather than read through `settled.value` inside [isRefreshing]: `derivedStateOf`
+     * invalidates on snapshot reads, and a `StateFlow`'s `value` is a plain field. Reading it
+     * there computed the right answer once and then never recomputed until `searchValue` changed
+     * — so the spinner appeared on the first keystroke and stayed up for as long as there was
+     * text in the box.
+     *
+     * Declared above [settledWatcher] and it must stay there: that collector is Eagerly shared
+     * and can run inside the constructor, and Kotlin initialises properties in declaration order.
+     */
+    private var settled by mutableStateOf(false)
+
     /** A refresh the app asked for: the screen was composed, or the reader came back to it. */
     private val manualInvalidations = MutableStateFlow(0)
 
@@ -132,8 +149,13 @@ class SearchBarViewModel(
      * came back.
      *
      * The cache already publishes what it takes in, so the fix is to listen: a lifecycle refresh
-     * and an arriving bundle are the same event to a result list. Merged and debounced once, so a
-     * burst of relay traffic costs one rescan rather than one per bundle.
+     * and an arriving bundle are the same event to a result list.
+     *
+     * Two things keep that affordable. Bundles carrying nothing a result list could show are
+     * dropped outright — the cache takes in chat, DMs, reactions and zap receipts all day, and
+     * none of them can appear in search — and what survives is sampled rather than debounced, so
+     * the cost is capped at one rescan per [RESCAN_INTERVAL_MS] however hard the relays push.
+     * A lifecycle refresh skips both and applies at once.
      */
     private val refreshes: StateFlow<Int> =
         merge(
@@ -141,7 +163,8 @@ class SearchBarViewModel(
             merge(
                 account.cache.getEventStream().newEventBundles,
                 account.cache.getEventStream().deletedEventBundles,
-            ).sample(RESCAN_INTERVAL_MS),
+            ).filter { bundle -> bundle.any { it.event?.kind in WATCHED_KINDS } }
+                .sample(RESCAN_INTERVAL_MS),
         ).scan(0) { count, _ -> count + 1 }
             .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
@@ -184,6 +207,12 @@ class SearchBarViewModel(
     // the moment search opened. `state.debouncedForRelays` is a StateFlow with a seeded value, so
     // the collector below no longer waits out a debounce window before the first call either.
     val listState: LazyListState = LazyListState(0, 0)
+
+    @Suppress("unused")
+    val settledWatcher =
+        state.settled
+            .onEach { settled = it }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val searchTerm =
         state.debouncedForRelays
@@ -516,7 +545,7 @@ class SearchBarViewModel(
      * No EOSE from the search subscription reaches this screen, so "under way" is the same
      * heuristic the empty state already trusts: the grace window since the query last changed.
      */
-    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() && !state.settled.value }
+    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() && !settled }
 
     /**
      * Could this text name an event rather than describe one? A bech32 pointer, or a run of hex
@@ -573,6 +602,22 @@ class SearchBarViewModel(
          * reader having asked for anything.
          */
         private const val RESCAN_INTERVAL_MS = 400L
+
+        /**
+         * The kinds an arriving bundle has to contain before it is worth looking again.
+         *
+         * Everything the seven result lists are built from: [RenderableKinds.ALL] for notes and
+         * for the public-chat and live-activity channels, `kind 0` for people, and the ephemeral
+         * chat kind for the rooms that have no definition event of their own. A relay delivering
+         * anything else — a chat message, a DM, a reaction, a zap receipt, which is most of what
+         * a running app takes in — cannot change what this screen shows, and a rescan for it is a
+         * walk of the whole cache for nothing.
+         *
+         * Add to this when a result list starts reading a new kind. Getting it wrong costs a late
+         * update rather than a wrong one: the next keystroke, or the next relevant bundle,
+         * recomputes everything anyway.
+         */
+        private val WATCHED_KINDS = RenderableKinds.ALL.toSet() + MetadataEvent.KIND + EphemeralChatEvent.KIND
     }
 
     class Factory(

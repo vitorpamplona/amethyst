@@ -69,7 +69,7 @@ class AdvancedSearchBarState(
     val debouncedQuery: StateFlow<SearchQuery> =
         state.debouncedForRelays
             .map { it.query }
-            .stateIn(scope, SharingStarted.Eagerly, SearchQuery.EMPTY)
+            .stateIn(scope, SharingStarted.Eagerly, state.debouncedForRelays.value.query)
 
     /**
      * What the field shows, which is simply the box.
@@ -98,9 +98,13 @@ class AdvancedSearchBarState(
      * Ranked on the query's *leftover* terms rather than on the whole box: `from:npub1…` and
      * `kind:article` are filters, and hunting for their literal text inside an event's content
      * ranks on noise. This was scoring the raw field text until the pipeline took the job over.
+     *
+     * Against the debounced query, which is the one these results were fetched for — ranking on
+     * the in-flight text re-sorted the whole list on every keystroke, to answer a query no relay
+     * had been asked yet.
      */
     val sortedNoteResults: StateFlow<ImmutableList<Event>> =
-        combine(_noteResults, state.eventSortOrder, query) { notes, order, q ->
+        combine(_noteResults, state.eventSortOrder, debouncedQuery) { notes, order, q ->
             SearchPipeline.rank(notes, order, q.text, { it }).toImmutableList()
         }.stateIn(scope, SharingStarted.Eagerly, persistentListOf())
 

@@ -26,8 +26,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.random.Random
 
 /**
  * Where a platform keeps two strings. Two reads at startup, one write per change.
@@ -72,9 +74,22 @@ class SearchHistory(
     init {
         // Fire and forget, as the drawer's collapse state is: the lists read as empty until disk
         // answers, and the worst case is a recent-searches row that appears a frame late.
+        //
+        // Merged rather than assigned. A reader can press Enter inside the window between the
+        // screen opening and the file being parsed, and an assignment would drop that search on
+        // the floor — in memory *and* on disk, since the next write persists whatever survived.
+        // What was remembered in the meantime is newer than the file, so it stays in front.
         scope.launch {
-            _recent.value = decodeQueries(readOrNull(KEY_RECENT))
-            _saved.value = decodeSaved(readOrNull(KEY_SAVED))
+            val storedRecentRaw = readOrNull(KEY_RECENT)
+            val merged = _recent.updateAndGet { pending -> mostRecentFirst(pending, decodeQueries(storedRecentRaw)) }
+            // Written back when the merge changed anything, because the pending entry was only
+            // ever persisted against an empty list — leaving it would drop the file's contents on
+            // the next write instead of the reader's search.
+            encodeQueries(merged).let { if (it != storedRecentRaw.orEmpty()) persist(KEY_RECENT, it) }
+
+            val storedSavedRaw = readOrNull(KEY_SAVED)
+            val mergedSaved = _saved.updateAndGet { pending -> (decodeSaved(storedSavedRaw) + pending).distinctBy { it.id } }
+            encodeSaved(mergedSaved).let { if (it != storedSavedRaw.orEmpty()) persist(KEY_SAVED, it) }
         }
     }
 
@@ -87,13 +102,22 @@ class SearchHistory(
      */
     fun remember(query: SearchQuery) {
         if (query.isEmpty) return
-        val serialized = QuerySerializer.serialize(query)
-        val next =
-            (listOf(query) + _recent.value.filterNot { QuerySerializer.serialize(it) == serialized })
-                .take(MAX_RECENT)
+        val next = mostRecentFirst(listOf(query), _recent.value)
         _recent.value = next
         persist(KEY_RECENT, encodeQueries(next))
     }
+
+    /**
+     * [newer] in front of [older], one entry per distinct query, capped.
+     *
+     * Compared on the serialized form so two queries that mean the same thing are one entry
+     * however they were typed — and so that a list which reaches the screen can never carry two
+     * rows with the same key, which a lazy list treats as a crash rather than a duplicate.
+     */
+    private fun mostRecentFirst(
+        newer: List<SearchQuery>,
+        older: List<SearchQuery>,
+    ): List<SearchQuery> = (newer + older).distinctBy { QuerySerializer.serialize(it) }.take(MAX_RECENT)
 
     fun clearRecent() {
         _recent.value = emptyList()
@@ -107,10 +131,21 @@ class SearchHistory(
     ) {
         if (query.isEmpty) return
         val now = TimeUtils.now()
-        val next = _saved.value + SavedSearch(id = "$now-${_saved.value.size}", label = label, query = query, createdAt = now)
+        val next = _saved.value + SavedSearch(id = newId(now), label = label, query = query, createdAt = now)
         _saved.value = next
         persist(KEY_SAVED, encodeSaved(next))
     }
+
+    /**
+     * An id no other saved search has.
+     *
+     * The timestamp alone is not enough and neither is the timestamp plus the list's size: two
+     * searches saved in the same second — or one saved after another was deleted — landed on the
+     * same id, and an id is what [forget] deletes by and what the restore merge de-duplicates by.
+     * The random half makes a collision across two runs of the app about as likely as one inside
+     * a single list, which is to say not.
+     */
+    private fun newId(now: Long): String = "$now-${Random.nextLong().toULong().toString(36)}"
 
     fun forget(id: String) {
         val next = _saved.value.filter { it.id != id }

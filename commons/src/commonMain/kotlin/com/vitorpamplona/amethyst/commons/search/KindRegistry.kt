@@ -134,6 +134,15 @@ object KindRegistry {
 
     val pseudoKinds: Set<String> = setOf("reply", "media")
 
+    /**
+     * [aliases], widest group first — the order [tokenize] has to try them in, sorted once.
+     *
+     * It ran `sortedByDescending` per call, and the calls are not rare: every chip the field
+     * draws asks for the name of its kind on every recomposition, and every serialization of a
+     * query goes through here too.
+     */
+    private val aliasesByWidestFirst = aliases.entries.sortedByDescending { it.value.size }
+
     val presets: Map<String, ContentPreset> =
         mapOf(
             "Notes" to ContentPreset(kinds = listOf(TextNoteEvent.KIND)),
@@ -198,8 +207,7 @@ object KindRegistry {
         if (kinds.isEmpty()) return emptyList()
         val remaining = kinds.toMutableList()
         val tokens = mutableListOf<Pair<Int, String>>()
-        aliases.entries
-            .sortedByDescending { it.value.size }
+        aliasesByWidestFirst
             .forEach { (alias, group) ->
                 if (remaining.containsAll(group)) {
                     tokens.add(kinds.indexOfFirst { it in group } to alias)

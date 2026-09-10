@@ -25,6 +25,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -209,5 +210,93 @@ class SearchHistoryTest {
             )
             runCurrent()
             assertEquals(listOf("two"), history.saved.value.map { it.label })
+        }
+
+    @Test
+    fun aSearchRememberedBeforeDiskAnswersIsNotLost() =
+        runTest {
+            // The screen opens and the file is read in the background. A reader who presses Enter
+            // inside that window had their search assigned away by the restore — in memory and
+            // then on disk, because the next write persists whatever survived.
+            val storage = InMemory(SearchHistory.KEY_RECENT to "nostr")
+            val history = SearchHistory(storage, backgroundScope)
+            history.remember(q("bitcoin"))
+            runCurrent()
+
+            assertEquals(listOf("bitcoin", "nostr"), history.recent.value.map { it.text })
+            assertEquals("bitcoin\nnostr", storage.values[SearchHistory.KEY_RECENT])
+        }
+
+    @Test
+    fun aSavedSearchMadeBeforeDiskAnswersSurvivesToo() =
+        runTest {
+            val storage = InMemory()
+            val seeded = SearchHistory(storage, backgroundScope)
+            runCurrent()
+            seeded.save(q("nostr"), "stored")
+            runCurrent()
+
+            val history = SearchHistory(InMemory(SearchHistory.KEY_SAVED to storage.values.getValue(SearchHistory.KEY_SAVED)), backgroundScope)
+            history.save(q("bitcoin"), "pending")
+            runCurrent()
+            assertEquals(
+                setOf("stored", "pending"),
+                history.saved.value
+                    .map { it.label }
+                    .toSet(),
+            )
+        }
+
+    @Test
+    fun aStoredFileWithDuplicatesComesBackWithoutThem() =
+        runTest {
+            // Two rows with the same text are two rows with the same key, and a lazy list treats
+            // that as a crash rather than a duplicate.
+            val history = SearchHistory(InMemory(SearchHistory.KEY_RECENT to "bitcoin\nnostr\nbitcoin"), backgroundScope)
+            runCurrent()
+            assertEquals(listOf("bitcoin", "nostr"), history.recent.value.map { it.text })
+        }
+
+    @Test
+    fun twoSearchesSavedInTheSameSecondAreTwoSearches() =
+        runTest {
+            // The id was the timestamp plus the list's size, so a second save in the same second
+            // could land on the id the first one already had — and an id is what forget() deletes
+            // by, and what the restore merge de-duplicates by.
+            val history = SearchHistory(InMemory(), backgroundScope)
+            runCurrent()
+            history.save(q("bitcoin"), "one")
+            history.save(q("nostr"), "two")
+            runCurrent()
+            assertEquals(
+                2,
+                history.saved.value
+                    .map { it.id }
+                    .toSet()
+                    .size,
+                "ids collided",
+            )
+        }
+
+    @Test
+    fun anIdIsNotReusedAfterTheSearchThatHadItIsDeleted() =
+        runTest {
+            val history = SearchHistory(InMemory(), backgroundScope)
+            runCurrent()
+            history.save(q("bitcoin"), "one")
+            runCurrent()
+            val first =
+                history.saved.value
+                    .single()
+                    .id
+            history.forget(first)
+            history.save(q("nostr"), "two")
+            runCurrent()
+            assertNotEquals(
+                first,
+                history.saved.value
+                    .single()
+                    .id,
+            )
         }
 }
