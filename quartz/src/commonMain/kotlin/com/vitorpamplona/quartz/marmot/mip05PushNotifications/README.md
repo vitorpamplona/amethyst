@@ -95,12 +95,36 @@ Nothing here publishes a kind 446 either. Selecting records, sealing, wrapping
 and choosing publish targets belong to the Nostr binding; `buildTrigger` hands
 back the rumor and stops.
 
-## Interop
+## Interop, and why there is none
 
-MDK implements the same adopted shape (`crates/marmot-app/src/notifications.rs`),
-but its `wn` CLI exposes no push commands — `notifications` has only
-`subscribe` — so there is no way to drive push through the interop harness the
-way `amy`/`wn` drive messages, media and streams. Coverage is the spec's own
-published removal fixture (event id and `owner_sig`, asserted in
-`PushOwnerProofTest`), byte-layout assertions built independently of the encoder,
-and the ordering and tombstone rules exercised in `PushRecordStoreTest`.
+MDK implements the same adopted shape
+(`crates/marmot-app/src/notifications.rs`, and the Flutter/iOS/Android apps all
+drive it through `upsert_push_registration`). We cannot test against it.
+
+The blocker is the surface, not the protocol. `wn`'s command set is
+`tui debug create-identity login whoami logout export-nsec accounts keys chats
+media groups messages follows profile relays usage-diagnostics settings users
+notifications stream daemon sync relay-stats reset`, and `wn notifications` has
+exactly one subcommand: `subscribe`. Nothing on that CLI registers a token,
+emits a kind 447/448/449, or accepts a kind 446 trigger. So there is no way to
+drive push through the interop harness the way `amy`/`wn` drive messages,
+media, avatars, edits and streams.
+
+Closing that would mean building a Rust harness against `marmot-app`'s push API
+directly — real work, worth doing when push is actually shipping and not
+before, since the thing it would protect is not yet reachable by a user.
+
+What we do have:
+
+- the spec's own published removal fixture — its canonical NIP-01
+  serialization, the resulting event id, and the `owner_sig` a known secret
+  produces over it — asserted in `PushOwnerProofTest`;
+- byte-layout assertions for `SignedRecord` written independently of the
+  encoder, so a mistake has to be made twice to pass;
+- the ordering primitive, tombstone durability and leaf-cleanup rules in
+  `PushRecordStoreTest`;
+- the advisory-drop behaviour of every decoder in `PushGossipTest`.
+
+That is a strong single-implementation story and explicitly not an interop one.
+Until a reference surface exists, assume the wire shape is unproven against a
+second implementation.

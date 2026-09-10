@@ -1,0 +1,123 @@
+{
+  "scenario_name": "convergence-committer-selected/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.20",
+  "seed": null,
+  "scenario": {
+    "name": "convergence-committer-selected/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol",
+      "david",
+      "eve"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "convergence",
+        "invitees": [
+          "bob",
+          "carol"
+        ],
+        "required_features": [],
+        "initial_admins": [
+          "bob"
+        ],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "invite_members",
+        "inviter": "alice",
+        "invitees": [
+          "david"
+        ],
+        "pending": "alice-invite"
+      },
+      {
+        "type": "invite_members",
+        "inviter": "bob",
+        "invitees": [
+          "eve"
+        ],
+        "pending": "bob-invite"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "alice-invite",
+        "outcome": "accepted"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "bob",
+        "publication": "bob-invite",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "carol"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "carol"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "convergence_decision",
+      "client": "carol",
+      "selected_tip_epoch": 2,
+      "decisive_rule": "tip_committer",
+      "witness_quorum_met": false
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "carol",
+      "epoch": 2,
+      "member_count": 4,
+      "received_payloads": []
+    }
+  ]
+}

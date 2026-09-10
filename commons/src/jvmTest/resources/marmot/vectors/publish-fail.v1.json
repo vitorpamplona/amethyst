@@ -1,0 +1,66 @@
+{
+  "scenario_name": "publish-fail/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.20",
+  "seed": null,
+  "scenario": {
+    "name": "publish-fail/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "publish-fail",
+        "invitees": [
+          "bob"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "reached_no_endpoint"
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "alice"
+        ]
+      }
+    ]
+  },
+  "expected_trace": {
+    "name": "publish-fail/v1",
+    "pending_resolutions": [
+      {
+        "step_index": 1,
+        "client": "alice",
+        "pending": "create",
+        "resolution": "rolled_back"
+      }
+    ],
+    "observations": [
+      {
+        "client": "alice",
+        "epoch": 0,
+        "member_count": 1,
+        "group_name": "publish-fail",
+        "event_counts": {
+          "message_received": 0,
+          "member_added": 0,
+          "member_removed": 0,
+          "epoch_changed": 0,
+          "app_invalidated": 0
+        },
+        "received_payloads": [],
+        "removed_members": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "scenario_name": "three-client-message-exchange/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.20",
+  "seed": null,
+  "scenario": {
+    "name": "three-client-message-exchange/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "vector-smoke",
+        "invitees": [
+          "bob",
+          "carol"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "alice:hello"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "bob:hello"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "carol:hello"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      }
+    ]
+  },
+  "expected_trace": {
+    "name": "three-client-message-exchange/v1",
+    "pending_resolutions": [
+      {
+        "step_index": 1,
+        "client": "alice",
+        "pending": "create",
+        "resolution": "confirmed"
+      }
+    ],
+    "observations": [
+      {
+        "client": "alice",
+        "epoch": 1,
+        "member_count": 3,
+        "group_name": "vector-smoke",
+        "event_counts": {
+          "message_received": 2,
+          "member_added": 0,
+          "member_removed": 0,
+          "epoch_changed": 0,
+          "app_invalidated": 0
+        },
+        "received_payloads": [
+          "bob:hello",
+          "carol:hello"
+        ],
+        "removed_members": []
+      },
+      {
+        "client": "bob",
+        "epoch": 1,
+        "member_count": 3,
+        "group_name": "vector-smoke",
+        "event_counts": {
+          "message_received": 2,
+          "member_added": 0,
+          "member_removed": 0,
+          "epoch_changed": 0,
+          "app_invalidated": 0
+        },
+        "received_payloads": [
+          "alice:hello",
+          "carol:hello"
+        ],
+        "removed_members": []
+      },
+      {
+        "client": "carol",
+        "epoch": 1,
+        "member_count": 3,
+        "group_name": "vector-smoke",
+        "event_counts": {
+          "message_received": 2,
+          "member_added": 0,
+          "member_removed": 0,
+          "epoch_changed": 0,
+          "app_invalidated": 0
+        },
+        "received_payloads": [
+          "alice:hello",
+          "bob:hello"
+        ],
+        "removed_members": []
+      }
+    ]
+  }
+}

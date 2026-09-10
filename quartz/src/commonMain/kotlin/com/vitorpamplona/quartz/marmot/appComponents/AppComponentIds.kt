@@ -76,7 +76,20 @@ object AppComponentIds {
     /** `marmot.group.avatar-url.v1` — the plain-https alternative to Blossom images. */
     const val GROUP_AVATAR_URL_V1 = 0x8007
 
-    /** `marmot.group.encrypted-media.v1` — frozen; new groups use [GROUP_ENCRYPTED_MEDIA_V2]. */
+    /**
+     * `marmot.group.encrypted-media.v1` — frozen; new groups use
+     * [GROUP_ENCRYPTED_MEDIA_V2].
+     *
+     * Deliberately NOT supported, and that is settled rather than pending. It
+     * is required only on the Legacy profile, and the reference engine now
+     * refuses to add a member to a legacy group at all ("strict cutover
+     * forbids adding members to legacy groups"). So the only groups that could
+     * ask us for it are ones we can never be invited into, and advertising
+     * support would be a standing promise with no reachable caller.
+     *
+     * A group that carries it MUST NOT have those bytes reinterpreted as v2 —
+     * they are different components with different shapes.
+     */
     const val GROUP_ENCRYPTED_MEDIA_V1 = 0x8008
 
     /** `marmot.member.account-identity-proof.v2` — leaf-only; see `AccountIdentityProofV2`. */

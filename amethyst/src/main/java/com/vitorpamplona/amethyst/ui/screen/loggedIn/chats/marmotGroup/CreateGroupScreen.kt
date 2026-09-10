@@ -73,6 +73,10 @@ fun CreateGroupScreen(
     var groupName by remember { mutableStateOf("") }
     var groupDescription by remember { mutableStateOf("") }
     var pickedIcon by remember { mutableStateOf<SelectedMedia?>(null) }
+    // Disappearing messages (`0x8005`). Chosen here and only here: promoting a
+    // component to required later needs its state installed by a prior commit,
+    // which this screen does not make.
+    var disappearing by remember { mutableStateOf(MarmotRetentionChoice.OFF) }
     // Stable seed for the placeholder avatar shown before an icon is picked. The real
     // group id is generated per creation attempt (so retries don't collide), so this is
     // a separate cosmetic seed rather than "".
@@ -87,7 +91,12 @@ fun CreateGroupScreen(
         scope.launch(Dispatchers.IO) {
             try {
                 val nostrGroupId = RandomInstance.bytes(32).toHexKey()
-                accountViewModel.createMarmotGroup(nostrGroupId, groupName.trim(), groupDescription.trim())
+                accountViewModel.createMarmotGroup(
+                    nostrGroupId,
+                    groupName.trim(),
+                    groupDescription.trim(),
+                    disappearing.seconds,
+                )
                 // Encrypt + upload the picked icon (if any) before the metadata commit,
                 // so its parameters land in the group's MarmotGroupData extension.
                 val iconChange =
@@ -186,6 +195,14 @@ fun CreateGroupScreen(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
+                enabled = !isCreating,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            MarmotRetentionPicker(
+                selected = disappearing,
+                onSelect = { disappearing = it },
                 enabled = !isCreating,
             )
 

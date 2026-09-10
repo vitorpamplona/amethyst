@@ -1,0 +1,94 @@
+{
+  "scenario_name": "current-profile-required-set/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.20",
+  "seed": null,
+  "application_profile": {
+    "name": "current",
+    "required_group_context_extensions": [
+      "0x0006"
+    ],
+    "required_proposals": [
+      "0x0008"
+    ],
+    "required_app_components": [
+      "0x8003",
+      "0x8009"
+    ],
+    "required_group_context_state_components": [
+      "0x8003"
+    ],
+    "leaf_only_app_components": [
+      "0x8009"
+    ]
+  },
+  "scenario": {
+    "name": "current-profile-required-set/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "current-profile",
+        "invitees": [
+          "bob"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "bob:first-current-message"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "alice",
+          "bob"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 1,
+      "member_count": 2,
+      "received_payloads": [
+        "bob:first-current-message"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "bob",
+      "epoch": 1,
+      "member_count": 2,
+      "received_payloads": []
+    }
+  ]
+}

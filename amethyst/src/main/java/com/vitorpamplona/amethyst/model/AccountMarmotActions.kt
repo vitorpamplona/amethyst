@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -404,6 +405,12 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         name: String = "",
         description: String = "",
+        /**
+         * Disappearing messages (`0x8005`), or null for off. Fixed at creation:
+         * promoting a component to required later needs its state installed by
+         * a prior commit, which this path does not make.
+         */
+        disappearingMessageSecs: ULong? = null,
     ) {
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
@@ -413,6 +420,7 @@ class AccountMarmotActions(
                 account.outboxRelays.flow.value
                     .map { it.url },
             profile = if (name.isEmpty() && description.isEmpty()) null else GroupProfileV1(name, description),
+            retention = disappearingMessageSecs?.let { MessageRetentionV1(it) },
         )
         // Creator owns the group — mark it as "known" immediately so it
         // doesn't appear under "New Requests" before the first message.

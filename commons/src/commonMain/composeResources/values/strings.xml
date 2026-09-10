@@ -2631,6 +2631,13 @@
     <string name="marmot_create_group">Create Group</string>
     <string name="marmot_create_group_title">Create Marmot Group</string>
     <string name="marmot_create_group_footer">A new MLS group will be created. You can add members after.</string>
+    <string name="marmot_retention_title">Disappearing messages</string>
+    <string name="marmot_retention_off">Off</string>
+    <string name="marmot_retention_1h">1 hour</string>
+    <string name="marmot_retention_1d">1 day</string>
+    <string name="marmot_retention_1w">1 week</string>
+    <string name="marmot_retention_active">Messages disappear after %1$s</string>
+    <string name="marmot_retention_footer">Messages are deleted from every member\'s device after this long. It cannot be changed later.</string>
     <string name="marmot_group_default_name">Marmot Group</string>
     <string name="marmot_group_fallback_name">Group %1$s…</string>
     <string name="marmot_user_fallback_name">%1$s…</string>

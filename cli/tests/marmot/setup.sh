@@ -55,8 +55,33 @@ preflight() {
       fail_msg "mdk checkout missing at $WN_REPO and --no-build set"; exit 1
     fi
     step "cloning mdk into $WN_REPO"
-    git clone --depth 1 https://github.com/marmot-protocol/mdk.git "$WN_REPO" \
+    git clone --filter=blob:none https://github.com/marmot-protocol/mdk.git "$WN_REPO" \
       2>&1 | tee -a "$LOG_FILE"
+  fi
+
+  # Pin to the commit the SHIPPING apps embed, not whatever master is today.
+  # Both White Noise clients vendor an immutable MarmotKit artifact and name
+  # its `mdk-sha` in a lockfile — whitenoise-android's
+  # `app/src/main/marmotkit/MARMOT_VERSION` and whitenoise-ios's
+  # `Packages/MarmotKit/MARMOT_VERSION` currently agree on this one. Testing
+  # against master answers "are we compatible with tip"; testing against this
+  # answers "are we compatible with what users are running", which is the
+  # question the harness exists to answer.
+  #
+  # Bump it deliberately, by reading those lockfiles again — not by drifting.
+  MDK_PIN="${MDK_PIN:-2f44f6b65a19f8818644ccd7027618ba91450c33}"
+  if [[ "$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null)" != "$MDK_PIN" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      info "mdk is not at the pinned $MDK_PIN and --no-build set — testing whatever is checked out"
+    else
+      step "checking out the pinned mdk $MDK_PIN"
+      if ! git -C "$WN_REPO" cat-file -e "$MDK_PIN^{commit}" 2>/dev/null; then
+        git -C "$WN_REPO" fetch --filter=blob:none origin "$MDK_PIN" 2>&1 | tee -a "$LOG_FILE"
+      fi
+      git -C "$WN_REPO" checkout --detach "$MDK_PIN" 2>&1 | tee -a "$LOG_FILE" || {
+        fail_msg "could not check out the pinned mdk $MDK_PIN"; exit 1
+      }
+    fi
   fi
 
   # No source patches. The harness used to carry two against whitenoise-rs:
@@ -75,6 +100,23 @@ preflight() {
   # caches often enough that a single attempt fails ~30% of the time.
   # Retry each cargo build until the binary actually exists or we've
   # exhausted the budget — the build is incremental so retries are cheap.
+  # Rebuild when the checkout moved, not only when the binary is missing.
+  # A pinned checkout beside a binary built from a different commit is worse
+  # than no pin at all: the run would report a version it did not test.
+  local built_marker="$WN_REPO/target/release/.harness-built-sha"
+  local want_sha
+  want_sha=$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null || echo "")
+  local built_sha=""
+  [[ -f "$built_marker" ]] && built_sha=$(cat "$built_marker" 2>/dev/null || echo "")
+  if [[ -x "$WN_BIN" && -x "$WND_BIN" && -n "$want_sha" && "$built_sha" != "$want_sha" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      info "wn was built from ${built_sha:-an unrecorded commit}, not $want_sha — --no-build keeps it"
+    else
+      step "mdk moved to $want_sha — rebuilding wn + wnd"
+      rm -f "$WN_BIN" "$WND_BIN"
+    fi
+  fi
+
   if [[ ! -x "$WN_BIN" || ! -x "$WND_BIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       fail_msg "wn/wnd not found and --no-build set"; exit 1
@@ -91,8 +133,9 @@ preflight() {
     [[ -x "$WN_BIN" && -x "$WND_BIN" ]] || {
       fail_msg "wn/wnd still missing after $max build attempts"; exit 1
     }
+    [[ -n "$want_sha" ]] && printf '%s\n' "$want_sha" >"$built_marker"
   fi
-  info "wn:  $WN_BIN"
+  info "wn:  $WN_BIN ($(git -C "$WN_REPO" rev-parse --short HEAD 2>/dev/null || echo unknown))"
   info "wnd: $WND_BIN"
 
   # Clone/build nostr-rs-relay — the harness's single loopback relay.

@@ -2481,9 +2481,13 @@ class AccountViewModel(
         nostrGroupId: String,
         name: String = "",
         description: String = "",
+        disappearingMessageSecs: ULong? = null,
     ) {
-        account.marmot.createMarmotGroup(nostrGroupId, name, description)
+        account.marmot.createMarmotGroup(nostrGroupId, name, description, disappearingMessageSecs)
     }
+
+    /** This group's disappearing-message duration in seconds; 0 is off. */
+    fun marmotRetentionSeconds(nostrGroupId: String): Long = account.marmotManager?.retentionSeconds(nostrGroupId) ?: 0L
 
     suspend fun publishMarmotKeyPackage() {
         account.marmot.publishMarmotKeyPackage()

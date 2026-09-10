@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_relay_no_events
 import com.vitorpamplona.amethyst.commons.resources.marmot_relays_header
 import com.vitorpamplona.amethyst.commons.resources.marmot_remove_member
 import com.vitorpamplona.amethyst.commons.resources.marmot_remove_member_confirm
+import com.vitorpamplona.amethyst.commons.resources.marmot_retention_active
 import com.vitorpamplona.amethyst.commons.resources.marmot_revoke
 import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_privileges
@@ -233,6 +234,19 @@ fun MarmotGroupInfoScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp),
                         )
+                        // Disappearing messages, when the group has them. Shown
+                        // rather than editable: the setting is fixed at epoch 0,
+                        // and a member who cannot change it still needs to know
+                        // their messages are on a clock.
+                        val retention = remember(nostrGroupId) { accountViewModel.marmotRetentionSeconds(nostrGroupId) }
+                        if (retention > 0L) {
+                            Text(
+                                text = stringRes(Res.string.marmot_retention_active, formatRetention(retention)),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
                     }
                     if (groupRelays.isNotEmpty()) {
                         GroupRelayStrip(
@@ -927,3 +941,20 @@ private fun RelayHealthRow(
         }
     }
 }
+
+/**
+ * A retention duration as a reader sees it.
+ *
+ * Deliberately coarse — the exact second is committed group state, but what a
+ * member needs from this line is "how long roughly", and rounding down keeps a
+ * 90-minute setting from reading as "1 hour" only after it has already been
+ * displayed as "2 hours" somewhere else.
+ */
+private fun formatRetention(seconds: Long): String =
+    when {
+        seconds % 604_800L == 0L -> "${seconds / 604_800L}w"
+        seconds % 86_400L == 0L -> "${seconds / 86_400L}d"
+        seconds % 3_600L == 0L -> "${seconds / 3_600L}h"
+        seconds % 60L == 0L -> "${seconds / 60L}m"
+        else -> "${seconds}s"
+    }
