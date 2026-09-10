@@ -41,6 +41,11 @@ fun main(args: Array<String>) {
     // the engine would make every number here fiction.
     Log.minLevel = LogLevel.ERROR
 
+    if (args.contains("--epoch-probe")) {
+        epochProbe()
+        return
+    }
+
     val results = allBenchmarks(only)
 
     if (json) {
