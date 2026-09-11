@@ -678,17 +678,36 @@ test_29_disband_amy_to_wn() {
     record_result "$id" fail "amy's epoch did not advance past $before_epoch"; return
   fi
 
-  local deadline=$(( $(date +%s) + 150 )) accepted=0 saw=""
+  # Converge, don't snapshot. MDK rotates its own leaf shortly after joining,
+  # so it can commit between the epoch gate above and the disband below — and
+  # then the two have forked. The protocol's answer is not "the disband lands
+  # first time": it is that the REQUEST survives, is regenerated against
+  # whichever branch was selected, and lands eventually. Asserting the
+  # race-free happy path made this test fail on a busy machine for a case the
+  # spec explicitly allows, so the loop re-reads amy's epoch each round —
+  # regeneration moves it — and drives amy's own sync, which is what carries a
+  # pass to settlement and re-issues a disband that lost.
+  local deadline=$(( $(date +%s) + 240 )) accepted=0 saw="" amy_now="$after_epoch"
   while [[ $(date +%s) -lt $deadline ]]; do
+    amy_now=$(amy_json marmot group show "$gid" 2>/dev/null | jq -r '.epoch // empty')
     saw=$(wn_b_json groups show "$mls_gid" 2>/dev/null | jq -r '.result.mls.epoch // empty')
-    if [[ -n "$saw" && "$saw" == "$after_epoch" ]]; then accepted=1; break; fi
+    if [[ -n "$saw" && -n "$amy_now" && "$saw" == "$amy_now" ]]; then accepted=1; break; fi
     wn_b sync >/dev/null 2>&1 || true
     sleep 5
   done
-  printf 'disband29 epoch %s -> %s, wn at %s\n' "$before_epoch" "$after_epoch" "${saw:-<none>}" >>"$LOG_FILE"
+  printf 'disband29 epoch %s -> %s (amy now %s), wn at %s\n' \
+    "$before_epoch" "$after_epoch" "${amy_now:-?}" "${saw:-<none>}" >>"$LOG_FILE"
 
   if [[ "$accepted" -ne 1 ]]; then
-    record_result "$id" fail "wn stayed at epoch ${saw:-<none>} instead of amy's $after_epoch — it rejected the disband commit"
+    record_result "$id" fail "wn stayed at epoch ${saw:-<none>} while amy is at ${amy_now:-?} — the disband never converged"
+    return
+  fi
+
+  # Converged — and amy must still read the group as ended. A disband that
+  # lost its branch and was never regenerated would agree on an epoch here
+  # while leaving the group live, which is the failure worth catching.
+  if [[ "$(amy_json marmot group show "$gid" 2>/dev/null | jq -r '.disbanded // false')" != "true" ]]; then
+    record_result "$id" fail "amy and wn agree on epoch ${saw} but the group is not disbanded"
     return
   fi
   record_result "$id" pass
