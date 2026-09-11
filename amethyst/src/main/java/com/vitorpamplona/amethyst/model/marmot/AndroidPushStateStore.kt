@@ -90,7 +90,9 @@ class AndroidPushStateStore(
                 temp.writeText(state)
                 if (!temp.renameTo(target)) {
                     target.writeText(state)
-                    temp.delete()
+                    if (!temp.delete()) {
+                        Log.w(TAG) { "could not remove temp push state file ${temp.name}" }
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "could not persist push state for $nostrGroupId: ${e.message}", e)
@@ -102,7 +104,10 @@ class AndroidPushStateStore(
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 try {
-                    file(nostrGroupId)?.delete()
+                    val target = file(nostrGroupId)?.takeIf { it.exists() }
+                    if (target != null && !target.delete()) {
+                        Log.w(TAG) { "could not delete push state for $nostrGroupId" }
+                    }
                 } catch (e: Exception) {
                     Log.w(TAG, "could not clear push state for $nostrGroupId: ${e.message}", e)
                 }
