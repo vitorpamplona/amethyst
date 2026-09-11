@@ -45,8 +45,8 @@
 # which writes into that single SHARED plist — deleting it would wipe every
 # other Java application's preferences too.
 cask "amethyst-nostr" do
-  version "1.14.0"
-  sha256 "84a1bdaf3577ed7375ab65c48358efd3c609fa47b504de61f4e8fc436f6b3436"
+  version "1.15.1"
+  sha256 "9a23e43846072b2eb7e980b3348c06536780235cf5c8ab7e18afe32c6e3fa02d"
 
   url "https://github.com/vitorpamplona/amethyst/releases/download/v#{version}/amethyst-desktop-#{version}-macos-arm64.dmg"
   name "Amethyst"
