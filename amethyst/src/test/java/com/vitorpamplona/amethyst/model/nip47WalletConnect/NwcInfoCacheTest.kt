@@ -185,9 +185,16 @@ class NwcInfoCacheTest {
 
             val results =
                 coroutineScope {
-                    val first = async(Dispatchers.IO) { cache.getFresh(uri("wallet1")) }
+                    // Unconfined, not IO: an unconfined coroutine runs its body inline until the
+                    // first real suspension, so by the time `async` returns, the caller has already
+                    // executed `inFlight.putIfAbsent` and parked on the winner's deferred. On IO it
+                    // had only been *scheduled*, and the gate below could open before it arrived --
+                    // the winner then removed the in-flight entry, the late caller found none, and
+                    // started a second fetch. That is the whole race, and it made this test fail
+                    // about one run in four under full-suite load while passing alone every time.
+                    val first = async(Dispatchers.Unconfined) { cache.getFresh(uri("wallet1")) }
                     fetcher.started.await()
-                    val rest = (1..4).map { async(Dispatchers.IO) { cache.getFresh(uri("wallet1")) } }
+                    val rest = (1..4).map { async(Dispatchers.Unconfined) { cache.getFresh(uri("wallet1")) } }
                     fetcher.release.complete(Unit)
                     (listOf(first) + rest).awaitAll()
                 }
@@ -207,7 +214,10 @@ class NwcInfoCacheTest {
 
             val joined =
                 coroutineScope {
-                    val caller = async(Dispatchers.IO) { cache.getFresh(uri("wallet1")) }
+                    // Unconfined for the same reason as the concurrent-callers test above: the
+                    // joiner has to reach `inFlight.putIfAbsent` before the gate opens, and on IO
+                    // it is merely scheduled. Same latent race, not yet observed failing.
+                    val caller = async(Dispatchers.Unconfined) { cache.getFresh(uri("wallet1")) }
                     fetcher.release.complete(Unit)
                     caller.await()
                 }
