@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.RelayTag
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.broadcastRelays
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.splitRelayListUpdate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -69,10 +70,14 @@ class BroadcastRelayListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): BroadcastRelayListEvent {
-            val newRelayList = relays.map { RelayTag.assemble(it) }
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-            val publicTags = earlierVersion.tags.remove(RelayTag::match)
-            val newPrivateTags = privateTags.remove(RelayTag::match).plus(newRelayList)
+
+            // Keeps public relays public and private relays private: rewriting them all as
+            // private tags blanks the list out for clients that only read the plain tags.
+            val split = splitRelayListUpdate(earlierVersion.tags.relays(), privateTags.relays(), relays)
+
+            val publicTags = earlierVersion.tags.remove(RelayTag::match).plus(split.publicRelays.map { RelayTag.assemble(it) })
+            val newPrivateTags = privateTags.remove(RelayTag::match).plus(split.privateRelays.map { RelayTag.assemble(it) })
 
             return signer.signNip51List(createdAt, KIND, publicTags, newPrivateTags)
         }
