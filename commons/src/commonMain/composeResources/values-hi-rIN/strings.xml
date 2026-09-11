@@ -2624,6 +2624,9 @@
     <string name="marmot_group_description_placeholder">समूह विवरण प्रविष्ट करें (विकल्पात्मक)</string>
     <string name="marmot_edit_info_footer">परिवर्तनों का स्थायी अभिलेखन समूह में किया जाएगा एमएलएस॰ द्वारा तथा सभी सदस्यों तक प्रसारित किया जाएगा।</string>
     <string name="marmot_group_icon">समूह चिह्न</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_remove_photo">चित्र हटाएँ</string>
     <string name="marmot_keypackage_relays_not_set_title">कुंचिकापोटली पुनःप्रसारक स्थापित नहीं</string>
     <string name="marmot_keypackage_relays_not_set_message">आपकी कोई कुंचिकापोटली पुनःप्रसारक सूची नहीं अब तक (मिप॰००)। यह सूची अन्य लोगों को बताता है आपकी कुंचिकापोटली कहाँ प्रकाशित है जिससे कि वे आपको समूह चर्चाओं में आमन्त्रित कर सके।\n\nक्या इसके लिए आपके वर्तमान निर्गतपेटिका पुनःप्रसारकों का उपयोग करें।</string>

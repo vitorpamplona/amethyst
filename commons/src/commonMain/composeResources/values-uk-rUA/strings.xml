@@ -1752,6 +1752,9 @@
     <string name="marmot_group_name_placeholder">Введіть назву групи</string>
     <string name="marmot_group_description_placeholder">Введіть опис групи (необов'язково)</string>
     <string name="marmot_edit_info_footer">Зміни буде збережено в групі через MLS та поширено для всіх учасників.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relays не налаштовано</string>
     <string name="marmot_keypackage_relays_not_set_message">У вас ще немає списку KeyPackage Relay (MIP-00). Цей список повідомляє іншим людям, де опубліковано ваш KeyPackage, щоб вони могли запросити вас до групових чатів.\n\nВикористати поточні вихідні relay для цього?</string>
     <string name="marmot_use_outbox_relays">Використати вихідні relay</string>

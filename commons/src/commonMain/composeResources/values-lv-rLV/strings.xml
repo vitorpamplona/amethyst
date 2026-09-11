@@ -1759,6 +1759,9 @@
     <string name="marmot_group_name_placeholder">Ievadiet grupas nosaukumu</string>
     <string name="marmot_group_description_placeholder">Ievadiet grupas aprakstu (neobligāts)</string>
     <string name="marmot_edit_info_footer">Izmaiņas tiks iesniegas grupai caur MLS un izplatītas visiem dalībniekiem.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage relay serveri nav iestatīti</string>
     <string name="marmot_keypackage_relays_not_set_message">Jums vēl nav KeyPackage relay serveru saraksta (MIP-00). Šis saraksts cilvēkiem norāda, kur ir publicēts jūsu KeyPackage, lai viņi varētu jūs uzaicināt grupu sarunās.\n\nVai izmantot pašreizējos izejas relay serverus?</string>
     <string name="marmot_use_outbox_relays">Izmantot izejas relay serverus</string>

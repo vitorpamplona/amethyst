@@ -1722,6 +1722,9 @@
     <string name="marmot_group_name_placeholder">ใส่ชื่อกลุ่ม</string>
     <string name="marmot_group_description_placeholder">ใส่คำอธิบายกลุ่ม (ไม่บังคับ)</string>
     <string name="marmot_edit_info_footer">การเปลี่ยนแปลงจะถูกยืนยันในกลุ่มผ่าน MLS และเผยแพร่ไปยังสมาชิกทุกคน</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">ยังไม่ได้ตั้งค่า KeyPackage Relay</string>
     <string name="marmot_keypackage_relays_not_set_message">คุณยังไม่มีรายการ KeyPackage Relay (MIP-00) รายการนี้บอกให้คนอื่นรู้ว่า KeyPackage ของคุณถูกเผยแพร่ที่ไหน เพื่อให้พวกเขาสามารถเชิญคุณเข้ากลุ่มแชทได้\n\nใช้ outbox relay ปัจจุบันของคุณสำหรับสิ่งนี้หรือไม่?</string>
     <string name="marmot_use_outbox_relays">ใช้ outbox relay</string>

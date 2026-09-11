@@ -2655,6 +2655,9 @@
     <string name="marmot_group_description_placeholder">Vnesite opis skupine (neobvezno)</string>
     <string name="marmot_edit_info_footer">Spremembe bodo potrjene prek MLS in poslane vsem članom skupine.</string>
     <string name="marmot_group_icon">Ikona skupine</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_remove_photo">Odstrani fotografijo</string>
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage releji niso nastavljeni</string>
     <string name="marmot_keypackage_relays_not_set_message">Še nimate seznama relejev za KeyPackage (MIP-00). Ta seznam drugim sporoča, kje je objavljen vaš KeyPackage, da vas lahko povabijo v skupinske klepete.

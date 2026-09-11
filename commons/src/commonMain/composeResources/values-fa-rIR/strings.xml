@@ -1763,6 +1763,9 @@
     <string name="marmot_group_name_placeholder">نام گروه را وارد کنید</string>
     <string name="marmot_group_description_placeholder">توضیحات گروه را وارد کنید (اختیاری)</string>
     <string name="marmot_edit_info_footer">تغییرات از طریق MLS به گروه اعمال و به همه اعضا منتشر خواهند شد.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">relay‌های KeyPackage تنظیم نشده‌اند</string>
     <string name="marmot_keypackage_relays_not_set_message">هنوز فهرست relay‌های KeyPackage ندارید (MIP-00). این فهرست به دیگران می‌گوید KeyPackage شما در کجا منتشر شده تا بتوانند شما را به گپ‌های گروهی دعوت کنند.\n\nآیا از relay‌های جعبه خروجی فعلی خود استفاده شود؟</string>
     <string name="marmot_use_outbox_relays">استفاده از relay‌های جعبه خروجی</string>

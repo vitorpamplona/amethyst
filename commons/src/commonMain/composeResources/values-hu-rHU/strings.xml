@@ -2640,6 +2640,9 @@
     <string name="marmot_group_description_placeholder">Adja meg a csoport leírását (nem kötelező)</string>
     <string name="marmot_edit_info_footer">A változtatások az MLS-en keresztül kerülnek érvényesítésre a csoportban, és továbbítódnak minden tag felé.</string>
     <string name="marmot_group_icon">Csoport ikonja</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_remove_photo">Fotó eltávolítása</string>
     <string name="marmot_keypackage_relays_not_set_title">A KeyPackage átjátszók nincsenek beállítva</string>
     <string name="marmot_keypackage_relays_not_set_message">Még nincs KeyPackage átjátszólistája (MIP-00). Ez a lista tájékoztatja a többi felhasználót arról, hol érhető el a KeyPackage-e, így meg tudják hívni csoportos beszélgetésekbe.\n\nSzeretné ehhez a jelenlegi kimenő átjátszóit használni?</string>

@@ -1745,6 +1745,9 @@
     <string name="marmot_group_name_placeholder">Guruh nomini kiriting</string>
     <string name="marmot_group_description_placeholder">Guruh tavsifini kiriting (ixtiyoriy)</string>
     <string name="marmot_edit_info_footer">O'zgarishlar MLS orqali guruhga kiritiladi va barcha a'zolarga tarqatiladi.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage relay'lari o'rnatilmagan</string>
     <string name="marmot_keypackage_relays_not_set_message">Sizda hali KeyPackage Relay ro'yxati yo'q (MIP-00). Ushbu ro'yxat boshqa odamlarga KeyPackage'ingiz qayerda nashr etilganini aytadi, shuning uchun ular sizni guruh chatlariga taklif qila oladi.\n\nBuning uchun mavjud chiqish relay'laringizdan foydalanilsinmi?</string>
     <string name="marmot_use_outbox_relays">Chiqish relay'larini ishlatish</string>

@@ -1747,6 +1747,9 @@
     <string name="marmot_group_name_placeholder">গ্রুপের নাম লিখুন</string>
     <string name="marmot_group_description_placeholder">গ্রুপের বিবরণ লিখুন (ঐচ্ছিক)</string>
     <string name="marmot_edit_info_footer">পরিবর্তনগুলো MLS-এর মাধ্যমে গ্রুপে প্রতিশ্রুতি করা হবে এবং সকল সদস্যের কাছে ছড়িয়ে দেওয়া হবে।</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relay সেট করা নেই</string>
     <string name="marmot_keypackage_relays_not_set_message">আপনার এখনো একটি KeyPackage Relay তালিকা নেই (MIP-00)। এই তালিকাটি অন্যদের জানায় যে আপনার KeyPackage কোথায় প্রকাশিত হয়েছে যাতে তারা আপনাকে গ্রুপ চ্যাটে আমন্ত্রণ জানাতে পারে।\n\nএর জন্য আপনার বর্তমান আউটবক্স relay ব্যবহার করবেন?</string>
     <string name="marmot_use_outbox_relays">আউটবক্স relay ব্যবহার করুন</string>

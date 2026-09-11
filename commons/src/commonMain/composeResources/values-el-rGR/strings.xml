@@ -1740,6 +1740,9 @@
     <string name="marmot_group_name_placeholder">Εισάγετε όνομα ομάδας</string>
     <string name="marmot_group_description_placeholder">Εισάγετε περιγραφή ομάδας (προαιρετικό)</string>
     <string name="marmot_edit_info_footer">Οι αλλαγές θα δεσμευτούν στην ομάδα μέσω MLS και θα διαδοθούν σε όλα τα μέλη.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">Τα KeyPackage Relays δεν έχουν οριστεί</string>
     <string name="marmot_keypackage_relays_not_set_message">Δεν έχετε ακόμα λίστα KeyPackage Relay (MIP-00). Αυτή η λίστα ενημερώνει τους άλλους για το πού δημοσιεύεται το KeyPackage σας, ώστε να μπορούν να σας προσκαλέσουν σε ομαδικές συνομιλίες.\n\nΝα χρησιμοποιηθούν τα τρέχοντα outbox relays σας;</string>
     <string name="marmot_use_outbox_relays">Χρήση outbox relays</string>

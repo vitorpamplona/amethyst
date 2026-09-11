@@ -1754,6 +1754,9 @@
     <string name="marmot_group_name_placeholder">輸入群組名稱</string>
     <string name="marmot_group_description_placeholder">輸入群組描述（選填）</string>
     <string name="marmot_edit_info_footer">變更將透過 MLS 提交至群組，並傳播給所有成員。</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">尚未設定 KeyPackage Relay</string>
     <string name="marmot_keypackage_relays_not_set_message">您尚未擁有 KeyPackage Relay 清單（MIP-00）。此清單告知其他人您的 KeyPackage 發布位置，以便他們邀請您加入群組聊天。\n\n是否使用您目前的 outbox relay？</string>
     <string name="marmot_use_outbox_relays">使用 outbox relay</string>

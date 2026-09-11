@@ -1743,6 +1743,9 @@
     <string name="marmot_group_name_placeholder">Ingiza jina la kikundi</string>
     <string name="marmot_group_description_placeholder">Ingiza maelezo ya kikundi (si lazima)</string>
     <string name="marmot_edit_info_footer">Mabadiliko yatatumwa kwenye kikundi kupitia MLS na kusambazwa kwa wanachama wote.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relays haijawekwa</string>
     <string name="marmot_keypackage_relays_not_set_message">Bado huna Orodha ya KeyPackage Relay (MIP-00). Orodha hii inawaambia watu wengine mahali ambapo KeyPackage yako imechapishwa ili waweze kukualika kwenye mazungumzo ya kikundi.\n\nTumia relay zako za outbox za sasa kwa hili?</string>
     <string name="marmot_use_outbox_relays">Tumia relay za outbox</string>

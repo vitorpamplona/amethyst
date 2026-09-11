@@ -2566,6 +2566,9 @@
     <string name="marmot_group_description_placeholder">Zadejte popis skupiny (volitelné)</string>
     <string name="marmot_edit_info_footer">Změny budou zapsány do skupiny přes MLS a rozšířeny všem členům.</string>
     <string name="marmot_group_icon">Ikona skupiny</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_remove_photo">Odebrat fotku</string>
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relays nejsou nastaveny</string>
     <string name="marmot_keypackage_relays_not_set_message">Ještě nemáte seznam KeyPackage Relays (MIP-00). Tento seznam říká ostatním lidem, kde je váš KeyPackage zveřejněn, aby vás mohli pozvat do skupinových chatů.\n\nPoužít pro toto vaše aktuální outbox relays?</string>
