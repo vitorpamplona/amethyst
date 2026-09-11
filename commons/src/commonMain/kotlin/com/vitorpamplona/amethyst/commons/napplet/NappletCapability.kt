@@ -108,6 +108,18 @@ enum class NappletCapability {
 
     companion object {
         /**
+         * What a page in the **website** posture (the NIP-07 `window.nostr` surface) may ask the
+         * broker for. There are two independent mints of this set — the nSite host derives it from
+         * `HostProfile.WEBSITE`, while the in-app browser mints a fresh per-origin token — so it
+         * lives here, once: when the two drifted, the browser silently denied every call to a
+         * capability the injected shim was still advertising.
+         *
+         * Widening this widens what any visited site can request, so it is a security decision, not
+         * a convenience list.
+         */
+        val WEBSITE_CAPABILITIES: Set<NappletCapability> = setOf(IDENTITY, RELAY, SIGNER)
+
+        /**
          * Maps a bare, currently supported NAP domain to the capability the broker enforces.
          * Returns `null` for unknown and partial/legacy domains — callers MUST treat that as
          * "unavailable, do not inject or grant". NIP-5D domain names are exact lowercase strings.

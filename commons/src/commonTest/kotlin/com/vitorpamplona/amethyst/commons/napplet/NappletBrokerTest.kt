@@ -850,4 +850,102 @@ class NappletBrokerTest {
             val response = broker.handle(applet, NappletRequest.Nip44Decrypt(peer.pubKey, sealed), allDeclared)
             assertIs<NappletResponse.Denied>(response)
         }
+
+    @Test
+    fun theWebsiteCapabilitySetCarriesEverythingNip07Needs() {
+        // Two places mint this set (the nSite HostProfile and the in-app browser's per-origin
+        // token). They drifted once: the browser kept IDENTITY+RELAY while the shim advertised
+        // nip44, so every call was denied by a capability the page was told it had.
+        assertTrue(NappletCapability.IDENTITY in NappletCapability.WEBSITE_CAPABILITIES)
+        assertTrue(NappletCapability.RELAY in NappletCapability.WEBSITE_CAPABILITIES)
+        assertTrue(NappletCapability.SIGNER in NappletCapability.WEBSITE_CAPABILITIES)
+    }
+
+    @Test
+    fun nip44WorksUnderTheWebsiteCapabilitySetAlone() =
+        runTest {
+            // What a browsed page actually gets — not `allDeclared`, which would hide a missing grant.
+            val peer = NostrSignerInternal(KeyPair("44".repeat(32).hexToByteArray()))
+            val broker = broker(ScriptedPrompt(GrantState.ALLOW_ALWAYS))
+
+            val response =
+                broker.handle(
+                    applet,
+                    NappletRequest.Nip44Encrypt(peer.pubKey, "gm"),
+                    NappletCapability.WEBSITE_CAPABILITIES,
+                )
+
+            assertIs<NappletResponse.Text>(response)
+            assertEquals("gm", peer.nip44Decrypt(response.value, signer.pubKey))
+        }
+
+    @Test
+    fun anAlwaysAllowForOneCounterpartyDoesNotUnlockTheRest() =
+        runTest {
+            // The dialog can hand back DecryptFrom(alice) instead of the broad Decrypt. Recording the
+            // REQUESTED op there would silently upgrade "only Alice" into every conversation forever.
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.REASONABLE)
+
+            val alice = NostrSignerInternal(KeyPair("55".repeat(32).hexToByteArray()))
+            val bob = NostrSignerInternal(KeyPair("66".repeat(32).hexToByteArray()))
+
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowForOp(NostrSignerOp.DecryptFrom(alice.pubKey)))
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+
+            val fromAlice = alice.nip44Encrypt("hi", signer.pubKey)
+            val fromBob = bob.nip44Encrypt("hi", signer.pubKey)
+
+            // 1. First read from Alice prompts; the user allows, but only for Alice.
+            assertIs<NappletResponse.Text>(broker.handle(applet, NappletRequest.Nip44Decrypt(alice.pubKey, fromAlice), allDeclared))
+            assertEquals(1, opPrompt.calls)
+
+            // 2. Reading Alice again rides the narrow grant — no second prompt.
+            assertIs<NappletResponse.Text>(broker.handle(applet, NappletRequest.Nip44Decrypt(alice.pubKey, fromAlice), allDeclared))
+            assertEquals(1, opPrompt.calls)
+
+            // 3. Bob is a different conversation and must ask again. If the broad Decrypt had been
+            //    recorded in step 1, this would sail through without the user ever agreeing to it.
+            broker.handle(applet, NappletRequest.Nip44Decrypt(bob.pubKey, fromBob), allDeclared)
+            assertEquals(2, opPrompt.calls)
+
+            // The broad grant was never written.
+            assertNull(signerLedger.store.loadOpDecision("napplet:${signer.pubKey}:${applet.coordinate}", NostrSignerOp.Decrypt))
+        }
+
+    @Test
+    fun aSessionGrantIsStoredNoWiderThanTheUserGaveIt() =
+        runTest {
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+
+            val alice = NostrSignerInternal(KeyPair("77".repeat(32).hexToByteArray()))
+            val bob = NostrSignerInternal(KeyPair("88".repeat(32).hexToByteArray()))
+
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowForSession(NostrSignerOp.DecryptFrom(alice.pubKey)))
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+
+            broker.handle(applet, NappletRequest.Nip44Decrypt(alice.pubKey, alice.nip44Encrypt("a", signer.pubKey)), allDeclared)
+            assertEquals(1, opPrompt.calls)
+
+            // Same counterparty rides the session grant; a different one must not.
+            broker.handle(applet, NappletRequest.Nip44Decrypt(alice.pubKey, alice.nip44Encrypt("a", signer.pubKey)), allDeclared)
+            assertEquals(1, opPrompt.calls)
+            broker.handle(applet, NappletRequest.Nip44Decrypt(bob.pubKey, bob.nip44Encrypt("b", signer.pubKey)), allDeclared)
+            assertEquals(2, opPrompt.calls)
+        }
 }

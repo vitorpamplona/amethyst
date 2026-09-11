@@ -51,7 +51,7 @@ enum class HostProfile {
      */
     fun declaredCapabilities(requires: List<String>): Set<NappletCapability> =
         when (this) {
-            WEBSITE -> setOf(NappletCapability.IDENTITY, NappletCapability.RELAY, NappletCapability.SIGNER)
+            WEBSITE -> NappletCapability.WEBSITE_CAPABILITIES
             NAPPLET -> resolveRequiredCapabilities(requires).capabilities.toSet()
         }
 
