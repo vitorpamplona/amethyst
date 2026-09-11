@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.commons.marmot
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
+import com.vitorpamplona.quartz.marmot.protocolCore.InMemoryPublishObligationStore
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -76,14 +78,25 @@ class MarmotDisbandTest {
 
             f.manager.disbandGroup(nostrGroupId)
 
+            // The Commit applied, so the group's own state says disbanded —
+            // but the LIFECYCLE does not, yet. `group-lifecycle-v1.md` is
+            // explicit that a disband is never terminalized through ordinary
+            // linear advancement: admitting it forces `Recovering` even with no
+            // fork, and only a SELECTED disband Commit moves it to `Disbanded`.
             assertTrue(f.manager.groupState(nostrGroupId)?.isDisbanded == true)
-            assertEquals(GroupLifecycleState.DISBANDED, f.manager.lifecycle(nostrGroupId))
+            assertEquals(GroupLifecycleState.RECOVERING, f.manager.lifecycle(nostrGroupId))
+            assertTrue(f.manager.isDisbanding(nostrGroupId))
 
-            // The whole point of the state: outbound work stops.
+            // Outbound work stops immediately all the same — that is the
+            // `Disbanding` gate, not the lifecycle.
             assertFailsWith<IllegalStateException> {
                 f.manager.buildTextMessage(nostrGroupId, "anyone still here?")
             }
-            Unit
+
+            // Settle the pass and the group terminalizes for real.
+            f.manager.driveConvergenceToSettlement(pollMs = 1)
+            assertEquals(GroupLifecycleState.DISBANDED, f.manager.lifecycle(nostrGroupId))
+            assertFalse(f.manager.isDisbanding(nostrGroupId), "a resolved request lowers its gate")
         }
 
     @Test
@@ -144,6 +157,12 @@ class MarmotDisbandTest {
             val commit = alice.manager.disbandGroup(nostrGroupId)
             bob.manager.ingest(commit.signedEvent)
 
+            // Same rule on the receiving side: admitted, then selected. A
+            // witness that terminalized on arrival could not tell a disband
+            // that won from one that lost a race it never saw.
+            assertEquals(GroupLifecycleState.RECOVERING, bob.manager.lifecycle(nostrGroupId))
+            bob.manager.driveConvergenceToSettlement(pollMs = 1)
+
             assertEquals(GroupLifecycleState.DISBANDED, bob.manager.lifecycle(nostrGroupId))
             assertFailsWith<IllegalStateException> {
                 bob.manager.buildTextMessage(nostrGroupId, "still here?")
@@ -198,15 +217,117 @@ class MarmotDisbandTest {
             val f = Fixture(publisher = MarmotPublisher { _, _ -> false })
             f.createCurrentProfile()
 
-            val thrown = assertFailsWith<IllegalStateException> { f.manager.disbandGroup(nostrGroupId) }
-            assertTrue(thrown.message.orEmpty().contains("reached no relay"))
+            f.manager.disbandGroup(nostrGroupId)
 
             assertTrue(f.manager.groupState(nostrGroupId)?.isDisbanded != true)
             assertTrue(f.manager.lifecycle(nostrGroupId) != GroupLifecycleState.DISBANDED)
 
-            // Still a working group: nothing about a failed disband may leak
-            // into the states that stop outbound work.
-            f.manager.buildTextMessage(nostrGroupId, "still here")
+            // What a failed publish must NOT do is throw the request away. The
+            // component calls the gate durable precisely so it "survives
+            // publication failure", and an admin who ended a conversation does
+            // not need to be told to click again because a relay blinked.
+            assertTrue(f.manager.isDisbanding(nostrGroupId))
+
+            // And nothing may be sent while it is unresolved. The group is not
+            // terminal — it may yet come back if the request turns out to be
+            // impossible — but it is no longer an ordinary live conversation.
+            assertFailsWith<IllegalStateException> {
+                f.manager.buildTextMessage(nostrGroupId, "still here")
+            }
+            Unit
+        }
+
+    @Test
+    fun `a pending disband request outlives a restart`() =
+        runBlocking {
+            // The gate is durable or it is nothing: the crash that happens
+            // between "the admin pressed disband" and "a relay took the commit"
+            // is exactly the case it exists for, and an in-memory flag loses
+            // the intent there and offers the group as live on the next start.
+            val store = SnapshotStateStore()
+            val obligations = InMemoryPublishObligationStore()
+            val first =
+                MarmotManager(
+                    NostrSignerInternal(KeyPair()),
+                    store,
+                    SnapshotMessageStore(),
+                    SnapshotBundleStore(),
+                    publisher = MarmotPublisher { _, _ -> false },
+                    publishObligationStore = obligations,
+                )
+            first.createCurrentProfileGroup(
+                nostrGroupId = nostrGroupId,
+                relays = listOf("wss://relay.invalid"),
+                profile = GroupProfileV1("doomed", ""),
+            )
+            first.disbandGroup(nostrGroupId)
+            assertTrue(first.isDisbanding(nostrGroupId))
+
+            // A fresh manager over the same stores is what a restart looks like.
+            val restarted =
+                MarmotManager(
+                    first.signer,
+                    store,
+                    SnapshotMessageStore(),
+                    SnapshotBundleStore(),
+                    publisher = ACCEPTING_RELAY,
+                    publishObligationStore = obligations,
+                )
+            restarted.restoreAll()
+
+            assertTrue(restarted.isDisbanding(nostrGroupId), "the request must survive the restart")
+            assertFailsWith<IllegalStateException> {
+                restarted.buildTextMessage(nostrGroupId, "did it end?")
+            }
+            Unit
+        }
+
+    @Test
+    fun `a disband that loses a branch race is regenerated, not dropped`() =
+        runBlocking {
+            // The case terminalizing-on-application could never survive. Alice
+            // disbands; the branch that wins is an ACTIVE one from bob, so her
+            // Commit loses. The spec says an authorized client regenerates it
+            // against the selected state — and the only reason she still can is
+            // that she never went terminal, because a `Disbanded` client stops
+            // processing group traffic and could not have learned she lost.
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.createCurrentProfile()
+
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+
+            // Bob is promoted so his own commit is one alice will accept.
+            alice.manager
+                .setGroupAdmins(nostrGroupId, listOf(alice.signer.pubKey, bob.signer.pubKey))
+                .let { bob.manager.ingest(it.signedEvent) }
+
+            // Both commit off the same epoch: alice's disband and bob's rename.
+            val disband = alice.manager.disbandGroup(nostrGroupId)
+            assertTrue(alice.manager.isDisbanding(nostrGroupId))
+            val rename = bob.manager.setGroupProfile(nostrGroupId, "still going", "")
+
+            // Alice sees bob's competing commit and settles the pass.
+            alice.manager.ingest(rename.signedEvent)
+            alice.manager.driveConvergenceToSettlement(pollMs = 1)
+
+            // Whatever branch won, the REQUEST is still alive: either it was
+            // the disband (terminal, gate down) or it was not (gate still up,
+            // regenerated against the selected state). What must never happen
+            // is a group that is live for bob and terminal for alice.
+            val lifecycle = alice.manager.lifecycle(nostrGroupId)
+            if (lifecycle == GroupLifecycleState.DISBANDED) {
+                assertFalse(alice.manager.isDisbanding(nostrGroupId))
+            } else {
+                assertTrue(
+                    alice.manager.isDisbanding(nostrGroupId),
+                    "a disband that lost its branch must stay pending, not vanish",
+                )
+            }
+            // Either way the commit alice published is the spec's shape.
+            assertTrue(disband.signedEvent.id.isNotEmpty())
             Unit
         }
 }

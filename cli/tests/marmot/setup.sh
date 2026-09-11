@@ -63,13 +63,22 @@ preflight() {
   # Both White Noise clients vendor an immutable MarmotKit artifact and name
   # its `mdk-sha` in a lockfile — whitenoise-android's
   # `app/src/main/marmotkit/MARMOT_VERSION` and whitenoise-ios's
-  # `Packages/MarmotKit/MARMOT_VERSION` currently agree on this one. Testing
-  # against master answers "are we compatible with tip"; testing against this
-  # answers "are we compatible with what users are running", which is the
-  # question the harness exists to answer.
+  # `Packages/MarmotKit/MARMOT_VERSION`. Testing against master answers "are we
+  # compatible with tip"; testing against this answers "are we compatible with
+  # what users are running", which is the question the harness exists to answer.
+  #
+  # THE TWO APPS NO LONGER AGREE, and the rule for that is: take the newer.
+  # As of 2026-09-10 android is on 0.9.21 (`fdd398a8`) and ios is still on
+  # 0.9.20 (`2f44f6b6`) — android syncs its bindings on its own cadence and got
+  # there first. The newer one is where new validation lands, so it is where
+  # drift shows up first; a client that satisfies 0.9.21 satisfies 0.9.20,
+  # since every 0.9.20 rule is still in 0.9.21. Pinning to the laggard would
+  # test the subset and call it coverage.
   #
   # Bump it deliberately, by reading those lockfiles again — not by drifting.
-  MDK_PIN="${MDK_PIN:-2f44f6b65a19f8818644ccd7027618ba91450c33}"
+  # If they agree again, that is the value; if they disagree, take the newer
+  # and say so here.
+  MDK_PIN="${MDK_PIN:-fdd398a80f1626f1713787cebe416f7890b5b204}"
   if [[ "$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null)" != "$MDK_PIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       info "mdk is not at the pinned $MDK_PIN and --no-build set — testing whatever is checked out"

@@ -67,7 +67,7 @@ class MarmotSystemRowDiffTest {
     }
 
     @Test
-    fun `a member who removed themselves left, anyone else was removed`() {
+    fun `a member who removed themselves left and anyone else was removed`() {
         // The registry distinguishes these and the only thing that can tell
         // them apart is whether the committer is the departing account.
         val before = snapshot(members = setOf(alice, bob))
@@ -79,7 +79,7 @@ class MarmotSystemRowDiffTest {
     }
 
     @Test
-    fun `admin changes are about the policy, not about presence`() {
+    fun `admin changes are about the policy and not about presence`() {
         // Bob is added and promoted in one commit: both rows are true, and a
         // client that collapsed them would lose who can act in the group.
         val rows =

@@ -87,7 +87,7 @@ class MarmotPublishObligation(
     }
 }
 
-/** Durable storage for unresolved publish obligations. */
+/** Durable storage for unresolved publish obligations and outbound gates. */
 interface MarmotPublishObligationStore {
     suspend fun save(
         obligationId: HexKey,
@@ -97,11 +97,34 @@ interface MarmotPublishObligationStore {
     suspend fun delete(obligationId: HexKey)
 
     suspend fun loadAll(): List<ByteArray>
+
+    /**
+     * Persist an outbound gate for one group.
+     *
+     * Gates are durable by definition — `Disbanding` "survives publication
+     * failure, restart, and a losing branch", and `Leaving` and `Removed` are
+     * one-way until the protocol event that clears them. An implementation
+     * that does not override these keeps them in memory only, which loses the
+     * request on restart; that is the pre-existing behaviour, not a new one,
+     * so it defaults rather than breaking every store.
+     */
+    suspend fun saveGate(
+        groupId: HexKey,
+        gate: String,
+    ) {
+    }
+
+    suspend fun deleteGate(groupId: HexKey) {
+    }
+
+    /** Group id to gate name, as written by [saveGate]. */
+    suspend fun loadGates(): Map<HexKey, String> = emptyMap()
 }
 
 /** Non-durable default. A client that uses this loses publish-before-apply across restart. */
 class InMemoryPublishObligationStore : MarmotPublishObligationStore {
     private val entries = LinkedHashMap<HexKey, ByteArray>()
+    private val gateEntries = LinkedHashMap<HexKey, String>()
 
     override suspend fun save(
         obligationId: HexKey,
@@ -115,6 +138,19 @@ class InMemoryPublishObligationStore : MarmotPublishObligationStore {
     }
 
     override suspend fun loadAll(): List<ByteArray> = entries.values.toList()
+
+    override suspend fun saveGate(
+        groupId: HexKey,
+        gate: String,
+    ) {
+        gateEntries[groupId] = gate
+    }
+
+    override suspend fun deleteGate(groupId: HexKey) {
+        gateEntries.remove(groupId)
+    }
+
+    override suspend fun loadGates(): Map<HexKey, String> = gateEntries.toMap()
 }
 
 /** Why a publish attempt ended. */
@@ -182,9 +218,16 @@ class MarmotPublishGate(
     private val gates = mutableMapOf<HexKey, LocalOutboundGate>()
     private val lifecycles = mutableMapOf<HexKey, GroupLifecycleState>()
 
-    /** Reload unresolved obligations. Call once at startup, after group restore. */
+    /** Reload unresolved obligations and outbound gates. Call once at startup, after group restore. */
     suspend fun restore() =
         mutex.withLock {
+            store.loadGates().forEach { (groupId, name) ->
+                // An unreadable gate name is dropped rather than guessed at:
+                // inventing `Removed` for a group we are still in would hide it
+                // forever, and inventing `Disbanding` would block a group whose
+                // owner never asked to end it.
+                LocalOutboundGate.entries.firstOrNull { it.name == name }?.let { gates[groupId] = it }
+            }
             store.loadAll().forEach { bytes ->
                 try {
                     val obligation = MarmotPublishObligation.decodeTls(bytes)
@@ -214,27 +257,48 @@ class MarmotPublishGate(
      * Only `Stable` may, and only with no outbound gate: `Leaving`,
      * `Disbanding` and a realized `Removed` each block all new outbound work.
      */
-    suspend fun canPrepareLocalCommit(groupId: HexKey): Boolean =
+    suspend fun canPrepareLocalCommit(
+        groupId: HexKey,
+        ignoringGate: LocalOutboundGate? = null,
+    ): Boolean =
         mutex.withLock {
             val state = lifecycles[groupId] ?: GroupLifecycleState.STABLE
-            state.canPrepareLocalCommit && gates[groupId] == null
+            val gate = gates[groupId]
+            // [ignoringGate] is for the work the gate itself exists to carry: a
+            // `Disbanding` group must still be able to prepare — and regenerate
+            // — the disband Commit, or raising the gate first would block the
+            // very request that raised it.
+            state.canPrepareLocalCommit && (gate == null || gate == ignoringGate)
         }
 
-    /** Raise an outbound gate — a sent SelfRemove, a disband request, a realized removal. */
+    /**
+     * Raise an outbound gate — a sent SelfRemove, a disband request, a realized
+     * removal — and make it durable before returning.
+     *
+     * Written before the caller acts on it, for the same reason a publish
+     * obligation is: a disband request that is only in memory is lost by the
+     * crash that happens between raising it and publishing the Commit, and the
+     * next start would offer the group as ordinarily live.
+     */
     suspend fun raiseGate(
         groupId: HexKey,
         gate: LocalOutboundGate,
-    ) = mutex.withLock {
-        gates[groupId] = gate
-        Unit
+    ) {
+        store.saveGate(groupId, gate.name)
+        mutex.withLock {
+            gates[groupId] = gate
+            Unit
+        }
     }
 
     /** Clear an outbound gate. Only an authenticated re-join clears `REMOVED`. */
-    suspend fun clearGate(groupId: HexKey) =
+    suspend fun clearGate(groupId: HexKey) {
+        store.deleteGate(groupId)
         mutex.withLock {
             gates.remove(groupId)
             Unit
         }
+    }
 
     /** Unresolved obligations for [groupId], oldest first. */
     suspend fun pendingFor(groupId: HexKey): List<MarmotPublishObligation> =

@@ -1043,10 +1043,16 @@ class MarmotManager(
     private suspend fun commitAndPublish(
         nostrGroupId: HexKey,
         relays: List<NormalizedRelayUrl>,
+        /**
+         * The one gate this commit is allowed to pass. Only the disband path
+         * uses it, and only for its own `Disbanding` gate — the gate exists to
+         * carry that request, so it must not block it.
+         */
+        ignoringGate: LocalOutboundGate? = null,
         stage: suspend () -> MlsGroupManager.StagedCommit,
     ): CommitPublication {
-        requireOutboundAllowed(nostrGroupId, "commit a group-state change")
-        check(publishGate.canPrepareLocalCommit(nostrGroupId)) {
+        requireOutboundAllowed(nostrGroupId, "commit a group-state change", ignoringGate)
+        check(publishGate.canPrepareLocalCommit(nostrGroupId, ignoringGate)) {
             "Group $nostrGroupId cannot prepare a local commit " +
                 "(lifecycle=${publishGate.lifecycle(nostrGroupId)}, gate=${publishGate.outboundGate(nostrGroupId)})"
         }
@@ -1133,6 +1139,17 @@ class MarmotManager(
                     "convergence settled group=${resolution.groupId.take(8)}… " +
                         "epoch=${resolution.canonicalEpoch} rewound=${resolution.rewound}"
                 }
+                // Settlement is the only moment a pending disband can be
+                // decided: the branch is chosen, so the request has either won,
+                // lost and needs regenerating, or become impossible. Doing it
+                // here is what makes the request survive a losing branch
+                // instead of being dropped with the pass.
+                val outcome = resolveDisbandRequest(resolution.groupId)
+                if (outcome != DisbandResolution.NOT_REQUESTED) {
+                    Log.d("MarmotManager") {
+                        "disband request for ${resolution.groupId.take(8)}… settled as $outcome"
+                    }
+                }
             }
         }
     }
@@ -1204,6 +1221,7 @@ class MarmotManager(
     private suspend fun requireOutboundAllowed(
         nostrGroupId: HexKey,
         what: String,
+        ignoringGate: LocalOutboundGate? = null,
     ) {
         when (val state = lifecycle(nostrGroupId)) {
             GroupLifecycleState.DISBANDED ->
@@ -1215,6 +1233,29 @@ class MarmotManager(
                 )
 
             else -> Log.d("MarmotManager") { "$what allowed for ${nostrGroupId.take(8)}… in $state" }
+        }
+
+        // A durable gate blocks outbound work without being a lifecycle state:
+        // the member is still in the tree, the group is not terminal, and yet
+        // nothing new may be sent. `Disbanding` is the one that matters here —
+        // it survives a publish no relay took, so a group whose ending is still
+        // pending must not accept messages in the meantime, which is exactly
+        // the window where a member would otherwise keep talking into a
+        // conversation an admin has already ended.
+        val gate = publishGate.outboundGate(nostrGroupId)
+        if (gate != null && gate != ignoringGate && gate.blocksOutbound) {
+            throw IllegalStateException(
+                when (gate) {
+                    LocalOutboundGate.DISBANDING ->
+                        "Group $nostrGroupId is being disbanded; cannot $what until that resolves"
+
+                    LocalOutboundGate.LEAVING ->
+                        "You are leaving group $nostrGroupId; cannot $what"
+
+                    LocalOutboundGate.REMOVED ->
+                        "You are no longer a member of group $nostrGroupId; cannot $what"
+                },
+            )
         }
     }
 
@@ -1921,7 +1962,16 @@ class MarmotManager(
         // requireOutboundAllowed also refuses an Unrecoverable group, which is
         // the point: disbanding from state we do not trust would publish a
         // terminal commit off a fork.
-        requireOutboundAllowed(nostrGroupId, "disband the group")
+        requireOutboundAllowed(nostrGroupId, "disband the group", ignoringGate = LocalOutboundGate.DISBANDING)
+
+        // The `Disbanding` gate goes up FIRST and durably. The request is the
+        // irreversible thing a human authorized, and it has to outlive
+        // everything that can go wrong after this line: a publish no relay
+        // acknowledges, a crash, a restart, and a branch race this commit
+        // loses. Raising it afterwards would leave the one window where a
+        // crash loses the intent entirely and the next start offers the group
+        // as ordinarily live.
+        publishGate.raiseGate(nostrGroupId, LocalOutboundGate.DISBANDING)
 
         // The disband Commit is only valid when `0x800c` is ALREADY required in
         // the candidate parent, so a group that predates the component needs
@@ -1929,25 +1979,141 @@ class MarmotManager(
         // creates requires it from epoch 0, so this is the older-group and
         // other-implementation path, not the common one.
         if (groupState(nostrGroupId)?.requires(GroupLifecycleV1.COMPONENT_ID) != true) {
-            val enablement = commitAndPublish(nostrGroupId, relays) { groupManager.stageEnableDisbanding(nostrGroupId) }
+            val enablement =
+                commitAndPublish(nostrGroupId, relays, ignoringGate = LocalOutboundGate.DISBANDING) {
+                    groupManager.stageEnableDisbanding(nostrGroupId)
+                }
             check(enablement.confirmed) {
                 "Could not enable disbanding on group $nostrGroupId: no relay acknowledged the enablement " +
                     "commit, so the group is unchanged and still live"
             }
         }
 
-        val publication = commitAndPublish(nostrGroupId, relays) { groupManager.stageDisband(nostrGroupId) }
-        // Every other setter is content to leave an unacknowledged commit as a
-        // retryable obligation and say nothing, because a later retry lands the
-        // same state. This one cannot: the caller is about to tell a human the
-        // conversation is over, and a group that is still live for everyone
-        // else must not be reported as ended. The obligation IS still queued —
-        // the message says so — but the answer to "did it happen" is no.
-        check(publication.confirmed) {
-            "Disband of group $nostrGroupId reached no relay; it stays queued as a pending " +
-                "publish and the group is still live until one acknowledges it"
+        val publication =
+            commitAndPublish(nostrGroupId, relays, ignoringGate = LocalOutboundGate.DISBANDING) {
+                groupManager.stageDisband(nostrGroupId)
+            }
+        // An unacknowledged publish is NOT a failed request any more. The
+        // commit stays a retryable obligation and the gate keeps the request
+        // alive across restarts, so this reports what happened instead of
+        // throwing the intent away — the caller reads [isDisbanding] and
+        // [lifecycle] to tell "ended" from "ending".
+        if (!publication.confirmed) {
+            Log.w("MarmotManager") {
+                "disbandGroup($nostrGroupId): no relay acknowledged the commit — the request stays " +
+                    "durable behind the Disbanding gate and retries with the obligation"
+            }
         }
         return publication.event
+    }
+
+    /**
+     * The epoch each pending disband request was last prepared against, so a
+     * regeneration happens at most once per epoch. See [resolveDisbandRequest].
+     */
+    private val disbandPreparedEpoch = mutableMapOf<HexKey, Long>()
+
+    /** True while an irreversible disband request for [nostrGroupId] is unresolved. */
+    suspend fun isDisbanding(nostrGroupId: HexKey): Boolean = publishGate.outboundGate(nostrGroupId) == LocalOutboundGate.DISBANDING
+
+    /**
+     * Resolve a pending disband request against the branch convergence just
+     * selected.
+     *
+     * Three outcomes, and the middle one is why this exists:
+     *
+     * - the selected branch carries the disband → the request succeeded. The
+     *   gate comes down; `Disbanded` is already set by the engine, and it is
+     *   absorbing, so nothing else is needed.
+     * - an ACTIVE branch was selected → our Commit lost. The spec says an
+     *   authorized client regenerates it against the selected state, which is
+     *   what this does; the gate stays up meanwhile, so the group is not
+     *   offered as ordinarily live between attempts.
+     * - we are no longer an admin or no longer a member → the request has
+     *   become impossible. It ends as a local failure with the gate cleared,
+     *   rather than retrying forever against a group that will never accept it.
+     *
+     * "If any valid disband branch is selected, the request succeeds regardless
+     * of which admin authored the selected Commit" — so this deliberately reads
+     * the SELECTED STATE rather than tracking whether our own bytes won.
+     */
+    suspend fun resolveDisbandRequest(nostrGroupId: HexKey): DisbandResolution {
+        if (!isDisbanding(nostrGroupId)) return DisbandResolution.NOT_REQUESTED
+
+        if (groupManager.getGroup(nostrGroupId)?.currentGroupState()?.isDisbanded == true) {
+            publishGate.clearGate(nostrGroupId)
+            disbandPreparedEpoch.remove(nostrGroupId)
+            return DisbandResolution.DISBANDED
+        }
+
+        val view = groupView(nostrGroupId)
+        if (view == null || signer.pubKey !in view.adminPubkeys) {
+            // Not an error worth throwing from a settlement loop: the group
+            // outlived the requester's authority over it, which is a real
+            // outcome the caller has to surface rather than retry.
+            publishGate.clearGate(nostrGroupId)
+            disbandPreparedEpoch.remove(nostrGroupId)
+            Log.w("MarmotManager") {
+                "disband request for $nostrGroupId is impossible: no longer an admin or no longer a member"
+            }
+            return DisbandResolution.IMPOSSIBLE
+        }
+
+        // Still pending and still authorized: regenerate against the selected
+        // state. A commit still in flight is left alone — republishing the same
+        // epoch twice is the fork this gate exists to prevent.
+        //
+        // The predicate is the PUBLISH gate's, deliberately, not [lifecycle]'s.
+        // A group that has just settled a pass still reads `Recovering` from
+        // the convergence engine — nothing resets that to `Stable` when a pass
+        // ends — so gating on the reported lifecycle would mean never
+        // regenerating anything, which is the whole feature. What actually
+        // decides whether a new commit may be prepared is an unresolved publish
+        // obligation, and that is what this asks about.
+        if (!publishGate.canPrepareLocalCommit(nostrGroupId, LocalOutboundGate.DISBANDING)) {
+            return DisbandResolution.PENDING
+        }
+
+        // ONE attempt per epoch. Regenerating opens a fresh convergence pass,
+        // and settling that pass calls back here — so without this the two
+        // spin against each other forever: settle, regenerate, settle,
+        // regenerate, with the group's epoch stuck wherever the competing
+        // branch left it. (MDK bounds the same loop the same way, with
+        // `DisbandRequest.last_prepared_epoch`.)
+        //
+        // Waiting for a NEW epoch is also the right trigger on its merits: a
+        // regeneration that would authenticate against the same parent as the
+        // attempt that just lost is the same commit, and it would lose again.
+        val epoch = currentEpoch(nostrGroupId)
+        if (epoch != null && disbandPreparedEpoch[nostrGroupId] == epoch) return DisbandResolution.PENDING
+        if (epoch != null) disbandPreparedEpoch[nostrGroupId] = epoch
+
+        return try {
+            commitAndPublish(
+                nostrGroupId,
+                groupRelays(nostrGroupId),
+                ignoringGate = LocalOutboundGate.DISBANDING,
+            ) { groupManager.stageDisband(nostrGroupId) }
+            DisbandResolution.PENDING
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "could not regenerate the disband commit for $nostrGroupId", e)
+            DisbandResolution.PENDING
+        }
+    }
+
+    /** What [resolveDisbandRequest] concluded. */
+    enum class DisbandResolution {
+        /** No disband request is pending for this group. */
+        NOT_REQUESTED,
+
+        /** A disband branch was selected. The group is terminal. */
+        DISBANDED,
+
+        /** Still unresolved — regenerated, in flight, or waiting on a pass. */
+        PENDING,
+
+        /** The requester is no longer an admin or no longer a member. */
+        IMPOSSIBLE,
     }
 
     /**

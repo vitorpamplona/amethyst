@@ -228,7 +228,41 @@ class MarmotConvergenceEngine(
         }
         ctx.canonicalCommits.addLast(candidateOf(commitBytes, sourceEpoch))
         trim(ctx)
-        terminalizeIfDisbanded(groupId, ctx)
+        admitDisbandForSelection(groupId, ctx)
+    }
+
+    /**
+     * A disband Commit reached canonical state — open a pass and wait for
+     * selection instead of terminalizing here.
+     *
+     * `group-lifecycle-v1.md` ("Convergence and realization"): a valid disband
+     * Commit is never terminalized through ordinary linear advancement.
+     * Admitting one moves the lifecycle to `Recovering` EVEN WHEN NO DIVERGENT
+     * EDGE EXISTS, and only a SELECTED disband Commit moves it on to
+     * `Disbanded`.
+     *
+     * The distinction is the whole safety property. Terminalizing on
+     * application means a disband that loses a branch race has already
+     * destroyed this client's group: `Disbanded` is absorbing, so it stops
+     * processing group traffic and can never learn that the branch it lost was
+     * the one everyone else kept. Waiting for selection costs one bounded pass
+     * and makes the outcome the group's rather than ours.
+     *
+     * The pass is opened WITHOUT [ConvergencePass.markForkDetected] — the spec
+     * is explicit that this forced transition does not assert that a fork
+     * exists — so a no-fork disband settles on quiescence with one branch and
+     * terminalizes, while a real race is resolved on its merits with no special
+     * ordering priority for the disband.
+     */
+    private fun admitDisbandForSelection(
+        groupId: HexKey,
+        ctx: GroupContext,
+    ) {
+        if (ctx.lifecycle == GroupLifecycleState.DISBANDED) return
+        if (groupManager.getGroup(groupId)?.currentGroupState()?.isDisbanded != true) return
+        val pass = ctx.pass ?: openPass(groupId, ctx, forkDetected = false)
+        pass.markDisbandCandidateAdmitted()
+        ctx.lifecycle = pass.lifecycleWhileRunning(ctx.lifecycle)
     }
 
     /**
@@ -459,6 +493,8 @@ class MarmotConvergenceEngine(
      * WHEN the batch is resolved, never what the frozen batch resolves to.
      */
     suspend fun settle(groupId: HexKey): ConvergenceResolution? {
+        settleUncontested(groupId)?.let { return it }
+
         // Graph construction restores groups and replays MLS bytes, which is
         // slow enough that holding the engine mutex across it would stall every
         // other group. Snapshot the inputs under the lock, resolve outside it,
@@ -538,6 +574,41 @@ class MarmotConvergenceEngine(
             )
         }
     }
+
+    /**
+     * Resolve a pass that has no divergent material at all.
+     *
+     * Every pass used to be opened BY a divergent commit, so this shape could
+     * not occur: [freezeInputs] needs a retained state some divergent candidate
+     * authenticates against, and with nothing divergent there is no such index,
+     * so it returns null — and a null there means `settle` returns without
+     * clearing `ctx.pass`. The pass then stays open forever and every caller
+     * polling for settlement spins.
+     *
+     * A disband opens exactly that shape: the spec has it open a bounded pass
+     * "even when no divergent edge exists", so that a competitor arriving
+     * inside the window is still considered. When the window closes with none,
+     * selection is trivial — the canonical branch is the only branch — and the
+     * pass resolves with nothing rewound.
+     */
+    private suspend fun settleUncontested(groupId: HexKey): ConvergenceResolution? =
+        mutex.withLock {
+            val ctx = contexts[groupId] ?: return@withLock null
+            val pass = ctx.pass ?: return@withLock null
+            if (ctx.divergent.isNotEmpty()) return@withLock null
+
+            pass.freeze()
+            ctx.pass = null
+            terminalizeIfDisbanded(groupId, ctx)
+            ConvergenceResolution(
+                groupId = groupId,
+                status = ConvergenceStatus.SETTLED,
+                lifecycle = ctx.lifecycle,
+                canonicalEpoch = groupManager.getGroup(groupId)?.epoch ?: 0L,
+                rewound = false,
+                outcomes = emptyList(),
+            )
+        }
 
     /** Forget everything about [groupId] — used when leaving or deleting a group. */
     suspend fun forget(groupId: HexKey) =
@@ -650,13 +721,16 @@ class MarmotConvergenceEngine(
     private fun openPass(
         groupId: HexKey,
         ctx: GroupContext,
+        forkDetected: Boolean = true,
     ): ConvergencePass {
         val baseEpoch = groupManager.getGroup(groupId)?.epoch ?: 0L
         val pass = ConvergencePass(baseEpoch, policy, monotonicNowMs)
         // A divergent commit that authenticates against a retained state IS an
         // eligible divergent edge, which is exactly what makes this a recovery
-        // rather than a linear pass.
-        pass.markForkDetected()
+        // rather than a linear pass. A disband opens a pass without one: it is
+        // a recovery because the spec says terminalization waits for selection,
+        // not because anything forked.
+        if (forkDetected) pass.markForkDetected()
         ctx.pass = pass
         ctx.lifecycle = pass.lifecycleWhileRunning(ctx.lifecycle)
         return pass

@@ -102,7 +102,7 @@ class MarmotEditOverlayTest {
     }
 
     @Test
-    fun `a same-second pair resolves by event id, identically for every reader`() {
+    fun `a same-second pair resolves by event id identically for every reader`() {
         // Two devices of one account can stamp the same second. Without a
         // deterministic tie-break two readers would render different text for
         // the same message forever, and neither would be wrong.
