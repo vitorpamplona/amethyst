@@ -334,15 +334,31 @@ class MarmotInboundProcessor(
                 GroupEventResult.Error(groupId, "Failed to process GroupEvent: ${e.message}", e)
             }
 
-        // Track processed events for dedup — except UndecryptableOuterLayer,
-        // which must stay retryable. These events are typically future-epoch
-        // arrivals buffered by the handler and replayed after a
-        // CommitProcessed advances our epoch; marking them processed here
-        // would cause the retry to hit the Duplicate early-return above and
-        // skip MLS decryption entirely. DoS is already bounded by the
-        // handler's per-group pending buffer.
+        // Track processed events for dedup — except the two results that must
+        // stay RETRYABLE, because for both of them "we saw this" is not the
+        // same as "we are done with this".
+        //
+        // UndecryptableOuterLayer is typically a future-epoch arrival buffered
+        // by the handler and replayed once a CommitProcessed advances our
+        // epoch; marking it processed would send the retry into the Duplicate
+        // early-return above and skip MLS decryption entirely.
+        //
+        // AppMessageOnCandidateBranch is the same shape one level up: the
+        // payload decrypted on a branch that was losing AT THE TIME, and
+        // convergence may still select that branch — this result is itself a
+        // witness FOR it. Remembering the id would mean a message that landed
+        // on the branch the group went on to adopt is dropped as a duplicate
+        // and never rendered, which is precisely backwards. Re-processing is
+        // safe: witnesses are a set keyed by sender account, so a resent
+        // payload adds nothing to a branch's standing and is admitted as
+        // ordinary rather than selection-relevant.
+        //
+        // DoS is bounded for both by the handler's per-group pending buffer.
         val idToRemember = messageId
-        if (idToRemember != null && result !is GroupEventResult.UndecryptableOuterLayer) {
+        if (idToRemember != null &&
+            result !is GroupEventResult.UndecryptableOuterLayer &&
+            result !is GroupEventResult.AppMessageOnCandidateBranch
+        ) {
             processedIdsMutex.withLock {
                 processedMessageIds.add(idToRemember)
                 // Trim the set if it exceeds the max size

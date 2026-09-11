@@ -413,7 +413,22 @@ class MarmotPublishBeforeApplyTest {
                     relays = listOf(relay),
                 )
             }
-            assertEquals(1, fx.publisher.published.size, "no replacement commit was offered")
+            // The invariant is that no REPLACEMENT COMMIT was minted for the
+            // held epoch — not that nothing went out. A blocked attempt now
+            // retries the stuck obligation on its way through, so the relay may
+            // legitimately see the same event twice; what it must never see is
+            // a second, different commit for the same epoch, because that is
+            // the fork publish-before-apply exists to prevent. Counting
+            // distinct ids says that, where counting sends only said it by
+            // accident.
+            assertEquals(
+                1,
+                fx.publisher.published
+                    .map { it.id }
+                    .toSet()
+                    .size,
+                "no replacement commit was offered; a re-send of the same event is not one",
+            )
         }
 
     /** The group's own relay list is the default recipient scope. */

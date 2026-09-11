@@ -261,6 +261,38 @@ class MarmotDisbandTest {
         }
 
     @Test
+    fun `rejoining a group we left clears the departure gate`() =
+        runBlocking {
+            // Leaving raises a durable `Leaving` gate, and nothing but a
+            // re-join clears it. That was harmless while gates blocked nothing;
+            // now that they stop outbound work — and survive restarts — a group
+            // you left and were invited back to would be readable and
+            // permanently unsendable.
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.createCurrentProfile()
+
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+
+            bob.manager.leaveGroup(nostrGroupId)
+            assertFailsWith<IllegalStateException>("a leaving member may not send") {
+                bob.manager.buildTextMessage(nostrGroupId, "one more thing")
+            }
+
+            // Invited back: a fresh KeyPackage, a fresh Welcome.
+            val rejoinKp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, rejoinWelcome) = alice.manager.addMember(nostrGroupId, rejoinKp, emptyList())
+            bob.manager.ingest(rejoinWelcome!!.giftWrapEvent)
+
+            // The group has to be usable again — that is the whole point of
+            // being invited back.
+            bob.manager.buildTextMessage(nostrGroupId, "back again")
+            Unit
+        }
+
+    @Test
     fun `a pending disband request outlives a restart`() =
         runBlocking {
             // The gate is durable or it is nothing: the crash that happens

@@ -208,6 +208,56 @@ class MarmotPublishDurabilityTest {
         }
 
     @Test
+    fun aWedgedGroupRecoversOnTheNextCommitWithoutARestart() =
+        runBlocking<Unit> {
+            // `PendingPublish` correctly refuses new commits, but the only
+            // thing that ever resolved it was `restoreAll` — so a single
+            // dropped socket left the group unable to commit anything until the
+            // app was restarted. The next attempt has to BE the recovery.
+            val signer = NostrSignerInternal(KeyPair())
+            val store = MemoryStateStore()
+            val obligations = MemoryObligationStore()
+            val publisher = SwitchablePublisher(accepts = false)
+            val groupId = "e".repeat(64)
+
+            val manager = manager(signer, store, obligations, publisher)
+            manager.createGroup(
+                groupId,
+                MarmotGroupData(
+                    nostrGroupId = groupId,
+                    adminPubkeys = listOf(signer.pubKey),
+                    relays = listOf(relay.url),
+                ),
+            )
+            val founder = KeyPair()
+            manager.addMember(
+                nostrGroupId = groupId,
+                memberPubKey = founder.pubKey.toHexKey(),
+                keyPackageBytes =
+                    manager.groupManager
+                        .getGroup(groupId)!!
+                        .createKeyPackage(founder.pubKey, ByteArray(0))
+                        .keyPackage
+                        .toTlsBytes(),
+                keyPackageEventId = "f".repeat(64),
+                relays = listOf(relay),
+            )
+
+            // A commit the relay never acknowledged: the group is held.
+            runCatching { manager.setGroupProfile(groupId, "first try", "", listOf(relay)) }
+            assertEquals(GroupLifecycleState.PENDING_PUBLISH, manager.lifecycle(groupId))
+
+            // The relay is back. Without a restart, the next commit must clear
+            // the stuck obligation and then land.
+            publisher.accepts = true
+            manager.setGroupProfile(groupId, "second try", "", listOf(relay))
+
+            assertEquals(GroupLifecycleState.STABLE, manager.lifecycle(groupId))
+            assertTrue(obligations.entries.isEmpty(), "the stuck obligation resolved on the way through")
+            assertEquals("second try", manager.groupView(groupId)?.name)
+        }
+
+    @Test
     fun aRetryThatFailsAgainKeepsTheGroupHeld() =
         runBlocking<Unit> {
             val signer = NostrSignerInternal(KeyPair())

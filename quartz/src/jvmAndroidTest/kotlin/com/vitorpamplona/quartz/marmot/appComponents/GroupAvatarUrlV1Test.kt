@@ -161,6 +161,40 @@ class GroupAvatarUrlV1Test {
     }
 
     @Test
+    fun anIpv6LiteralIsJudgedOnItsBytesNotItsSpelling() {
+        // Matching text let the same address through under another name.
+        // Loopback, in four spellings that are all ::1:
+        assertTrue("::1", !MarmotWebUrl.isSafeToContact("https://[::1]/a.png"))
+        assertTrue("expanded", !MarmotWebUrl.isSafeToContact("https://[0:0:0:0:0:0:0:1]/a.png"))
+        assertTrue("padded", !MarmotWebUrl.isSafeToContact("https://[0000:0000:0000:0000:0000:0000:0000:0001]/a.png"))
+        assertTrue("mixed case", !MarmotWebUrl.isSafeToContact("https://[::0001]/a.png"))
+
+        // IPv4 loopback wearing an IPv6 coat — shares no prefix with any of
+        // the strings the old check compared against.
+        assertTrue("v4-mapped loopback", !MarmotWebUrl.isSafeToContact("https://[::ffff:127.0.0.1]/a.png"))
+        assertTrue("v4-compatible loopback", !MarmotWebUrl.isSafeToContact("https://[::127.0.0.1]/a.png"))
+        assertTrue("v4-mapped private", !MarmotWebUrl.isSafeToContact("https://[::ffff:10.0.0.1]/a.png"))
+        assertTrue("v4-mapped link-local", !MarmotWebUrl.isSafeToContact("https://[::ffff:169.254.169.254]/a.png"))
+
+        assertTrue("unspecified", !MarmotWebUrl.isSafeToContact("https://[::]/a.png"))
+        assertTrue("unique local", !MarmotWebUrl.isSafeToContact("https://[fd00::1]/a.png"))
+        assertTrue("unique local fc", !MarmotWebUrl.isSafeToContact("https://[fc00::1]/a.png"))
+        assertTrue("link local", !MarmotWebUrl.isSafeToContact("https://[fe80::1]/a.png"))
+        // fe80::/10 is the top TEN bits, so febf is in range and fec0 is not —
+        // the old prefix test got this right by accident and wrong in general.
+        assertTrue("link local top of range", !MarmotWebUrl.isSafeToContact("https://[febf::1]/a.png"))
+        assertTrue("multicast", !MarmotWebUrl.isSafeToContact("https://[ff02::1]/a.png"))
+        // A zone index never makes an address more routable.
+        assertTrue("zoned link local", !MarmotWebUrl.isSafeToContact("https://[fe80::1%25eth0]/a.png"))
+        // Unparseable is refused, not waved through.
+        assertTrue("garbage", !MarmotWebUrl.isSafeToContact("https://[1:2:3::4::5]/a.png"))
+
+        // A real, routable v6 address still works.
+        assertTrue(MarmotWebUrl.isSafeToContact("https://[2001:4860:4860::8888]/a.png"))
+        assertTrue(MarmotWebUrl.isSafeToContact("https://[2606:4700:4700::1111]/a.png"))
+    }
+
+    @Test
     fun aHostThatWouldNeedIdnaIsRefusedRatherThanGuessedAt() {
         // We do not implement IDNA/punycode, so we cannot produce the encoded
         // form a peer expects. Refusing at the producer is safe; it costs

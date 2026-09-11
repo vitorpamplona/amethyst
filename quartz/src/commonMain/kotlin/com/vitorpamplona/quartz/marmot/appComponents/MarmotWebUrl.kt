@@ -224,12 +224,121 @@ object MarmotWebUrl {
             a >= 224
     }
 
+    /**
+     * Decide an IPv6 literal on its BYTES, never on how it was spelled.
+     *
+     * Matching text was the bug: `::1` is one of many spellings of loopback,
+     * and `0:0:0:0:0:0:0:1` — the same address, fully expanded — matched
+     * nothing and read as routable. `::ffff:127.0.0.1` is worse still, because
+     * it is IPv4 loopback wearing an IPv6 coat and shares no prefix with any
+     * of the strings above. Both made a group avatar URL a way to have every
+     * member fetch from their own machine.
+     *
+     * An address this cannot parse is refused rather than allowed: "we could
+     * not tell" must not mean "go ahead", which is the same rule the IPv4 side
+     * applies to shapes like `0x7f.1`.
+     */
     private fun isNonRoutableIpv6(addr: String): Boolean {
-        val a = addr.lowercase()
-        if (a == "::1" || a == "::") return true
-        // Unique-local (fc00::/7) and link-local (fe80::/10).
-        return a.startsWith("fc") || a.startsWith("fd") || a.startsWith("fe8") ||
-            a.startsWith("fe9") || a.startsWith("fea") || a.startsWith("feb")
+        val bytes = parseIpv6(addr) ?: return true
+
+        // An IPv4-mapped (::ffff:a.b.c.d) or IPv4-compatible (::a.b.c.d)
+        // address is really that IPv4 address, so it gets the IPv4 rules.
+        val v4Prefix = bytes.take(10).all { it.toInt() == 0 }
+        if (v4Prefix) {
+            val mapped = bytes[10].toInt() and 0xFF
+            val mapped2 = bytes[11].toInt() and 0xFF
+            if ((mapped == 0xFF && mapped2 == 0xFF) || (mapped == 0 && mapped2 == 0)) {
+                val packed =
+                    ((bytes[12].toLong() and 0xFF) shl 24) or
+                        ((bytes[13].toLong() and 0xFF) shl 16) or
+                        ((bytes[14].toLong() and 0xFF) shl 8) or
+                        (bytes[15].toLong() and 0xFF)
+                // `::` and `::1` land here too, and both are non-routable under
+                // the IPv4 rules (0.0.0.0 and 0.0.0.1 are in 0.0.0.0/8).
+                return isNonRoutableIpv4(packed)
+            }
+        }
+
+        val first = bytes[0].toInt() and 0xFF
+        val second = bytes[1].toInt() and 0xFF
+        return when {
+            // Unique-local fc00::/7.
+            first == 0xFC || first == 0xFD -> true
+            // Link-local fe80::/10 — the top two bits of the second byte.
+            first == 0xFE && (second and 0xC0) == 0x80 -> true
+            // Multicast ff00::/8.
+            first == 0xFF -> true
+            else -> false
+        }
+    }
+
+    /**
+     * The 16 bytes of an IPv6 literal, or null when it is not one.
+     *
+     * Handles `::` compression once, a trailing embedded IPv4 dotted quad, and
+     * a `%zone` suffix (dropped — a zone never makes an address more routable).
+     */
+    private fun parseIpv6(addr: String): ByteArray? {
+        val text = addr.lowercase().substringBefore('%')
+        if (text.isEmpty()) return null
+
+        val doubleColon = text.indexOf("::")
+        if (doubleColon != text.lastIndexOf("::")) return null
+
+        val headText = if (doubleColon >= 0) text.substring(0, doubleColon) else text
+        val tailText = if (doubleColon >= 0) text.substring(doubleColon + 2) else ""
+
+        val head = mutableListOf<Int>()
+        val tail = mutableListOf<Int>()
+
+        // The embedded-IPv4 form is only legal as the last element, and it
+        // contributes two groups rather than one.
+        fun push(
+            into: MutableList<Int>,
+            piece: String,
+            isLast: Boolean,
+        ): Boolean {
+            if (piece.contains('.')) {
+                if (!isLast) return false
+                val quad = packIpv4(piece) ?: return false
+                if (piece.count { it == '.' } != 3) return false
+                into.add(((quad shr 16) and 0xFFFF).toInt())
+                into.add((quad and 0xFFFF).toInt())
+                return true
+            }
+            if (piece.isEmpty() || piece.length > 4) return false
+            val value = piece.toIntOrNull(16) ?: return false
+            into.add(value)
+            return true
+        }
+
+        if (headText.isNotEmpty()) {
+            val pieces = headText.split(':')
+            pieces.forEachIndexed { i, piece ->
+                if (!push(head, piece, i == pieces.lastIndex && doubleColon < 0)) return null
+            }
+        }
+        if (tailText.isNotEmpty()) {
+            val pieces = tailText.split(':')
+            pieces.forEachIndexed { i, piece ->
+                if (!push(tail, piece, i == pieces.lastIndex)) return null
+            }
+        }
+
+        val groups =
+            when {
+                doubleColon < 0 -> if (head.size == 8) head else return null
+                head.size + tail.size > 7 -> return null
+                else -> head + List(8 - head.size - tail.size) { 0 } + tail
+            }
+        if (groups.size != 8) return null
+
+        val bytes = ByteArray(16)
+        groups.forEachIndexed { i, group ->
+            bytes[i * 2] = ((group shr 8) and 0xFF).toByte()
+            bytes[i * 2 + 1] = (group and 0xFF).toByte()
+        }
+        return bytes
     }
 
     /** Splits `host:port`, keeping an IPv6 literal's brackets on the host. */

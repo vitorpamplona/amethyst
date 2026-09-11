@@ -434,10 +434,17 @@ class MarmotPublishGate(
     suspend fun forget(groupId: HexKey) {
         val ids = mutex.withLock { pending.values.filter { it.groupId == groupId }.map { it.obligationId } }
         ids.forEach { store.delete(it) }
+        // The gate has three copies now — the map, the snapshot every
+        // non-suspending reader sees, and the record on disk. Dropping only the
+        // map would leave `outboundGateNow` still reporting a gate for a group
+        // this client has forgotten, and `restore()` would bring it back on the
+        // next start.
+        store.deleteGate(groupId)
         mutex.withLock {
             ids.forEach { pending.remove(it) }
             lifecycles.remove(groupId)
             gates.remove(groupId)
+            gateSnapshot.value = gates.toMap()
         }
     }
 }

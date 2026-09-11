@@ -244,8 +244,8 @@ class MarmotManager(
      * the safe direction: it blocks new local commits until the group actually
      * knows what happened to this one.
      */
-    suspend fun retryPendingPublishObligations() {
-        val pending = publishGate.allPending()
+    suspend fun retryPendingPublishObligations(onlyGroupId: HexKey? = null) {
+        val pending = publishGate.allPending().filter { onlyGroupId == null || it.groupId == onlyGroupId }
         if (pending.isEmpty()) return
         Log.d("MarmotManager") { "retryPendingPublishObligations(): ${pending.size} unresolved" }
         for (obligation in pending) {
@@ -433,6 +433,14 @@ class MarmotManager(
         val result = inboundProcessor.processWelcome(welcomeEvent, hintNostrGroupId)
 
         if (result is WelcomeResult.Joined) {
+            // An authenticated re-join is what clears a departure gate — the
+            // rule `LocalOutboundGate.REMOVED` states, and `LEAVING` needs it
+            // just as much: a member who left and was invited back holds a gate
+            // raised against a membership that no longer exists. Nothing else
+            // clears it, so without this the rejoined group is readable and
+            // permanently unsendable, and the gate's durability makes that
+            // survive every restart.
+            publishGate.clearGate(result.nostrGroupId)
             subscriptionManager.subscribeGroup(result.nostrGroupId)
             Log.d("MarmotManager") { "Joined group ${result.nostrGroupId}" }
         }
@@ -1052,6 +1060,16 @@ class MarmotManager(
         stage: suspend () -> MlsGroupManager.StagedCommit,
     ): CommitPublication {
         requireOutboundAllowed(nostrGroupId, "commit a group-state change", ignoringGate)
+        // A commit whose publish went unconfirmed leaves the group in
+        // `PendingPublish`, which correctly refuses new commits — but the only
+        // thing that ever resolved it was `restoreAll`, so one dropped socket
+        // wedged the group until the app was restarted. Retrying this group's
+        // obligations here makes the next attempt the recovery: republishing
+        // the same event is safe (a peer deduplicates it by id) and a retry
+        // that still fails leaves the group held exactly as before.
+        if (publishGate.lifecycle(nostrGroupId) == GroupLifecycleState.PENDING_PUBLISH) {
+            retryPendingPublishObligations(onlyGroupId = nostrGroupId)
+        }
         check(publishGate.canPrepareLocalCommit(nostrGroupId, ignoringGate)) {
             "Group $nostrGroupId cannot prepare a local commit " +
                 "(lifecycle=${publishGate.lifecycle(nostrGroupId)}, gate=${publishGate.outboundGate(nostrGroupId)})"
