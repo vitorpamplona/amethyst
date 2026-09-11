@@ -13,7 +13,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
 
 PackageIdentifier: VitorPamplona.Amethyst
-PackageVersion: 1.14.0
+PackageVersion: 1.15.1
 Platform:
 - Windows.Desktop
 MinimumOSVersion: 10.0.0.0
@@ -22,11 +22,11 @@ Scope: machine
 UpgradeBehavior: install
 Installers:
 - Architecture: x64
-  InstallerUrl: https://github.com/vitorpamplona/amethyst/releases/download/v1.14.0/amethyst-desktop-1.14.0-windows-x64.msi
+  InstallerUrl: https://github.com/vitorpamplona/amethyst/releases/download/v1.15.1/amethyst-desktop-1.15.1-windows-x64.msi
   # Quoted deliberately: an all-digit 64-char value is a YAML *integer*, which
   # fails the schema's `string` type. Quoting makes it a string whatever the
   # digest happens to be.
-  InstallerSha256: '7C1DF303AB3F1018ACF014FE106DDDE131FCED3432CFA7594954A4E5B883928C'
-  ProductCode: '{CBDCB81B-6E50-35EB-BAFC-A88FA8266DE1}'
+  InstallerSha256: 'BDE701816C921B13A1BD59C93E3592303666B32853768465C259684B15BCAF2D'
+  ProductCode: '{76571DF8-3F51-3130-B789-B02D93EB8871}'
 ManifestType: installer
 ManifestVersion: 1.12.0
