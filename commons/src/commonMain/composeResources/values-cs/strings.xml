@@ -145,6 +145,12 @@
         <item quantity="many">Birdex · %1$d druhů</item>
         <item quantity="other">Birdex · %1$d druhů</item>
     </plurals>
+    <plurals name="birdex_species_more">
+        <item quantity="one">+%1$d další</item>
+        <item quantity="few">+%1$d další</item>
+        <item quantity="many">+%1$d další</item>
+        <item quantity="other">+%1$d dalších</item>
+    </plurals>
     <string name="ps1_save_title">Uložení na paměťovou kartu PS1</string>
     <string name="ps1_save_block">blok %1$d</string>
     <string name="ps1_save_empty_slot">Prázdný slot</string>
@@ -244,6 +250,7 @@
     <string name="number_followers">%1$s Sledujících</string>
     <string name="log_out">Odhlásit</string>
     <string name="show_more">Zobrazit více</string>
+    <string name="show_less">Zobrazit méně</string>
     <string name="lightning_invoice">Blesková faktura</string>
     <string name="invoice_expired">Vypršela platnost</string>
     <string name="clink_lightning_offer">Nabídka CLINK</string>
@@ -1258,6 +1265,8 @@
     <string name="admission">Vstup</string>
     <string name="subscription">Předplatné</string>
     <string name="publication">Publikování</string>
+    <string name="publication_untitled_section">Sekce bez názvu</string>
+    <string name="publication_contents">Obsah</string>
     <string name="payments_url">URL plateb</string>
     <string name="target_audience">Cílové publikum</string>
     <string name="policies_and_links">Zásady &amp; odkazy</string>
@@ -1348,6 +1357,19 @@
     <string name="external_id_scope">Komentář k externímu zdroji</string>
     <string name="url_preview_open_in_browser">Otevřít v prohlížeči</string>
     <string name="long_form_reading_minutes">%1$d min čtení</string>
+    <string name="search_waiting_on_relays">Čekám na %1$d z %2$d relé</string>
+    <plurals name="publication_section_count">
+        <item quantity="one">%1$d sekce</item>
+        <item quantity="few">%1$d sekce</item>
+        <item quantity="many">%1$d sekce</item>
+        <item quantity="other">%1$d sekcí</item>
+    </plurals>
+    <plurals name="publication_more_sections">
+        <item quantity="one">%1$d další sekce</item>
+        <item quantity="few">%1$d další sekce</item>
+        <item quantity="many">%1$d další sekce</item>
+        <item quantity="other">%1$d dalších sekcí</item>
+    </plurals>
     <string name="music_playlist_collaborative">Sdílený</string>
     <string name="music_playlist_private">Soukromý</string>
     <string name="music_playlist_unknown_track">Neznámá stopa</string>
@@ -1747,6 +1769,7 @@
     <string name="onchain_send_failed_at">Selhalo při: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Platba byla odeslána (tx %1$s), ale potvrzení nebylo zveřejněno.</string>
     <string name="new_post">Nový příspěvek</string>
+    <string name="new_media">Nové médium: obrázek nebo video</string>
     <string name="new_community_note">Nová poznámka komunity</string>
     <string name="new_poll">Nová anketa</string>
     <string name="new_picture">Nový obrázek</string>
@@ -1842,6 +1865,7 @@
     <string name="jump_to_parent_reply">Přejít na původní příspěvek této odpovědi</string>
     <string name="boost_or_quote_description">Zvýšit nebo citovat</string>
     <string name="like_description">Olajkovat</string>
+    <string name="onchain_zap_description">On-chain zap v bitcoinu</string>
     <string name="onchain_zap_pending">Čeká na potvrzení</string>
     <string name="change_reaction">Změnit rychlé reakce</string>
     <string name="bottom_bar_settings_available">Dostupné</string>
@@ -1892,7 +1916,9 @@
     <string name="audio_visualizer_settings_description">Vyberte animaci zobrazenou při přehrávání zvukových poznámek.</string>
     <string name="audio_visualizer_off">Vypnuto</string>
     <string name="audio_visualizer_bars">Spektrální pruhy</string>
+    <string name="audio_visualizer_waves">Barevné vlny</string>
     <string name="audio_visualizer_radial">Radiální prstenec</string>
+    <string name="audio_visualizer_aurora">Polární záře</string>
     <string name="audio_visualizer_classic">Klasická křivka</string>
     <string name="audio_visualizer_static">Statický obrázek</string>
     <string name="profile_image_of_user">Obrázek profilu %1$s</string>
@@ -2148,6 +2174,7 @@
     <string name="dvm_home_status_payment_required">Tento algoritmus zdroje vyžaduje platbu</string>
     <string name="dvm_home_status_error">Algoritmus zdroje vrátil chybu</string>
     <string name="dvm_home_retry">Zkusit znovu</string>
+    <string name="dvm_offline_banner">Tento algoritmus zdroje v poslední době neposlal signál aktivity a může být nedostupný</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
     <string name="group_relay">Relé chatu</string>
     <string name="share_image">Sdílet obrázek…</string>
@@ -2164,6 +2191,12 @@
     <string name="search_sort_relevance">Relevantní</string>
     <string name="search_sort_popular">Populární</string>
     <string name="search_filters_title">Filtry</string>
+    <string name="search_no_results">Nebyly nalezeny žádné výsledky</string>
+    <string name="search_no_results_explainer">Zkuste méně filtrů nebo jiné slovo.</string>
+    <string name="search_type_to_begin">Začněte psát pro vyhledávání</string>
+    <string name="search_type_to_begin_explainer">Filtry výše zužují, co se prohledává — samy o sobě nevyhledávají.</string>
+    <string name="search_recent">Nedávná hledání</string>
+    <string name="search_recent_clear">Vymazat</string>
     <string name="search_filters_reset">Obnovit</string>
     <string name="search_filters_section_source">Zdroj</string>
     <string name="search_filters_section_sort">Seřadit podle</string>
@@ -2550,6 +2583,22 @@
     <string name="marmot_create_group">Vytvořit skupinu</string>
     <string name="marmot_create_group_title">Vytvořit skupinu Marmot</string>
     <string name="marmot_create_group_footer">Bude vytvořena nová MLS skupina. Členy můžete přidat poté.</string>
+    <string name="marmot_retention_title">Mizející zprávy</string>
+    <string name="marmot_retention_off">Vypnuto</string>
+    <string name="marmot_retention_1h">1 hodina</string>
+    <string name="marmot_retention_1d">1 den</string>
+    <string name="marmot_retention_1w">1 týden</string>
+    <string name="marmot_retention_active">Zprávy mizí po %1$s</string>
+    <string name="marmot_retention_footer">Zprávy se po této době smažou ze zařízení všech členů. Později to nelze změnit.</string>
+    <string name="marmot_disband_group">Rozpustit skupinu</string>
+    <string name="marmot_disband_group_confirm">Rozpustit „%1$s“ pro všechny? Konverzace skončí pro každého člena a nelze ji znovu otevřít — bylo by nutné vytvořit novou skupinu.</string>
+    <string name="marmot_disband_group_action">Rozpustit</string>
+    <string name="marmot_avatar_url">Odkaz na avatar</string>
+    <string name="marmot_avatar_url_footer">Odkaz https, který načte každý člen. Ponechte prázdné, chcete-li místo toho použít nahraný obrázek.</string>
+    <string name="marmot_legacy_group_no_avatar_url">Tato skupina byla vytvořena dříve, než byly podporovány avatary z odkazu, takže může používat pouze nahraný obrázek. Stávající skupiny nelze upgradovat — pro použití odkazu vytvořte novou skupinu.</string>
+    <string name="marmot_enable_encrypted_media">Používat šifrované přílohy</string>
+    <string name="marmot_enable_encrypted_media_explainer">Přílohy v této skupině používají starší formát. Přepnutím se do skupiny přidá komponenta šifrovaných médií a změnu uvidí každý člen. Nelze to vrátit zpět.</string>
+    <string name="marmot_legacy_group_no_disband">Tato skupina byla vytvořena dříve, než bylo podporováno rozpuštění, a nelze ji rozpustit. Stále ji můžete opustit nebo odebrat všechny ostatní členy. Stávající skupiny nelze upgradovat.</string>
     <string name="marmot_group_default_name">Skupina Marmot</string>
     <string name="marmot_group_fallback_name">Skupina %1$s…</string>
     <string name="marmot_tab_known">Známé</string>
@@ -2569,6 +2618,21 @@
     <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
          conversation, from the row's structured fields. %1$s is the member who
          committed the change, %2$s the member it concerns, %3$s the new name. -->
+    <string name="marmot_system_member_added">%1$s přidal %2$s</string>
+    <string name="marmot_system_member_added_passive">%1$s se připojil</string>
+    <string name="marmot_system_member_removed">%1$s odebral %2$s</string>
+    <string name="marmot_system_member_removed_passive">%1$s byl odebrán</string>
+    <string name="marmot_system_member_left">%1$s odešel</string>
+    <string name="marmot_system_admin_added">%1$s jmenoval %2$s administrátorem</string>
+    <string name="marmot_system_admin_added_passive">%1$s je nyní administrátor</string>
+    <string name="marmot_system_admin_removed">%1$s odebral %2$s práva administrátora</string>
+    <string name="marmot_system_admin_removed_passive">%1$s již není administrátor</string>
+    <string name="marmot_system_group_renamed">%1$s přejmenoval skupinu na %2$s</string>
+    <string name="marmot_system_group_renamed_passive">Skupina byla přejmenována na %1$s</string>
+    <string name="marmot_system_avatar_changed">%1$s změnil avatar skupiny</string>
+    <string name="marmot_system_avatar_changed_passive">Avatar skupiny se změnil</string>
+    <string name="marmot_system_group_disbanded">%1$s rozpustil skupinu</string>
+    <string name="marmot_system_group_disbanded_passive">Skupina byla rozpuštěna</string>
     <string name="marmot_remove_photo">Odebrat fotku</string>
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relays nejsou nastaveny</string>
     <string name="marmot_keypackage_relays_not_set_message">Ještě nemáte seznam KeyPackage Relays (MIP-00). Tento seznam říká ostatním lidem, kde je váš KeyPackage zveřejněn, aby vás mohli pozvat do skupinových chatů.\n\nPoužít pro toto vaše aktuální outbox relays?</string>
@@ -2691,4 +2755,5 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <string name="profile_card_follows_you">Sleduje vás</string>
 </resources>

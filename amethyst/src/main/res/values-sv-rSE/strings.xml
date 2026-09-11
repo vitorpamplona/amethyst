@@ -375,6 +375,7 @@
     <string name="napplet_cap_identity">Identitet</string>
     <string name="napplet_cap_keys">Tangentbordsåtgärder</string>
     <string name="napplet_cap_relay">Reläer</string>
+    <string name="napplet_cap_signer">Kryptering</string>
     <string name="napplet_cap_storage">Lagring</string>
     <string name="napplet_cap_value">Betalningar</string>
     <string name="napplet_cap_resource">Nätverk</string>
@@ -383,6 +384,7 @@
     <string name="napplet_cap_identity_desc">Läs din offentliga nyckel</string>
     <string name="napplet_cap_keys_desc">Bind tangentbordsgenvägar</string>
     <string name="napplet_cap_relay_desc">Läs, signera &amp; publicera dina händelser</string>
+    <string name="napplet_cap_signer_desc">Kryptera och dekryptera privata meddelanden med din nyckel</string>
     <string name="napplet_cap_storage_desc">Dess egna privata lagring</string>
     <string name="napplet_cap_value_desc">Betala Lightning-fakturor</string>
     <string name="napplet_cap_resource_desc">Hämta webb- och Blossom-resurser</string>
@@ -400,6 +402,8 @@
     <string name="napplet_consent_publish">Det här nApplet vill signera och publicera en kind %1$d-händelse som dig.</string>
     <string name="napplet_consent_publish_preview">Det här nApplet vill signera och publicera en kind %1$d-händelse som dig:</string>
     <string name="napplet_consent_publish_encrypted">Det här nApplet vill skicka en krypterad händelse som dig.</string>
+    <string name="napplet_consent_nip44_encrypt">Den här webbplatsen vill kryptera ett meddelande till %1$s med din Nostr-nyckel.</string>
+    <string name="napplet_consent_nip44_decrypt">Den här webbplatsen vill dekryptera ett meddelande från %1$s med din Nostr-nyckel.</string>
     <string name="napplet_consent_query">Det här nApplet vill läsa händelser från dina reläer.</string>
     <string name="napplet_consent_storage">Det här nApplet vill använda sin privata lagring.</string>
     <string name="napplet_consent_pay">Det här nApplet vill betala en Lightning-faktura.</string>
@@ -568,6 +572,14 @@
         <item quantity="other">Det håller också inne med %1$d andra saker.</item>
     </plurals>
     <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">Logga alltid in</string>
+    <string name="relay_auth_never">Aldrig</string>
+    <string name="relay_auth_always_allow_everywhere">Alltid, alla reläer</string>
+    <string name="relay_auth_never_allow_everywhere">Aldrig, alla reläer</string>
+    <string name="relay_auth_always_everywhere_title">Logga in på alla reläer?</string>
+    <string name="relay_auth_always_everywhere_body">Amethyst loggar in som %1$s på varje relä som frågar och slutar fråga dig. Reläer du har blockerat, och de du har ställt in att aldrig logga in på, förblir som de är. Du kan ändra detta under Reläautentisering.</string>
+    <string name="relay_auth_never_everywhere_title">Logga aldrig in på något relä?</string>
+    <string name="relay_auth_never_everywhere_body">Amethyst slutar berätta för reläer att du är %1$s och slutar fråga dig. Vissa reläer kommer att vägra betjäna dig: meddelanden, svar och aviseringar kanske inte går fram. Reläer du har ställt in att alltid logga in på förblir som de är. Du kan ändra detta under Reläautentisering.</string>
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Alltid, inställt av dig</string>
@@ -799,6 +811,10 @@
     <string name="payment_targets_section_explainer">Lägg till betalningsadresser för olika nätverk (t.ex. bitcoin, lightning, ethereum).</string>
     <string name="no_payment_app_found">Ingen app hittades för att hantera denna betalning. Installera en kompatibel plånbok.</string>
     <string name="no_payment_app_found_for_type">Ingen app installerad för att hantera %1$s-betalningar. Installera en kompatibel plånbok.</string>
+    <string name="payto_amount_set_in_app">Betala i %1$s — du väljer beloppet där</string>
+    <string name="zap_payto_section">Överlämning till betalapp</string>
+    <string name="zap_payto_section_explainer">När författaren publicerar en betalningsmetod som en app på den här telefonen kan öppna (Venmo, Monero, ett IBAN…) kan zap-väljaren erbjuda den. Ett tryck öppnar den appen, som frågar efter beloppet — inget publiceras till reläer, så anteckningens zap-antal ändras inte.</string>
+    <string name="zap_payto_toggle">Erbjud författarens betalningsmetoder</string>
     <string name="error_dialog_payment_error">Det gick inte att öppna betalningen</string>
     <string name="bolt12_offers">BOLT12-erbjudanden</string>
     <string name="bolt12_offers_section_explainer">Lägg till ett eller flera BOLT12-erbjudanden (lno1…). De delas offentligt så att vem som helst kan betala dig.</string>
@@ -931,6 +947,17 @@
     <string name="app_notification_code_channel_message_patch">%1$s skickade en patch</string>
     <string name="app_notification_code_channel_message_pr">%1$s öppnade en pull request</string>
     <string name="app_notification_code_channel_message_pr_update">%1$s uppdaterade en pull request</string>
+    <string name="app_notification_code_channel_message_reply">%1$s kommenterade</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s öppnade en tråd igen</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s mergade en pull request</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s tillämpade en patch</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s löste ett issue</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s mergade/löste en tråd</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s stängde en pull request</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s stängde en patch</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s stängde ett issue</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s stängde en tråd</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s markerade en tråd som utkast</string>
     <string name="app_notification_code_summary">Ny kodaktivitet</string>
     <!-- Badges -->
     <string name="app_notification_badges_channel_name">Märken</string>
@@ -1178,6 +1205,19 @@
     <string name="home_content_type_music">Musik &amp; ljud</string>
     <string name="home_content_type_podcasts">Poddar</string>
     <string name="home_content_type_fundraisers">Insamlingar</string>
+    <string name="home_content_type_ratings">Betyg &amp; recensioner</string>
+    <string name="rating_stars_out_of_five">Betyg %1$s av 5</string>
+    <string name="library_learning_resource">Läroresurs</string>
+    <string name="library_directory">Katalog</string>
+    <string name="library_blossom_piece">Filpost</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d objekt</item>
+        <item quantity="other">%1$d objekt</item>
+    </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">%1$d objekt till</item>
+        <item quantity="other">%1$d objekt till</item>
+    </plurals>
     <string name="settings_section_reminders">Påminnelser</string>
     <string name="wallet_connect">Plånboksanslut</string>
     <string name="theme">Tema</string>
@@ -1449,6 +1489,7 @@
     <string name="notification_settings_section_display">Visning i appen</string>
     <string name="notification_settings_section_categories">Kategorier</string>
     <string name="payment_required_title">Meddelande från %1$s</string>
+    <string name="notify_block_relay">Blockera relä</string>
     <string name="hi_seller_is_this_still_available">Hej %1$s, är detta fortfarande tillgängligt?</string>
     <string name="classifieds_category_clothing">Kläder</string>
     <string name="classifieds_category_accessories">Tillbehör</string>
@@ -2019,6 +2060,10 @@
     <string name="kind_git_reply">Git-svar</string>
     <string name="kind_git_pr">Pull Request</string>
     <string name="kind_git_pr_update">PR-uppdatering</string>
+    <string name="kind_git_status_open">Git-status: Öppen</string>
+    <string name="kind_git_status_applied">Git-status: Tillämpad</string>
+    <string name="kind_git_status_closed">Git-status: Stängd</string>
+    <string name="kind_git_status_draft">Git-status: Utkast</string>
     <string name="kind_zap_goals">Zap-mål</string>
     <string name="kind_hashtag_follows">Följda hashtaggar</string>
     <string name="kind_highlights">Höjdpunkter</string>
@@ -2293,6 +2338,15 @@
     <string name="marmot_failed_to_update">Misslyckades med att uppdatera: %1$s</string>
     <string name="marmot_failed_to_create_group">Misslyckades med att skapa grupp: %1$s</string>
     <string name="marmot_failed_to_leave_group">Misslyckades med att lämna grupp: %1$s</string>
+    <string name="marmot_enable_encrypted_media_needs_server">Lägg först till en Blossom-medieserver i Inställningar — gruppen behöver någonstans att ladda upp bilagor till.</string>
+    <string name="marmot_encrypted_media_enabled_toast">Den här gruppen använder nu krypterade bilagor</string>
+    <string name="marmot_failed_to_enable_encrypted_media">Kunde inte byta den här gruppen till krypterade bilagor: %1$s</string>
+    <string name="marmot_group_disbanded_toast">Gruppen upplöst</string>
+    <string name="marmot_group_disbanding_toast">Avslutar gruppen. Det blir klart när gruppen godkänner.</string>
+    <string name="marmot_group_composer_disbanding">Den här gruppen avslutas. Du kan fortfarande läsa den.</string>
+    <string name="marmot_group_composer_leaving">Du lämnar den här gruppen.</string>
+    <string name="marmot_group_composer_removed">Du är inte längre medlem i den här gruppen.</string>
+    <string name="marmot_failed_to_disband">Kunde inte upplösa gruppen: %1$s</string>
     <string name="marmot_adding_user">Lägger till %1$s…</string>
     <string name="marmot_failed_to_add_user">Misslyckades med att lägga till %1$s: %2$s</string>
     <string name="marmot_unknown_error">okänt fel</string>
