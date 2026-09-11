@@ -2332,4 +2332,59 @@
     <!-- Buzz agent persona editor -->
     <!-- Profile card (kind-0 rendered in the feed) -->
     <string name="podcast_value_for_value">Value-for-Value</string>
+    <string name="app_notification_code_channel_message_reply">%1$s hat kommentiert</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s hat einen Thread gemergt/gelöst</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s hat ein Issue gelöst</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s hat einen Patch angewendet</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s hat einen Pull Request gemergt</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s hat einen Thread geschlossen</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s hat ein Issue geschlossen</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s hat einen Patch geschlossen</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s hat einen Pull Request geschlossen</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s hat einen Thread als Entwurf markiert</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s hat einen Thread wieder geöffnet</string>
+    <string name="home_content_type_ratings">Bewertungen &amp; Rezensionen</string>
+    <string name="kind_git_status_applied">Git-Status: Angewendet</string>
+    <string name="kind_git_status_closed">Git-Status: Geschlossen</string>
+    <string name="kind_git_status_draft">Git-Status: Entwurf</string>
+    <string name="kind_git_status_open">Git-Status: Offen</string>
+    <string name="library_blossom_piece">Dateieintrag</string>
+    <string name="library_directory">Verzeichnis</string>
+    <string name="library_learning_resource">Lernressource</string>
+    <string name="marmot_enable_encrypted_media_needs_server">Füge zuerst in den Einstellungen einen Blossom-Medienserver hinzu — die Gruppe braucht einen Ort, an den Anhänge hochgeladen werden.</string>
+    <string name="marmot_encrypted_media_enabled_toast">Diese Gruppe verwendet jetzt verschlüsselte Anhänge</string>
+    <string name="marmot_failed_to_disband">Gruppe konnte nicht aufgelöst werden: %1$s</string>
+    <string name="marmot_failed_to_enable_encrypted_media">Diese Gruppe konnte nicht auf verschlüsselte Anhänge umgestellt werden: %1$s</string>
+    <string name="marmot_group_composer_disbanding">Diese Gruppe wird beendet. Du kannst sie weiterhin lesen.</string>
+    <string name="marmot_group_composer_leaving">Du verlässt diese Gruppe.</string>
+    <string name="marmot_group_composer_removed">Du bist kein Mitglied dieser Gruppe mehr.</string>
+    <string name="marmot_group_disbanded_toast">Gruppe aufgelöst</string>
+    <string name="marmot_group_disbanding_toast">Gruppe wird beendet. Das ist abgeschlossen, sobald die Gruppe zustimmt.</string>
+    <string name="napplet_cap_signer">Verschlüsselung</string>
+    <string name="napplet_cap_signer_desc">Private Nachrichten mit Ihrem Schlüssel ver- und entschlüsseln</string>
+    <string name="napplet_consent_nip44_decrypt">Diese Website möchte eine Nachricht von %1$s mit Ihrem Nostr-Schlüssel entschlüsseln.</string>
+    <string name="napplet_consent_nip44_encrypt">Diese Website möchte eine Nachricht an %1$s mit Ihrem Nostr-Schlüssel verschlüsseln.</string>
+    <string name="notify_block_relay">Relay blockieren</string>
+    <string name="payto_amount_set_in_app">In %1$s bezahlen — den Betrag wählst du dort</string>
+    <string name="rating_stars_out_of_five">Bewertet mit %1$s von 5</string>
+    <string name="relay_auth_always_allow_everywhere">Immer, alle Relays</string>
+    <string name="relay_auth_always_everywhere_body">Amethyst meldet sich als %1$s bei jedem Relay an, das danach fragt, und fragt dich nicht mehr. Relays, die du blockiert hast, und solche, bei denen du dich nie anmelden willst, bleiben so. Du kannst das unter Relay-Authentifizierung ändern.</string>
+    <string name="relay_auth_always_everywhere_title">Bei jedem Relay anmelden?</string>
+    <string name="relay_auth_always_log_in">Immer anmelden</string>
+    <string name="relay_auth_never">Nie</string>
+    <string name="relay_auth_never_allow_everywhere">Nie, alle Relays</string>
+    <string name="relay_auth_never_everywhere_body">Amethyst teilt Relays nicht mehr mit, dass du %1$s bist, und fragt dich nicht mehr. Manche Relays werden dich dann nicht bedienen: Nachrichten, Antworten und Benachrichtigungen kommen womöglich nicht durch. Relays, bei denen du dich immer anmelden willst, bleiben so. Du kannst das unter Relay-Authentifizierung ändern.</string>
+    <string name="relay_auth_never_everywhere_title">Bei keinem Relay anmelden?</string>
+    <string name="route_media">Medien</string>
+    <string name="zap_payto_section">Übergabe an Zahlungs-Apps</string>
+    <string name="zap_payto_section_explainer">Wenn der Autor eine Zahlungsmethode veröffentlicht, die eine App auf diesem Telefon öffnen kann (Venmo, Monero, eine IBAN…), kann die Zap-Auswahl sie anbieten. Tippen öffnet diese App, die nach dem Betrag fragt — es wird nichts an Relays veröffentlicht, daher ändert sich der Zap-Zähler der Notiz nicht.</string>
+    <string name="zap_payto_toggle">Zahlungsmethoden des Autors anbieten</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d Element</item>
+        <item quantity="other">%1$d Elemente</item>
+    </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">%1$d weiteres Element</item>
+        <item quantity="other">%1$d weitere Elemente</item>
+    </plurals>
 </resources>
