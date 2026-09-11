@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.protocolCore.InMemoryPublishObligationStore
+import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.runBlocking
@@ -31,6 +33,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -235,6 +238,26 @@ class MarmotDisbandTest {
                 f.manager.buildTextMessage(nostrGroupId, "still here")
             }
             Unit
+        }
+
+    @Test
+    fun `the gate reaches the front end's group state`() =
+        runBlocking {
+            // The UI cannot ask a suspending publish gate from the synchronous
+            // path that refreshes a conversation, so the gate is mirrored onto
+            // the chatroom. If that mirror is missing, the composer stays
+            // enabled on a group that refuses every send and the user finds out
+            // by tapping.
+            val f = Fixture()
+            f.createCurrentProfile()
+            val chatroom = MarmotGroupChatroom(nostrGroupId)
+
+            f.manager.syncMetadataTo(nostrGroupId, chatroom)
+            assertNull(chatroom.outboundGate.value, "a live group has no gate")
+
+            f.manager.disbandGroup(nostrGroupId)
+            f.manager.syncMetadataTo(nostrGroupId, chatroom)
+            assertEquals(LocalOutboundGate.DISBANDING, chatroom.outboundGate.value)
         }
 
     @Test

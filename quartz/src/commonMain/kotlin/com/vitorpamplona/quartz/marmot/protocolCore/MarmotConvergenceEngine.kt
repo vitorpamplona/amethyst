@@ -266,6 +266,27 @@ class MarmotConvergenceEngine(
     }
 
     /**
+     * End the recovery a settled pass was running.
+     *
+     * `Recovering` describes a pass IN FLIGHT — a fork being resolved, or a
+     * disband candidate waiting for selection. Once the pass settles the group
+     * has a selected branch again and is `Stable`, so leaving the state behind
+     * makes every later reader believe a recovery is still running: the group
+     * reads as recovering forever, and anything that gates on the reported
+     * lifecycle (rather than on the publish gate, which is the authority for
+     * whether a commit may be prepared) silently stops working.
+     *
+     * Only `Recovering` is cleared. `Unrecoverable` is not a pass outcome —
+     * it means this client cannot safely apply more traffic and is cleared by a
+     * verified repair — and `Disbanded` is absorbing.
+     */
+    private fun endRecovery(ctx: GroupContext) {
+        if (ctx.lifecycle == GroupLifecycleState.RECOVERING) {
+            ctx.lifecycle = GroupLifecycleState.STABLE
+        }
+    }
+
+    /**
      * Move a group to `Disbanded` once its lifecycle component says so.
      *
      * `Disbanded` is absorbing: there is no outgoing transition, no later
@@ -562,6 +583,7 @@ class MarmotConvergenceEngine(
             trimCandidates(ctx)
             ctx.divergent.clear()
             ctx.pass = null
+            endRecovery(ctx)
             terminalizeIfDisbanded(groupId, ctx)
             val epoch = groupManager.getGroup(groupId)?.epoch ?: inputs.tipEpoch
             ConvergenceResolution(
@@ -599,6 +621,7 @@ class MarmotConvergenceEngine(
 
             pass.freeze()
             ctx.pass = null
+            endRecovery(ctx)
             terminalizeIfDisbanded(groupId, ctx)
             ConvergenceResolution(
                 groupId = groupId,

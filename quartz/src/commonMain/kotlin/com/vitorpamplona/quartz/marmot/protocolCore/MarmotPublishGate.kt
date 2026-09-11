@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -218,6 +220,24 @@ class MarmotPublishGate(
     private val gates = mutableMapOf<HexKey, LocalOutboundGate>()
     private val lifecycles = mutableMapOf<HexKey, GroupLifecycleState>()
 
+    /**
+     * An immutable copy of [gates], republished on every change.
+     *
+     * The map itself is mutable state guarded by [mutex], so it cannot be read
+     * from a non-suspending caller without a data race. A front end needs the
+     * gate on the synchronous path that refreshes a conversation's state — and
+     * making that path suspend would push `suspend` up through every caller for
+     * one flag — so the authority stays behind the lock and this is what
+     * everyone else reads.
+     */
+    private val gateSnapshot = MutableStateFlow<Map<HexKey, LocalOutboundGate>>(emptyMap())
+
+    /** Lock-free view of the outbound gates, for non-suspending readers. */
+    val outboundGates: StateFlow<Map<HexKey, LocalOutboundGate>> get() = gateSnapshot
+
+    /** The gate blocking [groupId] right now, read without suspending. */
+    fun outboundGateNow(groupId: HexKey): LocalOutboundGate? = gateSnapshot.value[groupId]
+
     /** Reload unresolved obligations and outbound gates. Call once at startup, after group restore. */
     suspend fun restore() =
         mutex.withLock {
@@ -228,6 +248,7 @@ class MarmotPublishGate(
                 // owner never asked to end it.
                 LocalOutboundGate.entries.firstOrNull { it.name == name }?.let { gates[groupId] = it }
             }
+            gateSnapshot.value = gates.toMap()
             store.loadAll().forEach { bytes ->
                 try {
                     val obligation = MarmotPublishObligation.decodeTls(bytes)
@@ -287,7 +308,7 @@ class MarmotPublishGate(
         store.saveGate(groupId, gate.name)
         mutex.withLock {
             gates[groupId] = gate
-            Unit
+            gateSnapshot.value = gates.toMap()
         }
     }
 
@@ -296,7 +317,7 @@ class MarmotPublishGate(
         store.deleteGate(groupId)
         mutex.withLock {
             gates.remove(groupId)
-            Unit
+            gateSnapshot.value = gates.toMap()
         }
     }
 

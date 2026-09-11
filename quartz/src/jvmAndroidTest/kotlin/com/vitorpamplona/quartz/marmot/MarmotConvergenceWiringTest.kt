@@ -277,6 +277,37 @@ class MarmotConvergenceWiringTest {
         }
 
     /**
+     * `Recovering` describes a pass in flight, so a settled pass must leave it.
+     *
+     * Leaving the state behind reads as a recovery that never ends: the group
+     * reports `Recovering` for the rest of the session, and anything that gates
+     * on the reported lifecycle rather than on the publish gate quietly stops
+     * working. The publish gate is what actually decides whether a commit may
+     * be prepared, which is why this was invisible — it is a lie in the
+     * reporting, not a lock, and only a reader notices.
+     */
+    @Test
+    fun aSettledPassLeavesRecovering() =
+        runBlocking<Unit> {
+            val fork = buildFork()
+            var now = 0L
+            val obs = observer(fork.observerStateBytes) { now }
+
+            obs.inbound.processGroupEvent(fork.commitA)
+            obs.inbound.processGroupEvent(fork.commitB)
+            assertEquals(GroupLifecycleState.RECOVERING, obs.inbound.groupLifecycle(groupId))
+
+            now = ConvergencePolicy.V1.settlementQuiescenceMs
+            val settled = obs.inbound.settleDueConvergence()
+            assertEquals(1, settled.size)
+
+            // The resolution reports it, and so does the engine afterwards —
+            // a caller that reads either one has to see a group it can use.
+            assertEquals(GroupLifecycleState.STABLE, settled.single().lifecycle)
+            assertEquals(GroupLifecycleState.STABLE, obs.inbound.groupLifecycle(groupId))
+        }
+
+    /**
      * A plain relay redelivery is still just a duplicate. Convergence only
      * claims a commit when a RETAINED state authenticates it, and an echo's
      * parent was consumed by the very commit it echoes.

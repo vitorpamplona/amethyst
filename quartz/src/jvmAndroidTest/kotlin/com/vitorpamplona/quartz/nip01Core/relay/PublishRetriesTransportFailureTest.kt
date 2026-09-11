@@ -74,6 +74,12 @@ class PublishRetriesTransportFailureTest {
     private class HangsUpOnFirstEvent(
         private val delegate: WebsocketBuilder,
         private val dropFirstConnections: Int,
+        /**
+         * How long the relay takes to come back after it hung up. A real one
+         * does not reappear instantly, and the reconnect is the part the retry
+         * has to have time for.
+         */
+        private val reconnectDelayMs: Long = 0,
     ) : WebsocketBuilder {
         val eventFramesSeen = AtomicInteger(0)
         private val socketsBuilt = AtomicInteger(0)
@@ -83,6 +89,7 @@ class PublishRetriesTransportFailureTest {
             out: WebSocketListener,
         ): WebSocket {
             val index = socketsBuilt.getAndIncrement()
+            if (index >= dropFirstConnections && reconnectDelayMs > 0) Thread.sleep(reconnectDelayMs)
             val inner = delegate.build(url, out)
             val hangUp = index < dropFirstConnections
             return object : WebSocket by inner {
@@ -123,6 +130,38 @@ class PublishRetriesTransportFailureTest {
             assertTrue(
                 builder.eventFramesSeen.get() >= 2,
                 "the event has to actually go out a second time, not just be re-reported",
+            )
+            client.disconnect()
+        }
+
+    @Test
+    fun aRetryOutlivesTheCallersOriginalDeadline() =
+        runBlocking {
+            // The bug this pins: the retry was issued and then timed out before
+            // the relay could answer, so the publish did the work and threw the
+            // answer away. The hang-up costs the whole one-second budget here —
+            // only the grace granted when the retry is issued can land it.
+            val builder =
+                HangsUpOnFirstEvent(
+                    hub,
+                    dropFirstConnections = 1,
+                    reconnectDelayMs = 1_500,
+                )
+            val client = NostrClient(builder, scope)
+            val event = NostrSignerInternal(KeyPair()).sign(TextNoteEvent.build("slow to come back"))
+
+            val results =
+                client.publishAndCollectResults(
+                    event = event,
+                    relayList = setOf(InProcessRelays.DEFAULT_URL),
+                    timeoutInSeconds = 1,
+                )
+
+            val result = results.values.single()
+            assertTrue(
+                result.accepted,
+                "a retry issued at the edge of the budget must be given time to answer " +
+                    "(got \"${result.message}\")",
             )
             client.disconnect()
         }

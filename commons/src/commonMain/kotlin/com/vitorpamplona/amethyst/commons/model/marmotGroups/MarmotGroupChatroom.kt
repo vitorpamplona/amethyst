@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
+import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.channels.BufferOverflow
@@ -97,6 +98,18 @@ class MarmotGroupChatroom(
      * upgrade once it has been.
      */
     var hasEncryptedMediaPolicy = MutableStateFlow(false)
+
+    /**
+     * Why this group takes no new outbound work, or null when it does.
+     *
+     * A durable outbound gate is not a lifecycle state: the member is still in
+     * the tree and the group is not terminal, but nothing new may be sent —
+     * an unresolved disband request, a SelfRemove already sent, a realized
+     * removal. A front end needs it separately from [isCurrentProfile] and the
+     * lifecycle so it can DISABLE the composer with a reason rather than let a
+     * send throw and surface as an error after the fact.
+     */
+    var outboundGate = MutableStateFlow<LocalOutboundGate?>(null)
 
     var adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
     var relays = MutableStateFlow<List<String>>(emptyList())

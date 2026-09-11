@@ -79,6 +79,23 @@ class PublishResult(
 const val DEFAULT_TRANSPORT_RETRIES = 1
 
 /**
+ * Extra wall-clock granted once per retry that is actually issued.
+ *
+ * A retry is not free time: it starts a fresh dial-and-flush cycle at the
+ * moment the relay hung up, and by then most of the caller's budget is usually
+ * spent. Sharing the original deadline meant the retry was issued and then
+ * timed out before the relay could answer — the publish was reported failed
+ * having done the work and thrown the answer away, which is how a healthy
+ * loopback relay could still cost a message a run.
+ *
+ * Bounded by construction: only a relay that gave a transport failure earns it,
+ * and only as many times as [DEFAULT_TRANSPORT_RETRIES] allows, so the worst
+ * case is the caller's timeout plus this much per retried relay rather than an
+ * open-ended wait on something unreachable.
+ */
+const val TRANSPORT_RETRY_GRACE_MS = 5_000L
+
+/**
  * Internal channel marker for "this relay is back up", so the wait loop — the
  * one coroutine that owns the retry bookkeeping — can re-issue a send that a
  * disconnected relay would have dropped. The NUL prefix keeps it out of reach
@@ -207,11 +224,19 @@ suspend fun INostrClient.publishAndCollectResults(
                             // that is healthy a moment later. The retries live inside the
                             // caller's existing timeout, so nothing waits longer than before.
                             val retriesLeft = relayList.associateWith { transportRetries }.toMutableMap()
-                            // The withTimeout block will cancel the coroutine if the loop takes too long
-                            withTimeoutOrNull(timeoutInSeconds * 1000) {
+                            // The deadline is a moving target rather than one
+                            // `withTimeout` around the whole loop: issuing a retry extends it by
+                            // [TRANSPORT_RETRY_GRACE_MS], because the retry needs time the
+                            // original budget has already spent. Everything else about the wait
+                            // is unchanged — a relay that simply never answers still falls out at
+                            // the caller's timeout.
+                            var deadlineMs = timeoutInSeconds * 1000
+                            run {
                                 val awaitingReconnect = mutableSetOf<NormalizedRelayUrl>()
                                 while (receivedResults.size < relayList.size) {
-                                    val result = resultChannel.receive()
+                                    val remainingMs = deadlineMs - mark.elapsedNow().inWholeMilliseconds
+                                    if (remainingMs <= 0) break
+                                    val result = withTimeoutOrNull(remainingMs) { resultChannel.receive() } ?: break
 
                                     if (result.message == RECONNECTED) {
                                         // The pool flushes what it still owes a relay as part of
@@ -242,6 +267,7 @@ suspend fun INostrClient.publishAndCollectResults(
                                         // report the transport failure as before.
                                         receivedResults.remove(result.relay)
                                         awaitingReconnect.add(result.relay)
+                                        deadlineMs += TRANSPORT_RETRY_GRACE_MS
                                         Log.d("publishAndConfirm") {
                                             "Retrying ${event.id} on ${result.relay} after ${recorded.message}"
                                         }

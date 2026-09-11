@@ -111,6 +111,16 @@ The Marmot harnesses come in two flavours, same scenarios:
     and uniffi surface (the apps call it) but has no `wn groups` verb, so
     test 29 runs one way only.
 
+  **The daemon is not a way around this**, which is worth stating because it
+  is the obvious next idea. `wnd`'s socket protocol
+  (`crates/cli/src/daemon/protocol.rs`) carries `Ping`, `Status`, `Shutdown`,
+  four `*Subscribe` variants, and `Execute { cli: Box<Cli> }` — and that last
+  one takes the same clap command tree `wn` parses. The daemon is a persistent
+  host for the CLI's verbs, not a richer RPC, so a verb missing from `Cli` is
+  unreachable through the socket too. Closing these three needs either a verb
+  upstream in MDK or a driver linked against `marmot-uniffi`/`marmot-c`; both
+  are out of scope for a harness that deliberately builds MDK unpatched.
+
 A third, slimmer harness covers the NIP-17 DM surface:
 
 - **`dm/dm-interop-headless.sh`** — two `amy` processes (Identity A and

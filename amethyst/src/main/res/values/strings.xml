@@ -2701,6 +2701,9 @@
     <string name="marmot_failed_to_enable_encrypted_media">Could not switch this group to encrypted attachments: %1$s</string>
     <string name="marmot_group_disbanded_toast">Group disbanded</string>
     <string name="marmot_group_disbanding_toast">Ending the group. It finishes once the group agrees.</string>
+    <string name="marmot_group_composer_disbanding">This group is being ended. You can still read it.</string>
+    <string name="marmot_group_composer_leaving">You are leaving this group.</string>
+    <string name="marmot_group_composer_removed">You are no longer a member of this group.</string>
     <string name="marmot_failed_to_disband">Could not disband the group: %1$s</string>
     <string name="marmot_adding_user">Adding %1$s…</string>
     <string name="marmot_failed_to_add_user">Failed to add %1$s: %2$s</string>

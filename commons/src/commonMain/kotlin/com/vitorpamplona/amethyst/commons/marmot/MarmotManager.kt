@@ -2539,6 +2539,10 @@ class MarmotManager(
             chatroom.isCurrentProfile.value = view.isCurrentProfile
             chatroom.hasEncryptedMediaPolicy.value = encryptedMediaPolicy(nostrGroupId) != null
         }
+        // Read every sync, because a gate is raised and cleared by protocol
+        // events the UI never sees directly — a disband request resolving, a
+        // removal being realized.
+        chatroom.outboundGate.value = publishGate.outboundGateNow(nostrGroupId)
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)
         chatroom.members.value = members
