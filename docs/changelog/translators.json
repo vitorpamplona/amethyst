@@ -75,84 +75,12 @@
     "rchk": ""
   },
   "sinceLastTag": {
-    "tag": "v1.14.0",
-    "since": "2026-08-22T13:13:30-04:00",
+    "tag": "v1.15.0",
+    "since": "2026-09-11T16:59:08-04:00",
     "translators": [
       {
         "user": "vitorpamplona",
-        "languages": [
-          "Arabic, Saudi Arabia",
-          "Bengali",
-          "Chinese Simplified",
-          "Chinese Simplified, Singapore",
-          "Chinese Traditional",
-          "Chinese Traditional, Hong Kong",
-          "Czech",
-          "Dutch",
-          "English, United Kingdom",
-          "Esperanto",
-          "Finnish",
-          "French",
-          "French, Canada",
-          "German",
-          "Greek",
-          "Hindi",
-          "Hungarian",
-          "Indonesian",
-          "Italian",
-          "Japanese",
-          "Korean",
-          "Latvian",
-          "Persian",
-          "Polish",
-          "Portuguese",
-          "Portuguese, Brazilian",
-          "Russian",
-          "Rսssian, Սkraine",
-          "Serbian (Cyrillic)",
-          "Slovenian",
-          "Spanish",
-          "Spanish, Mexico",
-          "Spanish, United States",
-          "Swahili, Kenya",
-          "Swedish",
-          "Tamil",
-          "Thai",
-          "Turkish",
-          "Ukrainian",
-          "Uzbek",
-          "Vietnamese"
-        ]
-      },
-      {
-        "user": "StellarStoic",
-        "languages": [
-          "Slovenian"
-        ]
-      },
-      {
-        "user": "Bardesss",
-        "languages": [
-          "Dutch"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "rajs19420616",
-        "languages": [
-          "Hindi"
-        ]
+        "languages": []
       },
       {
         "user": "greenart7c3",
@@ -184,6 +112,10 @@
       },
       {
         "user": "vazw",
+        "languages": []
+      },
+      {
+        "user": "Bardesss",
         "languages": []
       },
       {
@@ -291,6 +223,10 @@
         "languages": []
       },
       {
+        "user": "rajs19420616",
+        "languages": []
+      },
+      {
         "user": "Maxblake",
         "languages": []
       },
@@ -307,7 +243,15 @@
         "languages": []
       },
       {
+        "user": "StellarStoic",
+        "languages": []
+      },
+      {
         "user": "D4rkFIow",
+        "languages": []
+      },
+      {
+        "user": "summoner001",
         "languages": []
       },
       {
@@ -328,6 +272,10 @@
       },
       {
         "user": "hypnotichemionus4",
+        "languages": []
+      },
+      {
+        "user": "maxblake2015",
         "languages": []
       },
       {
