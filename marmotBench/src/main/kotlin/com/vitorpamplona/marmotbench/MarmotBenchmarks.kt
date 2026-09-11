@@ -87,7 +87,7 @@ fun benchCreateGroup(invitees: Int): BenchResult =
         runBlocking {
             alice.manager.createCurrentProfileGroup(
                 nostrGroupId = groupId,
-                relays = listOf("wss://bench.invalid"),
+                relays = listOf(BENCH_RELAY),
                 profile = GroupProfileV1("bench", ""),
             )
             if (kps.isNotEmpty()) alice.manager.addMembers(groupId, kps, emptyList())
@@ -104,7 +104,7 @@ fun benchCreateGroup(invitees: Int): BenchResult =
 private suspend fun groupWithMembers(members: Int): Triple<Client, List<Client>, HexKey> {
     val alice = Client("alice")
     val groupId = newGroupId()
-    alice.manager.createCurrentProfileGroup(groupId, listOf("wss://bench.invalid"), GroupProfileV1("bench", ""))
+    alice.manager.createCurrentProfileGroup(groupId, listOf(BENCH_RELAY), GroupProfileV1("bench", ""))
     val invitees = (0 until members).map { Client("member-$it") }
     if (invitees.isNotEmpty()) {
         val kps = invitees.map { it.manager.generateKeyPackageEvent(relays = emptyList()) }
@@ -163,7 +163,7 @@ fun benchJoinWelcome(): BenchResult =
                 val alice = Client("alice")
                 val bob = Client("bob")
                 val groupId = newGroupId()
-                alice.manager.createCurrentProfileGroup(groupId, listOf("wss://bench.invalid"), GroupProfileV1("bench", ""))
+                alice.manager.createCurrentProfileGroup(groupId, listOf(BENCH_RELAY), GroupProfileV1("bench", ""))
                 val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
                 val (_, welcome) = alice.manager.addMember(groupId, kp, emptyList())
                 bob to welcome!!.giftWrapEvent
@@ -225,6 +225,8 @@ fun benchIngestAppMessage(members: Int): BenchResult =
     ) { (bob, event) ->
         runBlocking { bob.manager.ingest(event as GroupEvent) }
     }
+
+private const val BENCH_RELAY = "wss://bench.invalid"
 
 private const val PAYLOAD = "marmot benchmark payload — the same 64-ish byte body both sides send"
 

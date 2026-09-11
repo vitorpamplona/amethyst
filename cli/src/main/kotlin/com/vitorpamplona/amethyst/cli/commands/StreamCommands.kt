@@ -52,6 +52,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * kind:9.
  */
 object StreamCommands {
+    private const val STREAM_ID_FLAG = "stream-id"
+
     val USAGE: String =
         """
         |amy marmot stream — agent text stream previews over QUIC
@@ -105,7 +107,7 @@ object StreamCommands {
         val positional = args.positional
         if (positional.isEmpty()) return Output.error("bad_args", "stream start GID [--stream-id HEX] [--broker URI]…")
 
-        val streamId = args.flag("stream-id") ?: MlsCryptoProvider.randomBytes(32).toHexKey()
+        val streamId = args.flag(STREAM_ID_FLAG) ?: MlsCryptoProvider.randomBytes(32).toHexKey()
         if (streamId.length != 64) return Output.error("bad_args", "--stream-id must be 32 bytes of hex")
         // Repeatable in the spec, comma-separated here: `Args` keeps one
         // value per flag and a receiver tries them in the order given.
@@ -149,7 +151,7 @@ object StreamCommands {
     ): Int {
         val args = Args(rest)
         val positional = args.positional
-        val streamId = args.flag("stream-id")
+        val streamId = args.flag(STREAM_ID_FLAG)
         val startEventId = args.flag("start-event-id")
         val broker = args.flag("broker")
         // The two delivery modes are alternatives, not a fallback chain: one
@@ -265,7 +267,7 @@ object StreamCommands {
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
-            val wanted = args.flag("stream-id")
+            val wanted = args.flag(STREAM_ID_FLAG)
             val anchor =
                 findStart(ctx, gid, wanted)
                     ?: return Output.error("no_stream", "no kind:1200 stream start in group $gid")
@@ -363,7 +365,7 @@ object StreamCommands {
     ): Int {
         val args = Args(rest)
         val positional = args.positional
-        val streamId = args.flag("stream-id")
+        val streamId = args.flag(STREAM_ID_FLAG)
         val transcriptHash = args.flag("transcript-hash")
         val chunkCount = args.flag("chunk-count")?.toLongOrNull()
         if (positional.size < 2 || streamId == null || transcriptHash == null || chunkCount == null) {
