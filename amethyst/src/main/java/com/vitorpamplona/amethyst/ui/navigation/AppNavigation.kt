@@ -23,9 +23,6 @@ package com.vitorpamplona.amethyst.ui.navigation
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -448,8 +445,12 @@ fun BuildNavigation(
     NavHost(
         navController = nav.controller,
         startDestination = Route.Home,
-        enterTransition = { fadeIn(animationSpec = tween(200)) },
-        exitTransition = { fadeOut(animationSpec = tween(200)) },
+        enterTransition = { navShellFadeIn },
+        exitTransition = { navShellFadeOut },
+        // Without these two, a back *gesture* runs navigation-compose's own defaults
+        // (fadeIn opposite scaleOut(0.7f)) instead of the slides declared per route.
+        predictivePopEnterTransition = { predictivePopEnter() },
+        predictivePopExitTransition = { predictivePopExit() },
     ) {
         composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }
         composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
