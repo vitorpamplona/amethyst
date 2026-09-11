@@ -145,34 +145,64 @@ expect_contains() {
 
 # ------- JSON helpers --------------------------------------------------------
 
-# Extract MLS group ID as lowercase hex from wn JSON output.
-# Handles both formats:
-#   - plain hex string (from `groups list`)
-#   - {"value":{"vec":[...]}} serde struct (from `groups create`)
-#   - flat byte array [n, ...] (from some responses)
-# Plus the three wrapper shapes wn actually uses:
-#   - {"result": {"mls_group_id": ...}}                    (groups create)
-#   - {"group": {"mls_group_id": ...}, "membership": ...}  (groups invites[0])
-#   - {"mls_group_id": ...}                                (bare)
-# Input: JSON string via stdin; optional 2nd arg = field name (default: mls_group_id)
+# Extract an MLS group id as lowercase hex from `wn --json` output.
+#
+# MDK 0.9.x settled on one envelope, `{"ok":true,"result":{...}}`, but the
+# group id sits at a different place per verb:
+#   groups create           -> .result.group_id
+#   groups accept / rename  -> .result.group.group_id
+#   groups invites[]        -> .group_id            (an element, already peeled)
+#   groups members/admins   -> .result.group_id
+# Older builds wrapped the id as a serde `{"value":{"vec":[...]}}` struct or a
+# bare byte array; both are still decoded so a run against an older `wn` binary
+# reports a real mismatch instead of an empty string.
+#
+# Input: JSON on stdin. Optional 1st arg overrides the field name.
 jq_group_id() {
-    local field="${1:-mls_group_id}"
+    local field="${1:-group_id}"
     jq -r --arg f "$field" '
         def byte2hex:
             . as $n |
             [($n / 16 | floor), ($n % 16)] |
             map(if . < 10 then (48 + .) else (87 + .) end) |
             implode;
-        (.group // .result // .) |
-        (.group // .) |
-        .[$f] |
-        if type == "string" then .
-        elif (type == "object" and (.value.vec != null)) then
-            [.value.vec[] | byte2hex] | join("")
-        elif type == "array" then
-            [.[] | byte2hex] | join("")
-        else empty end
+        def as_hex:
+            if type == "string" then .
+            elif (type == "object" and (.value.vec != null)) then
+                [.value.vec[] | byte2hex] | join("")
+            elif type == "array" then
+                [.[] | byte2hex] | join("")
+            else empty end;
+        [ (.result? // empty), (.result?.group? // empty), (.group? // empty), . ]
+        | map(select(type == "object") | .[$f]? // empty | as_hex)
+        | map(select(. != null and . != ""))
+        | first // empty
     ' 2>/dev/null || true
+}
+
+# Peel MDK 0.9.x's `{"ok":true,"result":{...}}` envelope and hand back the
+# named collection as a JSON array. MDK moved every list one level in and gave
+# it a name (`invites`, `members`, `admins`, `messages`), so a bare
+# `(.result // .) | .[]?` now iterates the RESULT OBJECT'S VALUES — three
+# scalars where the harness expected invite objects. That failure is silent:
+# every poll simply never matches, and the test reports "never received
+# invite" for a welcome that arrived and was accepted.
+#
+# Input: JSON on stdin, collection name as $1.
+jq_list() {
+    local name="$1"
+    jq -c --arg n "$name" '
+        [ (.result?[$n]? // empty), (.[$n]? // empty), (.result? // empty), . ]
+        | map(select(type == "array"))
+        | (first // [])
+        | .[]
+    ' 2>/dev/null || true
+}
+
+# npub or hex pubkey of one member/admin entry. MDK names the field per
+# collection: members carry `member_id`, admins carry `admin_id`.
+jq_member_ids() {
+    jq -r '.member_id? // .admin_id? // .pubkey? // .public_key? // empty' 2>/dev/null || true
 }
 
 # ------- polling helpers -----------------------------------------------------
@@ -197,7 +227,7 @@ snapshot_invites() {
         local g
         g=$(printf '%s' "$one" | jq_group_id)
         [[ -n "$g" ]] && gids+=("$g")
-    done < <(printf '%s' "$raw" | jq -c '(.result // .) | .[]?' 2>/dev/null)
+    done < <(printf '%s' "$raw" | jq_list invites)
     # bash 3.2 (stock macOS) treats "${gids[*]}" on an empty array as an
     # unbound reference under `set -u`, so guard the expansion.
     if (( ${#gids[@]} > 0 )); then
@@ -228,9 +258,10 @@ wait_for_invite() {
     deadline=$(( start + timeout ))
     last_hb=$start
     while [[ $(date +%s) -lt $deadline ]]; do
-        # Post-v0.2 `wn --json groups invites` returns `{"result": [...]}`
-        # (older builds returned the bare array). Peel the wrapper when
-        # present so a pending invite is actually detected.
+        # MDK 0.9.x returns `{"ok":true,"result":{"invites":[...], …}}`.
+        # `jq_list` peels the envelope AND names the collection; iterating
+        # `.result` directly walks the sibling scalars instead and never
+        # matches.
         local raw
         raw=$("$wnfn" --json groups invites 2>/dev/null || true)
         # Walk every pending invite (not just .[0]) so we skip past stales.
@@ -242,14 +273,14 @@ wait_for_invite() {
                 printf '%s\n' "$gid"
                 return 0
             fi
-        done < <(printf '%s' "$raw" | jq -c '(.result // .) | .[]?' 2>/dev/null)
+        done < <(printf '%s' "$raw" | jq_list invites)
 
         # Heartbeat every ~10s.
         local now=$(date +%s)
         if (( now - last_hb >= 10 )); then
             local elapsed=$(( now - start )) remaining=$(( deadline - now ))
             local pending
-            pending=$(printf '%s' "$raw" | jq '(.result // .) | length' 2>/dev/null || echo "?")
+            pending=$(printf '%s' "$raw" | jq_list invites | wc -l | tr -d ' ')
             local recent=""
             if [[ -f "$data_dir/logs/stderr.log" ]]; then
                 recent=$(tail -n 200 "$data_dir/logs/stderr.log" 2>/dev/null \
@@ -277,9 +308,10 @@ wait_for_message() {
         else
             payload=$(wn_c_json messages list "$gid" --limit 20 2>/dev/null || true)
         fi
+        # MDK 0.9.x: `.result.messages[]`, decrypted body in `plaintext`.
         if [[ -n "${payload:-}" ]] && \
-           printf '%s' "$payload" | jq -e --arg n "$needle" \
-                '(.result // .) | .[]? | select((.content // .text // "") | contains($n))' \
+           printf '%s' "$payload" | jq_list messages | jq -e --arg n "$needle" \
+                'select((.plaintext // .content // .text // "") | contains($n))' \
                 >/dev/null 2>&1; then
             return 0
         fi
@@ -319,6 +351,11 @@ extract_pubkey() {
     if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
     # JSON: {"result": [ {"pubkey": …}, … ]} — post-v0.2 `wn --json whoami` shape
     v=$(printf '%s' "$raw" | jq -r '.result[0].pubkey // .result[0].npub // .result[0].public_key // empty' 2>/dev/null || true)
+    if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
+    # JSON: {"ok":true,"result":{"accounts":[{"npub": ...}, ...]}} — MDK 0.9.x.
+    # `result` became an object with a named list, so the array-indexed probes
+    # above miss it entirely and the caller sees an empty npub.
+    v=$(printf '%s' "$raw" | jq -r '.result.accounts[0].npub // .result.accounts[0].pubkey // empty' 2>/dev/null || true)
     if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
     # JSON: array of accounts (whoami may return a list)
     v=$(printf '%s' "$raw" | jq -r '.[0].pubkey // .[0].npub // .[0].public_key // empty' 2>/dev/null || true)

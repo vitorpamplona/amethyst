@@ -6,12 +6,11 @@
 # --- preflight ---------------------------------------------------------------
 preflight() {
   banner "Preflight"
-  for cmd in jq git curl cargo protoc patch; do
+  for cmd in jq git curl cargo protoc; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
       fail_msg "missing required tool: $cmd"
       case "$cmd" in
         protoc) info "hint: apt-get install protobuf-compiler   (or brew install protobuf on macOS)" ;;
-        patch)  info "hint: apt-get install patch" ;;
       esac
       exit 1
     fi
@@ -42,65 +41,91 @@ preflight() {
   [[ -x "$AMY_BIN" ]] || { fail_msg "amy still missing after build"; exit 1; }
   info "amy: $AMY_BIN"
 
-  # Clone/build whitenoise-rs if needed (shared between both harnesses).
+  # Clone/build the MDK reference client if needed (shared between both
+  # harnesses).
+  #
+  # This used to point at marmot-protocol/whitenoise-rs. That repository was
+  # archived on 2026-08-05 ("This repository is obsolete and is no longer
+  # updated") pinned to mdk-core 0.8.0, and wn/wnd moved into
+  # marmot-protocol/mdk as the `wn-cli` package. Pointing the harness at the
+  # dead repo tested us against a frozen MIP-era client, which is exactly the
+  # blind spot that let our implementation drift off the adopted spec.
   if [[ ! -d "$WN_REPO/.git" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
-      fail_msg "whitenoise-rs checkout missing at $WN_REPO and --no-build set"; exit 1
+      fail_msg "mdk checkout missing at $WN_REPO and --no-build set"; exit 1
     fi
-    step "cloning whitenoise-rs into $WN_REPO"
-    git clone --depth 1 https://github.com/marmot-protocol/whitenoise-rs.git "$WN_REPO" \
+    step "cloning mdk into $WN_REPO"
+    git clone --filter=blob:none https://github.com/marmot-protocol/mdk.git "$WN_REPO" \
       2>&1 | tee -a "$LOG_FILE"
   fi
 
-  # Two harness-only patches to whitenoise-rs so it runs in sandboxes that
-  # block the kernel keyring:
-  #   1. mock-keyring: honour $WHITENOISE_MOCK_KEYRING so wnd uses the
-  #      integration-tests mock keyring store when the kernel keyutils
-  #      syscalls are blocked (common in containers / CI). Compiled in via
-  #      `--features whitenoise/integration-tests` on the build below.
-  #   2. skip-unprocessable-retry: when mdk-core returns a terminal MLS
-  #      error (MlsMessageUnprocessable / PreviouslyFailed / MdkCoreError)
-  #      the message is provably undecryptable — retrying it ten times with
-  #      exponential backoff (~17 min) just blocks later decryptable commits
-  #      behind a queue of doomed retries, which in the harness manifests as
-  #      "A already left" / "name unchanged" timeouts. The patch treats those
-  #      errors as terminal.
+  # Pin to the commit the SHIPPING apps embed, not whatever master is today.
+  # Both White Noise clients vendor an immutable MarmotKit artifact and name
+  # its `mdk-sha` in a lockfile — whitenoise-android's
+  # `app/src/main/marmotkit/MARMOT_VERSION` and whitenoise-ios's
+  # `Packages/MarmotKit/MARMOT_VERSION`. Testing against master answers "are we
+  # compatible with tip"; testing against this answers "are we compatible with
+  # what users are running", which is the question the harness exists to answer.
   #
-  # The relay-override patches this harness used to carry (discovery-env /
-  # defaults-env) are gone: upstream wnd now takes native --discovery-relays
-  # and --default-account-relays flags (passed in start_daemon), which do the
-  # same job without patching. wn/wnd also moved into the crates/whitenoise-cli
-  # workspace member — the mock-keyring patch targets that path.
-  local -a patches=(
-    "whitenoise-mock-keyring.patch"
-    "whitenoise-skip-unprocessable-retry.patch"
-  )
-  # Apply each patch with a real exit-code check. The previous version
-  # swallowed patch's exit status via `| tee`, which meant a miscounted
-  # hunk header silently left the marker touched and the binary unpatched
-  # — the resulting wn retried provably-doomed MLS messages for ~17min
-  # and every later test flapped or timed out. Fail fast instead.
-  for name in "${patches[@]}"; do
-    local marker="$WN_REPO/.headless-patched-${name%.patch}"
-    if [[ ! -f "$marker" ]]; then
-      step "patching whitenoise-rs: $name"
-      if ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- \
-             <"$SCRIPT_DIR/patches/$name" >>"$LOG_FILE" 2>&1 ); then
-        touch "$marker"
-        # Invalidate the previous build so the patched source is picked up.
-        rm -f "$WN_BIN" "$WND_BIN"
-      else
-        fail_msg "patch $name failed — see $LOG_FILE"
-        tail -n 30 "$LOG_FILE" | sed 's/^/  /' >&2
-        exit 1
+  # THE TWO APPS NO LONGER AGREE, and the rule for that is: take the newer.
+  # As of 2026-09-10 android is on 0.9.21 (`fdd398a8`) and ios is still on
+  # 0.9.20 (`2f44f6b6`) — android syncs its bindings on its own cadence and got
+  # there first. The newer one is where new validation lands, so it is where
+  # drift shows up first; a client that satisfies 0.9.21 satisfies 0.9.20,
+  # since every 0.9.20 rule is still in 0.9.21. Pinning to the laggard would
+  # test the subset and call it coverage.
+  #
+  # Bump it deliberately, by reading those lockfiles again — not by drifting.
+  # If they agree again, that is the value; if they disagree, take the newer
+  # and say so here.
+  MDK_PIN="${MDK_PIN:-fdd398a80f1626f1713787cebe416f7890b5b204}"
+  if [[ "$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null)" != "$MDK_PIN" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      info "mdk is not at the pinned $MDK_PIN and --no-build set — testing whatever is checked out"
+    else
+      step "checking out the pinned mdk $MDK_PIN"
+      if ! git -C "$WN_REPO" cat-file -e "$MDK_PIN^{commit}" 2>/dev/null; then
+        git -C "$WN_REPO" fetch --filter=blob:none origin "$MDK_PIN" 2>&1 | tee -a "$LOG_FILE"
       fi
+      git -C "$WN_REPO" checkout --detach "$MDK_PIN" 2>&1 | tee -a "$LOG_FILE" || {
+        fail_msg "could not check out the pinned mdk $MDK_PIN"; exit 1
+      }
     fi
-  done
+  fi
 
+  # No source patches. The harness used to carry two against whitenoise-rs:
+  #
+  #   1. mock-keyring, so wnd could run where the kernel keyring is blocked.
+  #      MDK replaces this with a native flag: `--secret-store file` keeps
+  #      account secrets in files under the data dir instead of the OS
+  #      keychain. start_daemon passes it.
+  #   2. skip-unprocessable-retry, which made terminal MLS errors stop
+  #      retrying. That patched `src/whitenoise/event_processor/`, a path MDK
+  #      does not have. If MDK's retry behaviour turns out to stall this
+  #      harness the same way, that is a fresh diagnosis against MDK's own
+  #      code, not a patch to port.
+  #
   # cargo's transitive deps (rustup, crates.io) both return 503 on cold
   # caches often enough that a single attempt fails ~30% of the time.
   # Retry each cargo build until the binary actually exists or we've
   # exhausted the budget — the build is incremental so retries are cheap.
+  # Rebuild when the checkout moved, not only when the binary is missing.
+  # A pinned checkout beside a binary built from a different commit is worse
+  # than no pin at all: the run would report a version it did not test.
+  local built_marker="$WN_REPO/target/release/.harness-built-sha"
+  local want_sha
+  want_sha=$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null || echo "")
+  local built_sha=""
+  [[ -f "$built_marker" ]] && built_sha=$(cat "$built_marker" 2>/dev/null || echo "")
+  if [[ -x "$WN_BIN" && -x "$WND_BIN" && -n "$want_sha" && "$built_sha" != "$want_sha" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      info "wn was built from ${built_sha:-an unrecorded commit}, not $want_sha — --no-build keeps it"
+    else
+      step "mdk moved to $want_sha — rebuilding wn + wnd"
+      rm -f "$WN_BIN" "$WND_BIN"
+    fi
+  fi
+
   if [[ ! -x "$WN_BIN" || ! -x "$WND_BIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       fail_msg "wn/wnd not found and --no-build set"; exit 1
@@ -109,8 +134,7 @@ preflight() {
     for attempt in $(seq 1 $max); do
       step "building wn + wnd (attempt $attempt/$max, ~5 min first run)"
       ( cd "$WN_REPO" && \
-          cargo build --release -p whitenoise-cli \
-            --features whitenoise/integration-tests --bin wn --bin wnd ) \
+          cargo build --release -p wn-cli --bin wn --bin wnd ) \
         2>&1 | tee -a "$LOG_FILE"
       [[ -x "$WN_BIN" && -x "$WND_BIN" ]] && break
       [[ "$attempt" -lt "$max" ]] && warn "wn/wnd build failed (likely transient 503 from rustup or crates.io) — retrying"
@@ -118,8 +142,9 @@ preflight() {
     [[ -x "$WN_BIN" && -x "$WND_BIN" ]] || {
       fail_msg "wn/wnd still missing after $max build attempts"; exit 1
     }
+    [[ -n "$want_sha" ]] && printf '%s\n' "$want_sha" >"$built_marker"
   fi
-  info "wn:  $WN_BIN"
+  info "wn:  $WN_BIN ($(git -C "$WN_REPO" rev-parse --short HEAD 2>/dev/null || echo unknown))"
   info "wnd: $WND_BIN"
 
   # Clone/build nostr-rs-relay — the harness's single loopback relay.
@@ -147,6 +172,95 @@ preflight() {
   info "relay bin: $RELAY_BIN"
 }
 
+# --- local QUIC broker -------------------------------------------------------
+# MDK's own `marmot-quic-broker`, the reference implementation of the other
+# side of `transports/quic.md`. Agent text stream previews are the only tests
+# that need it, and they are the only way to know our binding is right — the
+# ALPN, the control envelope, the frame prefix and the record key schedule all
+# have to agree with an implementation that is not ours.
+#
+# `--replay-ttl-secs` is what lets a subscriber that connects after the
+# records were pushed still see them; with the default 0 a test would have to
+# race the publisher.
+start_quic_broker() {
+  if [[ ! -x "$BROKER_BIN" ]]; then
+    info "marmot-quic-broker not built — agent text stream tests will skip"
+    return 1
+  fi
+  step "starting QUIC broker on $BROKER_HOST:$BROKER_PORT"
+  mkdir -p "$STATE_DIR/broker"
+  nohup "$BROKER_BIN" --bind "$BROKER_HOST:$BROKER_PORT" --replay-ttl-secs 60 --json \
+    >"$STATE_DIR/broker/stdout.log" 2>"$STATE_DIR/broker/stderr.log" &
+  BROKER_PID=$!
+  local deadline=$(( $(date +%s) + 15 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if grep -q '"local_addr"' "$STATE_DIR/broker/stdout.log" 2>/dev/null; then
+      # The broker generates a self-signed certificate and prints its
+      # fingerprint. `amy` pins that exact leaf rather than trusting a chain —
+      # there is no CA in this picture, and without the pin every stream test
+      # fails inside TLS before a single frame is written.
+      BROKER_PIN=$(sed -n 's/.*"server_cert_sha256_fingerprint":"\([0-9a-f]*\)".*/\1/p' \
+        "$STATE_DIR/broker/stdout.log" | head -1)
+      if [[ -z "$BROKER_PIN" ]]; then
+        fail_msg "broker printed no server_cert_sha256_fingerprint — cannot pin it"
+        BROKER_PID=""
+        return 1
+      fi
+      info "broker pid $BROKER_PID ready (cert ${BROKER_PIN:0:16}…)"
+      return 0
+    fi
+    if ! kill -0 "$BROKER_PID" 2>/dev/null; then break; fi
+    sleep 1
+  done
+  fail_msg "broker never came up (see $STATE_DIR/broker/stderr.log)"
+  tail -n 20 "$STATE_DIR/broker/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
+  BROKER_PID=""
+  return 1
+}
+
+# --- blossom blob store ------------------------------------------------------
+# A loopback Blossom server for the encrypted-media tests. Both implementations
+# upload ciphertext to it and fetch each other's back; it never sees a key.
+start_blossom() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    info "python3 not found — encrypted-media tests will skip"
+    return 1
+  fi
+  step "starting blossom blob store on $BLOSSOM_URL"
+  mkdir -p "$STATE_DIR/blossom/blobs"
+  nohup python3 "$SCRIPT_DIR/blossom-server.py" \
+    --host "$BLOSSOM_HOST" --port "$BLOSSOM_PORT" --dir "$STATE_DIR/blossom/blobs" \
+    >"$STATE_DIR/blossom/stdout.log" 2>"$STATE_DIR/blossom/stderr.log" &
+  BLOSSOM_PID=$!
+  local deadline=$(( $(date +%s) + 15 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if grep -q '"ready"' "$STATE_DIR/blossom/stdout.log" 2>/dev/null; then
+      info "blossom pid $BLOSSOM_PID ready"
+      return 0
+    fi
+    if ! kill -0 "$BLOSSOM_PID" 2>/dev/null; then break; fi
+    sleep 1
+  done
+  fail_msg "blossom never came up (see $STATE_DIR/blossom/stderr.log)"
+  tail -n 20 "$STATE_DIR/blossom/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
+  BLOSSOM_PID=""
+  return 1
+}
+
+stop_blossom() {
+  [[ -n "${BLOSSOM_PID:-}" ]] || return 0
+  step "stopping blossom pid $BLOSSOM_PID"
+  kill "$BLOSSOM_PID" 2>/dev/null || true
+  BLOSSOM_PID=""
+}
+
+stop_quic_broker() {
+  [[ -n "${BROKER_PID:-}" ]] || return 0
+  step "stopping broker pid $BROKER_PID"
+  kill "$BROKER_PID" 2>/dev/null || true
+  BROKER_PID=""
+}
+
 # --- local relay -------------------------------------------------------------
 # Start nostr-rs-relay on $RELAY_PORT with a minimal config. Every test
 # runs against this one loopback endpoint — no external network traffic.
@@ -166,7 +280,7 @@ description = "Loopback relay for marmot-interop-headless.sh — do not use for 
 data_directory = "$RELAY_DATA"
 
 [network]
-address = "${RELAY_HOST:-127.0.0.1}"
+address = "${RELAY_BIND:-${RELAY_HOST:-127.0.0.1}}"
 port = $RELAY_PORT
 
 [options]
@@ -226,29 +340,37 @@ start_daemon() {
     info "$name daemon already running"; return 0
   fi
   rm -f "$socket"
-  # The mock keyring (WHITENOISE_MOCK_KEYRING=1) is in-memory only and
-  # resets to empty on every wnd restart, but the SQLite databases that
-  # wnd writes under $data_dir persist across runs and reference keys that
-  # no longer exist — wnd then bails with KeyringEntryMissingForExistingDatabase
-  # before it can even open a socket. Wipe the keyring-dependent state on
-  # each start so the daemon always comes up cold and consistent. Logs
-  # and the pid file are preserved for post-mortem.
+  # Start every daemon from a cold data dir. A stale SQLite database whose
+  # matching secret is gone leaves wnd unable to open its store, and it then
+  # bails before it can even create the socket. The identities here are
+  # disposable, so wiping is always the right move. Logs and the pid file are
+  # preserved for post-mortem.
   if [[ -d "$data_dir" ]]; then
     find "$data_dir" -mindepth 1 -maxdepth 1 \
       ! -name 'logs' ! -name 'pid' \
       -exec rm -rf {} + 2>/dev/null || true
   fi
-  mkdir -p "$data_dir/logs" "$data_dir/release"
+  mkdir -p "$data_dir/logs"
+  # MDK refuses to create its socket if the socket's parent directory is
+  # group-writable or world-accessible ("unsafe on-disk permissions"). A default
+  # umask gives 0755, so tighten it explicitly rather than depending on whatever
+  # umask the caller's shell happens to have.
+  chmod 700 "$data_dir"
   # --discovery-relays / --default-account-relays are native wnd flags that
   # force both the discovery plane and freshly-created accounts' NIP-65 / inbox
   # / key-package lists onto our loopback relay (kills the "can't reach nos.lol"
   # exit path and stops accounts from carrying unreachable public relays).
   #
-  # WHITENOISE_MOCK_KEYRING=1 is consumed by the mock-keyring patch: it swaps in
-  # the integration-tests mock secret store so wnd doesn't fall over when the
-  # kernel blocks keyutils syscalls. Harmless on a real host with a real keyring.
-  WHITENOISE_MOCK_KEYRING=1 \
-    nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
+  # --socket pins the listen path instead of letting wnd derive it. MDK derives
+  # it as {home}/dev/wnd.sock, whitenoise-rs used {data_dir}/{profile}/wnd.sock;
+  # passing it explicitly makes the harness independent of that choice.
+  #
+  # --secret-store file replaces the old mock-keyring source patch: account
+  # secrets live in files under the data dir, so the daemon comes up in
+  # containers and CI where the kernel keyring is unavailable.
+  #
+  nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
+      --socket "$socket" --secret-store file \
       --discovery-relays "$RELAY_URL" --default-account-relays "$RELAY_URL" \
       >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
   local pid=$!

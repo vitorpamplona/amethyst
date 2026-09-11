@@ -43,6 +43,10 @@ tasks.named<Test>("test") {
 dependencies {
     implementation(project(":quartz"))
     implementation(project(":commons"))
+    // Agent text stream previews: the raw-QUIC binding, and the QUIC
+    // stack under it for the certificate validator the transport requires.
+    implementation(project(":marmotQuic"))
+    implementation(project(":quic"))
     // `amy serve` embeds geode (the standalone Ktor relay built on quartz's
     // relay-server code). geode depends only on :quartz, never on :amethyst.
     implementation(project(":geode"))

@@ -24,12 +24,17 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
-import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
+import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
+import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import java.io.File
@@ -44,7 +49,9 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "group rename <gid> <name>")
-        return edit(dataDir, rest[0]) { _, cur -> cur.copy(name = rest[1]) }
+        return commit(dataDir, rest[0]) { ctx, gid, view ->
+            ctx.marmot.setGroupProfile(gid, rest[1], view.description)
+        }
     }
 
     suspend fun promote(
@@ -52,11 +59,9 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "group promote <gid> <npub>")
-        return edit(dataDir, rest[0]) { ctx, cur ->
+        return commit(dataDir, rest[0]) { ctx, gid, view ->
             val newAdmin = ctx.requireUserHex(rest[1])
-            val admins = cur.adminPubkeys.toMutableList()
-            if (newAdmin !in admins) admins.add(newAdmin)
-            cur.copy(adminPubkeys = admins)
+            ctx.marmot.setGroupAdmins(gid, (view.adminPubkeys + newAdmin).distinct())
         }
     }
 
@@ -65,10 +70,9 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Output.error("bad_args", "group demote <gid> <npub>")
-        return edit(dataDir, rest[0]) { ctx, cur ->
+        return commit(dataDir, rest[0]) { ctx, gid, view ->
             val target = ctx.requireUserHex(rest[1])
-            val admins = cur.adminPubkeys.filter { it != target }
-            cur.copy(adminPubkeys = admins)
+            ctx.marmot.setGroupAdmins(gid, view.adminPubkeys.filter { it != target })
         }
     }
 
@@ -114,8 +118,17 @@ object GroupMetadataCommands {
             }
         }
 
-        return edit(dataDir, gid, mapOf("image_hash" to enc.imageHash, "image_url" to uploadedUrl)) { _, cur ->
-            cur.withImage(enc.imageHash, enc.imageKey, enc.imageNonce, uploadKeySeed)
+        return commit(dataDir, gid, mapOf("image_hash" to enc.imageHash, "image_url" to uploadedUrl)) { ctx, resolved, _ ->
+            ctx.marmot.setGroupImage(
+                resolved,
+                GroupBlossomImageV1(
+                    imageHash = enc.imageHash.hexToByteArray(),
+                    imageKey = enc.imageKey,
+                    imageNonce = enc.imageNonce,
+                    imageUploadKey = uploadKeySeed,
+                    mediaType = args.flag("mime") ?: "image/jpeg",
+                ),
+            )
         }
     }
 
@@ -125,40 +138,113 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Output.error("bad_args", "group clear-image <gid>")
-        return edit(dataDir, rest[0]) { _, cur -> cur.withoutImage() }
+        return commit(dataDir, rest[0]) { ctx, gid, _ -> ctx.marmot.setGroupImage(gid, null) }
     }
 
-    private suspend fun edit(
+    /**
+     * Point the group avatar at a plain `https` URL (`0x8007`).
+     *
+     * The URL is normalized by the component's encoder, so what gets committed
+     * may differ from what was typed — the emitted `avatar_url` is the stored
+     * form, not the argument.
+     *
+     * `group set-avatar-url <gid> <https-url> [--dim WIDTHxHEIGHT] [--thumbhash TEXT]`
+     */
+    suspend fun setAvatarUrl(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val gid = args.positional(0, "gid")
+        val url = args.positional(1, "url")
+        val dim = args.flag("dim")
+        val thumbhash = args.flag("thumbhash")
+        args.rejectUnknown()
+
+        val avatar =
+            try {
+                GroupAvatarUrlV1(
+                    url = MarmotWebUrl.normalize(url, label = "avatar URL"),
+                    dim = dim?.encodeToByteArray() ?: ByteArray(0),
+                    thumbhash = thumbhash?.encodeToByteArray() ?: ByteArray(0),
+                )
+            } catch (e: IllegalArgumentException) {
+                return Output.error("bad_args", e.message ?: "invalid avatar URL")
+            }
+
+        return commit(dataDir, gid, mapOf("avatar_url" to avatar.url)) { ctx, resolved, _ ->
+            ctx.marmot.setGroupAvatarUrl(resolved, avatar)
+        }
+    }
+
+    /**
+     * Set the disappearing-message duration. `group set-retention <gid> <secs>`
+     *
+     * `0` turns disappearing messages off. The change is not retroactive:
+     * every message already carries the expiry pinned from the epoch that
+     * delivered it, so this only governs what arrives after the commit.
+     */
+    suspend fun setRetention(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val gid = args.positional(0, "gid")
+        val raw = args.positional(1, "secs")
+        args.rejectUnknown()
+
+        val secs =
+            raw.toULongOrNull()
+                ?: return Output.error("bad_args", "secs must be a whole number of seconds (0 disables)")
+
+        return commit(dataDir, gid, mapOf("disappearing_secs" to secs.toString())) { ctx, resolved, _ ->
+            ctx.marmot.setMessageRetention(resolved, secs)
+        }
+    }
+
+    /** Remove the https avatar link. `group clear-avatar-url <gid>` */
+    suspend fun clearAvatarUrl(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.isEmpty()) return Output.error("bad_args", "group clear-avatar-url <gid>")
+        return commit(dataDir, rest[0]) { ctx, gid, _ -> ctx.marmot.setGroupAvatarUrl(gid, null) }
+    }
+
+    /**
+     * Run one metadata commit and report it.
+     *
+     * The mutation goes through [MarmotManager]'s profile-agnostic setters
+     * rather than being applied to a legacy `MarmotGroupData` here. Building
+     * that blob locally was the bug: `groupMetadata` is null for every
+     * current-profile group, so this bootstrapped a legacy `0xF2EE` extension
+     * and committed it INTO a current-profile group — the rename appeared to
+     * succeed locally and every peer kept showing the old name.
+     */
+    private suspend fun commit(
         dataDir: DataDir,
         rawGid: HexKey,
         extra: Map<String, Any?> = emptyMap(),
-        mutate: suspend (Context, MarmotGroupData) -> MarmotGroupData,
+        mutate: suspend (Context, HexKey, MarmotManager.GroupView) -> OutboundGroupEvent,
     ): Int {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rawGid)
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
-            val outboxUrls = ctx.outboxRelays().map { it.url }
-            val cur =
-                ctx.marmot.groupMetadata(gid)
-                    ?: MarmotGroupData.bootstrap(
-                        nostrGroupId = gid,
-                        creatorPubKey = ctx.identity.pubKeyHex,
-                        outboxRelays = outboxUrls,
-                    )
-            val updated = mutate(ctx, cur).withMergedRelays(outboxUrls)
+            val view = ctx.marmot.groupView(gid) ?: return Output.error("not_member", "not a member of group $gid")
 
-            val commit = ctx.marmot.updateGroupMetadata(gid, updated)
+            val commit = mutate(ctx, gid, view)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(commit.signedEvent, targets)
             RawEventSupport.publishGuard(ack, commit.signedEvent.id)?.let { return it }
 
+            val after = ctx.marmot.groupView(gid)
             Output.emit(
                 mapOf(
                     "group_id" to gid,
-                    "name" to updated.name,
-                    "admins" to updated.adminPubkeys,
+                    "name" to (after?.name ?: view.name),
+                    "admins" to (after?.adminPubkeys ?: view.adminPubkeys),
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "commit_event_id" to commit.signedEvent.id,
                 ) + RawEventSupport.ackFields(ack) + extra,

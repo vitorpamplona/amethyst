@@ -298,9 +298,27 @@ class DispatchStageBenchmark {
         }
     }
 
+    /**
+     * Opt-in, like every other benchmark in this repo.
+     *
+     * It pushes 30,000 events through six dispatch variants twice, inside a
+     * `runTest` whose default cutoff is one minute. On an idle machine that is
+     * seconds; on a loaded CI runner it is not, and the run then fails with
+     * `UncompletedCoroutinesError` — a red build that measured the machine's
+     * load rather than the code. A benchmark should report a number, never
+     * decide whether a change is correct.
+     *
+     * Enable with `-DrunLoadBenchmark=true`.
+     */
+    private val enabled = System.getProperty("runLoadBenchmark") == "true"
+
     @Test
     fun dispatchStageBenchmark() =
         kotlinx.coroutines.test.runTest {
+            if (!enabled) {
+                println("[skip] dispatchStageBenchmark — benchmark. Enable with -DrunLoadBenchmark=true")
+                return@runTest
+            }
             println("=== DISPATCH STAGE BENCHMARK (post-parse, pre-verify) ===")
             println("cores=${Runtime.getRuntime().availableProcessors()} uniqueEvents=$UNIQUE_EVENTS subsPerRelay=$SUBS_PER_RELAY")
 

@@ -45,6 +45,12 @@ enum class ProposalType(
     EXTERNAL_INIT(6),
     GROUP_CONTEXT_EXTENSIONS(7),
 
+    // AppDataUpdate is the MLS Extensions draft's proposal for mutating
+    // GroupContext app components. Every current-profile Marmot group requires
+    // it, because that profile keeps all its mutable group state in the
+    // `app_data_dictionary` rather than in a bespoke extension.
+    APP_DATA_UPDATE(0x0008),
+
     // SelfRemove is standardized in MLS Extensions draft-ietf-mls-extensions
     // as IANA proposal type 0x000A, NOT a Marmot private-use value.
     // openmls / mdk encode it as 0x000A on the wire; quartz was writing
@@ -131,6 +137,91 @@ sealed class Proposal : TlsSerializable {
         override fun encodeTls(writer: TlsWriter) {
             writer.putUint16(proposalType.value)
             writer.putVectorVarInt(extensions)
+        }
+    }
+
+    /**
+     * AppDataUpdate proposal (MLS Extensions draft): set or remove ONE
+     * component in the GroupContext `app_data_dictionary`.
+     *
+     * ```text
+     * struct {
+     *     ComponentID component_id;
+     *     AppDataUpdateOperation op;   // uint8: 1 = update, 2 = remove
+     *     select (op) {
+     *       case update: opaque update<V>;
+     *       case remove: struct{};
+     *     };
+     * } AppDataUpdate;
+     * ```
+     *
+     * This targets the GroupContext dictionary ONLY. It is not an update
+     * mechanism for a LeafNode, KeyPackage, or GroupInfo dictionary — leaf
+     * state changes by replacing the leaf, which is what keeps a member's
+     * account identity proof out of reach of anyone else's proposal.
+     *
+     * Marmot layers its own authorization on top: most component changes are
+     * admin-gated, and a Commit's resulting state still has to satisfy every
+     * component's own validation rules. None of that is expressed here — this
+     * type is the wire format, not the policy.
+     */
+    data class AppDataUpdate(
+        val componentId: Int,
+        val operation: Operation,
+    ) : Proposal() {
+        override val proposalType = ProposalType.APP_DATA_UPDATE
+
+        init {
+            require(componentId in 0..0xFFFF) {
+                "ComponentID must fit in a uint16, was $componentId"
+            }
+        }
+
+        sealed class Operation {
+            /** Set the component's data, creating the entry if absent. */
+            data class Update(
+                val data: ByteArray,
+            ) : Operation() {
+                override fun equals(other: Any?): Boolean {
+                    if (this === other) return true
+                    if (other !is Update) return false
+                    return data.contentEquals(other.data)
+                }
+
+                override fun hashCode(): Int = data.contentHashCode()
+            }
+
+            /** Drop the component's entry entirely. */
+            object Remove : Operation()
+
+            companion object {
+                const val TYPE_UPDATE = 1
+                const val TYPE_REMOVE = 2
+            }
+        }
+
+        override fun encodeTls(writer: TlsWriter) {
+            writer.putUint16(proposalType.value)
+            writer.putUint16(componentId)
+            when (operation) {
+                is Operation.Update -> {
+                    writer.putUint8(Operation.TYPE_UPDATE)
+                    writer.putOpaqueVarInt(operation.data)
+                }
+
+                Operation.Remove -> {
+                    writer.putUint8(Operation.TYPE_REMOVE)
+                }
+            }
+        }
+
+        companion object {
+            fun update(
+                componentId: Int,
+                data: ByteArray,
+            ) = AppDataUpdate(componentId, Operation.Update(data))
+
+            fun remove(componentId: Int) = AppDataUpdate(componentId, Operation.Remove)
         }
     }
 
@@ -228,6 +319,20 @@ sealed class Proposal : TlsSerializable {
 
                 ProposalType.SELF_REMOVE -> {
                     SelfRemove()
+                }
+
+                ProposalType.APP_DATA_UPDATE -> {
+                    val componentId = reader.readUint16()
+                    when (val op = reader.readUint8()) {
+                        AppDataUpdate.Operation.TYPE_UPDATE ->
+                            AppDataUpdate.update(componentId, reader.readOpaqueVarInt())
+
+                        AppDataUpdate.Operation.TYPE_REMOVE ->
+                            AppDataUpdate.remove(componentId)
+
+                        else ->
+                            throw IllegalArgumentException("Unknown AppDataUpdateOperation: $op")
+                    }
                 }
 
                 ProposalType.GROUP_CONTEXT_EXTENSIONS -> {

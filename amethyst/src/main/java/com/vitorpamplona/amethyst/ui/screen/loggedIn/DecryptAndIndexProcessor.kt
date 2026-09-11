@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -675,8 +677,64 @@ class GroupEventHandler(
                         cache.copyRelaysFromTo(outerNote, innerEvent.id)
                     }
 
-                    // Track the message in the Marmot group chatroom
+                    // A kind:1009 edit is anchored to the message it replaces,
+                    // exactly like a Concord edit or a reaction: the bubble reads
+                    // `Note.edits`, and holding the edit as a hard-referenced
+                    // child of its target is what keeps it alive as long as that
+                    // target is. A Marmot inner event is decrypted exactly once —
+                    // the ratchet has moved on by the time anyone could re-fetch
+                    // it — so an edit left orphaned in the soft cache could be
+                    // collected and never come back.
+                    //
+                    // The overlay's own rules (author-only, latest wins) are
+                    // applied at render time by `Note.latestMarmotEdit`, not here:
+                    // the target's author is not necessarily known yet when the
+                    // edit arrives, and a link is not an endorsement.
+                    if (innerEvent.kind == MarmotAppEvent.KIND_EDIT) {
+                        MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(innerEvent))?.let { edit ->
+                            cache.getOrCreateNote(edit.targetId).addEdit(innerNote)
+                        }
+                    }
+
+                    // Push token gossip (kinds 447/448/449) is routing data for
+                    // a notification server, addressed to the other members'
+                    // clients rather than to the people in the room. It still
+                    // reaches the feed's dedupe and cache paths above like any
+                    // inner event — `MarmotGroupList` is what keeps it off the
+                    // screen — but its meaning is applied here.
+                    //
+                    // Everything this call does is advisory: a malformed entry,
+                    // a signature that does not verify, a list that lost its
+                    // ordering race are all dropped on their own and none of
+                    // them may reach the validity of the kind:445 that carried
+                    // them. That is why it neither throws nor is checked.
+                    account.marmotPushCoordinator?.let { push ->
+                        push.apply(result.groupId, innerEvent)
+                        // A peer asking for records gets our view, once. We
+                        // answer with the records we hold — including other
+                        // members' — with their owner signatures untouched, so
+                        // a member who has been offline can be caught up by
+                        // whoever happens to be around.
+                        if (push.isTokenRequest(innerEvent) && innerEvent.pubKey != account.signer.pubKey) {
+                            push.buildTokenList(result.groupId)?.let { response ->
+                                account.marmot.sendMarmotGroupMessage(
+                                    result.groupId,
+                                    response,
+                                    account.marmot.marmotGroupRelays(result.groupId),
+                                )
+                            }
+                        }
+                    }
+
+                    // Track the message in the Marmot group chatroom. A
+                    // peer-sent kind:1210 is dropped inside addMessage — see
+                    // `MarmotGroupList.isDisplayableFeedMessage`.
                     account.marmotGroupList.addMessage(result.groupId, innerNote)
+
+                    // Traffic is the natural clock for disappearing messages: a
+                    // group being read is a group whose expired messages should
+                    // already be gone.
+                    manager.pruneExpiredMessages(result.groupId)
 
                     // Persist the decrypted plaintext so the message
                     // survives an app restart. Marmot/MLS application
@@ -713,6 +771,13 @@ class GroupEventHandler(
                     // Sync MIP-01 metadata after epoch advance (extensions may have changed)
                     val chatroom = account.marmotGroupList.getOrCreateGroup(result.groupId)
                     manager.syncMetadataTo(result.groupId, chatroom)
+                    // The epoch just advanced, so whatever this commit changed
+                    // is now canonical state — which is exactly what a kind:1210
+                    // row is derived from. Deriving here covers OTHER members'
+                    // commits; our own are derived by `commitAndPublish`. Both
+                    // reach the feed through `onSystemRowDerived`.
+                    manager.recordRetentionForCurrentEpoch(result.groupId)
+                    manager.syncGroupSystemRows(result.groupId)
                     // Epoch just advanced — drain any kind:445 events that
                     // previously failed as UndecryptableOuterLayer for this
                     // group. See `pendingUndecryptable` for the scenario.
@@ -761,6 +826,29 @@ class GroupEventHandler(
                 is GroupEventResult.ProposalStaged -> {
                     Log.d("MarmotDbg") {
                         "GroupEventHandler.add: ProposalStaged group=${result.groupId.take(8)}… senderLeaf=${result.senderLeafIndex}"
+                    }
+                }
+
+                is GroupEventResult.AppMessageOnCandidateBranch -> {
+                    // Decrypted on a branch that is not canonical. Not shown:
+                    // the canonical state contradicts it. If convergence later
+                    // selects that branch the message arrives again through
+                    // the normal path, so nothing is lost by not rendering it
+                    // now.
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: app payload on candidate branch for group=${result.groupId.take(8)}… " +
+                            "epoch=${result.epoch} witness=${result.countedAsWitness}"
+                    }
+                }
+
+                is GroupEventResult.RefusedByLifecycle -> {
+                    // Disbanded is absorbing and Unrecoverable needs a repair
+                    // before anything more may be applied, so this input was
+                    // refused before decryption. Nothing to render, nothing to
+                    // retain, and nothing the user can do about it here.
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: refused for group=${result.groupId.take(8)}… " +
+                            "lifecycle=${result.lifecycle}"
                     }
                 }
 

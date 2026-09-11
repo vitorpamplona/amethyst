@@ -32,9 +32,12 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.marmot.AndroidIngestDedupStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidKeyPackageBundleStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidMarmotMessageStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
+import com.vitorpamplona.amethyst.model.marmot.AndroidPublishObligationStore
+import com.vitorpamplona.amethyst.model.marmot.AndroidPushStateStore
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -266,6 +269,45 @@ class AccountCacheState(
                 null
             }
 
+        val marmotPublishObligationStore =
+            try {
+                AndroidPublishObligationStore(accountDir)
+            } catch (e: Exception) {
+                Log.e(
+                    "AccountCacheState",
+                    "Failed to initialize AndroidPublishObligationStore " +
+                        "(a Marmot commit interrupted mid-publish will NOT be retried after a restart)",
+                    e,
+                )
+                null
+            }
+
+        val marmotIngestDedupStore =
+            try {
+                AndroidIngestDedupStore(accountDir)
+            } catch (e: Exception) {
+                Log.e(
+                    "AccountCacheState",
+                    "Failed to initialize AndroidIngestDedupStore " +
+                        "(every backdated gift wrap will be re-decided on each sync)",
+                    e,
+                )
+                null
+            }
+
+        val marmotPushStateStore =
+            try {
+                AndroidPushStateStore(accountDir)
+            } catch (e: Exception) {
+                Log.e(
+                    "AccountCacheState",
+                    "Failed to initialize AndroidPushStateStore " +
+                        "(a revoked push token could be resurrected by a relayed token list after a restart)",
+                    e,
+                )
+                null
+            }
+
         // Per-account NIP-42 ALLOW/DENY overrides live in this account's own dir, so a DENY for one
         // account never leaks into another (the store used to be a single app-wide file).
         val relayAuthPermissionStore = DataStoreRelayAuthPermissionStore(accountDir)
@@ -291,6 +333,9 @@ class AccountCacheState(
             mlsGroupStateStore = mlsStore,
             marmotMessageStore = marmotMessageStore,
             marmotKeyPackageStore = marmotKeyPackageStore,
+            marmotPublishObligationStore = marmotPublishObligationStore,
+            marmotIngestDedupStore = marmotIngestDedupStore,
+            marmotPushStateStore = marmotPushStateStore,
             powQueue = powQueue,
             relayAuthPermissionStore = relayAuthPermissionStore,
             signerPermissionStore = signerPermissionStore,

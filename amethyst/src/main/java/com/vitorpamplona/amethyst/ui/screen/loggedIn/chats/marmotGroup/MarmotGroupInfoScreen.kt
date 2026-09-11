@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -75,7 +76,12 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_member
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_member_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_to_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group_action
+import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_edit_group_info
+import com.vitorpamplona.amethyst.commons.resources.marmot_enable_encrypted_media
+import com.vitorpamplona.amethyst.commons.resources.marmot_enable_encrypted_media_explainer
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_privileges
@@ -85,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_info_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_required
 import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group_confirm
+import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_disband
 import com.vitorpamplona.amethyst.commons.resources.marmot_member_suffix_admin
 import com.vitorpamplona.amethyst.commons.resources.marmot_member_suffix_you
 import com.vitorpamplona.amethyst.commons.resources.marmot_relay_last_event
@@ -92,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_relay_no_events
 import com.vitorpamplona.amethyst.commons.resources.marmot_relays_header
 import com.vitorpamplona.amethyst.commons.resources.marmot_remove_member
 import com.vitorpamplona.amethyst.commons.resources.marmot_remove_member_confirm
+import com.vitorpamplona.amethyst.commons.resources.marmot_retention_active
 import com.vitorpamplona.amethyst.commons.resources.marmot_revoke
 import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_privileges
@@ -140,8 +148,13 @@ fun MarmotGroupInfoScreen(
     val groupRelays by chatroom.relays.collectAsStateWithLifecycle()
     val relayActivity by chatroom.relayActivity.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
+    val isCurrentProfile by chatroom.isCurrentProfile.collectAsStateWithLifecycle()
+    val hasEncryptedMedia by chatroom.hasEncryptedMediaPolicy.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var showDisbandDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
+    var isDisbanding by remember { mutableStateOf(false) }
+    var isEnablingMedia by remember { mutableStateOf(false) }
     var memberToRemove by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var memberToPromote by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var memberToDemote by remember { mutableStateOf<GroupMemberInfo?>(null) }
@@ -181,9 +194,30 @@ fun MarmotGroupInfoScreen(
                             contentDescription = stringRes(Res.string.marmot_edit_group_info),
                         )
                     }
+                    // Disband ends the conversation for EVERYONE, so only an
+                    // admin sees it and it sits behind its own confirmation.
+                    // Peers reject a non-admin's lifecycle commit anyway; not
+                    // offering it is what keeps a member from trying.
+                    //
+                    // A legacy group is hidden for a different reason: it has
+                    // no carrier for the lifecycle component at all, so the
+                    // commit is refused before it is built. The room says why
+                    // further down rather than leaving the absence unexplained.
+                    if (myPubkey in adminPubkeys && isCurrentProfile) {
+                        IconButton(
+                            onClick = { showDisbandDialog = true },
+                            enabled = !isLeaving && !isDisbanding,
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.DeleteForever,
+                                contentDescription = stringRes(Res.string.marmot_disband_group),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = { showLeaveDialog = true },
-                        enabled = !isLeaving,
+                        enabled = !isLeaving && !isDisbanding,
                     ) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ExitToApp,
@@ -233,6 +267,19 @@ fun MarmotGroupInfoScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp),
                         )
+                        // Disappearing messages, when the group has them. Shown
+                        // rather than editable: the setting is fixed at epoch 0,
+                        // and a member who cannot change it still needs to know
+                        // their messages are on a clock.
+                        val retention = remember(nostrGroupId) { accountViewModel.marmotRetentionSeconds(nostrGroupId) }
+                        if (retention > 0L) {
+                            Text(
+                                text = stringRes(Res.string.marmot_retention_active, formatRetention(retention)),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
                     }
                     if (groupRelays.isNotEmpty()) {
                         GroupRelayStrip(
@@ -256,6 +303,84 @@ fun MarmotGroupInfoScreen(
                             nav = nav,
                         )
                         HorizontalDivider()
+                    }
+                }
+
+                // Groups are created WITHOUT the encrypted-media component so
+                // that epoch 0 matches the reference implementation's byte for
+                // byte; the spec's answer is that a group which wants one
+                // commits it. This is where an admin does that. Offered only
+                // while the group lacks it, because the component has no
+                // defined removal and this is a one-way change.
+                if (isCurrentProfile && !hasEncryptedMedia && myPubkey in adminPubkeys) {
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            Button(
+                                onClick = {
+                                    if (!accountViewModel.hasBlossomServers()) {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                stringRes(context, R.string.marmot_enable_encrypted_media_needs_server),
+                                                Toast.LENGTH_LONG,
+                                            ).show()
+                                        return@Button
+                                    }
+                                    isEnablingMedia = true
+                                    scope.launch(Dispatchers.IO) {
+                                        try {
+                                            accountViewModel.enableMarmotEncryptedMediaV2(nostrGroupId)
+                                            launch(Dispatchers.Main) {
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        stringRes(context, R.string.marmot_encrypted_media_enabled_toast),
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            launch(Dispatchers.Main) {
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        stringRes(
+                                                            context,
+                                                            R.string.marmot_failed_to_enable_encrypted_media,
+                                                            e.message,
+                                                        ),
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                            }
+                                        } finally {
+                                            isEnablingMedia = false
+                                        }
+                                    }
+                                },
+                                enabled = !isEnablingMedia && !isLeaving && !isDisbanding,
+                            ) {
+                                Text(stringRes(Res.string.marmot_enable_encrypted_media))
+                            }
+                            Text(
+                                text = stringRes(Res.string.marmot_enable_encrypted_media_explainer),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
+                // An admin of a legacy group would otherwise just find the
+                // disband action missing. Say why, and say that it cannot be
+                // fixed by waiting for an update, so the only surprising part
+                // — that a NEW group would have it — is the part explained.
+                if (!isCurrentProfile && myPubkey in adminPubkeys) {
+                    item {
+                        Text(
+                            text = stringRes(Res.string.marmot_legacy_group_no_disband),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        )
                     }
                 }
 
@@ -371,6 +496,57 @@ fun MarmotGroupInfoScreen(
                 }
             },
             onDismiss = { showLeaveDialog = false },
+        )
+    }
+
+    if (showDisbandDialog) {
+        DisbandGroupDialog(
+            groupName = displayName ?: stringRes(Res.string.marmot_this_group),
+            onConfirm = {
+                showDisbandDialog = false
+                isDisbanding = true
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        // Ended, or ending. A disband terminalizes only once
+                        // convergence SELECTS the Commit, so the request can
+                        // still be pending here — and telling someone their
+                        // conversation is over when it may not be is the one
+                        // wrong answer. Either way the group takes no further
+                        // outbound work, so leaving the screen is right.
+                        val ended = accountViewModel.disbandMarmotGroup(nostrGroupId)
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(
+                                    context,
+                                    stringRes(
+                                        context,
+                                        if (ended) {
+                                            R.string.marmot_group_disbanded_toast
+                                        } else {
+                                            R.string.marmot_group_disbanding_toast
+                                        },
+                                    ),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                        }
+                        nav.nav(Route.Message)
+                    } catch (e: Exception) {
+                        // A disband that reached no relay leaves the group
+                        // live, so the screen must stay usable rather than
+                        // navigate away on a change that did not happen.
+                        isDisbanding = false
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(
+                                    context,
+                                    stringRes(context, R.string.marmot_failed_to_disband, e.message),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                        }
+                    }
+                }
+            },
+            onDismiss = { showDisbandDialog = false },
         )
     }
 
@@ -626,6 +802,38 @@ fun LeaveGroupDialog(
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.cancel))
+            }
+        },
+    )
+}
+
+/**
+ * Confirmation for the one group action that cannot be undone.
+ *
+ * Disband is absorbing: every member's copy terminalizes and no commit walks it
+ * back, so the wording says "for everyone" and "cannot be reopened" rather than
+ * the usual "are you sure".
+ */
+@Composable
+fun DisbandGroupDialog(
+    groupName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.marmot_disband_group)) },
+        text = {
+            Text(stringRes(Res.string.marmot_disband_group_confirm, groupName))
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(Res.string.marmot_disband_group_action), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
@@ -927,3 +1135,20 @@ private fun RelayHealthRow(
         }
     }
 }
+
+/**
+ * A retention duration as a reader sees it.
+ *
+ * Deliberately coarse — the exact second is committed group state, but what a
+ * member needs from this line is "how long roughly", and rounding down keeps a
+ * 90-minute setting from reading as "1 hour" only after it has already been
+ * displayed as "2 hours" somewhere else.
+ */
+private fun formatRetention(seconds: Long): String =
+    when {
+        seconds % 604_800L == 0L -> "${seconds / 604_800L}w"
+        seconds % 86_400L == 0L -> "${seconds / 86_400L}d"
+        seconds % 3_600L == 0L -> "${seconds / 3_600L}h"
+        seconds % 60L == 0L -> "${seconds / 60L}m"
+        else -> "${seconds}s"
+    }

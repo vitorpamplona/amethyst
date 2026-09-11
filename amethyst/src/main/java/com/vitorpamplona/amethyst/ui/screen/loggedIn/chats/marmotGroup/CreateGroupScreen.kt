@@ -73,6 +73,10 @@ fun CreateGroupScreen(
     var groupName by remember { mutableStateOf("") }
     var groupDescription by remember { mutableStateOf("") }
     var pickedIcon by remember { mutableStateOf<SelectedMedia?>(null) }
+    // Disappearing messages (`0x8005`). Chosen here and only here: promoting a
+    // component to required later needs its state installed by a prior commit,
+    // which this screen does not make.
+    var disappearing by remember { mutableStateOf(MarmotRetentionChoice.OFF) }
     // Stable seed for the placeholder avatar shown before an icon is picked. The real
     // group id is generated per creation attempt (so retries don't collide), so this is
     // a separate cosmetic seed rather than "".
@@ -82,12 +86,28 @@ fun CreateGroupScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    fun proceedWithCreate() {
+    /**
+     * Create the group, optionally after [prepare].
+     *
+     * [prepare] runs *inside* the same coroutine and is awaited, which is the whole point: the
+     * KeyPackage relay list it writes is what the creation below depends on. Launching the two
+     * side by side raced them, and the loser was silent -- `isCreating` had already latched true,
+     * so the top bar's `isActive` gate left Create inert with no error and no group, and only
+     * Cancel could leave the screen. Awaiting also puts a failure to save on the same Toast path
+     * as a failure to create, instead of dropping it in a coroutine nobody reads.
+     */
+    fun proceedWithCreate(prepare: (suspend () -> Unit)? = null) {
         isCreating = true
         scope.launch(Dispatchers.IO) {
             try {
+                prepare?.invoke()
                 val nostrGroupId = RandomInstance.bytes(32).toHexKey()
-                accountViewModel.createMarmotGroup(nostrGroupId)
+                accountViewModel.createMarmotGroup(
+                    nostrGroupId,
+                    groupName.trim(),
+                    groupDescription.trim(),
+                    disappearing.seconds,
+                )
                 // Encrypt + upload the picked icon (if any) before the metadata commit,
                 // so its parameters land in the group's MarmotGroupData extension.
                 val iconChange =
@@ -189,6 +209,14 @@ fun CreateGroupScreen(
                 enabled = !isCreating,
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            MarmotRetentionPicker(
+                selected = disappearing,
+                onSelect = { disappearing = it },
+                enabled = !isCreating,
+            )
+
             Text(
                 stringRes(Res.string.marmot_create_group_footer),
                 modifier = Modifier.padding(top = 12.dp),
@@ -202,10 +230,7 @@ fun CreateGroupScreen(
         MissingKeyPackageRelayListDialog(
             onConfirm = {
                 showKeyPackageRelayDialog = false
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.saveKeyPackageRelayListFromOutbox()
-                }
-                proceedWithCreate()
+                proceedWithCreate { accountViewModel.saveKeyPackageRelayListFromOutbox() }
             },
             onDismiss = {
                 showKeyPackageRelayDialog = false

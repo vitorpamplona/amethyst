@@ -1,0 +1,36 @@
+{
+  "fixture_name": "marmot.transport.nostr.routing.v1/update-invalid-duplicate-relay/v1",
+  "fixture_version": "1",
+  "vector_type": "app_component_update",
+  "component": {
+    "id": "0x8004",
+    "name": "marmot.transport.nostr.routing.v1",
+    "document": "spec/app-components/nostr-routing-v1.md"
+  },
+  "encoding": {
+    "format": "Marmot canonical encoding",
+    "notes": [
+      "bytes.hex is the MarmotNostrRoutingUpdateV1 payload (full replacement state), not the AppDataUpdate proposal wrapper.",
+      "It carries nostr_group_id[32] then two relay entries that decode to the same byte string."
+    ]
+  },
+  "bytes": {
+    "hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2c157773733a2f2f72656c61792d612e6578616d706c65157773733a2f2f72656c61792d612e6578616d706c65"
+  },
+  "expected": {
+    "valid": false,
+    "fields": {
+      "nostr_group_id_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "relays": [
+        "wss://relay-a.example",
+        "wss://relay-a.example"
+      ]
+    },
+    "errors": [
+      "duplicate_relay"
+    ]
+  },
+  "notes": [
+    "Implementations MUST reject this update during component validation; the reference decoder returns a duplicate-relay error."
+  ]
+}

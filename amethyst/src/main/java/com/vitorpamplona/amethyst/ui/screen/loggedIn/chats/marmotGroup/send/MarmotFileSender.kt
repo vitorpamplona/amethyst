@@ -25,8 +25,14 @@ import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.buildMip04IMetaTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * Sends uploaded MIP-04 encrypted media as Marmot group messages.
- * Each upload result becomes a separate kind:9 message with an imeta tag.
+ * Sends uploaded encrypted media as Marmot group messages. Each upload result
+ * becomes a separate kind:9 with an `imeta` tag.
+ *
+ * Every upload now carries an `encrypted-media-v2` reference, whatever policy
+ * the group holds -- see [MarmotFileUploader]. The MIP-04 branch below is kept
+ * because the result type still allows a null reference, but nothing this app
+ * writes takes it; the MIP-era shape survives only on the READ side, for
+ * messages older builds already sent.
  */
 class MarmotFileSender(
     val nostrGroupId: HexKey,
@@ -34,6 +40,16 @@ class MarmotFileSender(
 ) {
     suspend fun send(uploads: List<Mip04UploadResult>) {
         for (upload in uploads) {
+            val v2 = upload.encryptedMediaV2
+            if (v2 != null) {
+                accountViewModel.sendMarmotGroupEncryptedMediaV2(
+                    nostrGroupId = nostrGroupId,
+                    reference = v2,
+                    caption = upload.caption.orEmpty(),
+                )
+                continue
+            }
+
             val imeta =
                 buildMip04IMetaTag(
                     url = upload.url,

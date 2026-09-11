@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.AppComponentsTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.ClientTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.KeyPackageRefTag
@@ -40,6 +41,13 @@ fun TagArrayBuilder<KeyPackageEvent>.mlsExtensions(extensionIds: List<String>) =
 
 fun TagArrayBuilder<KeyPackageEvent>.mlsProposals(proposalIds: List<String>) = addUnique(MlsProposalsTag.assemble(proposalIds))
 
+fun TagArrayBuilder<KeyPackageEvent>.appComponents(componentIds: List<String>) = addUnique(AppComponentsTag.assemble(componentIds))
+
+/**
+ * MIP-era only. The current profile forbids this tag: a sender MUST NOT add
+ * one and a receiver MUST NOT switch decoders on it, because each field is
+ * decoded by the rule that defines it rather than by a negotiated marker.
+ */
 fun TagArrayBuilder<KeyPackageEvent>.encoding() = addUnique(EncodingTag.assemble())
 
 fun TagArrayBuilder<KeyPackageEvent>.keyPackageRef(ref: HexKey) = addUnique(KeyPackageRefTag.assemble(ref))

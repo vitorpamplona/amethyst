@@ -20,9 +20,16 @@
  */
 package com.vitorpamplona.quartz.marmot.mls.group
 
+import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519KeyPair
 import com.vitorpamplona.quartz.marmot.mls.crypto.Hpke
@@ -60,8 +67,10 @@ import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
+import com.vitorpamplona.quartz.marmot.mls.tree.PathSecretAndKey
 import com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.marmot.mls.tree.UpdatePathNode
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mac.MacInstance
@@ -127,6 +136,20 @@ class MlsGroup private constructor(
     /** Staged keys from proposeSigningKeyRotation — only promoted on successful commit */
     private var pendingSigningKey: ByteArray? = null,
     private var pendingEncryptionKey: ByteArray? = null,
+    /**
+     * HPKE private keys for the PARENT nodes on our own direct path, keyed by
+     * node index.
+     *
+     * RFC 9420 §7.6 does not say "the committer encrypts to your leaf" — it
+     * says the committer encrypts one path secret per node in the copath
+     * resolution, and you decrypt at whichever of those nodes you hold a key
+     * for. A merged subtree resolves to its PARENT, so as soon as a group has
+     * three members the commits addressed to us stop naming our leaf at all.
+     * Keeping only the leaf key is why every MDK commit after a three-member
+     * Add failed with "UpdatePath at common ancestor carries no ciphertext
+     * for us".
+     */
+    private val pathPrivateKeys: MutableMap<Int, ByteArray> = mutableMapOf(),
 ) {
     val groupId: ByteArray get() = groupContext.groupId
     val epoch: Long get() = groupContext.epoch
@@ -154,6 +177,25 @@ class MlsGroup private constructor(
     internal fun pendingProposalsSnapshot(): List<PendingProposal> = pendingProposals.toList()
 
     /**
+     * Whether any proposal is staged and waiting for a Commit.
+     *
+     * Public where [pendingProposalsSnapshot] is internal: a caller outside
+     * this module has no business reading the proposals, but it does need to
+     * know there is work to commit. A standalone `SelfRemove` from a departing
+     * member sits here until an authorized member commits it — and until then
+     * the leaver is still in the tree and still reading the group.
+     */
+    fun hasPendingProposals(): Boolean = pendingProposals.isNotEmpty()
+
+    /**
+     * The GroupContext extension list as it stands. Test-only: callers
+     * that want the dictionary should use [appDataDictionary], which
+     * cannot distinguish an absent extension from an empty one — a
+     * distinction the wire format does make.
+     */
+    internal fun groupContextExtensionsSnapshot(): List<Extension> = groupContext.extensions.toList()
+
+    /**
      * Encode the current ratchet tree the same way it's serialized into
      * the GroupInfo's `ratchet_tree` extension on a Welcome — a freshly-
      * decoded copy is what a joiner sees, so this is the right input for
@@ -179,16 +221,76 @@ class MlsGroup private constructor(
     /** Parsed Marmot Group Data Extension from the current GroupContext, or null. */
     fun currentMarmotData(): MarmotGroupData? = MarmotGroupData.fromExtensions(groupContext.extensions)
 
-    /** True if the local member appears in the group's current `admin_pubkeys` list. */
-    fun isLocalAdmin(): Boolean {
-        val id = myIdentityHex() ?: return false
-        return currentMarmotData()?.isAdmin(id) ?: false
+    /** The current profile's component view of this GroupContext. */
+    fun currentGroupState(): MarmotGroupState = MarmotGroupState.fromExtensions(groupContext.extensions)
+
+    /**
+     * The `nostr_group_id` this group routes kind-445 traffic under, from
+     * whichever profile the group is actually using.
+     *
+     * A current-profile group carries it in the `marmot.transport.nostr.routing.v1`
+     * component (`0x8004`); a legacy group carries it inside the monolithic
+     * `0xF2EE` extension. Reading only the legacy one leaves us unable to join
+     * any group a current-profile client created — the routing id is required
+     * to subscribe at all, so the failure is total rather than partial.
+     */
+    fun currentNostrGroupId(): HexKey? =
+        currentGroupState().routing?.nostrGroupIdHex
+            ?: currentMarmotData()?.nostrGroupId
+
+    /**
+     * The group's configured admin account identities, as lowercase hex.
+     *
+     * Reads whichever profile this group is on: the current profile's
+     * `marmot.group.admin-policy.v1` component (`0x8003`) when present,
+     * otherwise MIP-01's `admin_pubkeys` field inside `marmot_group_data`
+     * (`0xF2EE`). Empty means the group names no admins at all, which happens
+     * during bootstrap and in groups that carry neither.
+     *
+     * The current profile is checked first because a group can only be one of
+     * the two — MDK rejects a group that requires both proof profiles — and a
+     * current-profile group is the one whose authorization we must not skip.
+     */
+    fun currentAdminIdentities(): Set<String> = adminIdentitiesIn(groupContext.extensions)
+
+    /**
+     * The admin set named by [extensions], preferring the current profile.
+     *
+     * Decodes ONLY the admin policy, never the whole component set. Authorization
+     * must not depend on the validity of components it does not read: a
+     * malformed group profile is a defect worth surfacing where the profile is
+     * used, but it must not make the group un-committable by taking the admin
+     * check down with it.
+     */
+    private fun adminIdentitiesIn(extensions: List<Extension>): Set<String> {
+        val policyBytes = AppDataDictionary.fromExtensionsOrEmpty(extensions)[AdminPolicyV1.COMPONENT_ID]
+        if (policyBytes != null) return AdminPolicyV1.decode(policyBytes).adminHexKeys.toSet()
+        return MarmotGroupData
+            .fromExtensions(extensions)
+            ?.adminPubkeys
+            ?.toSet()
+            .orEmpty()
     }
 
-    /** True if the member at [leafIndex] is listed as admin in the current group data. */
+    /**
+     * Account identities holding at least one current member leaf, as hex.
+     *
+     * Admin authority is per ACCOUNT, not per leaf: a multi-device account
+     * shares one admin entry across all of its leaves.
+     */
+    fun currentMemberIdentities(): Set<String> = (0 until tree.leafCount).mapNotNullTo(mutableSetOf()) { memberIdentityHex(it) }
+
+    /** True if the local member is an active admin. */
+    fun isLocalAdmin(): Boolean = isLeafAdmin(myLeafIndex)
+
+    /**
+     * True if the member at [leafIndex] is an ACTIVE admin: listed in the
+     * group's admin set and still holding a leaf. The leaf lookup satisfies
+     * the second half by construction.
+     */
     fun isLeafAdmin(leafIndex: Int): Boolean {
         val id = memberIdentityHex(leafIndex) ?: return false
-        return currentMarmotData()?.isAdmin(id) ?: false
+        return id in currentAdminIdentities()
     }
 
     // --- State Persistence ---
@@ -219,7 +321,41 @@ class MlsGroup private constructor(
             // rewind our own generation counter to 0 and reuse an AEAD
             // key+nonce within this epoch (RFC 9420 §9).
             senderRatchetStates = secretTree.exportSenderStates(),
+            pathPrivateKeys = pathPrivateKeys.toMap(),
+            // A staged proposal is an obligation, not a message: a departing
+            // member's SelfRemove sits here until someone commits it, and a
+            // restart that forgot it would leave the leaver in the tree with
+            // the group's keys and nobody holding the proposal to evict them.
+            pendingProposals = pendingProposals.toList(),
         )
+    }
+
+    /**
+     * Record the HPKE private keys our direct path gained from [pathSecret] at
+     * [fromNodeIndex] and every node above it, up to the root.
+     *
+     * A path secret ratchets one KDF step per level regardless of filtering,
+     * and each level's node keypair is `DeriveKeyPair(DeriveSecret(secret,
+     * "node"))` — the same derivation the committer used, which is what makes
+     * the keys we store here the ones a later committer will encrypt to.
+     */
+    private fun rememberPathKeys(
+        fromNodeIndex: Int,
+        pathSecret: ByteArray,
+    ) {
+        val fullPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+        val start = fullPath.indexOf(fromNodeIndex)
+        if (start < 0) return
+        var secret = pathSecret
+        for (i in start until fullPath.size) {
+            val nodeSecret = MlsCryptoProvider.deriveSecret(secret, "node")
+            pathPrivateKeys[fullPath[i]] = Hpke.deriveKeyPair(nodeSecret).privateKey
+            secret = MlsCryptoProvider.deriveSecret(secret, "path")
+        }
+        // Anything no longer on our direct path (the tree reshaped under us)
+        // can never be addressed to us again; holding it would only make a
+        // stale key look usable at the next resolution scan.
+        pathPrivateKeys.keys.retainAll(fullPath.toSet())
     }
 
     /**
@@ -283,10 +419,24 @@ class MlsGroup private constructor(
     fun createKeyPackage(
         identity: ByteArray,
         signingKey: ByteArray,
+        /**
+         * The leaf signature keypair to use, when the caller had to generate it
+         * up front.
+         *
+         * A current-profile leaf must carry an account identity proof over its
+         * OWN signature key, and that proof is produced by an account signer
+         * that may be remote. So the caller generates the keypair, signs the
+         * proof against its public half, and hands both back here — the proof
+         * cannot be computed after the fact by code that only sees the leaf.
+         */
+        leafSignatureKeyPair: Ed25519KeyPair? = null,
+        leafExtensions: List<Extension> = emptyList(),
+        capabilities: Capabilities = marmotLeafCapabilities(),
+        keyPackageExtensions: List<Extension> = emptyList(),
     ): KeyPackageBundle {
         val initKp = X25519.generateKeyPair()
         val encKp = X25519.generateKeyPair()
-        val sigKp = Ed25519.generateKeyPair()
+        val sigKp = leafSignatureKeyPair ?: Ed25519.generateKeyPair()
 
         val leafNode =
             buildLeafNode(
@@ -295,12 +445,15 @@ class MlsGroup private constructor(
                 identity = identity,
                 source = LeafNodeSource.KEY_PACKAGE,
                 signingKey = sigKp.privateKey,
+                capabilities = capabilities,
+                leafExtensions = leafExtensions,
             )
 
         val unsigned =
             MlsKeyPackage(
                 initKey = initKp.publicKey,
                 leafNode = leafNode,
+                extensions = keyPackageExtensions,
                 signature = ByteArray(0),
             )
         val kp =
@@ -372,6 +525,9 @@ class MlsGroup private constructor(
             (currentLeaf?.credential as? Credential.Basic)?.identity
                 ?: ByteArray(0)
 
+        // An Update replaces our leaf with fresh key material and nothing
+        // else. Capabilities and leaf extensions (the account identity proof
+        // among them) describe the member, not the keys, so they carry over.
         val newLeafNode =
             buildLeafNode(
                 encryptionKey = newEncKp.publicKey,
@@ -381,6 +537,8 @@ class MlsGroup private constructor(
                 signingKey = newSigKp.privateKey,
                 groupId = groupId,
                 leafIndex = myLeafIndex,
+                capabilities = currentLeaf?.capabilities ?: marmotLeafCapabilities(),
+                leafExtensions = currentLeaf?.extensions ?: emptyList(),
             )
 
         val proposal = Proposal.Update(newLeafNode)
@@ -399,6 +557,36 @@ class MlsGroup private constructor(
      */
     fun proposeGroupContextExtensions(extensions: List<Extension>): Proposal.GroupContextExtensions {
         val proposal = Proposal.GroupContextExtensions(extensions)
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+        return proposal
+    }
+
+    /** The GroupContext `app_data_dictionary`, empty when the group carries none. */
+    fun appDataDictionary(): AppDataDictionary = AppDataDictionary.fromExtensionsOrEmpty(groupContext.extensions)
+
+    /**
+     * Propose setting one GroupContext app component to [data].
+     *
+     * Marmot components define their update payload as a full replacement
+     * state, so [data] is the component's new value, not a diff.
+     *
+     * This is the MLS mechanism only. Marmot's own authorization — most
+     * component changes are admin-gated, and the resulting state still has to
+     * satisfy every component's validation rules — is layered on top and is
+     * not enforced here.
+     */
+    fun proposeAppDataUpdate(
+        componentId: Int,
+        data: ByteArray,
+    ): Proposal.AppDataUpdate {
+        val proposal = Proposal.AppDataUpdate.update(componentId, data)
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+        return proposal
+    }
+
+    /** Propose dropping one GroupContext app component entirely. */
+    fun proposeAppDataRemoval(componentId: Int): Proposal.AppDataUpdate {
+        val proposal = Proposal.AppDataUpdate.remove(componentId)
         pendingProposals.add(PendingProposal(proposal, myLeafIndex))
         return proposal
     }
@@ -470,7 +658,27 @@ class MlsGroup private constructor(
         // `ValidationError(InvalidMembershipTag)`.
         val preCommitExtensions = groupContext.extensions
 
-        val proposalOrRefs = proposals.map { ProposalOrRef.Inline(it.proposal) }
+        // Inline only what WE authored. A proposal from another member has to
+        // go in by REFERENCE, because an inline proposal carries no sender: a
+        // receiving peer attributes it to the committer (see the
+        // `ProposalOrRef.Inline` branch of `processCommitInner`). For a
+        // `SelfRemove` that is not a cosmetic difference — the proposal means
+        // "remove my leaf", so inlining someone else's says "remove the
+        // committer's leaf", and every witness either evicts the wrong member
+        // or refuses the commit outright and falls an epoch behind.
+        //
+        // A reference resolves against the receiver's own pending pool, which
+        // is where their copy of the same standalone proposal already sits,
+        // carrying the ORIGINAL proposer's leaf index.
+        val proposalOrRefs =
+            proposals.map { pending ->
+                if (pending.senderLeafIndex == myLeafIndex) {
+                    ProposalOrRef.Inline(pending.proposal)
+                } else {
+                    val refValue = pending.authenticatedContentBytes ?: pending.proposal.toTlsBytes()
+                    ProposalOrRef.Reference(MlsCryptoProvider.refHash("MLS 1.0 Proposal Reference", refValue))
+                }
+            }
 
         // Check if we need an UpdatePath. RFC 9420 §12.4.1: the path value
         // MUST be populated if the proposal list is empty (pure forward-
@@ -486,13 +694,15 @@ class MlsGroup private constructor(
         // Order: Updates/Removes first, then Adds (so blank slots are freed before reuse)
         val addedMembers = mutableListOf<Pair<Int, MlsKeyPackage>>()
         val addProposals = mutableListOf<PendingProposal>()
+        val appDataUpdates = mutableListOf<Proposal.AppDataUpdate>()
         for (pending in proposals) {
-            if (pending.proposal is Proposal.Add) {
-                addProposals.add(pending)
-            } else {
-                applyProposal(pending.proposal, pending.senderLeafIndex)
+            when (val p = pending.proposal) {
+                is Proposal.Add -> addProposals.add(pending)
+                is Proposal.AppDataUpdate -> appDataUpdates.add(p)
+                else -> applyProposal(p, pending.senderLeafIndex)
             }
         }
+        applyAppDataUpdateProposals(appDataUpdates)
         // Apply Adds after Removes/Updates
         for (pending in addProposals) {
             val p = pending.proposal as Proposal.Add
@@ -503,6 +713,23 @@ class MlsGroup private constructor(
         // Generate new path secrets on the updated tree
         val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         val pathSecrets = tree.derivePathSecrets(myLeafIndex, leafSecret)
+
+        // We just minted the keys for our whole direct path. Keep the private
+        // halves: the next committer will address us at one of these nodes,
+        // not at our leaf, as soon as our subtree is merged.
+        //
+        // ONLY when this commit actually carries the path. A commit that omits
+        // the UpdatePath never publishes these public halves, so the tree keeps
+        // the old keys and a peer still encrypts to those — storing the fresh
+        // private halves here would overwrite the ones that can actually
+        // decrypt the next commit addressed to our ancestors.
+        if (needsPath && pathSecrets.isNotEmpty()) {
+            val fullPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+            pathPrivateKeys.keys.retainAll(fullPath.toSet())
+            for ((i, nodeIdx) in fullPath.withIndex()) {
+                pathSecrets.getOrNull(i)?.let { pathPrivateKeys[nodeIdx] = it.privateKey }
+            }
+        }
 
         // RFC 9420 §12.4.1: newly-added leaves (from Add proposals in THIS commit)
         // MUST be excluded from the copath resolution — they join via the Welcome
@@ -588,18 +815,35 @@ class MlsGroup private constructor(
                 // signature we mint fails to verify.
                 val effectiveSigningKey = pendingSigningKey ?: signingPrivateKey
                 val newEncKp = X25519.generateKeyPair()
+                // RFC 9420 §7.1: an UpdatePath leaf REPLACES our leaf. It is
+                // the same member, so everything about that member that is not
+                // key material carries over — capabilities and the leaf
+                // extensions. Rebuilding from defaults instead is not a
+                // cosmetic loss: a current-profile leaf keeps its
+                // `account-identity-proof` in an `app_data_dictionary` LEAF
+                // extension, and that extension can never be re-added by a
+                // proposal, so dropping it here silently demotes us out of the
+                // current profile at our very first commit. It also drops the
+                // `app_data_dictionary` capability the group's own
+                // `required_capabilities` demands, which makes the resulting
+                // tree fail RFC 9420 §7.3 leaf validation for every receiver —
+                // openmls reports `LeafNodeValidation(UnsupportedExtensions)`
+                // and the Welcome we just minted is unjoinable.
+                val previousLeaf = tree.getLeaf(myLeafIndex)
                 val newLeafNode =
                     buildLeafNode(
                         encryptionKey = newEncKp.publicKey,
                         signatureKey = Ed25519.publicFromPrivate(effectiveSigningKey),
                         identity =
-                            (tree.getLeaf(myLeafIndex)?.credential as? Credential.Basic)?.identity
+                            (previousLeaf?.credential as? Credential.Basic)?.identity
                                 ?: ByteArray(0),
                         source = LeafNodeSource.COMMIT,
                         signingKey = effectiveSigningKey,
                         groupId = groupId,
                         leafIndex = myLeafIndex,
                         parentHash = leafParentHash,
+                        capabilities = previousLeaf?.capabilities ?: marmotLeafCapabilities(),
+                        leafExtensions = previousLeaf?.extensions ?: emptyList(),
                     )
                 encryptionPrivateKey = newEncKp.privateKey
                 tree.setLeaf(myLeafIndex, newLeafNode)
@@ -662,8 +906,19 @@ class MlsGroup private constructor(
         // encryption-key seed rather than the key-schedule contribution. That
         // one-step gap silently diverged the two sides' epoch_secret and made
         // every cross-impl commit fail `ConfirmationTagMismatch`.
+        //
+        // Keyed on whether the commit CARRIES a path, not on whether we happened
+        // to derive path secrets. RFC 9420 §12.4.2: a commit with no
+        // `update_path` contributes a zero commit_secret, which is exactly what
+        // every receiver uses (see the `commit.updatePath != null` branch of
+        // `processCommitInner`). We derive `pathSecrets` unconditionally to
+        // build the path when it is needed; using them for the key schedule
+        // when the path was OMITTED gives the committer an epoch secret nobody
+        // else can reach, and every member rejects the commit with a
+        // confirmation-tag mismatch. A SelfRemove-only commit — a departing
+        // member's eviction — is precisely the case that omits the path.
         val commitSecret =
-            if (pathSecrets.isNotEmpty()) {
+            if (updatePath != null && pathSecrets.isNotEmpty()) {
                 MlsCryptoProvider.deriveSecret(pathSecrets.last().pathSecret, "path")
             } else {
                 ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
@@ -737,7 +992,7 @@ class MlsGroup private constructor(
         // Build Welcome for added members
         val welcomeBytes =
             if (addedMembers.isNotEmpty()) {
-                buildWelcome(addedMembers)
+                buildWelcome(addedMembers, pathSecrets)
             } else {
                 null
             }
@@ -1502,19 +1757,25 @@ class MlsGroup private constructor(
         val resolvedProposals = mutableListOf<Proposal>()
         val inlineAdds = mutableListOf<Proposal.Add>()
         val referenceAddSenders = mutableListOf<Pair<Proposal.Add, Int>>()
+        val inboundAppDataUpdates = mutableListOf<Proposal.AppDataUpdate>()
         for ((idx, pending) in resolvedPending.withIndex()) {
             val isInline = commit.proposals[idx] is ProposalOrRef.Inline
-            if (pending.proposal is Proposal.Add) {
-                if (isInline) {
-                    inlineAdds.add(pending.proposal)
-                } else {
-                    referenceAddSenders.add(pending.proposal to pending.senderLeafIndex)
+            when (val p = pending.proposal) {
+                is Proposal.Add -> {
+                    if (isInline) {
+                        inlineAdds.add(p)
+                    } else {
+                        referenceAddSenders.add(p to pending.senderLeafIndex)
+                    }
                 }
-            } else {
-                applyProposal(pending.proposal, pending.senderLeafIndex)
+
+                is Proposal.AppDataUpdate -> inboundAppDataUpdates.add(p)
+
+                else -> applyProposal(p, pending.senderLeafIndex)
             }
             resolvedProposals.add(pending.proposal)
         }
+        applyAppDataUpdateProposals(inboundAppDataUpdates)
         val newLeavesInCommit = mutableSetOf<Int>()
         for (add in inlineAdds) {
             newLeavesInCommit.add(applyProposalAdd(add))
@@ -1657,24 +1918,67 @@ class MlsGroup private constructor(
                         BinaryTree.nodeToLeaf(resNode) in newLeavesInCommit
                 }
 
-            // Find which encrypted secret corresponds to our position
+            // RFC 9420 §7.6: the committer encrypts one path secret per node
+            // in the copath resolution, and we decrypt at whichever of those
+            // nodes we hold a private key for. That is usually NOT our leaf —
+            // a merged subtree resolves to its parent, so from three members
+            // on we are addressed at an ancestor. Scan the resolution for a
+            // key we actually have rather than assuming our own leaf node.
             val myNodeIdx = BinaryTree.leafToNode(myLeafIndex)
-            val myResIdx = resolution.indexOf(myNodeIdx)
-            check(myResIdx in 0 until pathNode.encryptedPathSecret.size) {
+            val candidates =
+                resolution.withIndex().mapNotNull { (i, resNode) ->
+                    if (i >= pathNode.encryptedPathSecret.size) {
+                        null
+                    } else {
+                        val key = if (resNode == myNodeIdx) encryptionPrivateKey else pathPrivateKeys[resNode]
+                        key?.let { Triple(i, resNode, it) }
+                    }
+                }
+            check(candidates.isNotEmpty()) {
                 "UpdatePath at common ancestor carries no ciphertext for us " +
                     "(my_leaf=$myLeafIndex, my_node=$myNodeIdx, resolution=$resolution, " +
+                    "held_path_nodes=${pathPrivateKeys.keys.sorted()}, " +
                     "encrypted_path_secrets=${pathNode.encryptedPathSecret.size})"
             }
 
-            val ct = pathNode.encryptedPathSecret[myResIdx]
-            val pathSecret =
-                MlsCryptoProvider.decryptWithLabel(
-                    encryptionPrivateKey,
-                    "UpdatePathNode",
-                    pathDecContextBytes,
-                    ct.kemOutput,
-                    ct.ciphertext,
-                )
+            // Try each node we hold a key for rather than committing to the
+            // first. An Add or Remove renumbers nodes, so a retained key can
+            // outlive the node it belonged to; a stale one fails the AEAD
+            // rather than producing a wrong secret, so trying the next
+            // candidate is exact, not a guess.
+            var pathSecret: ByteArray? = null
+            var decryptedAt = -1
+            for ((i, _, key) in candidates) {
+                val ct = pathNode.encryptedPathSecret[i]
+                pathSecret =
+                    try {
+                        MlsCryptoProvider.decryptWithLabel(
+                            key,
+                            "UpdatePathNode",
+                            pathDecContextBytes,
+                            ct.kemOutput,
+                            ct.ciphertext,
+                        )
+                    } catch (_: Exception) {
+                        null
+                    }
+                if (pathSecret != null) {
+                    decryptedAt = i
+                    break
+                }
+            }
+            val recoveredPathSecret =
+                checkNotNull(pathSecret) {
+                    "UpdatePath at common ancestor did not decrypt with any key we hold " +
+                        "(my_leaf=$myLeafIndex, resolution=$resolution, slot_tried=$decryptedAt, " +
+                        "tried=${candidates.map { it.second }})"
+                }
+
+            // The path secret we just recovered belongs to the common ancestor
+            // and ratchets up to the root, so it hands us the private key for
+            // every node above it on our own direct path. Those are exactly
+            // the nodes a later committer may address us at.
+            rememberPathKeys(commonAncestorNode, recoveredPathSecret)
 
             // Derive remaining path secrets from common ancestor up to root,
             // then one more step to reach the `commit_secret` (RFC 9420 §9.2:
@@ -1689,7 +1993,7 @@ class MlsGroup private constructor(
             // UpdatePath node, so filtering changes which nodes carry
             // ciphertext but not the number of KDF steps.
             val stepsToRoot = unfilteredDirectPath.size - commonAncestorUnfilteredIdx - 1
-            var currentSecret = pathSecret
+            var currentSecret = recoveredPathSecret
             repeat(stepsToRoot) {
                 currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
             }
@@ -1770,6 +2074,19 @@ class MlsGroup private constructor(
         context: ByteArray,
         length: Int,
     ): ByteArray = KeySchedule.mlsExporter(epochSecrets.exporterSecret, label, context, length)
+
+    /**
+     * `MLS-Exporter("marmot", "agent-text-stream-quic", 32)` — the secret every
+     * member of this epoch derives per-stream record keys from. Per-stream and
+     * per-record separation is entirely in the HKDF key context, so this one
+     * secret covers every stream in the epoch.
+     */
+    fun agentTextStreamSecret(): ByteArray =
+        exporterSecret(
+            AgentTextStreamCrypto.EXPORTER_LABEL,
+            AgentTextStreamCrypto.EXPORTER_CONTEXT,
+            AgentTextStreamCrypto.SECRET_LENGTH,
+        )
 
     // --- External Join Support (RFC 9420 Section 8.3, 12.4.3.2) ---
 
@@ -2159,6 +2476,84 @@ class MlsGroup private constructor(
     }
 
     /**
+     * Resolve a commit's proposals as THIS state sees them, or null when it
+     * references a proposal this state does not hold.
+     *
+     * Convergence needs this without applying anything: a candidate parent is
+     * tried by several competing commits, and judging authorization must not
+     * advance the state being judged against.
+     */
+    fun resolveCommitProposals(pubMsg: PublicMessage): List<PendingProposal>? {
+        val commit =
+            try {
+                Commit.decodeTls(TlsReader(pubMsg.content))
+            } catch (_: Exception) {
+                return null
+            }
+        val resolved = mutableListOf<PendingProposal>()
+        for (proposalOrRef in commit.proposals) {
+            when (proposalOrRef) {
+                is ProposalOrRef.Inline ->
+                    resolved.add(PendingProposal(proposalOrRef.proposal, pubMsg.sender.leafIndex))
+
+                is ProposalOrRef.Reference -> {
+                    val match =
+                        pendingProposals.find { pending ->
+                            val refValue = pending.authenticatedContentBytes ?: pending.proposal.toTlsBytes()
+                            MlsCryptoProvider
+                                .refHash("MLS 1.0 Proposal Reference", refValue)
+                                .contentEquals(proposalOrRef.proposalRef)
+                        } ?: return null
+                    resolved.add(match)
+                }
+            }
+        }
+        return resolved
+    }
+
+    /**
+     * Whether [pubMsg]'s committer is authorized to make it against THIS state,
+     * without applying anything.
+     *
+     * Runs the same two gates the apply path runs, so an inbound commit and one
+     * we authored are held to one rule rather than two that drift. Authorization
+     * is parent-relative: this answer is only meaningful once MLS
+     * authentication has already established that this state IS the commit's
+     * candidate parent.
+     */
+    fun isCommitAuthorized(pubMsg: PublicMessage): Boolean {
+        val proposals = resolveCommitProposals(pubMsg) ?: return false
+        return try {
+            enforceAuthorizedProposalSet(proposals, committerLeafIndex = pubMsg.sender.leafIndex)
+            enforceNoAdminDepletion(proposals)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Whether every proposal in [pubMsg] is one its own sender may make without
+     * admin authority — a self-Update, or SelfRemove of itself.
+     *
+     * This is the `ordinary` / `privileged` distinction convergence compares on:
+     * a commit is `privileged` exactly when its applicable rule REQUIRES an
+     * active admin, so one an ordinary member could also have made stays
+     * ordinary even when an admin happened to send it.
+     */
+    fun isSelfOnlyCommit(pubMsg: PublicMessage): Boolean {
+        val proposals = resolveCommitProposals(pubMsg) ?: return false
+        if (proposals.isEmpty()) return false
+        val committer = pubMsg.sender.leafIndex
+        val allSelfRemove =
+            proposals.all { it.proposal is Proposal.SelfRemove && it.senderLeafIndex == committer }
+        if (allSelfRemove) return true
+        return proposals.size == 1 &&
+            proposals[0].proposal is Proposal.Update &&
+            proposals[0].senderLeafIndex == committer
+    }
+
+    /**
      * Verify RFC 9420 §6.2 membership_tag on an inbound PublicMessage Commit.
      * The tag binds the whole `(TBS || FramedContentAuthData)` payload to
      * the sender's epoch — if it's missing or wrong, the sender either
@@ -2293,9 +2688,12 @@ class MlsGroup private constructor(
         committerLeafIndex: Int = myLeafIndex,
     ) {
         if (proposals.isEmpty()) return
-        val marmot = currentMarmotData()
-        val adminsConfigured = marmot != null && marmot.adminPubkeys.isNotEmpty()
-        if (!adminsConfigured || isLeafAdmin(committerLeafIndex)) return
+        // Reads whichever profile the group is on: the admin-policy component
+        // (0x8003) for current-profile groups, `marmot_group_data` (0xF2EE)
+        // for legacy ones. An empty set means bootstrap — no admins named yet —
+        // and the gate stays open, mirroring MlsGroupManager.updateGroupExtensions.
+        val admins = currentAdminIdentities()
+        if (admins.isEmpty() || isLeafAdmin(committerLeafIndex)) return
 
         val allSelfRemove =
             proposals.all { it.proposal is Proposal.SelfRemove && it.senderLeafIndex == committerLeafIndex }
@@ -2323,26 +2721,45 @@ class MlsGroup private constructor(
      * bootstrap before any admin is named.
      */
     internal fun enforceNoAdminDepletion(proposals: List<PendingProposal>) {
-        val currentAdmins = currentMarmotData()?.adminPubkeys?.toSet().orEmpty()
+        val currentAdmins = currentAdminIdentities()
         if (currentAdmins.isEmpty()) return // Bootstrap: no admins yet, nothing to deplete.
 
-        // Resolve the effective admin list after any GroupContextExtensions
-        // proposal in this commit. If none is present, keep the current list.
+        // Resolve the effective admin list after this commit. Three carriers can
+        // change it, and they are checked in the order the commit applies them:
+        // an AppDataUpdate on 0x8003 (current profile), then a
+        // GroupContextExtensions proposal replacing the whole extension list
+        // (either profile). AppDataUpdate is resolved last because
+        // `applyAppDataUpdateProposals` runs after the rest of the list.
         val gce =
             proposals
                 .asSequence()
                 .map { it.proposal }
                 .filterIsInstance<Proposal.GroupContextExtensions>()
                 .lastOrNull()
-        val projectedMarmot =
-            if (gce != null) {
-                MarmotGroupData.fromExtensions(gce.extensions)
-            } else {
-                currentMarmotData()
+        val extensionsAfterGce = gce?.extensions ?: groupContext.extensions
+
+        val adminUpdate =
+            proposals
+                .asSequence()
+                .map { it.proposal }
+                .filterIsInstance<Proposal.AppDataUpdate>()
+                .lastOrNull { it.componentId == AdminPolicyV1.COMPONENT_ID }
+
+        val adminSet =
+            when (val operation = adminUpdate?.operation) {
+                is Proposal.AppDataUpdate.Operation.Update ->
+                    AdminPolicyV1.decode(operation.data).adminHexKeys.toSet()
+
+                // Removing the admin policy is never valid — it is the sole
+                // admin authority for the group's lifetime — so an empty set
+                // here trips the depletion check below, which is the outcome
+                // we want.
+                Proposal.AppDataUpdate.Operation.Remove -> emptySet()
+
+                null -> adminIdentitiesIn(extensionsAfterGce)
             }
-        val adminSet = projectedMarmot?.adminPubkeys?.toSet().orEmpty()
         check(adminSet.isNotEmpty()) {
-            "MIP-03: commit would empty admin_pubkeys (admin depletion)"
+            "commit would leave the group with no admins (admin depletion)"
         }
 
         // Compute which leaves remain after applying Removes/SelfRemoves.
@@ -2427,10 +2844,93 @@ class MlsGroup private constructor(
             }
 
             is Proposal.ExternalInit -> {} // Handled in external commit flow
+
+            is Proposal.AppDataUpdate -> {
+                // Applied by [applyAppDataUpdateProposals] after the rest of
+                // the proposal list, so a GroupContextExtensions proposal in
+                // the same commit is already reflected. Reaching it here would
+                // mean a caller bypassed that ordering.
+                error("AppDataUpdate must be applied through applyAppDataUpdateProposals")
+            }
         }
     }
 
-    private fun buildWelcome(addedMembers: List<Pair<Int, MlsKeyPackage>>): ByteArray {
+    /**
+     * Fold every `AppDataUpdate` proposal in a commit into the GroupContext
+     * `app_data_dictionary`.
+     *
+     * Two ordering rules matter, and both change the resulting GroupContext
+     * bytes — and therefore the epoch's key schedule — if we get them wrong:
+     *
+     *  1. These run AFTER the rest of the proposal list, so a
+     *     `GroupContextExtensions` proposal in the same commit is already
+     *     applied and we update the dictionary it produced.
+     *  2. The dictionary extension is added-or-replaced in place and is never
+     *     dropped, even when the last component is removed and the dictionary
+     *     ends up empty. An absent extension and an empty one are different
+     *     GroupContexts.
+     *
+     * MLS deliberately leaves the meaning of an update payload to the
+     * application — openmls hands the proposals back for the app to resolve —
+     * because a component's payload can be an arbitrary diff. Every Marmot
+     * component document defines its update as a full replacement state, so
+     * here resolution is the identity function. A future component that wanted
+     * true diff semantics would have to resolve them before this point.
+     */
+    private fun applyAppDataUpdateProposals(updates: List<Proposal.AppDataUpdate>) {
+        if (updates.isEmpty()) return
+
+        var dictionary = AppDataDictionary.fromExtensionsOrEmpty(groupContext.extensions)
+        for (update in updates) {
+            dictionary =
+                when (val operation = update.operation) {
+                    is Proposal.AppDataUpdate.Operation.Update ->
+                        dictionary.with(update.componentId, operation.data)
+
+                    Proposal.AppDataUpdate.Operation.Remove ->
+                        dictionary.without(update.componentId)
+                }
+        }
+
+        val extension = dictionary.toExtension()
+        val existing = groupContext.extensions.indexOfFirst { it.extensionType == AppDataDictionary.EXTENSION_TYPE }
+        val newExtensions =
+            if (existing >= 0) {
+                groupContext.extensions.toMutableList().also { it[existing] = extension }
+            } else {
+                groupContext.extensions + extension
+            }
+        groupContext = groupContext.copy(extensions = newExtensions)
+    }
+
+    /**
+     * Lowest common ancestor of [myLeafIndex] and [otherLeafIndex] expressed as
+     * an index INTO our own direct path, or -1 when there is none.
+     *
+     * Our direct path runs leaf-ward to root-ward, so the first node it shares
+     * with the other leaf's direct path is their lowest common ancestor — and
+     * its position is also the index of that node's path secret in
+     * `derivePathSecrets`, which walks the same list.
+     */
+    private fun directPathIndexOfAncestorWith(otherLeafIndex: Int): Int {
+        val mine = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+        val theirs = BinaryTree.directPath(otherLeafIndex, tree.leafCount).toSet()
+        return mine.indexOfFirst { it in theirs }
+    }
+
+    /**
+     * @param committerPathSecrets the path secrets this commit minted for the
+     *   committer's own direct path, in direct-path order. RFC 9420 §12.4.3.1:
+     *   when the Commit carries an UpdatePath, each new member's GroupSecrets
+     *   MUST carry the path secret at the lowest common ancestor of that
+     *   member's leaf and the committer's. Without it the joiner holds no key
+     *   for any ancestor, and the FIRST later commit that addresses it at one —
+     *   which is every commit once its subtree is merged — is undecryptable.
+     */
+    private fun buildWelcome(
+        addedMembers: List<Pair<Int, MlsKeyPackage>>,
+        committerPathSecrets: List<PathSecretAndKey>,
+    ): ByteArray {
         // Add ratchet tree as GroupInfo extension (RFC 9420 Section 12.4.3.3)
         val treeWriter = TlsWriter()
         tree.encodeTls(treeWriter)
@@ -2486,10 +2986,11 @@ class MlsGroup private constructor(
         // Build per-member encrypted group secrets
         val secrets =
             addedMembers.map { (leafIdx, kp) ->
+                val ancestorIdx = directPathIndexOfAncestorWith(leafIdx)
                 val groupSecrets =
                     GroupSecrets(
                         joinerSecret = epochSecrets.joinerSecret,
-                        pathSecret = null,
+                        pathSecret = committerPathSecrets.getOrNull(ancestorIdx)?.pathSecret,
                     )
                 val gsBytes = groupSecrets.toTlsBytes()
 
@@ -2718,6 +3219,19 @@ class MlsGroup private constructor(
         /** MLS self_remove proposal type (MIP-00 / MIP-03). */
         private const val SELF_REMOVE_PROPOSAL_TYPE = 0x000A
 
+        /** MLS extensions draft `app_data_update` proposal type. */
+        private const val APP_DATA_UPDATE_PROPOSAL_TYPE = 0x0008
+
+        /** How far back a fresh KeyPackage LeafNode's `not_before` is set. */
+        private const val LIFETIME_SKEW_SECONDS = 3_600L
+
+        /**
+         * 84 days. The spec's ceiling is 84 days plus one hour of skew, so this
+         * leaves the whole skew allowance as headroom rather than sitting
+         * exactly on the limit.
+         */
+        private const val LIFETIME_SPAN_SECONDS = 84L * 24 * 60 * 60
+
         /** Marmot Group Data Extension type (MIP-01). */
         private const val MARMOT_GROUP_DATA_EXTENSION_TYPE = 0xF2EE
 
@@ -2729,6 +3243,10 @@ class MlsGroup private constructor(
                 EXTERNAL_PUB_EXTENSION_TYPE,
                 EXTERNAL_SENDERS_EXTENSION_TYPE,
                 MARMOT_GROUP_DATA_EXTENSION_TYPE,
+                // The current profile's carrier for all app-owned group state.
+                // A group can arrive at one either by being created with it or
+                // by a GroupContextExtensions proposal that installs it.
+                AppDataDictionary.EXTENSION_TYPE,
             )
 
         /**
@@ -2843,101 +3361,70 @@ class MlsGroup private constructor(
         }
 
         /**
-         * RFC 9420 §7.9 parent_hash chain verification for a STATIC tree —
-         * specifically, the ratchet_tree extension a joiner reconstructs
-         * from a Welcome's GroupInfo. Without this, a malicious or
-         * misconfigured GroupInfo signer could ship a tree whose stored
-         * parent_hash values are inconsistent with the actual tree shape;
-         * peers that DO validate would reject every commit produced from
-         * this tree, but the joiner wouldn't notice until the next epoch
-         * silently rolled back.
+         * RFC 9420 §7.9.2 "Verifying Parent Hashes", over the STATIC tree a
+         * joiner reconstructs from a Welcome's GroupInfo.
          *
-         * For each leaf with `source == COMMIT` (the only source that
-         * carries a parent_hash payload), recompute the parent_hash chain
-         * top-down on the leaf's filtered direct path and verify the
-         * leaf's stored parent_hash matches what the chain produces.
-         *
+         * Without it a malicious or misconfigured GroupInfo signer could ship
+         * a tree whose stored parent_hash values do not match its shape; peers
+         * that DO validate would reject every commit produced from it, and the
+         * joiner would not notice until an epoch silently rolled back.
          * Returns `null` on success, or a human-readable failure reason.
-         * Skips KEY_PACKAGE and UPDATE leaves — those don't carry a
-         * meaningful parent_hash on the wire.
+         *
+         * The rule is per PARENT node, not per leaf: for each non-blank parent
+         * P, EXACTLY ONE of its two subtrees must contain a node whose
+         * `parent_hash` equals `ParentHash(P, other_subtree)`. That node is the
+         * child the committer descended through when it set P; the other
+         * subtree supplies the sibling hash.
+         *
+         * We used to re-derive every COMMIT-source leaf's `parent_hash`
+         * top-down from the CURRENT tree and demand a match. That is a much
+         * stronger claim than the RFC makes, and a false one: a later commit
+         * refreshes ancestors and a later Add changes the tree's shape, so a
+         * leaf set two epochs ago legitimately no longer re-derives. It
+         * rejected every tree where the inviter was not the last committer —
+         * in practice, every group invitation sent by anyone but the creator.
+         *
+         * Both sibling hashes and both resolutions exclude P's
+         * `unmerged_leaves`: those are precisely the leaves added after P was
+         * populated, so removing them reconstructs the tree as P's author saw
+         * it.
          */
         internal fun verifyTreeParentHashesForJoin(tree: RatchetTree): String? {
             if (tree.leafCount == 0) return null
-            val nodeCount = BinaryTree.nodeCount(tree.leafCount)
-            for (leafIdx in 0 until tree.leafCount) {
-                val leaf = tree.getLeaf(leafIdx) ?: continue
-                if (leaf.leafNodeSource != LeafNodeSource.COMMIT) continue
-                val expected = computeStaticLeafParentHash(tree, leafIdx, nodeCount)
-                val stored = leaf.parentHash ?: ByteArray(0)
-                if (!stored.contentEquals(expected)) {
-                    return "leaf $leafIdx parent_hash mismatch (stored=${stored.size}B, expected=${expected.size}B)"
+            for (parentIdx in tree.parentNodeIndices()) {
+                val key = tree.parentEncryptionKeyOf(parentIdx) ?: continue
+                val storedParentHash = tree.parentHashOf(parentIdx) ?: ByteArray(0)
+                val excluded = tree.unmergedLeavesOf(parentIdx)
+                val leftIdx = BinaryTree.left(parentIdx)
+                val rightIdx = BinaryTree.right(parentIdx)
+
+                fun hashWithSibling(siblingIdx: Int) =
+                    MlsCryptoProvider.hash(
+                        encodeParentHashInput(
+                            encryptionKey = key,
+                            parentHash = storedParentHash,
+                            originalSiblingTreeHash = tree.originalTreeHash(siblingIdx, excluded),
+                        ),
+                    )
+
+                val expectedInLeft = hashWithSibling(rightIdx)
+                val expectedInRight = hashWithSibling(leftIdx)
+
+                val foundLeft =
+                    tree.resolutionExcluding(leftIdx, excluded).any {
+                        tree.parentHashOf(it)?.contentEquals(expectedInLeft) == true
+                    }
+                val foundRight =
+                    tree.resolutionExcluding(rightIdx, excluded).any {
+                        tree.parentHashOf(it)?.contentEquals(expectedInRight) == true
+                    }
+
+                if (foundLeft == foundRight) {
+                    return "parent node $parentIdx is not parent-hash valid " +
+                        "(matched left=$foundLeft right=$foundRight)"
                 }
             }
             return null
-        }
-
-        /**
-         * Top-down recomputation of the parent_hash that a COMMIT-source
-         * leaf at [leafIdx] should carry, given the current tree shape.
-         * Mirrors [computeSenderParentHashes] but uses
-         * [RatchetTree.treeHashNode] for sibling tree hashes (no
-         * pre-update / post-update distinction in static validation).
-         */
-        private fun computeStaticLeafParentHash(
-            tree: RatchetTree,
-            leafIdx: Int,
-            nodeCount: Int,
-        ): ByteArray {
-            val (filteredDp, _) = tree.filteredDirectPath(leafIdx)
-            if (filteredDp.isEmpty()) return ByteArray(0)
-
-            // Walk top-down from root, propagating the expected parent_hash.
-            val hashes = mutableMapOf<Int, ByteArray>()
-            hashes[filteredDp.last()] = ByteArray(0)
-            for (i in filteredDp.size - 2 downTo 0) {
-                val xIdx = filteredDp[i]
-                val parentIdx = filteredDp[i + 1]
-                val parentNode = tree.getNode(parentIdx)
-                if (parentNode !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
-                    hashes[xIdx] = ByteArray(0)
-                    continue
-                }
-                // x's sibling under parent — parent has children left/right;
-                // sibling is whichever isn't x's ancestor.
-                val left = BinaryTree.left(parentIdx)
-                val right = BinaryTree.right(parentIdx)
-                val siblingIdx = if (xIdx == left) right else left
-                val siblingTreeHash = tree.treeHashNode(siblingIdx)
-                hashes[xIdx] =
-                    MlsCryptoProvider.hash(
-                        encodeParentHashInput(
-                            encryptionKey = parentNode.parentNode.encryptionKey,
-                            parentHash = hashes[parentIdx] ?: ByteArray(0),
-                            originalSiblingTreeHash = siblingTreeHash,
-                        ),
-                    )
-            }
-
-            // The leaf's expected parent_hash is the chain value AT the
-            // immediate parent (filteredDp[0]) — same convention as the
-            // committer-side computation in [computeSenderParentHashes].
-            val immediateParentIdx = filteredDp.first()
-            val immediateParent = tree.getNode(immediateParentIdx)
-            if (immediateParent !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
-                return ByteArray(0)
-            }
-            // Sibling of the leaf's node at the immediate parent.
-            val leafNodeIdx = BinaryTree.leafToNode(leafIdx)
-            val left = BinaryTree.left(immediateParentIdx)
-            val right = BinaryTree.right(immediateParentIdx)
-            val leafSiblingIdx = if (leafNodeIdx == left) right else left
-            return MlsCryptoProvider.hash(
-                encodeParentHashInput(
-                    encryptionKey = immediateParent.parentNode.encryptionKey,
-                    parentHash = hashes[immediateParentIdx] ?: ByteArray(0),
-                    originalSiblingTreeHash = tree.treeHashNode(leafSiblingIdx),
-                ),
-            )
         }
 
         /**
@@ -2952,18 +3439,121 @@ class MlsGroup private constructor(
             )
 
         /**
+         * Enforce the `0x8006` component's `required_member_roles` mask over
+         * the joining tree.
+         *
+         * A group carrying the agent-text-stream component requires each named
+         * role as an MLS leaf capability (`0xF2D1` receive, `0xF2D2` send,
+         * `0xF2D4` fanout). Advertising the component id alone is not enough —
+         * that only says "understands the component"; the role capability says
+         * "can actually do this".
+         */
+        private fun requireAgentTextStreamRoles(
+            extensions: List<Extension>,
+            tree: RatchetTree,
+            myLeafIndex: Int,
+        ) {
+            val policy =
+                AppDataDictionary
+                    .fromExtensionsOrEmpty(extensions)[AgentTextStreamQuicPolicyV1.COMPONENT_ID]
+                    ?.let { AgentTextStreamQuicPolicyV1.decode(it) } ?: return
+            val required = policy.requiredRoleCapabilities()
+            if (required.isEmpty()) return
+
+            val myLeaf = tree.getLeaf(myLeafIndex)
+            requireNotNull(myLeaf) { "Joiner's leaf is blank after tree reconstruction" }
+            val missing = required.filterNot { myLeaf.capabilities.extensions.contains(it) }
+            require(missing.isEmpty()) {
+                "Joiner does not advertise agent text stream roles this group requires: " +
+                    missing.joinToString { AppComponentIds.toHex(it) }
+            }
+        }
+
+        /**
+         * Leaf capabilities for the current profile.
+         *
+         * RFC 9420 §7.2 forbids advertising DEFAULT extension types, so only
+         * the draft `app_data_dictionary` extension and the `app_data_update`
+         * proposal appear — `required_capabilities` support is implicit.
+         *
+         * The legacy `0xF2EE` group-data extension is advertised alongside
+         * them, and that is not a hedge. A capability says "this client can
+         * handle it", not "this group uses it", and a group that REQUIRES
+         * `0xF2EE` refuses to add a leaf that does not advertise it. Without
+         * this line a current-profile KeyPackage would be un-addable to every
+         * legacy group that already exists — the exact mirror of the interop
+         * failure the current profile was adopted to fix.
+         *
+         * `0xF2D1` is the agent-text-stream RECEIVE role, for the same reason:
+         * a group carrying component `0x8006` with `required_member_roles`
+         * naming `receive` refuses a leaf that does not advertise it. The
+         * reference client puts exactly that policy into EVERY group it
+         * creates, so without this line an Amethyst KeyPackage cannot be
+         * invited into one at all.
+         *
+         * We stop at receive. `send` and `fanout` are not here because we do
+         * not originate previews from the app, and a capability is a standing
+         * promise rather than a hedge.
+         */
+        fun currentProfileLeafCapabilities(): Capabilities =
+            Capabilities(
+                extensions =
+                    listOf(
+                        AppDataDictionary.EXTENSION_TYPE,
+                        MarmotGroupData.EXTENSION_ID_INT,
+                        AgentTextStreamRoles.RECEIVE_CAPABILITY,
+                    ),
+                proposals = listOf(APP_DATA_UPDATE_PROPOSAL_TYPE, SELF_REMOVE_PROPOSAL_TYPE),
+            )
+
+        /**
+         * `required_capabilities` for a new current-profile group: extension
+         * `0x0006` and proposal `0x0008`.
+         *
+         * The Marmot components a group requires are negotiated in the
+         * upstream `app_components` component INSIDE the dictionary, not here —
+         * MLS `RequiredCapabilities` carries only MLS-level primitives.
+         */
+        fun buildCurrentProfileRequiredCapabilitiesExtension(): Extension {
+            val writer = TlsWriter()
+            val exts = TlsWriter()
+            exts.putUint16(AppDataDictionary.EXTENSION_TYPE)
+            writer.putOpaqueVarInt(exts.toByteArray())
+            val props = TlsWriter()
+            props.putUint16(APP_DATA_UPDATE_PROPOSAL_TYPE)
+            writer.putOpaqueVarInt(props.toByteArray())
+            val creds = TlsWriter()
+            creds.putUint16(Credential.CREDENTIAL_TYPE_BASIC)
+            writer.putOpaqueVarInt(creds.toByteArray())
+            return Extension(REQUIRED_CAPABILITIES_EXTENSION_TYPE, writer.toByteArray())
+        }
+
+        /**
          * Create a new MLS group with a single member (the creator).
          */
         fun create(
             identity: ByteArray,
             signingKey: ByteArray? = null,
-            initialExtensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> = emptyList(),
+            initialExtensions: List<Extension> = emptyList(),
+            /**
+             * LeafNode extensions for the creator's own leaf. A current-profile
+             * group MUST put its `app_data_dictionary` here, carrying the
+             * account identity proof — the proof is leaf-only and can never be
+             * added later by a proposal.
+             */
+            leafExtensions: List<Extension> = emptyList(),
+            capabilities: Capabilities = marmotLeafCapabilities(),
+            /**
+             * The `required_capabilities` extension for epoch 0. Defaults to
+             * the MIP-era set; a current-profile group passes
+             * [buildCurrentProfileRequiredCapabilitiesExtension].
+             */
+            requiredCapabilities: Extension = buildMarmotRequiredCapabilitiesExtension(),
         ): MlsGroup {
             val sigKp =
                 signingKey?.let { key ->
                     val pub = Ed25519.publicFromPrivate(key)
-                    com.vitorpamplona.quartz.marmot.mls.crypto
-                        .Ed25519KeyPair(key, pub)
+                    Ed25519KeyPair(key, pub)
                 } ?: Ed25519.generateKeyPair()
 
             val encKp = X25519.generateKeyPair()
@@ -2976,6 +3566,8 @@ class MlsGroup private constructor(
                     identity = identity,
                     source = LeafNodeSource.KEY_PACKAGE,
                     signingKey = sigKp.privateKey,
+                    capabilities = capabilities,
+                    leafExtensions = leafExtensions,
                 )
 
             val tree = RatchetTree(1)
@@ -2986,7 +3578,7 @@ class MlsGroup private constructor(
             // bake into epoch 0 (e.g. the MIP-01 MarmotGroupData extension so
             // new peers who join later can see the group name without first
             // decrypting a pre-membership bootstrap commit — see MIP-03).
-            val baseExtensions = listOf(buildMarmotRequiredCapabilitiesExtension())
+            val baseExtensions = listOf(requiredCapabilities)
             val groupContext =
                 GroupContext(
                     groupId = groupId,
@@ -3161,6 +3753,14 @@ class MlsGroup private constructor(
                 }
             }
 
+            // The agent-text-stream component (0x8006) states its own
+            // per-member requirement OUTSIDE MLS `required_capabilities`:
+            // `required_member_roles` names role capabilities every member
+            // must advertise. MLS cannot enforce it, so a joiner that skipped
+            // this check would join a group it can never satisfy and have
+            // every one of its commits refused by peers that do check.
+            requireAgentTextStreamRoles(groupContext.extensions, tree, myLeafIndex)
+
             // Derive epoch secrets directly from memberSecret (RFC 9420 Section 8.3)
             // For Welcome, epoch_secret = ExpandWithLabel(member_secret, "epoch", GroupContext, Nh)
             val epochSecret =
@@ -3217,17 +3817,31 @@ class MlsGroup private constructor(
             interimInput.putOpaqueVarInt(confirmationTag)
             val interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
 
-            return MlsGroup(
-                groupContext = groupContext,
-                tree = tree,
-                myLeafIndex = myLeafIndex,
-                epochSecrets = epochSecrets,
-                secretTree = secretTree,
-                initSecret = epochSecrets.initSecret,
-                signingPrivateKey = bundle.signaturePrivateKey,
-                encryptionPrivateKey = bundle.encryptionPrivateKey,
-                interimTranscriptHash = interimTranscriptHash,
-            )
+            // RFC 9420 §12.4.3.1: when the Commit that added us carried an
+            // UpdatePath, GroupSecrets carries the path secret at the lowest
+            // common ancestor of our leaf and the committer's. Deriving our
+            // direct-path keys from it is not optional bookkeeping — our
+            // subtree is already MERGED in the tree this Welcome hands us, so
+            // the very next commit addresses us at an ancestor, and a joiner
+            // that dropped this secret cannot decrypt a single one of them.
+            val joined =
+                MlsGroup(
+                    groupContext = groupContext,
+                    tree = tree,
+                    myLeafIndex = myLeafIndex,
+                    epochSecrets = epochSecrets,
+                    secretTree = secretTree,
+                    initSecret = epochSecrets.initSecret,
+                    signingPrivateKey = bundle.signaturePrivateKey,
+                    encryptionPrivateKey = bundle.encryptionPrivateKey,
+                    interimTranscriptHash = interimTranscriptHash,
+                )
+            groupSecrets.pathSecret?.let { pathSecret ->
+                val ancestorIdx = joined.directPathIndexOfAncestorWith(groupInfo.signer)
+                val fullPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+                fullPath.getOrNull(ancestorIdx)?.let { joined.rememberPathKeys(it, pathSecret) }
+            }
+            return joined
         }
 
         /**
@@ -3240,6 +3854,12 @@ class MlsGroup private constructor(
          * @param groupInfoBytes TLS-serialized GroupInfo
          * @param identity the joiner's identity
          * @param signingKey optional Ed25519 signing key (generated if null)
+         * @param capabilities the joiner leaf's capabilities. A current-profile
+         *   join MUST pass [currentProfileLeafCapabilities]; the default only
+         *   satisfies a legacy group's `required_capabilities`.
+         * @param leafExtensions the joiner leaf's extensions. A current-profile
+         *   join MUST pass the `app_data_dictionary` carrying its account
+         *   identity proof — leaf extensions cannot be added after the fact.
          * @return the new MlsGroup along with the raw inner commit bytes and a
          *   wire-ready PublicMessage envelope. Existing group members consume
          *   the framed bytes via [MlsGroup.processFramedCommit].
@@ -3248,6 +3868,8 @@ class MlsGroup private constructor(
             groupInfoBytes: ByteArray,
             identity: ByteArray,
             signingKey: ByteArray? = null,
+            capabilities: Capabilities = marmotLeafCapabilities(),
+            leafExtensions: List<Extension> = emptyList(),
         ): ExternalJoinResult {
             val groupInfo = GroupInfo.decodeTls(TlsReader(groupInfoBytes))
             val groupContext = groupInfo.groupContext
@@ -3312,6 +3934,8 @@ class MlsGroup private constructor(
                     signingKey = sigKp.privateKey,
                     groupId = groupContext.groupId,
                     leafIndex = tree.leafCount,
+                    capabilities = capabilities,
+                    leafExtensions = leafExtensions,
                 )
             val myLeafIndex = tree.addLeaf(placeholderLeaf)
 
@@ -3374,6 +3998,8 @@ class MlsGroup private constructor(
                     groupId = groupContext.groupId,
                     leafIndex = myLeafIndex,
                     parentHash = extLeafParentHash,
+                    capabilities = capabilities,
+                    leafExtensions = leafExtensions,
                 )
             tree.setLeaf(myLeafIndex, leafNode)
 
@@ -3533,6 +4159,8 @@ class MlsGroup private constructor(
                 signingPrivateKey = state.signingPrivateKey,
                 encryptionPrivateKey = state.encryptionPrivateKey,
                 interimTranscriptHash = state.interimTranscriptHash,
+                pathPrivateKeys = state.pathPrivateKeys.toMutableMap(),
+                pendingProposals = state.pendingProposals.toMutableList(),
             )
         }
 
@@ -3548,24 +4176,35 @@ class MlsGroup private constructor(
             groupId: ByteArray? = null,
             leafIndex: Int? = null,
             parentHash: ByteArray? = null,
+            capabilities: Capabilities = marmotLeafCapabilities(),
+            leafExtensions: List<Extension> = emptyList(),
         ): LeafNode {
             val unsigned =
                 LeafNode(
                     encryptionKey = encryptionKey,
                     signatureKey = signatureKey,
                     credential = Credential.Basic(identity),
-                    // Advertise MIP-01/MIP-03 required capabilities so we can be
+                    // Advertise the profile's required capabilities so we can be
                     // added to compliant groups that mark them as required.
-                    capabilities = marmotLeafCapabilities(),
+                    capabilities = capabilities,
                     leafNodeSource = source,
                     lifetime =
                         if (source == LeafNodeSource.KEY_PACKAGE) {
-                            Lifetime(0, Long.MAX_VALUE)
+                            // A real, bounded window. `Lifetime(0, Long.MAX_VALUE)`
+                            // used to go here, which any receiver enforcing
+                            // `foundation/key-packages.md` rejects outright: the
+                            // extension must be current AND span at most
+                            // 7,261,200s (84 days + an hour of clock skew).
+                            // The one-hour backdate gives a peer with a slow
+                            // clock a window in which the package is already
+                            // valid.
+                            val notBefore = TimeUtils.now() - LIFETIME_SKEW_SECONDS
+                            Lifetime(notBefore, notBefore + LIFETIME_SPAN_SECONDS)
                         } else {
                             null
                         },
                     parentHash = parentHash,
-                    extensions = emptyList(),
+                    extensions = leafExtensions,
                     signature = ByteArray(0), // Placeholder
                 )
 
@@ -3582,8 +4221,24 @@ class MlsGroup private constructor(
      * [CommitResult.preCommitExporterSecret] is the key the outer kind:445
      * MUST be encrypted with (RFC 9420 §12.4 + MDK parity).
      */
-    fun addMember(keyPackageBytes: ByteArray): CommitResult {
-        proposeAdd(keyPackageBytes)
+    fun addMember(keyPackageBytes: ByteArray): CommitResult = addMembers(listOf(keyPackageBytes))
+
+    /**
+     * Add several members in ONE commit.
+     *
+     * Not a convenience wrapper over [addMember] — a commit per Add costs an
+     * epoch and a publish round trip each, and every existing member processes
+     * each one. The Welcome already carries a separate `EncryptedGroupSecrets`
+     * per added member, keyed by KeyPackage reference (RFC 9420 §12.4.3.1), so
+     * one commit serves all of them and each joiner finds its own secrets.
+     *
+     * The reference implementation adds every invitee named at group creation
+     * this way, which is why a group it creates with two invitees sits at epoch
+     * 1 while ours used to reach epoch 2.
+     */
+    fun addMembers(keyPackagesBytes: List<ByteArray>): CommitResult {
+        require(keyPackagesBytes.isNotEmpty()) { "addMembers needs at least one KeyPackage" }
+        keyPackagesBytes.forEach { proposeAdd(it) }
         return commit()
     }
 

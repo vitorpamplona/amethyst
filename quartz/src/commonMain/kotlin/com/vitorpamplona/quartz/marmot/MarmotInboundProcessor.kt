@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
-import com.vitorpamplona.quartz.marmot.mip03GroupMessages.CommitOrdering
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
@@ -32,8 +32,19 @@ import com.vitorpamplona.quartz.marmot.mls.framing.PrivateMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
+import com.vitorpamplona.quartz.marmot.mls.messages.Welcome
+import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceAdmission
+import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceResolution
+import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceStatus
+import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
+import com.vitorpamplona.quartz.marmot.protocolCore.MarmotConvergenceEngine
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
@@ -70,6 +81,8 @@ sealed class GroupEventResult {
     data class CommitPending(
         val groupId: HexKey,
         val epoch: Long,
+        /** True when this commit forked the group and opened a convergence pass. */
+        val forkDetected: Boolean = false,
     ) : GroupEventResult()
 
     /**
@@ -103,6 +116,39 @@ sealed class GroupEventResult {
     data class ProposalStaged(
         val groupId: HexKey,
         val senderLeafIndex: Int,
+    ) : GroupEventResult()
+
+    /**
+     * An app payload that decrypted only on a losing candidate branch.
+     *
+     * `protocol-core/inbound-processing.md` is explicit that this is NOT a
+     * delivery — rendering it would show the application a message the
+     * canonical state contradicts. It is still protocol input: if it passed
+     * the payload checks it counted as an app-payload witness for the branch
+     * it decrypted on, which is how convergence can prefer a branch members
+     * actually used.
+     */
+    data class AppMessageOnCandidateBranch(
+        val groupId: HexKey,
+        val branchStateId: String,
+        val epoch: Long,
+        /** True when it passed the payload checks and was counted as a witness. */
+        val countedAsWitness: Boolean,
+    ) : GroupEventResult()
+
+    /**
+     * The group's lifecycle state refuses this input outright.
+     *
+     * `Disbanded` is absorbing — no later branch supersedes a terminalized
+     * disband, so there is nothing a subsequent kind-445 could do but be
+     * retained forever. `Unrecoverable` means this client cannot safely apply
+     * more traffic until it repairs, restores or rejoins; retaining input
+     * against material we no longer trust is how a client talks itself into
+     * settling for a state it should have refused.
+     */
+    data class RefusedByLifecycle(
+        val groupId: HexKey,
+        val lifecycle: GroupLifecycleState,
     ) : GroupEventResult()
 
     /**
@@ -160,15 +206,38 @@ sealed class WelcomeResult {
  *   extract welcome bytes and join the group via MlsGroupManager
  *
  * This class coordinates between [GroupEventEncryption] (outer layer),
- * [MlsGroupManager] (MLS engine), and [CommitOrdering] (conflict resolution).
+ * [MlsGroupManager] (MLS engine), and [MarmotConvergenceEngine] (fork
+ * resolution).
+ *
+ * ## Same-epoch conflicts
+ *
+ * Competing commits are resolved by `protocol-core/convergence.md`: a bounded
+ * pass collects candidates, branches are built by replaying MLS bytes against
+ * retained states, and the six-step comparison picks one. The superseded
+ * MIP-era rule — lowest outer `created_at`, then lowest Nostr event id — is
+ * gone, and deliberately: both are transport metadata the sender chooses and
+ * MLS does not authenticate, so a member could win every race by backdating.
  */
 class MarmotInboundProcessor(
     private val groupManager: MlsGroupManager,
     private val keyPackageRotationManager: KeyPackageRotationManager,
+    private val convergence: MarmotConvergenceEngine = MarmotConvergenceEngine(groupManager),
 ) {
-    private val commitTracker = CommitOrdering.EpochCommitTracker()
     private val processedIdsMutex = Mutex()
-    private val processedEventIds = LinkedHashSet<String>()
+
+    /**
+     * Marmot message ids (`SHA-256` over the recovered `MLSMessage` bytes) we
+     * have already applied, newest last.
+     *
+     * NOT Nostr event ids. `transports/nostr.md` is explicit: the Nostr event
+     * id is transport evidence and MUST NOT be the deduplication id. Relays
+     * redeliver, and a client subscribed to several relays receives the same
+     * group message repeatedly — those copies share MLS bytes but each carries
+     * its own fresh ephemeral pubkey and therefore a different event id, so an
+     * event-id dedup collapses nothing. Worse, a hostile republisher can mint
+     * unlimited distinct event ids for one MLS message.
+     */
+    private val processedMessageIds = LinkedHashSet<String>()
 
     companion object {
         private const val MAX_PROCESSED_IDS = 10_000
@@ -178,6 +247,16 @@ class MarmotInboundProcessor(
          */
         fun isWelcomeEvent(event: Event): Boolean = event.kind == WelcomeEvent.KIND
     }
+
+    /**
+     * `message_id = SHA-256(mls_message_bytes)` — the Marmot message id from
+     * `foundation/wire-envelopes.md`, computed over the recovered bytes
+     * without re-encoding so two transport copies of one MLS message agree.
+     *
+     * For a commit these are byte-for-byte its `commit_digest`, so convergence
+     * needs no second hash.
+     */
+    private fun marmotMessageId(mlsBytes: ByteArray): String = sha256(mlsBytes).toHexKey()
 
     /**
      * Process an inbound GroupEvent (kind:445).
@@ -195,16 +274,6 @@ class MarmotInboundProcessor(
      * @return the processing result
      */
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
-        // Deduplicate already-processed events (thread-safe)
-        val eventId = groupEvent.id
-        val alreadyProcessed =
-            processedIdsMutex.withLock {
-                eventId in processedEventIds
-            }
-        if (alreadyProcessed) {
-            return GroupEventResult.Duplicate(groupEvent.groupId() ?: "")
-        }
-
         val groupId =
             groupEvent.groupId()
                 ?: return GroupEventResult.Error(null, "GroupEvent missing h tag (group ID)")
@@ -213,6 +282,23 @@ class MarmotInboundProcessor(
             return GroupEventResult.Error(groupId, "Not a member of group $groupId")
         }
 
+        // Lifecycle BEFORE anything is retained. A disbanded group is
+        // terminal and an unrecoverable one cannot safely apply traffic, so
+        // input for either is refused here rather than decrypted, retained,
+        // and then quietly never acted on.
+        val lifecycle = convergence.lifecycle(groupId)
+        if (lifecycle == GroupLifecycleState.DISBANDED || lifecycle == GroupLifecycleState.UNRECOVERABLE) {
+            return GroupEventResult.RefusedByLifecycle(groupId, lifecycle)
+        }
+
+        // Settle FIRST, so this event is processed against resolved state
+        // rather than against a branch a pass is about to abandon. Inbound
+        // traffic is only an opportunistic tick, though: a group that goes
+        // quiet mid-pass has nothing to drive it, which is why
+        // [settleDueConvergence] exists for the app layer's timer.
+        convergence.settleIfDue(groupId)
+
+        var messageId: String? = null
         val result =
             try {
                 // Step 1: Outer ChaCha20-Poly1305 decryption
@@ -227,33 +313,58 @@ class MarmotInboundProcessor(
                         retainedEpochCount = groupManager.retainedExporterSecrets(groupId).size,
                     )
                 } else {
-                    // Step 2: Parse the MLS message
-                    val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
+                    // The Marmot message id is defined over the recovered MLS
+                    // bytes, so dedup can only happen AFTER outer decryption —
+                    // there is nothing to hash before that.
+                    messageId = marmotMessageId(mlsBytes)
+                    if (processedIdsMutex.withLock { messageId in processedMessageIds }) {
+                        GroupEventResult.Duplicate(groupId)
+                    } else {
+                        // Step 2: Parse the MLS message
+                        val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
 
-                    when (mlsMessage.wireFormat) {
-                        WireFormat.PRIVATE_MESSAGE -> processPrivateMessage(groupId, mlsMessage, groupEvent)
-                        WireFormat.PUBLIC_MESSAGE -> processPublicMessage(groupId, mlsMessage, groupEvent)
-                        else -> GroupEventResult.Error(groupId, "Unexpected wire format: ${mlsMessage.wireFormat}")
+                        when (mlsMessage.wireFormat) {
+                            WireFormat.PRIVATE_MESSAGE -> processPrivateMessage(groupId, mlsMessage, groupEvent)
+                            WireFormat.PUBLIC_MESSAGE -> processPublicMessage(groupId, mlsMessage, groupEvent)
+                            else -> GroupEventResult.Error(groupId, "Unexpected wire format: ${mlsMessage.wireFormat}")
+                        }
                     }
                 }
             } catch (e: Exception) {
                 GroupEventResult.Error(groupId, "Failed to process GroupEvent: ${e.message}", e)
             }
 
-        // Track processed events for dedup — except UndecryptableOuterLayer,
-        // which must stay retryable. These events are typically future-epoch
-        // arrivals buffered by the handler and replayed after a
-        // CommitProcessed advances our epoch; marking them processed here
-        // would cause the retry to hit the Duplicate early-return above and
-        // skip MLS decryption entirely. DoS is already bounded by the
-        // handler's per-group pending buffer.
-        if (result !is GroupEventResult.UndecryptableOuterLayer) {
+        // Track processed events for dedup — except the two results that must
+        // stay RETRYABLE, because for both of them "we saw this" is not the
+        // same as "we are done with this".
+        //
+        // UndecryptableOuterLayer is typically a future-epoch arrival buffered
+        // by the handler and replayed once a CommitProcessed advances our
+        // epoch; marking it processed would send the retry into the Duplicate
+        // early-return above and skip MLS decryption entirely.
+        //
+        // AppMessageOnCandidateBranch is the same shape one level up: the
+        // payload decrypted on a branch that was losing AT THE TIME, and
+        // convergence may still select that branch — this result is itself a
+        // witness FOR it. Remembering the id would mean a message that landed
+        // on the branch the group went on to adopt is dropped as a duplicate
+        // and never rendered, which is precisely backwards. Re-processing is
+        // safe: witnesses are a set keyed by sender account, so a resent
+        // payload adds nothing to a branch's standing and is admitted as
+        // ordinary rather than selection-relevant.
+        //
+        // DoS is bounded for both by the handler's per-group pending buffer.
+        val idToRemember = messageId
+        if (idToRemember != null &&
+            result !is GroupEventResult.UndecryptableOuterLayer &&
+            result !is GroupEventResult.AppMessageOnCandidateBranch
+        ) {
             processedIdsMutex.withLock {
-                processedEventIds.add(eventId)
+                processedMessageIds.add(idToRemember)
                 // Trim the set if it exceeds the max size
-                if (processedEventIds.size > MAX_PROCESSED_IDS) {
-                    val iterator = processedEventIds.iterator()
-                    val toRemove = processedEventIds.size - MAX_PROCESSED_IDS
+                if (processedMessageIds.size > MAX_PROCESSED_IDS) {
+                    val iterator = processedMessageIds.iterator()
+                    val toRemove = processedMessageIds.size - MAX_PROCESSED_IDS
                     repeat(toRemove) {
                         iterator.next()
                         iterator.remove()
@@ -288,7 +399,7 @@ class MarmotInboundProcessor(
         hintNostrGroupId: HexKey? = null,
     ): WelcomeResult =
         try {
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .d("MarmotDbg") {
                     "MarmotInboundProcessor.processWelcome: hint=${hintNostrGroupId?.take(8)} eventId=${welcomeEvent.id.take(8)}…"
                 }
@@ -298,7 +409,7 @@ class MarmotInboundProcessor(
             if (keyPackageEventId == null) {
                 return WelcomeResult.Error("WelcomeEvent missing KeyPackage event ID tag")
             }
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .d("MarmotDbg") {
                     "MarmotInboundProcessor.processWelcome: welcomeBytes=${welcomeBytes.size}B looking up KeyPackage by ref=${keyPackageEventId.take(8)}…"
                 }
@@ -312,23 +423,28 @@ class MarmotInboundProcessor(
             // log a noisy "No matching KeyPackageBundle" warning for what
             // is actually a benign replay.
             if (hintNostrGroupId != null && groupManager.isMember(hintNostrGroupId)) {
-                com.vitorpamplona.quartz.utils.Log
+                Log
                     .d("MarmotDbg") {
                         "MarmotInboundProcessor.processWelcome: already a member of group=${hintNostrGroupId.take(8)}… — treating Welcome as replay"
                     }
                 return WelcomeResult.AlreadyJoined(hintNostrGroupId)
             }
 
-            // Find the KeyPackageBundle that was consumed.
+            // Find the KeyPackageBundle the inviter encrypted to.
             //
-            // The Welcome's "e" tag carries the *Nostr event id* of the
-            // kind:30443 event (NOT the MLS reference hash), so we must
-            // resolve it via the eventId→slot index that
-            // [MarmotManager.generateKeyPackageEvent] populates after
-            // signing each KeyPackageEvent.
-            val bundle = keyPackageRotationManager.findBundleByEventId(keyPackageEventId)
+            // The authority is the MLS Welcome itself: each EncryptedGroupSecrets
+            // is addressed to a KeyPackageRef, and RFC 9420 says a joiner takes
+            // the first one it holds private keys for — which is exactly what
+            // OpenMLS does. The Welcome's "e" tag carries only the *Nostr event
+            // id* of the kind:30443 event, which is a routing hint an inviter can
+            // get wrong: MDK stamps the event id of the copy cached in its user
+            // directory, so a peer that rotated its published KeyPackage while
+            // MDK kept inviting from cache would be unjoinable if we trusted the
+            // tag alone. Try the refs first, then fall back to the tag.
+            val bundle =
+                findBundleForWelcome(welcomeBytes) ?: keyPackageRotationManager.findBundleByEventId(keyPackageEventId)
             if (bundle == null) {
-                com.vitorpamplona.quartz.utils.Log
+                Log
                     .w("MarmotDbg") {
                         "MarmotInboundProcessor.processWelcome: NO matching KeyPackageBundle for eventId=${keyPackageEventId.take(8)}… " +
                             "— inviter referenced a KeyPackage we don't have private keys for. " +
@@ -339,27 +455,61 @@ class MarmotInboundProcessor(
                     "No matching KeyPackageBundle found for event $keyPackageEventId",
                 )
             }
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: bundle found — invoking groupManager.processWelcome" }
 
             // Join the group; nostrGroupId is derived from the MLS GroupContext's
             // NostrGroupData extension. The h-tag hint (if any) is validated inside.
             val (_, nostrGroupId) = groupManager.processWelcome(welcomeBytes, bundle, hintNostrGroupId)
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: joined group=${nostrGroupId.take(8)}…" }
 
-            // Mark the KeyPackage as consumed — triggers rotation
-            keyPackageRotationManager.markConsumedByEventId(keyPackageEventId)
+            // Mark the KeyPackage as consumed — triggers rotation. Keyed on the
+            // bundle we actually used, not the "e" tag, for the same reason the
+            // lookup above is.
+            keyPackageRotationManager.markConsumedByRef(bundle.keyPackage.reference())
+
+            // Seed convergence with the joined state, so the very first inbound
+            // commit already has a retained parent to fall back to.
+            convergence.trackGroup(nostrGroupId)
 
             WelcomeResult.Joined(
                 nostrGroupId = nostrGroupId,
                 needsKeyPackageRotation = keyPackageRotationManager.needsRotation(),
             )
         } catch (e: Exception) {
-            com.vitorpamplona.quartz.utils.Log
+            Log
                 .w("MarmotDbg", "MarmotInboundProcessor.processWelcome: exception ${e.message}", e)
             WelcomeResult.Error("Failed to process Welcome: ${e.message}", e)
         }
+
+    /**
+     * Resolve the KeyPackageBundle a Welcome is addressed to, the way RFC 9420
+     * §12.4.3.1 (and OpenMLS) does it: walk the Welcome's EncryptedGroupSecrets
+     * in order and take the first `new_member` KeyPackageRef we hold private
+     * keys for.
+     *
+     * Returns null when the Welcome does not parse or names no KeyPackage of
+     * ours — the caller then falls back to the Nostr "e" tag hint, and reports
+     * the failure if that misses too.
+     */
+    private suspend fun findBundleForWelcome(welcomeBytes: ByteArray): KeyPackageBundle? {
+        val welcome =
+            try {
+                val mlsMessage = MlsMessage.decodeTls(TlsReader(welcomeBytes))
+                require(mlsMessage.wireFormat == WireFormat.WELCOME) { "not a Welcome wire format" }
+                Welcome.decodeTls(TlsReader(mlsMessage.payload))
+            } catch (e: Exception) {
+                Log.d("MarmotDbg") {
+                    "MarmotInboundProcessor.findBundleForWelcome: welcome did not parse (${e.message}) — falling back to the e tag"
+                }
+                return null
+            }
+        for (secret in welcome.secrets) {
+            keyPackageRotationManager.findBundleByRef(secret.newMember)?.let { return it }
+        }
+        return null
+    }
 
     /**
      * Mark a kind:445 event id as already processed so that a later relay
@@ -372,12 +522,12 @@ class MarmotInboundProcessor(
      * local epoch. Reprocessing the same commit bytes would otherwise fail
      * with a confirmation-tag / transcript mismatch.
      */
-    suspend fun markEventProcessed(eventId: HexKey) {
+    suspend fun markMessageProcessed(marmotMessageId: HexKey) {
         processedIdsMutex.withLock {
-            processedEventIds.add(eventId)
-            if (processedEventIds.size > MAX_PROCESSED_IDS) {
-                val iterator = processedEventIds.iterator()
-                val toRemove = processedEventIds.size - MAX_PROCESSED_IDS
+            processedMessageIds.add(marmotMessageId)
+            if (processedMessageIds.size > MAX_PROCESSED_IDS) {
+                val iterator = processedMessageIds.iterator()
+                val toRemove = processedMessageIds.size - MAX_PROCESSED_IDS
                 repeat(toRemove) {
                     iterator.next()
                     iterator.remove()
@@ -387,38 +537,66 @@ class MarmotInboundProcessor(
     }
 
     /**
-     * Resolve any pending commit conflicts for a given epoch.
+     * Start tracking [groupId] for convergence.
      *
-     * Call this after a brief delay when multiple commits may arrive for
-     * the same epoch. The winning commit is applied; losers are discarded.
-     *
-     * @param groupId the Nostr group ID
-     * @param epoch the epoch to resolve
-     * @return the result of processing the winning commit, or null if no commits pending
+     * Call after creating, joining, or restoring a group. The engine needs the
+     * current state in its retained window before the first commit arrives —
+     * a commit that loses a race is only recoverable if the state it was
+     * authored against is still held.
      */
-    suspend fun resolveCommitConflict(
-        groupId: HexKey,
-        epoch: Long,
-    ): GroupEventResult? {
-        val winner =
-            commitTracker.resolve(groupId, epoch)
-                ?: return null
-
-        val result = applyCommit(groupId, winner)
-        commitTracker.clearEpoch(groupId, epoch)
-        return result
+    suspend fun trackGroup(groupId: HexKey) {
+        convergence.trackGroup(groupId)
     }
 
     /**
-     * Get all (group, epoch) keys that have pending unresolved commits.
+     * Record a commit WE authored and already applied locally.
+     *
+     * Convergence has to see our own commits or it cannot resolve a fork we are
+     * half of: with no retained parent for our commit, a peer's competing one
+     * would look like an unplaceable orphan and be deferred forever instead of
+     * compared. [preState] must be captured BEFORE the local commit advanced
+     * the group — the outbound helper cannot recover it afterwards.
      */
-    suspend fun pendingCommitGroupEpochs(): Set<CommitOrdering.GroupEpochKey> = commitTracker.pendingGroupEpochs()
+    suspend fun recordLocalCommit(
+        groupId: HexKey,
+        framedCommitBytes: ByteArray,
+        sourceEpoch: Long,
+        preState: MlsGroupState?,
+    ) {
+        convergence.recordApplied(groupId, framedCommitBytes, sourceEpoch, preState)
+    }
 
     /**
-     * Clear all pending commit state.
+     * Resolve [groupId]'s open convergence pass now, without waiting for its
+     * cutoff.
+     *
+     * The pass timers are scheduling, not semantics, so closing one early
+     * changes WHEN the frozen batch is resolved and never what it resolves to.
+     * Returns null when no pass is open.
      */
+    suspend fun resolveConvergence(groupId: HexKey): ConvergenceResolution? = convergence.settle(groupId)
+
+    /**
+     * Resolve every group whose convergence pass has reached its cutoff.
+     *
+     * A quiet group settles nothing on its own — there is no inbound traffic to
+     * carry it — so the app layer should also drive this from a timer for as
+     * long as [openConvergencePasses] is non-empty.
+     */
+    suspend fun settleDueConvergence(): List<ConvergenceResolution> = convergence.settleAllDue()
+
+    /** Groups with an open convergence pass, and the base epoch each snapshotted. */
+    suspend fun openConvergencePasses(): Map<HexKey, Long> = convergence.openPasses()
+
+    /** Convergence status for [groupId]; `SETTLED` when no pass is running. */
+    suspend fun convergenceStatus(groupId: HexKey): ConvergenceStatus = convergence.status(groupId)
+
+    /** Group lifecycle state for [groupId], including a running pass's `Recovering`. */
+    suspend fun groupLifecycle(groupId: HexKey): GroupLifecycleState = convergence.lifecycle(groupId)
+
+    /** Drop all convergence state. */
     suspend fun clearPendingCommits() {
-        commitTracker.clear()
+        convergence.clear()
     }
 
     private suspend fun processPrivateMessage(
@@ -431,35 +609,48 @@ class MarmotInboundProcessor(
 
         return when (privMsg.contentType) {
             ContentType.APPLICATION -> {
-                // MLS decrypt to get the inner plaintext
-                val decrypted = groupManager.decrypt(groupId, mlsMessage.toTlsBytes())
-                val innerJson = decrypted.content.decodeToString()
+                val bytes = mlsMessage.toTlsBytes()
+                val decrypted = groupManager.decryptOrNull(groupId, bytes)
+                if (decrypted == null) {
+                    // Canonical state and every retained canonical epoch
+                    // failed. Before giving up, try the branches convergence is
+                    // holding — a payload sent on a fork decrypts on no
+                    // canonical epoch by construction.
+                    processCandidateBranchMessage(groupId, bytes)
+                } else {
+                    val payload = decrypted.content.decodeToString()
+                    val author = payloadAuthor(payload)
 
-                // MIP-03: if the inner application payload is a Nostr event,
-                // its `pubkey` field MUST equal the MLS sender's credential
-                // identity. Reject any mismatch — otherwise a group member
-                // could mint events claiming a different author. Non-event
-                // payloads (raw bytes via buildGroupEventFromBytes) bypass
-                // this check since there is no author field to verify.
-                val innerEvent =
-                    com.vitorpamplona.quartz.nip01Core.core.Event
-                        .fromJsonOrNull(innerJson)
-                if (innerEvent != null) {
+                    // `foundation/application-messages.md`, "Receiver
+                    // authentication": the inner author MUST equal the account
+                    // the MLS sender leaf authenticates. Without it any member
+                    // could mint messages attributed to anyone else in the
+                    // group. Payloads with no author field at all (raw bytes
+                    // via buildGroupEventFromBytes) have nothing to compare.
                     val senderIdentity = groupManager.memberIdentityHex(groupId, decrypted.senderLeafIndex)
-                    if (senderIdentity == null || innerEvent.pubKey != senderIdentity) {
+                    if (author != null && (senderIdentity == null || author != senderIdentity)) {
                         return GroupEventResult.Error(
                             groupId,
-                            "MIP-03: inner event pubkey (${innerEvent.pubKey}) does not match MLS sender identity ($senderIdentity)",
+                            "inner event pubkey ($author) does not match MLS sender identity ($senderIdentity)",
                         )
                     }
-                }
 
-                GroupEventResult.ApplicationMessage(
-                    groupId = groupId,
-                    innerEventJson = innerJson,
-                    senderLeafIndex = decrypted.senderLeafIndex,
-                    epoch = decrypted.epoch,
-                )
+                    // A payload that passed the checks is an app-payload
+                    // witness for the canonical branch at its epoch. The
+                    // incumbent is rebuilt and rescored at every resolution, so
+                    // counting only divergent branches would let any fork win
+                    // the witness steps unopposed.
+                    if (author != null && senderIdentity != null) {
+                        convergence.recordCanonicalWitness(groupId, decrypted.epoch, senderIdentity)
+                    }
+
+                    GroupEventResult.ApplicationMessage(
+                        groupId = groupId,
+                        innerEventJson = asEventShapedJson(payload),
+                        senderLeafIndex = decrypted.senderLeafIndex,
+                        epoch = decrypted.epoch,
+                    )
+                }
             }
 
             ContentType.COMMIT -> {
@@ -491,11 +682,13 @@ class MarmotInboundProcessor(
                 // without this every other member silently dropped the
                 // proposal and the admin's commit then failed with "Commit
                 // references unknown proposal" (marmot-interop test 15).
-                val group =
-                    groupManager.getGroup(groupId)
-                        ?: return GroupEventResult.Error(groupId, "Group not found")
+                if (groupManager.getGroup(groupId) == null) {
+                    return GroupEventResult.Error(groupId, "Group not found")
+                }
                 try {
-                    group.receivePublicMessageProposal(pubMsg)
+                    // Staged AND persisted: the pool is an obligation to
+                    // commit, so it has to outlive this process.
+                    groupManager.receiveStandaloneProposal(groupId, pubMsg)
                     GroupEventResult.ProposalStaged(groupId, pubMsg.sender.leafIndex)
                 } catch (e: Exception) {
                     GroupEventResult.Error(
@@ -512,25 +705,92 @@ class MarmotInboundProcessor(
         }
     }
 
+    /**
+     * The account a payload claims as its author, or null when it has none.
+     *
+     * The canonical shape is tried first, because that is what a conformant
+     * peer sends and its checks are the strict ones. The legacy fall-back
+     * exists only for payloads this client itself wrote before the switch to
+     * the unsigned shape: those carry a `sig` member, which the strict decoder
+     * refuses by design. It is deliberately not a general "accept anything"
+     * path — a payload that is neither shape still has no author, and still
+     * fails the comparison rather than passing it.
+     */
+    private fun payloadAuthor(payload: String): HexKey? =
+        MarmotAppEvent.decodeOrNull(payload)?.pubKey
+            ?: Event.fromJsonOrNull(payload)?.pubKey
+
+    /**
+     * Re-shape a canonical payload into the Event-shaped JSON the app layer
+     * consumes.
+     *
+     * The application pipeline is built around `Event`, which requires a `sig`
+     * member; the wire form must not carry one. Rather than force every
+     * consumer to learn a second shape, the empty signature is re-added here at
+     * the boundary. The id is unaffected either way — NIP-01 never hashed the
+     * signature — so a message keeps one identity across the conversion.
+     */
+    private fun asEventShapedJson(payload: String): String {
+        val appEvent = MarmotAppEvent.decodeOrNull(payload) ?: return payload
+        return appEvent.toJson().dropLast(1) + ",\"sig\":\"\"}"
+    }
+
+    /**
+     * Try an app message against the retained candidate branches.
+     *
+     * A payload that decrypts here is NOT delivered: it belongs to a branch
+     * that is not canonical, and handing it to the application would render a
+     * message the canonical state contradicts. What it can do is witness for
+     * that branch — but only if it passes the SAME payload checks a delivered
+     * one does. Decryption alone is not a witness; without the author check a
+     * single member could forge many distinct sender identities and buy a
+     * branch the witness quorum outright.
+     */
+    private suspend fun processCandidateBranchMessage(
+        groupId: HexKey,
+        mlsBytes: ByteArray,
+    ): GroupEventResult {
+        val candidate =
+            convergence.tryCandidateDecrypt(groupId, mlsBytes)
+                ?: return GroupEventResult.Error(
+                    groupId,
+                    "Application message decrypts on no canonical epoch or retained candidate branch",
+                )
+
+        val author = payloadAuthor(candidate.content.decodeToString())
+        val sender = candidate.senderAccount
+        val valid = author != null && sender != null && author == sender
+        if (valid && sender != null) {
+            convergence.recordWitness(groupId, candidate.stateId, sender)
+        }
+        return GroupEventResult.AppMessageOnCandidateBranch(
+            groupId = groupId,
+            branchStateId = candidate.stateId,
+            epoch = candidate.epoch,
+            countedAsWitness = valid,
+        )
+    }
+
+    /**
+     * Apply an inbound commit, letting convergence decide anything ambiguous.
+     *
+     * Commits that extend the current tip apply straight away rather than being
+     * held for a pass. That is not a shortcut past convergence: the state the
+     * commit was applied to is retained, so a competitor authored against the
+     * same parent is still recoverable afterwards — it simply stops
+     * authenticating against the new tip, which is precisely how the fork is
+     * detected. Holding every commit for the quiescence window instead would
+     * tax the overwhelmingly common single-commit case with a second of
+     * latency and change no outcome.
+     */
     private suspend fun handleCommitEvent(
         groupId: HexKey,
         groupEvent: GroupEvent,
     ): GroupEventResult {
-        val group =
-            groupManager.getGroup(groupId)
-                ?: return GroupEventResult.Error(groupId, "Group not found")
-        val currentEpoch = group.epoch
-        commitTracker.addCommit(groupId, currentEpoch, groupEvent)
-
-        // If this is the only commit for this epoch, apply immediately
-        val pending = commitTracker.pendingForEpoch(groupId, currentEpoch)
-        return if (pending.size == 1) {
-            val result = applyCommit(groupId, groupEvent)
-            commitTracker.clearEpoch(groupId, currentEpoch)
-            result
-        } else {
-            GroupEventResult.CommitPending(groupId, currentEpoch)
+        if (groupManager.getGroup(groupId) == null) {
+            return GroupEventResult.Error(groupId, "Group not found")
         }
+        return applyCommit(groupId, groupEvent)
     }
 
     private suspend fun applyCommit(
@@ -591,19 +851,30 @@ class MarmotInboundProcessor(
                             GroupEventResult.Error(groupId, "PublicMessage commit missing confirmation_tag")
                         }
 
-                        // Reject commits that are not for our current epoch.
-                        // Happens most commonly when our own already-applied
-                        // commit is echoed back from the relay after an app
-                        // restart (the in-memory dedup set is cleared), and
-                        // the outer layer decrypts via a retained epoch key.
-                        // Calling `processCommit` on a past-epoch commit
+                        // A commit for an epoch we already left is either an
+                        // echo of something applied, or the losing half of a
+                        // same-epoch race. Convergence tells them apart by
+                        // asking whether any RETAINED state authenticates it:
+                        // an echo authenticates nothing (we consumed its
+                        // parent), a competitor authenticates the parent we
+                        // still hold.
+                        //
+                        // Either way it must not go to `processCommit`, which
                         // partially mutates tree / groupContext / epochSecrets
-                        // before throwing on the confirmation-tag check,
-                        // leaving the local state diverged from every other
-                        // member's — they then can't decrypt anything we
-                        // send next.
+                        // before throwing on the confirmation-tag check and
+                        // leaves local state diverged from every other
+                        // member's. The fork is replayed against a CLONE of
+                        // the retained state instead, so the live group is
+                        // never touched until selection has decided.
                         currentEpoch != null && pubMsg.epoch < currentEpoch -> {
-                            GroupEventResult.Duplicate(groupId)
+                            when (convergence.offerDivergent(groupId, mlsBytes, pubMsg.epoch)) {
+                                ConvergenceAdmission.ADMITTED ->
+                                    GroupEventResult.CommitPending(groupId, pubMsg.epoch, forkDetected = true)
+
+                                ConvergenceAdmission.DUPLICATE,
+                                ConvergenceAdmission.NOT_A_CANDIDATE,
+                                -> GroupEventResult.Duplicate(groupId)
+                            }
                         }
 
                         currentEpoch != null && pubMsg.epoch > currentEpoch -> {
@@ -627,6 +898,12 @@ class MarmotInboundProcessor(
                                     "Invalid membership_tag on PublicMessage commit",
                                 )
                             } else {
+                                // Captured BEFORE the epoch advance: this is
+                                // the parent a competing commit authenticates
+                                // against, and without it a commit that lost
+                                // the race would have nothing to replay on and
+                                // could never be reconsidered.
+                                val preState = groupManager.snapshot(groupId)
                                 groupManager.processCommit(
                                     nostrGroupId = groupId,
                                     commitBytes = pubMsg.content,
@@ -634,6 +911,7 @@ class MarmotInboundProcessor(
                                     confirmationTag = tag,
                                     signature = pubMsg.signature,
                                 )
+                                convergence.recordApplied(groupId, mlsBytes, pubMsg.epoch, preState)
                                 val post = groupManager.getGroup(groupId)
                                 GroupEventResult.CommitProcessed(groupId, post?.epoch ?: 0)
                             }
@@ -662,7 +940,7 @@ class MarmotInboundProcessor(
      * should treat null as an expected "nothing to do here" outcome and log
      * at DEBUG, not as an error.
      */
-    private fun tryDecryptOuterLayer(
+    private suspend fun tryDecryptOuterLayer(
         groupId: HexKey,
         encryptedContent: String,
     ): ByteArray? {
@@ -681,6 +959,19 @@ class MarmotInboundProcessor(
                 return GroupEventEncryption.decrypt(encryptedContent, retainedKey)
             } catch (_: Exception) {
                 // This retained key didn't work — try the next one
+            }
+        }
+
+        // Finally the branches convergence retains. An event published on a
+        // fork is keyed by that branch's epoch exporter, which appears in
+        // neither the canonical nor the retained-canonical set — so without
+        // this a payload on a candidate branch could never even be peeled, and
+        // the branch could never accumulate witnesses.
+        for (candidateKey in convergence.candidateExporterSecrets(groupId)) {
+            try {
+                return GroupEventEncryption.decrypt(encryptedContent, candidateKey)
+            } catch (_: Exception) {
+                // Not this branch — try the next.
             }
         }
 

@@ -1,0 +1,127 @@
+{
+  "scenario_name": "group-data-update/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "group-data-update/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "before",
+        "invitees": [
+          "bob"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob"
+        ]
+      },
+      {
+        "type": "update_group_data",
+        "client": "alice",
+        "name": "after",
+        "pending": "rename"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "rename",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "alice",
+          "bob"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 6,
+      "client": "alice",
+      "pending": "rename",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 2,
+      "member_count": 2,
+      "received_payloads": []
+    },
+    {
+      "type": "client_state",
+      "client": "bob",
+      "epoch": 2,
+      "member_count": 2,
+      "received_payloads": []
+    },
+    {
+      "type": "group_profile",
+      "client": "alice",
+      "name": "after",
+      "description": ""
+    },
+    {
+      "type": "group_profile",
+      "client": "bob",
+      "name": "after",
+      "description": ""
+    },
+    {
+      "type": "clients_converged",
+      "clients": [
+        "alice",
+        "bob"
+      ],
+      "epoch": 2,
+      "member_count": 2
+    }
+  ]
+}

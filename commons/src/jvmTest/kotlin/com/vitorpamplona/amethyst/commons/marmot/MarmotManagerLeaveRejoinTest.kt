@@ -111,10 +111,11 @@ class MarmotManagerLeaveRejoinTest {
                 "Joining must register a subscription for the group",
             )
 
-            // The commit that added Bob also arrives at Alice (echo) — ingest
-            // is idempotent: her own pipeline marks the id processed before
-            // publish, so a replay routes to Ignored.
-            assertIs<MarmotIngestResult.Ignored>(alice.manager.ingest(commitEvent1.signedEvent))
+            // Alice's first add is the FOUNDING add: she was the group's only
+            // member, so it merges locally under the empty publication
+            // obligation and no commit is published. There is therefore no echo
+            // to come back to her — the Welcome above was the whole delivery.
+            assertNull(commitEvent1, "the founding add publishes no commit")
 
             // Step 3: Alice sends a kind:9 inner event. Bob ingests the kind:445.
             val helloBefore = "hello before leave"
@@ -224,7 +225,11 @@ class MarmotManagerLeaveRejoinTest {
         val mls = InMemoryMlsGroupStateStore()
         val kp = InMemoryKeyPackageBundleStore()
         val msg = InMemoryMarmotMessageStore()
-        return Fixture(MarmotManager(signer, mls, msg, kp), mls, kp, msg)
+        // Publish-before-apply needs an acknowledged accept, so a manager with
+        // no publisher can never advance group state. This stands in for a
+        // relay that accepts everything.
+        val acceptingRelay = MarmotPublisher { _, _ -> true }
+        return Fixture(MarmotManager(signer, mls, msg, kp, acceptingRelay), mls, kp, msg)
     }
 }
 

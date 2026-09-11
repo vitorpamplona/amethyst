@@ -22,11 +22,11 @@ use std::env;
 use std::fs::File;
 use std::process;
 
+use ::tls_codec::Serialize;
 use openmls::prelude::*;
 use openmls_basic_credential::SignatureKeyPair;
 use openmls_rust_crypto::OpenMlsRustCrypto;
 use openmls_traits::OpenMlsProvider;
-use tls_codec::Serialize;
 
 const CS: Ciphersuite = Ciphersuite::MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519;
 

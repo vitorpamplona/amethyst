@@ -81,45 +81,61 @@ actual object X25519 {
         val c = Curve25519Field.GF0.copyOf()
         val d = Curve25519Field.GF1.copyOf()
 
+        // The ladder's entire working set, allocated ONCE. Every field
+        // operation in the loop writes into one of these, so 255 iterations
+        // allocate nothing at all — where the allocating form produced a fresh
+        // element per operation, about 1.3 MB of garbage per call.
+        val e = LongArray(10)
+        val f = LongArray(10)
+        val g = LongArray(10)
+        val h = LongArray(10)
+        val dd = LongArray(10)
+        val ff = LongArray(10)
+        val da = LongArray(10)
+        val cb = LongArray(10)
+        val cc = LongArray(10)
+        val tmp = LongArray(10)
+
         for (i in 254 downTo 0) {
             val r = ((z[i shr 3].toLong() shr (i and 7)) and 1)
             Curve25519Field.sel25519(a, b, r)
             Curve25519Field.sel25519(c, d, r)
 
-            val e = Curve25519Field.add(a, c)
-            val aMc = Curve25519Field.sub(a, c)
-            val f = Curve25519Field.add(b, d)
-            val bMd = Curve25519Field.sub(b, d)
+            // a, b, c and d are read only by these four lines; from here on
+            // they are dead and can be overwritten with the new values.
+            Curve25519Field.addInto(e, a, c)
+            Curve25519Field.subInto(g, a, c)
+            Curve25519Field.addInto(f, b, d)
+            Curve25519Field.subInto(h, b, d)
 
-            val dd = Curve25519Field.sqr(e)
-            val ff = Curve25519Field.sqr(aMc)
-            val da = Curve25519Field.mul(bMd, e)
-            val cb = Curve25519Field.mul(f, aMc)
+            Curve25519Field.sqrInto(dd, e)
+            Curve25519Field.sqrInto(ff, g)
+            Curve25519Field.mulInto(da, h, e)
+            Curve25519Field.mulInto(cb, f, g)
 
-            val ePrime = Curve25519Field.add(da, cb)
-            val aPrime = Curve25519Field.sub(da, cb)
+            // e := da + cb and g := da - cb. Reusing e and g is safe: both
+            // held inputs to the four products above, which are now computed.
+            Curve25519Field.addInto(e, da, cb)
+            Curve25519Field.subInto(g, da, cb)
 
-            val bNew = Curve25519Field.sqr(ePrime)
-            val aSqr = Curve25519Field.sqr(aPrime)
-            val dNew = Curve25519Field.mul(aSqr, x)
+            Curve25519Field.sqrInto(b, e)
+            Curve25519Field.sqrInto(g, g)
+            Curve25519Field.mulInto(d, g, x)
 
-            val aNew = Curve25519Field.mul(dd, ff)
-            val cc = Curve25519Field.sub(dd, ff)
-            val tmp = Curve25519Field.mul(cc, Curve25519Field.A24)
-            val ddPlusTmp = Curve25519Field.add(dd, tmp)
-            val cNew = Curve25519Field.mul(cc, ddPlusTmp)
-
-            aNew.copyInto(a)
-            bNew.copyInto(b)
-            cNew.copyInto(c)
-            dNew.copyInto(d)
+            Curve25519Field.mulInto(a, dd, ff)
+            Curve25519Field.subInto(cc, dd, ff)
+            Curve25519Field.mulA24Into(tmp, cc)
+            Curve25519Field.addInto(tmp, dd, tmp)
+            Curve25519Field.mulInto(c, cc, tmp)
 
             Curve25519Field.sel25519(a, b, r)
             Curve25519Field.sel25519(c, d, r)
         }
 
-        val invC = Curve25519Field.inv25519(c)
-        val result = Curve25519Field.mul(a, invC)
-        return Curve25519Field.pack25519(result)
+        // c := 1/c, then a := a/c. `tmp` is free again and serves as the
+        // inversion's scratch element.
+        Curve25519Field.inv25519Into(c, c, tmp)
+        Curve25519Field.mulInto(a, a, c)
+        return Curve25519Field.pack25519(a)
     }
 }

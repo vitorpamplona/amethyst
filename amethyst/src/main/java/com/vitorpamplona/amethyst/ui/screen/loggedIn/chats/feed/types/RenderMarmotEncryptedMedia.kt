@@ -42,10 +42,15 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2Cipher
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04Cipher
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaMeta
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.toMip04MediaMeta
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -58,6 +63,114 @@ fun hasMip04Media(event: Event?): Boolean {
     if (event == null) return false
     val imetas = event.imetas()
     return imetas.any { it.toMip04MediaMeta() != null }
+}
+
+/**
+ * The `encrypted-media-v2` reference on an event, or null.
+ *
+ * Deliberately NOT routed through [imetas]: NIP-92 parsing anchors on a `url`
+ * field, and a v2 tag has no `url` — it carries `locator <kind> <value>` pairs
+ * instead, because the same ciphertext may live at several places and none of
+ * them is privileged. Reading v2 through the NIP-92 parser silently produced
+ * nothing, so a v2 attachment rendered as its caption with the image missing
+ * and no error.
+ */
+fun encryptedMediaV2Of(event: Event?): EncryptedMediaReferenceV2? {
+    if (event == null) return null
+    return event.tags.firstNotNullOfOrNull { tag ->
+        if (tag.size > 1 && tag[0] == "imeta") EncryptedMediaV2.parseImetaTagOrNull(tag) else null
+    }
+}
+
+fun hasEncryptedMediaV2(event: Event?): Boolean = encryptedMediaV2Of(event) != null
+
+/**
+ * Renders an `encrypted-media-v2` attachment.
+ *
+ * Same shape as the MIP-04 path — register a cipher against the URL the blob
+ * will be fetched from, then hand a [BaseMediaContent] to [ZoomableContentView]
+ * — with two differences that come from the format:
+ *
+ * - The URL comes from the FIRST `blossom-v1` locator rather than a `url`
+ *   field. Later locators are mirrors of the same ciphertext; trying them in
+ *   turn would need the download layer to report failure back here, which it
+ *   does not, so this renders the first and leaves fallback for when it can.
+ * - The nonce and plaintext hash come off the tag, so the cipher is built
+ *   through its receiving constructor.
+ */
+@Composable
+fun RenderEncryptedMediaV2(
+    note: Note,
+    bgColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = note.event ?: return
+    val reference = remember(event) { encryptedMediaV2Of(event) }
+    val url =
+        remember(reference) {
+            reference
+                ?.locators
+                ?.firstOrNull { it.kind == EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND }
+                ?.value
+        }
+
+    val nostrGroupId = remember(note) { findGroupIdForNote(note, accountViewModel) }
+    val mediaSecret =
+        remember(nostrGroupId) {
+            nostrGroupId?.let { accountViewModel.marmotMediaExporterSecret(it) }
+        }
+
+    if (reference == null || url == null || mediaSecret == null) {
+        RenderDecryptionError(note, bgColor, accountViewModel, nav)
+        return
+    }
+
+    val cipher = remember(reference, mediaSecret) { EncryptedMediaV2Cipher(mediaSecret, reference) }
+    Amethyst.instance.keyCache.add(url, cipher, reference.mediaType)
+
+    val description = event.alt()
+    val dim = reference.dim?.let { DimensionTag.parse(it) }
+    val content by remember(reference) {
+        mutableStateOf<BaseMediaContent>(
+            if (reference.mediaType.startsWith("image/")) {
+                EncryptedMediaUrlImage(
+                    url = url,
+                    description = description,
+                    hash = reference.plaintextSha256.toHexKey(),
+                    dim = dim,
+                    uri = note.toNostrUri(),
+                    mimeType = reference.mediaType,
+                    encryptionAlgo = EncryptedMediaV2.VERSION,
+                    encryptionKey = mediaSecret,
+                    encryptionNonce = reference.nonce,
+                    thumbhash = reference.thumbhash,
+                )
+            } else {
+                EncryptedMediaUrlVideo(
+                    url = url,
+                    description = description,
+                    hash = reference.plaintextSha256.toHexKey(),
+                    dim = dim,
+                    uri = note.toNostrUri(),
+                    authorName = note.author?.toBestDisplayName(),
+                    mimeType = reference.mediaType,
+                    encryptionAlgo = EncryptedMediaV2.VERSION,
+                    encryptionKey = mediaSecret,
+                    encryptionNonce = reference.nonce,
+                    thumbhash = reference.thumbhash,
+                )
+            },
+        )
+    }
+
+    ZoomableContentView(
+        content,
+        persistentListOf(content),
+        roundedCorner = true,
+        contentScale = ContentScale.FillWidth,
+        accountViewModel,
+    )
 }
 
 /**

@@ -20,17 +20,23 @@
  */
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags
 
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.PushGossip
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * Version tag for Marmot push notification events (kind 446).
- * Current version: "mip05-v1".
+ * The `v` tag every push event carries — kinds 446, 447, 448 and 449.
+ *
+ * A recipient MUST reject any other value. `marmot-push-v1` is not a rename of
+ * the earlier exploratory `mip05-v1`: that version carried tokens in tags with
+ * an empty content, left the sender's leaf implicit, defined no removals and
+ * predated owner authentication entirely. The two are not interoperable, and
+ * refusing the old string is how they stay apart.
  */
 class VersionTag {
     companion object {
         const val TAG_NAME = "v"
-        const val CURRENT_VERSION = "mip05-v1"
+        const val CURRENT_VERSION = PushGossip.VERSION
 
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1) && tag[0] == TAG_NAME) { return null }

@@ -21,15 +21,18 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.sun.management.UnixOperatingSystemMXBean
+import com.vitorpamplona.amethyst.cli.stores.FileIngestDedupStore
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
 import com.vitorpamplona.amethyst.cli.stores.FileMlsGroupStateStore
+import com.vitorpamplona.amethyst.cli.stores.FilePublishObligationStore
 import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
+import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
 import com.vitorpamplona.amethyst.commons.marmot.MarmotSyncPolicy
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -43,6 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -317,6 +321,8 @@ class Context(
     private val mlsStore by lazy { FileMlsGroupStateStore(dataDir.groupsDir) }
     private val keyPackageStore by lazy { FileKeyPackageBundleStore(dataDir.keyPackageBundleFile) }
     private val messageStore by lazy { FileMarmotMessageStore(dataDir.groupsDir) }
+    private val publishObligationStore by lazy { FilePublishObligationStore(dataDir.publishObligationsDir) }
+    private val ingestDedupStore by lazy { FileIngestDedupStore(dataDir.ingestDedupFile) }
 
     /**
      * Shared Nostr event store for this run, opened via [StoreFactory]
@@ -344,7 +350,20 @@ class Context(
     }
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
-    val marmot: MarmotManager by lazy { MarmotManager(signer, mlsStore, messageStore, keyPackageStore) }
+    val marmot: MarmotManager by lazy {
+        MarmotManager(
+            signer,
+            mlsStore,
+            messageStore,
+            keyPackageStore,
+            // Publish-before-apply: a group-state change becomes canonical only
+            // once a relay in the group's own scope returns OK true. Anything
+            // weaker (queued, sent, no error yet) is explicitly not success.
+            MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays) },
+            publishObligationStore,
+            ingestDedupStore,
+        )
+    }
 
     // ------------------------------------------------------------------
     // Cashu (NIP-60 / NIP-61) — shared wallet code from commons
@@ -444,7 +463,7 @@ class Context(
      * Android app.
      */
     suspend fun outboxRelays(): Set<NormalizedRelayUrl> =
-        relaysOf(identity.pubKeyHex)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
+        relaysOf(identity.pubKeyHex)?.allWriteRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: DefaultNIP65RelaySet
 
     /**
@@ -455,7 +474,7 @@ class Context(
      * marked.
      */
     suspend fun nip65ReadRelays(): Set<NormalizedRelayUrl> =
-        relaysOf(identity.pubKeyHex)?.readRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
+        relaysOf(identity.pubKeyHex)?.allReadRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: outboxRelays()
 
     /**
@@ -463,16 +482,23 @@ class Context(
      * to [DefaultDMRelayList] when no kind:10050 has been seen.
      */
     suspend fun inboxRelays(): Set<NormalizedRelayUrl> =
-        dmInboxOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
+        dmInboxOf(identity.pubKeyHex)?.allRelays()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: DefaultDMRelayList.toSet()
 
     /**
-     * KeyPackage relays (MIP-00 kind:10051) for this account. Falls
-     * back to [outboxRelays] when no kind:10051 has been seen — same
-     * fallback the Android app uses for KeyPackage discovery.
+     * Our own KeyPackage relay list (MIP-00 kind:10051). Falls back to
+     * [outboxRelays] when no kind:10051 has been seen — the same fallback the
+     * Android app uses for KeyPackage discovery.
+     *
+     * `allRelays()`, not `relays()`: the filtered accessor drops local-network
+     * entries because someone else's list is attacker-supplied input, but this
+     * is a list we published ourselves. Reading it filtered made a deliberately
+     * configured local relay look like no configuration at all, and the
+     * publisher then fell back to a default relay set the operator never chose
+     * — sending a KeyPackage somewhere they did not pick.
      */
     suspend fun keyPackageRelays(): Set<NormalizedRelayUrl> =
-        keyPackageRelaysOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
+        keyPackageRelaysOf(identity.pubKeyHex)?.allRelays()?.takeIf { it.isNotEmpty() }?.toSet()
             ?: outboxRelays()
 
     /** Union of all three buckets. */
@@ -778,10 +804,12 @@ class Context(
         val kp = keyPackageRelaysOf(pubKey)
         val nip65 = relaysOf(pubKey)
         if (dm == null && kp == null && nip65 == null) return null
+        val dmInbox = dm?.relays().orEmpty()
         return RecipientRelayFetcher.Lists(
-            dmInbox = dm?.relays().orEmpty(),
+            dmInbox = dmInbox,
             keyPackage = kp?.relays().orEmpty(),
             nip65 = nip65,
+            dmInboxWithheld = dmInbox.isEmpty() && dm?.allRelays().orEmpty().isNotEmpty(),
         )
     }
 
@@ -865,14 +893,15 @@ class Context(
         } ?: input
     }
 
-    fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> {
-        val m = marmot.groupMetadata(nostrGroupId) ?: return emptySet()
-        return m.relays
-            .mapNotNull {
-                com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-                    .normalizeOrNull(it)
-            }.toSet()
-    }
+    /**
+     * The group's own relay set, from whichever routing component it carries.
+     *
+     * Delegates rather than reading `MarmotGroupData` directly: a
+     * current-profile group has no `0xF2EE` extension at all, and reading only
+     * that one silently returned an empty set for every group the current
+     * profile creates.
+     */
+    fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> = marmot.groupRelays(nostrGroupId).toSet()
 
     override fun close() {
         // Nothing to persist for an anonymous run (no account dir to write into).

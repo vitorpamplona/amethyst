@@ -1,0 +1,132 @@
+{
+  "scenario_name": "delayed-past-epoch-app-message/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "delayed-past-epoch-app-message/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol",
+      "david"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "delayed-past-epoch-app",
+        "invitees": [
+          "bob",
+          "carol"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "david"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "epoch-one-delayed"
+      },
+      {
+        "type": "withhold_message",
+        "selector": { "sender": "bob", "class": "application" },
+        "label": "old-app"
+      },
+      {
+        "type": "invite_members",
+        "inviter": "alice",
+        "invitees": [
+          "david"
+        ],
+        "pending": "invite-david"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "invite-david",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "carol",
+          "david"
+        ]
+      },
+      {
+        "type": "release_withheld",
+        "label": "old-app"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "carol"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "carol"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 8,
+      "client": "alice",
+      "pending": "invite-david",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "carol",
+      "epoch": 2,
+      "member_count": 4,
+      "received_payloads": [
+        "epoch-one-delayed"
+      ]
+    }
+  ]
+}

@@ -131,10 +131,10 @@ actual object Ed25519 {
 
     private fun newPoint(): Array<LongArray> =
         arrayOf(
-            LongArray(16),
-            LongArray(16),
-            LongArray(16),
-            LongArray(16),
+            LongArray(10),
+            LongArray(10),
+            LongArray(10),
+            LongArray(10),
         )
 
     private fun identityPoint(): Array<LongArray> {
@@ -155,33 +155,65 @@ actual object Ed25519 {
                 p[2].copyOf(),
                 p[3].copyOf(),
             )
-        addPointInPlace(result, q)
+        addPointInPlace(result, q, PointAddScratch())
         return result
+    }
+
+    /**
+     * Scratch for [addPointInPlace].
+     *
+     * Extended-coordinate addition needs ten temporary field elements, and a
+     * scalar multiplication calls it 512 times — twice per scalar bit. Making
+     * each call allocate its own was the single largest source of garbage in
+     * the MLS stack: an allocation profile put 93% of all sampled allocation
+     * in `Curve25519Field.mul/add/sub`, most of it reached from here.
+     *
+     * One instance is created per scalar multiplication and reused by every
+     * step, so the loop allocates nothing.
+     */
+    private class PointAddScratch {
+        val a = LongArray(10)
+        val b = LongArray(10)
+        val c = LongArray(10)
+        val d = LongArray(10)
+        val e = LongArray(10)
+        val f = LongArray(10)
+        val g = LongArray(10)
+        val h = LongArray(10)
+        val t1 = LongArray(10)
+        val t2 = LongArray(10)
     }
 
     private fun addPointInPlace(
         p: Array<LongArray>,
         q: Array<LongArray>,
+        s: PointAddScratch,
     ) {
-        val a = Curve25519Field.sub(p[1], p[0])
-        val t = Curve25519Field.sub(q[1], q[0])
-        val aMul = Curve25519Field.mul(a, t)
-        val b = Curve25519Field.add(p[0], p[1])
-        val t2 = Curve25519Field.add(q[0], q[1])
-        val bMul = Curve25519Field.mul(b, t2)
-        val c = Curve25519Field.mul(p[3], q[3])
-        val cMul = Curve25519Field.mul(c, Curve25519Field.D2)
-        val d = Curve25519Field.mul(p[2], q[2])
-        val dAdd = Curve25519Field.add(d, d)
-        val e = Curve25519Field.sub(bMul, aMul)
-        val f = Curve25519Field.sub(dAdd, cMul)
-        val g = Curve25519Field.add(dAdd, cMul)
-        val h = Curve25519Field.add(bMul, aMul)
+        // Every read of p and q happens in this first block. `scalarMult`
+        // doubles by passing the same point as both arguments, so nothing may
+        // be written back until these are done.
+        Curve25519Field.subInto(s.a, p[1], p[0])
+        Curve25519Field.subInto(s.t1, q[1], q[0])
+        Curve25519Field.mulInto(s.a, s.a, s.t1)
+        Curve25519Field.addInto(s.b, p[0], p[1])
+        Curve25519Field.addInto(s.t2, q[0], q[1])
+        Curve25519Field.mulInto(s.b, s.b, s.t2)
+        Curve25519Field.mulInto(s.c, p[3], q[3])
+        Curve25519Field.mulInto(s.c, s.c, Curve25519Field.D2)
+        Curve25519Field.mulInto(s.d, p[2], q[2])
+        Curve25519Field.addInto(s.d, s.d, s.d)
 
-        Curve25519Field.mul(e, f).copyInto(p[0])
-        Curve25519Field.mul(h, g).copyInto(p[1])
-        Curve25519Field.mul(g, f).copyInto(p[2])
-        Curve25519Field.mul(e, h).copyInto(p[3])
+        Curve25519Field.subInto(s.e, s.b, s.a)
+        Curve25519Field.subInto(s.f, s.d, s.c)
+        Curve25519Field.addInto(s.g, s.d, s.c)
+        Curve25519Field.addInto(s.h, s.b, s.a)
+
+        // Safe to write p now: e, f, g and h are scratch, so no later product
+        // reads anything we are about to overwrite.
+        Curve25519Field.mulInto(p[0], s.e, s.f)
+        Curve25519Field.mulInto(p[1], s.h, s.g)
+        Curve25519Field.mulInto(p[2], s.g, s.f)
+        Curve25519Field.mulInto(p[3], s.e, s.h)
     }
 
     private fun negatePoint(p: Array<LongArray>): Array<LongArray> {
@@ -205,11 +237,13 @@ actual object Ed25519 {
                 p[2].copyOf(),
                 p[3].copyOf(),
             )
+        // One workspace for all 512 additions below.
+        val scratch = PointAddScratch()
         for (i in 255 downTo 0) {
             val b = ((s[i shr 3].toInt() shr (i and 7)) and 1).toLong()
             cswap(result, q, b)
-            addPointInPlace(q, result)
-            addPointInPlace(result, result)
+            addPointInPlace(q, result, scratch)
+            addPointInPlace(result, result, scratch)
             cswap(result, q, b)
         }
         return result
@@ -250,25 +284,7 @@ actual object Ed25519 {
         Curve25519Field.GF1.copyInto(p[2])
 
         val y2 = Curve25519Field.sqr(r)
-        val d =
-            Curve25519Field.gf(
-                0x78A3,
-                0x1359,
-                0x4DCA,
-                0x75EB,
-                0xD8AB,
-                0x4141,
-                0x0A4D,
-                0x0070,
-                0xE898,
-                0x7779,
-                0x4079,
-                0x8CC7,
-                0xFE73,
-                0x2B6F,
-                0x6CEE,
-                0x5203,
-            )
+        val d = Curve25519Field.D
         val num = Curve25519Field.sub(y2, Curve25519Field.GF1)
         val den = Curve25519Field.add(Curve25519Field.mul(d, y2), Curve25519Field.GF1)
         val denInv = Curve25519Field.inv25519(den)

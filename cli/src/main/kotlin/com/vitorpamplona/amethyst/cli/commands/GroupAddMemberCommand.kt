@@ -83,9 +83,9 @@ object GroupAddMemberCommand {
                             seedRelays = seed,
                         )
 
-                // KeyPackage discovery (MIP-00): prefer the invitee's own
-                // kind:10051, then their kind:10002 write marker, then our
-                // bootstrap pool as a last-resort fallback.
+                // KeyPackage discovery: the invitee's kind:10002 write set is
+                // the rule now; their kind:10051 is a legacy hint and our
+                // bootstrap pool a last-resort fallback.
                 val kpRelays =
                     KeyPackageFetcher.fetchRelaysFor(
                         targetKeyPackageRelays = recipient.keyPackage,
@@ -111,9 +111,20 @@ object GroupAddMemberCommand {
                         relays = groupRelays.toList(),
                     )
 
-                // Order matters: commit first (so invitee doesn't join at a future epoch),
-                // then welcome.
-                val commitAck = ctx.publish(commitEvent.signedEvent, groupRelays)
+                // Order matters: commit first (so invitee doesn't join at a future
+                // epoch), then welcome.
+                //
+                // A FOUNDING add returns no commit at all: the creator was the
+                // group's only member, so the Add is merged locally under the
+                // empty publication obligation and the invitee learns epoch 1
+                // from the Welcome's own GroupInfo. There is nothing to send
+                // first, and nothing whose acknowledgement to wait for.
+                val commitAck =
+                    if (commitEvent != null) {
+                        ctx.publish(commitEvent.signedEvent, groupRelays)
+                    } else {
+                        emptyMap()
+                    }
                 val welcomeTargets: Set<NormalizedRelayUrl> =
                     if (welcomeDelivery != null) {
                         // Welcome gift wrap (kind:1059 wrapping kind:444) must
@@ -127,9 +138,17 @@ object GroupAddMemberCommand {
                         //      bootstrapped Amethyst accounts listen on these)
                         // Our own outbox is added as belt-and-braces so we
                         // can re-ingest the welcome ourselves too.
+                        //
+                        // The default set is a bootstrap for someone who has
+                        // advertised NOTHING, not a fallback for someone whose
+                        // advertised inbox we declined to use. When they named
+                        // a local-network relay we refuse to reach, sending
+                        // their invite to a public default set instead is a
+                        // different action than they asked for — so we keep it
+                        // on the group's own relays and say so.
                         buildSet {
                             addAll(recipient.dmInboxOrFallback())
-                            if (isEmpty()) {
+                            if (isEmpty() && !recipient.dmInboxWithheld) {
                                 addAll(DefaultDMRelayList)
                             }
                             addAll(ctx.outboxRelays())
@@ -149,11 +168,15 @@ object GroupAddMemberCommand {
                         "pubkey" to pub,
                         "status" to "invited",
                         "key_package_event_id" to kpEvent.id,
-                        "commit_event_id" to commitEvent.signedEvent.id,
+                        "commit_event_id" to commitEvent?.signedEvent?.id,
+                        // Null commit_event_id is not a failure — it is the
+                        // founding add, which publishes no group message.
+                        "founding_local_merge" to (commitEvent == null),
                         "welcome_event_id" to welcomeDelivery?.giftWrapEvent?.id,
                         "commit_accepted_by" to commitAck.filterValues { it.accepted }.keys.map { it.url },
                         "welcome_accepted_by" to welcomeAck.filterValues { it.accepted }.keys.map { it.url },
                         "welcome_targets" to welcomeTargets.map { it.url },
+                        "welcome_inbox_withheld" to recipient.dmInboxWithheld,
                         "key_package_relays" to kpRelays.map { it.url },
                     ),
                 )

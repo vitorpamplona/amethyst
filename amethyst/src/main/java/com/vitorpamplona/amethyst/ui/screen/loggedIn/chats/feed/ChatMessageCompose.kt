@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
 import com.vitorpamplona.amethyst.commons.model.latestConcordEdit
+import com.vitorpamplona.amethyst.commons.model.latestMarmotEdit
 import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -67,11 +68,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChan
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatZap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderConcordEditedNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEditedNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedMediaV2
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
@@ -81,6 +84,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -620,15 +624,24 @@ fun NoteRow(
             note.event is DraftWrapEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
             note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
+            // `encrypted-media-v2` is a separate branch because its imeta has
+            // no `url` field for the NIP-92 parser above to anchor on.
+            hasEncryptedMediaV2(note.event) -> RenderEncryptedMediaV2(note, bgColor, accountViewModel, nav)
             else -> {
-                // Concord and Buzz channels overlay edits on their messages (kind-3302 and
-                // kind-40003): when one exists, render the newest edit's content instead of the
-                // stale original. One observer for both — a message is only ever one kind, so a
-                // single edits-flow collector per row covers both (and is null for other surfaces).
+                // Concord, Buzz and Marmot all overlay edits on their messages (kinds 3302,
+                // 40003 and 1009): when one exists, render the winning edit's content instead of
+                // the stale original. One observer for all three — a message is only ever one
+                // kind, so a single edits-flow collector per row covers them (and is null for
+                // other surfaces).
                 val edit = observeChatEdit(note)
-                when (edit?.event) {
-                    is ConcordChatEditEvent -> RenderConcordEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
-                    is StreamMessageEditEvent -> RenderBuzzEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                val editEvent = edit?.event
+                when {
+                    editEvent is ConcordChatEditEvent -> RenderEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    editEvent is StreamMessageEditEvent -> RenderBuzzEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    // A Marmot edit is a plain inner app event, not a typed
+                    // class, so it is matched on its kind rather than its type.
+                    editEvent != null && editEvent.kind == MarmotAppEvent.KIND_EDIT ->
+                        RenderEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
                     else -> RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
                 }
             }
@@ -646,7 +659,7 @@ fun observeChatEdit(note: Note): Note? {
     val latest by
         produceState<Note?>(initialValue = null, note.idHex) {
             note.flow().edits.stateFlow.collect {
-                value = note.latestConcordEdit() ?: note.latestBuzzEdit()
+                value = note.latestConcordEdit() ?: note.latestBuzzEdit() ?: note.latestMarmotEdit()
             }
         }
     return latest

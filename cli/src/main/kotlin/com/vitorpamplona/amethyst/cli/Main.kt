@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.cli.commands.KeyPackageCommands
 import com.vitorpamplona.amethyst.cli.commands.KindCommand
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
 import com.vitorpamplona.amethyst.cli.commands.LogoffCommand
+import com.vitorpamplona.amethyst.cli.commands.MarmotMediaCommands
 import com.vitorpamplona.amethyst.cli.commands.MarmotResetCommand
 import com.vitorpamplona.amethyst.cli.commands.MessageCommands
 import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.StatusCommand
 import com.vitorpamplona.amethyst.cli.commands.StoreCommands
+import com.vitorpamplona.amethyst.cli.commands.StreamCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
@@ -370,12 +372,14 @@ private suspend fun marmotDispatch(
     route(
         name = "marmot",
         tail = tail,
-        usage = "marmot <key-package|group|message|await|reset>",
+        usage = "marmot <key-package|group|message|media|stream|await|reset>",
         routes =
             mapOf(
                 "key-package" to { rest -> KeyPackageCommands.dispatch(dataDir, rest) },
                 "group" to { rest -> GroupCommands.dispatch(dataDir, rest) },
                 "message" to { rest -> MessageCommands.dispatch(dataDir, rest) },
+                "media" to { rest -> MarmotMediaCommands.dispatch(dataDir, rest) },
+                "stream" to { rest -> StreamCommands.dispatch(dataDir, rest) },
                 "await" to { rest -> AwaitCommands.dispatch(dataDir, rest) },
                 "reset" to { rest -> MarmotResetCommand.run(dataDir, rest) },
             ),
@@ -844,8 +848,10 @@ private fun printUsage() {
         |  marmot group rename GID NAME               commit a rename
         |  marmot group promote GID NPUB              add admin
         |  marmot group demote GID NPUB               remove admin
+        |  marmot group set-retention GID SECS        set disappearing messages (0 disables)
         |  marmot group remove GID NPUB               remove member
         |  marmot group leave GID                     self-remove
+        |  marmot group disband GID --yes             end the group for everyone (irreversible)
         |
         |  marmot message send GID TEXT               publish kind:9 inner event into the group
         |  marmot message list GID [--limit N]        dump decrypted inner events

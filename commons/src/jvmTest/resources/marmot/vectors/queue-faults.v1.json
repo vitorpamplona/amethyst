@@ -1,0 +1,125 @@
+{
+  "scenario_name": "queue-faults/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "queue-faults/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "faults",
+        "invitees": [
+          "bob",
+          "carol"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "bob:first"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "carol:second"
+      },
+      {
+        "type": "duplicate_message",
+        "selector": { "sender": "bob", "class": "application" }
+      },
+      {
+        "type": "withhold_message",
+        "selector": { "sender": "bob", "class": "application", "occurrence": 1 },
+        "label": "delayed-copy"
+      },
+      {
+        "type": "reorder_messages",
+        "order": [
+          { "sender": "carol", "class": "application" },
+          { "sender": "bob", "class": "application" }
+        ]
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice"
+        ]
+      },
+      {
+        "type": "release_withheld",
+        "label": "delayed-copy"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "alice"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 1,
+      "member_count": 3,
+      "received_payloads": [
+        "carol:second",
+        "bob:first"
+      ]
+    }
+  ]
+}

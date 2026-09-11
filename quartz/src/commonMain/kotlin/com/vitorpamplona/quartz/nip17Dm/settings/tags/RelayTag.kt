@@ -34,16 +34,34 @@ class RelayTag {
 
         fun notMatch(tag: Array<String>) = !(tag.has(0) && tag[0] == TAG_NAME)
 
+        /**
+         * Parse, dropping local-network entries.
+         *
+         * The drop is for lists that came from SOMEONE ELSE: a relay list is
+         * attacker-supplied input, and an entry naming `127.0.0.1` or an
+         * RFC 1918 address would aim our connection at our own machine or LAN.
+         * Use [parseUnfiltered] to read back a list this account published
+         * itself.
+         */
         fun parse(tag: Array<String>): NormalizedRelayUrl? {
+            val relay = parseUnfiltered(tag)
+            ensure(relay != null && !relay.isLocalHost()) { return null }
+            return relay
+        }
+
+        /**
+         * Parse without the local-network drop, for reading back OUR OWN list.
+         *
+         * A user who configured a local relay meant it, and [parse] would
+         * report their list as empty — which a publisher then treats as
+         * "unconfigured" and answers with a default relay set the user never
+         * chose.
+         */
+        fun parseUnfiltered(tag: Array<String>): NormalizedRelayUrl? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-
-            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
-
-            ensure(relay != null && !relay.isLocalHost()) { return null }
-
-            return relay
+            return RelayUrlNormalizer.normalizeOrNull(tag[1])
         }
 
         fun assemble(relay: NormalizedRelayUrl) = arrayOf(TAG_NAME, relay.url)

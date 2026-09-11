@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.marmot
 
 import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -111,16 +112,218 @@ class AndroidMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             writeMutex.withLock {
-                val file = messagesFile(nostrGroupId)
-                if (file.exists() && !file.delete()) {
-                    Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
+                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId))) {
+                    if (file.exists() && !file.delete()) {
+                        Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
+                    }
                 }
             }
         }
     }
 
-    private fun readAll(nostrGroupId: String): List<String> {
-        val file = messagesFile(nostrGroupId)
+    private fun epochsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epochs")
+
+    /**
+     * Which MLS epoch delivered an inner event. Agent text streams bind the
+     * epoch into their record key context, so a receiver needs the epoch that
+     * carried the stream's kind:1200 anchor rather than the group's current
+     * one — a commit landing in between would otherwise derive a different key
+     * and render nothing.
+     *
+     * Stored through the same encrypted codec as the messages: the ids are as
+     * sensitive as the payloads they point at.
+     */
+    override suspend fun recordEpoch(
+        nostrGroupId: String,
+        innerEventId: String,
+        epoch: Long,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            try {
+                val line = "$innerEventId $epoch"
+                val existing = readAllFrom(epochsFile(nostrGroupId)).toMutableList()
+                if (line in existing) return@withLock
+                existing.add(line)
+                writeAllTo(epochsFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordEpoch($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadEpochs(nostrGroupId: String): Map<String, Long> =
+        withContext(Dispatchers.IO) {
+            try {
+                readAllFrom(epochsFile(nostrGroupId))
+                    .mapNotNull { line ->
+                        val parts = line.trim().split(' ')
+                        if (parts.size != 2) return@mapNotNull null
+                        val epoch = parts[1].toLongOrNull() ?: return@mapNotNull null
+                        parts[0] to epoch
+                    }.toMap()
+            } catch (e: Exception) {
+                Log.e(TAG, "loadEpochs($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
+
+    private fun expiriesFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "expiries")
+
+    /**
+     * When a message stops being displayable, for a group that expires them.
+     *
+     * Encrypted like the messages: an expiry names an inner event id and says
+     * roughly when it was sent, which is conversation metadata.
+     *
+     * First write wins. The expiry is pinned to the retention of the message's
+     * own source epoch, so re-persisting the same message after a restart —
+     * which happens, because the ratchet rewinds and relays replay — must not
+     * re-time it under whatever the setting has since become.
+     */
+    override suspend fun recordExpiry(
+        nostrGroupId: String,
+        innerEventId: String,
+        expiresAtSecs: Long,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            try {
+                val existing = readAllFrom(expiriesFile(nostrGroupId)).toMutableList()
+                if (existing.any { it.substringBefore(' ') == innerEventId }) return@withLock
+                existing.add("$innerEventId $expiresAtSecs")
+                writeAllTo(expiriesFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordExpiry($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> =
+        withContext(Dispatchers.IO) {
+            try {
+                readAllFrom(expiriesFile(nostrGroupId))
+                    .mapNotNull { line ->
+                        val parts = line.trim().split(' ')
+                        if (parts.size != 2) return@mapNotNull null
+                        val at = parts[1].toLongOrNull() ?: return@mapNotNull null
+                        parts[0] to at
+                    }.toMap()
+            } catch (e: Exception) {
+                Log.e(TAG, "loadExpiries($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
+
+    /**
+     * Delete messages and forget their expiries, rewriting both logs.
+     *
+     * A rewrite rather than a tombstone: the point of a disappearing message
+     * is that the plaintext is gone from disk, and this store holds the only
+     * copy — the ratchet moved past the ciphertext it came from long ago.
+     */
+    override suspend fun removeMessages(
+        nostrGroupId: String,
+        innerEventIds: Set<String>,
+    ) = withContext(Dispatchers.IO) {
+        if (innerEventIds.isEmpty()) return@withContext
+        writeMutex.withLock {
+            try {
+                val kept =
+                    readAll(nostrGroupId).filter { json ->
+                        val id = Event.fromJsonOrNull(json)?.id
+                        id == null || id !in innerEventIds
+                    }
+                writeAll(nostrGroupId, kept)
+
+                val keptExpiries =
+                    readAllFrom(expiriesFile(nostrGroupId)).filter { it.substringBefore(' ') !in innerEventIds }
+                writeAllTo(expiriesFile(nostrGroupId), keptExpiries)
+            } catch (e: Exception) {
+                Log.e(TAG, "removeMessages($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun epochRetentionsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epoch_retentions")
+
+    /**
+     * What retention this group required at each epoch.
+     *
+     * First write wins per epoch: an epoch's required components are fixed the
+     * moment it exists, so a second answer for the same epoch would be a bug
+     * rather than an update.
+     */
+    override suspend fun recordEpochRetention(
+        nostrGroupId: String,
+        epoch: Long,
+        retentionSecs: Long,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            try {
+                val existing = readAllFrom(epochRetentionsFile(nostrGroupId)).toMutableList()
+                if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
+                existing.add("$epoch $retentionSecs")
+                writeAllTo(epochRetentionsFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordEpochRetention($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadEpochRetentions(nostrGroupId: String): Map<Long, Long> =
+        withContext(Dispatchers.IO) {
+            try {
+                readAllFrom(epochRetentionsFile(nostrGroupId))
+                    .mapNotNull { line ->
+                        val parts = line.trim().split(' ')
+                        if (parts.size != 2) return@mapNotNull null
+                        val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
+                        val secs = parts[1].toLongOrNull() ?: return@mapNotNull null
+                        epoch to secs
+                    }.toMap()
+            } catch (e: Exception) {
+                Log.e(TAG, "loadEpochRetentions($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
+
+    private fun snapshotFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "snapshot")
+
+    /**
+     * The group state the last kind:1210 rows were derived from.
+     *
+     * Encrypted like everything else here: it names members and admins, which
+     * is the group's membership written down.
+     *
+     * A single entry rather than an append log — this is one baseline, not a
+     * history, and the previous one is worthless the moment rows are derived
+     * against it.
+     */
+    override suspend fun recordGroupSnapshot(
+        nostrGroupId: String,
+        snapshotJson: String,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            try {
+                writeAllTo(snapshotFile(nostrGroupId), listOf(snapshotJson))
+            } catch (e: Exception) {
+                Log.e(TAG, "recordGroupSnapshot($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadGroupSnapshot(nostrGroupId: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                readAllFrom(snapshotFile(nostrGroupId)).firstOrNull()
+            } catch (e: Exception) {
+                Log.e(TAG, "loadGroupSnapshot($nostrGroupId) FAILED: ${e.message}", e)
+                null
+            }
+        }
+
+    private fun readAll(nostrGroupId: String): List<String> = readAllFrom(messagesFile(nostrGroupId))
+
+    private fun readAllFrom(file: File): List<String> {
         if (!file.exists()) return emptyList()
         val encrypted = file.readBytes()
         val plain = encryption.decrypt(encrypted) ?: return emptyList()
@@ -151,8 +354,12 @@ class AndroidMarmotMessageStore(
     private fun writeAll(
         nostrGroupId: String,
         messages: List<String>,
+    ) = writeAllTo(messagesFile(nostrGroupId), messages)
+
+    private fun writeAllTo(
+        file: File,
+        messages: List<String>,
     ) {
-        val file = messagesFile(nostrGroupId)
         file.parentFile?.mkdirs()
 
         val encodedEntries = messages.map { it.encodeToByteArray() }

@@ -20,9 +20,13 @@
  */
 package com.vitorpamplona.quartz.marmot.mls.group
 
+import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
+import com.vitorpamplona.quartz.marmot.appComponents.GroupLifecycleV1
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.marmot.mls.components.ComponentsList
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager.Companion.EPOCH_RETENTION_WINDOW
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.messages.ExternalJoinResult
@@ -104,6 +108,20 @@ class MlsGroupManager(
     private val retainedEpochs = mutableMapOf<HexKey, MutableList<RetainedEpochSecrets>>()
 
     /**
+     * Bumped whenever a group's retained-epoch window changes, and compared
+     * against what was last written in [persistGroup].
+     *
+     * The window only moves when an epoch advances, but [persistGroup] runs on
+     * every application message too — sending one advances the sender's ratchet
+     * and that has to be durable. Re-encoding and rewriting an unchanged
+     * retention window on each of those was measurable: it is one TlsWriter and
+     * one byte array per retained epoch, plus a store write, for bytes
+     * identical to the ones already there.
+     */
+    private val retainedEpochRevision = mutableMapOf<HexKey, Long>()
+    private val retainedEpochPersisted = mutableMapOf<HexKey, Long>()
+
+    /**
      * Restore all groups from persistent storage on startup.
      * Call this once during Account initialization.
      */
@@ -129,6 +147,9 @@ class MlsGroupManager(
                             retained
                                 .map { RetainedEpochSecrets.decodeTls(TlsReader(it)) }
                                 .toMutableList()
+                        // What was just loaded is by definition what is on
+                        // disk, so the first persist has nothing to rewrite.
+                        retainedEpochPersisted[nostrGroupId] = retainedEpochRevision[nostrGroupId] ?: 0L
                         Log.d(TAG) { "restoreAll(): restored ${retained.size} retained epochs for $nostrGroupId" }
                     }
                 } catch (e: Exception) {
@@ -151,6 +172,70 @@ class MlsGroupManager(
      * Get an active group by its Nostr group ID.
      */
     fun getGroup(nostrGroupId: HexKey): MlsGroup? = groups[nostrGroupId]
+
+    /**
+     * A snapshot of a group's current state, WITHOUT persisting anything.
+     *
+     * Convergence keeps a bounded window of these so a commit that lost a
+     * same-epoch race still has a parent to replay against later. Taking the
+     * snapshot must not touch storage: it happens on every applied commit,
+     * and the state that matters is already persisted by the apply itself.
+     */
+    fun snapshot(nostrGroupId: HexKey): MlsGroupState? = groups[nostrGroupId]?.saveState()
+
+    /**
+     * Replace a group's state wholesale — the convergence rewind primitive.
+     *
+     * Used when branch selection picks a candidate branch over what was
+     * canonical. The outgoing epoch's secrets are pushed into the retention
+     * window first, so application messages already sent on the abandoned
+     * branch still decrypt for as long as any other past epoch would.
+     *
+     * This deliberately takes a whole state rather than a commit: the state was
+     * produced by replaying MLS bytes during graph construction, and replaying
+     * them a second time here would risk the two answers differing.
+     */
+    suspend fun installState(
+        nostrGroupId: HexKey,
+        state: MlsGroupState,
+    ) = mutex.withLock {
+        val current = groups[nostrGroupId]
+        val changed =
+            current == null ||
+                !current
+                    .saveState()
+                    .groupContext
+                    .toTlsBytes()
+                    .contentEquals(state.groupContext.toTlsBytes())
+        if (!changed) return@withLock
+
+        val outgoing = current?.retainedSecrets()
+        groups[nostrGroupId] = MlsGroup.restore(state)
+        // Retain by outgoing epoch even when the epoch NUMBER is unchanged: a
+        // same-epoch rewind swaps one epoch-N state for a different one, and
+        // the abandoned N still has traffic addressed to it.
+        if (outgoing != null) pushRetainedEpoch(nostrGroupId, outgoing)
+        persistGroup(nostrGroupId)
+    }
+
+    /**
+     * Register and persist a group built elsewhere, e.g. by
+     * `CurrentProfileGroupFactory`.
+     *
+     * Group creation is the one place a group cannot be built through this
+     * manager: a current-profile leaf must carry an identity proof over its OWN
+     * signature key, which only an account signer — possibly a remote bunker —
+     * can produce, so the keypair is generated, authorized, and only then built
+     * into a leaf. The manager takes ownership of the finished group here.
+     */
+    suspend fun adoptGroup(
+        nostrGroupId: HexKey,
+        group: MlsGroup,
+    ) = mutex.withLock {
+        require(!groups.containsKey(nostrGroupId)) { "Group $nostrGroupId already exists" }
+        groups[nostrGroupId] = group
+        persistGroup(nostrGroupId)
+    }
 
     /**
      * List all active Nostr group IDs.
@@ -223,9 +308,10 @@ class MlsGroupManager(
             val group = MlsGroup.processWelcome(welcomeBytes, bundle)
 
             val derivedId =
-                group.currentMarmotData()?.nostrGroupId
+                group.currentNostrGroupId()
                     ?: throw IllegalArgumentException(
-                        "Welcome GroupContext is missing the NostrGroupData extension — cannot derive nostrGroupId",
+                        "Welcome GroupContext carries no nostr routing: neither the current profile's " +
+                            "0x8004 component nor the legacy 0xF2EE extension — cannot derive nostrGroupId",
                     )
 
             if (hintNostrGroupId != null && hintNostrGroupId != derivedId) {
@@ -285,6 +371,223 @@ class MlsGroupManager(
             persistGroup(nostrGroupId)
             result
         }
+
+    /**
+     * A locally prepared Commit that has NOT been applied.
+     *
+     * `protocol-core/publish-lifecycle.md` requires publish-before-apply: a
+     * locally generated group-state change must not become canonical until its
+     * publish obligation is confirmed. Applying first and rolling back on
+     * failure is not equivalent — between the two there is a window in which
+     * this client is forked from every peer, and a crash inside that window
+     * makes the fork permanent.
+     *
+     * So the commit is prepared on a CLONE restored from [priorState]. The live
+     * group is untouched, keeps its pending proposals (which is exactly the
+     * "proposal stays available for retry" rule on failure), and [pendingState]
+     * becomes canonical only via [installState] once publication is confirmed.
+     */
+    class StagedCommit(
+        val result: CommitResult,
+        /** Canonical state the commit was generated from. */
+        val priorState: MlsGroupState,
+        /** What becomes canonical once the publish obligation succeeds. */
+        val pendingState: MlsGroupState,
+    )
+
+    /**
+     * Prepare a Commit without applying it, by running [prepare] on a clone.
+     *
+     * The clone's pre-commit exporter secret equals the live group's, so the
+     * outbound kind:445 is outer-encrypted with the same epoch-N key it would
+     * have been either way.
+     */
+    private suspend fun stage(
+        nostrGroupId: HexKey,
+        prepare: (MlsGroup) -> CommitResult,
+    ): StagedCommit =
+        mutex.withLock {
+            val live = requireGroup(nostrGroupId)
+            val priorState = live.saveState()
+            val clone = MlsGroup.restore(priorState)
+            val result = prepare(clone)
+            StagedCommit(result, priorState, clone.saveState())
+        }
+
+    /** Stage an Add. See [StagedCommit] for why this does not apply. */
+    suspend fun stageAddMember(
+        nostrGroupId: HexKey,
+        keyPackageBytes: ByteArray,
+    ): StagedCommit = stageAddMembers(nostrGroupId, listOf(keyPackageBytes))
+
+    /** Stage several Adds as ONE commit. See [MlsGroup.addMembers]. */
+    suspend fun stageAddMembers(
+        nostrGroupId: HexKey,
+        keyPackagesBytes: List<ByteArray>,
+    ): StagedCommit = stage(nostrGroupId) { it.addMembers(keyPackagesBytes) }
+
+    /** Stage a Remove. See [StagedCommit] for why this does not apply. */
+    suspend fun stageRemoveMember(
+        nostrGroupId: HexKey,
+        targetLeafIndex: Int,
+    ): StagedCommit = stage(nostrGroupId) { it.removeMember(targetLeafIndex) }
+
+    /**
+     * Refuse a GroupContextExtensions change from a non-admin.
+     *
+     * The admin set is read profile-agnostically: a current-profile group
+     * keeps it in the `0x8003` admin-policy component, a legacy group inside
+     * the `0xF2EE` extension. Reading only the legacy one made
+     * `adminsConfigured` false for every current-profile group, which skipped
+     * the gate entirely rather than failing closed — the group would then
+     * refuse the commit on arrival at every peer, so the only thing the
+     * missing check bought was a locally-diverged copy.
+     *
+     * A group with NO admin set at all is still open: that is the MIP-01
+     * bootstrap state, before any admin policy has been installed.
+     */
+    private fun requireAdminForExtensionChange(group: MlsGroup) {
+        val admins = group.currentAdminIdentities()
+        check(admins.isEmpty() || group.isLocalAdmin()) {
+            "MIP-01: only admins may update group extensions"
+        }
+    }
+
+    /** Stage a GroupContextExtensions change. See [StagedCommit]. */
+    suspend fun stageUpdateGroupExtensions(
+        nostrGroupId: HexKey,
+        extensions: List<Extension>,
+    ): StagedCommit {
+        val live = requireGroup(nostrGroupId)
+        requireAdminForExtensionChange(live)
+        return stage(nostrGroupId) { clone ->
+            clone.proposeGroupContextExtensions(extensions)
+            clone.commit()
+        }
+    }
+
+    /**
+     * Stage an `app_data_update` proposal + Commit for one component.
+     *
+     * The current profile's carrier for group metadata. A GroupContextExtensions
+     * change rewrites the WHOLE extension set, which is what MIP-01 had to do
+     * with its single monolithic blob; `app_data_update` names one component
+     * id, so two admins changing different components do not clobber each
+     * other's work just by racing.
+     *
+     * Passing null [data] removes the component.
+     */
+    suspend fun stageAppDataUpdate(
+        nostrGroupId: HexKey,
+        componentId: Int,
+        data: ByteArray?,
+    ): StagedCommit {
+        requireAdminForExtensionChange(requireGroup(nostrGroupId))
+        return stage(nostrGroupId) { clone ->
+            if (data == null) clone.proposeAppDataRemoval(componentId) else clone.proposeAppDataUpdate(componentId, data)
+            clone.commit()
+        }
+    }
+
+    /**
+     * Stage the enablement Commit that makes `marmot.group.lifecycle.v1`
+     * (`0x800c`) required, per `app-components/group-lifecycle-v1.md`
+     * ("Enablement for existing groups").
+     *
+     * One Commit that adds the `active` state when it is absent and adds
+     * `0x800c` to the required `app_components` list, and carries nothing else
+     * — a peer validates the enablement shape and rejects a Commit that folds
+     * unrelated proposals into it. Enablement does not disband the group.
+     *
+     * A group that already requires the component needs no enablement; callers
+     * check [MarmotGroupState.requires] first rather than committing a no-op
+     * epoch.
+     */
+    suspend fun stageEnableDisbanding(nostrGroupId: HexKey): StagedCommit {
+        requireAdminForExtensionChange(requireGroup(nostrGroupId))
+        return stage(nostrGroupId) { clone ->
+            val dictionary = clone.appDataDictionary()
+            val required = ComponentsList.supportedOrRequired(dictionary).toMutableSet()
+            required.add(GroupLifecycleV1.COMPONENT_ID)
+            clone.proposeAppDataUpdate(ComponentsList.APP_COMPONENTS_ID, ComponentsList.encode(required))
+            if (dictionary[GroupLifecycleV1.COMPONENT_ID] == null) {
+                clone.proposeAppDataUpdate(GroupLifecycleV1.COMPONENT_ID, GroupLifecycleV1.ACTIVE.encode())
+            }
+            clone.commit()
+        }
+    }
+
+    /**
+     * Stage the terminal disband Commit, in the exact shape
+     * `app-components/group-lifecycle-v1.md` ("Disband update and Commit
+     * shape") requires:
+     *
+     * - exactly one lifecycle update, to `disbanded`;
+     * - exactly one admin-policy replacement naming ONLY the committer's
+     *   account — carried even when the committer was already the sole admin;
+     * - a Remove for every candidate-parent leaf except the committing leaf,
+     *   including the committer's own other devices; and
+     * - nothing else, all inline.
+     *
+     * A peer validates the whole set, so a Commit that carries only the
+     * lifecycle update — which is what this used to stage — is rejected
+     * outright as an unsupported lifecycle transition. The group would stay
+     * live for every other member while reading as ended here, which is the
+     * one outcome a terminal state must never produce.
+     *
+     * A single-leaf group therefore still produces a valid disband Commit,
+     * with no Remove proposals at all.
+     */
+    suspend fun stageDisband(nostrGroupId: HexKey): StagedCommit {
+        requireAdminForExtensionChange(requireGroup(nostrGroupId))
+        return stage(nostrGroupId) { clone ->
+            val committer =
+                clone.memberIdentity(clone.leafIndex)
+                    ?: throw IllegalStateException("Group $nostrGroupId has no identity for the local leaf")
+            clone.proposeAppDataUpdate(GroupLifecycleV1.COMPONENT_ID, GroupLifecycleV1.DISBANDED.encode())
+            clone.proposeAppDataUpdate(AdminPolicyV1.COMPONENT_ID, AdminPolicyV1(listOf(committer)).encode())
+            // Every other leaf, not every other ACCOUNT: the spec removes the
+            // committer's own remaining devices too, so the final tree holds
+            // the one committing leaf and nothing else.
+            for ((leafIndex, _) in clone.members()) {
+                if (leafIndex != clone.leafIndex) clone.proposeRemove(leafIndex)
+            }
+            clone.commit()
+        }
+    }
+
+    /**
+     * Stage a peer's standalone proposal and PERSIST the group.
+     *
+     * Staging alone only mutates memory, and a staged proposal is an
+     * obligation rather than a message: a departing member's `SelfRemove` sits
+     * in the pool until someone commits it. Losing it to a restart leaves the
+     * leaver in the tree, still holding the group's keys, with nobody holding
+     * the proposal that would evict them — so this writes through the same way
+     * an epoch change does.
+     */
+    suspend fun receiveStandaloneProposal(
+        nostrGroupId: HexKey,
+        pubMsg: PublicMessage,
+    ) = mutex.withLock {
+        requireGroup(nostrGroupId).receivePublicMessageProposal(pubMsg)
+        persistGroup(nostrGroupId)
+    }
+
+    /** Whether [nostrGroupId] has a staged proposal waiting for a Commit. */
+    fun hasPendingProposals(nostrGroupId: HexKey): Boolean = groups[nostrGroupId]?.hasPendingProposals() == true
+
+    /**
+     * Stage a Commit over whatever proposals are already staged.
+     *
+     * Unlike every other `stage*` entry point this one has nothing of its own
+     * to propose — the proposals are already in the LIVE group's pool, put
+     * there by ingesting a peer's standalone proposal. That pool travels with
+     * [MlsGroup.saveState], so the clone inherits it; when it did not, this
+     * committed an empty proposal list, advanced the epoch, and dropped the
+     * very proposal it was called to apply.
+     */
+    suspend fun stageCommit(nostrGroupId: HexKey): StagedCommit = stage(nostrGroupId) { it.commit() }
 
     /**
      * Process a received Commit, advancing the epoch.
@@ -498,11 +801,7 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            val currentMarmot = group.currentMarmotData()
-            val adminsConfigured = currentMarmot != null && currentMarmot.adminPubkeys.isNotEmpty()
-            check(!adminsConfigured || group.isLocalAdmin()) {
-                "MIP-01: only admins may update group extensions"
-            }
+            requireAdminForExtensionChange(group)
             val retainedBefore = group.retainedSecrets()
             group.proposeGroupContextExtensions(extensions)
             val result = group.commit()
@@ -537,6 +836,8 @@ class MlsGroupManager(
     private suspend fun removeGroupStateUnlocked(nostrGroupId: HexKey) {
         groups.remove(nostrGroupId)
         retainedEpochs.remove(nostrGroupId)
+        retainedEpochRevision.remove(nostrGroupId)
+        retainedEpochPersisted.remove(nostrGroupId)
         store.delete(nostrGroupId)
     }
 
@@ -564,6 +865,8 @@ class MlsGroupManager(
             }
             groups.clear()
             retainedEpochs.clear()
+            retainedEpochRevision.clear()
+            retainedEpochPersisted.clear()
         }
 
     // --- Key Export ---
@@ -649,9 +952,11 @@ class MlsGroupManager(
             Log.d(TAG) { "persistGroup($nostrGroupId): serialized ${encoded.size} bytes, calling store.save" }
             store.save(nostrGroupId, encoded)
 
-            // Also persist retained epochs
+            // Also persist retained epochs — but only when the window actually
+            // moved. See [retainedEpochRevision].
             val retained = retainedEpochs[nostrGroupId]
-            if (retained != null) {
+            val revision = retainedEpochRevision[nostrGroupId] ?: 0L
+            if (retained != null && retainedEpochPersisted[nostrGroupId] != revision) {
                 val retainedBytes =
                     retained.map { epoch ->
                         val writer = TlsWriter()
@@ -659,6 +964,7 @@ class MlsGroupManager(
                         writer.toByteArray()
                     }
                 store.saveRetainedEpochs(nostrGroupId, retainedBytes)
+                retainedEpochPersisted[nostrGroupId] = revision
                 Log.d(TAG) { "persistGroup($nostrGroupId): persisted ${retainedBytes.size} retained epochs" }
             }
         } catch (e: Exception) {
@@ -684,6 +990,7 @@ class MlsGroupManager(
         while (retained.size > EPOCH_RETENTION_WINDOW) {
             retained.removeAt(0)
         }
+        retainedEpochRevision[nostrGroupId] = (retainedEpochRevision[nostrGroupId] ?: 0L) + 1
     }
 
     private fun tryDecryptWithRetainedEpoch(

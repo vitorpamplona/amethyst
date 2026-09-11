@@ -53,6 +53,17 @@ object RecipientRelayFetcher {
         val keyPackage: List<NormalizedRelayUrl>,
         /** Latest kind:10002 the user published (null if none seen). */
         val nip65: AdvertisedRelayListEvent?,
+        /**
+         * True when the user DID advertise a kind:10050 inbox but every entry
+         * was dropped by the local-network filter, leaving [dmInbox] empty.
+         *
+         * "Advertised nothing" and "advertised only relays we refuse to reach"
+         * are different facts, and the caller has to be able to tell them
+         * apart. Treating the second as the first sends a gift wrap addressed
+         * to this user to a default relay set they never chose — the opposite
+         * of what the filter is for.
+         */
+        val dmInboxWithheld: Boolean = false,
     ) {
         /** Read-marker relays from kind:10002. Mirrors `User.inboxRelays()`. */
         fun nip65Read(): List<NormalizedRelayUrl> = nip65?.readRelaysNorm().orEmpty()
@@ -125,10 +136,12 @@ object RecipientRelayFetcher {
             }
         }
 
+        val dmInbox = dm?.relays().orEmpty()
         return Lists(
-            dmInbox = dm?.relays().orEmpty(),
+            dmInbox = dmInbox,
             keyPackage = kp?.relays().orEmpty(),
             nip65 = nip65,
+            dmInboxWithheld = dmInbox.isEmpty() && dm?.allRelays().orEmpty().isNotEmpty(),
         )
     }
 }

@@ -1,0 +1,122 @@
+{
+  "scenario_name": "invite-member/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.20",
+  "seed": null,
+  "scenario": {
+    "name": "invite-member/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "invite-member",
+        "invitees": [
+          "bob"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "invite_members",
+        "inviter": "alice",
+        "invitees": [
+          "carol"
+        ],
+        "pending": "invite-carol"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "invite-carol",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "observe",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 6,
+      "client": "alice",
+      "pending": "invite-carol",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 2,
+      "member_count": 3,
+      "received_payloads": []
+    },
+    {
+      "type": "client_state",
+      "client": "bob",
+      "epoch": 2,
+      "member_count": 3,
+      "received_payloads": [],
+      "added_members": [
+        "carol"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "carol",
+      "epoch": 2,
+      "member_count": 3,
+      "received_payloads": []
+    }
+  ]
+}

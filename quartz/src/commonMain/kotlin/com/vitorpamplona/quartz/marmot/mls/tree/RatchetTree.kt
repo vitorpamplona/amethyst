@@ -267,6 +267,113 @@ class RatchetTree(
     }
 
     /**
+     * RFC 9420 §7.9.2 `original_sibling_tree_hash`: the tree hash of the
+     * subtree rooted at [nodeIndex] computed as if every leaf in
+     * [excludedLeaves] were blank.
+     *
+     * This is what makes a stored `parent_hash` verifiable LATER. The plain
+     * tree hash of a sibling subtree changes every time a leaf is added to it,
+     * so re-deriving a parent_hash from the current tree disagrees with the
+     * value its author computed — even though nothing about that author's
+     * commit was wrong. Excluding the parent's `unmerged_leaves` removes
+     * exactly the leaves added since the parent was last set, which is the set
+     * that moved.
+     */
+    internal fun originalTreeHash(
+        nodeIndex: Int,
+        excludedLeaves: Set<Int>,
+    ): ByteArray {
+        if (BinaryTree.isLeaf(nodeIndex)) {
+            val leafIndex = BinaryTree.nodeToLeaf(nodeIndex)
+            val writer = TlsWriter()
+            writer.putUint8(1)
+            writer.putUint32(leafIndex.toLong())
+            val leaf = getNode(nodeIndex).takeIf { leafIndex !in excludedLeaves }
+            if (leaf != null) {
+                writer.putUint8(1)
+                (leaf as TreeNode.Leaf).leafNode.encodeTls(writer)
+            } else {
+                writer.putUint8(0)
+            }
+            return MlsCryptoProvider.hash(writer.toByteArray())
+        }
+
+        val leftHash = originalTreeHash(BinaryTree.left(nodeIndex), excludedLeaves)
+        val rightHash = originalTreeHash(BinaryTree.right(nodeIndex), excludedLeaves)
+
+        val writer = TlsWriter()
+        writer.putUint8(2)
+        val parent = getNode(nodeIndex)
+        if (parent != null) {
+            writer.putUint8(1)
+            // The excluded leaves are removed from this node's own
+            // unmerged_leaves too: they are the leaves whose addition this
+            // hash is meant to be blind to.
+            val node = (parent as TreeNode.Parent).parentNode
+            node.copy(unmergedLeaves = node.unmergedLeaves.filterNot { it in excludedLeaves }).encodeTls(writer)
+        } else {
+            writer.putUint8(0)
+        }
+        writer.putOpaqueVarInt(leftHash)
+        writer.putOpaqueVarInt(rightHash)
+
+        return MlsCryptoProvider.hash(writer.toByteArray())
+    }
+
+    /**
+     * Resolution of [nodeIndex] with [excludedLeaves] treated as blank.
+     *
+     * Parent-hash validation has to reconstruct the tree as it stood when the
+     * parent was populated, and the leaves added since are exactly the ones in
+     * that parent's `unmerged_leaves`.
+     */
+    fun resolutionExcluding(
+        nodeIndex: Int,
+        excludedLeaves: Set<Int>,
+    ): List<Int> {
+        val node = getNode(nodeIndex)
+        if (BinaryTree.isLeaf(nodeIndex)) {
+            val leafIndex = BinaryTree.nodeToLeaf(nodeIndex)
+            return if (node == null || leafIndex in excludedLeaves) emptyList() else listOf(nodeIndex)
+        }
+        if (node != null) {
+            val result = mutableListOf(nodeIndex)
+            if (node is TreeNode.Parent) {
+                for (leaf in node.parentNode.unmergedLeaves) {
+                    if (leaf !in excludedLeaves) result.add(BinaryTree.leafToNode(leaf))
+                }
+            }
+            return result
+        }
+        return resolutionExcluding(BinaryTree.left(nodeIndex), excludedLeaves) +
+            resolutionExcluding(BinaryTree.right(nodeIndex), excludedLeaves)
+    }
+
+    /** The `parent_hash` field a node carries, or null when it has none. */
+    internal fun parentHashOf(nodeIndex: Int): ByteArray? =
+        when (val node = getNode(nodeIndex)) {
+            is TreeNode.Parent -> node.parentNode.parentHash
+            is TreeNode.Leaf -> node.leafNode.parentHash
+            else -> null
+        }
+
+    /** The encryption key of the parent node at [nodeIndex], if it is one. */
+    internal fun parentEncryptionKeyOf(nodeIndex: Int): ByteArray? = (getNode(nodeIndex) as? TreeNode.Parent)?.parentNode?.encryptionKey
+
+    /** Node indices of every non-blank parent node, root-inclusive. */
+    internal fun parentNodeIndices(): List<Int> =
+        (0 until BinaryTree.nodeCount(_leafCount))
+            .filter { !BinaryTree.isLeaf(it) && getNode(it) is TreeNode.Parent }
+
+    /** Unmerged leaves recorded on the parent node at [nodeIndex], if any. */
+    internal fun unmergedLeavesOf(nodeIndex: Int): Set<Int> =
+        (getNode(nodeIndex) as? TreeNode.Parent)
+            ?.parentNode
+            ?.unmergedLeaves
+            ?.toSet()
+            .orEmpty()
+
+    /**
      * RFC 9420 §4.1.2 "filtered direct path":
      *   the direct path of a leaf node L, with any parent node removed whose
      *   child on the copath of L has an empty resolution (unmerged_leaves

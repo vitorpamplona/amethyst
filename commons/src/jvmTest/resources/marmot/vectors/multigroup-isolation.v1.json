@@ -1,0 +1,357 @@
+{
+  "scenario_name": "multigroup-isolation/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.20",
+  "seed": null,
+  "scenario": {
+    "name": "multigroup-isolation/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol"
+    ],
+    "steps": [
+      {
+        "type": "in_group",
+        "group": "a",
+        "action": {
+          "type": "create_group",
+          "creator": "alice",
+          "name": "group-a",
+          "invitees": [
+            "bob"
+          ],
+          "required_features": [],
+          "initial_admins": [
+            "alice"
+          ],
+          "pending": "a-create"
+        }
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "a-create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob"
+        ]
+      },
+      {
+        "type": "in_group",
+        "group": "b",
+        "action": {
+          "type": "create_group",
+          "creator": "alice",
+          "name": "group-b",
+          "invitees": [
+            "carol"
+          ],
+          "required_features": [],
+          "initial_admins": [
+            "alice"
+          ],
+          "pending": "b-create"
+        }
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "b-create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "carol"
+        ]
+      },
+      {
+        "type": "in_group",
+        "group": "c",
+        "action": {
+          "type": "create_group",
+          "creator": "bob",
+          "name": "group-c",
+          "invitees": [
+            "carol"
+          ],
+          "required_features": [],
+          "initial_admins": [
+            "bob"
+          ],
+          "pending": "c-create"
+        }
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "bob",
+        "publication": "c-create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "carol"
+        ]
+      },
+      {
+        "type": "in_group",
+        "group": "a",
+        "action": {
+          "type": "clear_events",
+          "clients": [
+            "alice",
+            "bob"
+          ]
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "b",
+        "action": {
+          "type": "clear_events",
+          "clients": [
+            "alice",
+            "carol"
+          ]
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "c",
+        "action": {
+          "type": "clear_events",
+          "clients": [
+            "bob",
+            "carol"
+          ]
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "a",
+        "action": {
+          "type": "send_app_message",
+          "sender": "alice",
+          "payload": "multigroup:a:alice"
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "a",
+        "action": {
+          "type": "send_app_message",
+          "sender": "bob",
+          "payload": "multigroup:a:bob"
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "b",
+        "action": {
+          "type": "send_app_message",
+          "sender": "alice",
+          "payload": "multigroup:b:alice"
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "b",
+        "action": {
+          "type": "send_app_message",
+          "sender": "carol",
+          "payload": "multigroup:b:carol"
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "c",
+        "action": {
+          "type": "send_app_message",
+          "sender": "bob",
+          "payload": "multigroup:c:bob"
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "c",
+        "action": {
+          "type": "send_app_message",
+          "sender": "carol",
+          "payload": "multigroup:c:carol"
+        }
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "bob",
+            "payload": "multigroup:b:alice",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "bob",
+            "payload": "multigroup:b:carol",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "carol",
+            "payload": "multigroup:a:alice",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "carol",
+            "payload": "multigroup:a:bob",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "alice",
+            "payload": "multigroup:c:bob",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "alice",
+            "payload": "multigroup:c:carol",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "a",
+        "action": {
+          "type": "observe_exact",
+          "clients": [
+            "alice",
+            "bob"
+          ]
+        }
+      },
+      {
+        "type": "in_group",
+        "group": "b",
+        "action": {
+          "type": "observe_exact",
+          "clients": [
+            "carol"
+          ]
+        }
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "a-create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 5,
+      "client": "alice",
+      "pending": "b-create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 9,
+      "client": "bob",
+      "pending": "c-create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 1,
+      "member_count": 2,
+      "received_payloads": [
+        "multigroup:a:bob",
+        "multigroup:b:carol"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "bob",
+      "epoch": 1,
+      "member_count": 2,
+      "received_payloads": [
+        "multigroup:a:alice",
+        "multigroup:c:carol"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "carol",
+      "epoch": 1,
+      "member_count": 2,
+      "received_payloads": [
+        "multigroup:b:alice",
+        "multigroup:c:bob"
+      ]
+    }
+  ]
+}

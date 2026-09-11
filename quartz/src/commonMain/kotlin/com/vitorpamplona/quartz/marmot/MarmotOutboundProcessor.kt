@@ -20,16 +20,19 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Result of building an outbound GroupEvent.
@@ -37,6 +40,16 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 data class OutboundGroupEvent(
     val signedEvent: GroupEvent,
     val nostrGroupId: HexKey,
+    /**
+     * `SHA-256` over the MLS bytes this event carries — the Marmot message id
+     * from `foundation/wire-envelopes.md`.
+     *
+     * Kept alongside the signed event so a publisher can suppress its own echo
+     * by MLS identity. The Nostr event id cannot serve: relays redeliver, and
+     * each transport copy of one MLS message carries its own fresh ephemeral
+     * pubkey and therefore a different event id.
+     */
+    val marmotMessageId: HexKey,
 )
 
 /**
@@ -72,7 +85,28 @@ class MarmotOutboundProcessor(
     suspend fun buildGroupEvent(
         nostrGroupId: HexKey,
         innerEvent: Event,
-    ): OutboundGroupEvent = buildGroupEventFromBytes(nostrGroupId, innerEvent.toJson().encodeToByteArray())
+    ): OutboundGroupEvent = buildAppEvent(nostrGroupId, MarmotAppEvent.fromEvent(innerEvent))
+
+    /**
+     * Send a Marmot app event — the canonical, UNSIGNED payload shape
+     * (`foundation/application-messages.md`).
+     *
+     * The signature is dropped rather than merely left empty, and both halves
+     * of that matter. A conformant decoder REJECTS a payload carrying a `sig`
+     * member at all, so an event serialized with `"sig":""` is refused by every
+     * peer; and a payload with a real signature would be a valid standalone
+     * relay event, so one leaked plaintext could be republished publicly as a
+     * signed statement by its author.
+     *
+     * The event id is unchanged by the conversion: NIP-01 hashes
+     * `[0, pubkey, created_at, kind, tags, content]`, which never included the
+     * signature. Message identity therefore survives the switch, and history
+     * written under the old shape still lines up.
+     */
+    suspend fun buildAppEvent(
+        nostrGroupId: HexKey,
+        appEvent: MarmotAppEvent,
+    ): OutboundGroupEvent = buildGroupEventFromBytes(nostrGroupId, appEvent.encodeToPayload())
 
     /**
      * Encrypt raw bytes and build a GroupEvent for publishing.
@@ -115,6 +149,7 @@ class MarmotOutboundProcessor(
         return OutboundGroupEvent(
             signedEvent = signedEvent,
             nostrGroupId = nostrGroupId,
+            marmotMessageId = sha256(mlsCiphertext).toHexKey(),
         )
     }
 
@@ -159,6 +194,7 @@ class MarmotOutboundProcessor(
         return OutboundGroupEvent(
             signedEvent = signedEvent,
             nostrGroupId = nostrGroupId,
+            marmotMessageId = sha256(commitBytes).toHexKey(),
         )
     }
 
@@ -174,9 +210,21 @@ class MarmotOutboundProcessor(
         nostrGroupId: HexKey,
         createdAt: Long,
     ): Long? {
-        val extensions = groupManager.getGroup(nostrGroupId)?.extensions ?: return null
-        val marmotData = MarmotGroupData.fromExtensions(extensions) ?: return null
-        val secs = marmotData.disappearingMessageSecs ?: return null
-        return createdAt + secs.toLong()
+        val group = groupManager.getGroup(nostrGroupId) ?: return null
+        // The current profile carries retention in the 0x8005 component; the
+        // legacy profile in the monolithic 0xF2EE extension. Reading only the
+        // legacy one silently dropped the expiration tag on every
+        // current-profile group, so disappearing messages simply did not
+        // disappear.
+        val secs =
+            group
+                .currentGroupState()
+                .retention
+                ?.takeIf { it.isEnabled }
+                ?.disappearingMessageSecs
+                ?.toLong()
+                ?: MarmotGroupData.fromExtensions(group.extensions)?.disappearingMessageSecs?.toLong()
+                ?: return null
+        return createdAt + secs
     }
 }

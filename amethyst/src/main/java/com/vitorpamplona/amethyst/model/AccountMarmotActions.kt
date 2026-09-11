@@ -20,7 +20,15 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
+import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
+import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
+import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -52,7 +60,7 @@ class AccountMarmotActions(
     fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> {
         val groupRelays =
             account.marmotManager
-                ?.groupMetadata(nostrGroupId)
+                ?.groupView(nostrGroupId)
                 ?.relays
                 ?.mapNotNull {
                     com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -135,8 +143,11 @@ class AccountMarmotActions(
                 ?.toSet()
                 .orEmpty()
         val fetchRelays =
-            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-                .fetchRelaysFor(memberKeyPackageRelays, memberOutbox, myOutbox)
+            KeyPackageFetcher.fetchRelaysFor(
+                targetOutbox = memberOutbox,
+                myOutbox = myOutbox,
+                targetKeyPackageRelays = memberKeyPackageRelays,
+            )
 
         Log.d("MarmotDbg") {
             "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
@@ -214,15 +225,24 @@ class AccountMarmotActions(
         manager.syncMetadataTo(nostrGroupId, chatroom)
 
         Log.d("MarmotDbg") {
-            "addMarmotGroupMember: built commit kind=${commitEvent.signedEvent.kind} id=${commitEvent.signedEvent.id.take(8)}… " +
+            val commit =
+                commitEvent?.let { "kind=${it.signedEvent.kind} id=${it.signedEvent.id.take(8)}…" }
+                    ?: "none (founding add, merged locally)"
+            "addMarmotGroupMember: built commit $commit " +
                 "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
         }
 
-        // Publish commit first (critical ordering)
+        // Nothing to publish here either way. A normal commit was already
+        // published by the manager, which only advances the group once a relay
+        // acknowledged it (publish-before-apply); publishing it again would
+        // just duplicate the event. A FOUNDING add has no commit at all — the
+        // creator was the group's only member, so it merges locally under the
+        // empty publication obligation and the invitee gets epoch 1 from the
+        // Welcome.
         Log.d("MarmotDbg") {
-            "addMarmotGroupMember: publishing commit kind:${commitEvent.signedEvent.kind} to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+            commitEvent?.let { "addMarmotGroupMember: commit kind:${it.signedEvent.kind} published to ${groupRelays.size} relay(s)" }
+                ?: "addMarmotGroupMember: founding add merged locally, no commit published"
         }
-        account.client.publish(commitEvent.signedEvent, groupRelays.toSet())
 
         // Then send the Welcome gift wrap to the new member.
         //
@@ -266,11 +286,16 @@ class AccountMarmotActions(
 
     /**
      * Relays where this account publishes kind:30443 KeyPackage events.
-     * Per MIP-00: prefer kind:10051 KeyPackage Relay List; fall back to NIP-65 outbox.
+     *
+     * The NIP-65 write set is the discovery rule now — the spec removed the
+     * dedicated kind:10051 KeyPackage relay list. The account's own 10051 is
+     * still unioned in so peers that have not migrated keep finding us.
      */
     fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> =
-        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-            .publishRelaysFor(account.keyPackageRelayList.flow.value, account.outboxRelays.flow.value)
+        KeyPackageFetcher.publishRelaysFor(
+            myOutbox = account.outboxRelays.flow.value,
+            legacyKeyPackageRelayList = account.keyPackageRelayList.flow.value,
+        )
 
     /**
      * Publish or rotate KeyPackage events.
@@ -376,12 +401,40 @@ class AccountMarmotActions(
     }
 
     /**
-     * Create a new Marmot MLS group.
+     * Create a new Marmot MLS group under the CURRENT profile.
+     *
+     * Not the legacy `0xF2EE` shape. A current-profile peer refuses a leaf
+     * with no account identity proof, and a legacy group cannot be upgraded
+     * into one afterwards — its existing leaves have no proofs to add — so the
+     * profile is decided here, once, and never migrated. Groups made the old
+     * way are joinable only by other legacy clients.
+     *
+     * The name, description and avatar arrive later through
+     * `updateMarmotGroupMetadata`; the routing component has to exist from
+     * epoch 0 because it carries the `nostr_group_id` every kind-445 event in
+     * this group is addressed to.
      */
-    suspend fun createMarmotGroup(nostrGroupId: HexKey) {
+    suspend fun createMarmotGroup(
+        nostrGroupId: HexKey,
+        name: String = "",
+        description: String = "",
+        /**
+         * Disappearing messages (`0x8005`), or null for off. Fixed at creation:
+         * promoting a component to required later needs its state installed by
+         * a prior commit, which this path does not make.
+         */
+        disappearingMessageSecs: ULong? = null,
+    ) {
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
-        manager.createGroup(nostrGroupId)
+        manager.createCurrentProfileGroup(
+            nostrGroupId = nostrGroupId,
+            relays =
+                account.outboxRelays.flow.value
+                    .map { it.url },
+            profile = if (name.isEmpty() && description.isEmpty()) null else GroupProfileV1(name, description),
+            retention = disappearingMessageSecs?.let { MessageRetentionV1(it) },
+        )
         // Creator owns the group — mark it as "known" immediately so it
         // doesn't appear under "New Requests" before the first message.
         account.marmotGroupList.markAsKnown(nostrGroupId)
@@ -406,9 +459,9 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val metadata = manager.groupMetadata(nostrGroupId)
-        if (metadata != null && metadata.adminPubkeys.contains(account.signer.pubKey)) {
-            val remaining = metadata.adminPubkeys.filter { it != account.signer.pubKey }.toMutableList()
+        val view = manager.groupView(nostrGroupId)
+        if (view != null && view.adminPubkeys.contains(account.signer.pubKey)) {
+            val remaining = view.adminPubkeys.filter { it != account.signer.pubKey }.toMutableList()
             // MIP-03 also rejects any GCE commit that leaves the group with zero
             // admins. If we're the only one, promote an arbitrary non-self
             // member to admin before stepping down.
@@ -421,9 +474,7 @@ class AccountMarmotActions(
                 if (heir != null) remaining.add(heir)
             }
             if (remaining.isNotEmpty()) {
-                val demoted = metadata.copy(adminPubkeys = remaining)
-                val demoteCommit = manager.updateGroupMetadata(nostrGroupId, demoted)
-                account.client.publish(demoteCommit.signedEvent, groupRelays)
+                manager.setGroupAdmins(nostrGroupId, remaining, groupRelays.toList())
             }
         }
 
@@ -483,17 +534,16 @@ class AccountMarmotActions(
             return
         }
 
-        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
+        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex, groupRelays.toList())
         Log.d("MarmotDbg") {
             "removeMarmotGroupMember: built commit kind=${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
         }
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
         Log.d("MarmotDbg") {
-            "removeMarmotGroupMember: publishing commit id=${outbound.signedEvent.id.take(8)}… " +
-                "to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+            "removeMarmotGroupMember: commit id=${outbound.signedEvent.id.take(8)}… " +
+                "published to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
         }
-        account.client.publish(outbound.signedEvent, groupRelays)
     }
 
     /**
@@ -508,13 +558,112 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val outbound = manager.updateGroupMetadata(nostrGroupId, metadata)
-        // The MLS commit has already been applied locally — surface the new
-        // metadata in the chatroom now so the UI reflects it without waiting
-        // for the relay round-trip.
+        manager.updateGroupMetadata(nostrGroupId, metadata, groupRelays.toList())
+        // The commit was published and acknowledged before it became canonical,
+        // so the local state is already the one peers will see — surface it now
+        // rather than waiting for our own event to loop back.
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
-        account.client.publish(outbound.signedEvent, groupRelays)
+    }
+
+    /**
+     * Disband a Marmot MLS group (`marmot.group.lifecycle.v1`, `0x800c`).
+     *
+     * Irreversible and absorbing: every member's copy terminalizes when they
+     * apply the commit, and there is no commit that walks it back. The caller
+     * MUST have confirmed with a human first — this layer only refuses what is
+     * structurally impossible (a non-admin, a legacy group, a second disband),
+     * which is not the same as asking.
+     *
+     * Deliberately NOT silent on failure the way the other actions here are: a
+     * disband that did not happen must not look like one that did, so the
+     * exception propagates to the caller's error path.
+     *
+     * It is no longer terminal the moment it is published, either: the Commit
+     * is admitted as a convergence candidate and only a SELECTED one moves the
+     * group to `Disbanded`, so between the two the request sits behind a
+     * durable `Disbanding` gate. Reporting that distinction is the whole point
+     * of the return value — announcing "group disbanded" for a request that is
+     * still pending is the one thing a terminal action must never do.
+     *
+     * @return true when the group is terminal now; false when the request is
+     *   durable and unresolved, which is not a failure.
+     */
+    suspend fun disbandMarmotGroup(
+        nostrGroupId: HexKey,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
+        if (!account.isWriteable()) return false
+
+        manager.disbandGroup(nostrGroupId, groupRelays.toList())
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
+        return manager.lifecycle(nostrGroupId) == GroupLifecycleState.DISBANDED
+    }
+
+    /**
+     * Commit the `encrypted-media-v2` policy (`0x800b`) for a group.
+     *
+     * Creation deliberately leaves this off — `CurrentProfileGroupFactory`
+     * explains why: carrying it at epoch 0 would make our GroupContext differ
+     * from the reference's for the same inputs, and would force every joiner to
+     * advertise `0x800b` before it could be added. The spec's answer is that "a
+     * group that wants a media policy commits one", and until now nothing on
+     * Android could, so `marmotUsesEncryptedMediaV2` was false for every group
+     * this app created and attachments always fell back to MIP-04.
+     *
+     * Enable-only on purpose. Changing the policy later is the same commit;
+     * REMOVING it is a different question the component does not answer, and
+     * inventing a removal that strands members mid-upload is not something to
+     * guess at.
+     *
+     * The endpoints come from the account's own Blossom server list, because a
+     * policy naming servers the uploader does not use would describe a group
+     * nobody can actually post media to.
+     */
+    suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: HexKey) {
+        val manager = account.marmotManager ?: return
+        if (!account.isWriteable()) return
+
+        val servers = account.blossomServers.flow.value
+        require(servers.isNotEmpty()) {
+            "Cannot enable encrypted media without at least one Blossom server configured"
+        }
+        val policy =
+            EncryptedMediaPolicyV2(
+                allowedLocatorKinds = listOf(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND),
+                defaultBlobEndpoints =
+                    servers.map {
+                        BlobStoreEndpointV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, it)
+                    },
+            )
+        manager.setEncryptedMediaPolicy(nostrGroupId, policy, marmotGroupRelays(nostrGroupId).toList())
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
+    }
+
+    /**
+     * Set or clear the group's plain-`https` avatar link
+     * (`marmot.group.avatar-url.v1`, `0x8007`).
+     *
+     * The lightweight avatar carrier: no Blossom upload, no key material, just
+     * a URL every Marmot client can render. A blank [url] clears it, which
+     * falls the group back to its encrypted Blossom image if it has one — the
+     * two carriers coexist and this one wins while it is set.
+     */
+    suspend fun setMarmotGroupAvatarUrl(
+        nostrGroupId: HexKey,
+        url: String,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = account.marmotManager ?: return
+        if (!account.isWriteable()) return
+
+        val avatar = url.trim().takeIf { it.isNotEmpty() }?.let { GroupAvatarUrlV1(MarmotWebUrl.normalize(it, label = "avatar URL")) }
+        manager.setGroupAvatarUrl(nostrGroupId, avatar, groupRelays.toList())
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
     }
 
     /**
@@ -534,17 +683,10 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val metadata = manager.groupMetadata(nostrGroupId) ?: return
-        if (metadata.adminPubkeys.contains(targetPubKey)) return
+        val view = manager.groupView(nostrGroupId) ?: return
+        if (view.adminPubkeys.contains(targetPubKey)) return
 
-        val outboxRelayStrings =
-            account.outboxRelays.flow.value
-                .map { it.url }
-        val updated =
-            metadata
-                .copy(adminPubkeys = metadata.adminPubkeys + targetPubKey)
-                .withMergedRelays(outboxRelayStrings)
-        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
+        manager.setGroupAdmins(nostrGroupId, view.adminPubkeys + targetPubKey, groupRelays.toList())
     }
 
     /**
@@ -561,20 +703,13 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val metadata = manager.groupMetadata(nostrGroupId) ?: return
-        if (!metadata.adminPubkeys.contains(targetPubKey)) return
-        val remaining = metadata.adminPubkeys.filter { it != targetPubKey }
+        val view = manager.groupView(nostrGroupId) ?: return
+        if (!view.adminPubkeys.contains(targetPubKey)) return
+        val remaining = view.adminPubkeys.filter { it != targetPubKey }
         check(remaining.isNotEmpty()) {
             "Cannot revoke the last admin from a Marmot group (MIP-03)"
         }
 
-        val outboxRelayStrings =
-            account.outboxRelays.flow.value
-                .map { it.url }
-        val updated =
-            metadata
-                .copy(adminPubkeys = remaining)
-                .withMergedRelays(outboxRelayStrings)
-        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
+        manager.setGroupAdmins(nostrGroupId, remaining, groupRelays.toList())
     }
 }

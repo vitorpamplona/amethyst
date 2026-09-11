@@ -157,6 +157,7 @@ class MarmotSyncPolicy(
             val detail =
                 when (result) {
                     is MarmotIngestResult.Failure -> " ${result.message}"
+                    is MarmotIngestResult.Ignored -> " (${result.reason})"
                     else -> ""
                 }
             log("ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}$detail")

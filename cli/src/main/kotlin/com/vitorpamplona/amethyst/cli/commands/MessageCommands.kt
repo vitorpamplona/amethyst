@@ -35,6 +35,7 @@ object MessageCommands {
         |  marmot message send GID TEXT               publish kind:9 inner event into the group
         |  marmot message list GID [--limit N]        dump decrypted inner events (default --limit 50;
         |                                              --limit 0 = unlimited)
+        |  marmot message edit GID EVENT_ID TEXT      publish kind:1009 replacing a message's text
         |  marmot message react GID EVENT_ID EMOJI    publish kind:7 reaction targeting an inner event
         |  marmot message delete GID EVENT_ID…        publish kind:5 deletion targeting inner events
         """.trimMargin()
@@ -46,10 +47,11 @@ object MessageCommands {
         route(
             "message",
             tail,
-            "message <send|list|react|delete> …",
+            "message <send|list|edit|react|delete> …",
             mapOf(
                 "send" to { rest -> send(dataDir, rest) },
                 "list" to { rest -> list(dataDir, rest) },
+                "edit" to { rest -> edit(dataDir, rest) },
                 "react" to { rest -> react(dataDir, rest) },
                 "delete" to { rest -> delete(dataDir, rest) },
             ),
@@ -102,17 +104,37 @@ object MessageCommands {
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
             val raw = ctx.marmot.loadStoredMessages(gid)
+            val parsed = raw.mapNotNull { Event.fromJsonOrNull(it) }
+            // An edit is not its own row: it replaces the target's text in
+            // place. Resolving the overlay here rather than in the renderer is
+            // what keeps every front end from re-deriving the authorship and
+            // tie-break rules, and getting one of them subtly different.
+            val overlays = ctx.marmot.editOverlays(parsed)
+            // A deletion is not its own row either. The retracted body is
+            // blanked rather than the row dropped, so a harness (or a reader
+            // paging back) can tell "retracted" from "never arrived".
+            val deleted = ctx.marmot.deletedIds(parsed)
+            // Pinned at persist time from the retention of the epoch that
+            // DELIVERED each message, so it is the message's own expiry and not
+            // a recomputation against whatever the group's setting is now.
+            val expiries = ctx.marmot.messageExpiries(gid)
             val items =
                 raw
                     .map { line ->
                         try {
                             @Suppress("UNCHECKED_CAST")
                             val obj = Output.mapper.readValue<Map<String, Any?>>(line)
+                            val id = obj["id"] as? String
+                            val edited = overlays[id]
+                            val retracted = id != null && id in deleted
                             mapOf(
                                 "event_id" to obj["id"],
                                 "author" to obj["pubkey"],
                                 "kind" to obj["kind"],
-                                "content" to obj["content"],
+                                "content" to if (retracted) "" else (edited ?: obj["content"]),
+                                "edited" to (edited != null && !retracted),
+                                "deleted" to retracted,
+                                "expires_at" to expiries[id],
                                 "created_at" to obj["created_at"],
                             )
                         } catch (_: Exception) {
@@ -121,6 +143,52 @@ object MessageCommands {
                     }.takeLast(limit)
 
             Output.emit(mapOf("group_id" to gid, "messages" to items))
+            return 0
+        }
+    }
+
+    /**
+     * Replace a prior message's text. `message edit <gid> <event_id> <text>`
+     *
+     * The edit only lands for readers if this account wrote the target — every
+     * receiver re-checks that against the message it holds — so the same check
+     * runs here rather than publishing something that will be ignored.
+     */
+    private suspend fun edit(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.size < 3) return Output.error("bad_args", "message edit <gid> <target_event_id> <text>")
+        val targetId = rest[1]
+        val replacement = rest[2]
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
+            ctx.syncIncoming()
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
+
+            val target =
+                findStoredInnerEvent(ctx, gid, targetId)
+                    ?: return Output.error("not_found", "no stored message $targetId in group $gid")
+            if (target.pubKey != ctx.identity.pubKeyHex) {
+                return Output.error("not_author", "only the author of $targetId may replace its text")
+            }
+
+            val bundle = ctx.marmot.buildMessageEdit(gid, target.id, replacement)
+            val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
+            val ack = ctx.publish(bundle.outbound.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }
+
+            Output.emit(
+                mapOf(
+                    "group_id" to gid,
+                    "inner_event_id" to bundle.innerEvent.id,
+                    "outer_event_id" to bundle.outbound.signedEvent.id,
+                    "kind" to bundle.innerEvent.kind,
+                    "target_event_id" to target.id,
+                    "content" to replacement,
+                ) + RawEventSupport.ackFields(ack),
+            )
             return 0
         }
     }

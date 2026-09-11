@@ -35,7 +35,7 @@ object GroupReadCommands {
             val ids = ctx.marmot.activeGroupIds()
             val items =
                 ids.map { id ->
-                    val m = ctx.marmot.groupMetadata(id)
+                    val m = ctx.marmot.groupView(id)
                     mapOf(
                         "group_id" to id,
                         "name" to (m?.name ?: ""),
@@ -58,7 +58,7 @@ object GroupReadCommands {
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
-            val meta = ctx.marmot.groupMetadata(gid)
+            val meta = ctx.marmot.groupView(gid)
             val members =
                 ctx.marmot.memberPubkeys(gid).map {
                     mapOf("pubkey" to it.pubkey, "leaf_index" to it.leafIndex)
@@ -72,8 +72,30 @@ object GroupReadCommands {
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "admins" to (meta?.adminPubkeys ?: emptyList()),
                     "relays" to (meta?.relays ?: emptyList()),
+                    "avatar_url" to meta?.avatarUrl?.url,
+                    // Hints are opaque bytes by contract; render them as text
+                    // only for the conventional UTF-8 case an operator can read.
+                    "avatar_dim" to
+                        meta
+                            ?.avatarUrl
+                            ?.dim
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.decodeToString(),
+                    "avatar_thumbhash" to
+                        meta
+                            ?.avatarUrl
+                            ?.thumbhash
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.decodeToString(),
                     "members" to members,
                     "is_admin" to (meta?.adminPubkeys?.contains(ctx.identity.pubKeyHex) == true),
+                    // Disappearing messages, in seconds; 0 means off.
+                    "disappearing_secs" to ctx.marmot.retentionSeconds(gid),
+                    // The terminal state has no way back, so it is worth
+                    // saying out loud rather than leaving a caller to infer it
+                    // from a group that quietly refuses every verb.
+                    "disbanded" to (ctx.marmot.groupState(gid)?.isDisbanded == true),
+                    "lifecycle" to ctx.marmot.lifecycle(gid).name,
                 ),
             )
             return 0
@@ -109,7 +131,7 @@ object GroupReadCommands {
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
-            val m = ctx.marmot.groupMetadata(gid)
+            val m = ctx.marmot.groupView(gid)
             Output.emit(mapOf("group_id" to gid, "admins" to (m?.adminPubkeys ?: emptyList())))
             return 0
         }

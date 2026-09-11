@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -50,6 +51,23 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.watchCha
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.launch
+
+/**
+ * A caller's own rendering for feed rows that are not chat bubbles.
+ *
+ * Marmot's kind:1210 group system rows are the case this exists for: they sit
+ * in the conversation in chronological order but are captions about group
+ * state, not messages, and rendering one as a bubble would show a reader raw
+ * JSON attributed to whoever committed the change.
+ */
+@Immutable
+interface ChatFeedRowRenderer {
+    /** True when this renderer takes the row instead of the normal bubble. */
+    fun claims(note: Note): Boolean
+
+    @Composable
+    fun Render(note: Note)
+}
 
 @Composable
 fun RefreshingChatroomFeedView(
@@ -81,6 +99,9 @@ fun RefreshingChatroomFeedView(
     jumpToNoteId: State<String?>? = null,
     onJumpHandled: () -> Unit = {},
     onWantsToEditChatMessage: ((Note) -> Unit)? = null,
+    // Optional per-row override for rows the caller renders itself rather than as
+    // a chat bubble. Null for every surface whose feed is only messages.
+    rowRenderer: ChatFeedRowRenderer? = null,
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         listStateObserver(listState)
@@ -99,6 +120,7 @@ fun RefreshingChatroomFeedView(
             jumpToNoteId,
             onJumpHandled,
             onWantsToEditChatMessage,
+            rowRenderer,
         )
     }
 }
@@ -119,6 +141,7 @@ fun RenderChatFeedView(
     jumpToNoteId: State<String?>? = null,
     onJumpHandled: () -> Unit = {},
     onWantsToEditChatMessage: ((Note) -> Unit)? = null,
+    rowRenderer: ChatFeedRowRenderer? = null,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -152,6 +175,7 @@ fun RenderChatFeedView(
                     jumpToNoteId,
                     onJumpHandled,
                     onWantsToEditChatMessage,
+                    rowRenderer,
                 )
             }
         }
@@ -174,6 +198,7 @@ fun ChatFeedLoaded(
     jumpToNoteId: State<String?>? = null,
     onJumpHandled: () -> Unit = {},
     onWantsToEditChatMessage: ((Note) -> Unit)? = null,
+    rowRenderer: ChatFeedRowRenderer? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -256,20 +281,30 @@ fun ChatFeedLoaded(
                         older?.event?.createdAt,
                     )
 
-                    ChatroomMessageCompose(
-                        baseNote = item,
-                        routeForLastRead = routeForLastRead,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        onWantsToReply = onWantsToReply,
-                        onWantsToEditDraft = onWantsToEditDraft,
-                        onScrollToNote = onScrollToNote,
-                        shouldHighlight = highlightedNoteId.value == item.idHex,
-                        onHighlightFinished = { highlightedNoteId.value = null },
-                        groupPosition = watchChatGroupPosition(newer, item, older),
-                        previousNoteId = older?.idHex,
-                        onWantsToEditChatMessage = onWantsToEditChatMessage,
-                    )
+                    // A claimed row is rendered by the caller instead of as a
+                    // bubble. The date divisor above still applies — a system
+                    // row belongs under the day it happened on like anything
+                    // else — which is why the claim is checked here and not
+                    // around the whole item.
+                    val claimed = rowRenderer?.takeIf { it.claims(item) }
+                    if (claimed != null) {
+                        claimed.Render(item)
+                    } else {
+                        ChatroomMessageCompose(
+                            baseNote = item,
+                            routeForLastRead = routeForLastRead,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onWantsToReply = onWantsToReply,
+                            onWantsToEditDraft = onWantsToEditDraft,
+                            onScrollToNote = onScrollToNote,
+                            shouldHighlight = highlightedNoteId.value == item.idHex,
+                            onHighlightFinished = { highlightedNoteId.value = null },
+                            groupPosition = watchChatGroupPosition(newer, item, older),
+                            previousNoteId = older?.idHex,
+                            onWantsToEditChatMessage = onWantsToEditChatMessage,
+                        )
+                    }
                 }
             }
         }

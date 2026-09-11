@@ -27,7 +27,9 @@ object GroupCommands {
         """
         |amy marmot group — MLS group management
         |
-        |  marmot group create [--name NAME]          create an empty group (self-only)
+        |  marmot group create [--name NAME]          create an empty group (self-only);
+        |    [--legacy]                                --legacy builds a MIP-era group that
+        |                                              only 0xF2EE-capable leaves can join
         |  marmot group list                          list joined groups
         |  marmot group show GID                      print full group details
         |  marmot group members GID                   print members
@@ -39,8 +41,13 @@ object GroupCommands {
         |  marmot group set-image GID FILE            encrypt + commit a group avatar
         |    [--server URL]                            (--server uploads the ciphertext to Blossom)
         |  marmot group clear-image GID               remove the group avatar
+        |  marmot group set-avatar-url GID URL        commit a plain https avatar link
+        |    [--dim WxH] [--thumbhash TEXT]            (optional opaque render hints)
+        |  marmot group clear-avatar-url GID          remove the https avatar link
+        |  marmot group set-retention GID SECS        set disappearing messages (0 disables)
         |  marmot group remove GID NPUB               remove member
         |  marmot group leave GID                     self-remove
+        |  marmot group disband GID --yes             end the group for everyone (irreversible)
         """.trimMargin()
 
     suspend fun dispatch(
@@ -63,8 +70,12 @@ object GroupCommands {
                 "demote" to { rest -> GroupMetadataCommands.demote(dataDir, rest) },
                 "set-image" to { rest -> GroupMetadataCommands.setImage(dataDir, rest) },
                 "clear-image" to { rest -> GroupMetadataCommands.clearImage(dataDir, rest) },
+                "set-avatar-url" to { rest -> GroupMetadataCommands.setAvatarUrl(dataDir, rest) },
+                "clear-avatar-url" to { rest -> GroupMetadataCommands.clearAvatarUrl(dataDir, rest) },
+                "set-retention" to { rest -> GroupMetadataCommands.setRetention(dataDir, rest) },
                 "remove" to { rest -> GroupMembershipCommands.remove(dataDir, rest) },
                 "leave" to { rest -> GroupMembershipCommands.leave(dataDir, rest) },
+                "disband" to { rest -> GroupMembershipCommands.disband(dataDir, rest) },
             ),
             help = USAGE,
         )

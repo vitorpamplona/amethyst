@@ -229,6 +229,17 @@ class DataDir(
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
 
     /**
+     * Unresolved publish obligations. Durable because publish-before-apply is
+     * only meaningful across a crash: without this, a commit recorded and then
+     * lost to a restart is replaced by a fresh one for the same epoch, forking
+     * us against the peers that accepted the first.
+     */
+    val publishObligationsDir = File(marmotDir, "obligations")
+
+    /** Inbound events this account has terminally decided about. */
+    val ingestDedupFile = File(marmotDir, "ingested.ids")
+
+    /**
      * SQLite event-store DB file, a sibling of [eventsDir] under
      * `<root>/shared/`. Used when the store backend is SQLite (the
      * default — see [StoreFactory]); the FS backend uses [eventsDir]

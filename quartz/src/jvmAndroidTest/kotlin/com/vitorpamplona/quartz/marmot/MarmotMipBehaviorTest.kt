@@ -355,9 +355,15 @@ class MarmotMipBehaviorTest {
             assertEquals(WelcomeEvent.KIND, rumor.kind, "Innermost rumor MUST be kind:444")
             assertEquals("", rumor.sig, "MIP-02: kind:444 rumor MUST NOT carry a signature")
 
-            val encodingTag = rumor.tags.find { it.isNotEmpty() && it[0] == "encoding" }
-            assertNotNull(encodingTag, "MIP-02: rumor MUST carry [encoding, base64]")
-            assertEquals("base64", encodingTag[1])
+            // The MIP-era rule required an `encoding` tag here. The adopted
+            // binding REVERSES it: "A sender MUST NOT add an `encoding` tag for
+            // any event shape in this document." Byte encoding is fixed per
+            // field, so a negotiated one only gives a receiver a way to be
+            // steered into a different parse of the same bytes.
+            assertNull(
+                rumor.tags.find { it.isNotEmpty() && it[0] == "encoding" },
+                "transports/nostr.md: a kind:444 rumor MUST NOT carry an encoding tag",
+            )
 
             val eTag = rumor.tags.find { it.isNotEmpty() && it[0] == "e" }
             assertNotNull(eTag, "MIP-02: rumor MUST carry [e, <KeyPackage event id>]")
@@ -767,12 +773,18 @@ class MarmotMipBehaviorTest {
             }
             assertTrue(tamperedLeafIdx >= 0, "test setup must produce a COMMIT-source leaf")
 
+            // RFC 9420 §7.9.2 states the rule per PARENT node — exactly one of
+            // its subtrees must contain the matching parent_hash — so the
+            // rejection names the parent whose invariant broke rather than the
+            // leaf that was edited. The tamper is still caught: that leaf was
+            // the one descendant carrying its parent's expected hash.
             val reason = MlsGroup.verifyTreeParentHashesForJoin(originalTree)
             assertNotNull(reason)
             assertTrue(
-                reason.contains("leaf $tamperedLeafIdx parent_hash mismatch"),
-                "rejection message must name the tampered leaf: $reason",
+                reason.contains("is not parent-hash valid"),
+                "rejection must name the parent whose invariant broke: $reason",
             )
+            assertTrue(tamperedLeafIdx >= 0)
         }
 
     // ----------------------------------------------------------------------

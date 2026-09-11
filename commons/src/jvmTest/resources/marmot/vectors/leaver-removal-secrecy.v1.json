@@ -1,0 +1,349 @@
+{
+  "scenario_name": "leaver-removal-secrecy/v1",
+  "vector_version": "1",
+  "conformance_version": "0.9.19",
+  "seed": null,
+  "scenario": {
+    "name": "leaver-removal-secrecy/v1",
+    "spec_version": "2",
+    "clients": [
+      "alice",
+      "bob",
+      "carol",
+      "dave"
+    ],
+    "steps": [
+      {
+        "type": "create_group",
+        "creator": "alice",
+        "name": "leaver",
+        "invitees": [
+          "bob",
+          "carol",
+          "dave"
+        ],
+        "required_features": [],
+        "pending": "create"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "create",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "clear_events",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "leaver:pre:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "leaver:pre:bob"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "leaver:pre:carol"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "dave",
+        "payload": "leaver:pre:dave"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "remove_members",
+        "remover": "alice",
+        "members": [
+          "dave"
+        ],
+        "pending": "remove-dave"
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "publication": "remove-dave",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "leaver:gap:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "leaver:gap:bob"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "carol",
+        "payload": "leaver:gap:carol"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "leave",
+        "client": "carol"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice"
+        ]
+      },
+      {
+        "type": "acknowledge_outbound",
+        "client": "alice",
+        "outcome": "accepted"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "bob",
+          "carol"
+        ]
+      },
+      {
+        "type": "send_app_message",
+        "sender": "alice",
+        "payload": "leaver:tail:alice"
+      },
+      {
+        "type": "send_app_message",
+        "sender": "bob",
+        "payload": "leaver:tail:bob"
+      },
+      {
+        "type": "deliver_all"
+      },
+      {
+        "type": "tick",
+        "clients": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "dave",
+            "payload": "leaver:gap:alice",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "dave",
+            "payload": "leaver:gap:bob",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "dave",
+            "payload": "leaver:gap:carol",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "dave",
+            "payload": "leaver:tail:alice",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "dave",
+            "payload": "leaver:tail:bob",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "carol",
+            "payload": "leaver:tail:alice",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "assert",
+        "assertion": {
+          "mode": "exactly",
+          "predicate": {
+            "type": "payload_count",
+            "client": "carol",
+            "payload": "leaver:tail:bob",
+            "count": 0
+          }
+        }
+      },
+      {
+        "type": "observe_exact",
+        "clients": [
+          "alice",
+          "bob"
+        ]
+      }
+    ]
+  },
+  "expected_outcomes": [
+    {
+      "type": "pending_resolution",
+      "step_index": 1,
+      "client": "alice",
+      "pending": "create",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "pending_resolution",
+      "step_index": 12,
+      "client": "alice",
+      "pending": "remove-dave",
+      "resolution": "confirmed"
+    },
+    {
+      "type": "client_state",
+      "client": "alice",
+      "epoch": 3,
+      "member_count": 2,
+      "received_payloads": [
+        "leaver:pre:bob",
+        "leaver:pre:carol",
+        "leaver:pre:dave",
+        "leaver:gap:bob",
+        "leaver:gap:carol",
+        "leaver:tail:bob"
+      ],
+      "removed_members": [
+        "dave",
+        "carol"
+      ]
+    },
+    {
+      "type": "client_state",
+      "client": "bob",
+      "epoch": 3,
+      "member_count": 2,
+      "received_payloads": [
+        "leaver:pre:alice",
+        "leaver:pre:carol",
+        "leaver:pre:dave",
+        "leaver:gap:alice",
+        "leaver:gap:carol",
+        "leaver:tail:alice"
+      ],
+      "removed_members": [
+        "dave",
+        "carol"
+      ]
+    },
+    {
+      "type": "clients_converged",
+      "clients": [
+        "alice",
+        "bob"
+      ],
+      "epoch": 3,
+      "member_count": 2
+    },
+    {
+      "type": "no_pending_work",
+      "clients": [
+        "alice",
+        "bob"
+      ]
+    }
+  ]
+}

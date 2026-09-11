@@ -22,9 +22,15 @@ package com.vitorpamplona.amethyst.cli.stores
 
 import com.vitorpamplona.amethyst.cli.SecureFileIO
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /**
@@ -146,5 +152,227 @@ class FileMarmotMessageStore(
 
     override suspend fun delete(nostrGroupId: String) {
         file(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group messages")
+        epochFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message epochs")
+        snapshotFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group system-row baseline")
+        expiryFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message expiries")
+        epochRetentionFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group epoch retentions")
     }
+
+    private fun snapshotFile(id: String) = File(dir, "$id.snapshot")
+
+    override suspend fun recordGroupSnapshot(
+        nostrGroupId: String,
+        snapshotJson: String,
+    ) {
+        // Overwritten, not appended: this is one baseline, not a history.
+        SecureFileIO.writeBytesAtomic(snapshotFile(nostrGroupId), snapshotJson.encodeToByteArray())
+    }
+
+    override suspend fun loadGroupSnapshot(nostrGroupId: String): String? = snapshotFile(nostrGroupId).takeIf { it.exists() }?.readText()
+
+    private fun expiryFile(id: String) = File(dir, "$id.expiries")
+
+    /**
+     * First write wins: an expiry is pinned to the retention of the message's
+     * own source epoch, so re-persisting the same message after a replay must
+     * not re-time it under a setting that has since changed.
+     */
+    override suspend fun recordExpiry(
+        nostrGroupId: String,
+        innerEventId: String,
+        expiresAtSecs: Long,
+    ) {
+        val target = expiryFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it.substringBefore(' ') == innerEventId }) return
+        SecureFileIO.appendText(target, "$innerEventId $expiresAtSecs\n")
+    }
+
+    override suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> =
+        expiryFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                val at = parts[1].toLongOrNull() ?: return@mapNotNull null
+                parts[0] to at
+            }?.toMap()
+            ?: emptyMap()
+
+    /** Rewrites both logs: a disappearing message has to actually leave the disk. */
+    override suspend fun removeMessages(
+        nostrGroupId: String,
+        innerEventIds: Set<String>,
+    ) {
+        if (innerEventIds.isEmpty()) return
+        val target = file(nostrGroupId)
+        if (target.exists()) {
+            val kept =
+                target.readLines().filter { line ->
+                    line.isNotBlank() && Event.fromJsonOrNull(line)?.id !in innerEventIds
+                }
+            SecureFileIO.writeBytesAtomic(target, (kept.joinToString("\n") + if (kept.isEmpty()) "" else "\n").encodeToByteArray())
+        }
+        val expiries = expiryFile(nostrGroupId)
+        if (expiries.exists()) {
+            val kept = expiries.readLines().filter { it.isNotBlank() && it.substringBefore(' ') !in innerEventIds }
+            SecureFileIO.writeBytesAtomic(expiries, (kept.joinToString("\n") + if (kept.isEmpty()) "" else "\n").encodeToByteArray())
+        }
+    }
+
+    private fun epochRetentionFile(id: String) = File(dir, "$id.epoch-retentions")
+
+    /** First write wins: an epoch's required components are fixed once it exists. */
+    override suspend fun recordEpochRetention(
+        nostrGroupId: String,
+        epoch: Long,
+        retentionSecs: Long,
+    ) {
+        val target = epochRetentionFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it.substringBefore(' ') == epoch.toString() }) return
+        SecureFileIO.appendText(target, "$epoch $retentionSecs\n")
+    }
+
+    override suspend fun loadEpochRetentions(nostrGroupId: String): Map<Long, Long> =
+        epochRetentionFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
+                val secs = parts[1].toLongOrNull() ?: return@mapNotNull null
+                epoch to secs
+            }?.toMap()
+            ?: emptyMap()
+
+    private fun epochFile(id: String) = File(dir, "$id.epochs")
+
+    override suspend fun recordEpoch(
+        nostrGroupId: String,
+        innerEventId: String,
+        epoch: Long,
+    ) {
+        val line = "$innerEventId $epoch"
+        val target = epochFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it == line }) return
+        SecureFileIO.appendText(target, line + "\n")
+    }
+
+    override suspend fun loadEpochs(nostrGroupId: String): Map<String, Long> =
+        epochFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                val epoch = parts[1].toLongOrNull() ?: return@mapNotNull null
+                parts[0] to epoch
+            }?.toMap() ?: emptyMap()
+}
+
+/**
+ * Durable publish obligations, one file per obligation under [dir].
+ *
+ * Publish-before-apply only means anything if the obligation outlives the
+ * process: the whole point is that a commit is prepared, recorded, published,
+ * and only then applied, so a crash between record and publish must leave a
+ * trace. With a non-durable store that window silently becomes "the commit
+ * never happened", and on relaunch the client mints a REPLACEMENT commit for
+ * the same epoch — forking itself against the peers that accepted the first
+ * one.
+ *
+ * A file per obligation rather than one appended log: obligations resolve out
+ * of order (two groups publish concurrently), and deleting one must not
+ * rewrite the others.
+ */
+class FilePublishObligationStore(
+    private val dir: File,
+) : MarmotPublishObligationStore {
+    init {
+        SecureFileIO.secureMkdirs(dir)
+    }
+
+    private fun file(obligationId: String) = File(dir, "$obligationId.obligation")
+
+    override suspend fun save(
+        obligationId: HexKey,
+        bytes: ByteArray,
+    ) {
+        SecureFileIO.writeBytesAtomic(file(obligationId), bytes)
+    }
+
+    override suspend fun delete(obligationId: HexKey) {
+        file(obligationId).deleteOrWarn("FilePublishObligationStore", "publish obligation")
+    }
+
+    override suspend fun loadAll(): List<ByteArray> =
+        dir
+            .listFiles { f -> f.isFile && f.name.endsWith(".obligation") }
+            ?.sortedBy { it.name }
+            ?.mapNotNull { runCatching { it.readBytes() }.getOrNull() }
+            .orEmpty()
+
+    private fun gateFile(groupId: String) = File(dir, "$groupId.gate")
+
+    /**
+     * Outbound gates live beside the obligations and are durable for the same
+     * reason: `Disbanding` must survive "publication failure, restart, and a
+     * losing branch", and every `amy` verb is its own process — so an
+     * in-memory gate would not survive even the next command, let alone a
+     * crash.
+     */
+    override suspend fun saveGate(
+        groupId: HexKey,
+        gate: String,
+    ) {
+        SecureFileIO.writeBytesAtomic(gateFile(groupId), gate.encodeToByteArray())
+    }
+
+    override suspend fun deleteGate(groupId: HexKey) {
+        gateFile(groupId).deleteOrWarn("FilePublishObligationStore", "outbound gate")
+    }
+
+    override suspend fun loadGates(): Map<HexKey, String> =
+        dir
+            .listFiles { f -> f.isFile && f.name.endsWith(".gate") }
+            ?.mapNotNull { file ->
+                runCatching { file.name.removeSuffix(".gate") to file.readText().trim() }.getOrNull()
+            }?.toMap()
+            .orEmpty()
+}
+
+/**
+ * Durable "already decided" markers, one hex id per line.
+ *
+ * Append-only and capped: the point is to stop re-deciding backdated gift
+ * wraps forever, not to remember every event this account has ever seen. When
+ * the cap is hit the oldest half is dropped — the worst case for a forgotten
+ * marker is one wasted re-decision, so trading memory for exactness is the
+ * right way round.
+ */
+class FileIngestDedupStore(
+    private val file: File,
+    private val maxEntries: Int = 20_000,
+) : MarmotIngestDedupStore {
+    private val mutex = Mutex()
+
+    override suspend fun mark(eventId: HexKey) =
+        mutex.withLock {
+            SecureFileIO.appendText(file, eventId + "\n")
+            if (file.length() > maxEntries.toLong() * 65L) {
+                val kept = file.readLines().filter { it.isNotBlank() }.takeLast(maxEntries / 2)
+                SecureFileIO.writeBytesAtomic(file, (kept.joinToString("\n") + "\n").encodeToByteArray())
+            }
+        }
+
+    override suspend fun loadAll(): Set<HexKey> =
+        mutex.withLock {
+            file
+                .takeIf { it.exists() }
+                ?.readLines()
+                ?.filter { it.isNotBlank() }
+                ?.toSet()
+                .orEmpty()
+        }
 }

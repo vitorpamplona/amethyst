@@ -69,6 +69,40 @@ class PublishResult(
     }
 }
 
+/**
+ * How many times a relay that answered with a transport failure rather than an
+ * OK is re-sent to before the failure is reported. One retry covers the common
+ * case — a socket that dropped between our EVENT frame and the relay's OK —
+ * without turning a genuinely unreachable relay into a long stall, because the
+ * retries share the caller's existing publish timeout.
+ */
+const val DEFAULT_TRANSPORT_RETRIES = 1
+
+/**
+ * Extra wall-clock granted once per retry that is actually issued.
+ *
+ * A retry is not free time: it starts a fresh dial-and-flush cycle at the
+ * moment the relay hung up, and by then most of the caller's budget is usually
+ * spent. Sharing the original deadline meant the retry was issued and then
+ * timed out before the relay could answer — the publish was reported failed
+ * having done the work and thrown the answer away, which is how a healthy
+ * loopback relay could still cost a message a run.
+ *
+ * Bounded by construction: only a relay that gave a transport failure earns it,
+ * and only as many times as [DEFAULT_TRANSPORT_RETRIES] allows, so the worst
+ * case is the caller's timeout plus this much per retried relay rather than an
+ * open-ended wait on something unreachable.
+ */
+const val TRANSPORT_RETRY_GRACE_MS = 5_000L
+
+/**
+ * Internal channel marker for "this relay is back up", so the wait loop — the
+ * one coroutine that owns the retry bookkeeping — can re-issue a send that a
+ * disconnected relay would have dropped. The NUL prefix keeps it out of reach
+ * of any real relay message, and it never surfaces in a [PublishResult].
+ */
+private const val RECONNECTED = "\u0000publish-retry-reconnected"
+
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun INostrClient.publishAndConfirm(
     event: Event,
@@ -107,6 +141,7 @@ suspend fun INostrClient.publishAndCollectResults(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
+    transportRetries: Int = DEFAULT_TRANSPORT_RETRIES,
 ): Map<NormalizedRelayUrl, PublishResult> {
     val resultChannel = Channel<DetailedResult>(UNLIMITED)
     val mark = TimeSource.Monotonic.markNow()
@@ -129,6 +164,22 @@ suspend fun INostrClient.publishAndCollectResults(
                 if (relay.url in relayList) {
                     resultChannel.trySend(DetailedResult(relay.url, false, PublishResult.DISCONNECTED))
                     Log.d("publishAndConfirm") { "Disconnected from relay ${relay.url}" }
+                }
+            }
+
+            /**
+             * A relay is only sendable once it is back up: publishing to a
+             * disconnected relay dials and drops the command, so a retry has to
+             * be re-issued from here rather than at the moment we noticed the
+             * hang-up.
+             */
+            override fun onConnected(
+                relay: IRelayClient,
+                pingMillis: Int,
+                compressed: Boolean,
+            ) {
+                if (relay.url in relayList) {
+                    resultChannel.trySend(DetailedResult(relay.url, false, RECONNECTED))
                 }
             }
 
@@ -165,18 +216,92 @@ suspend fun INostrClient.publishAndCollectResults(
                     val result =
                         async {
                             val receivedResults = mutableMapOf<NormalizedRelayUrl, PublishResult>()
-                            // The withTimeout block will cancel the coroutine if the loop takes too long
-                            withTimeoutOrNull(timeoutInSeconds * 1000) {
+                            // A relay that hung up or never connected gave no verdict on the
+                            // event — it may have stored it, it may not. Re-send to that relay
+                            // once (a Nostr event is idempotent under its own id, so the worst
+                            // case is a duplicate the relay collapses) and keep waiting for the
+                            // OK we were owed, instead of reporting a failed publish for a relay
+                            // that is healthy a moment later. The retries live inside the
+                            // caller's existing timeout, so nothing waits longer than before.
+                            val retriesLeft = relayList.associateWith { transportRetries }.toMutableMap()
+                            // The deadline is a moving target rather than one
+                            // `withTimeout` around the whole loop: issuing a retry extends it by
+                            // [TRANSPORT_RETRY_GRACE_MS], because the retry needs time the
+                            // original budget has already spent. Everything else about the wait
+                            // is unchanged — a relay that simply never answers still falls out at
+                            // the caller's timeout.
+                            var deadlineMs = timeoutInSeconds * 1000
+                            run {
+                                val awaitingReconnect = mutableSetOf<NormalizedRelayUrl>()
                                 while (receivedResults.size < relayList.size) {
-                                    val result = resultChannel.receive()
+                                    val remainingMs = deadlineMs - mark.elapsedNow().inWholeMilliseconds
+                                    if (remainingMs <= 0) break
+                                    val result = withTimeoutOrNull(remainingMs) { resultChannel.receive() } ?: break
+
+                                    if (result.message == RECONNECTED) {
+                                        // The pool flushes what it still owes a relay as part of
+                                        // coming back up, so there is nothing to re-send here —
+                                        // this only reopens the relay to a fresh verdict.
+                                        awaitingReconnect.remove(result.relay)
+                                        continue
+                                    }
+
+                                    // One dropped socket can report itself more than once
+                                    // (the pool's disconnect and the relay client's both land
+                                    // here). While a relay is waiting to come back those are
+                                    // echoes of the drop we already answered, not new verdicts.
+                                    if (result.relay in awaitingReconnect) continue
 
                                     val currentResult = receivedResults[result.relay]
                                     // do not override a successful result.
                                     if (currentResult == null || !currentResult.accepted) {
                                         receivedResults[result.relay] = PublishResult(result.success, result.message, result.elapsedMs)
                                     }
+
+                                    val recorded = receivedResults[result.relay]
+                                    if (recorded != null && recorded.isTransportFailure && (retriesLeft[result.relay] ?: 0) > 0) {
+                                        retriesLeft[result.relay] = retriesLeft.getValue(result.relay) - 1
+                                        // Drop the provisional verdict so the loop keeps waiting
+                                        // for this relay rather than treating the hang-up as its
+                                        // answer. If the retry also fails we record it again and
+                                        // report the transport failure as before.
+                                        receivedResults.remove(result.relay)
+                                        awaitingReconnect.add(result.relay)
+                                        deadlineMs += TRANSPORT_RETRY_GRACE_MS
+                                        Log.d("publishAndConfirm") {
+                                            "Retrying ${event.id} on ${result.relay} after ${recorded.message}"
+                                        }
+                                        // The event is still in the pool's outbox for this relay,
+                                        // so the dial is the whole job: the pool flushes what it
+                                        // owes the relay once the socket is back.
+                                        //
+                                        // Except that a reconnect can only dial relays the pool
+                                        // still holds, and a relay can leave it — the desired set
+                                        // is sampled, so a snapshot taken before this publish
+                                        // claimed the relay retires it, socket and all. Restoring
+                                        // membership first is what keeps the retry from being a
+                                        // silent no-op: issued, logged, dialing nothing, and
+                                        // reported at the deadline as the hang-up we already knew
+                                        // about. A no-op when the relay is still there, which is
+                                        // the ordinary case.
+                                        ensureInPool(result.relay)
+                                        // Ignore the accumulated backoff — this is a user-visible
+                                        // publish waiting on it, not a background refresh.
+                                        resetBackoff()
+                                        reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+                                    }
                                 }
                             }
+                            // A relay whose last word was a transport failure and whose retry
+                            // never came back inside the timeout still has to be reported: the
+                            // caller promised a verdict for every listed relay, and "we retried"
+                            // is not one.
+                            for (relay in relayList) {
+                                if (relay !in receivedResults && retriesLeft.getValue(relay) < transportRetries) {
+                                    receivedResults[relay] = PublishResult(false, PublishResult.DISCONNECTED)
+                                }
+                            }
+
                             receivedResults
                         }
 

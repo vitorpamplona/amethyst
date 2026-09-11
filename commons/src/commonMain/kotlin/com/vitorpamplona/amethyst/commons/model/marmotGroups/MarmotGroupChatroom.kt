@@ -29,6 +29,8 @@ import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
+import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.channels.BufferOverflow
@@ -55,6 +57,60 @@ class MarmotGroupChatroom(
      * it; when null they fall back to the host relay's NIP-11 icon.
      */
     var image = MutableStateFlow<MarmotGroupImage?>(null)
+
+    /**
+     * The group's plain-https avatar (`marmot.group.avatar-url.v1`), or null
+     * when it has none. It takes precedence over [image]: a group carrying
+     * both shows this one, and only falls back to the encrypted Blossom blob
+     * once this is cleared.
+     */
+    var avatarUrl = MutableStateFlow<GroupAvatarUrlV1?>(null)
+
+    /**
+     * False for a legacy MIP-01 group — one that predates the current profile
+     * and requires `0xf2f1` instead of the `0x8009` account identity proof.
+     *
+     * Front ends need this because a legacy group has nowhere to PUT several
+     * components: lifecycle (`0x800c`, so no disband), the URL avatar
+     * (`0x8007`), and the encrypted-media policy (`0x800b`) are all
+     * GroupContext state a legacy group never carried. Offering those actions
+     * on one produces a commit that is refused before it is built, so the
+     * honest thing is not to offer them.
+     *
+     * Nor can that be fixed by upgrading the group: the identity proof lives in
+     * each member's own LeafNode and covers that leaf's signature key, so it
+     * cannot be added to leaves that already exist. See `AccountIdentityProofV2`
+     * — "There is no fallback and no in-place migration". A legacy room stays a
+     * legacy room; a new group is the only route.
+     *
+     * Defaults to TRUE so a group that has just been created shows its full
+     * feature set immediately: creation does not run a metadata sync, and every
+     * group created now is a current-profile one. A restored legacy group is
+     * corrected by the startup sync before any screen reads this.
+     */
+    var isCurrentProfile = MutableStateFlow(true)
+
+    /**
+     * True once the group carries the `encrypted-media-v2` policy (`0x800b`).
+     *
+     * Attachments fall back to MIP-04 without it, so a front end needs this to
+     * tell an admin the group can be upgraded — and to stop offering the
+     * upgrade once it has been.
+     */
+    var hasEncryptedMediaPolicy = MutableStateFlow(false)
+
+    /**
+     * Why this group takes no new outbound work, or null when it does.
+     *
+     * A durable outbound gate is not a lifecycle state: the member is still in
+     * the tree and the group is not terminal, but nothing new may be sent —
+     * an unresolved disband request, a SelfRemove already sent, a realized
+     * removal. A front end needs it separately from [isCurrentProfile] and the
+     * lifecycle so it can DISABLE the composer with a reason rather than let a
+     * send throw and surface as an error after the fact.
+     */
+    var outboundGate = MutableStateFlow<LocalOutboundGate?>(null)
+
     var adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
     var relays = MutableStateFlow<List<String>>(emptyList())
     var memberCount = MutableStateFlow(0)

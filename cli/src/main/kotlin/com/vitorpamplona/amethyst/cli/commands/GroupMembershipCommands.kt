@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
+import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -77,10 +78,10 @@ object GroupMembershipCommands {
             // leave the group with zero admins (admin depletion). If we're
             // the only admin, hand admin to another member first.
             val demoteEventId: String? =
-                ctx.marmot.groupMetadata(gid)?.let { metadata ->
-                    if (!metadata.adminPubkeys.contains(ctx.identity.pubKeyHex)) return@let null
+                ctx.marmot.groupView(gid)?.let { view ->
+                    if (!view.adminPubkeys.contains(ctx.identity.pubKeyHex)) return@let null
 
-                    val newAdmins = metadata.adminPubkeys.filter { it != ctx.identity.pubKeyHex }.toMutableList()
+                    val newAdmins = view.adminPubkeys.filter { it != ctx.identity.pubKeyHex }.toMutableList()
                     if (newAdmins.isEmpty()) {
                         val heir =
                             ctx.marmot
@@ -90,8 +91,7 @@ object GroupMembershipCommands {
                                 ?: return@let null // solo group — skip demote, let MLS state cleanup handle it
                         newAdmins.add(heir)
                     }
-                    val demoted = metadata.copy(adminPubkeys = newAdmins)
-                    val demoteCommit = ctx.marmot.updateGroupMetadata(gid, demoted)
+                    val demoteCommit = ctx.marmot.setGroupAdmins(gid, newAdmins, targets.toList())
                     ctx.publish(demoteCommit.signedEvent, targets)
                     demoteCommit.signedEvent.id
                 }
@@ -104,6 +104,66 @@ object GroupMembershipCommands {
                     "self_demote_event_id" to demoteEventId,
                     "proposal_event_id" to outbound.signedEvent.id,
                 ) + RawEventSupport.ackFields(ack),
+            )
+            return 0
+        }
+    }
+
+    /**
+     * End the group for everyone. `group disband <gid> [--yes]`
+     *
+     * Terminal and irreversible: there is no un-disband commit, no later branch
+     * supersedes it, and a replacement conversation is a NEW group with a new
+     * id. `--yes` is required for exactly that reason — every other verb here
+     * is recoverable by issuing its opposite, and this one is not.
+     *
+     * The commit shape, the admin check and the enablement step all live in
+     * [com.vitorpamplona.amethyst.commons.marmot.MarmotManager.disbandGroup];
+     * this only confirms the intent and reports what happened.
+     */
+    suspend fun disband(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.isEmpty()) return Output.error("bad_args", "group disband <gid> --yes")
+        val args = Args(rest.drop(1).toTypedArray())
+        val confirmed = args.bool("yes")
+        args.rejectUnknown()
+        if (!confirmed) {
+            return Output.error(
+                "needs_confirmation",
+                "disbanding ends the group for every member and cannot be undone; pass --yes",
+            )
+        }
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
+            ctx.syncIncoming()
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
+
+            val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
+            // Publish-before-apply happens INSIDE disbandGroup, which refuses
+            // to terminalize on anything less than a relay OK — so unlike every
+            // other group verb here there is no second publish afterwards. A
+            // re-publish of a commit that already landed can still fail on a
+            // dropped connection, and reporting a completed, irreversible
+            // disband as a failure is the one wrong answer this command can
+            // give.
+            val outbound =
+                try {
+                    ctx.marmot.disbandGroup(gid, targets.toList())
+                } catch (e: IllegalStateException) {
+                    return Output.error("refused", e.message ?: "cannot disband group $gid")
+                }
+
+            Output.emit(
+                mapOf(
+                    "group_id" to gid,
+                    "disbanded" to (ctx.marmot.groupState(gid)?.isDisbanded == true),
+                    "epoch" to ctx.marmot.groupEpoch(gid),
+                    "commit_event_id" to outbound.signedEvent.id,
+                ),
             )
             return 0
         }

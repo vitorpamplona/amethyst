@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,7 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -72,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -98,6 +102,11 @@ fun MarmotGroupChatView(
 
     WatchLifecycleAndUpdateModel(feedViewModel)
 
+    val chatroom =
+        remember(nostrGroupId) {
+            accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        }
+
     val newMessageModel: MarmotNewMessageViewModel = viewModel(key = nostrGroupId + "MarmotNewMessageViewModel")
     newMessageModel.init(accountViewModel)
     newMessageModel.load(nostrGroupId)
@@ -120,6 +129,20 @@ fun MarmotGroupChatView(
         }
     }
 
+    // The live agent-preview watcher is NOT started here.
+    //
+    // Opening the chat used to build a [MarmotAgentStreamWatcher] and call
+    // `watchLatest` on every feed change, which dials the QUIC brokers a
+    // kind:1200 advertises. Nothing in the deployed network publishes those
+    // streams, so that was a UDP connection attempt to a third-party endpoint
+    // on behalf of a feature no one is using — a service we start, not a
+    // capability we hold.
+    //
+    // The watcher, the transport and the banner all still exist and are still
+    // tested; `amy marmot stream watch` drives the same code on demand. Wiring
+    // it back is re-adding the watcher, the LaunchedEffect and the banner
+    // below, once there is something to watch.
+
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier =
@@ -134,20 +157,36 @@ fun MarmotGroupChatView(
                 routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
                 onWantsToReply = { note -> newMessageModel.reply(note) },
                 onWantsToEditDraft = { },
+                // kind:1210 rows sit in the conversation in order but are
+                // group-state captions rather than messages, so they get their
+                // own centered style instead of a bubble.
+                rowRenderer = remember(accountViewModel) { MarmotSystemRowRenderer(accountViewModel) },
             )
         }
 
         Spacer(modifier = DoubleVertSpacer)
 
-        MarmotGroupMessageComposer(
-            nostrGroupId = nostrGroupId,
-            newMessageModel = newMessageModel,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            onMessageSent = {
-                feedViewModel.feedState.sendToTop()
-            },
-        )
+        // A durable outbound gate means the group takes no new work: an
+        // unresolved disband request, a SelfRemove already sent, a realized
+        // removal. Sending would throw behind it, so the composer is replaced
+        // by the reason rather than left there to fail on tap — the history
+        // stays readable either way, which is the point of a gate that is not
+        // a terminal state.
+        val outboundGate by chatroom.outboundGate.collectAsStateWithLifecycle()
+        val gate = outboundGate
+        if (gate != null) {
+            MarmotGroupClosedComposer(gate)
+        } else {
+            MarmotGroupMessageComposer(
+                nostrGroupId = nostrGroupId,
+                newMessageModel = newMessageModel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onMessageSent = {
+                    feedViewModel.feedState.sendToTop()
+                },
+            )
+        }
     }
 }
 
@@ -330,4 +369,33 @@ private fun MarmotGroupFileUploadDialog(
         nav = nav,
         isNip17 = false,
     )
+}
+
+/**
+ * Stands in for the composer when an outbound gate is up.
+ *
+ * Deliberately a statement rather than a disabled text field: a greyed-out
+ * input still invites typing, and the three reasons are not the same — one is
+ * waiting on the group, one on a commit, and one is over. The group's history
+ * stays on screen above it.
+ */
+@Composable
+private fun MarmotGroupClosedComposer(gate: LocalOutboundGate) {
+    val message =
+        when (gate) {
+            LocalOutboundGate.DISBANDING -> stringRes(R.string.marmot_group_composer_disbanding)
+            LocalOutboundGate.LEAVING -> stringRes(R.string.marmot_group_composer_leaving)
+            LocalOutboundGate.REMOVED -> stringRes(R.string.marmot_group_composer_removed)
+        }
+    Row(
+        modifier = EditFieldModifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = message,
+            color = MaterialTheme.colorScheme.placeholderText,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+        )
+    }
 }

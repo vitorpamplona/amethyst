@@ -32,6 +32,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
+import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
+import com.vitorpamplona.amethyst.commons.marmot.MarmotPushCoordinator
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -174,6 +176,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
@@ -203,6 +206,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -212,6 +216,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -338,6 +343,7 @@ import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -373,6 +379,24 @@ class Account(
     val mlsGroupStateStore: MlsGroupStateStore? = null,
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
+    /**
+     * Durable publish obligations. Null means publish-before-apply does not
+     * survive a restart, so a commit interrupted mid-publish is replaced by a
+     * fresh one for the same epoch — a fork against the peers that took the
+     * first.
+     */
+    val marmotPublishObligationStore: com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore? = null,
+    /**
+     * Durable "already decided" markers for inbound events. Null means every
+     * backdated gift wrap is re-unwrapped on every sync.
+     */
+    val marmotIngestDedupStore: com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore? = null,
+    /**
+     * Durable push token records, stamps and tombstones. Null means a restart
+     * forgets every tombstone, so a relayed but revoked token record can win
+     * once and start waking a device its owner asked to be forgotten.
+     */
+    val marmotPushStateStore: com.vitorpamplona.quartz.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
@@ -920,7 +944,56 @@ class Account(
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
-    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it, marmotMessageStore, marmotKeyPackageStore) }
+    val marmotManager: MarmotManager? =
+        mlsGroupStateStore?.let {
+            MarmotManager(
+                signer,
+                it,
+                marmotMessageStore,
+                marmotKeyPackageStore,
+                // Publish-before-apply: a group-state change becomes canonical
+                // only once a relay in the group's own scope returns OK true.
+                // `publishAndConfirm` is exactly that "at least one
+                // acknowledged accept" rule; a plain `publish` would report
+                // success for bytes nobody took.
+                MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays) },
+                marmotPublishObligationStore,
+                marmotIngestDedupStore,
+                scope = scope,
+            )
+        }
+
+    /**
+     * Push token gossip (`features/push-notifications.md`) for the groups this
+     * account is in.
+     *
+     * Present whenever Marmot itself is, because CONSUMING gossip costs nothing
+     * and is what lets this client answer a peer's kind:447 later. Producing a
+     * record of our own is a separate decision: it needs a device token and a
+     * notification server public key, neither of which the protocol discovers.
+     */
+    val marmotPushCoordinator: MarmotPushCoordinator? =
+        marmotManager?.let {
+            marmotPushStateStore?.let { store -> MarmotPushCoordinator(it, store) } ?: MarmotPushCoordinator(it)
+        }
+
+    /**
+     * Raw QUIC for agent text stream previews (`transports/quic.md`).
+     *
+     * Only the live preview needs it. A device that cannot open a QUIC
+     * connection still participates fully — it reads every stream's
+     * authoritative kind:9 like ordinary chat — which is why this is a
+     * separate optional piece rather than part of [marmotManager].
+     */
+    val marmotStreamTransport: MarmotQuicTransport by lazy {
+        QuicAgentTextStreamTransport(
+            parentScope = scope,
+            // Preview brokers are commonly self-signed and the binding expects
+            // that; the platform trust store is still the default answer, and
+            // a deployment that pins does it here.
+            certificateValidator = JdkCertificateValidator(),
+        )
+    }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 
@@ -3716,6 +3789,26 @@ class Account(
 
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {
+            // Derived kind:1210 rows go straight into the conversation. Only
+            // DERIVED rows arrive here — one received over the wire is an
+            // assertion by its sender and is dropped at ingest — so these are
+            // safe to render with attribution.
+            marmotManager.onSystemRowDerived = { groupId, row ->
+                cache.justConsume(row, null, true)
+                val note = cache.getOrCreateNote(row.id)
+                note.event = row
+                marmotGroupList.addMessage(groupId, note)
+            }
+
+            // A disappearing message that is gone from disk but still on screen
+            // has not disappeared. Drop it from the conversation as it expires,
+            // rather than waiting for the next read to omit it.
+            marmotManager.onMessagesExpired = { groupId, expiredIds ->
+                expiredIds.forEach { id ->
+                    cache.getNoteIfExists(id)?.let { marmotGroupList.removeMessage(groupId, it) }
+                }
+            }
+
             scope.launch(Dispatchers.IO) {
                 marmotManager.restoreAll()
 

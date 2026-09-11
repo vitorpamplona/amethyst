@@ -115,11 +115,13 @@ import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
-import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -2452,9 +2454,49 @@ class AccountViewModel(
 
     fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
 
-    suspend fun createMarmotGroup(nostrGroupId: String) {
-        account.marmot.createMarmotGroup(nostrGroupId)
+    /**
+     * True when this group carries the `encrypted-media-v2` policy (`0x800b`)
+     * and a sender should therefore produce v2 references.
+     *
+     * A group without it is not a licence to reinterpret the frozen v1 policy
+     * at `0x8008` as v2 — they are different components — so this is a plain
+     * "does the group say v2", and the sender falls back to MIP-04 when it
+     * does not.
+     */
+    fun marmotUsesEncryptedMediaV2(nostrGroupId: String): Boolean = account.marmotManager?.encryptedMediaPolicy(nostrGroupId) != null
+
+    /** True when this account has somewhere to upload a group's encrypted media. */
+    fun hasBlossomServers(): Boolean =
+        account.blossomServers.flow.value
+            .isNotEmpty()
+
+    suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: String) {
+        account.marmot.enableMarmotEncryptedMediaV2(nostrGroupId)
     }
+
+    /** Post the kind:9 carrying an `encrypted-media-v2` attachment. */
+    suspend fun sendMarmotGroupEncryptedMediaV2(
+        nostrGroupId: String,
+        reference: EncryptedMediaReferenceV2,
+        caption: String,
+    ) {
+        val manager = account.marmotManager ?: return
+        val bundle = manager.buildMediaMessage(nostrGroupId, reference, caption, persistOwn = false)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+    }
+
+    suspend fun createMarmotGroup(
+        nostrGroupId: String,
+        name: String = "",
+        description: String = "",
+        disappearingMessageSecs: ULong? = null,
+    ) {
+        account.marmot.createMarmotGroup(nostrGroupId, name, description, disappearingMessageSecs)
+    }
+
+    /** This group's disappearing-message duration in seconds; 0 is off. */
+    fun marmotRetentionSeconds(nostrGroupId: String): Long = account.marmotManager?.retentionSeconds(nostrGroupId) ?: 0L
 
     suspend fun publishMarmotKeyPackage() {
         account.marmot.publishMarmotKeyPackage()
@@ -2486,6 +2528,27 @@ class AccountViewModel(
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
         val relays = account.marmot.marmotGroupRelays(nostrGroupId)
         account.marmot.leaveMarmotGroup(nostrGroupId, relays)
+    }
+
+    /**
+     * Disband the group for everyone. Irreversible — the caller is responsible
+     * for confirming with the user before this is reached.
+     *
+     * @return true when the group is terminal now, false when the request is
+     *   still pending convergence, which is not a failure.
+     */
+    suspend fun disbandMarmotGroup(nostrGroupId: String): Boolean {
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        return account.marmot.disbandMarmotGroup(nostrGroupId, relays)
+    }
+
+    /** Set (or, with a blank string, clear) the group's plain-https avatar link. */
+    suspend fun setMarmotGroupAvatarUrl(
+        nostrGroupId: String,
+        url: String,
+    ) {
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.setMarmotGroupAvatarUrl(nostrGroupId, url, relays)
     }
 
     suspend fun resetMarmotState() {
@@ -2549,35 +2612,26 @@ class AccountViewModel(
         // overlap, so kind:445 messages never reach the other side. The
         // welcome carries the metadata, so the invitee learns the relays at
         // join time.
-        val outboxRelayStrings =
-            account.outboxRelays.flow.value
-                .map { it.url }
-        val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
-        val baseMetadata =
-            currentMetadata
-                ?.copy(name = name, description = description)
-                ?.withMergedRelays(outboxRelayStrings)
-                ?: MarmotGroupData.bootstrap(
-                    nostrGroupId = nostrGroupId,
-                    creatorPubKey = account.signer.pubKey,
-                    outboxRelays = outboxRelayStrings,
-                    name = name,
-                    description = description,
-                )
-        val updatedMetadata =
-            when (icon) {
-                is MarmotGroupIconChange.Keep -> baseMetadata
-                is MarmotGroupIconChange.Clear -> baseMetadata.withoutImage()
-                is MarmotGroupIconChange.Set ->
-                    baseMetadata.withImage(
-                        imageHash = icon.upload.imageHash,
+        val manager = account.marmotManager ?: return
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+
+        manager.setGroupProfile(nostrGroupId, name, description, relays.toList())
+        when (icon) {
+            is MarmotGroupIconChange.Keep -> Unit
+            is MarmotGroupIconChange.Clear -> manager.setGroupImage(nostrGroupId, null, relays.toList())
+            is MarmotGroupIconChange.Set ->
+                manager.setGroupImage(
+                    nostrGroupId,
+                    GroupBlossomImageV1(
+                        imageHash = icon.upload.imageHash.hexToByteArray(),
                         imageKey = icon.upload.imageKey,
                         imageNonce = icon.upload.imageNonce,
                         imageUploadKey = icon.upload.imageUploadKey,
-                    )
-            }
-        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
+                        mediaType = icon.upload.mediaType,
+                    ),
+                    relays.toList(),
+                )
+        }
     }
 
     override fun onCleared() {

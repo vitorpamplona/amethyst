@@ -1,0 +1,216 @@
+{
+  "schema": "mdk-encrypted-media-imeta-fixture/v1",
+  "description": "Golden and rejection imeta fixtures for encrypted-media-v1. Shared by marmot-app, marmot-uniffi, and wn-cli tests so every layer agrees on validation verdicts and exact wire round-trips. `expected.dim`/`expected.thumbhash` distinguish absent (null) from present-empty (\"\").",
+  "media_version": "encrypted-media-v1",
+  "cases": [
+    {
+      "name": "golden-image-full",
+      "source_epoch": 7,
+      "valid": true,
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce 333333333333333333333333",
+        "m image/png",
+        "filename diagram.png",
+        "dim 800x600",
+        "thumbhash 1QcSHQRnh493V4dIh4eXh1h4kJUI"
+      ],
+      "expected": {
+        "version": "encrypted-media-v1",
+        "locators": [
+          {
+            "kind": "blossom-v1",
+            "value": "https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin"
+          }
+        ],
+        "ciphertext_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce_hex": "333333333333333333333333",
+        "media_type": "image/png",
+        "file_name": "diagram.png",
+        "dim": "800x600",
+        "thumbhash": "1QcSHQRnh493V4dIh4eXh1h4kJUI"
+      }
+    },
+    {
+      "name": "golden-document-minimal",
+      "source_epoch": 42,
+      "valid": true,
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/4444444444444444444444444444444444444444444444444444444444444444.bin",
+        "ciphertext_sha256 4444444444444444444444444444444444444444444444444444444444444444",
+        "plaintext_sha256 5555555555555555555555555555555555555555555555555555555555555555",
+        "nonce 666666666666666666666666",
+        "m application/pdf",
+        "filename brief.pdf"
+      ],
+      "expected": {
+        "version": "encrypted-media-v1",
+        "locators": [
+          {
+            "kind": "blossom-v1",
+            "value": "https://media.example/4444444444444444444444444444444444444444444444444444444444444444.bin"
+          }
+        ],
+        "ciphertext_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "plaintext_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "nonce_hex": "666666666666666666666666",
+        "media_type": "application/pdf",
+        "file_name": "brief.pdf",
+        "dim": null,
+        "thumbhash": null
+      }
+    },
+    {
+      "name": "golden-present-empty-dim",
+      "source_epoch": 7,
+      "valid": true,
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce 333333333333333333333333",
+        "m image/png",
+        "filename diagram.png",
+        "dim "
+      ],
+      "expected": {
+        "version": "encrypted-media-v1",
+        "locators": [
+          {
+            "kind": "blossom-v1",
+            "value": "https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin"
+          }
+        ],
+        "ciphertext_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce_hex": "333333333333333333333333",
+        "media_type": "image/png",
+        "file_name": "diagram.png",
+        "dim": "",
+        "thumbhash": null
+      }
+    },
+    {
+      "name": "rejects-missing-nonce",
+      "source_epoch": 7,
+      "valid": false,
+      "error_contains": "nonce",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "m image/png",
+        "filename diagram.png"
+      ]
+    },
+    {
+      "name": "rejects-duplicate-media-type",
+      "source_epoch": 7,
+      "valid": false,
+      "error_contains": "exactly one m",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce 333333333333333333333333",
+        "m image/png",
+        "filename diagram.png",
+        "m image/jpeg"
+      ]
+    },
+    {
+      "name": "rejects-blurhash-field",
+      "source_epoch": 7,
+      "valid": false,
+      "error_contains": "thumbhash",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce 333333333333333333333333",
+        "m image/png",
+        "filename diagram.png",
+        "blurhash LEHV6nWB2yk8pyo0adR*.7kCMdnj"
+      ]
+    },
+    {
+      "name": "rejects-blossom-locator-hash-mismatch",
+      "source_epoch": 7,
+      "valid": false,
+      "error_contains": "locator",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/7777777777777777777777777777777777777777777777777777777777777777.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce 333333333333333333333333",
+        "m image/png",
+        "filename diagram.png"
+      ]
+    },
+    {
+      "name": "rejects-unknown-version",
+      "source_epoch": 7,
+      "valid": false,
+      "error_contains": "version",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v3",
+        "locator blossom-v1 https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce 333333333333333333333333",
+        "m image/png",
+        "filename diagram.png"
+      ]
+    },
+    {
+      "name": "rejects-whitespace-only-filename",
+      "source_epoch": 7,
+      "valid": false,
+      "error_contains": "file name",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce 333333333333333333333333",
+        "m image/png",
+        "filename  "
+      ]
+    },
+    {
+      "name": "rejects-short-nonce",
+      "source_epoch": 7,
+      "valid": false,
+      "error_contains": "nonce",
+      "tag": [
+        "imeta",
+        "v encrypted-media-v1",
+        "locator blossom-v1 https://media.example/1111111111111111111111111111111111111111111111111111111111111111.bin",
+        "ciphertext_sha256 1111111111111111111111111111111111111111111111111111111111111111",
+        "plaintext_sha256 2222222222222222222222222222222222222222222222222222222222222222",
+        "nonce 3333333333333333",
+        "m image/png",
+        "filename diagram.png"
+      ]
+    }
+  ]
+}

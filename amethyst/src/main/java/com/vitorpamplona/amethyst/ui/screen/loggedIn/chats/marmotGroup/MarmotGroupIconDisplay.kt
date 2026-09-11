@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
+import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -90,6 +92,38 @@ fun rememberMarmotGroupIconUrl(
     }
 
     return url
+}
+
+/**
+ * The avatar URL for a group that may carry either avatar carrier, applying the
+ * components' precedence: `marmot.group.avatar-url.v1` wins over
+ * `marmot.group.blossom.image.v1`, and clearing the URL one falls back to the
+ * Blossom blob.
+ *
+ * The URL avatar is a plain link with no key material, so there is no cipher to
+ * register — it just goes to Coil. It does get a contact check first: a URL can
+ * be valid group state and still be somewhere we refuse to fetch from, and the
+ * spec puts that decision squarely on the client. An unsafe destination renders
+ * as no URL avatar rather than as an error, which lets the Blossom image (or the
+ * relay icon) take over.
+ *
+ * Returns null when the group has neither carrier.
+ */
+@Composable
+fun rememberMarmotGroupAvatarUrl(
+    avatarUrl: GroupAvatarUrlV1?,
+    image: MarmotGroupImage?,
+    accountViewModel: AccountViewModel,
+    adminPubkeys: List<HexKey> = emptyList(),
+): String? {
+    val link =
+        remember(avatarUrl) {
+            avatarUrl?.url?.takeIf { it.isNotEmpty() && MarmotWebUrl.isSafeToContact(it) }
+        }
+    // Branch rather than resolving both: the Blossom path registers a
+    // decryption cipher and probes servers as a side effect, and neither is
+    // worth doing for an avatar the renderer is not going to show.
+    return if (link != null) link else rememberMarmotGroupIconUrl(image, accountViewModel, adminPubkeys)
 }
 
 /**
