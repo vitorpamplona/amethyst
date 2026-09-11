@@ -277,7 +277,7 @@ class NappletBrokerService : Service() {
             // Bind to the account active at mint time: a browser token minted for one account must
             // never sign as another if the user switches while the page is still open.
             val mintAccount = Amethyst.instance.sessionManager.loggedInAccount() ?: return true
-            val token = NappletLaunchRegistry.register(identity, setOf(NappletCapability.IDENTITY, NappletCapability.RELAY), mintAccount.pubKey)
+            val token = NappletLaunchRegistry.register(identity, NappletCapability.WEBSITE_CAPABILITIES, mintAccount.pubKey)
             val response =
                 Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {
                     this.data =

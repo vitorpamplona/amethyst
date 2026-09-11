@@ -169,6 +169,10 @@ object NappletProtocolJson {
                     createdAt = t["created_at"]?.jsonPrimitive?.long ?: (System.currentTimeMillis() / 1000),
                 )
             }
+            // NIP-07 nip44.encrypt/decrypt: crypto only, no publish. `peer` is the counterparty
+            // pubkey the NIP-07 call names as its first argument.
+            "nostr.nip44Encrypt" -> NappletRequest.Nip44Encrypt(peer = o.req("peer"), plaintext = o.str("plaintext") ?: "")
+            "nostr.nip44Decrypt" -> NappletRequest.Nip44Decrypt(peer = o.req("peer"), ciphertext = o.str("ciphertext") ?: "")
             "storage.get" -> NappletRequest.StorageGet(o.req("key"), o.storageScope())
             "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"), o.storageScope())
             "storage.remove" -> NappletRequest.StorageRemove(o.req("key"), o.storageScope())
@@ -250,6 +254,10 @@ object NappletProtocolJson {
                     response.binding?.let { put("binding", it) }
                 }
                 is NappletResponse.StorageValue -> {
+                    put("ok", true)
+                    put("value", response.value)
+                }
+                is NappletResponse.Text -> {
                     put("ok", true)
                     put("value", response.value)
                 }

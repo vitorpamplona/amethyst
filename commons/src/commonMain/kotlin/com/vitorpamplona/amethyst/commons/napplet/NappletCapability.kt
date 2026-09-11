@@ -44,6 +44,21 @@ enum class NappletCapability {
     /** `relay` — publish (shell-signed), query, and subscribe to the user's relays. */
     RELAY,
 
+    /**
+     * NIP-44 encrypt/decrypt with the user's key, returning the ciphertext/plaintext to the caller
+     * instead of publishing it. Needed by any standard Nostr web app that builds NIP-59 seals
+     * itself (NIP-17 DMs, gift-wrapped app protocols) — signing alone cannot produce a seal.
+     *
+     * Deliberately **not** in [fromNapDomain]: no NIP-5D domain maps here, so a locked napplet can
+     * never declare it. It is granted only to the website posture (the NIP-07 `window.nostr`
+     * surface), where the page is already trusted with `signEvent`. Every individual call still
+     * passes the per-operation signer ledger
+     * ([Encrypt][com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp.Encrypt] /
+     * [Decrypt][com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp.Decrypt]),
+     * which is what actually keeps decryption behind a prompt.
+     */
+    SIGNER,
+
     /** `storage` — a per-applet sandboxed key-value store, namespaced by applet identity. */
     STORAGE,
 
@@ -92,6 +107,18 @@ enum class NappletCapability {
         get() = !requiresPerUseConsent
 
     companion object {
+        /**
+         * What a page in the **website** posture (the NIP-07 `window.nostr` surface) may ask the
+         * broker for. There are two independent mints of this set — the nSite host derives it from
+         * `HostProfile.WEBSITE`, while the in-app browser mints a fresh per-origin token — so it
+         * lives here, once: when the two drifted, the browser silently denied every call to a
+         * capability the injected shim was still advertising.
+         *
+         * Widening this widens what any visited site can request, so it is a security decision, not
+         * a convenience list.
+         */
+        val WEBSITE_CAPABILITIES: Set<NappletCapability> = setOf(IDENTITY, RELAY, SIGNER)
+
         /**
          * Maps a bare, currently supported NAP domain to the capability the broker enforces.
          * Returns `null` for unknown and partial/legacy domains — callers MUST treat that as

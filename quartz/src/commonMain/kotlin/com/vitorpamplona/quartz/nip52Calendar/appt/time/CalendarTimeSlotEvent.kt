@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.DayIndexTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.LocationTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -76,6 +77,9 @@ class CalendarTimeSlotEvent(
 
     fun endTzId() = tags.firstTagValue("end_tzid")
 
+    /** The NIP-52 `D` day indexes this event claims. Empty for an event published without them. */
+    fun dayIndexes() = tags.mapNotNull(DayIndexTag.Companion::parse)
+
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag.Companion::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag.Companion::parse)
@@ -109,6 +113,9 @@ class CalendarTimeSlotEvent(
             end?.let { endTimestamp(it) }
             startTzId?.let { startTzId(it) }
             endTzId?.let { endTzId(it) }
+            // NIP-52 requires the `D` day index on 31923; without it the event is invisible to
+            // date-indexed calendar clients, which query by day rather than scanning every event.
+            dayIndexes(start, end)
             initializer()
         }
     }

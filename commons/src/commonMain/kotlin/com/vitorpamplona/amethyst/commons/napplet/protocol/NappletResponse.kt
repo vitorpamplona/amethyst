@@ -65,6 +65,14 @@ sealed interface NappletResponse {
         val value: String?,
     ) : NappletResponse
 
+    /**
+     * A single opaque string result, returned in the `value` field. Used by the NIP-44 ops, where the
+     * payload is ciphertext one way and plaintext the other and the host has nothing to interpret.
+     */
+    data class Text(
+        val value: String,
+    ) : NappletResponse
+
     /** Result of `storage.keys` (and other string-list reads). */
     data class Strings(
         val values: List<String>,

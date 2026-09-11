@@ -368,4 +368,33 @@ class NappletProtocolJsonTest {
         val failed = json.parseToJsonElement(NappletProtocolJson.encodeResponse("relay.publish", NappletResponse.Failed("boom"))).jsonObject
         assertEquals("boom", failed["reason"]?.jsonPrimitive?.content)
     }
+
+    @Test
+    fun decodesNip44EncryptAndDecrypt() {
+        // The envelope the injected window.nostr.nip44 shim posts. Field names are the contract
+        // between shim.js and this decoder — renaming either side silently breaks NIP-17 in nSites.
+        assertEquals(
+            NappletRequest.Nip44Encrypt("pk", "gm"),
+            NappletProtocolJson.decodeRequest("""{"type":"nostr.nip44Encrypt","id":"1","peer":"pk","plaintext":"gm"}"""),
+        )
+        assertEquals(
+            NappletRequest.Nip44Decrypt("pk", "cipher"),
+            NappletProtocolJson.decodeRequest("""{"type":"nostr.nip44Decrypt","id":"1","peer":"pk","ciphertext":"cipher"}"""),
+        )
+    }
+
+    @Test
+    fun nip44WithoutAPeerIsRejectedRatherThanDefaultedToSomeKey() {
+        // `peer` is required: silently substituting a default would encrypt to the wrong party.
+        assertThrowsAny { NappletProtocolJson.decodeRequest("""{"type":"nostr.nip44Encrypt","id":"1","plaintext":"gm"}""") }
+        assertThrowsAny { NappletProtocolJson.decodeRequest("""{"type":"nostr.nip44Decrypt","id":"1","ciphertext":"c"}""") }
+    }
+
+    @Test
+    fun encodesTextResultsUnderValue() {
+        val result = json.parseToJsonElement(NappletProtocolJson.encodeResponse("nostr.nip44Encrypt", NappletResponse.Text("CIPHER"))).jsonObject
+        assertEquals("nostr.nip44Encrypt.result", result["type"]?.jsonPrimitive?.content)
+        assertTrue(result["ok"]!!.jsonPrimitive.boolean)
+        assertEquals("CIPHER", result["value"]?.jsonPrimitive?.content)
+    }
 }

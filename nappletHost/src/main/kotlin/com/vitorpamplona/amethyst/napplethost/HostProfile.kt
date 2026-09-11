@@ -41,12 +41,17 @@ enum class HostProfile {
 
     /**
      * What this posture is allowed to ask the broker for — THE security decision, minted into the
-     * launch token in the trusted main process. A website gets the IDENTITY + RELAY pair NIP-07 needs
-     * (consent-gated); a locked napplet gets only what its manifest `requires` declares.
+     * launch token in the trusted main process. A website gets the IDENTITY + RELAY + SIGNER set
+     * NIP-07 needs (consent-gated); a locked napplet gets only what its manifest `requires` declares.
+     *
+     * SIGNER (NIP-44 encrypt/decrypt) is website-only by construction: no NIP-5D domain maps to it,
+     * so [resolveRequiredCapabilities] can never produce it for a napplet however its manifest is
+     * written. Without it a page can sign but not seal, which locks it out of NIP-17 and every other
+     * gift-wrapped protocol.
      */
     fun declaredCapabilities(requires: List<String>): Set<NappletCapability> =
         when (this) {
-            WEBSITE -> setOf(NappletCapability.IDENTITY, NappletCapability.RELAY)
+            WEBSITE -> NappletCapability.WEBSITE_CAPABILITIES
             NAPPLET -> resolveRequiredCapabilities(requires).capabilities.toSet()
         }
 

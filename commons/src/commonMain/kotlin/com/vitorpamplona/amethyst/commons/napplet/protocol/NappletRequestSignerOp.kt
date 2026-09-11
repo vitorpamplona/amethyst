@@ -34,5 +34,38 @@ fun NappletRequest.toSignerOp(): NostrSignerOp? =
         is NappletRequest.Publish -> NostrSignerOp.SignKind(kind)
         is NappletRequest.SignEvent -> NostrSignerOp.SignKind(kind)
         is NappletRequest.PublishEncrypted -> NostrSignerOp.Encrypt
+        is NappletRequest.Nip44Encrypt -> NostrSignerOp.Encrypt
+        // The broad grant, matching what NIP-46's nip44_decrypt maps to. The narrower
+        // DecryptFrom(peer) exists, but only the NIP-46 authorizer honours it today; recording one
+        // here would be a grant this broker never reads back, so the user would re-prompt forever.
+        is NappletRequest.Nip44Decrypt -> NostrSignerOp.Decrypt
+        else -> null
+    }
+
+/**
+ * The NARROWER op a request may alternatively be granted — today only
+ * [NostrSignerOp.DecryptFrom], i.e. "always allow, but only for this counterparty". Mirrors the
+ * NIP-46 authorizer's `toNarrowSignerOp`.
+ *
+ * A single broad "always allow decrypt" hands an app every private conversation the user will ever
+ * have; this is the granular alternative the consent dialog offers alongside it. `null` for every
+ * request without a counterparty — signing and encryption already name the thing being granted.
+ */
+fun NappletRequest.toNarrowSignerOp(): NostrSignerOp? =
+    when (this) {
+        is NappletRequest.Nip44Decrypt -> NostrSignerOp.DecryptFrom(peer)
+        else -> null
+    }
+
+/**
+ * The counterparty whose conversation a decrypt request asks to read, or `null` for every other
+ * request. Scoped to decryption to match the NIP-46 authorizer and what the consent dialog
+ * documents: it drives "X wants to read your messages with Alice", a categorically different
+ * decision from the encrypt/sign case, where the counterparty is already part of what the user
+ * is composing.
+ */
+fun NappletRequest.counterpartyPubKey(): String? =
+    when (this) {
+        is NappletRequest.Nip44Decrypt -> peer
         else -> null
     }

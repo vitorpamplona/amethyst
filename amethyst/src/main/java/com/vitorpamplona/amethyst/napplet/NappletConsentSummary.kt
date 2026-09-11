@@ -275,6 +275,14 @@ class NappletConsentSummary(
                 }
             }
             is NappletRequest.PublishEncrypted -> context.getString(R.string.napplet_consent_publish_encrypted)
+            is NappletRequest.Nip44Encrypt -> {
+                val preview = request.plaintext.take(160).trim()
+                val summary = context.getString(R.string.napplet_consent_nip44_encrypt, counterpartyLabel(request.peer))
+                if (preview.isEmpty()) summary else summary + "\n\u201C$preview\u201D"
+            }
+            // The ciphertext is meaningless to show, so name the counterparty instead — that is
+            // the decision the user is actually making ("let this page read messages from X").
+            is NappletRequest.Nip44Decrypt -> context.getString(R.string.napplet_consent_nip44_decrypt, counterpartyLabel(request.peer))
             is NappletRequest.QueryEvents, is NappletRequest.Subscribe -> context.getString(R.string.napplet_consent_query)
             is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove, is NappletRequest.StorageKeys ->
                 context.getString(R.string.napplet_consent_storage)

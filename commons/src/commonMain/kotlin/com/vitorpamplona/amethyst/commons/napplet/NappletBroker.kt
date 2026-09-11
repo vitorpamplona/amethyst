@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope
+import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -245,6 +246,12 @@ class NappletBroker(
                 signAndPublish(request.kind, withRecipientTag(request.tags, request.recipient), ciphertext)
             }
 
+            // NIP-07 nip44.encrypt/decrypt: the shell runs the crypto with the real key and hands back
+            // only the result, so the page can build its own NIP-59 seals without ever seeing the key.
+            is NappletRequest.Nip44Encrypt -> NappletResponse.Text(signer.nip44Encrypt(request.plaintext, request.peer))
+
+            is NappletRequest.Nip44Decrypt -> NappletResponse.Text(signer.nip44Decrypt(request.ciphertext, request.peer))
+
             is NappletRequest.QueryEvents -> {
                 val gateway = relay ?: return NappletResponse.Unsupported("relay.query")
                 NappletResponse.Events(gateway.query(request.filters))
@@ -449,50 +456,57 @@ class NappletBroker(
     ): Boolean =
         signerConsentLock.withLock {
             val sl = signerLedger ?: return@withLock true
+            val coordinate = signerCoordinateFor(identity)
+            // A decrypt request also carries a narrower op ("decrypt messages from THIS
+            // counterparty"). A standing narrow grant satisfies it without widening the broad one.
+            val narrowOp = request.toNarrowSignerOp()
+
             // Session grants win immediately without touching storage. Scoped to this applet: a
             // grant made for one app never authorizes another.
-            if (sessionKey(signerCoordinateFor(identity), op) in sessionAllows) {
-                sl.updateLastUsed(signerCoordinateFor(identity))
+            if (sessionKey(coordinate, op) in sessionAllows) {
+                sl.updateLastUsed(coordinate)
                 return@withLock true
             }
-            when (sl.decide(signerCoordinateFor(identity), op)) {
+            when (sl.decide(coordinate, op)) {
                 NostrOpDecision.ALLOW -> {
-                    sl.updateLastUsed(signerCoordinateFor(identity))
+                    sl.updateLastUsed(coordinate)
                     true
                 }
+                // An explicit DENY on the broad op is final — a narrow grant never overrides it.
                 NostrOpDecision.DENY -> false
                 NostrOpDecision.ASK -> {
-                    val prompt = signerConsentPrompt ?: return@withLock true
-                    when (val grant = prompt.request(identity, op, request)) {
-                        is SignerOpGrant.AllowAll -> {
-                            sl.setPolicy(signerCoordinateFor(identity), AppSignerPolicy.FULL_TRUST)
-                            sl.updateLastUsed(signerCoordinateFor(identity))
-                            true
-                        }
-                        is SignerOpGrant.AllowForOp -> {
-                            sl.setOpDecision(signerCoordinateFor(identity), op, NostrOpDecision.ALLOW)
-                            sl.updateLastUsed(signerCoordinateFor(identity))
-                            true
-                        }
-                        is SignerOpGrant.AllowForSession -> {
-                            sessionAllows.add(sessionKey(signerCoordinateFor(identity), op))
-                            sl.updateLastUsed(signerCoordinateFor(identity))
-                            true
-                        }
-                        is SignerOpGrant.AllowUntil -> {
-                            sl.setTimedOpDecision(signerCoordinateFor(identity), op, NostrOpDecision.ALLOW, grant.expiresAt)
-                            sl.updateLastUsed(signerCoordinateFor(identity))
-                            true
-                        }
-                        is SignerOpGrant.DenyForOp -> {
-                            sl.setOpDecision(signerCoordinateFor(identity), op, NostrOpDecision.DENY)
-                            false
-                        }
-                        else -> grant.isAllowed
+                    if (narrowOp != null && isNarrowAllowed(sl, coordinate, narrowOp)) {
+                        sl.updateLastUsed(coordinate)
+                        return@withLock true
                     }
+                    val prompt = signerConsentPrompt ?: return@withLock true
+                    val grant = prompt.request(identity, op, request)
+                    // Record the GRANT's own op, never the requested one: the dialog may hand back a
+                    // narrower op ("only from this counterparty"), and a stored grant must never be
+                    // wider than what the user actually tapped.
+                    sl.record(coordinate, grant)
+                    if (grant is SignerOpGrant.AllowForSession) {
+                        sessionAllows.add(sessionKey(coordinate, grant.op))
+                    }
+                    if (grant.isAllowed) sl.updateLastUsed(coordinate)
+                    grant.isAllowed
                 }
             }
         }
+
+    /**
+     * True when a standing or session grant exists for the narrower [narrowOp] (e.g. decrypt-from-X).
+     * Only an explicit per-op override counts: [NostrSignerPermissionLedger.decide] would otherwise
+     * fall through to the app's policy, and FULL_TRUST/REASONABLE would answer for an op nobody ever
+     * granted. Mirrors the NIP-46 authorizer so both surfaces honour a narrow grant identically.
+     */
+    private suspend fun isNarrowAllowed(
+        sl: NostrSignerPermissionLedger,
+        coordinate: String,
+        narrowOp: NostrSignerOp,
+    ): Boolean =
+        sessionKey(coordinate, narrowOp) in sessionAllows ||
+            sl.store.loadOpDecision(coordinate, narrowOp)?.let { sl.decide(coordinate, narrowOp) == NostrOpDecision.ALLOW } ?: false
 
     /**
      * The signer-ledger coordinate for [identity] under the current account. The signer permission

@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
+import com.vitorpamplona.amethyst.commons.napplet.protocol.counterpartyPubKey
+import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -78,12 +80,22 @@ fun buildSignerConsentInfo(
         } else {
             resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
         }
-    val summary = op.label(context)
+    // A decrypt grant can be scoped to one conversation: offer "always allow for Alice" next to the
+    // broad "always allow", instead of only the all-conversations-forever choice. Mirrors the NIP-46
+    // dialog, so the same decision reads the same way whichever surface asked.
+    val narrowOp = request.toNarrowSignerOp()
+    val counterparty = request.counterpartyPubKey()
+    // For decrypt this names the counterparty ("read your private messages with Alice").
+    val summary = (narrowOp ?: op).label(context)
     val preview =
         when (request) {
             is NappletRequest.Publish -> request.content.take(160).trim()
             is NappletRequest.SignEvent -> request.content.take(160).trim()
             is NappletRequest.PublishEncrypted -> request.content.take(160).trim()
+            // Encryption shows the plaintext the page wants sealed; decryption has only ciphertext,
+            // which tells the user nothing, so its preview stays empty and the counterparty in
+            // rawData carries the meaning.
+            is NappletRequest.Nip44Encrypt -> request.plaintext.take(160).trim()
             else -> ""
         }
     val rawData =
@@ -105,6 +117,20 @@ fun buildSignerConsentInfo(
                 node.put("content", request.content)
                 JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
             }
+            is NappletRequest.Nip44Encrypt -> {
+                val node = JacksonMapper.mapper.createObjectNode()
+                node.put("operation", "nip44.encrypt")
+                node.put("peer", request.peer)
+                node.put("plaintext", request.plaintext)
+                JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+            }
+            is NappletRequest.Nip44Decrypt -> {
+                val node = JacksonMapper.mapper.createObjectNode()
+                node.put("operation", "nip44.decrypt")
+                node.put("peer", request.peer)
+                node.put("ciphertext", request.ciphertext)
+                JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+            }
             else -> ""
         }
     val previewTemplate =
@@ -122,6 +148,16 @@ fun buildSignerConsentInfo(
         rawData = rawData,
         iconUrl = iconUrl,
         previewTemplate = previewTemplate,
+        counterpartyName = counterparty?.let { counterpartyLabel(it) },
+        counterpartyPicture = counterparty?.let { LocalCache.getUserIfExists(it)?.profilePicture() },
+        counterpartyPubKey = counterparty,
+        narrowOp = narrowOp,
+        // Read the pubkey off the narrow op itself: the dialog drops the button unless BOTH halves
+        // are present, so deriving them from one value keeps them from disagreeing.
+        narrowOpLabel =
+            (narrowOp as? NostrSignerOp.DecryptFrom)?.let {
+                context.getString(R.string.nip46_signer_allow_always_for, counterpartyLabel(it.counterparty))
+            },
     )
 }
 

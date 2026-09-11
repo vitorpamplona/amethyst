@@ -31,6 +31,7 @@ fun NappletCapability.labelRes(): Int =
         NappletCapability.IDENTITY -> R.string.napplet_cap_identity
         NappletCapability.KEYS -> R.string.napplet_cap_keys
         NappletCapability.RELAY -> R.string.napplet_cap_relay
+        NappletCapability.SIGNER -> R.string.napplet_cap_signer
         NappletCapability.STORAGE -> R.string.napplet_cap_storage
         NappletCapability.VALUE -> R.string.napplet_cap_value
         NappletCapability.RESOURCE -> R.string.napplet_cap_resource
@@ -47,6 +48,7 @@ fun NappletCapability.descriptionRes(): Int =
         NappletCapability.IDENTITY -> R.string.napplet_cap_identity_desc
         NappletCapability.KEYS -> R.string.napplet_cap_keys_desc
         NappletCapability.RELAY -> R.string.napplet_cap_relay_desc
+        NappletCapability.SIGNER -> R.string.napplet_cap_signer_desc
         NappletCapability.STORAGE -> R.string.napplet_cap_storage_desc
         NappletCapability.VALUE -> R.string.napplet_cap_value_desc
         NappletCapability.RESOURCE -> R.string.napplet_cap_resource_desc
