@@ -2,8 +2,8 @@
 # Amethyst app version — single source of truth consumed by both Android (amethyst/)
 # and Desktop (desktopApp/). `appCode` is the Android versionCode: a monotonic
 # integer that must increment on every release, even when `app` is unchanged.
-app = "1.15.0"
-appCode = "458"
+app = "1.15.1"
+appCode = "459"
 accompanistAdaptive = "0.37.3"
 # Pinned: 0.3.0 turns CacheMap.entries/keys/values into DeprecationLevel.ERROR (and
 # throws UnsupportedOperationException at runtime), which breaks quartz's appleMain
@@ -13,6 +13,9 @@ accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
 composeMultiplatform = "1.12.0"
 activityCompose = "1.13.0"
+# 9.4.0's PerModuleBundleTask rejects an AAB entry whose name contains a colon, which every
+# .kotlin_module named after a Gradle project path has. Worked around in amethyst/build.gradle.kts
+# (stripColonNamedEntries) rather than by pinning to 9.3.1; drop that block if AGP fixes it.
 agp = "9.4.0"
 android-compileSdk = "37"
 android-minSdk = "26"

@@ -1,3 +1,7 @@
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -610,4 +614,76 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.camera.extensions)
+}
+
+// AGP 9.4.0's PerModuleBundleTask refuses to write an AAB entry whose name contains a colon:
+//
+//   Entry name contains invalid characters: root/META-INF/zoomable-root:zoomable.kotlin_module
+//
+// A .kotlin_module is named after the Gradle project path that produced it, colons included, and
+// 14 of the 98 merged into this app carry one -- zoomable, Negentropy, vico, seven coil3 artifacts
+// and four of ours. The entries are identical under 9.3.1, which writes them without complaint, so
+// 9.4.0 added the rejection rather than the names.
+//
+// packaging.resources.excludes cannot remove them: with minification on, R8 emits the java
+// resources and PerModuleBundleTask.addHybridFolder hands JarFlinger its own predicate, so those
+// filters are never consulted. Nothing in the AAB reads a .kotlin_module either -- it exists for
+// the Kotlin compiler to resolve top-level declarations across modules at COMPILE time.
+//
+// So drop them from R8's java-res jar in the moment before the bundle task opens it, then put the
+// jar back exactly as R8 left it. The strip is doFirst on the CONSUMER rather than doLast on R8, so
+// a build-cache hit on R8 cannot skip it; the restore is what keeps R8 up to date next build --
+// without it Gradle sees a modified output and re-runs R8 every time, which measured ~2 min a build
+// here for no work.
+fun stripColonNamedEntries(jar: File): Int {
+    val offenders = ZipFile(jar).use { zip -> zip.entries().toList().count { ':' in it.name } }
+    if (offenders == 0) return 0
+
+    val rewritten = File(jar.parentFile, "${jar.name}.stripped")
+    ZipFile(jar).use { zip ->
+        ZipOutputStream(rewritten.outputStream().buffered()).use { out ->
+            zip.entries().asSequence().filterNot { ':' in it.name }.forEach { entry ->
+                out.putNextEntry(ZipEntry(entry.name))
+                zip.getInputStream(entry).use { it.copyTo(out) }
+                out.closeEntry()
+            }
+        }
+    }
+    rewritten.copyTo(jar, overwrite = true)
+    rewritten.delete()
+    return offenders
+}
+
+androidComponents.onVariants { variant ->
+    val variantName = variant.name
+    val capitalized = variantName.replaceFirstChar { it.uppercase() }
+    tasks.matching { it.name == "build${capitalized}PreBundle" }.configureEach {
+        val javaResDir = layout.buildDirectory.dir("intermediates/merged_java_res/$variantName")
+        val backups = mutableMapOf<File, File>()
+
+        doFirst {
+            javaResDir.get().asFile
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "jar" }
+                .forEach { jar ->
+                    val backup = File(jar.parentFile, "${jar.name}.orig")
+                    jar.copyTo(backup, overwrite = true)
+                    val dropped = stripColonNamedEntries(jar)
+                    if (dropped > 0) {
+                        backups[jar] = backup
+                        logger.lifecycle("Stripped $dropped colon-named entries from ${jar.name}")
+                    } else {
+                        backup.delete()
+                    }
+                }
+        }
+
+        doLast {
+            backups.forEach { (jar, backup) ->
+                backup.copyTo(jar, overwrite = true)
+                backup.delete()
+            }
+            backups.clear()
+        }
+    }
 }
