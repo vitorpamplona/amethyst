@@ -2004,6 +2004,16 @@ class MarmotManager(
                     "durable behind the Disbanding gate and retries with the obligation"
             }
         }
+
+        // Start the carrier ourselves. Applying this Commit opened a bounded
+        // convergence pass, and terminalization now happens only when that pass
+        // SETTLES — but the settler is otherwise started by inbound traffic
+        // that detected a fork, and this pass has neither. Without this the
+        // group sits in `Recovering` behind its own `Disbanding` gate
+        // indefinitely: nothing may be sent to it and it never ends. A front
+        // end that drives settlement itself (the CLI does) would not notice;
+        // the app would.
+        startConvergenceSettler()
         return publication.event
     }
 
@@ -2094,6 +2104,9 @@ class MarmotManager(
                 groupRelays(nostrGroupId),
                 ignoringGate = LocalOutboundGate.DISBANDING,
             ) { groupManager.stageDisband(nostrGroupId) }
+            // Same reason as in [disbandGroup]: the regenerated Commit opens a
+            // pass of its own that nothing else would carry to settlement.
+            startConvergenceSettler()
             DisbandResolution.PENDING
         } catch (e: Exception) {
             Log.w("MarmotManager", "could not regenerate the disband commit for $nostrGroupId", e)

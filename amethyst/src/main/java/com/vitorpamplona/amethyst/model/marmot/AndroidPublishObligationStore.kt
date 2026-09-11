@@ -95,6 +95,74 @@ class AndroidPublishObligationStore(
             }
         }
 
+    private fun gateDir(): File = File(rootDir, "marmot_gates")
+
+    private fun gateFile(groupId: String) = File(gateDir(), "$groupId.gate")
+
+    /**
+     * Outbound gates are durable for the same reason obligations are, and the
+     * `Disbanding` one more than any: the component requires it to survive
+     * "publication failure, restart, and a losing branch", and Android kills
+     * apps mid-work routinely. An in-memory gate loses an admin's irreversible
+     * request to the crash between raising it and a relay taking the Commit,
+     * and the next launch offers the group as ordinarily live.
+     *
+     * Not encrypted, unlike an obligation: the value is one enum name and the
+     * filename is a group id this device already stores in the clear
+     * everywhere else. There is no key material and no message content here.
+     */
+    override suspend fun saveGate(
+        groupId: HexKey,
+        gate: String,
+    ) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val target = gateFile(groupId)
+            try {
+                target.parentFile?.mkdirs()
+                val tmp = File(target.parentFile, "${target.name}.tmp")
+                tmp.writeBytes(gate.encodeToByteArray())
+                if (!tmp.renameTo(target)) {
+                    tmp.copyTo(target, overwrite = true)
+                    if (!tmp.delete()) Log.w(TAG) { "could not delete temp file ${tmp.absolutePath}" }
+                }
+            } catch (e: Exception) {
+                // Same rule as an obligation: failing to record the gate is
+                // worse than failing to act, because the request is the part
+                // that cannot be reconstructed.
+                Log.e(TAG, "saveGate($groupId) FAILED", e)
+                throw e
+            }
+        }
+    }
+
+    override suspend fun deleteGate(groupId: HexKey) =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val target = gateFile(groupId)
+                if (target.exists() && !target.delete()) {
+                    Log.w(TAG) { "could not delete cleared gate ${target.absolutePath}" }
+                }
+                Unit
+            }
+        }
+
+    override suspend fun loadGates(): Map<HexKey, String> =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                gateDir()
+                    .listFiles { f -> f.isFile && f.name.endsWith(".gate") }
+                    ?.mapNotNull { file ->
+                        try {
+                            file.name.removeSuffix(".gate") to file.readText().trim()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "could not read gate ${file.absolutePath}", e)
+                            null
+                        }
+                    }?.toMap()
+                    .orEmpty()
+            }
+        }
+
     override suspend fun loadAll(): List<ByteArray> =
         withContext(Dispatchers.IO) {
             mutex.withLock {

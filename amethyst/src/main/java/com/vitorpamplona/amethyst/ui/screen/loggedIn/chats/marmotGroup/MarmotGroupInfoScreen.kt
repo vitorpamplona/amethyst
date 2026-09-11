@@ -507,11 +507,27 @@ fun MarmotGroupInfoScreen(
                 isDisbanding = true
                 scope.launch(Dispatchers.IO) {
                     try {
-                        accountViewModel.disbandMarmotGroup(nostrGroupId)
+                        // Ended, or ending. A disband terminalizes only once
+                        // convergence SELECTS the Commit, so the request can
+                        // still be pending here — and telling someone their
+                        // conversation is over when it may not be is the one
+                        // wrong answer. Either way the group takes no further
+                        // outbound work, so leaving the screen is right.
+                        val ended = accountViewModel.disbandMarmotGroup(nostrGroupId)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, stringRes(context, R.string.marmot_group_disbanded_toast), Toast.LENGTH_SHORT)
-                                .show()
+                                .makeText(
+                                    context,
+                                    stringRes(
+                                        context,
+                                        if (ended) {
+                                            R.string.marmot_group_disbanded_toast
+                                        } else {
+                                            R.string.marmot_group_disbanding_toast
+                                        },
+                                    ),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                         nav.nav(Route.Message)
                     } catch (e: Exception) {

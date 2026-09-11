@@ -312,6 +312,34 @@ class FilePublishObligationStore(
             ?.sortedBy { it.name }
             ?.mapNotNull { runCatching { it.readBytes() }.getOrNull() }
             .orEmpty()
+
+    private fun gateFile(groupId: String) = File(dir, "$groupId.gate")
+
+    /**
+     * Outbound gates live beside the obligations and are durable for the same
+     * reason: `Disbanding` must survive "publication failure, restart, and a
+     * losing branch", and every `amy` verb is its own process — so an
+     * in-memory gate would not survive even the next command, let alone a
+     * crash.
+     */
+    override suspend fun saveGate(
+        groupId: HexKey,
+        gate: String,
+    ) {
+        SecureFileIO.writeBytesAtomic(gateFile(groupId), gate.encodeToByteArray())
+    }
+
+    override suspend fun deleteGate(groupId: HexKey) {
+        gateFile(groupId).deleteOrWarn("FilePublishObligationStore", "outbound gate")
+    }
+
+    override suspend fun loadGates(): Map<HexKey, String> =
+        dir
+            .listFiles { f -> f.isFile && f.name.endsWith(".gate") }
+            ?.mapNotNull { file ->
+                runCatching { file.name.removeSuffix(".gate") to file.readText().trim() }.getOrNull()
+            }?.toMap()
+            .orEmpty()
 }
 
 /**

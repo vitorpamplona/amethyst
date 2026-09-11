@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -577,17 +578,28 @@ class AccountMarmotActions(
      * Deliberately NOT silent on failure the way the other actions here are: a
      * disband that did not happen must not look like one that did, so the
      * exception propagates to the caller's error path.
+     *
+     * It is no longer terminal the moment it is published, either: the Commit
+     * is admitted as a convergence candidate and only a SELECTED one moves the
+     * group to `Disbanded`, so between the two the request sits behind a
+     * durable `Disbanding` gate. Reporting that distinction is the whole point
+     * of the return value — announcing "group disbanded" for a request that is
+     * still pending is the one thing a terminal action must never do.
+     *
+     * @return true when the group is terminal now; false when the request is
+     *   durable and unresolved, which is not a failure.
      */
     suspend fun disbandMarmotGroup(
         nostrGroupId: HexKey,
         groupRelays: Set<NormalizedRelayUrl>,
-    ) {
-        val manager = account.marmotManager ?: return
-        if (!account.isWriteable()) return
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
+        if (!account.isWriteable()) return false
 
         manager.disbandGroup(nostrGroupId, groupRelays.toList())
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
+        return manager.lifecycle(nostrGroupId) == GroupLifecycleState.DISBANDED
     }
 
     /**

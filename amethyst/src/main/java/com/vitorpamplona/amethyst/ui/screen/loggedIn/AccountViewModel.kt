@@ -2533,10 +2533,13 @@ class AccountViewModel(
     /**
      * Disband the group for everyone. Irreversible — the caller is responsible
      * for confirming with the user before this is reached.
+     *
+     * @return true when the group is terminal now, false when the request is
+     *   still pending convergence, which is not a failure.
      */
-    suspend fun disbandMarmotGroup(nostrGroupId: String) {
+    suspend fun disbandMarmotGroup(nostrGroupId: String): Boolean {
         val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.disbandMarmotGroup(nostrGroupId, relays)
+        return account.marmot.disbandMarmotGroup(nostrGroupId, relays)
     }
 
     /** Set (or, with a blank string, clear) the group's plain-https avatar link. */
