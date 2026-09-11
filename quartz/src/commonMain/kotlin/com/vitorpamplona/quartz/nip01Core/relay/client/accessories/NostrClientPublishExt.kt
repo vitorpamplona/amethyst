@@ -273,9 +273,20 @@ suspend fun INostrClient.publishAndCollectResults(
                                         }
                                         // The event is still in the pool's outbox for this relay,
                                         // so the dial is the whole job: the pool flushes what it
-                                        // owes the relay once the socket is back. Ignore the
-                                        // accumulated backoff — this is a user-visible publish
-                                        // waiting on it, not a background refresh.
+                                        // owes the relay once the socket is back.
+                                        //
+                                        // Except that a reconnect can only dial relays the pool
+                                        // still holds, and a relay can leave it — the desired set
+                                        // is sampled, so a snapshot taken before this publish
+                                        // claimed the relay retires it, socket and all. Restoring
+                                        // membership first is what keeps the retry from being a
+                                        // silent no-op: issued, logged, dialing nothing, and
+                                        // reported at the deadline as the hang-up we already knew
+                                        // about. A no-op when the relay is still there, which is
+                                        // the ordinary case.
+                                        ensureInPool(result.relay)
+                                        // Ignore the accumulated backoff — this is a user-visible
+                                        // publish waiting on it, not a background refresh.
                                         resetBackoff()
                                         reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
                                     }

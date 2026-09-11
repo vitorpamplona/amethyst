@@ -57,6 +57,22 @@ interface INostrClient : AutoCloseable {
      */
     fun resetBackoff() { }
 
+    /**
+     * Puts [url] back in the connection pool if it is no longer there, without dialing it.
+     *
+     * [reconnect] can only act on relays the pool still holds, so a caller that means to
+     * revive one it stopped hearing from has to restore that precondition first —
+     * otherwise the reconnect iterates past an empty pool and does nothing at all, which
+     * is indistinguishable from a relay that was asked and stayed silent.
+     *
+     * A relay leaves the pool when nothing wants it any more (no subscription, no count,
+     * no pending publish). That is normally the right call and normally permanent, so
+     * this is deliberately narrow: it restores membership and leaves dialing, backoff and
+     * filter syncing to [reconnect]. Defaults to a no-op — a client with no pool has
+     * nothing to restore and should not be forced to implement one.
+     */
+    fun ensureInPool(url: NormalizedRelayUrl) { }
+
     fun isActive(): Boolean
 
     /**
