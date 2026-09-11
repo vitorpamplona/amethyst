@@ -139,6 +139,10 @@
         <item quantity="one">Birdex · %1$d espécie</item>
         <item quantity="other">Birdex · %1$d espécies</item>
     </plurals>
+    <plurals name="birdex_species_more">
+        <item quantity="one">+%1$d outra</item>
+        <item quantity="other">+%1$d outras</item>
+    </plurals>
     <string name="ps1_save_title">Salvamento em cartão de memória PS1</string>
     <string name="ps1_save_block">bloco %1$d</string>
     <string name="ps1_save_empty_slot">Espaço vazio</string>
@@ -235,6 +239,7 @@
     <string name="number_followers">%1$s Seguidores</string>
     <string name="log_out">Sair</string>
     <string name="show_more">Mostrar mais</string>
+    <string name="show_less">Mostrar menos</string>
     <string name="lightning_invoice">Fatura Lightning</string>
     <string name="invoice_expired">Expirada</string>
     <string name="clink_lightning_offer">Oferta CLINK</string>
@@ -1247,6 +1252,8 @@
     <string name="admission">Entrada</string>
     <string name="subscription">Assinatura</string>
     <string name="publication">Publicação</string>
+    <string name="publication_untitled_section">Seção sem título</string>
+    <string name="publication_contents">Sumário</string>
     <string name="payments_url">URL de pagamentos</string>
     <string name="target_audience">Público-alvo</string>
     <string name="policies_and_links">Políticas &amp; links</string>
@@ -1337,6 +1344,15 @@
     <string name="external_id_scope">Comentar em um recurso externo</string>
     <string name="url_preview_open_in_browser">Abrir no navegador</string>
     <string name="long_form_reading_minutes">%1$d min de leitura</string>
+    <string name="search_waiting_on_relays">Aguardando %1$d de %2$d relés</string>
+    <plurals name="publication_section_count">
+        <item quantity="one">%1$d seção</item>
+        <item quantity="other">%1$d seções</item>
+    </plurals>
+    <plurals name="publication_more_sections">
+        <item quantity="one">mais %1$d seção</item>
+        <item quantity="other">mais %1$d seções</item>
+    </plurals>
     <string name="music_playlist_collaborative">Colaborativa</string>
     <string name="music_playlist_private">Privada</string>
     <string name="music_playlist_unknown_track">Faixa desconhecida</string>
@@ -1733,6 +1749,7 @@
     <string name="onchain_send_failed_at">Falhou em: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">O pagamento foi transmitido (tx %1$s), mas o recibo não foi publicado.</string>
     <string name="new_post">Novo Post</string>
+    <string name="new_media">Nova mídia: imagem ou vídeo</string>
     <string name="new_community_note">Nova Nota da Comunidade</string>
     <string name="new_poll">Nova Enquete</string>
     <string name="new_picture">Nova Foto</string>
@@ -1877,7 +1894,9 @@
     <string name="audio_visualizer_settings_description">Escolha a animação exibida enquanto as notas de áudio são reproduzidas.</string>
     <string name="audio_visualizer_off">Desligado</string>
     <string name="audio_visualizer_bars">Barras de espectro</string>
+    <string name="audio_visualizer_waves">Ondas coloridas</string>
     <string name="audio_visualizer_radial">Anel radial</string>
+    <string name="audio_visualizer_aurora">Brilho de aurora</string>
     <string name="audio_visualizer_classic">Forma de onda clássica</string>
     <string name="audio_visualizer_static">Imagem estática</string>
     <string name="profile_image_of_user">Foto de perfil de %1$s</string>
@@ -2127,6 +2146,7 @@
     <string name="dvm_home_status_payment_required">Este algoritmo de feed requer pagamento</string>
     <string name="dvm_home_status_error">O algoritmo de feed retornou um erro</string>
     <string name="dvm_home_retry">Tentar novamente</string>
+    <string name="dvm_offline_banner">Este algoritmo de feed não enviou sinal de atividade recentemente e pode estar fora do ar</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
     <string name="group_relay">Relé de chat</string>
     <string name="share_image">Compartilhar imagem…</string>
@@ -2142,6 +2162,12 @@
     <string name="search_sort_relevance">Relevância</string>
     <string name="search_sort_popular">Populares</string>
     <string name="search_filters_title">Filtros</string>
+    <string name="search_no_results">Nenhum resultado encontrado</string>
+    <string name="search_no_results_explainer">Tente menos filtros ou outra palavra.</string>
+    <string name="search_type_to_begin">Digite algo para pesquisar</string>
+    <string name="search_type_to_begin_explainer">Os filtros acima restringem o que é pesquisado — eles não pesquisam sozinhos.</string>
+    <string name="search_recent">Pesquisas recentes</string>
+    <string name="search_recent_clear">Limpar</string>
     <string name="search_filters_reset">Redefinir</string>
     <string name="search_filters_section_source">Fonte</string>
     <string name="search_filters_section_sort">Ordenar por</string>
@@ -2529,6 +2555,22 @@
     <string name="marmot_create_group">Criar grupo</string>
     <string name="marmot_create_group_title">Criar grupo Marmot</string>
     <string name="marmot_create_group_footer">Um novo grupo MLS será criado. Você pode adicionar membros depois.</string>
+    <string name="marmot_retention_title">Mensagens temporárias</string>
+    <string name="marmot_retention_off">Desativado</string>
+    <string name="marmot_retention_1h">1 hora</string>
+    <string name="marmot_retention_1d">1 dia</string>
+    <string name="marmot_retention_1w">1 semana</string>
+    <string name="marmot_retention_active">As mensagens desaparecem após %1$s</string>
+    <string name="marmot_retention_footer">As mensagens são apagadas do dispositivo de todos os membros após esse tempo. Isso não pode ser alterado depois.</string>
+    <string name="marmot_disband_group">Dissolver grupo</string>
+    <string name="marmot_disband_group_confirm">Dissolver “%1$s” para todos? A conversa termina para todos os membros e não pode ser reaberta — seria preciso criar um novo grupo.</string>
+    <string name="marmot_disband_group_action">Dissolver</string>
+    <string name="marmot_avatar_url">Link do avatar</string>
+    <string name="marmot_avatar_url_footer">Um link https que todos os membros conseguem carregar. Deixe vazio para usar a imagem enviada.</string>
+    <string name="marmot_legacy_group_no_avatar_url">Este grupo foi criado antes do suporte a avatares por link, então só pode usar uma imagem enviada. Grupos existentes não podem ser atualizados — crie um novo grupo para usar um link.</string>
+    <string name="marmot_enable_encrypted_media">Usar anexos criptografados</string>
+    <string name="marmot_enable_encrypted_media_explainer">Os anexos deste grupo usam o formato antigo. Ao mudar, o componente de mídia criptografada é adicionado ao grupo, e todos os membros veem a alteração. Não é possível voltar atrás.</string>
+    <string name="marmot_legacy_group_no_disband">Este grupo foi criado antes do suporte à dissolução e não pode ser dissolvido. Você ainda pode sair dele ou remover todos os outros membros. Grupos existentes não podem ser atualizados.</string>
     <string name="marmot_group_default_name">Grupo Marmot</string>
     <string name="marmot_group_fallback_name">Grupo %1$s…</string>
     <string name="marmot_tab_known">Conhecidos</string>
@@ -2548,6 +2590,21 @@
     <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
          conversation, from the row's structured fields. %1$s is the member who
          committed the change, %2$s the member it concerns, %3$s the new name. -->
+    <string name="marmot_system_member_added">%1$s adicionou %2$s</string>
+    <string name="marmot_system_member_added_passive">%1$s entrou</string>
+    <string name="marmot_system_member_removed">%1$s removeu %2$s</string>
+    <string name="marmot_system_member_removed_passive">%1$s foi removido</string>
+    <string name="marmot_system_member_left">%1$s saiu</string>
+    <string name="marmot_system_admin_added">%1$s tornou %2$s admin</string>
+    <string name="marmot_system_admin_added_passive">%1$s agora é admin</string>
+    <string name="marmot_system_admin_removed">%1$s removeu %2$s como admin</string>
+    <string name="marmot_system_admin_removed_passive">%1$s não é mais admin</string>
+    <string name="marmot_system_group_renamed">%1$s renomeou o grupo para %2$s</string>
+    <string name="marmot_system_group_renamed_passive">O grupo foi renomeado para %1$s</string>
+    <string name="marmot_system_avatar_changed">%1$s alterou o avatar do grupo</string>
+    <string name="marmot_system_avatar_changed_passive">O avatar do grupo foi alterado</string>
+    <string name="marmot_system_group_disbanded">%1$s dissolveu o grupo</string>
+    <string name="marmot_system_group_disbanded_passive">O grupo foi dissolvido</string>
     <string name="marmot_remove_photo">Remover foto</string>
     <string name="marmot_keypackage_relays_not_set_title">Relays de KeyPackage não definidos</string>
     <string name="marmot_keypackage_relays_not_set_message">Você ainda não tem uma lista de relays de KeyPackage (MIP-00). Esta lista informa a outras pessoas onde seu KeyPackage está publicado para que possam convidá-lo para chats em grupo.\n\nUsar seus relays de outbox atuais para isso?</string>
@@ -2671,4 +2728,5 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
+    <string name="profile_card_follows_you">Segue você</string>
 </resources>

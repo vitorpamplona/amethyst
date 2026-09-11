@@ -407,6 +407,7 @@
     <string name="napplet_cap_identity">Identita</string>
     <string name="napplet_cap_keys">Akce klávesnice</string>
     <string name="napplet_cap_relay">Relaye</string>
+    <string name="napplet_cap_signer">Šifrování</string>
     <string name="napplet_cap_storage">Úložiště</string>
     <string name="napplet_cap_value">Platby</string>
     <string name="napplet_cap_resource">Síť</string>
@@ -415,6 +416,7 @@
     <string name="napplet_cap_identity_desc">Číst váš veřejný klíč</string>
     <string name="napplet_cap_keys_desc">Přiřadit klávesové zkratky</string>
     <string name="napplet_cap_relay_desc">Číst, podepisovat &amp; zveřejňovat vaše eventy</string>
+    <string name="napplet_cap_signer_desc">Šifrovat a dešifrovat soukromé zprávy vaším klíčem</string>
     <string name="napplet_cap_storage_desc">Vlastní soukromé úložiště</string>
     <string name="napplet_cap_value_desc">Platit Lightning faktury</string>
     <string name="napplet_cap_resource_desc">Načítat webové a Blossom zdroje</string>
@@ -432,6 +434,8 @@
     <string name="napplet_consent_publish">Tento nApplet chce podepsat a zveřejnit event kind %1$d vaším jménem.</string>
     <string name="napplet_consent_publish_preview">Tento nApplet chce podepsat a zveřejnit event kind %1$d vaším jménem:</string>
     <string name="napplet_consent_publish_encrypted">Tento nApplet chce odeslat šifrovaný event vaším jménem.</string>
+    <string name="napplet_consent_nip44_encrypt">Tento web chce zašifrovat zprávu pro %1$s vaším Nostr klíčem.</string>
+    <string name="napplet_consent_nip44_decrypt">Tento web chce dešifrovat zprávu od %1$s vaším Nostr klíčem.</string>
     <string name="napplet_consent_query">Tento nApplet chce číst eventy z vašich relays.</string>
     <string name="napplet_consent_storage">Tento nApplet chce používat své soukromé úložiště.</string>
     <string name="napplet_consent_pay">Tento nApplet chce zaplatit Lightning fakturu.</string>
@@ -634,6 +638,14 @@
         <item quantity="other">Zadržuje také %1$d dalších věcí.</item>
     </plurals>
     <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">Vždy se přihlašovat</string>
+    <string name="relay_auth_never">Nikdy</string>
+    <string name="relay_auth_always_allow_everywhere">Vždy, všechny relaye</string>
+    <string name="relay_auth_never_allow_everywhere">Nikdy, všechny relaye</string>
+    <string name="relay_auth_always_everywhere_title">Přihlašovat se ke všem relayům?</string>
+    <string name="relay_auth_always_everywhere_body">Amethyst se bude přihlašovat jako %1$s ke každému relayi, který o to požádá, a přestane se ptát. Relaye, které jste zablokovali, a ty, u kterých jste nastavili, že se nikdy nepřihlašovat, zůstanou beze změny. Změnit to můžete v nastavení Autentizace relay.</string>
+    <string name="relay_auth_never_everywhere_title">Nikdy se nepřihlašovat k žádnému relayi?</string>
+    <string name="relay_auth_never_everywhere_body">Amethyst přestane relayům sdělovat, že jste %1$s, a přestane se ptát. Některé relaye vás odmítnou obsloužit: zprávy, odpovědi a oznámení nemusí projít. Relaye, u kterých jste nastavili, že se vždy přihlašovat, zůstanou beze změny. Změnit to můžete v nastavení Autentizace relay.</string>
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Vždy, nastaveno vámi</string>
@@ -895,6 +907,10 @@
     <string name="payment_targets_section_explainer">Přidejte platební adresy pro různé sítě (např. bitcoin, lightning, ethereum).</string>
     <string name="no_payment_app_found">Nebyla nalezena žádná aplikace pro zpracování této platby. Nainstalujte prosím kompatibilní peněženku.</string>
     <string name="no_payment_app_found_for_type">Není nainstalována žádná aplikace pro platby typu %1$s. Nainstalujte prosím kompatibilní peněženku.</string>
+    <string name="payto_amount_set_in_app">Zaplatit v %1$s — částku zvolíte tam</string>
+    <string name="zap_payto_section">Předání platby jiné aplikaci</string>
+    <string name="zap_payto_section_explainer">Když autor zveřejní platební metodu, kterou dokáže otevřít aplikace v tomto telefonu (Venmo, Monero, IBAN…), výběr zapu ji může nabídnout. Klepnutím se otevře daná aplikace, která se zeptá na částku — na relaye se nic nezveřejní, takže počet zapů u poznámky se nezmění.</string>
+    <string name="zap_payto_toggle">Nabízet platební metody autora</string>
     <string name="error_dialog_payment_error">Nelze otevřít platbu</string>
     <string name="bolt12_offers">Nabídky BOLT12</string>
     <string name="bolt12_offers_section_explainer">Přidejte jednu nebo více nabídek BOLT12 (lno1…). Jsou sdíleny veřejně, takže vám může kdokoli zaplatit.</string>
@@ -1027,6 +1043,17 @@
     <string name="app_notification_code_channel_message_patch">%1$s odeslal patch</string>
     <string name="app_notification_code_channel_message_pr">%1$s otevřel pull request</string>
     <string name="app_notification_code_channel_message_pr_update">%1$s aktualizoval pull request</string>
+    <string name="app_notification_code_channel_message_reply">%1$s přidal komentář</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s znovu otevřel vlákno</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s sloučil pull request</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s aplikoval patch</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s vyřešil issue</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s sloučil/vyřešil vlákno</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s uzavřel pull request</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s uzavřel patch</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s uzavřel issue</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s uzavřel vlákno</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s označil vlákno jako koncept</string>
     <string name="app_notification_code_summary">Nová aktivita v kódu</string>
     <!-- Badges -->
     <string name="app_notification_badges_channel_name">Odznaky</string>
@@ -1288,6 +1315,23 @@
     <string name="home_content_type_music">Hudba a zvuk</string>
     <string name="home_content_type_podcasts">Podcasty</string>
     <string name="home_content_type_fundraisers">Sbírky</string>
+    <string name="home_content_type_ratings">Hodnocení a recenze</string>
+    <string name="rating_stars_out_of_five">Hodnoceno %1$s z 5</string>
+    <string name="library_learning_resource">Výukový materiál</string>
+    <string name="library_directory">Adresář</string>
+    <string name="library_blossom_piece">Záznam souboru</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d položka</item>
+        <item quantity="few">%1$d položky</item>
+        <item quantity="many">%1$d položky</item>
+        <item quantity="other">%1$d položek</item>
+    </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">%1$d další položka</item>
+        <item quantity="few">%1$d další položky</item>
+        <item quantity="many">%1$d další položky</item>
+        <item quantity="other">%1$d dalších položek</item>
+    </plurals>
     <string name="settings_section_reminders">Připomenutí</string>
     <string name="wallet_connect">Připojení peněženky</string>
     <string name="theme">Motiv</string>
@@ -1573,6 +1617,7 @@
     <string name="notification_settings_section_display">Zobrazení v aplikaci</string>
     <string name="notification_settings_section_categories">Kategorie</string>
     <string name="payment_required_title">Zpráva od %1$s</string>
+    <string name="notify_block_relay">Zablokovat relay</string>
     <string name="hi_seller_is_this_still_available">Ahoj %1$s, je to stále k dispozici?</string>
     <string name="classifieds_category_clothing">Oblečení</string>
     <string name="classifieds_category_accessories">Příslušenství</string>
@@ -1619,6 +1664,7 @@
     <string name="route_notifications">Upozornění</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
+    <string name="route_media">Média</string>
     <string name="route_calendars">Kalendáře</string>
     <string name="route_calendar_collections">Seznamy kalendářů</string>
     <string name="route_chess">Šachy</string>
@@ -2191,6 +2237,10 @@
     <string name="kind_git_reply">Git odpověď</string>
     <string name="kind_git_pr">Pull request</string>
     <string name="kind_git_pr_update">Aktualizace PR</string>
+    <string name="kind_git_status_open">Git stav: Otevřeno</string>
+    <string name="kind_git_status_applied">Git stav: Aplikováno</string>
+    <string name="kind_git_status_closed">Git stav: Uzavřeno</string>
+    <string name="kind_git_status_draft">Git stav: Koncept</string>
     <string name="kind_zap_goals">Cíle zapů</string>
     <string name="kind_hashtag_follows">Sledované hashtagy</string>
     <string name="kind_highlights">Zvýraznění</string>
@@ -2509,6 +2559,15 @@
     <string name="marmot_failed_to_update">Nepodařilo se aktualizovat: %1$s</string>
     <string name="marmot_failed_to_create_group">Nepodařilo se vytvořit skupinu: %1$s</string>
     <string name="marmot_failed_to_leave_group">Nepodařilo se opustit skupinu: %1$s</string>
+    <string name="marmot_enable_encrypted_media_needs_server">Nejprve přidejte v Nastavení mediální server Blossom — skupina potřebuje místo, kam nahrávat přílohy.</string>
+    <string name="marmot_encrypted_media_enabled_toast">Tato skupina nyní používá šifrované přílohy</string>
+    <string name="marmot_failed_to_enable_encrypted_media">Tuto skupinu se nepodařilo přepnout na šifrované přílohy: %1$s</string>
+    <string name="marmot_group_disbanded_toast">Skupina rozpuštěna</string>
+    <string name="marmot_group_disbanding_toast">Ukončuji skupinu. Dokončí se, jakmile to skupina odsouhlasí.</string>
+    <string name="marmot_group_composer_disbanding">Tato skupina se ukončuje. Stále ji můžete číst.</string>
+    <string name="marmot_group_composer_leaving">Opouštíte tuto skupinu.</string>
+    <string name="marmot_group_composer_removed">Již nejste členem této skupiny.</string>
+    <string name="marmot_failed_to_disband">Skupinu se nepodařilo rozpustit: %1$s</string>
     <string name="marmot_adding_user">Přidávám %1$s…</string>
     <string name="marmot_failed_to_add_user">Nepodařilo se přidat %1$s: %2$s</string>
     <string name="marmot_unknown_error">neznámá chyba</string>

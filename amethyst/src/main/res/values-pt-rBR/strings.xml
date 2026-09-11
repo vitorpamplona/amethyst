@@ -375,6 +375,7 @@
     <string name="napplet_cap_identity">Identidade</string>
     <string name="napplet_cap_keys">Ações de teclado</string>
     <string name="napplet_cap_relay">Relés</string>
+    <string name="napplet_cap_signer">Criptografia</string>
     <string name="napplet_cap_storage">Armazenamento</string>
     <string name="napplet_cap_value">Pagamentos</string>
     <string name="napplet_cap_resource">Rede</string>
@@ -383,6 +384,7 @@
     <string name="napplet_cap_identity_desc">Ler sua chave pública</string>
     <string name="napplet_cap_keys_desc">Vincular atalhos de teclado</string>
     <string name="napplet_cap_relay_desc">Ler, assinar &amp; publicar seus eventos</string>
+    <string name="napplet_cap_signer_desc">Criptografar e descriptografar mensagens privadas com sua chave</string>
     <string name="napplet_cap_storage_desc">Armazenamento privado próprio</string>
     <string name="napplet_cap_value_desc">Pagar faturas Lightning</string>
     <string name="napplet_cap_resource_desc">Buscar recursos da web e do Blossom</string>
@@ -400,6 +402,8 @@
     <string name="napplet_consent_publish">Este nApplet quer assinar e publicar um evento kind %1$d como você.</string>
     <string name="napplet_consent_publish_preview">Este nApplet quer assinar e publicar um evento kind %1$d como você:</string>
     <string name="napplet_consent_publish_encrypted">Este nApplet quer enviar um evento criptografado como você.</string>
+    <string name="napplet_consent_nip44_encrypt">Este site quer criptografar uma mensagem para %1$s com sua chave Nostr.</string>
+    <string name="napplet_consent_nip44_decrypt">Este site quer descriptografar uma mensagem de %1$s com sua chave Nostr.</string>
     <string name="napplet_consent_query">Este nApplet quer ler eventos dos seus relays.</string>
     <string name="napplet_consent_storage">Este nApplet quer usar seu armazenamento privado.</string>
     <string name="napplet_consent_pay">Este nApplet quer pagar uma fatura Lightning.</string>
@@ -568,6 +572,14 @@
         <item quantity="other">Ele também está retendo mais %1$d coisas.</item>
     </plurals>
     <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">Sempre fazer login</string>
+    <string name="relay_auth_never">Nunca</string>
+    <string name="relay_auth_always_allow_everywhere">Sempre, todos os relays</string>
+    <string name="relay_auth_never_allow_everywhere">Nunca, todos os relays</string>
+    <string name="relay_auth_always_everywhere_title">Fazer login em todos os relays?</string>
+    <string name="relay_auth_always_everywhere_body">O Amethyst fará login como %1$s em todos os relays que pedirem e deixará de perguntar. Os relays que você bloqueou, e aqueles em que você definiu nunca fazer login, continuam assim. Você pode mudar isso em Autenticação de relay.</string>
+    <string name="relay_auth_never_everywhere_title">Nunca fazer login em nenhum relay?</string>
+    <string name="relay_auth_never_everywhere_body">O Amethyst deixará de informar aos relays que você é %1$s e deixará de perguntar. Alguns relays vão se recusar a atendê-lo: mensagens, respostas e notificações podem não chegar. Os relays em que você definiu sempre fazer login continuam assim. Você pode mudar isso em Autenticação de relay.</string>
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Sempre, definido por você</string>
@@ -799,6 +811,10 @@
     <string name="payment_targets_section_explainer">Adicione endereços de pagamento para diferentes redes (ex.: bitcoin, lightning, ethereum).</string>
     <string name="no_payment_app_found">Nenhum aplicativo encontrado para processar este pagamento. Por favor, instale uma carteira compatível.</string>
     <string name="no_payment_app_found_for_type">Nenhum app instalado para processar pagamentos %1$s. Instale uma carteira compatível.</string>
+    <string name="payto_amount_set_in_app">Pague em %1$s — você escolhe o valor lá</string>
+    <string name="zap_payto_section">Encaminhamento para app de pagamento</string>
+    <string name="zap_payto_section_explainer">Quando o autor publica um método de pagamento que um app neste telefone consegue abrir (Venmo, Monero, um IBAN…), o seletor de zap pode oferecê-lo. Tocar abre esse app, que pede o valor — nada é publicado nos relays, então a contagem de zaps da nota não muda.</string>
+    <string name="zap_payto_toggle">Oferecer os métodos de pagamento do autor</string>
     <string name="error_dialog_payment_error">Não foi possível abrir o pagamento</string>
     <string name="bolt12_offers">Ofertas BOLT12</string>
     <string name="bolt12_offers_section_explainer">Adicione uma ou mais ofertas BOLT12 (lno1…). Elas são compartilhadas publicamente, então qualquer pessoa pode pagar você.</string>
@@ -931,6 +947,17 @@
     <string name="app_notification_code_channel_message_patch">%1$s enviou um patch</string>
     <string name="app_notification_code_channel_message_pr">%1$s abriu um pull request</string>
     <string name="app_notification_code_channel_message_pr_update">%1$s atualizou um pull request</string>
+    <string name="app_notification_code_channel_message_reply">%1$s comentou</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s reabriu um tópico</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s mesclou um pull request</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s aplicou um patch</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s resolveu um issue</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s mesclou/resolveu um tópico</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s fechou um pull request</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s fechou um patch</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s fechou um issue</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s fechou um tópico</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s marcou um tópico como rascunho</string>
     <string name="app_notification_code_summary">Nova atividade de código</string>
     <!-- Badges -->
     <string name="app_notification_badges_channel_name">Selos</string>
@@ -1178,6 +1205,15 @@
     <string name="home_content_type_music">Música e áudio</string>
     <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Arrecadações</string>
+    <string name="home_content_type_ratings">Avaliações e resenhas</string>
+    <string name="rating_stars_out_of_five">Avaliado com %1$s de 5</string>
+    <string name="library_learning_resource">Recurso de aprendizagem</string>
+    <string name="library_directory">Diretório</string>
+    <string name="library_blossom_piece">Registro de arquivo</string>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">mais %1$d item</item>
+        <item quantity="other">mais %1$d itens</item>
+    </plurals>
     <string name="settings_section_reminders">Lembretes</string>
     <string name="wallet_connect">Conectar Carteira</string>
     <string name="theme">Tema</string>
@@ -1449,6 +1485,7 @@
     <string name="notification_settings_section_display">Exibição no app</string>
     <string name="notification_settings_section_categories">Categorias</string>
     <string name="payment_required_title">Mensagem de %1$s</string>
+    <string name="notify_block_relay">Bloquear relay</string>
     <string name="hi_seller_is_this_still_available">Oi %1$s, ainda está disponível?</string>
     <string name="classifieds_category_clothing">Roupas</string>
     <string name="classifieds_category_accessories">Acessórios</string>
@@ -1495,6 +1532,7 @@
     <string name="route_notifications">Notificações</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
+    <string name="route_media">Mídia</string>
     <string name="route_calendars">Calendários</string>
     <string name="route_calendar_collections">Listas de calendário</string>
     <string name="route_chess">Xadrez</string>
@@ -2019,6 +2057,10 @@
     <string name="kind_git_reply">Resposta do Git</string>
     <string name="kind_git_pr">Pull request</string>
     <string name="kind_git_pr_update">Atualização de PR</string>
+    <string name="kind_git_status_open">Status do Git: Aberto</string>
+    <string name="kind_git_status_applied">Status do Git: Aplicado</string>
+    <string name="kind_git_status_closed">Status do Git: Fechado</string>
+    <string name="kind_git_status_draft">Status do Git: Rascunho</string>
     <string name="kind_zap_goals">Metas de Zap</string>
     <string name="kind_hashtag_follows">Hashtags seguidas</string>
     <string name="kind_highlights">Destaques</string>
@@ -2293,6 +2335,15 @@
     <string name="marmot_failed_to_update">Falha ao atualizar: %1$s</string>
     <string name="marmot_failed_to_create_group">Falha ao criar grupo: %1$s</string>
     <string name="marmot_failed_to_leave_group">Falha ao sair do grupo: %1$s</string>
+    <string name="marmot_enable_encrypted_media_needs_server">Adicione primeiro um servidor de mídia Blossom nas Configurações — o grupo precisa de um lugar para onde enviar os anexos.</string>
+    <string name="marmot_encrypted_media_enabled_toast">Este grupo agora usa anexos criptografados</string>
+    <string name="marmot_failed_to_enable_encrypted_media">Não foi possível mudar este grupo para anexos criptografados: %1$s</string>
+    <string name="marmot_group_disbanded_toast">Grupo dissolvido</string>
+    <string name="marmot_group_disbanding_toast">Encerrando o grupo. Isso termina quando o grupo concordar.</string>
+    <string name="marmot_group_composer_disbanding">Este grupo está sendo encerrado. Você ainda pode lê-lo.</string>
+    <string name="marmot_group_composer_leaving">Você está saindo deste grupo.</string>
+    <string name="marmot_group_composer_removed">Você não é mais membro deste grupo.</string>
+    <string name="marmot_failed_to_disband">Não foi possível dissolver o grupo: %1$s</string>
     <string name="marmot_adding_user">Adicionando %1$s…</string>
     <string name="marmot_failed_to_add_user">Falha ao adicionar %1$s: %2$s</string>
     <string name="marmot_unknown_error">erro desconhecido</string>

@@ -377,6 +377,7 @@
     <string name="napplet_cap_identity">Identität</string>
     <string name="napplet_cap_keys">Tastaturaktionen</string>
     <string name="napplet_cap_relay">Relays</string>
+    <string name="napplet_cap_signer">Verschlüsselung</string>
     <string name="napplet_cap_storage">Speicher</string>
     <string name="napplet_cap_value">Zahlungen</string>
     <string name="napplet_cap_resource">Netzwerk</string>
@@ -385,6 +386,7 @@
     <string name="napplet_cap_identity_desc">Ihren öffentlichen Schlüssel lesen</string>
     <string name="napplet_cap_keys_desc">Tastenkürzel belegen</string>
     <string name="napplet_cap_relay_desc">Ihre Ereignisse lesen, signieren &amp; veröffentlichen</string>
+    <string name="napplet_cap_signer_desc">Private Nachrichten mit Ihrem Schlüssel ver- und entschlüsseln</string>
     <string name="napplet_cap_storage_desc">Eigener privater Speicher</string>
     <string name="napplet_cap_value_desc">Lightning-Rechnungen bezahlen</string>
     <string name="napplet_cap_resource_desc">Web- und Blossom-Ressourcen abrufen</string>
@@ -402,6 +404,8 @@
     <string name="napplet_consent_publish">Dieses nApplet möchte ein kind-%1$d-Ereignis in Ihrem Namen signieren und veröffentlichen.</string>
     <string name="napplet_consent_publish_preview">Dieses nApplet möchte ein kind-%1$d-Ereignis in Ihrem Namen signieren und veröffentlichen:</string>
     <string name="napplet_consent_publish_encrypted">Dieses nApplet möchte ein verschlüsseltes Ereignis in Ihrem Namen senden.</string>
+    <string name="napplet_consent_nip44_encrypt">Diese Website möchte eine Nachricht an %1$s mit Ihrem Nostr-Schlüssel verschlüsseln.</string>
+    <string name="napplet_consent_nip44_decrypt">Diese Website möchte eine Nachricht von %1$s mit Ihrem Nostr-Schlüssel entschlüsseln.</string>
     <string name="napplet_consent_query">Dieses nApplet möchte Ereignisse von Ihren Relays lesen.</string>
     <string name="napplet_consent_storage">Dieses nApplet möchte seinen privaten Speicher verwenden.</string>
     <string name="napplet_consent_pay">Dieses nApplet möchte eine Lightning-Rechnung bezahlen.</string>
@@ -570,6 +574,14 @@
         <item quantity="other">Es hält außerdem %1$d weitere Dinge zurück.</item>
     </plurals>
     <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">Immer anmelden</string>
+    <string name="relay_auth_never">Nie</string>
+    <string name="relay_auth_always_allow_everywhere">Immer, alle Relays</string>
+    <string name="relay_auth_never_allow_everywhere">Nie, alle Relays</string>
+    <string name="relay_auth_always_everywhere_title">Bei jedem Relay anmelden?</string>
+    <string name="relay_auth_always_everywhere_body">Amethyst meldet sich als %1$s bei jedem Relay an, das danach fragt, und fragt dich nicht mehr. Relays, die du blockiert hast, und solche, bei denen du dich nie anmelden willst, bleiben so. Du kannst das unter Relay-Authentifizierung ändern.</string>
+    <string name="relay_auth_never_everywhere_title">Bei keinem Relay anmelden?</string>
+    <string name="relay_auth_never_everywhere_body">Amethyst teilt Relays nicht mehr mit, dass du %1$s bist, und fragt dich nicht mehr. Manche Relays werden dich dann nicht bedienen: Nachrichten, Antworten und Benachrichtigungen kommen womöglich nicht durch. Relays, bei denen du dich immer anmelden willst, bleiben so. Du kannst das unter Relay-Authentifizierung ändern.</string>
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Immer, von dir festgelegt</string>
@@ -801,6 +813,10 @@
     <string name="payment_targets_section_explainer">Füge Zahlungsadressen für verschiedene Netzwerke hinzu (z.B. Bitcoin, Lightning, Ethereum).</string>
     <string name="no_payment_app_found">Keine App gefunden, die diese Zahlung verarbeiten kann. Bitte installiere eine kompatible Wallet.</string>
     <string name="no_payment_app_found_for_type">Es ist keine App installiert, die Zahlungen vom Typ %1$s verarbeiten kann. Bitte installiere eine kompatible Wallet.</string>
+    <string name="payto_amount_set_in_app">In %1$s bezahlen — den Betrag wählst du dort</string>
+    <string name="zap_payto_section">Übergabe an Zahlungs-Apps</string>
+    <string name="zap_payto_section_explainer">Wenn der Autor eine Zahlungsmethode veröffentlicht, die eine App auf diesem Telefon öffnen kann (Venmo, Monero, eine IBAN…), kann die Zap-Auswahl sie anbieten. Tippen öffnet diese App, die nach dem Betrag fragt — es wird nichts an Relays veröffentlicht, daher ändert sich der Zap-Zähler der Notiz nicht.</string>
+    <string name="zap_payto_toggle">Zahlungsmethoden des Autors anbieten</string>
     <string name="error_dialog_payment_error">Zahlung konnte nicht geöffnet werden</string>
     <string name="bolt12_offers">BOLT12-Angebote</string>
     <string name="bolt12_offers_section_explainer">Füge ein oder mehrere BOLT12-Angebote (lno1…) hinzu. Sie werden öffentlich geteilt, sodass dich jeder bezahlen kann.</string>
@@ -933,6 +949,17 @@
     <string name="app_notification_code_channel_message_patch">%1$s hat einen Patch gesendet</string>
     <string name="app_notification_code_channel_message_pr">%1$s hat einen Pull Request eröffnet</string>
     <string name="app_notification_code_channel_message_pr_update">%1$s hat einen Pull Request aktualisiert</string>
+    <string name="app_notification_code_channel_message_reply">%1$s hat kommentiert</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s hat einen Thread wieder geöffnet</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s hat einen Pull Request gemergt</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s hat einen Patch angewendet</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s hat ein Issue gelöst</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s hat einen Thread gemergt/gelöst</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s hat einen Pull Request geschlossen</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s hat einen Patch geschlossen</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s hat ein Issue geschlossen</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s hat einen Thread geschlossen</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s hat einen Thread als Entwurf markiert</string>
     <string name="app_notification_code_summary">Neue Code-Aktivität</string>
     <!-- Badges -->
     <string name="app_notification_badges_channel_name">Abzeichen</string>
@@ -1180,6 +1207,19 @@
     <string name="home_content_type_music">Musik &amp; Audio</string>
     <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Spendenaktionen</string>
+    <string name="home_content_type_ratings">Bewertungen &amp; Rezensionen</string>
+    <string name="rating_stars_out_of_five">Bewertet mit %1$s von 5</string>
+    <string name="library_learning_resource">Lernressource</string>
+    <string name="library_directory">Verzeichnis</string>
+    <string name="library_blossom_piece">Dateieintrag</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d Element</item>
+        <item quantity="other">%1$d Elemente</item>
+    </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">%1$d weiteres Element</item>
+        <item quantity="other">%1$d weitere Elemente</item>
+    </plurals>
     <string name="settings_section_reminders">Erinnerungen</string>
     <string name="wallet_connect">Wallet Verbindung</string>
     <string name="theme">Design</string>
@@ -1451,6 +1491,7 @@
     <string name="notification_settings_section_display">Anzeige in der App</string>
     <string name="notification_settings_section_categories">Kategorien</string>
     <string name="payment_required_title">Nachricht von %1$s</string>
+    <string name="notify_block_relay">Relay blockieren</string>
     <string name="hi_seller_is_this_still_available">Hallo %1$s, ist das noch verfügbar?</string>
     <string name="classifieds_category_clothing">Kleidung</string>
     <string name="classifieds_category_accessories">Accessoires</string>
@@ -1497,6 +1538,7 @@
     <string name="route_notifications">Benachrichtigungen</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
+    <string name="route_media">Medien</string>
     <string name="route_calendars">Kalender</string>
     <string name="route_calendar_collections">Kalenderlisten</string>
     <string name="route_chess">Schach</string>
@@ -2021,6 +2063,10 @@
     <string name="kind_git_reply">Git-Antwort</string>
     <string name="kind_git_pr">Pull Request</string>
     <string name="kind_git_pr_update">PR Update</string>
+    <string name="kind_git_status_open">Git-Status: Offen</string>
+    <string name="kind_git_status_applied">Git-Status: Angewendet</string>
+    <string name="kind_git_status_closed">Git-Status: Geschlossen</string>
+    <string name="kind_git_status_draft">Git-Status: Entwurf</string>
     <string name="kind_zap_goals">Zap-Ziele</string>
     <string name="kind_hashtag_follows">Gefolgte Hashtags</string>
     <string name="kind_highlights">Highlights</string>
@@ -2295,6 +2341,15 @@
     <string name="marmot_failed_to_update">Aktualisierung fehlgeschlagen: %1$s</string>
     <string name="marmot_failed_to_create_group">Gruppe konnte nicht erstellt werden: %1$s</string>
     <string name="marmot_failed_to_leave_group">Gruppe konnte nicht verlassen werden: %1$s</string>
+    <string name="marmot_enable_encrypted_media_needs_server">Füge zuerst in den Einstellungen einen Blossom-Medienserver hinzu — die Gruppe braucht einen Ort, an den Anhänge hochgeladen werden.</string>
+    <string name="marmot_encrypted_media_enabled_toast">Diese Gruppe verwendet jetzt verschlüsselte Anhänge</string>
+    <string name="marmot_failed_to_enable_encrypted_media">Diese Gruppe konnte nicht auf verschlüsselte Anhänge umgestellt werden: %1$s</string>
+    <string name="marmot_group_disbanded_toast">Gruppe aufgelöst</string>
+    <string name="marmot_group_disbanding_toast">Gruppe wird beendet. Das ist abgeschlossen, sobald die Gruppe zustimmt.</string>
+    <string name="marmot_group_composer_disbanding">Diese Gruppe wird beendet. Du kannst sie weiterhin lesen.</string>
+    <string name="marmot_group_composer_leaving">Du verlässt diese Gruppe.</string>
+    <string name="marmot_group_composer_removed">Du bist kein Mitglied dieser Gruppe mehr.</string>
+    <string name="marmot_failed_to_disband">Gruppe konnte nicht aufgelöst werden: %1$s</string>
     <string name="marmot_adding_user">%1$s wird hinzugefügt…</string>
     <string name="marmot_failed_to_add_user">%1$s konnte nicht hinzugefügt werden: %2$s</string>
     <string name="marmot_unknown_error">unbekannter Fehler</string>
