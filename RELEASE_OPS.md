@@ -190,26 +190,29 @@ RELAY_URLS="wss://relay.zapstore.dev,wss://nos.lol,wss://nostr.mom,wss://vitor.n
 Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
 itself reads from.
 
-### Homebrew + Winget — ⚠️ not shipping yet
+### Homebrew + Winget — ⚠️ Winget not shipping yet
 
 `bump-homebrew.yml` and `bump-winget.yml` are wired to open PRs against
-`Homebrew/homebrew-cask` (cask `amethyst-nostr`) and `microsoft/winget-pkgs`
-(`VitorPamplona.Amethyst`). Both can only *update* a package that already
-exists upstream, so until the one-time bootstrap lands they detect the absence
-and skip with a `::warning::`.
+`Homebrew/homebrew-cask` (cask `amethyst-nostr`), `Homebrew/homebrew-core`
+(formula `amy`) and `microsoft/winget-pkgs` (`VitorPamplona.Amethyst`). They can
+only *update* a package that already exists upstream, so until the one-time
+bootstrap lands they detect the absence and skip with a `::warning::`.
 
 Bootstrap status:
 
 | Channel | Upstream package | State |
 |---|---|---|
-| **Winget** | `microsoft/winget-pkgs` → `VitorPamplona.Amethyst` | **Submitted at v1.14.0** — [PR #422752](https://github.com/microsoft/winget-pkgs/pull/422752), pending CLA + review |
-| **Homebrew cask** | `Homebrew/homebrew-cask` → `amethyst-nostr` | Not submitted |
-| **Homebrew formula** | `Homebrew/homebrew-core` → `amy` | Not submitted |
+| **Homebrew cask** | `Homebrew/homebrew-cask` → `amethyst-nostr` | **Live** — merged 2026-08-24, upstream at 1.14.0 |
+| **Homebrew formula** | `Homebrew/homebrew-core` → `amy` | **Live** |
+| **Homebrew formula** | `Homebrew/homebrew-core` → `geode-relay` | Not submitted — renamed from `geode`, which is permanently reserved for Apache Geode |
+| **Winget** | `microsoft/winget-pkgs` → `VitorPamplona.Amethyst` | **Submitted at v1.14.0** — [PR #422752](https://github.com/microsoft/winget-pkgs/pull/422752), still open pending CLA + review |
 
-Until each lands, that channel delivers nothing and macOS/Windows users get the
-desktop app from GitHub Releases only. Re-check before assuming — the state
-above is a snapshot, and `gh api repos/microsoft/winget-pkgs/contents/manifests/v/VitorPamplona`
-(404 = still absent) answers it in one call.
+Until each lands, that channel delivers nothing and its users get the desktop
+app or CLI from GitHub Releases only. Re-check before assuming — the state above
+is a snapshot, and two calls answer it:
+`gh api repos/microsoft/winget-pkgs/contents/manifests/v/VitorPamplona` and
+`curl -s -o /dev/null -w '%{http_code}' https://formulae.brew.sh/api/cask/amethyst-nostr.json`
+(404 = still absent).
 
 Two separate faults kept this invisible until v1.13.1, both now fixed:
 
@@ -237,9 +240,9 @@ readable by anyone with push access here), so a maintainer runs the last step:
 ```bash
 # after merging the sync PRs
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...     # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.14.0
+scripts/bump-homebrew-cask.sh v1.15.0
 
-scripts/bump-winget.sh v1.14.0               # no token — uses your `gh` auth
+scripts/bump-winget.sh v1.15.0               # no token — uses your `gh` auth
 ```
 
 Both scripts re-verify the published artifact's sha256 before submitting, and

@@ -533,14 +533,17 @@ reads an optional per-release changelog from
 
 ## Bootstrap runbook (one-time)
 
-> **Status as of v1.14.0:** Winget has been submitted — [microsoft/winget-pkgs#422752](https://github.com/microsoft/winget-pkgs/pull/422752), pending CLA + review. Neither Homebrew package (`amethyst-nostr` cask, `amy` formula) has been submitted yet.
-> `https://formulae.brew.sh/api/cask/amethyst-nostr.json` and
-> `microsoft/winget-pkgs/manifests/v/VitorPamplona/Amethyst` both 404, so
-> **Amethyst does not currently ship through either channel.** The bump
-> workflows detect this and skip with a `::warning::` instead of failing, so a
-> green release run does *not* mean Homebrew/Winget shipped. The two subsections
-> below are the work that activates them; until then treat the desktop app as
-> GitHub-Releases-only on macOS and Windows.
+> **Status as of v1.15.0:** both Homebrew packages are now live upstream — the
+> `amethyst-nostr` cask (`Homebrew/homebrew-cask`, at 1.14.0) and the `amy`
+> formula (`Homebrew/homebrew-core`) both answer 200 on `formulae.brew.sh`, so
+> `bump-homebrew.yml` finally has something to bump. **Winget is still not
+> bootstrapped**: [microsoft/winget-pkgs#422752](https://github.com/microsoft/winget-pkgs/pull/422752)
+> is open pending CLA + review, and
+> `microsoft/winget-pkgs/manifests/v/VitorPamplona/Amethyst` still 404s. Neither
+> is the `geode-relay` formula, which has never been submitted. Those two bump
+> workflows detect the absence and skip with a `::warning::` instead of failing,
+> so a green release run does *not* mean they shipped; treat the desktop app as
+> GitHub-Releases-only on **Windows**.
 
 ### Package-manager credentials (and why there are none)
 
@@ -584,7 +587,7 @@ The token then lives only in that maintainer's shell:
 
 ```bash
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.14.0
+scripts/bump-homebrew-cask.sh v1.15.0
 ```
 
 Create one at
@@ -600,7 +603,7 @@ Same split, and it needs **no token at all**. `scripts/bump-winget.sh` drives
 runs fine from macOS or Linux:
 
 ```bash
-scripts/bump-winget.sh v1.14.0
+scripts/bump-winget.sh v1.15.0
 ```
 
 CI (`bump-winget.yml`, `GITHUB_TOKEN` only) does the bookkeeping: downloads the
