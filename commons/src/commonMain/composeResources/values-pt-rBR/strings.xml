@@ -2545,6 +2545,9 @@
     <string name="marmot_group_description_placeholder">Insira a descrição do grupo (opcional)</string>
     <string name="marmot_edit_info_footer">As alterações serão confirmadas no grupo via MLS e propagadas para todos os membros.</string>
     <string name="marmot_group_icon">Ícone do grupo</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_remove_photo">Remover foto</string>
     <string name="marmot_keypackage_relays_not_set_title">Relays de KeyPackage não definidos</string>
     <string name="marmot_keypackage_relays_not_set_message">Você ainda não tem uma lista de relays de KeyPackage (MIP-00). Esta lista informa a outras pessoas onde seu KeyPackage está publicado para que possam convidá-lo para chats em grupo.\n\nUsar seus relays de outbox atuais para isso?</string>

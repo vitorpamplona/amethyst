@@ -1739,6 +1739,9 @@
     <string name="marmot_group_name_placeholder">그룹 이름 입력</string>
     <string name="marmot_group_description_placeholder">그룹 설명 입력 (선택사항)</string>
     <string name="marmot_edit_info_footer">변경 사항은 MLS를 통해 그룹에 커밋되고 모든 멤버에게 전파됩니다.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relay가 설정되지 않았습니다</string>
     <string name="marmot_keypackage_relays_not_set_message">아직 KeyPackage Relay 목록이 없습니다 (MIP-00). 이 목록은 다른 사람들에게 귀하의 KeyPackage가 게시된 위치를 알려주어 그룹 채팅에 초대할 수 있게 합니다.\n\n현재 outbox relay를 사용하시겠습니까?</string>
     <string name="marmot_use_outbox_relays">Outbox relay 사용</string>

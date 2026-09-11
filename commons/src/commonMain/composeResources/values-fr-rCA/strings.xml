@@ -1709,6 +1709,9 @@
     <string name="marmot_group_name_placeholder">Entrez le nom du groupe</string>
     <string name="marmot_group_description_placeholder">Entrez la description du groupe (facultatif)</string>
     <string name="marmot_edit_info_footer">Les modifications seront validées dans le groupe via MLS et propagées à tous les membres.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">Relais KeyPackage non définis</string>
     <string name="marmot_keypackage_relays_not_set_message">Vous n'avez pas encore de liste de relais KeyPackage (MIP-00). Cette liste indique aux autres personnes où votre KeyPackage est publié afin qu'elles puissent vous inviter dans des discussions de groupe.\n\nUtiliser vos relais de boîte d'envoi actuels pour cela ?</string>
     <string name="marmot_use_outbox_relays">Utiliser les relais de boîte d'envoi</string>

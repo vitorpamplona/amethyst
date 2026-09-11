@@ -14,4 +14,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="profile_image">Profile Image</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
 </resources>

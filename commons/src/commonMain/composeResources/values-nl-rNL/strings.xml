@@ -2471,6 +2471,9 @@
     <string name="marmot_group_description_placeholder">Voer groepsbeschrijving in (optioneel)</string>
     <string name="marmot_edit_info_footer">Wijzigingen worden via MLS aan de groep doorgevoerd en naar alle leden verspreid.</string>
     <string name="marmot_group_icon">Groepsicoon</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_remove_photo">Foto verwijderen</string>
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage-relays niet ingesteld</string>
     <string name="marmot_keypackage_relays_not_set_message">Je hebt nog geen KeyPackage-relaylijst (MIP-00). Deze lijst geeft anderen aan waar je KeyPackage is gepubliceerd zodat ze je kunnen uitnodigen voor groepsgesprekken.\n\nJe huidige outbox-relays hiervoor gebruiken?</string>

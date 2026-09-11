@@ -1745,6 +1745,9 @@
     <string name="marmot_group_name_placeholder">குழுவின் பெயரை உள்ளிடவும்</string>
     <string name="marmot_group_description_placeholder">குழுவின் விளக்கத்தை உள்ளிடவும் (விரும்பினால்)</string>
     <string name="marmot_edit_info_footer">மாற்றங்கள் MLS வழியாக குழுவிற்கு அனுப்பப்படும் மற்றும் அனைத்து உறுப்பினர்களுக்கும் பரவும்.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relays அமைக்கப்படவில்லை</string>
     <string name="marmot_keypackage_relays_not_set_message">உங்களிடம் இன்னும் KeyPackage Relay பட்டியல் இல்லை (MIP-00). இந்த பட்டியல் மற்றவர்களுக்கு உங்கள் KeyPackage எங்கே வெளியிடப்பட்டுள்ளது என்பதை தெரிவிக்கிறது, இதனால் அவர்கள் உங்களை குழு அரட்டைகளில் அழைக்க முடியும்.\n\nதற்போதைய outbox relays-ஐ பயன்படுத்தவா?</string>
     <string name="marmot_use_outbox_relays">Outbox relays பயன்படுத்து</string>

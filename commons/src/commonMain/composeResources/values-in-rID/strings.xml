@@ -1728,6 +1728,9 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="marmot_group_name_placeholder">Masukkan nama grup</string>
     <string name="marmot_group_description_placeholder">Masukkan deskripsi grup (opsional)</string>
     <string name="marmot_edit_info_footer">Perubahan akan dikonfirmasi ke grup melalui MLS dan disebarkan ke semua anggota.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage Relay belum diatur</string>
     <string name="marmot_keypackage_relays_not_set_message">Anda belum memiliki Daftar KeyPackage Relay (MIP-00). Daftar ini memberi tahu orang lain di mana KeyPackage Anda diterbitkan sehingga mereka dapat mengundang Anda ke obrolan grup.\n\nGunakan relay outbox Anda saat ini untuk ini?</string>
     <string name="marmot_use_outbox_relays">Gunakan relay outbox</string>

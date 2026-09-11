@@ -1745,6 +1745,9 @@
     <string name="marmot_group_name_placeholder">Syötä ryhmän nimi</string>
     <string name="marmot_group_description_placeholder">Syötä ryhmän kuvaus (valinnainen)</string>
     <string name="marmot_edit_info_footer">Muutokset tallennetaan ryhmään MLS:n kautta ja välitetään kaikille jäsenille.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage-relayta ei ole asetettu</string>
     <string name="marmot_keypackage_relays_not_set_message">Sinulla ei ole vielä KeyPackage-relaylistaa (MIP-00). Tämä lista kertoo muille, missä KeyPackagesi on julkaistu, jotta he voivat kutsua sinut ryhmäkeskusteluihin.\n\nKäytetäänkö nykyisiä lähtevien relayitasi tähän?</string>
     <string name="marmot_use_outbox_relays">Käytä lähtevien relayita</string>

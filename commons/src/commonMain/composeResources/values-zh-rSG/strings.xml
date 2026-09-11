@@ -1768,6 +1768,9 @@
     <string name="marmot_group_name_placeholder">输入群名称</string>
     <string name="marmot_group_description_placeholder">输入群描述(可选)</string>
     <string name="marmot_edit_info_footer">更改将通过 MLS 提交到该群，并传播给所有成员。</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">未设置密钥包中继</string>
     <string name="marmot_keypackage_relays_not_set_message">您还没有密钥包中继列表 (MIP-00)。 此列表告诉其他人您的密钥包在哪里发布，以便他们可以邀请您加入群聊。\n\n使用您当前的发件箱中继？</string>
     <string name="marmot_use_outbox_relays">使用发件箱中继</string>

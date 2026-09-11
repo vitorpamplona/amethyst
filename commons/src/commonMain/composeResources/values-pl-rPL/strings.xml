@@ -2654,6 +2654,9 @@
     <string name="marmot_group_description_placeholder">Dodaj opis grupy (opcjonalnie)</string>
     <string name="marmot_edit_info_footer">Zmiany zostaną zatwierdzone w grupie za pośrednictwem MLS i przekazane wszystkim członkom.</string>
     <string name="marmot_group_icon">Ikona grupy</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_remove_photo">Usuń zdjęcie</string>
     <string name="marmot_keypackage_relays_not_set_title">Nie ustawiono transmiterów KeyPackage</string>
     <string name="marmot_keypackage_relays_not_set_message">Nie masz jeszcze listy transmiterów KeyPackage (MIP-00). Lista ta informuje innych użytkowników, gdzie opublikowano Twój KeyPackage, dzięki czemu mogą zapraszać Cię do czatów grupowych.\n\nUżyj do tego swoich obecnych transmiterów ze skrzynki wysyłkowej?</string>

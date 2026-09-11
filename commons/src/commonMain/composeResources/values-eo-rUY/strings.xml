@@ -1761,6 +1761,9 @@
     <string name="marmot_group_name_placeholder">Enigu nomon de grupo</string>
     <string name="marmot_group_description_placeholder">Enigu priskribon de grupo (nedeviga)</string>
     <string name="marmot_edit_info_footer">Ŝanĝoj estos transdonitaj al la grupo per MLS kaj disvastigitaj al ĉiuj membroj.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage-relays ne agordita</string>
     <string name="marmot_keypackage_relays_not_set_message">Vi ankoraŭ ne havas KeyPackage-relay-liston (MIP-00). Ĉi tiu listo informas aliajn, kie via KeyPackage estas publikigita, por ke ili povu inviti vin al grupaj babilejoj.\n\nUzi viajn nunajn elirkest-relays por tio?</string>
     <string name="marmot_use_outbox_relays">Uzi elirkest-relays</string>

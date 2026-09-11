@@ -1735,6 +1735,9 @@
     <string name="marmot_group_name_placeholder">Nhập tên nhóm</string>
     <string name="marmot_group_description_placeholder">Nhập mô tả nhóm (tùy chọn)</string>
     <string name="marmot_edit_info_footer">Các thay đổi sẽ được cam kết vào nhóm qua MLS và truyền đến tất cả thành viên.</string>
+    <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
+         conversation, from the row's structured fields. %1$s is the member who
+         committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_keypackage_relays_not_set_title">Chưa đặt relay KeyPackage</string>
     <string name="marmot_keypackage_relays_not_set_message">Bạn chưa có Danh sách relay KeyPackage (MIP-00). Danh sách này cho người khác biết nơi KeyPackage của bạn được công bố để họ có thể mời bạn vào các cuộc trò chuyện nhóm.\n\nSử dụng các relay outbox hiện tại của bạn cho mục đích này?</string>
     <string name="marmot_use_outbox_relays">Dùng relay outbox</string>
