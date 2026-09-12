@@ -48,7 +48,7 @@ class VideoFeedFilter(
         SupportedContent(
             blockedUrls = listOf("youtu.be", "youtube.com"),
             mimeTypes = SUPPORTED_VIDEO_FEED_MIME_TYPES_SET,
-            supportedFileExtensions = (RichTextParser.videoExtensions + RichTextParser.imageExtensions).toSet(),
+            supportedFileExtensions = (RichTextParser.videoExt + RichTextParser.imageExt).toSet(),
         )
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultStoriesFollowList.value.code

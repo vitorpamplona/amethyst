@@ -142,4 +142,61 @@ class OpenGraphParserTest {
         assertEquals("", info.description)
         assertEquals("", info.image)
     }
+
+    @Test
+    fun readsTheAudioFileAPlayerPageDeclares() {
+        // Trimmed from the real document at
+        // https://e.nostr.build/a_ETvKzX2OdOGmFEp1avRlm5_mp3?t=Aria&by=The+Fishcake -- an HTML
+        // player page (Content-Type: text/html) whose `og:audio` is the actual mp3. Note that
+        // `og:audio` comes AFTER title, description and image: an early exit that stops once
+        // those three are filled never reaches it.
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:type" content="music.song"/>
+                |  <meta property="og:title" content="Aria by The Fishcake"/>
+                |  <meta property="og:description" content="nostr.build media player"/>
+                |  <meta property="og:image" content="https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3/poster.jpg"/>
+                |  <meta property="og:audio" content="https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3"/>
+                |  <meta property="og:audio:secure_url" content="https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3"/>
+                |  <meta property="og:audio:type" content="audio/mpeg"/>
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("Aria by The Fishcake", info.title)
+        assertEquals("https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3", info.audio)
+        assertEquals("audio/mpeg", info.audioType)
+    }
+
+    @Test
+    fun prefersOgAudioOverTheSecureUrlThatFollowsIt() {
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:audio" content="https://example.com/first.mp3"/>
+                |  <meta property="og:audio:secure_url" content="https://example.com/second.mp3"/>
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("https://example.com/first.mp3", info.audio)
+    }
+
+    @Test
+    fun fallsBackToTheSecureUrlWhenItIsTheOnlyOne() {
+        val info = extract("""<head><meta property="og:audio:secure_url" content="https://example.com/a.mp3"></head>""")
+
+        assertEquals("https://example.com/a.mp3", info.audio)
+    }
+
+    @Test
+    fun aPageWithoutAudioReportsEmptyAudioFields() {
+        val info = extract("""<head><meta property="og:title" content="T"></head>""")
+
+        assertEquals("", info.audio)
+        assertEquals("", info.audioType)
+    }
 }

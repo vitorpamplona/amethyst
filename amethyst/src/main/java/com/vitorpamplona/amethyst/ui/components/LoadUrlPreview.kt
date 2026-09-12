@@ -110,6 +110,10 @@ fun RenderLoaded(
     accountViewModel: AccountViewModel,
     nav: INav? = null,
 ) {
+    // Bound to a local: `UrlInfoItem` lives in another module, so the null check below cannot
+    // smart-cast the property itself.
+    val playableAudio = state.previewInfo.playableAudioUrl
+
     when {
         state.previewInfo.mimeType.startsWith("image") -> {
             Box(modifier = HalfVertPadding) {
@@ -122,7 +126,8 @@ fun RenderLoaded(
             }
         }
 
-        state.previewInfo.mimeType.startsWith("video") -> {
+        // Audio rides the video pipeline; see RichTextParser.videoExt.
+        state.previewInfo.mimeType.startsWith("video") || state.previewInfo.mimeType.startsWith("audio") -> {
             Box(modifier = HalfVertPadding) {
                 ZoomableContentView(
                     content = MediaUrlVideo(url, uri = callbackUri),
@@ -137,6 +142,29 @@ fun RenderLoaded(
             Box(modifier = HalfVertPadding) {
                 ZoomableContentView(
                     content = MediaUrlPdf(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
+                    roundedCorner = true,
+                    contentScale = ContentScale.FillWidth,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
+
+        // An HTML page that declares the audio file it is a player for: nostr.build publishes a
+        // player page per uploaded track and points at the real mp3 from `og:audio`. Play that
+        // file, with the page's `og:image` as cover art, instead of a card that only links out.
+        // `playableAudioUrl` is null unless the page also vouched for the type, so a page with a
+        // junk `og:audio` still falls through to the card below.
+        playableAudio != null -> {
+            Box(modifier = HalfVertPadding) {
+                ZoomableContentView(
+                    content =
+                        MediaUrlVideo(
+                            url = playableAudio,
+                            description = state.previewInfo.title.ifBlank { null },
+                            uri = callbackUri,
+                            artworkUri = state.previewInfo.imageUrlFullPath.ifBlank { null },
+                            mimeType = state.previewInfo.audioType.ifBlank { null },
+                        ),
                     roundedCorner = true,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,

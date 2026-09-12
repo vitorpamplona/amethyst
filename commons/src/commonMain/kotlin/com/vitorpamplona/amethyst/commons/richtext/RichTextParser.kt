@@ -498,6 +498,10 @@ class RichTextParser {
         val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "m3u8") + audioExt
         val pdfExt = listOf("pdf")
 
+        // The lower+UPPER doubled forms, kept for callers that need the literal spellings — the
+        // `data:image/(png|PNG|...)` alternation in [Patterns.BASE64_IMAGE], for one. Do NOT reach
+        // for these to match a URL: [hasExtensionIn] compares case-insensitively, so the doubled
+        // list only doubles the work, and it still misses mixed case like `.Mp3`.
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
         val videoExtensions = videoExt + videoExt.map { it.uppercase() }
         val pdfExtensions = pdfExt + pdfExt.map { it.uppercase() }
@@ -513,39 +517,72 @@ class RichTextParser {
                     it.uppercase()
                 }
 
-        private fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
-            // Called per URL during feed render — substringBefore allocates nothing when the
-            // separator is absent, unlike split().
-            val queryStart = fullUrl.indexOf('?')
-            if (queryStart >= 0) return fullUrl.substring(0, queryStart)
-            return fullUrl.substringBefore('#')
+        /** Index just past the URL's path — the first `?` or `#`, or the whole length. */
+        private fun pathEndIndex(url: String): Int {
+            val queryStart = url.indexOf('?')
+            if (queryStart >= 0) return queryStart
+            val fragmentStart = url.indexOf('#')
+            return if (fragmentStart >= 0) fragmentStart else url.length
         }
 
-        fun isImageExtension(ext: String) = imageExtensions.any { it == ext }
-
-        fun isImageOrVideoExtension(ext: String) = imageExtensions.any { it == ext } || videoExtensions.any { it == ext }
-
-        fun isImageOrVideoUrl(url: String): Boolean {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-
-            return imageExtensions.any { removedParamsFromUrl.endsWith(it) } ||
-                videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+        /**
+         * Whether the last path segment of [url] ends in one of [extensions], as a real
+         * dot-introduced file extension.
+         *
+         * **The dot is mandatory**, and that is the whole point of this function. The substring
+         * test it replaced (`url.endsWith("mp3")` after the query was trimmed) matched any path
+         * that merely ended in an extension's letters. nostr.build serves an HTML *player page* at
+         * `https://e.nostr.build/a_<id>_mp3?t=...` — underscore, not dot — and that page was
+         * classified as audio and handed to ExoPlayer, which can only fail on `text/html`; the
+         * accidental match also stole the link preview that would otherwise have rendered the
+         * page's OpenGraph card. Ordinary prose slugs (`.../my-thoughts-on-mp3`) were misrouted
+         * the same way.
+         *
+         * Matching is case-insensitive, so a mixed-case `.Mp3` — which the doubled
+         * lower/UPPER extension lists never covered — now resolves too. [extensions] may be
+         * spelled with or without the leading dot (`"mp4"` and `".mp4"` both work), because both
+         * spellings reach here: this module's lists are bare, while the video-feed filters'
+         * `SupportedContent` has historically been handed either.
+         *
+         * Called per URL during feed render, so it allocates nothing: the path end and the
+         * extension boundary are located by index and compared in place.
+         */
+        fun hasExtensionIn(
+            url: String,
+            extensions: Collection<String>,
+        ): Boolean {
+            val end = pathEndIndex(url)
+            var i = end - 1
+            while (i >= 0) {
+                val c = url[i]
+                // A `/` before any `.` means the last path segment has no extension. This is also
+                // what keeps the dot in a host name (`https://e.nostr.build/a_x_mp3`) from being
+                // read as the start of one.
+                if (c == '/') return false
+                if (c == '.') {
+                    val start = i + 1
+                    val length = end - start
+                    return extensions.any {
+                        val from = if (it.startsWith('.')) 1 else 0
+                        it.length - from == length && url.regionMatches(start, it, from, length, ignoreCase = true)
+                    }
+                }
+                i--
+            }
+            return false
         }
 
-        fun isImageUrl(url: String): Boolean {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-            return imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-        }
+        fun isImageExtension(ext: String) = imageExt.any { it.equals(ext, ignoreCase = true) }
 
-        fun isVideoUrl(url: String): Boolean {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-            return videoExtensions.any { removedParamsFromUrl.endsWith(it) }
-        }
+        fun isImageOrVideoExtension(ext: String) = isImageExtension(ext) || videoExt.any { it.equals(ext, ignoreCase = true) }
 
-        fun isAudioUrl(url: String): Boolean {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-            return audioExtensions.any { removedParamsFromUrl.endsWith(it) }
-        }
+        fun isImageOrVideoUrl(url: String): Boolean = isImageUrl(url) || isVideoUrl(url)
+
+        fun isImageUrl(url: String): Boolean = hasExtensionIn(url, imageExt)
+
+        fun isVideoUrl(url: String): Boolean = hasExtensionIn(url, videoExt)
+
+        fun isAudioUrl(url: String): Boolean = hasExtensionIn(url, audioExt)
 
         // A declared MIME type is authoritative when present; the URL extension is only a fallback
         // for the common bare-URL case.
@@ -565,10 +602,7 @@ class RichTextParser {
                 mimeType.equals("audio/mpegurl", ignoreCase = true)
         }
 
-        fun isPdfUrl(url: String): Boolean {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-            return pdfExtensions.any { removedParamsFromUrl.endsWith(it) }
-        }
+        fun isPdfUrl(url: String): Boolean = hasExtensionIn(url, pdfExt)
 
         /**
          * Resolves which renderer can display a declared blob — the single decision every media
@@ -603,10 +637,9 @@ class RichTextParser {
 
             if (url.startsWith("data:")) return null
 
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-            if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) return MediaContentKind.IMAGE
-            if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) return MediaContentKind.VIDEO
-            if (pdfExtensions.any { removedParamsFromUrl.endsWith(it) }) return MediaContentKind.PDF
+            if (hasExtensionIn(url, imageExt)) return MediaContentKind.IMAGE
+            if (hasExtensionIn(url, videoExt)) return MediaContentKind.VIDEO
+            if (hasExtensionIn(url, pdfExt)) return MediaContentKind.PDF
 
             return null
         }
@@ -614,9 +647,8 @@ class RichTextParser {
         fun isValidURL(url: String?): Boolean = isValidUrl(url)
 
         fun parseImageOrVideo(fullUrl: String): BaseMediaContent {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
-            val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-            val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+            val isImage = hasExtensionIn(fullUrl, imageExt)
+            val isVideo = hasExtensionIn(fullUrl, videoExt)
 
             return if (isImage) {
                 MediaUrlImage(fullUrl)
