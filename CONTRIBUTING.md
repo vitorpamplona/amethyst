@@ -265,9 +265,11 @@ front:
   sequentially: `for peer in aioquic picoquic quic-go quinn; do
   quic/interop/run-matrix.sh -s $peer; done`. Plan at
   `quic/interop/plans/2026-05-06-interop-runner.md`.
-- **CLI suites** ([`cli/tests/README.md`](cli/tests/README.md)): headless
-  variants need only `cargo` + a loopback `nostr-rs-relay`; the interactive
-  Marmot variant prompts a human to drive the Android UI.
+- **CLI suites** ([`cli/tests/README.md`](cli/tests/README.md)): every
+  relay-backed suite boots the embedded `amy serve` relay (geode) — no
+  external relay binary; only the Marmot suites additionally need `cargo`
+  for MDK's `wn`/`wnd`. The interactive Marmot variant prompts a human to
+  drive the Android UI.
 
 If a change is documentation-only, UI-only, build-script-only, or otherwise
 cannot affect wire bytes / decoded audio / MLS state / DM envelopes, skip

@@ -598,6 +598,15 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.secp256k1.kmp.jni.jvm)
 
+    // In-process Nostr relay (geode) so unit tests that drive a real
+    // NostrClient talk to an embedded relay instead of a public one. Same
+    // wiring quartz uses for its jvmAndroidTest source set: the engine, its
+    // testFixtures (RelayClientTest base, preload/publish helpers) and the
+    // JVM SQLite driver the in-memory EventStore needs on a host JVM.
+    testImplementation(project(":geode"))
+    testImplementation(testFixtures(project(":geode")))
+    testImplementation(libs.androidx.sqlite.bundled.jvm)
+
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.junit.ktx)
