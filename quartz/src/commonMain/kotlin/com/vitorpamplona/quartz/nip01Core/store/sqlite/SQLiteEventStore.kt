@@ -62,6 +62,8 @@ class SQLiteEventStore(
     val extraPragmas: List<String> = emptyList(),
 ) {
     companion object {
+        /** SQLite's message for the unique index on `event_headers (id)`. */
+        private const val DUPLICATE_ID_CONSTRAINT = "UNIQUE constraint failed: event_headers.id"
         const val DATABASE_VERSION = 5
     }
 
@@ -526,6 +528,14 @@ class SQLiteEventStore(
      */
     private fun classifyRowError(e: Throwable): IEventStore.InsertOutcome {
         val message = e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED
+        // A second copy of an event the store already holds trips the unique index on
+        // event_headers.id. That is not a refusal of the event but a statement that it
+        // is already here, and NIP-01 has a dedicated answer for it (`OK true` with the
+        // `duplicate:` prefix) — so name it, instead of leaking SQLite's constraint text
+        // for the session to turn into a rejection the client then retries or reports.
+        if (message.contains(DUPLICATE_ID_CONSTRAINT)) {
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.DUPLICATE)
+        }
         val refusal =
             message.contains("blocked:") ||
                 message.contains("duplicate:") ||

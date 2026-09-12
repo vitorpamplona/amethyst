@@ -44,6 +44,9 @@ object RejectionReason {
      */
     const val PREFIX_REPLACED = "replaced:"
 
+    /** NIP-01 prefix for "already have this event" — answered with `OK true`, not false. */
+    const val PREFIX_DUPLICATE = "duplicate:"
+
     // The standard store reasons.
     const val DUPLICATE = "duplicate: already have this event"
     const val EXPIRED = "blocked: Cannot insert an expired event"

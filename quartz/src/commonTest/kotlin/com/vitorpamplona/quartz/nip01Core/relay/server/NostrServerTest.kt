@@ -120,8 +120,13 @@ class NostrServerTest {
             server.close()
         }
 
+    /**
+     * NIP-01: `["OK", <id>, true, "duplicate: already have this event"]`. A client
+     * resends any event whose OK has not landed, so a duplicate must read as
+     * success — OK false would make every such resend look like a rejection.
+     */
     @Test
-    fun duplicateEventReturnsOkFalse() =
+    fun duplicateEventReturnsOkTrueWithDuplicatePrefix() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
@@ -138,7 +143,8 @@ class NostrServerTest {
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(2, okMessages.size)
             assertTrue(okMessages[0].contains(",true,"))
-            assertTrue(okMessages[1].contains(",false,"))
+            assertTrue(okMessages[1].contains(",true,"))
+            assertTrue(okMessages[1].contains("duplicate:"))
 
             server.close()
         }
