@@ -75,15 +75,20 @@ iOS targets could not be linked in the Linux CI container; the workflow runs
 `:commonsUI:iosSimulatorArm64Test` + `:commonsUI:compileTestKotlinIosArm64`
 next to the `:commons` ones on macOS.
 
-## Follow-ups
+## Follow-ups (done in the same branch)
 
-- **Tighten the CLI size budget** in `create-release.yml` once a release
-  confirms the new `amy` tarball size (target < 80 MB per
-  `cli/plans/2026-04-21-cli-distribution.md`).
-- **Rename the feed DAL out of `ui.feeds`** (it is the one `ui.*` package
-  that still lives in `commons`); a package rename that touches app imports.
-- **`nip64Chess` → `nip64Chess/ui`** for the composables now in `commonsUI`
-  (module split done, package rename pending).
+- **CLI size budget tightened to 120 MB** in `create-release.yml`. Measured
+  after the split (1.15.2, Linux x64): JVM tarball 55 MB, jlink image tarball
+  80 MB, `lib/` 60 MB on disk — vs ~70 MB JVM tarball before.
+- **Feed DAL moved out of `ui.feeds`** into `commons/…/feeds/` (root of the
+  existing `feeds` package, next to `feeds/custom`). Consumer imports rewritten.
+- **Chess composables moved to `nip64Chess/ui`** in `commonsUI`; the logic
+  stays in `commons/…/nip64Chess/`.
+
+## Open
+
 - `commons` still applies the Compose *compiler* plugin on purpose (stability
   inference for its model classes as seen from the apps' composables).
   Revisit if a `runtime-annotation`-only setup proves sufficient.
+- `ui/note/ParentNote` + `ReplyContext` remain in `commons` under a `ui.*`
+  package name (pure logic; candidate for `model/`).

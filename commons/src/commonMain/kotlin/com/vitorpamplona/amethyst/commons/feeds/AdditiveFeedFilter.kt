@@ -18,12 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.feeds
+package com.vitorpamplona.amethyst.commons.feeds
 
-import androidx.compose.runtime.State
+import com.vitorpamplona.amethyst.commons.util.logTime
 
-interface InvalidatableContent {
-    fun invalidateData(ignoreIfDoing: Boolean = false)
-
-    val isRefreshing: State<Boolean>
+abstract class AdditiveFeedFilter<T> :
+    FeedFilter<T>(),
+    IAdditiveFeedFilter<T> {
+    open fun updateListWith(
+        oldList: List<T>,
+        newItems: Set<T>,
+    ): List<T> =
+        logTime(
+            debugMessage = { "${this::class.simpleName} AdditiveFeedFilter updating ${newItems.size} new items to ${it.size} items" },
+        ) {
+            val newItemsToBeAdded = applyFilter(newItems)
+            if (newItemsToBeAdded.isNotEmpty()) {
+                val newList = oldList.toSet() + newItemsToBeAdded
+                sort(newList).take(limit())
+            } else {
+                oldList
+            }
+        }
 }

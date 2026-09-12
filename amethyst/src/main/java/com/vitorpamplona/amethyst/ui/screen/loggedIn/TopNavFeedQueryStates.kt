@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedQueryState
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import kotlinx.coroutines.flow.StateFlow
 
 /**

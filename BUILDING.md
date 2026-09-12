@@ -688,8 +688,9 @@ Caveats that the maintainer must weigh before submitting:
   justify it (sandboxed Gradle can't fetch Maven deps).
 - **Bundle size.** The bundle used to be ~70 MB because `:commons` leaked
   Compose/Skiko jars onto the CLI classpath. Compose UI now lives in
-  `:commonsUI`, which `:cli` does not depend on, so the bundle no longer
-  carries those jars — re-measure at the next release.
+  `:commonsUI`, which `:cli` does not depend on: the JVM tarball is ~55 MB
+  and the jlink image tarball ~80 MB (1.15.2, Linux x64). The release
+  workflow caps every amy asset at 120 MB.
 
 After the formula merges, the `livecheck` block lets homebrew-core's BrewTestBot
 auto-open version-bump PRs on each stable release — no token or workflow on our

@@ -18,30 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.feeds
+package com.vitorpamplona.amethyst.commons.feeds
 
-import com.vitorpamplona.amethyst.commons.model.IAccount
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
 
-class ChatroomFeedFilter(
-    val withUser: ChatroomKey,
-    val account: IAccount,
-) : AdditiveFeedFilter<Note>(),
-    ChangesFlowFilter<Note> {
-    fun chatroom() = account.chatroomList.getOrCreatePrivateChatroom(withUser)
+@Stable
+sealed class FeedState {
+    @Stable
+    object Loading : FeedState()
 
-    override fun changesFlow() = chatroom().changesFlow()
+    @Stable
+    class Loaded(
+        val feed: MutableStateFlow<LoadedFeedState<Note>>,
+    ) : FeedState()
 
-    // returns the last Note of each user.
-    override fun feedKey(): String = withUser.hashCode().toString()
+    @Stable
+    object Empty : FeedState()
 
-    override fun feed(): List<Note> = chatroom().messages.filter { account.isAcceptable(it) }.sortedWith(DefaultFeedOrder)
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> {
-        val chatroom = chatroom()
-        return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
-    }
-
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    @Stable
+    class FeedError(
+        val errorMessage: String,
+    ) : FeedState()
 }
+
+@Immutable
+class LoadedFeedState<T>(
+    val list: ImmutableList<T>,
+    val showHidden: Boolean,
+)

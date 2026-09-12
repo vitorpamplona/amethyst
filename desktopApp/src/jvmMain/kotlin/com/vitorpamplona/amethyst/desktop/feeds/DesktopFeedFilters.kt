@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.desktop.feeds
 
+import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.DefaultFeedOrder
+import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource
+import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrder
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
-import com.vitorpamplona.amethyst.commons.ui.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

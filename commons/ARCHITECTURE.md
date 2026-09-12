@@ -101,7 +101,7 @@ in `commonsUI`, under the same package.
 |----------------|-----|---------|
 | `state`        | no² | Small feature `StateFlow` machines (`FollowState`, `UserMetadataState`, `LoadingState`). |
 | `viewmodels`   | no² | Larger list/feed-backed ViewModels (`androidx.lifecycle.ViewModel`). Shared by all GUI front ends; `cli` usually drives the layers below instead. The few that hold Compose UI state (`ChatNewMessageState` — `TextFieldValue`; `thread/LevelFeedViewModel` — `LazyListState`) live in `commonsUI` under the same package. |
-| `feeds`        | no  | `FeedDefinitionRepository` — custom-feed definitions & ordering. |
+| `feeds`        | no  | The feed data-access layer at the root (`FeedFilter`, `AdditiveFeedFilter`, `AdditiveComplexFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `FeedState`, `InvalidatableContent`, `DefaultFeedOrder`, `RepostRenderability`…) plus `feeds/custom` (`FeedDefinitionRepository` — custom-feed definitions & ordering) and `feeds/related`. See the `feed-patterns` skill. |
 | `profile`      | mixed | `ProfileBroadcastStatus` (state) + `EditProfileFields` at the root; the `ProfileBroadcastBanner` composable lives in `commonsUI` `profile/ui`. |
 | `privacylock`  | mixed | Lock state machine + settings here; `LocalPrivacyLockState`/`lockStateFor` (CompositionLocal accessor) in `commonsUI`. |
 
@@ -126,7 +126,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 ### UI (Compose — lives in **`commonsUI`**)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/note`, `ui/richtext`, `ui/search`, `ui/notifications`, `ui/screens`, `ui/layouts`, `ui/markdown`, `ui/privacylock`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. **Exception:** `ui/feeds` in *this* module holds the headless feed DAL (`FeedFilter`, `AdditiveFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `RepostRenderability`…) — see debt §4; the `ui/feeds` composables (`NewPostsChip`, `RelayReachMarker`…) are in `commonsUI`. Likewise `ui/note/ParentNote`+`ReplyContext` (pure thread logic) stay here. |
+| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/note`, `ui/richtext`, `ui/search`, `ui/notifications`, `ui/screens`, `ui/layouts`, `ui/markdown`, `ui/privacylock`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. **Exception:** `ui/note/ParentNote`+`ReplyContext` (pure thread logic) stay in *this* module. The `ui/feeds` composables (`NewPostsChip`, `RelayReachMarker`…) are in `commonsUI`; the feed DAL that used to share that package now lives in `feeds/` here. |
 | `nip23LongContent` | yes | Long-form (NIP-23) article UI: `nip23LongContent/ui/article` (reader) + `…/ui/editor` (authoring). The model lives in `model/nip23LongContent` (here). |
 | `icons`        | yes | `ImageVector` icon definitions + builders, Material Symbols codepoints, the icon-font glyph tables. |
 | `hashtags`     | yes | Custom hashtag `ImageVector`s. |
@@ -139,7 +139,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 ### Mixed (documented debt — see §4)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `nip64Chess`   | mixed | Live-chess feature: game/lobby/subscription logic (here) **and** board/lobby composables (`commonsUI`) in one flat package. Still wants a `nip64Chess/ui` sub-package rename. (Mirrors `quartz/.../nip64Chess`.) |
+| `nip64Chess`   | mixed | Live-chess feature: game/lobby/subscription logic here; board/lobby composables in `commonsUI` under `nip64Chess/ui`. (Mirrors `quartz/.../nip64Chess`.) |
 | `domain`       | no  | Currently only `domain/nip46` (Nostr Connect signer flows). Sparse; candidate to fold into a clearer home. |
 
 ---
@@ -232,14 +232,9 @@ compiles: `commonMain` → `jvmAndroid` → platform-specific. See
 
 These are intentionally *documented*, not silently tolerated. Fix opportunistically.
 
-- **`nip64Chess` is UI+logic in one flat package.** The composables now sit in
-  `commonsUI` (module split), but they keep the flat `nip64Chess` package;
-  renaming them into `nip64Chess/ui/` is the remaining step.
-- **`ui/feeds` (in `commons`) holds the feed data-access layer** (`FeedFilter`,
-  `ChangesFlowFilter`, `FeedContentState`), which is logic, not UI, and overlaps
-  conceptually with the top-level `feeds` (custom-feed definitions). Since the
-  module split it is the one `ui.*` package that is *also* in `commons`. Move
-  the DAL out of `ui/` (a package rename touching app imports) when convenient.
+- **`ui/note` in `commons`** still hosts `ParentNote` + `ReplyContext` (pure
+  thread logic used by ViewModels) under a `ui.*` package name. Candidate for
+  `model/` when touched next.
 - **Same package tree in two modules.** Intentional (zero-import-churn split),
   but it means a package's module is not visible from its name. Rule of
   thumb: if it imports Compose UI it is in `commonsUI`; check §2 when unsure.

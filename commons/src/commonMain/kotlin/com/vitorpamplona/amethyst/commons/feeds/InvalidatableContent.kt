@@ -18,10 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.feeds
+package com.vitorpamplona.amethyst.commons.feeds
 
-interface IAdditiveFeedFilter<T> : IFeedFilter<T> {
-    fun applyFilter(newItems: Set<T>): Set<T>
+import androidx.compose.runtime.State
 
-    fun sort(items: Set<T>): List<T>
+interface InvalidatableContent {
+    fun invalidateData(ignoreIfDoing: Boolean = false)
+
+    val isRefreshing: State<Boolean>
 }

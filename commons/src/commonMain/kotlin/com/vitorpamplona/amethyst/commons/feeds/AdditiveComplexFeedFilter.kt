@@ -18,11 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.feeds
+package com.vitorpamplona.amethyst.commons.feeds
 
-import com.vitorpamplona.amethyst.commons.model.ListChange
-import kotlinx.coroutines.flow.MutableSharedFlow
+import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
 
-interface ChangesFlowFilter<T> : IAdditiveFeedFilter<T> {
-    fun changesFlow(): MutableSharedFlow<ListChange<T>>
+abstract class AdditiveComplexFeedFilter<T, U> : FeedFilter<T>() {
+    abstract fun updateListWith(
+        oldList: List<T>,
+        newItems: Set<U>,
+    ): List<T>
 }

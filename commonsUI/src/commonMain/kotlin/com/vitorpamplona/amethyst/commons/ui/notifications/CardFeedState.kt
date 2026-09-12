@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.notifications
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState
+import com.vitorpamplona.amethyst.commons.feeds.LoadedFeedState
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**

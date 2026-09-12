@@ -18,17 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.feeds
+package com.vitorpamplona.amethyst.commons.feeds
 
-interface IFeedFilter<T> {
-    fun loadTop(): List<T>
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
-    fun limit(): Int = 500
+class ChatroomFeedFilter(
+    val withUser: ChatroomKey,
+    val account: IAccount,
+) : AdditiveFeedFilter<Note>(),
+    ChangesFlowFilter<Note> {
+    fun chatroom() = account.chatroomList.getOrCreatePrivateChatroom(withUser)
 
-    /** Returns a string that serves as the key to invalidate the list if it changes. */
-    fun feedKey(): Any
+    override fun changesFlow() = chatroom().changesFlow()
 
-    fun showHiddenKey(): Boolean = false
+    // returns the last Note of each user.
+    override fun feedKey(): String = withUser.hashCode().toString()
 
-    fun feed(): List<T>
+    override fun feed(): List<Note> = chatroom().messages.filter { account.isAcceptable(it) }.sortedWith(DefaultFeedOrder)
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        val chatroom = chatroom()
+        return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
+    }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

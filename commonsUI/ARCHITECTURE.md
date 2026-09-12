@@ -3,8 +3,8 @@
 `commonsUI` holds every piece of shared code that needs **Compose UI** and is
 therefore useless to the headless `cli`:
 
-- composables (`ui/<area>`, `<feature>/ui`, and the historical flat feature
-  packages like `nip64Chess`, `audio`),
+- composables (`ui/<area>`, `<feature>/ui` — e.g. `nip64Chess/ui`,
+  `profile/ui` — and the historical flat `audio` renderers),
 - `ImageVector` icons (`icons`, `hashtags`, `robohash`) and the icon fonts,
 - theme, layouts, markdown rendering (`ui/markdown`, jvmAndroid),
 - Coil (`service/image`: `CoilImageBridge` + BlurHash/ThumbHash/Base64/Blossom

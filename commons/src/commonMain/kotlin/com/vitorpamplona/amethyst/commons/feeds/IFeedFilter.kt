@@ -18,35 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.feeds
+package com.vitorpamplona.amethyst.commons.feeds
 
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.model.Note
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.MutableStateFlow
+interface IFeedFilter<T> {
+    fun loadTop(): List<T>
 
-@Stable
-sealed class FeedState {
-    @Stable
-    object Loading : FeedState()
+    fun limit(): Int = 500
 
-    @Stable
-    class Loaded(
-        val feed: MutableStateFlow<LoadedFeedState<Note>>,
-    ) : FeedState()
+    /** Returns a string that serves as the key to invalidate the list if it changes. */
+    fun feedKey(): Any
 
-    @Stable
-    object Empty : FeedState()
+    fun showHiddenKey(): Boolean = false
 
-    @Stable
-    class FeedError(
-        val errorMessage: String,
-    ) : FeedState()
+    fun feed(): List<T>
 }
-
-@Immutable
-class LoadedFeedState<T>(
-    val list: ImmutableList<T>,
-    val showHidden: Boolean,
-)
