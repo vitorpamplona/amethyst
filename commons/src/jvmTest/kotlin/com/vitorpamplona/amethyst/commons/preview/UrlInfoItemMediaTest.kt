@@ -38,6 +38,7 @@ class UrlInfoItemMediaTest {
         audioType: String = "",
         video: String = "",
         videoType: String = "",
+        type: String = "music.song",
     ) = UrlInfoItem(
         url = url,
         mimeType = "text/html",
@@ -46,6 +47,7 @@ class UrlInfoItemMediaTest {
         audioType = audioType,
         video = video,
         videoType = videoType,
+        type = type,
     )
 
     @Test
@@ -184,6 +186,57 @@ class UrlInfoItemMediaTest {
         assertTrue(noArt.fetchComplete())
 
         assertFalse(item().fetchComplete())
+    }
+
+    @Test
+    fun onlyAPlayerPageTakesOverTheCard() {
+        // A news story that embeds a clip declares `article` and keeps its card -- headline,
+        // description, host, tap-through. Replacing all of that with a bare player is a strictly
+        // worse rendering of an article.
+        assertNull(
+            item(video = "https://example.com/clip.mp4", videoType = "video/mp4", type = "article").playableMediaUrl,
+        )
+        // A page that declares no type at all is a document until it says otherwise.
+        assertNull(
+            item(video = "https://example.com/clip.mp4", videoType = "video/mp4", type = "").playableMediaUrl,
+        )
+        // Every music.* and video.* subtype a media host uses is a player page.
+        assertEquals(
+            "https://example.com/clip.mp4",
+            item(video = "https://example.com/clip.mp4", videoType = "video/mp4", type = "video.other").playableMediaUrl,
+        )
+        assertEquals(
+            "https://example.com/x.mp3",
+            item(audio = "https://example.com/x.mp3", audioType = "audio/mpeg", type = "music.album").playableMediaUrl,
+        )
+    }
+
+    @Test
+    fun aDocumentRelativeMediaPathResolvesToo() {
+        // `startsWith("/")` was the old test, so this spelling used to reach the player verbatim
+        // as "media/x.mp3" -- a relative string the player can only hang on.
+        assertEquals(
+            "https://e.nostr.build/dir/media/x.mp3",
+            item(url = "https://e.nostr.build/dir/page", audio = "media/x.mp3", audioType = "audio/mpeg").playableMediaUrl,
+        )
+    }
+
+    @Test
+    fun onlyHttpSchemesArePlayable() {
+        // The page is remote and untrusted; the scheme is what stops it aiming the local player
+        // at a local read.
+        assertNull(item(audio = "file:///sdcard/secret.mp3", audioType = "audio/mpeg").playableMediaUrl)
+        assertNull(item(audio = "content://media/external/audio/1", audioType = "audio/mpeg").playableMediaUrl)
+        assertNull(item(audio = "javascript:alert(1)", audioType = "audio/mpeg").playableMediaUrl)
+    }
+
+    @Test
+    fun playableMediaTypeFollowsTheUrlItDescribes() {
+        // A refused page reports no type either, so a caller cannot hand a MIME to a null URL.
+        val refused = item(video = "https://example.com/clip.mp4", videoType = "video/mp4", type = "article")
+
+        assertNull(refused.playableMediaUrl)
+        assertNull(refused.playableMediaType)
     }
 
     @Test

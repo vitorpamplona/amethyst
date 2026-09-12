@@ -40,24 +40,39 @@ class UrlInfoItem(
     val video: String = "",
     /** `og:video:type` — the MIME the page declares for [video]. Empty when not declared. */
     val videoType: String = "",
+    /** `og:type` — what the page says it is, e.g. `music.song`, `video.other`, `article`. */
+    val type: String = "",
 ) {
     val verifiedUrl = runCatching { URI(url).toURL() }.getOrNull()
 
-    /** Resolves a possibly page-relative OpenGraph URL against the page's own address. */
-    private fun absolute(path: String): String =
-        if (path.startsWith("/")) {
-            runCatching {
-                verifiedUrl
-                    ?.toURI()
-                    ?.resolve(path)
-                    ?.toURL()
-                    ?.toString()
-            }.getOrNull() ?: path
-        } else {
-            path
-        }
+    /**
+     * Resolves an OpenGraph URL against the page's own address, or null when it cannot be made
+     * into an absolute `http(s)` one.
+     *
+     * Two things are deliberate. It resolves *any* relative reference, not just root-relative
+     * ones: the earlier `startsWith("/")` test passed a document-relative `media/x.mp3` through
+     * untouched, and a relative string reaching a media player is a load that can only hang.
+     * And it requires http(s), so a page cannot point the local player at `file:///` -- the page
+     * is remote and untrusted, the scheme is the only thing standing between it and a local read.
+     */
+    private fun resolve(path: String): String? {
+        if (path.isBlank()) return null
+        return runCatching {
+            val base = verifiedUrl?.toURI()
+            val resolved = if (base != null) base.resolve(path) else URI(path)
+            if (!resolved.scheme.equals("http", ignoreCase = true) &&
+                !resolved.scheme.equals("https", ignoreCase = true)
+            ) {
+                null
+            } else {
+                resolved.toURL().toString()
+            }
+        }.getOrNull()
+    }
 
-    val imageUrlFullPath = absolute(image)
+    // Falls back to the raw value so an unresolvable image degrades to "the loader shows nothing",
+    // which is what it did before. Only the playable gate below treats unresolvable as refusal.
+    val imageUrlFullPath = resolve(image) ?: image
 
     /**
      * The declared `og:video`, absolute, but only when the declaration holds up: a [videoType] the
@@ -71,8 +86,7 @@ class UrlInfoItem(
      * classifies as nothing, so it is refused here and the page falls through to its link card.
      */
     private val playableVideoUrl: String? =
-        absolute(video)
-            .ifEmpty { null }
+        resolve(video)
             ?.takeIf { RichTextParser.classifyMedia(it, videoType.ifEmpty { null }) == MediaContentKind.VIDEO }
 
     /**
@@ -80,9 +94,21 @@ class UrlInfoItem(
      * family, or a genuine audio file extension when the page omitted the type.
      */
     private val playableAudioUrl: String? =
-        absolute(audio)
-            .ifEmpty { null }
+        resolve(audio)
             ?.takeIf { RichTextParser.isAudioContent(audioType.ifEmpty { null }, it) }
+
+    /**
+     * Whether the page presents itself as a player *for* this media rather than a document that
+     * merely embeds some.
+     *
+     * Media hosts declare `music.song` / `video.other`; a news story with a clip in it declares
+     * `article`. Without this distinction an `og:video` on an article would replace its whole
+     * card -- headline, description, host, tap-through -- with a bare player, which is a strictly
+     * worse rendering of an article. A page that declares no type at all is treated as a document
+     * and keeps its card.
+     */
+    private val isMediaPlayerPage =
+        type.startsWith("music.", ignoreCase = true) || type.startsWith("video.", ignoreCase = true)
 
     /**
      * The media file this page declares itself to be a player for, or null when it declared none
@@ -91,11 +117,15 @@ class UrlInfoItem(
      * `og:video` wins a page that declares both, because it is the richer render: the audio path
      * deliberately strips the picture.
      */
-    val playableMediaUrl: String? = playableVideoUrl ?: playableAudioUrl
+    val playableMediaUrl: String? = if (isMediaPlayerPage) playableVideoUrl ?: playableAudioUrl else null
 
     /** The MIME the page declared for [playableMediaUrl], or null when it named none. */
     val playableMediaType: String? =
-        if (playableVideoUrl != null) videoType.ifEmpty { null } else audioType.ifEmpty { null }
+        when {
+            playableMediaUrl == null -> null
+            playableVideoUrl != null -> videoType.ifEmpty { null }
+            else -> audioType.ifEmpty { null }
+        }
 
     /**
      * Whether the fetch produced something worth rendering. An image is the usual evidence, but a

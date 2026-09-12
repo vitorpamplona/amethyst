@@ -168,6 +168,7 @@ class OpenGraphParserTest {
         assertEquals("Aria by The Fishcake", info.title)
         assertEquals("https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3", info.audio)
         assertEquals("audio/mpeg", info.audioType)
+        assertEquals("music.song", info.type)
     }
 
     @Test
@@ -223,7 +224,17 @@ class OpenGraphParserTest {
 
         assertEquals("https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4", info.video)
         assertEquals("video/mp4", info.videoType)
+        assertEquals("video.other", info.type)
         assertEquals("", info.audio)
+    }
+
+    @Test
+    fun readsWhatThePageSaysItIs() {
+        // og:type is what separates a media host's player page from an article that embeds a clip;
+        // only the former should have its card replaced by a player.
+        assertEquals("music.song", extract("""<head><meta property="og:type" content="music.song"></head>""").type)
+        assertEquals("article", extract("""<head><meta property="og:type" content="article"></head>""").type)
+        assertEquals("", extract("""<head><meta property="og:title" content="T"></head>""").type)
     }
 
     @Test

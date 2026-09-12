@@ -228,7 +228,7 @@ private fun MyLoadUrlPreviewDirect(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxHeight().aspectRatio(1f),
                     )
-                } else if (state.previewInfo.mimeType.startsWith("video")) {
+                } else if (state.previewInfo.mimeType.startsWith("video") || state.previewInfo.mimeType.startsWith("audio")) {
                     VideoView(
                         state.previewInfo.url,
                         mimeType = state.previewInfo.mimeType,
@@ -297,7 +297,7 @@ private fun MyLoadUrlPreviewDirectFillWidth(
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                } else if (state.previewInfo.mimeType.startsWith("video")) {
+                } else if (state.previewInfo.mimeType.startsWith("video") || state.previewInfo.mimeType.startsWith("audio")) {
                     VideoView(
                         state.previewInfo.url,
                         mimeType = state.previewInfo.mimeType,

@@ -126,11 +126,14 @@ fun RenderLoaded(
             }
         }
 
-        // Audio rides the video pipeline; see RichTextParser.videoExt.
+        // Audio rides the video pipeline; see RichTextParser.videoExt. The fetched Content-Type is
+        // forwarded because it is the only type signal for an extension-less URL -- an HLS
+        // playlist served as `audio/x-mpegurl` off `/stream?id=1` is otherwise handed to the
+        // progressive source and fails.
         state.previewInfo.mimeType.startsWith("video") || state.previewInfo.mimeType.startsWith("audio") -> {
             Box(modifier = HalfVertPadding) {
                 ZoomableContentView(
-                    content = MediaUrlVideo(url, uri = callbackUri),
+                    content = MediaUrlVideo(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
                     roundedCorner = true,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,

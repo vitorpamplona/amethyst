@@ -33,6 +33,8 @@ class OpenGraphParser {
         val video: String = "",
         /** The `og:video:type` MIME the page declares for [video], e.g. `video/mp4`. */
         val videoType: String = "",
+        /** `og:type` — what the page says it *is*, e.g. `music.song`, `video.other`, `article`. */
+        val type: String = "",
     )
 
     companion object {
@@ -101,6 +103,14 @@ class OpenGraphParser {
                 "og:video:type",
             )
 
+        // What the page says it is. A media host's player page declares `music.*` or `video.*`; an
+        // article that merely embeds a clip declares `article` and keeps its link card. Without
+        // this an `og:video` on a news story would replace the whole card with a bare player.
+        private val META_X_TYPE =
+            arrayOf(
+                "og:type",
+            )
+
         private val CONTENT = "content"
     }
 
@@ -113,6 +123,7 @@ class OpenGraphParser {
         AUDIO_TYPE,
         VIDEO,
         VIDEO_TYPE,
+        TYPE,
     }
 
     private fun fieldFor(key: String): Field? =
@@ -124,6 +135,7 @@ class OpenGraphParser {
             in META_X_AUDIO_TYPE -> Field.AUDIO_TYPE
             in META_X_VIDEO -> Field.VIDEO
             in META_X_VIDEO_TYPE -> Field.VIDEO_TYPE
+            in META_X_TYPE -> Field.TYPE
             else -> null
         }
 
@@ -143,6 +155,7 @@ class OpenGraphParser {
         var audioType = ""
         var video = ""
         var videoType = ""
+        var type = ""
 
         metaTags.forEach {
             // A meta tag names its key in exactly one of these three attributes, but which one
@@ -162,9 +175,10 @@ class OpenGraphParser {
                 Field.AUDIO_TYPE -> if (audioType.isEmpty()) audioType = it.attr(CONTENT)
                 Field.VIDEO -> if (video.isEmpty()) video = it.attr(CONTENT)
                 Field.VIDEO_TYPE -> if (videoType.isEmpty()) videoType = it.attr(CONTENT)
+                Field.TYPE -> if (type.isEmpty()) type = it.attr(CONTENT)
                 null -> Unit
             }
         }
-        return Result(title, description, image, audio, audioType, video, videoType)
+        return Result(title, description, image, audio, audioType, video, videoType, type)
     }
 }
