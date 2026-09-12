@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.abbreviateBolt12Offer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -191,7 +192,7 @@ fun Bolt12OfferEntry(
         horizontalArrangement = Arrangement.SpaceAround,
     ) {
         Text(
-            text = "${offer.take(14)}…${offer.takeLast(6)}",
+            text = abbreviateBolt12Offer(offer),
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Monospace,
             maxLines = 1,

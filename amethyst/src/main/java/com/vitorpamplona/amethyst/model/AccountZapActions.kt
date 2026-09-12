@@ -188,9 +188,10 @@ class AccountZapActions(
      * external-wallet or LNURL fallback because only NWC returns the proof.
      *
      * Outcomes are split by what they say about the money:
-     *  - [onNotPaid]: the wallet answered with an error, so nothing was paid. The
-     *    wallet does the offer → invoice exchange itself, so a stale or dead offer
-     *    lands here too. The caller may safely retry over another rail.
+     *  - [onNotPaid]: the wallet answered with an error. The wallet does the offer →
+     *    invoice exchange itself, so a stale or dead offer lands here too. Whether a
+     *    retry is safe depends on the code — `PAYMENT_FAILED` may be a timeout with the
+     *    HTLC still in flight — see `Bolt12LightningFallback`.
      *  - [onError]: paid but no valid receipt, or nothing conclusive. Never retry.
      *  - [onTimeout]: the wallet never answered. Unknown state — never retry.
      */

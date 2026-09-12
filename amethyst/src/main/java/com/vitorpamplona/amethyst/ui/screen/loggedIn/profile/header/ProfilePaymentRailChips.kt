@@ -234,7 +234,7 @@ private fun RailAndTargetChips(
             ProfilePaymentChip(
                 color = BitcoinOrange,
                 label = stringRes(Res.string.bolt12_lightning_offer),
-                detail = remember(offer) { "${offer.take(14)}\u2026${offer.takeLast(6)}" },
+                detail = remember(offer) { abbreviateBolt12Offer(offer) },
                 copyValue = offer,
                 onClick = { bolt12DialogOffer = offer },
             ) {

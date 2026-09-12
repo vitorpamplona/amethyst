@@ -29,23 +29,29 @@ class Bolt12LightningFallbackTest {
     @Test
     fun offerSideRefusalsRetryOverLightning() {
         listOf(
-            NwcErrorCode.PAYMENT_FAILED,
             NwcErrorCode.EXPIRED,
             NwcErrorCode.NOT_FOUND,
             NwcErrorCode.BAD_REQUEST,
             NwcErrorCode.NOT_IMPLEMENTED,
             NwcErrorCode.UNSUPPORTED_PAYMENT_INSTRUCTION,
             NwcErrorCode.UNSUPPORTED_NETWORK,
-            NwcErrorCode.INTERNAL,
-            NwcErrorCode.OTHER,
         ).forEach { code ->
             assertTrue("$code should fall back to BOLT11", Bolt12LightningFallback.shouldRetry(code))
         }
     }
 
     @Test
-    fun aReplyWithoutACodeStillRetries() {
-        assertTrue(Bolt12LightningFallback.shouldRetry(null))
+    fun aFailedOrAmbiguousPaymentNeverRetries() {
+        // PAYMENT_FAILED "may be due to a timeout" (NIP-47): the HTLC can still settle.
+        // The catch-alls and a reply with no code say nothing about whether funds moved.
+        listOf(
+            NwcErrorCode.PAYMENT_FAILED,
+            NwcErrorCode.INTERNAL,
+            NwcErrorCode.OTHER,
+            null,
+        ).forEach { code ->
+            assertFalse("$code may already have paid; a retry could double-spend", Bolt12LightningFallback.shouldRetry(code))
+        }
     }
 
     @Test

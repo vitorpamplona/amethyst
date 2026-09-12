@@ -148,7 +148,7 @@ private fun Bolt12OfferRow(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         Text(
-            text = "${offer.take(14)}…${offer.takeLast(6)}",
+            text = abbreviateBolt12Offer(offer),
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurface,
@@ -233,3 +233,10 @@ private fun Bolt12NwcAmountDialog(
         }
     }
 }
+
+/**
+ * The short form every BOLT12 surface shows for an `lno1…` offer: enough of the
+ * head to recognise the prefix, the tail to tell two offers apart. Shared by the
+ * profile chip, this dialog and the offers settings screen so they agree.
+ */
+fun abbreviateBolt12Offer(offer: String): String = "${offer.take(14)}\u2026${offer.takeLast(6)}"

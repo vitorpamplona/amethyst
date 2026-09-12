@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionMetadata
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -505,13 +506,14 @@ class ZapPaymentHandler(
      * [Account.sendBolt12Zap]. Fire-and-forget like [payViaNWC]: dispatch is optimistic
      * and settlement/errors surface later through the async NWC response.
      *
-     * When the wallet answers that it did **not** pay — it resolves the offer itself,
-     * so a stale or unreachable offer fails there — and the recipient also publishes a
-     * lightning address, the same share is re-sent as a regular BOLT11 zap through
-     * [zapOverLightning], silently: the BOLT12 error is only shown when there is no
-     * BOLT11 route, or when the refusal is about our wallet rather than the offer
-     * ([Bolt12LightningFallback]). A paid-but-no-receipt outcome and a wallet that
-     * never answers are never retried, since funds may already have moved.
+     * When the wallet refuses the offer before attempting a payment — it resolves the
+     * offer itself, so a stale, expired or unsupported offer fails there — and the
+     * recipient also publishes a lightning address, the same share is re-sent as a
+     * regular BOLT11 zap through [zapOverLightning], silently. The BOLT12 error is
+     * shown when there is no BOLT11 route or when the refusal does not qualify
+     * ([Bolt12LightningFallback]: a failed payment attempt may still settle, and a
+     * refusal about our own wallet would repeat on BOLT11). A paid-but-no-receipt
+     * outcome and a wallet that never answers are never retried either.
      */
     suspend fun payViaBolt12(
         recipients: List<Bolt12Recipient>,
@@ -576,7 +578,9 @@ class ZapPaymentHandler(
                             onError(stringRes(context, R.string.error_dialog_zap_error), e.message ?: e.toString(), recipient.user)
                         }
                     } else {
-                        reportBolt12Error(R.string.bolt12_payment_failed, detail)
+                        // bolt12_payment_failed always formats a detail; a wallet may send neither
+                        // message nor a recognised code.
+                        reportBolt12Error(R.string.bolt12_payment_failed, detail ?: (code ?: NwcErrorCode.OTHER).name)
                     }
                 },
                 onTimeout = {

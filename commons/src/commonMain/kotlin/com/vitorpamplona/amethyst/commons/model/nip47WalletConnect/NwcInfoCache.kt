@@ -30,6 +30,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -74,6 +78,16 @@ class NwcInfoCache(
     )
 
     private val cache = ConcurrentMap<HexKey, Entry>()
+
+    private val updatesState = MutableStateFlow(0)
+
+    /**
+     * Bumps every time a fetch stores an entry. [current] is a plain map read, so a
+     * composable that derives state from it (the zap picker's "can our wallet pay a
+     * BOLT12 offer" check) has nothing to recompose on when the info arrives after
+     * it opened; keying on this flow closes that gap.
+     */
+    val updates: StateFlow<Int> = updatesState.asStateFlow()
 
     // Fetches in progress, keyed like [cache]. Every fetching path goes through [fetchOnce].
     private val inFlight = ConcurrentMap<HexKey, CompletableDeferred<NwcInfoEvent?>>()
@@ -182,6 +196,7 @@ class NwcInfoCache(
             }
 
         cache[uri.pubKeyHex] = Entry(info, now())
+        updatesState.update { it + 1 }
         return info
     }
 

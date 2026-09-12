@@ -226,6 +226,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -2130,12 +2131,12 @@ fun observeZapRailCapability(
 ): RailCapability {
     val cashuState = accountViewModel.account.cashuWalletState
     val author = baseNote.author
-    // These four are deliberately read only to drive the recompute below — do NOT
-    // delete them as "unused". Each observe* call ALSO subscribes the relay fetch
-    // (so a not-yet-seen kind:0 / kind:10019 gets pulled in while the popup is
-    // open), and each value is a remember() key so railCapability recomputes when
-    // it arrives. RailCapabilityResolver.peek re-reads everything itself; these
-    // just say *when* to re-run it.
+    // Every value below up to `showOnchainWallet` is deliberately read only to drive
+    // the recompute — do NOT delete them as "unused". Each observe* call ALSO
+    // subscribes the relay fetch (so a not-yet-seen kind:0 / kind:10019 / kind:10058
+    // gets pulled in while the popup is open), and each value is a remember() key so
+    // railCapability recomputes when it arrives. RailCapabilityResolver.peek re-reads
+    // everything itself; these just say *when* to re-run it.
     val cashuMints by cashuState.mints.collectAsStateWithLifecycle()
     val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
     val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }
@@ -2144,7 +2145,11 @@ fun observeZapRailCapability(
     // (rides in UserMetadataForKeyKinds beside kind:0) and our default NWC wallet,
     // whose `pay` support decides whether that offer makes them Lightning-payable.
     val bolt12OfferList = author?.let { observeNoteEvent<Bolt12OfferListEvent>(it.bolt12OfferListNote, accountViewModel).value }
-    val defaultWalletUri by accountViewModel.account.nip47SignerState.defaultWalletUri
+    val nip47State = accountViewModel.account.nip47SignerState
+    val defaultWalletUri by nip47State.defaultWalletUri.collectAsStateWithLifecycle()
+    // The wallet's kind:13194 info (its `pay` support) is a plain cache read inside
+    // canZapViaBolt12(); this counter is what recomputes when it lands after opening.
+    val walletInfoUpdates by remember(nip47State) { nip47State.infoCache?.updates ?: MutableStateFlow(0) }
         .collectAsStateWithLifecycle()
     // Honors the user's "show on-chain wallet" preference: off hides the on-chain
     // rail from the zap chips too, matching the wallet screen, profile chips, and
@@ -2194,6 +2199,7 @@ fun observeZapRailCapability(
         nutzapInfo,
         bolt12OfferList,
         defaultWalletUri,
+        walletInfoUpdates,
         showPayToChip,
         recipientPayTo,
         payToApps,

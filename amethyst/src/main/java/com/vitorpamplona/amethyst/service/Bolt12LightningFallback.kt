@@ -25,27 +25,30 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
 /**
  * Decides whether a BOLT12 zap the wallet refused should be re-sent as a BOLT11 zap.
  *
- * Only ever consulted for a NIP-47 *error* reply, which by the spec means the wallet
- * did not pay — so the retry can never double-spend. The question left is whether a
- * second attempt over a different instruction has a chance: a refusal about the
- * offer (the wallet could not resolve it, the recipient's node is unreachable, the
- * offer expired, or our wallet does not handle `lno` at all) is worth retrying over
- * the recipient's lightning address; a refusal about *our* wallet — no balance, a
- * quota or rate limit, a permission the connection lacks — would fail the same way
- * on BOLT11 and would only produce a second error.
+ * Only ever consulted for a NIP-47 *error* reply. An allowlist, because not every
+ * error means no money moved: NIP-47 defines `PAYMENT_FAILED` as "may be due to a
+ * timeout, exhausting all routes, insufficient capacity or similar", and a wallet
+ * that gave up on a payment whose HTLC is still in flight can see it settle later.
+ * Retrying on that, or on the catch-all `INTERNAL` / `OTHER` / no-code replies,
+ * could pay the recipient twice. Only refusals the wallet raises *before* it
+ * attempts a payment qualify — the offer could not be resolved or has expired, the
+ * request was rejected as malformed, or our wallet does not handle `lno` at all.
+ * Those are the "recipient's configuration is stale" cases the fallback exists for.
+ * Refusals about our own wallet (balance, quota, permissions) are out too: BOLT11
+ * through the same wallet would fail identically and only add a second error.
  */
 object Bolt12LightningFallback {
-    /** Refusals that describe the sender's wallet, not the offer. */
-    private val senderSideCodes =
+    /** Refusals raised before any payment attempt, about the offer or the instruction. */
+    private val offerSideCodes =
         setOf(
-            NwcErrorCode.INSUFFICIENT_BALANCE,
-            NwcErrorCode.QUOTA_EXCEEDED,
-            NwcErrorCode.RATE_LIMITED,
-            NwcErrorCode.RESTRICTED,
-            NwcErrorCode.UNAUTHORIZED,
-            NwcErrorCode.UNSUPPORTED_ENCRYPTION,
+            NwcErrorCode.EXPIRED,
+            NwcErrorCode.NOT_FOUND,
+            NwcErrorCode.BAD_REQUEST,
+            NwcErrorCode.NOT_IMPLEMENTED,
+            NwcErrorCode.UNSUPPORTED_PAYMENT_INSTRUCTION,
+            NwcErrorCode.UNSUPPORTED_NETWORK,
         )
 
     /** True when a refusal with [code] (null when the wallet sent none) should be retried over BOLT11. */
-    fun shouldRetry(code: NwcErrorCode?): Boolean = code !in senderSideCodes
+    fun shouldRetry(code: NwcErrorCode?): Boolean = code in offerSideCodes
 }
