@@ -278,7 +278,7 @@ tasks.withType<Test>().configureEach {
 // there. Commons gains this gate once FeedDefinitionSerializer.kt has been
 // migrated off Jackson; future commonMain code must not reintroduce JVM-only
 // JSON / HTTP deps.
-val verifyKmpPurity by tasks.registering {
+val verifyKmpPurity = tasks.register("verifyKmpPurity") {
     group = "verification"
     description = "Fails if iOS-targeted source sets import JVM-only deps."
     val checkedDirs =

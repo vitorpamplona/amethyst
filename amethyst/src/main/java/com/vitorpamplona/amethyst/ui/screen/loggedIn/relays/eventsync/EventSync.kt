@@ -43,10 +43,12 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -90,6 +92,9 @@ class EventSync(
 
         /** Maximum number of completed-relay entries kept in the activity log. */
         const val MAX_ACTIVITY_LOG = 5000
+
+        /** Poll interval while waiting for the last forwarded events to be acknowledged. */
+        const val OUTBOX_DRAIN_POLL_MS = 100L
     }
 
     // -------------------------------------------------------------------------
@@ -392,6 +397,13 @@ class EventSync(
 
         val sourceRelayOfEvent = ConcurrentHashMap<HexKey, NormalizedRelayUrl>()
 
+        // (event id, destination) pairs already counted as sent. The outbox is
+        // at-least-once: it writes an event as soon as the socket is ready and
+        // resends everything still unacknowledged when the connection finishes
+        // syncing, so one event can hit the same relay twice before its OK lands.
+        // The relay dedups the second copy; the counters must too.
+        val sentPairs = ConcurrentHashMap.newKeySet<String>()
+
         val runningState =
             SyncState.Running(
                 relaysCompleted = 0,
@@ -423,7 +435,12 @@ class EventSync(
                     success: Boolean,
                 ) {
                     super.onSent(relay, cmdStr, cmd, success)
-                    if (cmd is EventCmd) {
+                    // `success` is "written to the socket", not "OK received". A write to a
+                    // destination that is still connecting fails and the outbox resends it
+                    // once the socket opens; counting the failed attempt too made every
+                    // cold destination report one extra event sent. Likewise a successful
+                    // resend of an unacknowledged event is the same send, not a second one.
+                    if (cmd is EventCmd && success && sentPairs.add(cmd.event.id + relay.url.url)) {
                         var hasSent = false
 
                         if (outboxDedup.contains(cmd.event.id)) {
@@ -586,6 +603,13 @@ class EventSync(
                     },
                 )
 
+                // `publish` is fire-and-forget through the client's outbox, and `use` closes
+                // the client as soon as this block returns. Without a drain, the events
+                // forwarded from the last page of the last relay are still waiting for a
+                // socket or an OK when the outbox is destroyed — the sync reports Done and
+                // silently never delivers them. Bounded by the same per-relay timeout.
+                awaitOutboxDrain(client, outboxDedup + inboxDedup + dmDedup)
+
                 _syncState.value =
                     SyncState.Done(
                         totalEventsReceived = runningState.eventsReceived.value,
@@ -610,6 +634,24 @@ class EventSync(
                 _syncState.value = SyncState.Error(e.message ?: "Unknown error", filterSince, filterUntil)
             } finally {
                 client.removeConnectionListener(okListener)
+            }
+        }
+    }
+
+    /**
+     * Waits until no forwarded event in [ids] has a relay left in the client's outbox, or
+     * until [RELAY_TIMEOUT_MS] passes. Ids that drain are dropped from the working set so
+     * each poll only revisits what is still pending.
+     */
+    private suspend fun awaitOutboxDrain(
+        client: INostrClient,
+        ids: Set<HexKey>,
+    ) {
+        val pending = ids.toMutableSet()
+        withTimeoutOrNull(RELAY_TIMEOUT_MS) {
+            while (pending.isNotEmpty()) {
+                pending.removeAll { client.pendingPublishRelaysFor(it).isNullOrEmpty() }
+                if (pending.isNotEmpty()) delay(OUTBOX_DRAIN_POLL_MS)
             }
         }
     }

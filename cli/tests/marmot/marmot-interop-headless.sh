@@ -3,9 +3,9 @@
 # marmot-interop-headless.sh — zero-prompt, zero-internet interop harness.
 #
 # Drives Identity A via the `amy` CLI (./gradlew :cli:installDist) and
-# Identities B/C via MDK's `wn`/`wnd`. Spins up a local
-# nostr-rs-relay on ws://127.0.0.1:$RELAY_PORT so nothing ever leaves the
-# machine. Matches the 13 test scenarios in marmot-interop.sh but without
+# Identities B/C via MDK's `wn`/`wnd`. Spins up a local embedded relay
+# (`amy serve`, i.e. geode) on ws://127.0.0.2:$RELAY_PORT so nothing ever
+# leaves the machine. Matches the 13 test scenarios in marmot-interop.sh but without
 # any human prompts — all checks run to completion and the exit code
 # reflects pass/fail totals.
 #
@@ -37,9 +37,10 @@ WN_BIN="$WN_REPO/target/release/wn"
 WND_BIN="$WN_REPO/target/release/wnd"
 AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 
-# Local relay wiring — cloned + built during preflight, started on
-# $RELAY_PORT. The harness never touches the public internet for test
-# traffic; wn/wnd/amy all point at this one loopback endpoint.
+# Local relay wiring — the embedded `amy serve` (geode), started on
+# $RELAY_PORT by start_local_relay (../headless/helpers.sh). The harness
+# never touches the public internet for test traffic; wn/wnd/amy all
+# point at this one loopback endpoint.
 #
 # Bind to 127.0.0.2 rather than 127.0.0.1: Quartz's RelayUrlNormalizer
 # strips literal 127.0.0.1 / localhost / 192.168.* out of NIP-17 inbox
@@ -48,8 +49,6 @@ AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 # Amethyst's public defaults instead of the loopback. 127.0.0.2 is
 # still pure loopback (no network traffic) but isn't on the strip list.
 RELAY_HOST="${RELAY_HOST:-127.0.0.2}"
-RELAY_REPO="${RELAY_REPO:-$STATE_DIR/nostr-rs-relay}"
-RELAY_BIN="$RELAY_REPO/target/release/nostr-rs-relay"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8080}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
@@ -73,7 +72,7 @@ BLOSSOM_PID=""
 
 NO_BUILD=0
 # Every run starts from empty stores. wnd already wipes B's and C's data dirs
-# on each start, but A's amy home and the relay's SQLite file used to survive,
+# on each start, but A's amy home and the relay's state used to survive,
 # and the leftovers are not inert: a KeyPackage A published in an earlier run
 # is still on the relay for B to invite with, an old group's kind:445 events
 # still arrive and fail to decrypt, and A's cursors still say it has seen them.
@@ -119,8 +118,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ $RESET_STATE -eq 1 && -d "$STATE_DIR" ]]; then
-  # Keep the relay checkout + its build (minutes to rebuild) and the log and
-  # results history; drop everything that holds protocol state.
+  # Keep the log and results history; drop everything that holds protocol
+  # state (the relay is in-memory, so wiping its dir just drops its identity).
   #
   # run.env counts as protocol state: it is where tests hand each other group
   # ids. Leaving it behind a wipe leaves ids naming groups nobody is in any

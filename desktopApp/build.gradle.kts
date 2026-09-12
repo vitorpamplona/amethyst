@@ -254,7 +254,7 @@ compose.desktop {
 // The arch is selected at task-execution time from the host JVM's os.arch, so
 // the same task builds the correct AppImage on both x86_64 and aarch64 hosts.
 // BUILDING.md documents local-dev fetch.
-val createReleaseAppImage by tasks.registering(Exec::class) {
+val createReleaseAppImage = tasks.register<Exec>("createReleaseAppImage") {
     group = "compose desktop"
     description = "Package createReleaseDistributable output into a Linux AppImage via appimagetool."
     dependsOn("createReleaseDistributable")
@@ -330,7 +330,7 @@ val createReleaseAppImage by tasks.registering(Exec::class) {
 // proguarded jkeychain-1.1.0-*.jar with all 117 KB intact), so this task is
 // a regression guard, not a workaround. It's wired onto every release task so
 // it fails the build immediately if the .so disappears.
-val verifyJkeychainNativeSurvivesProguard by tasks.registering {
+val verifyJkeychainNativeSurvivesProguard = tasks.register("verifyJkeychainNativeSurvivesProguard") {
     description = "Fail the release build if osxkeychain.so is stripped from proguarded output (would break macOS Keychain at runtime)"
     group = "verification"
     dependsOn("proguardReleaseJars")
@@ -395,7 +395,7 @@ listOf(
 // into the .app) so the subsequent bundle signing seals already-signed code.
 // Runs only on macOS with the Developer ID identity exported — a no-op on every
 // other leg and on unsigned local/PR builds.
-val signMacJarNatives by tasks.registering {
+val signMacJarNatives = tasks.register("signMacJarNatives") {
     description = "Codesign macOS Mach-O natives embedded in bundled jars before the .app is sealed + notarized"
     group = "build"
     dependsOn("proguardReleaseJars")

@@ -81,6 +81,9 @@ object CodeNotification {
         event: GitPullRequestUpdateEvent,
     ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_pr_update, event.content)
 
+    // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
+    // events already on relays still arrive and still have to be rendered.
+    @Suppress("DEPRECATION")
     suspend fun notify(
         context: Context,
         account: Account,

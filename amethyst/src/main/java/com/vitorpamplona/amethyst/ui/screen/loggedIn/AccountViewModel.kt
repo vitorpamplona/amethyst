@@ -2647,7 +2647,6 @@ class AccountViewModel(
         com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
             .clear()
         feedStates.destroy()
-        super.onCleared()
     }
 
     fun loadMentions(

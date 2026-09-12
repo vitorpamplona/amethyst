@@ -22,7 +22,7 @@ kotlin {
 // Generate a BuildConfig.kt carrying the app version from the catalog so
 // RelayInfo.VERSION (reported over NIP-11) tracks releases automatically
 // instead of being a hand-bumped literal.
-val generateVersionFile by tasks.registering {
+val generateVersionFile = tasks.register("generateVersionFile") {
     val versionValue = libs.versions.app.get()
     val outDir = layout.buildDirectory.dir("generated/version/kotlin")
     inputs.property("version", versionValue)

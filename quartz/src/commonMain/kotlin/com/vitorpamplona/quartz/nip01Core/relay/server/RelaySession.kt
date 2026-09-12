@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
+import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
@@ -212,7 +213,13 @@ class RelaySession(
                     }
 
                     is IEventStore.InsertOutcome.Rejected -> {
-                        send(OkMessage(cmd.event.id, false, outcome.reason))
+                        // NIP-01: an event the relay already holds is acknowledged with
+                        // `OK true` and the `duplicate:` prefix. Every real client
+                        // (amethyst's outbox included) resends an event whose OK has not
+                        // landed yet, and treats OK false as a rejection to surface —
+                        // so answering false here turns a routine resend into an error.
+                        val duplicate = outcome.reason.startsWith(RejectionReason.PREFIX_DUPLICATE)
+                        send(OkMessage(cmd.event.id, duplicate, outcome.reason))
                     }
 
                     is IEventStore.InsertOutcome.Failed -> {

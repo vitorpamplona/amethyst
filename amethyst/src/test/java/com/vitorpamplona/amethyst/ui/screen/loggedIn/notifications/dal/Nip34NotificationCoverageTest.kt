@@ -70,6 +70,7 @@ class Nip34NotificationCoverageTest {
      * A NIP-22 [com.vitorpamplona.quartz.nip22Comments.CommentEvent] handles
      * modern comments through its own separate wiring.
      */
+    @Suppress("DEPRECATION")
     private val nip34ParticipantKinds =
         setOf(
             GitPatchEvent.KIND,
@@ -131,6 +132,7 @@ class Nip34NotificationCoverageTest {
      * uppercase `E`. Asserting the wrong half passes the kind list while matching
      * nothing on the wire.
      */
+    @Suppress("DEPRECATION")
     @Test
     fun `status kinds are pulled by the lowercase-e engagement subscription`() {
         val eAnchoredActivityKinds =
