@@ -2381,4 +2381,7 @@
     <!-- Buzz agent persona editor -->
     <!-- Profile card (kind-0 rendered in the feed) -->
     <string name="podcast_value_for_value">Valor-para-Valor</string>
+    <!-- Health Connect: activity label, shown by Health Connect next to the link into our
+         rationale screen. Needs to be an Android resource (not a commons Compose resource)
+         because android:label on the manifest entry can only reference @string/. -->
 </resources>
