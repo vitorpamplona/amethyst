@@ -838,7 +838,6 @@ class NestViewModel(
         closed = true
         teardownBroadcast(BroadcastUiState.Idle, finalCleanup = true)
         teardown(targetState = ConnectionUiState.Closed, finalCleanup = true)
-        super.onCleared()
     }
 
     private fun observeSpeakerState(s: NestsSpeaker) {

@@ -154,7 +154,7 @@ val hangInteropCacheDir =
 val moqRelayVersion = "0.10.25"
 val moqTokenCliVersion = "0.5.23"
 
-val interopInstallMoqRelay by tasks.registering(Exec::class) {
+val interopInstallMoqRelay = tasks.register<Exec>("interopInstallMoqRelay") {
     description = "cargo install moq-relay $moqRelayVersion (interop)"
     group = "interop"
     commandLine(
@@ -178,7 +178,7 @@ val interopInstallMoqRelay by tasks.registering(Exec::class) {
     doFirst { hangInteropCacheDir.asFile.mkdirs() }
 }
 
-val interopInstallMoqTokenCli by tasks.registering(Exec::class) {
+val interopInstallMoqTokenCli = tasks.register<Exec>("interopInstallMoqTokenCli") {
     description = "cargo install moq-token-cli $moqTokenCliVersion (interop)"
     group = "interop"
     commandLine(
@@ -201,7 +201,7 @@ val interopInstallMoqTokenCli by tasks.registering(Exec::class) {
     doFirst { hangInteropCacheDir.asFile.mkdirs() }
 }
 
-val interopBuildSidecars by tasks.registering(Exec::class) {
+val interopBuildSidecars = tasks.register<Exec>("interopBuildSidecars") {
     description = "cargo build --release for nestsClient/tests/hang-interop sidecars"
     group = "interop"
     workingDir = hangInteropDir.asFile
@@ -226,7 +226,7 @@ val interopBuildSidecars by tasks.registering(Exec::class) {
     outputs.dir(hangInteropDir.dir("target/release"))
 }
 
-val interopBuildHangSidecars by tasks.registering {
+val interopBuildHangSidecars = tasks.register("interopBuildHangSidecars") {
     description = "Build all hang-interop binaries (sidecars + moq-relay + moq-token)."
     group = "interop"
     dependsOn(interopBuildSidecars, interopInstallMoqRelay, interopInstallMoqTokenCli)
@@ -305,7 +305,7 @@ fun resolveBunBinary(): String {
 fun resolveNpxBinary(): String =
     System.getenv("NPX_BIN") ?: System.getProperty("npxBin") ?: "npx"
 
-val interopBuildBrowserHarness by tasks.registering(Exec::class) {
+val interopBuildBrowserHarness = tasks.register<Exec>("interopBuildBrowserHarness") {
     description = "bun install && bun build for the browser interop harness"
     group = "interop"
     workingDir = browserInteropDir.asFile
@@ -325,7 +325,7 @@ val interopBuildBrowserHarness by tasks.registering(Exec::class) {
     outputs.dir(browserInteropDir.dir("dist"))
 }
 
-val interopInstallPlaywrightChromium by tasks.registering(Exec::class) {
+val interopInstallPlaywrightChromium = tasks.register<Exec>("interopInstallPlaywrightChromium") {
     description = "Install Playwright Chromium + dependencies for the browser interop harness"
     group = "interop"
     workingDir = browserInteropDir.asFile

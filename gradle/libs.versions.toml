@@ -28,6 +28,7 @@ uiautomator = "2.4.0"
 biometricKtx = "1.4.0-alpha02"
 coil = "3.6.2"
 composeBom = "2026.09.00"
+tracingPerfetto = "1.0.1"
 composeRuntimeAnnotation = "1.12.1"
 coreKtx = "1.19.0"
 datastore = "1.2.1"
@@ -136,6 +137,9 @@ androidx-camera-extensions = { module = "androidx.camera:camera-extensions", ver
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "androidxCamera" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "androidxCamera" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-runtime-tracing = { group = "androidx.compose.runtime", name = "runtime-tracing" }
+androidx-tracing-perfetto = { group = "androidx.tracing", name = "tracing-perfetto", version.ref = "tracingPerfetto" }
+androidx-tracing-perfetto-binary = { group = "androidx.tracing", name = "tracing-perfetto-binary", version.ref = "tracingPerfetto" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-runtime-annotation = { group = "androidx.compose.runtime", name = "runtime-annotation", version.ref = "composeRuntimeAnnotation" }
 androidx-collection = { group = "androidx.collection", name = "collection", version.ref = "androidxCollection" }
