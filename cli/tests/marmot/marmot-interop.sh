@@ -5,12 +5,19 @@
 # Sequential, all-or-nothing. Script drives the `wn` side automatically and
 # prompts the human operator at each step that requires Amethyst UI action.
 #
-# Usage: ./marmot-interop.sh [--local-relays] [--transponder] [--no-build]
+# Usage: ./marmot-interop.sh [--public-relays] [--port N] [--transponder] [--no-build]
+#
+# By default the harness boots its own relay — `amy serve`, i.e. geode — bound
+# to 0.0.0.0:$RELAY_PORT so the wn daemons reach it on loopback and the phone
+# reaches it over the LAN (ws://<laptop-ip>:PORT, or ws://10.0.2.2:PORT from an
+# emulator). Pass --public-relays to run the old real-world path against the
+# public relay set instead; that is the only mode that touches the internet.
 #
 set -uo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 TESTS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
 STATE_DIR="$SCRIPT_DIR/state"
 LOG_DIR="$STATE_DIR/logs"
 B_DIR="$STATE_DIR/B"
@@ -27,6 +34,17 @@ RESULTS_FILE="$STATE_DIR/results-$RUN_TS.tsv"
 WN_REPO="${WN_REPO:-$STATE_DIR/mdk}"
 WN_BIN=""
 WND_BIN=""
+AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
+
+# Embedded relay (default mode). Bound on every interface so a device on the
+# same network can reach it; the daemons connect over loopback. Loopback
+# `ws://` relays are only accepted by MDK behind this explicit opt-in.
+RELAY_HOST="127.0.0.1"
+RELAY_BIND="0.0.0.0"
+RELAY_PORT="${RELAY_PORT:-8080}"
+RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
+RELAY_DATA="$STATE_DIR/relay"
+export WN_ALLOW_LOOPBACK_RELAYS=1
 B_NPUB=""
 B_HEX=""
 C_NPUB=""
@@ -34,6 +52,7 @@ C_HEX=""
 A_NPUB=""
 A_HEX=""
 
+# Only used with --public-relays.
 DEFAULT_RELAYS=(
   "wss://relay.damus.io"
   "wss://nos.lol"
@@ -41,7 +60,7 @@ DEFAULT_RELAYS=(
   "wss://nostr.bitcoiner.social"
   "wss://nostr.mom"
 )
-USE_LOCAL_RELAYS=0
+USE_PUBLIC_RELAYS=0
 ENABLE_TRANSPONDER=0
 NO_BUILD=0
 
@@ -50,7 +69,9 @@ usage() {
 marmot-interop.sh — Amethyst <-> MDK interop harness
 
 Options:
-  --local-relays    Use ws://localhost:8080 instead of public relays (requires 'just docker-up')
+  --public-relays   Use the public relay set instead of the embedded relay
+                    (amy serve / geode, the default). Only mode that leaves the machine.
+  --port N          Port for the embedded relay (default 8080)
   --transponder     Run Test 14 (MIP-05 push notifications)
   --no-build        Don't rebuild wn/wnd if binaries are missing
   -h, --help        Show this help
@@ -62,8 +83,10 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --local-relays) USE_LOCAL_RELAYS=1 ;;
-    --transponder)  ENABLE_TRANSPONDER=1 ;;
+    --public-relays) USE_PUBLIC_RELAYS=1 ;;
+    --local-relays)  printf '%s\n' "note: --local-relays is now the default (embedded amy serve relay); flag ignored" >&2 ;;
+    --port)          RELAY_PORT="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
+    --transponder)   ENABLE_TRANSPONDER=1 ;;
     --no-build)     NO_BUILD=1 ;;
     -h|--help)      usage; exit 0 ;;
     *) printf 'unknown flag: %s\n' "$1" >&2; usage; exit 2 ;;
@@ -77,6 +100,8 @@ mkdir -p "$STATE_DIR" "$LOG_DIR" "$B_DIR/logs" "$C_DIR/logs"
 
 # shellcheck source=../lib.sh
 source "$TESTS_DIR/lib.sh"
+# shellcheck source=../headless/helpers.sh — start_local_relay / stop_local_relay (embedded amy serve)
+source "$TESTS_DIR/headless/helpers.sh"
 
 # --- preflight ---------------------------------------------------------------
 preflight() {
@@ -87,6 +112,26 @@ preflight() {
     fi
     printf '  %s: %s\n' "$cmd" "$(command -v "$cmd")" >>"$LOG_FILE"
   done
+
+  # The embedded relay is `amy serve`, so amy has to exist unless the run
+  # goes to the public relays. Same transient-503 retry as the headless
+  # harness: one bad jitpack/dl.google.com roll must not abort the run.
+  if [[ "$USE_PUBLIC_RELAYS" -ne 1 && ! -x "$AMY_BIN" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      fail_msg "amy not found at $AMY_BIN and --no-build set"; exit 1
+    fi
+    local attempt max_attempts=4
+    for attempt in $(seq 1 $max_attempts); do
+      step "building :cli:installDist (attempt $attempt/$max_attempts)"
+      if ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE" \
+          && [[ -x "$AMY_BIN" ]]; then
+        break
+      fi
+      [[ "$attempt" -lt "$max_attempts" ]] && warn "gradle build failed (likely transient jitpack/Google 503) — retrying"
+    done
+    [[ -x "$AMY_BIN" ]] || { fail_msg "amy still missing after build"; exit 1; }
+    printf '  amy: %s\n' "$AMY_BIN" >>"$LOG_FILE"
+  fi
 
   WN_BIN="$WN_REPO/target/release/wn"
   WND_BIN="$WN_REPO/target/release/wnd"
@@ -285,7 +330,7 @@ discover_a_relays() {
   if [[ -n "$kp_event_id" && "$kp_event_id" != "null" ]]; then
     info "wn_b found A's KeyPackage (kind:30443) — discovery plane is working"
   else
-    warn "wn_b could NOT find A's KeyPackage. wn is bootstrapped on ${DEFAULT_RELAYS[*]}."
+    warn "wn_b could NOT find A's KeyPackage. wn is bootstrapped on ${RELAY_LIST[*]}."
     warn "Either Amethyst never published a KeyPackage, or it's only on relays wn can't reach."
     warn "All later tests will fail. Fix this before continuing (tap KP publish in Amethyst settings)."
   fi
@@ -300,7 +345,7 @@ discover_a_relays() {
 
   if ! command -v sqlite3 >/dev/null 2>&1; then
     warn "sqlite3 not installed — skipping wn user_relays cache probe."
-    warn "If Test 03 fails with 'no invite arrived', install sqlite3 or rerun with --local-relays."
+    warn "If Test 03 fails with 'no invite arrived', install sqlite3 or rerun without --public-relays."
     return
   fi
 
@@ -383,12 +428,7 @@ discover_a_relays() {
 # --- relays ------------------------------------------------------------------
 configure_relays() {
   banner "Configuring relays"
-  local relays=()
-  if [[ "$USE_LOCAL_RELAYS" -eq 1 ]]; then
-    relays=( "ws://localhost:8080" )
-  else
-    relays=( "${DEFAULT_RELAYS[@]}" )
-  fi
+  local relays=( "${RELAY_LIST[@]}" )
   # Each relay × 3 types × 2 daemons produces a lot of repetitive "ok"
   # lines — the happy path doesn't need any of it on screen. Quiet the
   # per-add logging into $LOG_FILE and only surface real failures as
@@ -527,27 +567,28 @@ configure_relays() {
         info "sanity kinds 10050/1059/445 ok (B->C welcome + message round-trip)"
       else
         warn "kind:445 failed — C never decrypted sanity-ping (relays may be dropping group messages)"
-        warn "Consider rerunning with --local-relays."
+        warn "Consider rerunning without --public-relays (the embedded relay accepts every kind)."
       fi
       # best-effort cleanup so re-runs don't accumulate dead sanity groups
       wn_c groups leave "$sanity_c_gid" >/dev/null 2>&1 || true
       wn_b groups leave "$sanity_gid" >/dev/null 2>&1 || true
     else
       warn "kind:10050/1059 failed — C never received welcome; relays likely dropping gift wraps or inbox lists"
-      warn "Consider rerunning with --local-relays (requires 'just docker-up' in the mdk checkout)."
+      warn "Consider rerunning without --public-relays (the embedded relay accepts every kind)."
     fi
   fi
 }
 
 instruct_amethyst_setup() {
-  if [[ "$USE_LOCAL_RELAYS" -eq 1 ]]; then
-    # Offline/sandbox path: we own the only relay, so the harness DOES
-    # need to dictate Amethyst's relay config — nothing is discoverable
-    # via the public network.
-    prompt_human "Configure Amethyst to match this --local-relays harness:
+  if [[ "$USE_PUBLIC_RELAYS" -ne 1 ]]; then
+    # Offline/sandbox path (default): we own the only relay — the embedded
+    # `amy serve` (geode) on 0.0.0.0:$RELAY_PORT — so the harness DOES need
+    # to dictate Amethyst's relay config; nothing is discoverable via the
+    # public network.
+    prompt_human "Configure Amethyst to use this harness's embedded relay (amy serve / geode):
   1. Settings -> Relays:  add as READ+WRITE
-       ws://10.0.2.2:8080     (Android emulator)
-       ws://<your-LAN-ip>:8080  (physical device on same Wi-Fi)
+       ws://10.0.2.2:$RELAY_PORT     (Android emulator)
+       ws://<your-LAN-ip>:$RELAY_PORT  (physical device on same Wi-Fi)
   2. Settings -> Key Package Relays:  add the SAME URL
   3. Settings -> DM Inbox Relays (NIP-17/kind:10050):  add the SAME URL
   4. Trigger key-package publish (toggle KP relay on/off if needed)
@@ -555,7 +596,7 @@ instruct_amethyst_setup() {
     return
   fi
 
-  # Public-relay path: the harness should behave like any real Nostr
+  # --public-relays path: the harness should behave like any real Nostr
   # client — discover A's advertised relays via kind:10002 / 10050 /
   # 10051 and publish there, rather than forcing A to adopt the
   # harness's own relay set. That lets the tests surface real-world
@@ -1301,6 +1342,7 @@ main() {
     local rc=$?
     trap - EXIT INT TERM HUP
     stop_daemons
+    stop_local_relay
     print_summary
     exit "$rc"
   }
@@ -1311,6 +1353,12 @@ main() {
   banner "Amethyst <-> MDK interop harness ($RUN_TS)"
 
   preflight
+  if [[ "$USE_PUBLIC_RELAYS" -eq 1 ]]; then
+    RELAY_LIST=( "${DEFAULT_RELAYS[@]}" )
+  else
+    RELAY_LIST=( "$RELAY_URL" )
+    start_local_relay
+  fi
   start_daemon B "$B_DIR" "$B_SOCKET"
   start_daemon C "$C_DIR" "$C_SOCKET"
   ensure_identity B
@@ -1327,7 +1375,7 @@ main() {
   # plane, then summarise what wn sees. Surfaces up front the kind of
   # failure (A's 10050 unreachable from wn, missing KP list, etc.) that
   # would otherwise bite as a silent Test 03 timeout.
-  if [[ "$USE_LOCAL_RELAYS" -ne 1 ]]; then
+  if [[ "$USE_PUBLIC_RELAYS" -eq 1 ]]; then
     discover_a_relays
   fi
 

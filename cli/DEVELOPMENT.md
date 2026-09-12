@@ -348,7 +348,7 @@ Amy-specific layer still needs its own coverage:
 | Error / exit-code contract (bad args → 2, timeout → 124, `rejected` → 1) | `ExitCodeContractTest` — table-driven tests invoking `runCli(argv)` with captured stdout/stderr. |
 | JSON output shape (keys and types under `--json`) | `JsonContractTest` — runs commands under `--json` and asserts on the parsed object. The default text render has no shape contract and isn't asserted on. |
 | File layout on disk (`identity.json`, `shared/events.db`, `marmot/groups/*.mls`, …) | Structural assertions after a command sequence. |
-| Round-trip between two accounts on a local relay | End-to-end shell harnesses under `cli/tests/`: each spins up a local `nostr-rs-relay` and a fresh `$HOME=$STATE_DIR` so amy sees a virgin `~/.amy/`, then bootstraps multiple accounts sharing one store and drives a scenario through them. Nine suites today — see [`cli/tests/README.md`](./tests/README.md). |
+| Round-trip between two accounts on a local relay | End-to-end shell harnesses under `cli/tests/`: each spins up the embedded `amy serve` relay (geode) and a fresh `$HOME=$STATE_DIR` so amy sees a virgin `~/.amy/`, then bootstraps multiple accounts sharing one store and drives a scenario through them. Nine suites today — see [`cli/tests/README.md`](./tests/README.md). |
 
 The JVM suite drives `runCli` **in-process** through the shared
 `amy(vararg argv)` harness in `CliResult.kt`: it captures stdout/stderr,

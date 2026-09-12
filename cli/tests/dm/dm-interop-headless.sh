@@ -3,8 +3,9 @@
 # dm-interop-headless.sh — zero-prompt NIP-17 DM interop harness.
 #
 # Two `amy` processes (Identity A and Identity D) talk to each other
-# through a local nostr-rs-relay on ws://127.0.0.1:$RELAY_PORT. No
-# whitenoise-rs, no Marmot, no public internet traffic.
+# through a local embedded relay (`amy serve`, i.e. geode) on
+# ws://127.0.0.2:$RELAY_PORT. No MDK, no Marmot, no Rust toolchain, no
+# public internet traffic.
 #
 # Usage: ./dm-interop-headless.sh [--port N] [--no-build]
 #
@@ -26,16 +27,14 @@ RESULTS_FILE="$STATE_DIR/results-$RUN_TS.tsv"
 
 AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 
-# Share the nostr-rs-relay checkout with the Marmot harness to avoid
-# rebuilding it twice. Override RELAY_REPO / RELAY_DATA if you want full
-# isolation between runs.
+# Loopback relay = `amy serve` (geode), booted from $AMY_BIN by
+# start_local_relay in headless/helpers.sh. Override RELAY_DATA if you
+# want full isolation between runs.
 # Bind the loopback relay to 127.0.0.2 rather than 127.0.0.1 so Quartz's
 # `isLocalHost()` filter doesn't silently strip it out of the kind:10050
 # inbox events during recipient-relay resolution. 127.0.0.2 is still pure
 # loopback — no network traffic, no config needed.
 RELAY_HOST="${RELAY_HOST:-127.0.0.2}"
-RELAY_REPO="${RELAY_REPO:-$TESTS_DIR/marmot/state-headless/nostr-rs-relay}"
-RELAY_BIN="$RELAY_REPO/target/release/nostr-rs-relay"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8090}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
@@ -68,12 +67,9 @@ mkdir -p "$STATE_DIR" "$LOG_DIR"
 # shellcheck source=../lib.sh
 source "$TESTS_DIR/lib.sh"
 
-# Reuse start_local_relay / stop_local_relay from the Marmot harness's
-# setup.sh — the relay lifecycle is identical. preflight() there also
-# builds whitenoise-rs, which we don't need; setup.sh in this dir
-# defines a slimmer preflight_dm().
-# shellcheck source=../marmot/setup.sh
-source "$TESTS_DIR/marmot/setup.sh"
+# setup.sh in this dir defines the slim preflight_dm() (amy only, no
+# MDK); the relay lifecycle (start_local_relay / stop_local_relay, the
+# embedded `amy serve`) comes from the shared headless helpers.
 # shellcheck source=setup.sh
 source "$SCRIPT_DIR/setup.sh"
 # shellcheck source=../headless/helpers.sh
