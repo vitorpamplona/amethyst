@@ -311,14 +311,14 @@ class KtorRelayTest {
                 )
             assertEquals(true, ok, "successful insert must round-trip OK true on the wire")
 
-            // Duplicate insert returns OK false; this also exercises the
-            // "non-empty message" branch of the serializer.
+            // Duplicate insert returns OK true with a `duplicate:` message (NIP-01);
+            // this also exercises the "non-empty message" branch of the serializer.
             val ok2 =
                 client.publishAndConfirm(
                     event = event,
                     relayList = setOf(server.url.normalizeRelayUrl()),
                 )
-            assertEquals(false, ok2, "duplicate insert must round-trip OK false")
+            assertEquals(true, ok2, "duplicate insert must round-trip OK true (NIP-01 duplicate:)")
         }
 
     /**

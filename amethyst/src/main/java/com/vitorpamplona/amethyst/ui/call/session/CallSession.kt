@@ -65,6 +65,7 @@ import org.webrtc.RtpSender
 import org.webrtc.VideoTrack
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "CallSession"
 private const val VIDEO_MAX_BITRATE_BPS_DEFAULT = 1_500_000
@@ -429,6 +430,7 @@ class CallSession(
             try {
                 withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "Failed to create PeerConnection for ${peerPubKey.take(8)}", e)
                 return
             }

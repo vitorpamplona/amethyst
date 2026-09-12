@@ -360,6 +360,5 @@ class BuzzDmListViewModel : ViewModel() {
     override fun onCleared() {
         liveJob?.cancel()
         liveJob = null
-        super.onCleared()
     }
 }

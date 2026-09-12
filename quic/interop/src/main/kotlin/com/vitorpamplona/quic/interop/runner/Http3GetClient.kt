@@ -203,9 +203,7 @@ class Http3GetClient(
                         body += frame.body
                     }
 
-                    else -> {
-                        Unit
-                    }
+                    else -> {}
                 }
             }
         }

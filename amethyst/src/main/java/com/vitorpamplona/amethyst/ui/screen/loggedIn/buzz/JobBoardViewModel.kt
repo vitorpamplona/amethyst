@@ -137,7 +137,6 @@ class JobBoardViewModel : ViewModel() {
 
     override fun onCleared() {
         stopWatching()
-        super.onCleared()
     }
 
     companion object {

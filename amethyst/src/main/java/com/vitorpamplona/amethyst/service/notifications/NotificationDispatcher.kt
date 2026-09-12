@@ -112,6 +112,9 @@ class NotificationDispatcher(
         // recipient account.
         // `internal` (was `private`) so the notification-kinds contract test
         // can pin the push-side kind set against the in-app feed's kind set.
+        // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
+        // events already on relays still arrive and still have to be routed.
+        @Suppress("DEPRECATION")
         internal val NOTIFICATION_KINDS: Set<Int> =
             setOf(
                 // Direct-arrival

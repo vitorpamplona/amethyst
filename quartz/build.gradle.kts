@@ -304,11 +304,11 @@ kotlin {
             dependsOn(appleMain)
         }
 
-        val iosArm64Main by getting {
+        getByName("iosArm64Main") {
             dependsOn(iosMain.get())
         }
 
-        val iosSimulatorArm64Main by getting {
+        getByName("iosSimulatorArm64Main") {
             dependsOn(iosMain.get())
         }
 
@@ -316,11 +316,11 @@ kotlin {
             dependsOn(appleTest)
         }
 
-        val iosArm64Test by getting {
+        getByName("iosArm64Test") {
             dependsOn(iosTest.get())
         }
 
-        val iosSimulatorArm64Test by getting {
+        getByName("iosSimulatorArm64Test") {
             dependsOn(iosTest.get())
         }
 
@@ -334,11 +334,11 @@ kotlin {
                 dependsOn(appleTest)
             }
 
-        val macosArm64Main by getting {
+        getByName("macosArm64Main") {
             dependsOn(macosMain)
         }
 
-        val macosArm64Test by getting {
+        getByName("macosArm64Test") {
             dependsOn(macosTest)
         }
 
@@ -355,11 +355,11 @@ kotlin {
                 dependsOn(nativeTest)
             }
 
-        val linuxX64Main by getting {
+        getByName("linuxX64Main") {
             dependsOn(linuxMain)
         }
 
-        val linuxX64Test by getting {
+        getByName("linuxX64Test") {
             dependsOn(linuxTest)
         }
     }
@@ -383,7 +383,7 @@ dependencies {
 // Scope: source sets whose code is compiled for at least one non-JVM
 // target. Excludes jvmAndroid, jvmMain, androidMain (and their tests),
 // where Jackson and OkHttp are legitimately used.
-val verifyKmpPurity by tasks.registering {
+val verifyKmpPurity = tasks.register("verifyKmpPurity") {
     group = "verification"
     description = "Fails if iOS-targeted source sets import JVM-only deps."
     val checkedDirs =

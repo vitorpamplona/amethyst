@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,11 +59,15 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 // Thread-safe and hoisted: previously each CalendarDateBadge recompose allocated a new
 // SimpleDateFormat, which (a) is not thread-safe and (b) created 500 allocations while scrolling.
-private val MonthShortFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("MMM", Locale.getDefault())
+// Cached per locale rather than in a single val that captures the locale once: the month
+// names have to follow a language the user changes while the app is running.
+private val monthShortFormatters = ConcurrentHashMap<Locale, DateTimeFormatter>()
+
+private fun monthShortFormatter(locale: Locale): DateTimeFormatter = monthShortFormatters.getOrPut(locale) { DateTimeFormatter.ofPattern("MMM", locale) }
 
 @Composable
 fun CalendarEventListCard(
@@ -214,7 +219,10 @@ private fun CalendarDateBadge(startSeconds: Long?) {
             Instant.ofEpochSecond(startSeconds).atZone(ZoneId.systemDefault()).toLocalDate()
         }
     val day = localDate.dayOfMonth.toString()
-    val month = remember(localDate) { MonthShortFormatter.format(localDate).uppercase() }
+    // LocalLocale rather than Locale.getDefault(): the latter is not observable, so a
+    // locale change while the app runs would leave the month name in the old language.
+    val locale = LocalLocale.current.platformLocale
+    val month = remember(localDate, locale) { monthShortFormatter(locale).format(localDate).uppercase() }
 
     Column(
         modifier = Modifier.size(width = 52.dp, height = 60.dp),

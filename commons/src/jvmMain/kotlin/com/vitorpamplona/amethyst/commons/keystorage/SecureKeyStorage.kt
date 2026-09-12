@@ -149,6 +149,75 @@ actual class SecureKeyStorage private actual constructor() {
             }
         }
 
+    /**
+     * Strict variant that distinguishes "backend confirms item not found" from every
+     * other outcome. This matters on macOS: `javakeyring` collapses `errSecItemNotFound`
+     * (-25300), `errSecAuthFailed` (-25293), `errSecUserCanceled` (-128), and
+     * `errSecInteractionNotAllowed` (-25308) into the same `PasswordAccessException`.
+     * A caller that mistook "user clicked Deny" for "first launch, generate a fresh
+     * key" would silently rotate the metadata AES key and permanently destroy the
+     * accounts.json.enc it was supposed to unlock.
+     *
+     * On macOS this shells out to `/usr/bin/security find-generic-password`, whose
+     * exit codes are documented and unambiguous (44 = not found, 128 = user cancel /
+     * dialog dismissed, others = backend failure). On Windows / Linux, javakeyring
+     * has no such ambiguity for the equivalent flows in practice, but we still treat
+     * any `PasswordAccessException` here as ambiguous (throw) to keep the contract
+     * strict on the getOrCreate path.
+     */
+    actual suspend fun getPrivateKeyOrThrow(npub: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                if (!keyringAvailable) {
+                    return@withContext getFromFallback(npub)
+                }
+                if (isMacOs()) {
+                    return@withContext getFromMacSecurityCli(SERVICE_NAME, npub)
+                }
+                try {
+                    keyring().getPassword(SERVICE_NAME, npub)
+                } catch (e: PasswordAccessException) {
+                    // Non-mac backends: keep the strict contract by refusing to
+                    // treat this as "definitively absent". A caller that needs a
+                    // permissive lookup should use getPrivateKey() instead.
+                    throw SecureStorageException(
+                        "Keyring backend refused access or returned ambiguous not-found",
+                        e,
+                    )
+                }
+            } catch (e: SecureStorageException) {
+                throw e
+            } catch (e: BackendNotSupportedException) {
+                keyringAvailable = false
+                println("OS keyring not available, using fallback encrypted storage")
+                getFromFallback(npub)
+            } catch (e: Exception) {
+                throw SecureStorageException("Failed to retrieve private key (strict)", e)
+            }
+        }
+
+    /**
+     * Test seam: overridable strategy for the strict macOS lookup. Production wires
+     * to [defaultMacSecurityLookup] which spawns `/usr/bin/security`. Tests replace
+     * this with a stub so unit tests run hermetically on any OS.
+     */
+    internal var macSecurityLookup: (String, String) -> MacSecurityResult =
+        ::defaultMacSecurityLookup
+
+    private fun getFromMacSecurityCli(
+        service: String,
+        account: String,
+    ): String? {
+        val result = macSecurityLookup(service, account)
+        return when (result) {
+            is MacSecurityResult.Found -> result.password
+            is MacSecurityResult.NotFound -> null
+            is MacSecurityResult.Ambiguous -> throw SecureStorageException(
+                "macOS Keychain access failed (${result.reason}, exit=${result.exitCode})",
+            )
+        }
+    }
+
     actual suspend fun deletePrivateKey(npub: String): Boolean =
         withContext(Dispatchers.IO) {
             try {
@@ -464,6 +533,98 @@ internal interface KeyringHandle {
         service: String,
         account: String,
     )
+}
+
+/**
+ * Outcome of a strict macOS `/usr/bin/security find-generic-password` lookup.
+ * Kept as a sealed hierarchy so [SecureKeyStorage.getPrivateKeyOrThrow] can
+ * cleanly translate to `null` versus `SecureStorageException`.
+ */
+internal sealed class MacSecurityResult {
+    data class Found(
+        val password: String,
+    ) : MacSecurityResult()
+
+    object NotFound : MacSecurityResult()
+
+    /**
+     * Any exit code other than 0 (found) or 44 (item not found). Reason is a short
+     * human string derived from stderr / documented codes:
+     *   128 = user cancelled or dismissed the Keychain Access dialog
+     *   -25293 (errSecAuthFailed) surfaces as exit 51 in practice
+     *   -25308 (errSecInteractionNotAllowed) surfaces when Keychain is locked
+     */
+    data class Ambiguous(
+        val exitCode: Int,
+        val reason: String,
+    ) : MacSecurityResult()
+}
+
+/**
+ * Pure parser split out for testability on non-macOS CI runners. Maps the
+ * documented exit code contract of `/usr/bin/security find-generic-password`
+ * to a [MacSecurityResult]. `stdout` is the raw password body (`-w` prints it
+ * followed by a newline; strip the trailing newline only). `stderr` is used
+ * as a hint for the ambiguous [MacSecurityResult.Ambiguous.reason] string.
+ */
+internal fun parseMacSecurityFindResult(
+    exitCode: Int,
+    stdout: String,
+    stderr: String,
+): MacSecurityResult =
+    when (exitCode) {
+        0 -> MacSecurityResult.Found(stdout.trimEnd('\n', '\r'))
+        44 -> MacSecurityResult.NotFound
+        else -> {
+            val reason =
+                when {
+                    exitCode == 128 -> "user cancelled Keychain dialog"
+                    stderr.contains("-25293") -> "errSecAuthFailed"
+                    stderr.contains("-25308") -> "errSecInteractionNotAllowed"
+                    stderr.contains("-128") -> "user cancelled Keychain dialog"
+                    stderr.isNotBlank() ->
+                        stderr
+                            .lineSequence()
+                            .first()
+                            .trim()
+                            .take(120)
+                    else -> "unknown"
+                }
+            MacSecurityResult.Ambiguous(exitCode, reason)
+        }
+    }
+
+private fun isMacOs(): Boolean = System.getProperty("os.name").orEmpty().startsWith("Mac")
+
+/**
+ * Production implementation: spawn `/usr/bin/security` and read exit code + streams.
+ * Kept package-private so tests can also reach it if they want to run the real path
+ * on a mac host, but production always goes through the [SecureKeyStorage.macSecurityLookup]
+ * indirection.
+ */
+internal fun defaultMacSecurityLookup(
+    service: String,
+    account: String,
+): MacSecurityResult {
+    val process =
+        try {
+            ProcessBuilder(
+                "/usr/bin/security",
+                "find-generic-password",
+                "-s",
+                service,
+                "-a",
+                account,
+                "-w",
+            ).redirectErrorStream(false).start()
+        } catch (e: Exception) {
+            return MacSecurityResult.Ambiguous(-1, "failed to spawn /usr/bin/security: ${e.message ?: e::class.simpleName ?: "unknown"}")
+        }
+    process.outputStream.close()
+    val stdout = process.inputStream.bufferedReader().use { it.readText() }
+    val stderr = process.errorStream.bufferedReader().use { it.readText() }
+    val exitCode = process.waitFor()
+    return parseMacSecurityFindResult(exitCode, stdout, stderr)
 }
 
 internal class RealKeyringHandle(

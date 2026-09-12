@@ -24,12 +24,10 @@ import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.marmot.ingest
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.runBlocking
 
@@ -170,7 +168,7 @@ fun benchJoinWelcome(): BenchResult =
             }
         },
     ) { (bob, wrap) ->
-        runBlocking { bob.manager.ingest(wrap as GiftWrapEvent) }
+        runBlocking { bob.manager.ingest(wrap) }
     }
 
 /**
@@ -223,7 +221,7 @@ fun benchIngestAppMessage(members: Int): BenchResult =
             }
         },
     ) { (bob, event) ->
-        runBlocking { bob.manager.ingest(event as GroupEvent) }
+        runBlocking { bob.manager.ingest(event) }
     }
 
 private const val BENCH_RELAY = "wss://bench.invalid"

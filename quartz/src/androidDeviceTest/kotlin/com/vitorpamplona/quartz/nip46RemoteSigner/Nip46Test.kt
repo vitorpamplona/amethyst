@@ -56,6 +56,10 @@ internal class Nip46Test {
             sig = "ec39e60722a083cccbd2d82d2827e13f5499fa7cbcedac5b76011a844c077473adb629d50d01fab147835ac6c8a3d5ba9aaddd87d6723f0c3c864b9119fc4356",
         )
 
+    // The round trip is only type-safe by construction: the caller hands in a T,
+    // the message is encoded and decoded, and the decoder returns the same
+    // BunkerMessage subtype. The runtime has no way to check that.
+    @Suppress("UNCHECKED_CAST")
     suspend fun <T : BunkerMessage> encodeDecodeEvent(req: T): T {
         val eventStr = NostrConnectEvent.create(req, remoteKey.pubKey, signer).toJson()
 

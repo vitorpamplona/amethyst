@@ -47,6 +47,9 @@ import java.io.File
  */
 class LocalCacheSearchParityTest {
     companion object {
+        /** Hoisted out of [loadCorpus]: building a Json format is expensive enough that the compiler warns on it. */
+        private val json = Json { ignoreUnknownKeys = true }
+
         private lateinit var corpus: List<Event>
 
         @BeforeClass
@@ -57,7 +60,7 @@ class LocalCacheSearchParityTest {
                     .firstOrNull { it.isFile }
                     ?: error("tools/search-parity/fixture.json is missing; run tools/search-parity/fetch_fixtures.py")
 
-            val root = Json { ignoreUnknownKeys = true }.parseToJsonElement(file.readText()).jsonObject
+            val root = json.parseToJsonElement(file.readText()).jsonObject
             corpus =
                 root["cases"]!!
                     .jsonArray

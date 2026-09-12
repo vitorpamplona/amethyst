@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -185,6 +186,7 @@ class RelayAuthSessionGrantsTest {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun promotingAGrantToAlwaysNeverOpensAGapThatRePrompts() =
         runTest {
@@ -205,6 +207,7 @@ class RelayAuthSessionGrantsTest {
             assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun neverAllowStopsAuthenticatingBeforeItsWriteLands() =
         runTest {

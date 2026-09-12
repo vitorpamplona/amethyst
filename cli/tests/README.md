@@ -1,21 +1,24 @@
 # amy CLI test harnesses
 
-Shell-based end-to-end harnesses that drive the `amy` CLI binary — against a
-loopback `nostr-rs-relay`, an embedded `amy serve` relay, live public servers,
-or no relay at all, depending on the suite. Eleven directories:
+Shell-based end-to-end harnesses that drive the `amy` CLI binary — against an
+embedded relay (`amy serve`, i.e. **geode**, the relay this repo ships), live
+public servers, or no relay at all, depending on the suite. No suite depends on
+an external relay binary or a Rust toolchain for its relay: every relay-backed
+harness boots geode from the `amy` binary it already built, so the relay under
+test is the same server code that runs in production. Eleven directories:
 
 ```
 cli/tests/
 ├── lib.sh                 # shared logging, results, assertions
 ├── headless/              # shared bits used by every harness
-│   └── helpers.sh
+│   └── helpers.sh                  # amy wrappers, assertions, embedded relay boot
 ├── blossom/               # Blossom blob lifecycle vs LIVE public servers
 │   └── blossom-live.sh
 ├── cache/                 # local-store-as-cache semantics (profile show
-│   └── cache-headless.sh  #   cache/refresh, store stat) vs nostr-rs-relay
+│   └── cache-headless.sh  #   cache/refresh, store stat) vs embedded `amy serve`
 ├── clink/                 # CLINK pointer decode — local-only, no relay
 │   └── clink-headless.sh
-├── dm/                    # NIP-17 DM interop (amy ↔ amy)
+├── dm/                    # NIP-17 DM interop (amy ↔ amy) vs embedded `amy serve`
 │   ├── dm-interop-headless.sh
 │   ├── setup.sh                    # preflight + identities
 │   └── tests-dm.sh
@@ -24,7 +27,7 @@ cli/tests/
 ├── marmot/                # Marmot / MLS group-messaging interop
 │   ├── marmot-interop.sh           # interactive — prompts Amethyst Android UI
 │   ├── marmot-interop-headless.sh  # zero-prompt
-│   ├── setup.sh                    # preflight + wn + relay + identities
+│   ├── setup.sh                    # preflight + wn + identities
 │   ├── tests-create.sh             # tests 01–05
 │   ├── tests-manage.sh             # tests 06–08, 11
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
@@ -60,7 +63,7 @@ Suite notes:
   and mined-nonce round-trips through `pow check`.
 - **`cache/cache-headless.sh`** proves the local store is the source of
   truth for reads: `profile show` served from cache vs `--refresh`, and
-  `store stat` reporting the right histogram, vs a loopback nostr-rs-relay.
+  `store stat` reporting the right histogram, vs the embedded `amy serve` relay.
 - **`relaygroup/relaygroup-headless.sh`** runs NIP-29 create/message/join/
   list/browse against an embedded relay (`amy serve`, which boots geode) —
   no external relay binary. geode doesn't sign 39000-39003, so browse/info
@@ -124,10 +127,8 @@ The Marmot harnesses come in two flavours, same scenarios:
 A third, slimmer harness covers the NIP-17 DM surface:
 
 - **`dm/dm-interop-headless.sh`** — two `amy` processes (Identity A and
-  Identity D) exchange NIP-17 DMs through the loopback nostr-rs-relay.
-  No MDK required — only `amy` and the relay binary (which
-  is shared with the Marmot harness's checkout at
-  `marmot/state-headless/nostr-rs-relay/`).
+  Identity D) exchange NIP-17 DMs through the embedded `amy serve` relay.
+  No MDK, no Rust — only `amy`.
 
 A harness covers Blossom blob storage (BUD-01/02/04/09) against **live**
 public servers rather than a loopback relay:
@@ -212,15 +213,18 @@ at `desktopApp/src/jvmTest/kotlin/.../service/upload/`.
 
 On the machine that runs the harness:
 
-- **Rust 1.90+** — install via https://rustup.rs
+- **Rust 1.90+** — install via https://rustup.rs (for MDK's `wn`/`wnd` only;
+  the relay is `amy serve`, no Rust needed for it)
 - **git**, **curl**, **jq** — package manager
 - **~5 GB disk** for the first-run build of `wn` + `wnd`
-- Public internet access (for the default relay set and fetching crates)
+- Internet access for fetching crates on the first build. Test traffic
+  stays on the machine unless you pass `--public-relays`.
 
 On the Android side:
 
 - Amethyst installed on an **emulator** or a **physical device**
-- The device must reach the same relays the harness uses (see below)
+- The device must reach the harness's embedded relay over the network
+  (see below), or the public relays when running with `--public-relays`
 
 ## Quick start
 
@@ -240,9 +244,11 @@ The script will, in order:
 4. Create Nostr identities for B and C, persist their npubs in `state/run.env`.
 5. Ask you to paste **your Amethyst account npub** (Identity A). This is
    cached for subsequent runs.
-6. Add the default public relays to both daemons and run a sanity check
-   (publish a KP from B, fetch it from C).
-7. Print an **Amethyst setup checklist** — add the same relays to Amethyst,
+6. Boot the embedded relay (`amy serve`, i.e. geode, on `0.0.0.0:8080`),
+   add it to both daemons and run a sanity check (publish a KP from B,
+   fetch it from C). With `--public-relays` the default public set is used
+   instead and the relay is not started.
+7. Print an **Amethyst setup checklist** — add the same relay to Amethyst,
    publish a KP, verify you are logged in with A.
 8. Run all 13 tests sequentially. Each test either:
    - runs `wn` commands fully automatically and asserts on JSON output, **or**
@@ -253,9 +259,10 @@ The script will, in order:
 ## Command-line flags
 
 ```
---local-relays    Use ws://localhost:8080 instead of the default public relays.
-                  Required if the public relays reject kinds 444/445/30443.
-                  Run 'just docker-up' inside the mdk checkout first.
+--public-relays   Use the public relay set below instead of the embedded relay.
+                  The only mode whose test traffic leaves the machine; the
+                  public relays may reject kinds 444/445/30443.
+--port N          Port for the embedded relay (default 8080).
 --transponder     Run Test 14 (push notifications via the transponder service).
 --no-build        Fail instead of rebuilding wn/wnd. Useful when iterating.
 -h, --help        Show help.
@@ -267,31 +274,31 @@ Environment overrides:
 WN_REPO=/some/path/mdk             # use an existing checkout
 ```
 
-## Default relays
+## Relays
+
+By default the harness owns the only relay: `amy serve` (geode) bound to
+`0.0.0.0:8080`. The `wn` daemons reach it on loopback; Amethyst reaches it
+over the network:
+
+- **Android emulator:** add `ws://10.0.2.2:8080` to Settings → Relays,
+  Settings → Key Package Relays and Settings → DM Inbox Relays.
+- **Physical device on same Wi-Fi:** add `ws://<laptop-LAN-ip>:8080`.
+
+With `--public-relays` the daemons are bootstrapped on
 
 ```
 wss://relay.damus.io
 wss://nos.lol
 wss://relay.primal.net
+wss://nostr.bitcoiner.social
+wss://nostr.mom
 ```
 
-These are known to accept kind 1059 (gift wraps) and kind 30000+ (addressable
-events). If the **sanity check fails** — meaning C cannot read the KeyPackage
-that B just published — the harness warns you and continues. In that case
-re-run with `--local-relays` after starting the Docker stack:
-
-```bash
-cd state/mdk
-just docker-up
-cd ../..
-./marmot-interop.sh --local-relays
-```
-
-For Amethyst with `--local-relays`:
-
-- **Android emulator:** add `ws://10.0.2.2:8080` to Settings → Relays and
-  Settings → Key Package Relays.
-- **Physical device on same Wi-Fi:** add `ws://<laptop-LAN-ip>:8080`.
+instead and Amethyst is left on its own relay set, so the run surfaces
+real-world discovery failures (A's inbox behind NIP-42, whitelists, kinds the
+public relays drop). If the **sanity check fails** in that mode — meaning C
+cannot read the KeyPackage that B just published — the harness warns you and
+continues; re-run without `--public-relays` to rule the relays out.
 
 ## How human interaction works
 
