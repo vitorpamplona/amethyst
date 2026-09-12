@@ -71,6 +71,20 @@ val RepliesAndReactionsKinds =
         AttestationEvent.KIND,
     )
 
+/**
+ * NIP-22 keeps the conversation root in the **uppercase** `E` tag and only the direct
+ * parent in lowercase `e`. A comment two or more levels deep therefore never carries
+ * `e`=<rootId>, so an `e`-only engagement filter sees only the first level of a
+ * 1111 thread — the rest used to appear only once ThreadScreen opened its own `E`
+ * subscription. These kinds are the ones that anchor themselves with `E`.
+ */
+val RootScopedRepliesKinds =
+    listOf(
+        CommentEvent.KIND,
+        // NIP-34 PR revisions point at the PR they revise through `E`.
+        GitPullRequestUpdateEvent.KIND,
+    )
+
 val RepliesAndReactionsKinds2 =
     listOf(
         DeletionEvent.KIND,
@@ -145,6 +159,22 @@ fun filterRepliesAndReactionsToNotes(
                             tags = mapOf("e" to sortedList),
                             since = since,
                             limit = 100,
+                        ),
+                ),
+                // Its own filter on purpose: tag names inside one filter are ANDed, so folding
+                // "E" into the "e" filter above would only match comments carrying both.
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.ENGAGEMENT,
+                            accountPubKeys = listOfNotNull(accountPubKey),
+                            kinds = RootScopedRepliesKinds,
+                            tags = mapOf("E" to sortedList),
+                            since = since,
+                            // Matches the ceiling of the direct-reply filter above: this is the
+                            // rest of the same thread, not a second conversation.
+                            limit = 1000,
                         ),
                 ),
                 RelayBasedFilter(
