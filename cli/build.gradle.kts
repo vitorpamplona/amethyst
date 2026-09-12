@@ -110,7 +110,7 @@ application {
 // JVM decodes each one as ASCII (every byte > 0x7F → U+FFFD), and amy
 // then signs a kind:7 whose `content` is four replacement characters.
 // Whitenoise rejects it with "Invalid reaction content".
-val patchAmyLauncherCharset by tasks.registering {
+val patchAmyLauncherCharset = tasks.register("patchAmyLauncherCharset") {
     val appName = application.applicationName
     val startScriptsTask = tasks.named("startScripts")
     dependsOn(startScriptsTask)

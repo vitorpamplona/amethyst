@@ -139,6 +139,9 @@ class NotificationFeedFilter(
                 AttestationRequestEvent.KIND,
             )
 
+        // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
+        // events already on relays still arrive and still have to be routed.
+        @Suppress("DEPRECATION")
         val NOTIFICATION_KINDS =
             // Kinds that RENDER as a row on the Notifications tab. This is a
             // display gate over whatever is already in LocalCache — it plays no
@@ -268,6 +271,9 @@ class NotificationFeedFilter(
 
         // Shared with EventNotificationConsumer so push notifications and the
         // in-app feed apply the same per-kind "is this event for me" rule.
+        // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
+        // events already on relays still arrive and still have to be routed.
+        @Suppress("DEPRECATION")
         fun tagsAnEventByUser(
             note: Note,
             authorHex: HexKey,

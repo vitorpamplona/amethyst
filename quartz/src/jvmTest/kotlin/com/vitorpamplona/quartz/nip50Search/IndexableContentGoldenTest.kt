@@ -131,7 +131,7 @@ class IndexableContentGoldenTest {
                         }
                     }
                 val rejoined = visited.joinToString(event.indexableSeparator())
-                if (rejoined == event.indexableContent()) null else "kind $kind: visitor=${rejoined.take(120)!!} content=${event.indexableContent().take(120)}"
+                if (rejoined == event.indexableContent()) null else "kind $kind: visitor=${rejoined.take(120)} content=${event.indexableContent().take(120)}"
             }
         assertEquals("visitor and indexed content disagree", emptyList<String>(), disagreements)
     }

@@ -180,11 +180,11 @@ move anything, re-audit — you're probably duplicating logic.
 9. **Test suite** — largely in place, two layers:
    - **Shell harnesses** under `cli/tests/` — ten suites: `blossom`
      (live servers), `cache`, `clink`, `dm`, `git` (NIP-34 vs `amy serve`),
-     `marmot` (vs whitenoise-rs), `nests` (manual audio-rooms matrix), `pow`,
+     `marmot` (vs MDK), `nests` (manual audio-rooms matrix), `pow`,
      `relaygroup`, `sync`, plus the shared `headless/` helpers. See
-     `cli/tests/README.md`.
-     None run in CI yet (the relay-backed ones need Rust + a ~3 min
-     cold `nostr-rs-relay` build).
+     `cli/tests/README.md`. Every relay-backed suite runs against the
+     embedded `amy serve` relay (geode) — no external relay binary.
+     None run in CI yet (the Marmot ones need Rust for MDK's `wn`).
    - **JVM unit suite** at `cli/src/test/kotlin/` — `Args` parsing,
      exit-code contract, and `--json` shape tests driving `runCli`
      in-process via the `amy.home` isolation seam.

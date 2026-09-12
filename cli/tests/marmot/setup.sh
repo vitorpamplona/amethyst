@@ -147,29 +147,8 @@ preflight() {
   info "wn:  $WN_BIN ($(git -C "$WN_REPO" rev-parse --short HEAD 2>/dev/null || echo unknown))"
   info "wnd: $WND_BIN"
 
-  # Clone/build nostr-rs-relay — the harness's single loopback relay.
-  if [[ ! -x "$RELAY_BIN" ]]; then
-    if [[ "$NO_BUILD" -eq 1 ]]; then
-      fail_msg "nostr-rs-relay not found at $RELAY_BIN and --no-build set"; exit 1
-    fi
-    if [[ ! -d "$RELAY_REPO/.git" ]]; then
-      step "cloning nostr-rs-relay into $RELAY_REPO"
-      git clone --depth 1 https://github.com/scsibug/nostr-rs-relay "$RELAY_REPO" \
-        2>&1 | tee -a "$LOG_FILE"
-    fi
-    local attempt max=4
-    for attempt in $(seq 1 $max); do
-      step "building nostr-rs-relay (attempt $attempt/$max, ~3 min first run)"
-      ( cd "$RELAY_REPO" && cargo build --release --bin nostr-rs-relay ) \
-        2>&1 | tee -a "$LOG_FILE"
-      [[ -x "$RELAY_BIN" ]] && break
-      [[ "$attempt" -lt "$max" ]] && warn "nostr-rs-relay build failed (likely transient 503 from crates.io) — retrying"
-    done
-    [[ -x "$RELAY_BIN" ]] || {
-      fail_msg "nostr-rs-relay still missing after $max build attempts"; exit 1
-    }
-  fi
-  info "relay bin: $RELAY_BIN"
+  # The loopback relay is `amy serve` (geode) — see start_local_relay in
+  # ../headless/helpers.sh. Nothing to clone or build beyond amy itself.
 }
 
 # --- local QUIC broker -------------------------------------------------------
@@ -262,75 +241,8 @@ stop_quic_broker() {
 }
 
 # --- local relay -------------------------------------------------------------
-# Start nostr-rs-relay on $RELAY_PORT with a minimal config. Every test
-# runs against this one loopback endpoint — no external network traffic.
-start_local_relay() {
-  banner "Starting local nostr-rs-relay on $RELAY_URL"
-  mkdir -p "$RELAY_DATA" "$RELAY_DATA/logs"
-
-  # Render a minimal config file each run so port/limits come from the
-  # harness rather than whatever was left on disk from a previous session.
-  cat >"$RELAY_DATA/config.toml" <<EOF
-[info]
-relay_url = "$RELAY_URL"
-name = "amethyst-headless-harness"
-description = "Loopback relay for marmot-interop-headless.sh — do not use for anything real."
-
-[database]
-data_directory = "$RELAY_DATA"
-
-[network]
-address = "${RELAY_BIND:-${RELAY_HOST:-127.0.0.1}}"
-port = $RELAY_PORT
-
-[options]
-reject_future_seconds = 3600
-
-[limits]
-# Keep kind:444 / 445 / 1059 / 30443 wide open — the whole point is
-# exercising Marmot traffic the public relays reject.
-max_event_bytes = 524288
-max_ws_message_bytes = 1048576
-max_ws_frame_bytes = 1048576
-EOF
-
-  # Abort early if something else is already bound to the port — failing
-  # with a clear error beats a mysterious-looking daemon stall later.
-  if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$RELAY_PORT\$"; then
-    fail_msg "port $RELAY_PORT already in use — pass --port N or free it"
-    exit 1
-  fi
-
-  nohup "$RELAY_BIN" --db "$RELAY_DATA" --config "$RELAY_DATA/config.toml" \
-    >"$RELAY_DATA/logs/stdout.log" 2>"$RELAY_DATA/logs/stderr.log" &
-  echo "$!" > "$RELAY_DATA/pid"
-  step "relay pid $(cat "$RELAY_DATA/pid"); waiting for $RELAY_URL …"
-
-  local deadline=$(( $(date +%s) + 20 ))
-  while [[ $(date +%s) -lt $deadline ]]; do
-    if curl -sSf -m 1 "http://${RELAY_HOST:-127.0.0.1}:$RELAY_PORT/" >/dev/null 2>&1; then
-      info "relay up"
-      return 0
-    fi
-    sleep 0.5
-  done
-  fail_msg "relay never came up (see $RELAY_DATA/logs/stderr.log)"
-  tail -n 40 "$RELAY_DATA/logs/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
-  exit 1
-}
-
-stop_local_relay() {
-  local pid_file="$RELAY_DATA/pid"
-  [[ -f "$pid_file" ]] || return 0
-  local pid; pid=$(cat "$pid_file" 2>/dev/null || echo "")
-  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-    info "stopping relay pid $pid"
-    kill "$pid" 2>/dev/null || true
-    sleep 1
-    kill -9 "$pid" 2>/dev/null || true
-  fi
-  rm -f "$pid_file"
-}
+# start_local_relay / stop_local_relay live in ../headless/helpers.sh: the
+# relay is the embedded `amy serve` (geode), shared by every harness.
 
 # --- daemons -----------------------------------------------------------------
 start_daemon() {
@@ -480,9 +392,9 @@ configure_relays() {
 
   step "publishing A's KeyPackage"
   amy_a marmot key-package publish >>"$LOG_FILE" 2>&1 || warn "amy marmot key-package publish failed"
-  # Give nostr-rs-relay a breath to fsync the kind:10002 / 10050 / 30443
+  # Give the relay a breath to ingest the kind:10002 / 10050 / 30443
   # writes and push them out on the discovery subscription so that the
   # first `wn keys check` that follows actually sees them instead of
-  # racing the relay's WAL flush.
+  # racing the relay's ingest queue.
   sleep 2
 }

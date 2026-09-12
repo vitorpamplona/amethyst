@@ -118,6 +118,5 @@ open class UserFeedViewModel(
     override fun onCleared() {
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
         bundler.cancel()
-        super.onCleared()
     }
 }

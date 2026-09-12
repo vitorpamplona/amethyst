@@ -399,9 +399,9 @@ dependencies {
     // Usage: runtime-enable, then capture a Perfetto trace with the `track_event` data source:
     //   adb shell am broadcast -a androidx.tracing.perfetto.action.ENABLE_TRACING \
     //     -n com.vitorpamplona.amethyst.debug/androidx.tracing.perfetto.TracingReceiver
-    debugImplementation("androidx.compose.runtime:runtime-tracing")
-    debugImplementation("androidx.tracing:tracing-perfetto:1.0.1")
-    debugImplementation("androidx.tracing:tracing-perfetto-binary:1.0.1")
+    debugImplementation(libs.androidx.compose.runtime.tracing)
+    debugImplementation(libs.androidx.tracing.perfetto)
+    debugImplementation(libs.androidx.tracing.perfetto.binary)
 
     implementation(project(":quartz"))
     implementation(project(":commons"))
@@ -598,6 +598,15 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.secp256k1.kmp.jni.jvm)
+
+    // In-process Nostr relay (geode) so unit tests that drive a real
+    // NostrClient talk to an embedded relay instead of a public one. Same
+    // wiring quartz uses for its jvmAndroidTest source set: the engine, its
+    // testFixtures (RelayClientTest base, preload/publish helpers) and the
+    // JVM SQLite driver the in-memory EventStore needs on a host JVM.
+    testImplementation(project(":geode"))
+    testImplementation(testFixtures(project(":geode")))
+    testImplementation(libs.androidx.sqlite.bundled.jvm)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.junit)

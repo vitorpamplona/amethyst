@@ -20,18 +20,4 @@
  */
 package com.vitorpamplona.quartz.utils
 
-operator fun BigDecimal.plus(other: BigDecimal): BigDecimal = add(other)
-
-operator fun BigDecimal.minus(other: BigDecimal): BigDecimal = subtract(other)
-
-/**
- * Truncate to a Long, the way Number.toLong() does on every platform.
- *
- * It has to be an expect *function* rather than a member of `expect class
- * BigDecimal`: every actual is already a Number and so already has toLong(),
- * but java.math.BigDecimal leaves toByte()/toShort() abstract, which makes
- * `expect class BigDecimal : Number` impossible to actualize with the JVM
- * typealias. Without this, `amount.toLong()` in shared code resolves only in
- * the platform compilations and breaks `compileCommonMainKotlinMetadata`.
- */
-expect fun BigDecimal.toLongValue(): Long
+actual fun BigDecimal.toLongValue(): Long = toLong()

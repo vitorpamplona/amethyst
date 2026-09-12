@@ -10,7 +10,7 @@
 // the authoritative one. Keeping the pattern table in one file means a new
 // forbidden API lands in every module at once instead of drifting per copy.
 
-val verifyKmpPurity by tasks.registering {
+val verifyKmpPurity = tasks.register("verifyKmpPurity") {
     group = "verification"
     description = "Fails if iOS-targeted source sets import JVM-only deps."
     // Every source set that feeds an Apple target. Modules that don't have a
