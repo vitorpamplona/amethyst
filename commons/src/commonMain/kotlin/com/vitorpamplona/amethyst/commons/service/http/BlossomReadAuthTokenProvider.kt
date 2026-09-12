@@ -129,14 +129,11 @@ class BlossomReadAuthTokenProvider(
         val fresh = CompletableDeferred<String?>()
         inFlight.putIfAbsent(host, fresh)?.let { return it }
 
-        // Third look, now that this caller holds the [inFlight] slot. The second look
-        // above still leaves a window: a straggler can read the cache before a fast
-        // leader stores its token, get descheduled, and then win `putIfAbsent` only
-        // because that leader has since cached *and* retired its entry — and sign a
-        // second time. Winning the slot after the leader's `remove` means the
-        // leader's earlier cache write is visible here (both go through the same
-        // ConcurrentHashMap bin), so an entry now is the just-minted token: hand it
-        // out and retire the slot instead of launching a duplicate signature.
+        // Third look, now that this caller owns the slot. The look above still leaves a
+        // gap: a leader can insert, sign, cache and retire its entry entirely between
+        // that read and the putIfAbsent, so the map is empty again and this caller wins
+        // it. Any leader that retired before this insert cached first, so a token
+        // present now is theirs — take it and give the slot back instead of re-signing.
         cachedHeader(host)?.let {
             inFlight.remove(host, fresh)
             fresh.complete(it)
