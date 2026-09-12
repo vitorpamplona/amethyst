@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.utils.toLongValue
 
 /**
  * One in-flight kind-9735 zap to render as a floating overlay on the
@@ -59,7 +60,7 @@ data class RoomZap(
                 eventId = event.id,
                 sourcePubkey = event.zapRequest?.pubKey ?: event.pubKey,
                 targetPubkey = event.zappedAuthor().firstOrNull(),
-                amountSats = event.amount?.toLong(),
+                amountSats = event.amount?.toLongValue(),
                 createdAtSec = event.createdAt,
             )
 

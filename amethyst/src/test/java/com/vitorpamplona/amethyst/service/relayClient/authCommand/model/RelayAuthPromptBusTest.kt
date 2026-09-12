@@ -153,6 +153,7 @@ class RelayAuthPromptBusTest {
      * answer already sitting in the deferred, so the relay it belongs to goes unauthenticated for that
      * long despite the user having answered. Marking it shown is what makes the answer land now.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun anAnswerFannedOutToAQueuedPromptLandsWithoutWaitingOutTheQueueWindow() =
         runTest {

@@ -760,7 +760,7 @@ class MarmotInboundProcessor(
         val author = payloadAuthor(candidate.content.decodeToString())
         val sender = candidate.senderAccount
         val valid = author != null && sender != null && author == sender
-        if (valid && sender != null) {
+        if (valid) {
             convergence.recordWitness(groupId, candidate.stateId, sender)
         }
         return GroupEventResult.AppMessageOnCandidateBranch(

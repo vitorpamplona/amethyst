@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.utils.toLongValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
@@ -162,7 +163,7 @@ class LiveStreamTopZappersViewModel(
         when (val ev = note.event) {
             is LnZapEvent -> {
                 val request = ev.zapRequest ?: return null
-                val sats = ev.amount()?.toLong() ?: return null
+                val sats = ev.amount()?.toLongValue() ?: return null
                 ZapContribution(note.idHex, request.pubKey, request.isAnonTagged(), sats)
             }
             is Bolt12ZapEvent -> {
@@ -178,7 +179,7 @@ class LiveStreamTopZappersViewModel(
     ): ZapContribution? {
         val receiptEv = receiptNote?.event as? LnZapEvent ?: return null
         val request = zapRequestNote.event as? LnZapRequestEvent ?: return null
-        val sats = receiptEv.amount()?.toLong() ?: return null
+        val sats = receiptEv.amount()?.toLongValue() ?: return null
         return ZapContribution(receiptNote.idHex, request.pubKey, request.isAnonTagged(), sats)
     }
 }
