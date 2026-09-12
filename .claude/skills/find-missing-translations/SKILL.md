@@ -7,7 +7,7 @@ description: Use when comparing Android strings.xml locale files to find untrans
 
 ## Overview
 
-Extract string resource keys from a default `values/strings.xml` that are absent in a target locale's `strings.xml`, excluding non-translatable entries. Outputs missing keys and offers to translate them.
+Extract string resource keys from a default `values/strings.xml` that are absent in a target locale's `strings.xml`, excluding non-translatable entries. Outputs the missing keys, then offers the two things that close them: **translate** the ones needing translation, and **copy the English value verbatim** for the ones a locale deliberately keeps in English (since 2026-09-12 that copy is what seeds Crowdin — see Background).
 
 The repo now has **two independent Crowdin-managed resource trees** — you must scan **both** (see "Resource trees" below).
 
@@ -67,15 +67,23 @@ grep -nE '<string name="[^"]*">"' commons/src/commonMain/composeResources/values
 
 **Do not** treat the value-overlap as something to deduplicate during a translation pass. Migrating amethyst's own screens onto the shared `action_*` strings is a *separate, optional* refactor and a maintainer call — out of scope for this skill. Just translate each tree correctly and independently.
 
-## Background: Crowdin strip-identical behavior
+## Background: source-identical translations and the `import_eq_suggestions` flag
 
-This repo syncs translations via Crowdin (branch `l10n_crowdin_translations`). Crowdin's default export behavior **omits any translation that exactly equals the source**, so a key that the translator deliberately kept as English (common for brand terms like `"Nowhere Drop"`, single-word loanwords like `"Apps"` / `"Feed"` / `"Issues"`, or version prefixes like `"v%1$s"`) will not appear in the locale's `strings.xml` even though the Crowdin UI shows it as 100% translated.
+This repo syncs translations via Crowdin (branch `l10n_crowdin_translations`). Crowdin does not *store* a translation that exactly equals the source unless it is told to, so historically a key a translator deliberately kept as English (brand terms like `"Nowhere Drop"`, single-word loanwords like `"Apps"` / `"Feed"` / `"Issues"`, version prefixes like `"v%1$s"`) never appeared in the locale's `strings.xml`, even though the Crowdin UI showed it as 100% translated.
+
+**That changed on 2026-09-12.** `.github/workflows/crowdin.yml` now passes `import_eq_suggestions: true` to `crowdin/github-action`, so `upload_translations` no longer skips values equal to the source — whatever sits in the repo's locale files is seeded into Crowdin's database, identical values included. `auto_approve_imported` stays at its default `false`, so they arrive as **pending** translations for a translator to approve.
+
+Confirmed end-to-end the same day: the first sync after the flag landed (workflow run `34706537802` → PR #4107) rewrote all five touched locale files in Crowdin's own key order with **zero net key changes** — 323 additions and 323 removals that pair up exactly. All 330 identical values pushed that morning came back down intact, unapproved included. Since Crowdin's download *replaces* file content with its export, a value it did not hold would have vanished; none did.
+
+**Reading such a sync diff: compare key *sets* per file, never `-`/`+` lines separately.** A reorder looks identical to a mass strip under `grep '^-'`, and it will convince you the mechanism failed when nothing changed at all.
 
 What this means for this skill:
 
-1. **The raw on-disk diff is the candidate set.** A key missing from a locale file is either genuinely untranslated *or* a source-identical entry Crowdin stripped. Both are reported; the human decides which to skip. The Crowdin web UI ("N untranslated") is the ground truth for what genuinely needs work.
-2. **Source-identical entries are a small, recognizable minority.** Brand terms (`Nowhere X`), single-word loanwords (`Apps` / `Feed` / `Issues`), and bare version/format strings (`v%1$s`) are the usual cases. Skip these by inspection rather than translating them to something identical.
-3. **Don't add source-identical fallbacks.** Android falls back to `values/strings.xml` at runtime, so a key intentionally kept as English already renders correctly, and Crowdin's next sync would strip a local duplicate anyway.
+1. **The raw on-disk diff is the candidate set.** A key missing from a locale file is genuinely untranslated, *or* a source-identical entry stripped before 2026-09-12 that no sync has re-seeded yet. Both are reported, and both are now actionable in the repo — translate the first, copy English into the second. The Crowdin web UI ("N untranslated") remains the ground truth for what needs human work.
+2. **Source-identical entries are still recognizable, but no longer skipped.** Brand terms (`Nowhere X`), loanwords (`Apps` / `Feed` / `Issues`), symbol- or format-only values (`v%1$s`, `+%1$d`, `%1$d/%2$d`, `∞`, 👀) and example placeholders (`iPhone 13`, `https://example.com`) are the usual cases. Copy the English value into the locale file verbatim so the upload can seed it.
+3. **DO add source-identical values — that is now the mechanism, not churn.** A key absent from a locale file is invisible to `upload_translations`; writing the English value in is what gets it into Crowdin, so a translator approves it once in bulk instead of typing it into the UI ~70 times per locale. (Runtime behaviour is unchanged either way: Android still falls back to `values/strings.xml`.) Two exclusions:
+   - **Never for `<plurals>`.** Copying English `one`/`other` into cs/pl trips `MissingQuantity`, which is a CI error (cs needs `one`/`few`/`many`/`other`). Plurals stay a Crowdin-UI job.
+   - **Not for words a locale would genuinely translate.** German `buzz_dm_workspace` ("Arbeitsbereich"), `workout` ("Training"), `relay_group_threads_title` ("Themen"), `calendar_rsvp_section` ("Zusagen") are *gaps*, not deliberate English keeps. Copying English there seeds a wrong pending suggestion — list those for the human to translate rather than approve.
 
 4. **A repo-side edit to a translated value only sticks where Crowdin's database
    doesn't contradict it.** Download replaces file content with Crowdin's current
@@ -95,6 +103,13 @@ What this means for this skill:
    do stick, because that file is Crowdin's input, not its output: deleting a key
    from `values/strings.xml` removes it project-wide, and attributes declared
    there propagate into every export.
+
+   **This does not contradict item 3 — the two cases differ.** Seeding a key
+   Crowdin holds *nothing* for (the identical-value copy) sticks, because there is
+   no stored value to contradict it; that is exactly why the copy pass works.
+   *Overwriting* a value Crowdin already holds differently — including an empty
+   one — still loses on the next sync. Add missing entries in the repo; change
+   existing translations in the UI.
 
 > **Historical note:** an earlier version of this skill tried to auto-filter the
 > candidate list with a git "sync-timestamp" heuristic (skip any key added before
@@ -172,7 +187,7 @@ comm -23 \
 
 This gives two lists of missing key names — keep them separate; `<plurals>` translations need the per-locale CLDR category set (see Step 5 → "Plurals: handle with care").
 
-Crowdin can asymmetrically strip keys across locales (each translator independently chose source-identical for different keys), so **cs is not a reliable upper bound**. Diff **every** target locale and union the results — don't assume the cs set covers the others. A quick per-locale count is a useful sanity check against the Crowdin UI's "N untranslated":
+Locale files are asymmetric — legacy pre-2026-09-12 strips and uneven translator progress both leave different keys missing in different locales — so **cs is not a reliable upper bound**. Diff **every** target locale and union the results — don't assume the cs set covers the others. A quick per-locale count is a useful sanity check against the Crowdin UI's "N untranslated":
 
 ```bash
 for locale in cs de-rDE sv-rSE pt-rBR; do
@@ -190,7 +205,7 @@ for locale in cs de-rDE sv-rSE pt-rBR; do
 done
 ```
 
-The combined `strings + plurals` total should line up with the Crowdin web UI's untranslated count for that locale. If it does, the raw diff is your actionable set (minus any source-identical entries you skip by inspection — see Background).
+The combined `strings + plurals` total should line up with the Crowdin web UI's untranslated count for that locale. If it does, the raw diff is your actionable set: translate what needs translating, and copy the English value verbatim for the entries a locale keeps in English (see Background).
 
 ### 3. Get English values for missing keys
 
@@ -458,7 +473,7 @@ When adding translated strings to locale files:
 
 - **Append new strings at the bottom** of the file, just before the closing `</resources>` tag.
 - Do NOT try to insert them in alphabetical or matching order — a separate process handles ordering.
-- **Insert into each locale ONLY the keys missing from *that* locale — never a shared "union" block.** Because Crowdin strips keys asymmetrically (Step 2), a key you translate may already exist in some target locales. If you compute one union set of missing keys, translate it, and paste the *same* block into every locale, you will create **duplicate keys** in whichever locales already had them. Drive the insertion off the **per-locale** diff, not the union:
+- **Insert into each locale ONLY the keys missing from *that* locale — never a shared "union" block.** Because locale files are asymmetric (Step 2), a key you translate may already exist in some target locales. If you compute one union set of missing keys, translate it, and paste the *same* block into every locale, you will create **duplicate keys** in whichever locales already had them. Drive the insertion off the **per-locale** diff, not the union:
 
   ```bash
   # For each locale, insert only the keys comm -23 reports missing FOR THAT LOCALE.
@@ -535,8 +550,8 @@ When adding translated strings to locale files:
 - **Forgetting `translatable="false"`** — these should never appear in locale files
 - **Diffing only `<string name=`** — `<plurals>` is a separate resource type; a source `<plurals>` missing from a locale will never show up in a `<string>` diff. Always run the diff twice (once per resource type) as shown in Step 2. The same goes for `<string-array>` if the project uses it.
 - **Trusting a git "sync-timestamp" heuristic to pre-filter the list** — this skill used to skip keys added before the last `New Crowdin translations` commit, on the theory that Crowdin had already "decided" them. It was dropped: a key added shortly before an export that translators hadn't reached yet is genuinely missing, so the heuristic silently dropped real work. Use the raw on-disk diff and reconcile against the Crowdin web UI's untranslated count instead.
-- **Adding source-identical fallbacks locally** — they get overwritten on the next Crowdin sync. Android falls back to `values/strings.xml` at runtime anyway, so a key intentionally kept as English already renders correctly. Skip these by inspection (brand terms, loanwords, `v%1$s`-style strings); don't translate them to an identical value.
-- **Skipping per-locale diffs when only diffing cs** — Crowdin can strip different keys in different locales (each translator's choice), so cs is not a reliable upper bound. Diff each target locale and union the results.
+- **Skipping source-identical entries instead of copying them in** — correct before 2026-09-12, wrong now. With `import_eq_suggestions: true` the repo file is the *seed* for Crowdin's database, so a key you leave out stays untranslated in the UI forever and reappears in every future scan. Copy the English value verbatim, except for `<plurals>` (trips `MissingQuantity`) and words the locale would really translate. (Confirmed by PR #4107: 330 identical values survived the next sync with zero net changes.)
+- **Skipping per-locale diffs when only diffing cs** — different keys are missing in different locales (legacy strips plus uneven translator progress), so cs is not a reliable upper bound. Diff each target locale and union the results.
 - **Pasting the union set of missing keys into every locale → duplicate keys** — the union is the right set to *translate*, but the wrong set to *insert*. A key missing in only some locales, inserted into all of them, duplicates in the ones that already had it. Drive each file's insertion off its own per-locale diff (see Step 6). In `commons`, a duplicate key is build-breaking: `convertXmlValueResourcesForCommonMain` fails with `Duplicated key '…'`. **Always run the post-insertion duplicate + XML-wellformedness gate in Step 6 before declaring done.** (Happened 2026-07-21 with `ps1_save_block` / `podcast_value_for_value` / `chats_history_relays`.)
 - **Declaring the pass done without running `:amethyst:lintPlayBenchmark`** — the duplicate-key + XML + `convertXmlValueResourcesForCommonMain` gate is necessary but nowhere near sufficient. `MissingQuantity` and `ImpliedQuantity` are errors, there is no lint baseline, and `abortOnError` is on, so a change that compiles and passes every check in Step 6's first half can still take CI red. Compiling is not evidence. (Happened 2026-08-13: 3 lint errors after a clean duplicate/XML gate and a green `compileFdroidDebugKotlin`.)
 - **Converting a `<string>` to `<plurals>` with `other` only** — "Crowdin fills the rest" is false; `MissingQuantity` errors immediately and CI fails before any sync. Supply every category the locale uses at conversion time, and re-check the declension rather than reusing the old text for `one`.
