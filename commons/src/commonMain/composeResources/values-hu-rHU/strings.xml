@@ -1379,6 +1379,7 @@
     <string name="external_id_scope">Megjegyzés egy külső forráshoz</string>
     <string name="url_preview_open_in_browser">Megnyitás böngészőben</string>
     <string name="long_form_reading_minutes">Olvasási idő: %1$d perc</string>
+    <string name="search_waiting_on_relays">Várakozás %2$d / %1$d átjátszóra</string>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d szakasz</item>
         <item quantity="other">%1$d szakasz</item>
@@ -2207,6 +2208,8 @@
     <string name="dvm_home_status_payment_required">Ez a írfolyam-algoritmus előfizetést igényel</string>
     <string name="dvm_home_status_error">A Hírfolyam-algoritmus hibával tért vissza</string>
     <string name="dvm_home_retry">Újra</string>
+    <string name="dvm_offline">Offline</string>
+    <string name="dvm_offline_banner">Ez a hírfolyam-algoritmus az utóbbi időben nem küldött magáról „életjelet”, és elképzelhető, hogy leállt</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
     <string name="group_relay">Csevegési átjátszó</string>
     <string name="share_image">Kép megosztása…</string>
@@ -2223,6 +2226,12 @@
     <string name="search_sort_relevance">Relevancia</string>
     <string name="search_sort_popular">Népszerű</string>
     <string name="search_filters_title">Szűrők</string>
+    <string name="search_no_results">Nem találhatók eredmények</string>
+    <string name="search_no_results_explainer">Próbálkozzon kevesebb szűrővel vagy egy másik szóval.</string>
+    <string name="search_type_to_begin">Keresés…</string>
+    <string name="search_type_to_begin_explainer">A fenti szűrők szűkítik a keresést, de önmagukban nem végzik azt.</string>
+    <string name="search_recent">Legutóbbi keresések</string>
+    <string name="search_recent_clear">Törlés</string>
     <string name="search_filters_reset">Visszaállítás</string>
     <string name="search_filters_section_source">Forrás</string>
     <string name="search_filters_section_sort">Rendezés</string>
@@ -2623,6 +2632,23 @@
     <string name="marmot_create_group">Csoport létrehozása</string>
     <string name="marmot_create_group_title">Marmot csoport létrehozása</string>
     <string name="marmot_create_group_footer">Egy új MLS-csoport jön létre. A tagokat később adhatja hozzá.</string>
+    <string name="marmot_retention_title">Eltűnő üzenetek</string>
+    <string name="marmot_retention_off">Ki</string>
+    <string name="marmot_retention_1h">1 óra</string>
+    <string name="marmot_retention_1d">1 nap</string>
+    <string name="marmot_retention_1w">1 hét</string>
+    <string name="marmot_retention_active">Az üzenetek eltűnnek %1$s után</string>
+    <string name="marmot_retention_footer">Ennyi idő elteltével az üzenetek minden tag eszközéről törlődnek. Ez a művelet nem vonaható vissza.</string>
+    <string name="marmot_disband_group">Csoport feloszlatása</string>
+    <string name="marmot_disband_group_confirm">Feloszlatja a(z) „%1$s” nevű csoportot mindenki számára? A beszélgetés minden tag számára befejeződik, és nem nyitható újra, és ebben az esetben új csoportot kell létrehozni.</string>
+    <string name="marmot_disband_group_action">Feloszlatás</string>
+    <string name="marmot_avatar_url">Profilkép hivatkozása</string>
+    <string name="marmot_avatar_url_placeholder">https://peldaul.hu/profilkep.png</string>
+    <string name="marmot_avatar_url_footer">Egy https-hivatkozás, amelyet minden tag be tud tölteni. Hagyja üresen, ha inkább a feltöltött képet szeretné használni.</string>
+    <string name="marmot_legacy_group_no_avatar_url">Ez a csoport még azelőtt jött létre, hogy a hivatkozásalapú profilképek támogatottak lettek volna, ezért csak feltöltött képet használhat. A meglévő csoportok nem frissíthetők. Hozzon létre egy új csoportot, ha hivatkozásokat szeretne használni.</string>
+    <string name="marmot_enable_encrypted_media">Titkosított mellékletek használata</string>
+    <string name="marmot_enable_encrypted_media_explainer">Ebben a csoportban a mellékletek a régebbi formátumot használják. A váltással hozzáadja a titkosított médiaösszetevőt a csoporthoz, és a változást minden csoporttag látja. Ez a művelet nem vonható vissza.</string>
+    <string name="marmot_legacy_group_no_disband">Ez a csoport még azelőtt jött létre, hogy a feloszlatás lehetősége elérhetővé vált volna, ezért nem oszlatható fel. Továbbra is kiléphet belőle, vagy eltávolíthatja az összes többi tagot. A már létező csoportok nem frissíthetők.</string>
     <string name="marmot_group_default_name">Marmot csoport</string>
     <string name="marmot_group_fallback_name">%1$s csoport…</string>
     <string name="marmot_user_fallback_name">%1$s…</string>
@@ -2643,6 +2669,21 @@
     <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
          conversation, from the row's structured fields. %1$s is the member who
          committed the change, %2$s the member it concerns, %3$s the new name. -->
+    <string name="marmot_system_member_added">%1$s hozzáadta a csoporthoz őt: %2$s</string>
+    <string name="marmot_system_member_added_passive">%1$s csatlakozott a csoporthoz</string>
+    <string name="marmot_system_member_removed">%1$s eltávolította a csoportól őt: %2$s</string>
+    <string name="marmot_system_member_removed_passive">%1$s el lett távolítva</string>
+    <string name="marmot_system_member_left">%1$s elhagyta a csoportot</string>
+    <string name="marmot_system_admin_added">%1$s megváltoztatta %2$s szerepkörét erre: adminisztrátor</string>
+    <string name="marmot_system_admin_added_passive">%1$s mostantól adminisztrátor</string>
+    <string name="marmot_system_admin_removed">%1$s eltávolította %2$s adminisztrátori szerepkörét</string>
+    <string name="marmot_system_admin_removed_passive">%1$s mostantól nem adminisztrátor</string>
+    <string name="marmot_system_group_renamed">%1$s átnevezte a csoportot erre: %2$s</string>
+    <string name="marmot_system_group_renamed_passive">A csoport át lett nevezve erre: %1$s</string>
+    <string name="marmot_system_avatar_changed">%1$s megváltoztatta a csoport profilképét</string>
+    <string name="marmot_system_avatar_changed_passive">A csoport profilképe megváltozott</string>
+    <string name="marmot_system_group_disbanded">%1$s feloszlatta a csoportot</string>
+    <string name="marmot_system_group_disbanded_passive">A csoport fel lett oszlatva</string>
     <string name="marmot_remove_photo">Fotó eltávolítása</string>
     <string name="marmot_keypackage_relays_not_set_title">A KeyPackage átjátszók nincsenek beállítva</string>
     <string name="marmot_keypackage_relays_not_set_message">Még nincs KeyPackage átjátszólistája (MIP-00). Ez a lista tájékoztatja a többi felhasználót arról, hol érhető el a KeyPackage-e, így meg tudják hívni csoportos beszélgetésekbe.\n\nSzeretné ehhez a jelenlegi kimenő átjátszóit használni?</string>
