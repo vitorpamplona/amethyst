@@ -230,7 +230,7 @@ class UiSharedPreferences(
                     automaticallyShowImages = preferences[UI_SHOW_IMAGES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyStartPlayback = preferences[UI_START_PLAYBACK]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyPlayVideos = preferences[UI_PLAY_VIDEOS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
-                    playYouTubeInApp = preferences[UI_PLAY_YOUTUBE_IN_APP]?.let { BooleanType.valueOf(it) } ?: BooleanType.NEVER,
+                    playYouTubeInApp = preferences[UI_PLAY_YOUTUBE_IN_APP]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     automaticallyShowUrlPreview = preferences[UI_SHOW_URL_PREVIEW]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyHideNavigationBars = preferences[UI_HIDE_NAVIGATION_BARS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     automaticallyShowProfilePictures = preferences[UI_SHOW_PROFILE_PICTURES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,

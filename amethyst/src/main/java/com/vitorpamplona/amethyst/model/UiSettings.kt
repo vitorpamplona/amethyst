@@ -67,10 +67,12 @@ data class UiSettings(
     val showPayToZapChip: Boolean = true,
     // Whether a YouTube link plays inside Amethyst -- in the sandboxed in-app browser, on
     // YouTube's IFrame player page -- instead of being handed to the external YouTube app.
-    // Defaults to NEVER: the handoff is the behavior every existing user already has, the
-    // external app plays better (their account, quality, downloads), and an in-app YouTube
-    // page is YouTube's scripts running on a page we opened. Opt-in, not opt-out.
-    val playYouTubeInApp: BooleanType = BooleanType.NEVER,
+    // Defaults to ALWAYS: staying in the app is the point of the feature, and a link that
+    // bounces the reader out to another app loses them mid-feed. The page still runs in the
+    // `:napplet` process behind the account's Tor choice, so playing it in-app costs the
+    // reader nothing they were not already spending by opening it at all. Anyone who prefers
+    // the external app (their account, quality, downloads) turns this off in Settings > Media.
+    val playYouTubeInApp: BooleanType = BooleanType.ALWAYS,
 )
 
 enum class ThemeType(

@@ -35,8 +35,9 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
  * runs in the `:napplet` process, honours the site's Tor choice, and keeps a per-account storage
  * partition. YouTube's scripts therefore never share a process with the account or `LocalCache`.
  *
- * Off by default. [open] returns false whenever it declines -- setting off, or not a video link --
- * and the caller then opens the URL exactly as it did before, in the external app.
+ * On by default, and switchable in Settings > Media. [open] returns false whenever it declines --
+ * setting off, or not a video link -- and the caller then opens the URL exactly as it did before,
+ * in the external app.
  */
 object YouTubeInApp {
     /**

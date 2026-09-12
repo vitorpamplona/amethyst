@@ -57,7 +57,7 @@ class UiSettingsFlow(
     val composeSignature: MutableStateFlow<String> = MutableStateFlow(""),
     val showOnchainWallet: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(true),
-    val playYouTubeInApp: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.NEVER),
+    val playYouTubeInApp: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
