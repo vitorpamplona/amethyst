@@ -1196,7 +1196,7 @@ class AccountViewModel(
             .isNotEmpty()
 
     /** True when a BOLT12 offer can be paid in-app: an NWC wallet is set and advertises `pay` (nwc#2). */
-    fun canPayBolt12ViaNwc(): Boolean = hasNwcWallet() && account.zaps.defaultWalletSupportsBolt12Pay()
+    fun canPayBolt12ViaNwc(): Boolean = account.zaps.canZapViaBolt12()
 
     /**
      * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2

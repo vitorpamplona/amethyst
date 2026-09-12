@@ -167,10 +167,7 @@ class ZapPaymentHandler(
         // BOLT12 when our default NWC wallet advertises the nwc#2 `pay` method (needed for
         // the payer proof). Otherwise — no wallet, or a wallet without `pay` — the recipient
         // stays on lightning, so an unsupported wallet degrades gracefully instead of erroring.
-        val canBolt12 =
-            account.settings.nwcWallets.value
-                .isNotEmpty() &&
-                account.zaps.defaultWalletSupportsBolt12Pay()
+        val canBolt12 = account.zaps.canZapViaBolt12()
 
         val bolt12Recipients =
             unverifiedZapsToSend.mapNotNull {

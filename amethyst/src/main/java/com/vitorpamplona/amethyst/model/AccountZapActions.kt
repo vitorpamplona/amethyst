@@ -163,6 +163,16 @@ class AccountZapActions(
     }
 
     /**
+     * True when this account can settle a BOLT12 zap at all: an NWC wallet is
+     * configured and the default one advertises `pay`. The sender-side half of the
+     * BOLT12 route; the recipient-side half is a published kind:10058 offer.
+     */
+    fun canZapViaBolt12(): Boolean =
+        account.settings.nwcWallets.value
+            .isNotEmpty() &&
+            defaultWalletSupportsBolt12Pay()
+
+    /**
      * Sends a NIP-B1 BOLT12 zap to [recipientPubKey] over the default NWC wallet.
      *
      * Signs a kind 9737 intent, pays [offer] via the nwc#2 `pay` method with the
