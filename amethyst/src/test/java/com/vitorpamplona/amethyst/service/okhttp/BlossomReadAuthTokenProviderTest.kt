@@ -218,6 +218,35 @@ class BlossomReadAuthTokenProviderTest {
             )
         }
 
+    /**
+     * The same single-flight guarantee, but with a signature that returns almost
+     * immediately — an in-process [NostrSignerInternal], which is what the image
+     * path uses for a local key.
+     *
+     * A fast signature is the harder case: the leader can finish, cache its token
+     * and retire its in-flight entry while a straggler is still between its own
+     * cache miss and its look at the in-flight map. That straggler finds both
+     * empty, and must pick the just-minted token up instead of signing a second
+     * one. Run over many rounds because the window is only microseconds wide.
+     */
+    @Test
+    fun aFastSignerStillSharesOneSignature() =
+        runBlocking {
+            repeat(ROUNDS) { round ->
+                val instant = DelayingTestSigner(delayMs = 0)
+                val provider = BlossomReadAuthTokenProvider({ instant }, scope)
+
+                val results =
+                    (1..CONCURRENT_CALLERS)
+                        .map { async(Dispatchers.Default) { provider.header(host) } }
+                        .awaitAll()
+
+                assertEquals("round $round: one signature for $CONCURRENT_CALLERS callers", 1, instant.signatures)
+                assertEquals("round $round: every caller must get the same token", 1, results.toSet().size)
+                assertNotNull("round $round: token must be non-null", results.first())
+            }
+        }
+
     private companion object {
         // Matches OkHttpClientFactory's maxRequestsPerHost: the worst realistic
         // burst is one gated host filling every per-host dispatcher slot.
@@ -225,5 +254,9 @@ class BlossomReadAuthTokenProviderTest {
 
         // How long one signature takes in the concurrency test.
         const val SIGN_MS = 300L
+
+        // Rounds of the fast-signer burst. The leader-finished-early window is
+        // microseconds wide, so one round hits it only now and then.
+        const val ROUNDS = 200
     }
 }
