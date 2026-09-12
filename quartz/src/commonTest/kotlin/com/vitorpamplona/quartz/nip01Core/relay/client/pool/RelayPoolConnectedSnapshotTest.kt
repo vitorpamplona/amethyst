@@ -26,25 +26,30 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * [RelayPool.connectedRelayUrls] must report what the pool actually holds open, even when the
- * socket layer never confirms a close.
+ * Both views of "connected" -- the callback-fed [RelayPool.connectedRelays] flow and the
+ * members-read [RelayPool.connectedRelayUrls] snapshot -- must agree the moment the pool lets a
+ * relay go, even when the socket layer never confirms the close.
  *
  * [com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.FakeWebSocket.disconnect] is a
- * no-op that never calls back, which is exactly what OkHttp does after a relay sent a WebSocket
- * CLOSE frame the app never answered: `cancel()` then fires neither `onClosed` nor `onFailure`.
- * The callback-driven [RelayPool.connectedRelays] flow keeps such a relay for minutes; the
- * snapshot drops it the moment the pool lets go of it.
+ * no-op that never calls back, which is exactly what OkHttp did after a relay sent a CLOSE frame
+ * the app never answered: `cancel()` then fired neither `onClosed` nor `onFailure`. The flow used
+ * to keep such a relay for minutes; now the pool clears it on removal and on disconnect, and the
+ * client reports its own teardown, so neither view depends on that callback.
  */
 class RelayPoolConnectedSnapshotTest {
     private val url = NormalizedRelayUrl("wss://relay.example.com/")
 
-    @Test
-    fun snapshotMatchesTheFlowWhileTheSocketIsOpen() {
+    private fun openedPool(): Pair<FakeWebsocketBuilder, RelayPool> {
         val sockets = FakeWebsocketBuilder()
         val pool = RelayPool(sockets)
-
         pool.getOrCreateRelay(url).connect()
         sockets.lastListener.onOpen(pingMillis = 10, compression = false)
+        return sockets to pool
+    }
+
+    @Test
+    fun snapshotMatchesTheFlowWhileTheSocketIsOpen() {
+        val (_, pool) = openedPool()
 
         assertEquals(setOf(url), pool.connectedRelays.value)
         assertEquals(setOf(url), pool.connectedRelayUrls())
@@ -52,21 +57,27 @@ class RelayPoolConnectedSnapshotTest {
     }
 
     @Test
-    fun removedRelayLeavesTheSnapshotEvenWhenTheCloseIsSilent() {
-        val sockets = FakeWebsocketBuilder()
-        val pool = RelayPool(sockets)
+    fun removingARelayClearsBothViewsEvenWhenTheCloseIsSilent() {
+        val (_, pool) = openedPool()
 
-        pool.getOrCreateRelay(url).connect()
-        sockets.lastListener.onOpen(pingMillis = 10, compression = false)
-
-        // The pool drops the relay (no subscription wants it anymore) and cancels its socket,
-        // but the socket layer stays silent.
+        // No subscription wants it anymore: the pool drops it and cancels its socket, and the
+        // socket layer stays silent.
         pool.removeRelay(url)
 
-        // Documents the drift this test exists for: the flow still carries the relay...
-        assertEquals(setOf(url), pool.connectedRelays.value)
-        // ...while the snapshot already reflects that nothing is held open.
+        assertEquals(emptySet(), pool.connectedRelays.value)
         assertEquals(emptySet(), pool.connectedRelayUrls())
         assertEquals(0, pool.connectedRelaysCount())
+    }
+
+    @Test
+    fun disconnectingThePoolClearsBothViewsEvenWhenTheCloseIsSilent() {
+        val (_, pool) = openedPool()
+
+        // The host is putting the client down (app backgrounded, connectivity lost).
+        pool.disconnect()
+
+        assertEquals(emptySet(), pool.connectedRelays.value)
+        assertEquals(emptySet(), pool.connectedRelayUrls())
+        assertEquals(setOf(url), pool.availableRelays.value, "still a member, just not connected")
     }
 }

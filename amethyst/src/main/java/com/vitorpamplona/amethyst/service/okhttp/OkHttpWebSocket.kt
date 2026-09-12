@@ -109,6 +109,24 @@ class OkHttpWebSocket(
             incomingMessages.trySendBlocking(text)
         }
 
+        override fun onClosing(
+            webSocket: okhttp3.WebSocket,
+            code: Int,
+            reason: String,
+        ) {
+            // The relay sent a CLOSE frame. OkHttp fires onClosed only once BOTH peers have sent
+            // one, and sending ours is the application's job (WebSocketListener KDoc; its own
+            // WebSocketEcho recipe does exactly this). Unanswered, the socket sat half-closed:
+            // no onClosed, no onFailure, send() still accepted and discarded, a later cancel()
+            // silent too -- so the relay client believed it was connected until the 120s ping
+            // path failed up to two intervals later. Mirrors BasicOkHttpWebSocket in quartz;
+            // the two classes differ only in how needsReconnect() is decided.
+            //
+            // Always 1000 rather than echoing `code`: close() validates the code it writes and
+            // throws on the reserved ones (1005, 1006, 1015), and a relay may send anything.
+            webSocket.close(1000, null)
+        }
+
         override fun onClosed(
             webSocket: okhttp3.WebSocket,
             code: Int,

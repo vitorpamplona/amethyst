@@ -83,6 +83,17 @@ open class BasicRelayClient(
 
     private var socket: WebSocket? = null
 
+    /**
+     * The listener wired to the socket this client currently owns. Every callback checks it is still
+     * the current one before touching any state: a socket this client has already replaced (see
+     * [disconnect] + [connect], which is how the pool rebuilds a session) or torn down can still
+     * report on its own thread afterwards -- OkHttp delivers `onClosed` from its writer thread once
+     * the close handshake completes, and a cancelled socket's failure lands later still. Without
+     * the check such a late callback would null the NEW socket out from under the client, leaving a
+     * live connection orphaned and dialing a third one on the next pass.
+     */
+    @Volatile private var currentListener: MyWebsocketListener? = null
+
     // True if it has received the onOpen call from the socket.
     // @Volatile: written on the serialized socket-callback thread, read from the
     // relay-pool/timer thread (see RelayLoadingCursors for the same pattern).
@@ -132,7 +143,9 @@ open class BasicRelayClient(
 
             lastConnectTentativeInSeconds = nowInSeconds()
 
-            socket = socketBuilder.build(url, MyWebsocketListener())
+            val newListener = MyWebsocketListener()
+            currentListener = newListener
+            socket = socketBuilder.build(url, newListener)
             socket?.connect()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -148,15 +161,20 @@ open class BasicRelayClient(
     }
 
     inner class MyWebsocketListener : WebSocketListener {
+        /** True once this client moved on to another socket, or tore this one down itself. */
+        private fun isStale() = currentListener !== this
+
         override fun onOpen(
             pingMillis: Int,
             compression: Boolean,
         ) {
+            if (isStale()) return
             markConnectionAsReady(compression)
             listener.onConnected(this@BasicRelayClient, pingMillis, compression)
         }
 
         override suspend fun onMessage(text: String) {
+            if (isStale()) return
             try {
                 val msg = decoder.decode(text)
                 listener.onIncomingMessage(this@BasicRelayClient, text, msg)
@@ -171,6 +189,7 @@ open class BasicRelayClient(
             code: Int,
             reason: String,
         ) {
+            if (isStale()) return
             markConnectionAsClosed()
             listener.onDisconnected(this@BasicRelayClient)
         }
@@ -180,6 +199,9 @@ open class BasicRelayClient(
             code: Int?,
             response: String?,
         ) {
+            // A session this client already retired: disconnect() reported it when it happened.
+            if (isStale()) return
+
             // socket is already closed
             // socket?.disconnect()
 
@@ -279,10 +301,21 @@ open class BasicRelayClient(
         lastConnectTentativeInSeconds = 0L // this is not an error, so prepare to reconnect as soon as requested.
         delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
         connectedAtInSeconds = 0L
-        socket?.disconnect()
+        val closing = socket
+        // Retire the session before touching the socket: whatever its layer reports from here
+        // on is about a socket this client no longer owns, and is ignored (see currentListener).
+        currentListener = null
         socket = null
         isReady = false
         usingCompression = false
+        if (closing != null) {
+            closing.disconnect()
+            // Report the teardown ourselves instead of waiting for the socket layer to confirm
+            // it. It might not: OkHttp's cancel() raises no callback when no reader is left to
+            // fail, which is exactly the state a relay-initiated close leaves behind, so the
+            // pool's bookkeeping used to keep such a relay "connected" until the ping timeout.
+            listener.onDisconnected(this)
+        }
     }
 
     override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {

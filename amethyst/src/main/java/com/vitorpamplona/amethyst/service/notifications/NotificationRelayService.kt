@@ -324,15 +324,15 @@ class NotificationRelayService : Service() {
                 launch {
                     // The two flows are only the *trigger*; the number comes from
                     // client.connectedRelays(), which reads each pool member's live socket
-                    // state. connectedRelaysFlow() alone over-reported: it is maintained by
-                    // OkHttp callbacks, and a relay that sent a WebSocket CLOSE frame never
-                    // produces one (the app doesn't answer onClosing, so neither onClosed nor
-                    // onFailure fires, and the later cancel() is silent too). After the feeds
-                    // tore down in the background that left hundreds of already-closed relays
-                    // in the flow for minutes, with no subscription to justify a single one of
-                    // them. availableRelaysFlow() is merged in because that is the flow that
-                    // moves when the pool drops such a relay -- the connected flow, by
-                    // definition, doesn't.
+                    // state. connectedRelaysFlow() alone used to over-report: it is fed by
+                    // socket callbacks, and until the OkHttp sockets answered a relay's CLOSE
+                    // frame a relay-initiated close produced none (no onClosed, no onFailure,
+                    // and a silent cancel() afterwards). After the feeds tore down in the
+                    // background that left hundreds of already-dropped relays in the flow for
+                    // minutes, with no subscription to justify a single one of them. Reading
+                    // the members directly cannot be fooled that way, and availableRelaysFlow()
+                    // is merged in because that is the flow that moves when the pool drops a
+                    // relay.
                     //
                     // sample() caps how often we touch the notification. During feed
                     // load/teardown these flows churn dozens of times per second; posting on

@@ -119,6 +119,9 @@ class RelayPool(
         relays.forEach { url, relay ->
             relay.disconnect()
         }
+        // We just tore every socket down; don't leave the answer to the socket layer's
+        // callbacks (see [connectedRelayUrls] for how those can go missing).
+        _connectedRelays.update { emptySet() }
     }
 
     fun sendOrConnectAndSync(
@@ -210,6 +213,9 @@ class RelayPool(
         val relayInPool = relays.remove(relay)
         if (relayInPool != null) {
             relayInPool.disconnect()
+            // A relay that is no longer a member cannot be connected, whatever its socket
+            // layer reports (or fails to report) later.
+            _connectedRelays.update { it - relay }
             return true
         }
         return false
@@ -226,6 +232,7 @@ class RelayPool(
             disconnect()
             relays.clear()
             _availableRelays.update { emptySet() }
+            _connectedRelays.update { emptySet() }
         }
     }
 
@@ -271,13 +278,13 @@ class RelayPool(
     /**
      * The relays whose socket is up *right now*, read from each pool member's [IRelayClient.isConnected].
      *
-     * This is the ground truth; [connectedRelays] is a projection of it that only moves on the
-     * [onConnected] / [onDisconnected] callbacks. The two drift whenever a socket dies without a
-     * callback: a relay that sent a WebSocket CLOSE frame leaves OkHttp waiting for a reply that never
-     * comes, so neither `onClosed` nor `onFailure` fires, and a later `cancel()` is silent too. The URL
-     * then sits in [connectedRelays] until the 120s ping path finally fails, while this snapshot has
-     * already dropped it (a removed relay is no longer a member; a still-desired one reads
-     * `isConnected() == false` as soon as its socket closes). Use this for anything a person reads as
+     * [connectedRelays] is a projection of this that moves on the [onConnected] / [onDisconnected]
+     * callbacks plus the pool's own removals and [disconnect]. The two can still drift for a relay that
+     * is *still a member* whose socket layer lost a terminal callback: before the OkHttp sockets
+     * answered a relay's CLOSE frame, that was every relay-initiated close (no `onClosed`, no
+     * `onFailure`, and a silent `cancel()` afterwards), and the flow carried such relays for minutes
+     * after the pool had let go of them. Reading the members directly cannot be fooled by a callback
+     * that never came for a relay the pool no longer holds. Use this for anything a person reads as
      * "how many relays am I connected to"; keep the flow for change notification.
      */
     fun connectedRelayUrls(): Set<NormalizedRelayUrl> {
