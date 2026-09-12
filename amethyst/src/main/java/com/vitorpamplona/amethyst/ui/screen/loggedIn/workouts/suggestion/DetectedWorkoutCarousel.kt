@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.workout_from_health_connect
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_button
+import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_details
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_message
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_title
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_distance_km
@@ -68,6 +71,7 @@ import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.labelRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.symbol
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -128,7 +132,12 @@ fun DetectedWorkoutCarousel(
 
     when (granted) {
         null -> return // not checked yet — render nothing so the prompt never flashes
-        false -> ConnectCard(modifier) { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) }
+        false ->
+            ConnectCard(
+                modifier = modifier,
+                onDetails = { context.startActivity(Intent(context, HealthConnectRationaleActivity::class.java)) },
+                onConnect = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) },
+            )
         true -> {
             if (workouts.isEmpty()) return
             Column(
@@ -163,6 +172,7 @@ fun DetectedWorkoutCarousel(
 @Composable
 private fun ConnectCard(
     modifier: Modifier,
+    onDetails: () -> Unit,
     onConnect: () -> Unit,
 ) {
     OutlinedCard(
@@ -202,7 +212,14 @@ private fun ConnectCard(
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            // The rationale is one tap away *before* the system dialog, not only from inside
+            // Health Connect: the user should be able to read what Amethyst reads and why
+            // before deciding to grant anything.
+            TextButton(onClick = onDetails) {
+                Text(stringRes(Res.string.workout_suggestion_connect_details))
+            }
             Button(onClick = onConnect) {
                 Text(stringRes(Res.string.workout_suggestion_connect_button))
             }

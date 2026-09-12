@@ -188,11 +188,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Health Connect privacy-policy rationale (required by Google when reading health data) -->
-            <intent-filter>
-                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
-            </intent-filter>
-
             <intent-filter android:label="Amethyst">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -446,15 +441,28 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- Health Connect privacy-policy rationale on Android 14+. Without this activity-alias
-             the permission request fails silently (no dialog appears). The system launches it,
-             guarded by START_VIEW_PERMISSION_USAGE, to show our privacy policy; it routes into
-             MainActivity. Android 13 and lower use the ACTION_SHOW_PERMISSIONS_RATIONALE
-             intent-filter declared on MainActivity above. -->
+        <!-- Health Connect permissions rationale. Both entry points land on the same screen,
+             which explains what Amethyst reads from Health Connect and why; it needs no account,
+             so it works even when launched cold from Health Connect itself.
+             Android 13 and lower open it with ACTION_SHOW_PERMISSIONS_RATIONALE; without a
+             target for it the permission request fails silently (no dialog appears). -->
+        <activity
+            android:name=".ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity"
+            android:exported="true"
+            android:label="@string/health_connect_rationale_activity_label"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.Amethyst">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Android 14+ route to the same rationale screen. The system launches it, guarded by
+             START_VIEW_PERMISSION_USAGE, from the Health Connect data-management screens. -->
         <activity-alias
             android:name="ViewPermissionUsageActivity"
             android:exported="true"
-            android:targetActivity=".ui.MainActivity"
+            android:targetActivity=".ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity"
             android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
