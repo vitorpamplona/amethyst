@@ -110,10 +110,16 @@ class InternTradeoffBenchmark {
             }
         }
 
+    /**
+     * Holds the last measured corpus so the JIT cannot drop the allocations we
+     * just paid for. A field rather than a local: a local's assignments are
+     * visible to the compiler's data flow, which then folds the `check` below
+     * into a constant.
+     */
+    private var sink: Any? = null
+
     @Test
     fun internCostAndBenefit() {
-        var sink: Any? = null
-
         println("\n=== corpus: $EVENTS events, $AUTHORS authors, $RELAYS relays ===")
 
         // ---- memory ----
