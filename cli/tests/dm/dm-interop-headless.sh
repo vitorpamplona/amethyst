@@ -30,10 +30,12 @@ AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 # Loopback relay = `amy serve` (geode), booted from $AMY_BIN by
 # start_local_relay in headless/helpers.sh. Override RELAY_DATA if you
 # want full isolation between runs.
-# Bind the loopback relay to 127.0.0.2 rather than 127.0.0.1 so Quartz's
-# `isLocalHost()` filter doesn't silently strip it out of the kind:10050
-# inbox events during recipient-relay resolution. 127.0.0.2 is still pure
-# loopback — no network traffic, no config needed.
+# 127.0.0.2 used to dodge Quartz's `isLocalHost()` strip of loopback
+# relays in kind:10050 inbox lists. That filter now covers all of
+# 127.0.0.0/8, so the strict-inbox sends (dm-01/02/05/06) fail with
+# no_dm_relays regardless of which loopback address the relay binds;
+# only the fallback-chain tests (dm-03/04) are unaffected. Kept for
+# parity with the other harnesses until that routing rule is revisited.
 RELAY_HOST="${RELAY_HOST:-127.0.0.2}"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8090}"

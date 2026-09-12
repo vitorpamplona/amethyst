@@ -40,9 +40,11 @@ RESULTS_FILE="$STATE_DIR/results-$RUN_TS.tsv"
 AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 
 # Loopback relay = `amy serve` (geode), booted from $AMY_BIN by
-# start_local_relay in headless/helpers.sh. 127.0.0.2 rather than
-# 127.0.0.1 so Quartz's isLocalHost() filter doesn't strip it out of the
-# published relay lists (see the DM harness for the full note).
+# start_local_relay in headless/helpers.sh. 127.0.0.2 only for parity
+# with the DM and Marmot harnesses: Quartz's isLocalHost() now covers all
+# of 127.0.0.0/8, so it is stripped from parsed relay lists exactly like
+# 127.0.0.1. Nothing here depends on that parse — amy publishes to and
+# reads from the relay it was told about.
 RELAY_HOST="${RELAY_HOST:-127.0.0.2}"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8092}"

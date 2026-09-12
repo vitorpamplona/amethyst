@@ -76,8 +76,11 @@ assert_eq() {
 #
 # Callers set (before sourcing or at least before calling):
 #   AMY_BIN      amy launcher (built via `./gradlew :cli:installDist`)
-#   RELAY_HOST   host clients connect to (most harnesses use 127.0.0.2 —
-#                see the isLocalHost() note at the top of each script)
+#   RELAY_HOST   host clients connect to. The harnesses use 127.0.0.2 for
+#                parity with each other; note that Quartz's isLocalHost()
+#                treats all of 127.0.0.0/8 as loopback, so it does NOT
+#                survive the NIP-17 / NIP-65 relay-list parsers any better
+#                than 127.0.0.1 does.
 #   RELAY_BIND   optional bind address; defaults to $RELAY_HOST. Set to
 #                0.0.0.0 when a device on the LAN must reach the relay.
 #   RELAY_PORT   listen port

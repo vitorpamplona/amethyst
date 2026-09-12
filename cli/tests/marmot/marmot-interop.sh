@@ -37,10 +37,17 @@ WND_BIN=""
 AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 
 # Embedded relay (default mode). Bound on every interface so a device on the
-# same network can reach it; the daemons connect over loopback. Loopback
+# same network can reach it; the daemons connect over $RELAY_HOST. Loopback
 # `ws://` relays are only accepted by MDK behind this explicit opt-in.
-RELAY_HOST="127.0.0.1"
-RELAY_BIND="0.0.0.0"
+#
+# Known limit, inherited from the old --local-relays mode: the URL wn
+# advertises in its kind:10050/10051 lists is $RELAY_URL, and Amethyst's
+# parsers drop loopback and RFC1918 relays from those lists, so A→B welcome
+# delivery leans on Amethyst's fallback relays. Override RELAY_HOST with an
+# address the device can dial (e.g. the laptop's LAN IP) to have wn
+# advertise that instead; the daemons then connect to it too.
+RELAY_HOST="${RELAY_HOST:-127.0.0.1}"
+RELAY_BIND="${RELAY_BIND:-0.0.0.0}"
 RELAY_PORT="${RELAY_PORT:-8080}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 RELAY_DATA="$STATE_DIR/relay"
@@ -85,7 +92,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --public-relays) USE_PUBLIC_RELAYS=1 ;;
     --local-relays)  printf '%s\n' "note: --local-relays is now the default (embedded amy serve relay); flag ignored" >&2 ;;
-    --port)          RELAY_PORT="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
+    --port)
+      [[ $# -ge 2 && "$2" != --* ]] || { printf 'missing value for --port\n' >&2; usage; exit 2; }
+      RELAY_PORT="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
     --transponder)   ENABLE_TRANSPONDER=1 ;;
     --no-build)     NO_BUILD=1 ;;
     -h|--help)      usage; exit 0 ;;
@@ -567,14 +576,14 @@ configure_relays() {
         info "sanity kinds 10050/1059/445 ok (B->C welcome + message round-trip)"
       else
         warn "kind:445 failed — C never decrypted sanity-ping (relays may be dropping group messages)"
-        warn "Consider rerunning without --public-relays (the embedded relay accepts every kind)."
+        warn "Consider rerunning without --public-relays (the embedded relay stores every kind)."
       fi
       # best-effort cleanup so re-runs don't accumulate dead sanity groups
       wn_c groups leave "$sanity_c_gid" >/dev/null 2>&1 || true
       wn_b groups leave "$sanity_gid" >/dev/null 2>&1 || true
     else
       warn "kind:10050/1059 failed — C never received welcome; relays likely dropping gift wraps or inbox lists"
-      warn "Consider rerunning without --public-relays (the embedded relay accepts every kind)."
+      warn "Consider rerunning without --public-relays (the embedded relay stores every kind)."
     fi
   fi
 }

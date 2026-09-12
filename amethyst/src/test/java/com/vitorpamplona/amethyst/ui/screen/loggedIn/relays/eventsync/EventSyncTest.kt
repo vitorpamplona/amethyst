@@ -94,14 +94,18 @@ class EventSyncTest : RelayClientTest() {
 
     private fun corpus(): List<Event> = mine + mentions + dmToMe + noise
 
-    private fun eventSync(builder: WebsocketBuilder): EventSync =
+    /** [decorate] runs on every client the sync builds, e.g. to attach an authenticator. */
+    private fun eventSync(
+        builder: WebsocketBuilder,
+        decorate: (NostrClient) -> Unit = {},
+    ): EventSync =
         EventSync(
             accountPubKey = account.pubKey,
             relayDb = { listOf(source) },
             outboxTargets = { setOf(outbox) },
             inboxTargets = { setOf(inbox) },
             dmTargets = { setOf(dm) },
-            clientBuilder = { NostrClient(builder, scope) },
+            clientBuilder = { NostrClient(builder, scope).also(decorate) },
             scope = scope,
         )
 
@@ -164,6 +168,14 @@ class EventSyncTest : RelayClientTest() {
                 mine.size + mentions.size + 1,
                 done.totalEventsReceived,
             )
+            // runSync drains the outbox before closing its client, so by the time
+            // Done is published every forwarded event has been written to its
+            // destination socket — not merely queued.
+            assertEquals(
+                "every routed event was sent before the client closed",
+                mine.size + mentions.size + 1,
+                done.totalEventsSent,
+            )
 
             assertRouted(hub)
         }
@@ -185,22 +197,12 @@ class EventSyncTest : RelayClientTest() {
             val authSigner = NostrSignerSync(KeyPair())
             var authenticator: RelayAuthenticator? = null
             val sync =
-                EventSync(
-                    accountPubKey = account.pubKey,
-                    relayDb = { listOf(source) },
-                    outboxTargets = { setOf(outbox) },
-                    inboxTargets = { setOf(inbox) },
-                    dmTargets = { setOf(dm) },
-                    clientBuilder = {
-                        val client = NostrClient(router, scope)
-                        authenticator =
-                            RelayAuthenticator(client = client, scope = scope) { _, template, _ ->
-                                listOf(authSigner.sign(template))
-                            }
-                        client
-                    },
-                    scope = scope,
-                )
+                eventSync(router) { client ->
+                    authenticator =
+                        RelayAuthenticator(client = client, scope = scope) { _, template, _ ->
+                            listOf(authSigner.sign(template))
+                        }
+                }
 
             try {
                 withTimeout(30_000) { sync.runSync() }
