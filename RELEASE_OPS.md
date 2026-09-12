@@ -240,9 +240,9 @@ readable by anyone with push access here), so a maintainer runs the last step:
 ```bash
 # after merging the sync PRs
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...     # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.15.1
+scripts/bump-homebrew-cask.sh v1.15.2
 
-scripts/bump-winget.sh v1.15.1               # no token — uses your `gh` auth
+scripts/bump-winget.sh v1.15.2               # no token — uses your `gh` auth
 ```
 
 Both scripts re-verify the published artifact's sha256 before submitting, and
