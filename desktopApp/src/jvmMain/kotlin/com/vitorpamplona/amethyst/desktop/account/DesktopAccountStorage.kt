@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.account
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
 import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.account.AccountStorage
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
@@ -145,9 +146,17 @@ class DesktopAccountStorage(
         return loaded
     }
 
+    /**
+     * Persists first, caches second.
+     *
+     * If the disk write fails (keychain refused, I/O error, disk full) the in-memory
+     * cache must NOT be left claiming a state that was never written: the rest of the
+     * session would serve accounts that vanish on the next launch, and the user would
+     * see a successful save that silently did nothing.
+     */
     private suspend fun writeCachedMetadata(metadata: AccountMetadata) {
-        cachedMetadata = metadata
         writeMetadataToDisk(metadata)
+        cachedMetadata = metadata
     }
 
     // --- Encrypted file I/O ---
@@ -280,7 +289,9 @@ class DesktopAccountStorage(
      *   - key exists in keychain: use it
      *   - keychain confirms definitively absent: generate + persist a fresh key
      *   - any other outcome (user cancelled/denied prompt, keychain locked,
-     *     backend transient error): propagate the exception, do NOT rotate.
+     *     backend transient error): propagate the exception, do NOT rotate --
+     *     unless there is no accounts.json.enc yet, in which case there is no
+     *     ciphertext to orphan and we bootstrap a fresh key (see below).
      *
      * Rotating the AES key on an ambiguous miss silently destroys the ability
      * to decrypt the existing accounts.json.enc, wiping the logged-in accounts
@@ -289,14 +300,37 @@ class DesktopAccountStorage(
     private suspend fun getOrCreateKey(): ByteArray {
         cachedKey?.let { return it }
 
-        val existing = secureStorage.getPrivateKeyOrThrow(METADATA_KEY_ALIAS)
+        val existing =
+            try {
+                secureStorage.getPrivateKeyOrThrow(METADATA_KEY_ALIAS)
+            } catch (e: SecureStorageException) {
+                // Bootstrap escape. Every non-macOS backend java-keyring ships
+                // (Windows Credential Store, Freedesktop Secret Service, KWallet)
+                // throws PasswordAccessException for a *genuinely absent* credential,
+                // so the strict lookup structurally cannot report "definitively
+                // absent" there. Without this branch a fresh Linux/Windows install
+                // could never mint the key and could never persist an account.
+                //
+                // Minting is only safe while there is no accounts.json.enc: with no
+                // ciphertext on disk there is nothing a new key can orphan. Once the
+                // file exists the strict contract applies and we propagate.
+                if (getAccountsFile().exists()) throw e
+                Log.w(
+                    "DesktopAccountStorage",
+                    "Keychain lookup failed and no accounts file exists; bootstrapping a fresh metadata key",
+                    e,
+                )
+                null
+            }
+
         if (existing != null) {
             val key = Base64.getDecoder().decode(existing)
             cachedKey = key
             return key
         }
 
-        // Definitively absent: safe to create and persist a fresh key.
+        // Definitively absent (or bootstrapping with nothing on disk): safe to
+        // create and persist a fresh key.
         val key = ByteArray(AES_KEY_SIZE).also { SecureRandom().nextBytes(it) }
         secureStorage.savePrivateKey(METADATA_KEY_ALIAS, Base64.getEncoder().encodeToString(key))
         cachedKey = key

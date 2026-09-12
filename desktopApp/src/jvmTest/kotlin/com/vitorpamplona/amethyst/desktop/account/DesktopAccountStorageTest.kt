@@ -265,6 +265,67 @@ class DesktopAccountStorageTest {
             }
         }
 
+    @Test
+    fun `getOrCreateKey ambiguous error with no accounts file bootstraps a fresh key`() =
+        runTest {
+            // Every non-macOS backend java-keyring ships (Windows Credential Store,
+            // Freedesktop Secret Service, KWallet) throws PasswordAccessException for a
+            // *genuinely absent* credential, which the strict lookup surfaces as
+            // SecureStorageException. With no accounts.json.enc there is no ciphertext
+            // a new key could orphan, so a fresh install must still be able to mint one
+            // -- otherwise Linux/Windows can never persist an account at all.
+            val saved = mutableMapOf<String, String>()
+            val throwingStorage: SecureKeyStorage = mockk()
+            coEvery { throwingStorage.getPrivateKeyOrThrow("account-metadata-key") } throws
+                SecureStorageException("Keyring backend refused access or returned ambiguous not-found")
+            coEvery { throwingStorage.savePrivateKey(any(), any()) } answers {
+                saved[firstArg()] = secondArg()
+            }
+            coEvery { throwingStorage.getPrivateKey(any()) } answers { saved[firstArg()] }
+            coEvery { throwingStorage.hasPrivateKey(any()) } answers { saved.containsKey(firstArg()) }
+
+            val file = File(File(tempDir, ".amethyst"), "accounts.json.enc")
+            assertFalse(file.exists())
+
+            val fresh = DesktopAccountStorage(throwingStorage, tempDir)
+            fresh.saveAccount(AccountInfo("npub1freshinstall", SignerType.Internal))
+
+            assertNotNull(saved["account-metadata-key"])
+            assertTrue(file.exists())
+            assertEquals(listOf("npub1freshinstall"), fresh.loadAccounts().map { it.npub })
+            // The escape is bootstrap-only: once the file exists the strict contract
+            // applies again -- pinned by `getOrCreateKey keyring throws ambiguous error
+            // does not rotate key or touch file` above.
+        }
+
+    // --- Cache must never claim a state that was not persisted ---
+
+    @Test
+    fun `failed disk write does not poison the in-memory cache`() =
+        runTest {
+            storage.saveAccount(AccountInfo("npub1persisted", SignerType.Internal))
+            assertEquals(listOf("npub1persisted"), storage.loadAccounts().map { it.npub })
+
+            // Block the atomic-write temp path so writeMetadataToDisk fails.
+            val temp = File(File(tempDir, ".amethyst"), "accounts.json.enc.tmp")
+            assertTrue(temp.mkdirs())
+
+            assertFails {
+                runBlocking {
+                    storage.saveAccount(AccountInfo("npub1phantom", SignerType.Internal))
+                }
+            }
+
+            // Same instance: the cache must still reflect only what reached the disk,
+            // not the account the failed save handed it.
+            assertEquals(listOf("npub1persisted"), storage.loadAccounts().map { it.npub })
+
+            // And the on-disk file agrees.
+            temp.delete()
+            val relaunched = DesktopAccountStorage(secureStorage, tempDir)
+            assertEquals(listOf("npub1persisted"), relaunched.loadAccounts().map { it.npub })
+        }
+
     // --- Bug 2: read failure must not silently reset the file ---
 
     @Test
