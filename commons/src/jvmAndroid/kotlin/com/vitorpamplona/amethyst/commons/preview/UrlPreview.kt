@@ -65,7 +65,18 @@ class UrlPreview {
                             mimeType.type == "text" && mimeType.subtype == "html" -> {
                                 val metaTags = HtmlParser().parseHtml(response.body.bytes(), mimeType.charset()?.name())
                                 val data = OpenGraphParser().extractUrlInfo(metaTags)
-                                UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
+                                UrlInfoItem(
+                                    url,
+                                    data.title,
+                                    data.description,
+                                    data.image,
+                                    mimeType.toString(),
+                                    data.audio,
+                                    data.audioType,
+                                    data.video,
+                                    data.videoType,
+                                    data.type,
+                                )
                             }
 
                             mimeType.type == "image" -> {
@@ -73,6 +84,16 @@ class UrlPreview {
                             }
 
                             mimeType.type == "video" -> {
+                                UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+                            }
+
+                            // A URL with no audio extension that turns out to serve audio anyway
+                            // (`/download?id=7`) used to land in the `else` below and throw, losing
+                            // the note's link entirely. The renderer plays it off the MIME. `image`
+                            // carries the URL for the same reason the video branch above does: it
+                            // is what UrlInfoItem.fetchComplete reads to decide the fetch produced
+                            // something renderable.
+                            mimeType.type == "audio" -> {
                                 UrlInfoItem(url, image = url, mimeType = mimeType.toString())
                             }
 

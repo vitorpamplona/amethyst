@@ -20,24 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal
 
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+
 class SupportedContent(
     val blockedUrls: List<String>,
     val mimeTypes: Set<String>,
     val supportedFileExtensions: Set<String>,
 ) {
-    private fun validExtension(fullUrl: String): Boolean {
-        val queryIndex = fullUrl.indexOf('?')
-        if (queryIndex > 0) {
-            return supportedFileExtensions.any { fullUrl.startsWith(it, queryIndex - it.length) }
-        }
-
-        val fragmentIndex = fullUrl.indexOf('#')
-        if (fragmentIndex > 0) {
-            return supportedFileExtensions.any { fullUrl.startsWith(it, fragmentIndex - it.length) }
-        }
-
-        return supportedFileExtensions.any { fullUrl.endsWith(it) }
-    }
+    // Delegates to the shared matcher rather than repeating the scan, which is what let the two
+    // copies drift: this one also matched an extension's letters without the introducing dot, so
+    // nostr.build's HTML player page at `.../a_<id>_mp3` was admitted into the video feed.
+    private fun validExtension(fullUrl: String): Boolean = RichTextParser.hasExtensionIn(fullUrl, supportedFileExtensions)
 
     fun acceptableUrl(
         url: String,

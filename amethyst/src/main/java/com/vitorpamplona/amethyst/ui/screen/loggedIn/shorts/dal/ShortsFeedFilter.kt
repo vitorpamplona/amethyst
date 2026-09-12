@@ -86,7 +86,7 @@ class ShortsFeedFilter(
         SupportedContent(
             blockedUrls = listOf("youtu.be", "youtube.com"),
             mimeTypes = SUPPORTED_VIDEO_FEED_MIME_TYPES_SET,
-            supportedFileExtensions = (RichTextParser.videoExtensions + RichTextParser.imageExtensions).toSet(),
+            supportedFileExtensions = (RichTextParser.videoExt + RichTextParser.imageExt).toSet(),
         )
 
     fun acceptableVideoiMetas(iMetas: List<VideoMeta>): Boolean = iMetas.any { videoFeedSupport.acceptableUrl(it.url, it.mimeType) }

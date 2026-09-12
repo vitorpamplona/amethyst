@@ -290,7 +290,7 @@ private fun WebBookmarkCard(
     ) {
         val previewInfo = (urlPreviewState as? UrlPreviewState.Loaded)?.previewInfo
 
-        if (previewInfo?.imageUrlFullPath != null) {
+        if (previewInfo?.imageUrlFullPath?.isNotBlank() == true) {
             AsyncImage(
                 model = previewInfo.imageUrlFullPath,
                 contentDescription = event.title() ?: previewInfo.title,

@@ -142,4 +142,140 @@ class OpenGraphParserTest {
         assertEquals("", info.description)
         assertEquals("", info.image)
     }
+
+    @Test
+    fun readsTheAudioFileAPlayerPageDeclares() {
+        // Trimmed from the real document at
+        // https://e.nostr.build/a_ETvKzX2OdOGmFEp1avRlm5_mp3?t=Aria&by=The+Fishcake -- an HTML
+        // player page (Content-Type: text/html) whose `og:audio` is the actual mp3. Note that
+        // `og:audio` comes AFTER title, description and image: an early exit that stops once
+        // those three are filled never reaches it.
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:type" content="music.song"/>
+                |  <meta property="og:title" content="Aria by The Fishcake"/>
+                |  <meta property="og:description" content="nostr.build media player"/>
+                |  <meta property="og:image" content="https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3/poster.jpg"/>
+                |  <meta property="og:audio" content="https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3"/>
+                |  <meta property="og:audio:secure_url" content="https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3"/>
+                |  <meta property="og:audio:type" content="audio/mpeg"/>
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("Aria by The Fishcake", info.title)
+        assertEquals("https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3", info.audio)
+        assertEquals("audio/mpeg", info.audioType)
+        assertEquals("music.song", info.type)
+    }
+
+    @Test
+    fun prefersOgAudioOverTheSecureUrlThatFollowsIt() {
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:audio" content="https://example.com/first.mp3"/>
+                |  <meta property="og:audio:secure_url" content="https://example.com/second.mp3"/>
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("https://example.com/first.mp3", info.audio)
+    }
+
+    @Test
+    fun fallsBackToTheSecureUrlWhenItIsTheOnlyOne() {
+        val info = extract("""<head><meta property="og:audio:secure_url" content="https://example.com/a.mp3"></head>""")
+
+        assertEquals("https://example.com/a.mp3", info.audio)
+    }
+
+    @Test
+    fun aPageWithoutAudioReportsEmptyAudioFields() {
+        val info = extract("""<head><meta property="og:title" content="T"></head>""")
+
+        assertEquals("", info.audio)
+        assertEquals("", info.audioType)
+    }
+
+    @Test
+    fun readsTheVideoFileAPlayerPageDeclares() {
+        // The mirror of the audio page above, from the same host:
+        // https://e.nostr.build/v_<id>_mp4 -- `og:type` flips to video.other and the media pair
+        // becomes og:video/og:video:type.
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:type" content="video.other"/>
+                |  <meta property="og:title" content="Clip by Someone"/>
+                |  <meta property="og:image" content="https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4/poster.jpg"/>
+                |  <meta property="og:video" content="https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4"/>
+                |  <meta property="og:video:secure_url" content="https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4"/>
+                |  <meta property="og:video:type" content="video/mp4"/>
+                |  <meta property="og:video:width" content="1280"/>
+                |  <meta property="og:video:height" content="720"/>
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4", info.video)
+        assertEquals("video/mp4", info.videoType)
+        assertEquals("video.other", info.type)
+        assertEquals("", info.audio)
+    }
+
+    @Test
+    fun readsWhatThePageSaysItIs() {
+        // og:type is what separates a media host's player page from an article that embeds a clip;
+        // only the former should have its card replaced by a player.
+        assertEquals("music.song", extract("""<head><meta property="og:type" content="music.song"></head>""").type)
+        assertEquals("article", extract("""<head><meta property="og:type" content="article"></head>""").type)
+        assertEquals("", extract("""<head><meta property="og:title" content="T"></head>""").type)
+    }
+
+    @Test
+    fun readsTheUrlAliasForHostsThatOnlyEmitIt() {
+        // YouTube writes og:video:url and never the bare og:video. Parsing it is not trusting it
+        // -- see UrlInfoItemMediaTest, where this exact declaration is refused on its text/html
+        // type -- but a host that spells it this way with a real file must still be readable.
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:video:url" content="https://www.youtube.com/embed/dQw4w9WgXcQ">
+                |  <meta property="og:video:type" content="text/html">
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("https://www.youtube.com/embed/dQw4w9WgXcQ", info.video)
+        assertEquals("text/html", info.videoType)
+    }
+
+    @Test
+    fun mediaTagsAreReadEvenWhenTheyTrailACompleteCard() {
+        // The regression the removed early exit caused: title, description and image are all
+        // filled before og:audio/og:video appear, so stopping there skipped the media entirely.
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:title" content="T">
+                |  <meta property="og:description" content="D">
+                |  <meta property="og:image" content="https://example.com/i.png">
+                |  <meta property="og:audio" content="https://example.com/a.mp3">
+                |  <meta property="og:audio:type" content="audio/mpeg">
+                |  <meta property="og:video" content="https://example.com/v.mp4">
+                |  <meta property="og:video:type" content="video/mp4">
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("https://example.com/a.mp3", info.audio)
+        assertEquals("https://example.com/v.mp4", info.video)
+    }
 }

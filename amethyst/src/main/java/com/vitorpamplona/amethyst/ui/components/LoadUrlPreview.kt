@@ -110,6 +110,10 @@ fun RenderLoaded(
     accountViewModel: AccountViewModel,
     nav: INav? = null,
 ) {
+    // Bound to a local: `UrlInfoItem` lives in another module, so the null check below cannot
+    // smart-cast the property itself.
+    val playableMedia = state.previewInfo.playableMediaUrl
+
     when {
         state.previewInfo.mimeType.startsWith("image") -> {
             Box(modifier = HalfVertPadding) {
@@ -122,10 +126,14 @@ fun RenderLoaded(
             }
         }
 
-        state.previewInfo.mimeType.startsWith("video") -> {
+        // Audio rides the video pipeline; see RichTextParser.videoExt. The fetched Content-Type is
+        // forwarded because it is the only type signal for an extension-less URL -- an HLS
+        // playlist served as `audio/x-mpegurl` off `/stream?id=1` is otherwise handed to the
+        // progressive source and fails.
+        state.previewInfo.mimeType.startsWith("video") || state.previewInfo.mimeType.startsWith("audio") -> {
             Box(modifier = HalfVertPadding) {
                 ZoomableContentView(
-                    content = MediaUrlVideo(url, uri = callbackUri),
+                    content = MediaUrlVideo(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
                     roundedCorner = true,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,
@@ -137,6 +145,29 @@ fun RenderLoaded(
             Box(modifier = HalfVertPadding) {
                 ZoomableContentView(
                     content = MediaUrlPdf(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
+                    roundedCorner = true,
+                    contentScale = ContentScale.FillWidth,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
+
+        // An HTML page that declares the media file it is a player for: nostr.build publishes one
+        // such page per upload and names the real file in `og:video` or `og:audio`. Play that
+        // file, with the page's `og:image` as poster/cover art, instead of a card that only links
+        // out. `playableMediaUrl` is null unless the page's declared type held up, so a page whose
+        // `og:video` is really an embed (YouTube's, say) still falls through to the card below.
+        playableMedia != null -> {
+            Box(modifier = HalfVertPadding) {
+                ZoomableContentView(
+                    content =
+                        MediaUrlVideo(
+                            url = playableMedia,
+                            description = state.previewInfo.title.ifBlank { null },
+                            uri = callbackUri,
+                            artworkUri = state.previewInfo.imageUrlFullPath.ifBlank { null },
+                            mimeType = state.previewInfo.playableMediaType,
+                        ),
                     roundedCorner = true,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,

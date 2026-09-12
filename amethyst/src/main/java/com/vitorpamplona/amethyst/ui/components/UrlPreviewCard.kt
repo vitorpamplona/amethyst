@@ -117,12 +117,16 @@ fun UrlPreviewCard(
                     },
                 ),
     ) {
-        AsyncImage(
-            model = previewInfo.imageUrlFullPath,
-            contentDescription = previewInfo.title,
-            contentScale = ContentScale.FillWidth,
-            modifier = previewCardImageModifier,
-        )
+        // A Loaded preview no longer implies an image: a player page that ships no cover art is
+        // kept (it has media to play), and painting its empty string left a blank 180dp box.
+        if (previewInfo.imageUrlFullPath.isNotBlank()) {
+            AsyncImage(
+                model = previewInfo.imageUrlFullPath,
+                contentDescription = previewInfo.title,
+                contentScale = ContentScale.FillWidth,
+                modifier = previewCardImageModifier,
+            )
+        }
 
         Row(
             modifier = MaxWidthWithHorzPadding,
