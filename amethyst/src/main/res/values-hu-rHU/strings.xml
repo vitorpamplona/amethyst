@@ -375,6 +375,7 @@
     <string name="napplet_cap_identity">Azonosság</string>
     <string name="napplet_cap_keys">Billentyűzetműveletek</string>
     <string name="napplet_cap_relay">Átjátszók</string>
+    <string name="napplet_cap_signer">Titkosítás</string>
     <string name="napplet_cap_storage">Tárhely</string>
     <string name="napplet_cap_value">Fizetések</string>
     <string name="napplet_cap_resource">Hálózat</string>
@@ -383,6 +384,7 @@
     <string name="napplet_cap_identity_desc">Az Ön nyilvános kulcsának olvasása</string>
     <string name="napplet_cap_keys_desc">Billentyűkötések hozzárendelése</string>
     <string name="napplet_cap_relay_desc">Események olvasása, aláírása és közzététele</string>
+    <string name="napplet_cap_signer_desc">A privát üzeneteket a saját kulcsával titkosítja és fejti vissza az alkalmazás</string>
     <string name="napplet_cap_storage_desc">Saját privát tárhely</string>
     <string name="napplet_cap_value_desc">Lightning-számlák kifizetése</string>
     <string name="napplet_cap_resource_desc">Webes és Blossom erőforrások lekérése</string>
@@ -400,6 +402,8 @@
     <string name="napplet_consent_publish">Ez a nKisalkalmazás alá szeretne írni és közzétenni egy %1$d típusú eseményt az Ön nevében.</string>
     <string name="napplet_consent_publish_preview">Ez a nKisalkalmazás alá szeretne írni és közzétenni egy %1$d típusú eseményt az Ön nevében:</string>
     <string name="napplet_consent_publish_encrypted">Ez a nKisalkalmazás egy titkosított eseményt szeretne küldeni az Ön nevében.</string>
+    <string name="napplet_consent_nip44_encrypt">Ez az oldal az Ön Nostr-kulcsával titkosítani szeretne egy üzenetet %1$s felhasználó számára.</string>
+    <string name="napplet_consent_nip44_decrypt">Ez az oldal az Ön Nostr-kulcsával vissza szeretne fejteni egy üzenetet, amit %1$s felhasználótol kapott.</string>
     <string name="napplet_consent_query">Ez a nKisalkalmazás eseményeket szeretne olvasni az Ön átjátszóiról.</string>
     <string name="napplet_consent_storage">Ez a nKisalkalmazás az Ön privát tárhelyét szeretné használni.</string>
     <string name="napplet_consent_pay">Ez a nKisalkalmazás ki szeretne fizetni egy Lightning számlát.</string>
@@ -2336,6 +2340,15 @@
     <string name="marmot_failed_to_update">Nem sikerült frissíteni: %1$s</string>
     <string name="marmot_failed_to_create_group">Nem sikerült létrehozni a csoportot: %1$s</string>
     <string name="marmot_failed_to_leave_group">Nem sikerült elhagyni a csoportot: %1$s</string>
+    <string name="marmot_enable_encrypted_media_needs_server">Először adjon hozzá egy Blossom médiakiszolgálót a beállításokban, mert a csoportnak szüksége van egy helyre, ahová a mellékleteket feltöltheti.</string>
+    <string name="marmot_encrypted_media_enabled_toast">Ez a csoport mostantól titkosított mellékleteket használ</string>
+    <string name="marmot_failed_to_enable_encrypted_media">Nem sikerült átállítani ezt a csoportot a titkosított mellékletek használatára: %1$s</string>
+    <string name="marmot_group_disbanded_toast">Csoport feloszlatva</string>
+    <string name="marmot_group_disbanding_toast">A csoport feloszlatása akkor ér véget, amikor annak tagjai egyezségre jutnak.</string>
+    <string name="marmot_group_composer_disbanding">Ez a csoport feloszlik, de továbbra is olvasható marad.</string>
+    <string name="marmot_group_composer_leaving">Ön elhagyja a csoportot.</string>
+    <string name="marmot_group_composer_removed">Ön már nem tagja ennek a csoportnak.</string>
+    <string name="marmot_failed_to_disband">Nem sikerült feloszlatni a csoportot: %1$s</string>
     <string name="marmot_adding_user">%1$s hozzáadása…</string>
     <string name="marmot_failed_to_add_user">Nem sikerült hozzáadni a következőt: %1$s: %2$s</string>
     <string name="marmot_unknown_error">ismeretlen hiba</string>
