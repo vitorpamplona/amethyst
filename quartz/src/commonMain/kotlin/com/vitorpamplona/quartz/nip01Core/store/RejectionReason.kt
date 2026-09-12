@@ -49,6 +49,16 @@ object RejectionReason {
 
     // The standard store reasons.
     const val DUPLICATE = "duplicate: already have this event"
+
+    /**
+     * A replaceable or addressable event that a stored version already supersedes
+     * (newer `created_at`, or the same `created_at` and a lower id). Nothing is
+     * written, and — like [DUPLICATE] — the relay answers `OK true`: NIP-01 keeps
+     * `duplicate:` as the machine-readable prefix for "already covered", and that
+     * is what nostr-rs-relay sends here too, so clients that retry on anything
+     * else (MDK's `wn`) settle instead of re-offering the same event forever.
+     */
+    const val SUPERSEDED = "duplicate: a newer version of this replaceable event is already stored"
     const val EXPIRED = "blocked: Cannot insert an expired event"
     const val DELETED = "blocked: a deletion event exists"
     const val VANISHED = "blocked: a request to vanish event exists"

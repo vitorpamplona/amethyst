@@ -64,6 +64,12 @@ class SQLiteEventStore(
     companion object {
         /** SQLite's message for the unique index on `event_headers (id)`. */
         private const val DUPLICATE_ID_CONSTRAINT = "UNIQUE constraint failed: event_headers.id"
+
+        /**
+         * Common prefix of SQLite's messages for `replaceable_idx` (`kind, pubkey`) and
+         * `addressable_idx` (`kind, pubkey, d_tag`) — both start with these two columns.
+         */
+        private const val SUPERSEDED_CONSTRAINT = "UNIQUE constraint failed: event_headers.kind, event_headers.pubkey"
         const val DATABASE_VERSION = 5
     }
 
@@ -535,6 +541,12 @@ class SQLiteEventStore(
         // for the session to turn into a rejection the client then retries or reports.
         if (message.contains(DUPLICATE_ID_CONSTRAINT)) {
             return IEventStore.InsertOutcome.Rejected(RejectionReason.DUPLICATE)
+        }
+        // The replaceable / addressable unique indexes fire only when the supersession
+        // trigger found nothing older to delete, i.e. the stored version already wins
+        // (STORE-W01/W02). Same shape as a duplicate: nothing to write, `OK true`.
+        if (message.contains(SUPERSEDED_CONSTRAINT)) {
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.SUPERSEDED)
         }
         val refusal =
             message.contains("blocked:") ||
