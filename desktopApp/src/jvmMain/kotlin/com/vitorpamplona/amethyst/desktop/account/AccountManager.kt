@@ -259,11 +259,59 @@ class AccountManager internal constructor(
 
     // --- Account loading ---
 
+    /**
+     * Two-phase consolidation of every Amethyst-owned keychain item into the
+     * single `vault-v1` item that [SecureKeyStorage.enableConsolidatedVault]
+     * manages, so cold-boot triggers at most one macOS Keychain Access prompt
+     * regardless of how many accounts (each with its own nsec, per-account
+     * bunker ephemeral, and NWC URI) the user has.
+     *
+     * Phase 1 migrates only the `account-metadata-key` (the AES key that
+     * decrypts `accounts.json.enc`). Nothing else can be enumerated before
+     * that file is readable, so this phase runs against a single-alias
+     * candidate list. It is a no-op on fresh installs (no legacy item) and
+     * on already-migrated setups (vault-v1 exists).
+     *
+     * Phase 2 runs after `accounts.json.enc` has been decrypted and the full
+     * npub list is known. For each npub we add the nsec alias itself, the
+     * per-account bunker-ephemeral alias, and the NWC alias. The legacy
+     * shared bunker-ephemeral alias is included for the pre-per-account
+     * migration compatibility branch in [loadBunkerAccount]. Phase 2 is
+     * idempotent (see [SecureKeyStorage.enableConsolidatedVault]) so it is
+     * safe to run on every startup and to include aliases the vault already
+     * covers.
+     */
+    private suspend fun bootstrapConsolidatedVault() {
+        try {
+            secureStorage.enableConsolidatedVault(listOf(DesktopAccountStorage.METADATA_KEY_ALIAS))
+            val npubs = accountStorage.loadAccounts().map { it.npub }
+            val aliases = mutableListOf<String>()
+            aliases += DesktopAccountStorage.METADATA_KEY_ALIAS
+            aliases += LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS
+            for (npub in npubs) {
+                aliases += npub
+                aliases += bunkerEphemeralKeyAlias(npub)
+                aliases += nwcKeyAlias(npub)
+            }
+            secureStorage.enableConsolidatedVault(aliases)
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Non-fatal: SecureKeyStorage falls back to legacy per-alias reads
+            // for anything the vault does not cover. Users see the old two-prompt
+            // behaviour but nothing breaks.
+        }
+    }
+
     suspend fun loadSavedAccount(): Result<AccountState.LoggedIn> =
         try {
             // Clean up legacy files (one-time)
             listOf("last_account.txt", "bunker_uri.txt", "nwc_connection.txt")
                 .forEach { File(amethystDir, it).deleteOrWarn("AccountManager", "legacy file") }
+
+            // Consolidate keychain items into vault-v1 so macOS prompts once, not per item.
+            // Runs before any other keychain read on the hot startup path.
+            bootstrapConsolidatedVault()
 
             // Single source of truth: accounts.json.enc
             val activeNpub =
