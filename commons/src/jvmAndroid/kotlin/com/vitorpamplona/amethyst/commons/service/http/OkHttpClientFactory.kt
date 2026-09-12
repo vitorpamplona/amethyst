@@ -84,13 +84,24 @@ class OkHttpClientFactory(
 
     // Most images/videos in a feed come from a small set of hosts (e.g. a single
     // Blossom/imgproxy server). OkHttp's default dispatcher caps inflight requests
-    // per host at 5, which serializes feed loading. Raise the limits so the feed
-    // can parallelize downloads the way a browser does.
+    // per host at 5, which serializes feed loading, so we lift that.
+    //
+    // The TOTAL, though, has to stay in phone territory. Dispatcher's executor is
+    // an unbounded cached pool (SynchronousQueue), so maxRequests is literally the
+    // thread ceiling: 128 meant up to 128 threads doing 128 concurrent TLS
+    // handshakes on a handset. Nothing upstream bounds the arrival rate either --
+    // Coil's enqueue is unbounded and PrefetchFeedMedia warms ±3 notes on BOTH
+    // sides of the viewport on every visible-range change -- so the queue really
+    // does reach the cap on a fast scroll. Past the point where the radio and the
+    // CPU are saturated, more concurrency doesn't add throughput, it just slices
+    // the same bandwidth thinner and pushes every image's completion out
+    // together, including the one actually on screen. A tighter total lets the
+    // visible images finish and paint while the rest wait their turn.
     private val dispatcher =
         Dispatcher().apply {
             if (!HttpClientEnvironment.isEmulator) {
-                maxRequestsPerHost = 16
-                maxRequests = 128
+                maxRequestsPerHost = 8
+                maxRequests = 32
             } else {
                 maxRequestsPerHost = 5
                 maxRequests = 64
@@ -138,15 +149,14 @@ class OkHttpClientFactory(
             .addInterceptor(OnionLocationInterceptor(onionCache))
             .build()
 
-    private var lastProxy: Proxy? = null
+    private val proxyRoutes = ProxyRouteTracker()
 
     fun buildHttpClient(
         proxy: Proxy?,
         timeoutSeconds: Int,
     ): OkHttpClient {
-        if (proxy != lastProxy) {
+        if (proxyRoutes.shouldEvictFor(proxy)) {
             rootClient.connectionPool.evictAll()
-            lastProxy = proxy
         }
         val seconds = if (proxy != null) timeoutSeconds * 3 else timeoutSeconds
         return rootClient
@@ -191,5 +201,44 @@ class OkHttpClientFactory(
         // evict a silently-dropped connection well before the read timeout would
         // otherwise stall a request for the full 30s/90s.
         const val HTTP2_PING_INTERVAL_SECS: Long = 10
+    }
+}
+
+/**
+ * Decides when a rebuilt client must drop the pooled connections it shares with every other
+ * client [OkHttpClientFactory] mints.
+ *
+ * The eviction exists so a changed Tor route doesn't leave usable connections behind on the old
+ * one. The trap is that a single factory mints BOTH long-lived variants — [DualHttpClientManager]
+ * builds `defaultHttpClient` (always SOCKS, because `buildLocalSocksProxy` falls back to 9050
+ * rather than returning null) and `defaultHttpClientWithoutProxy` (always null) from the same
+ * instance, and they share one `rootClient.connectionPool`. Comparing every build against one
+ * "last proxy" field therefore saw the two variants alternate forever: each rebuild looked like a
+ * route change and wiped the pool they share. Both `stateIn` flows re-emit on every
+ * `isMobileDataProvider` change and every resubscribe (they are `WhileSubscribed(1000)`, collected
+ * from a composable), so in practice the pool was emptied whenever the network flapped or the app
+ * came back to the foreground — and the next image then paid a fresh DNS + TCP + TLS.
+ *
+ * Two rules fix it:
+ *
+ *  - A direct build (`proxy == null`) never evicts. `null` is that variant's permanent route, so
+ *    it can never have changed.
+ *  - A proxied build evicts only when the proxy differs from the one the PREVIOUS proxied build
+ *    used, i.e. the Tor port actually moved.
+ *
+ * Nothing is lost by being this narrow: OkHttp's `Address` — the connection-pool key — includes
+ * the proxy, so a direct connection and a SOCKS connection to the same host are already distinct
+ * entries that can never be handed to each other's calls.
+ */
+internal class ProxyRouteTracker {
+    private var lastProxy: Proxy? = null
+
+    @Synchronized
+    fun shouldEvictFor(proxy: Proxy?): Boolean {
+        if (proxy == null) return false
+
+        val previous = lastProxy
+        lastProxy = proxy
+        return previous != null && previous != proxy
     }
 }
