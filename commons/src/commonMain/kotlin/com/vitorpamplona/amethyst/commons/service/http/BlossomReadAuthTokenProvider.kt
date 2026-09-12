@@ -129,6 +129,20 @@ class BlossomReadAuthTokenProvider(
         val fresh = CompletableDeferred<String?>()
         inFlight.putIfAbsent(host, fresh)?.let { return it }
 
+        // Third look, taken while holding the [inFlight] slot. The second look above
+        // still leaves a window: a caller that missed the cache there can be parked
+        // before its `putIfAbsent` while a leader that started after it signs, caches
+        // and retires its own entry — a local key does all of that in microseconds —
+        // so the parked caller's `putIfAbsent` then succeeds against an empty map and
+        // mints a second signature. With the slot held, any earlier leader has already
+        // cached (it caches *before* retiring), so a hit here is definitive: hand the
+        // cached token to ourselves and to every follower that already joined [fresh].
+        cachedHeader(host)?.let { cached ->
+            inFlight.remove(host, fresh)
+            fresh.complete(cached)
+            return fresh
+        }
+
         scope
             .launch {
                 val header =
