@@ -28,7 +28,10 @@ import com.vitorpamplona.amethyst.commons.model.account.AccountStorage
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermission
@@ -58,6 +61,16 @@ sealed class StorageCorruption(
     class JsonMalformed(
         backupPath: String?,
     ) : StorageCorruption(backupPath)
+
+    /**
+     * A transient failure surfaced from the read path (I/O error, keychain refused
+     * or otherwise ambiguous access, OOM, etc). No backup was written and the
+     * on-disk file is untouched. Callers should retry or surface an error UI rather
+     * than treating this as data loss. See [DesktopAccountStorage.readMetadataFromDisk].
+     */
+    class TransientError(
+        val cause: Throwable,
+    ) : StorageCorruption(backupPath = null)
 }
 
 class DesktopAccountStorage(
@@ -68,6 +81,7 @@ class DesktopAccountStorage(
     companion object {
         private const val METADATA_KEY_ALIAS = "account-metadata-key"
         private const val ACCOUNTS_FILE = "accounts.json.enc"
+        private const val ACCOUNTS_LOCK_FILE = "accounts.json.enc.lock"
         private const val AES_KEY_SIZE = 32 // 256 bits
         private const val GCM_IV_SIZE = 12
         private const val GCM_TAG_BITS = 128
@@ -76,38 +90,51 @@ class DesktopAccountStorage(
     private val mapper = jacksonObjectMapper()
     private val amethystDir by lazy { File(homeDir, ".amethyst") }
 
-    // In-memory cache — read from disk once, then serve from memory
+    // In-memory cache: read from disk once, then serve from memory
     private var cachedMetadata: AccountMetadata? = null
+
+    // In-process mutex around the cross-process file lock. Two callers inside
+    // the same JVM would otherwise fail with OverlappingFileLockException from
+    // FileChannel.lock(), since JVM file locks are per-JVM not per-thread.
+    private val fileLockMutex = Mutex()
+
+    // Guards read-modify-write cycles on [cachedMetadata]. Distinct from
+    // [fileLockMutex] so we can hold it across a full read + mutate + write
+    // sequence (the file lock is taken and released inside each disk op).
+    private val stateMutex = Mutex()
 
     // --- AccountStorage interface ---
 
     override suspend fun loadAccounts(): List<AccountInfo> = getCachedMetadata().accounts.map { it.toAccountInfo() }
 
-    override suspend fun saveAccount(info: AccountInfo) {
-        val metadata = getCachedMetadata()
-        val dto = AccountInfoDto.from(info)
-        val updated = metadata.accounts.filter { it.npub != info.npub } + dto
-        writeCachedMetadata(metadata.copy(accounts = updated))
-    }
+    override suspend fun saveAccount(info: AccountInfo) =
+        stateMutex.withLock {
+            val metadata = getCachedMetadata()
+            val dto = AccountInfoDto.from(info)
+            val updated = metadata.accounts.filter { it.npub != info.npub } + dto
+            writeCachedMetadata(metadata.copy(accounts = updated))
+        }
 
-    override suspend fun deleteAccount(npub: String) {
-        val metadata = getCachedMetadata()
-        val updated = metadata.accounts.filter { it.npub != npub }
-        val newActive =
-            if (metadata.activeNpub == npub) {
-                updated.firstOrNull()?.npub
-            } else {
-                metadata.activeNpub
-            }
-        writeCachedMetadata(metadata.copy(accounts = updated, activeNpub = newActive))
-    }
+    override suspend fun deleteAccount(npub: String) =
+        stateMutex.withLock {
+            val metadata = getCachedMetadata()
+            val updated = metadata.accounts.filter { it.npub != npub }
+            val newActive =
+                if (metadata.activeNpub == npub) {
+                    updated.firstOrNull()?.npub
+                } else {
+                    metadata.activeNpub
+                }
+            writeCachedMetadata(metadata.copy(accounts = updated, activeNpub = newActive))
+        }
 
     override suspend fun currentAccount(): String? = getCachedMetadata().activeNpub
 
-    override suspend fun setCurrentAccount(npub: String) {
-        val metadata = getCachedMetadata()
-        writeCachedMetadata(metadata.copy(activeNpub = npub))
-    }
+    override suspend fun setCurrentAccount(npub: String) =
+        stateMutex.withLock {
+            val metadata = getCachedMetadata()
+            writeCachedMetadata(metadata.copy(activeNpub = npub))
+        }
 
     // --- Cached I/O ---
 
@@ -129,9 +156,17 @@ class DesktopAccountStorage(
         val file = getAccountsFile()
         if (!file.exists()) return AccountMetadata()
 
+        ensureDir()
+        return withAccountsFileLock {
+            readMetadataFromDiskLocked(file)
+        }
+    }
+
+    private suspend fun readMetadataFromDiskLocked(file: File): AccountMetadata {
         val encrypted = file.readBytes()
         if (encrypted.size < GCM_IV_SIZE) {
-            val backup = backupCorruptFile(file)
+            // Genuinely unusable: not enough bytes for the IV. Back up and reset.
+            val backup = backupCorruptFile(file, ".corrupt")
             onCorruption(StorageCorruption.FileCorrupted(backup))
             return AccountMetadata()
         }
@@ -140,31 +175,43 @@ class DesktopAccountStorage(
             val decrypted = decrypt(encrypted)
             mapper.readValue<AccountMetadata>(decrypted)
         } catch (e: javax.crypto.AEADBadTagException) {
-            Log.e("DesktopAccountStorage", "GCM auth tag mismatch — file corrupted or key lost", e)
-            val backup = backupCorruptFile(file)
+            // Genuine ciphertext corruption or lost/rotated AES key.
+            Log.e("DesktopAccountStorage", "GCM auth tag mismatch, file corrupted or key lost", e)
+            val backup = backupCorruptFile(file, ".corrupt")
             onCorruption(StorageCorruption.FileCorrupted(backup))
             AccountMetadata()
         } catch (e: javax.crypto.BadPaddingException) {
-            Log.e("DesktopAccountStorage", "Decryption failed — file corrupted", e)
-            val backup = backupCorruptFile(file)
+            // Genuine ciphertext corruption.
+            Log.e("DesktopAccountStorage", "Decryption failed, file corrupted", e)
+            val backup = backupCorruptFile(file, ".corrupt")
             onCorruption(StorageCorruption.FileCorrupted(backup))
             AccountMetadata()
         } catch (e: com.fasterxml.jackson.core.JacksonException) {
+            // Schema mismatch: decrypted cleanly but the JSON does not fit our shape.
+            // Distinct suffix so operators can tell it apart from ciphertext corruption.
             Log.e("DesktopAccountStorage", "JSON malformed after decryption", e)
-            val backup = backupCorruptFile(file)
+            val backup = backupCorruptFile(file, ".jsonerror")
             onCorruption(StorageCorruption.JsonMalformed(backup))
             AccountMetadata()
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e("DesktopAccountStorage", "Failed to read accounts metadata", e)
-            val backup = backupCorruptFile(file)
-            onCorruption(StorageCorruption.FileCorrupted(backup))
-            AccountMetadata()
+            // Transient failure: I/O error, keychain refused / ambiguous, OOM, etc.
+            // DO NOT rename the on-disk file; the ciphertext is intact and the next
+            // launch may succeed (for example after the user re-approves the
+            // Keychain Access prompt). Surface up for the caller to decide.
+            Log.e("DesktopAccountStorage", "Transient error reading accounts metadata; file preserved", e)
+            onCorruption(StorageCorruption.TransientError(e))
+            throw e
         }
     }
 
-    private fun backupCorruptFile(file: File): String? =
+    private fun backupCorruptFile(
+        file: File,
+        suffix: String,
+    ): String? =
         try {
-            val backup = File(file.parent, "accounts.json.enc.corrupt.${System.currentTimeMillis()}")
+            val backup = File(file.parent, "${file.name}$suffix.${System.currentTimeMillis()}")
             java.nio.file.Files
                 .copy(file.toPath(), backup.toPath())
             file.deleteOrWarn("DesktopAccountStorage", "corrupt accounts file")
@@ -178,14 +225,47 @@ class DesktopAccountStorage(
         val json = mapper.writeValueAsBytes(metadata)
         val encrypted = encrypt(json)
 
-        // Atomic write via temp file
         val file = getAccountsFile()
-        val temp = File(amethystDir, "${ACCOUNTS_FILE}.tmp")
-        temp.writeBytes(encrypted)
-        Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
-
-        setFilePermissions(file)
+        withAccountsFileLock {
+            // Atomic write via temp file, under the cross-process lock so two
+            // Amethyst instances (Homebrew upgrade race, accidental double-launch)
+            // cannot interleave writes and truncate the file.
+            val temp = File(amethystDir, "$ACCOUNTS_FILE.tmp")
+            temp.writeBytes(encrypted)
+            Files.move(
+                temp.toPath(),
+                file.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE,
+            )
+            setFilePermissions(file)
+        }
     }
+
+    /**
+     * Cross-process advisory lock + in-process mutex around the accounts.json.enc
+     * read/write critical section. The mutex is required because JVM
+     * `FileChannel.lock()` is a per-JVM lock and would throw
+     * `OverlappingFileLockException` on the second acquire from the same JVM.
+     * The channel lock is required to keep two Amethyst processes serial (upgrade
+     * race, accidental double-launch, cron-style relaunch).
+     *
+     * Mirrors the pattern used in SecureKeyStorage.withFileLock; kept private
+     * to this class so the two lock lifecycles stay independent.
+     */
+    private suspend inline fun <T> withAccountsFileLock(crossinline block: suspend () -> T): T =
+        fileLockMutex.withLock {
+            val lockFile = File(amethystDir, ACCOUNTS_LOCK_FILE)
+            if (!lockFile.exists()) {
+                lockFile.createNewFile()
+                setFilePermissions(lockFile)
+            }
+            RandomAccessFile(lockFile, "rw").use { raf ->
+                raf.channel.lock().use { _ ->
+                    block()
+                }
+            }
+        }
 
     private fun getAccountsFile() = File(amethystDir, ACCOUNTS_FILE)
 
@@ -193,16 +273,30 @@ class DesktopAccountStorage(
 
     private var cachedKey: ByteArray? = null
 
+    /**
+     * Reads (or creates on first launch) the metadata AES key.
+     *
+     * Distinguishes:
+     *   - key exists in keychain: use it
+     *   - keychain confirms definitively absent: generate + persist a fresh key
+     *   - any other outcome (user cancelled/denied prompt, keychain locked,
+     *     backend transient error): propagate the exception, do NOT rotate.
+     *
+     * Rotating the AES key on an ambiguous miss silently destroys the ability
+     * to decrypt the existing accounts.json.enc, wiping the logged-in accounts
+     * on next launch. That is the bug this method exists to prevent.
+     */
     private suspend fun getOrCreateKey(): ByteArray {
         cachedKey?.let { return it }
 
-        val existing = secureStorage.getPrivateKey(METADATA_KEY_ALIAS)
+        val existing = secureStorage.getPrivateKeyOrThrow(METADATA_KEY_ALIAS)
         if (existing != null) {
             val key = Base64.getDecoder().decode(existing)
             cachedKey = key
             return key
         }
 
+        // Definitively absent: safe to create and persist a fresh key.
         val key = ByteArray(AES_KEY_SIZE).also { SecureRandom().nextBytes(it) }
         secureStorage.savePrivateKey(METADATA_KEY_ALIAS, Base64.getEncoder().encodeToString(key))
         cachedKey = key

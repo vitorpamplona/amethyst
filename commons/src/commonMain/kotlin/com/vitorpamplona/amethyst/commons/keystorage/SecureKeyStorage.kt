@@ -76,11 +76,33 @@ expect class SecureKeyStorage private constructor() {
      * **Security Warning:** The returned String cannot be securely zeroed from memory (JVM limitation).
      * Dereference the returned value immediately after use to minimize exposure time.
      *
+     * Callers that MUST distinguish "key does not exist" from "backend refused/locked/failed"
+     * (for example, before generating a replacement key on disk) should use
+     * [getPrivateKeyOrThrow] instead. This method returns null on any error and cannot
+     * safely be used as an "is this the first launch?" probe.
+     *
      * @param npub The public key in npub (Bech32) format
      * @return The private key in hexadecimal format, or null if not found
      * @throws SecureStorageException if retrieval operation fails
      */
     suspend fun getPrivateKey(npub: String): String?
+
+    /**
+     * Retrieves a private key for the given npub, distinguishing "definitively absent"
+     * from any other failure mode.
+     *
+     * On success, returns the key. When the backend confirms the item does not exist,
+     * returns null. Any other outcome (backend unavailable, user denied the OS prompt,
+     * keychain locked, I/O error) throws [SecureStorageException]. This is the safe
+     * primitive for compare-and-swap style flows where a null must not be interpreted
+     * as permission to generate and persist a replacement.
+     *
+     * @param npub The public key in npub (Bech32) format
+     * @return The private key in hexadecimal format, or null only when the backend
+     *   confirms the item does not exist
+     * @throws SecureStorageException on any ambiguous or transient failure
+     */
+    suspend fun getPrivateKeyOrThrow(npub: String): String?
 
     /**
      * Deletes a private key for the given npub.

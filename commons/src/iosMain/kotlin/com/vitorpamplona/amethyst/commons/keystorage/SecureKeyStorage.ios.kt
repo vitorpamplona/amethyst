@@ -34,6 +34,8 @@ actual class SecureKeyStorage private actual constructor() {
 
     actual suspend fun getPrivateKey(npub: String): String? = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
 
+    actual suspend fun getPrivateKeyOrThrow(npub: String): String? = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
+
     actual suspend fun deletePrivateKey(npub: String): Boolean = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
 
     actual suspend fun hasPrivateKey(npub: String): Boolean = throw SecureStorageException("Keychain Services binding pending (iOS Phase 4)")
