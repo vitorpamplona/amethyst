@@ -31,6 +31,14 @@ jobs:
         with:
           upload_sources: true
           upload_translations: true
+          # Upload translations that are identical to the English source (brand
+          # terms, loanwords like "Feed"/"Apps", bare formats like "v%1$s").
+          # Without this they are SKIPPED on upload, so a locale that deliberately
+          # keeps English never reaches Crowdin's DB and the key keeps coming back
+          # as untranslated. They arrive as normal UNAPPROVED translations --
+          # auto_approve_imported stays at its default false, so a translator still
+          # approves them in the Crowdin UI (bulk-select in the Editor).
+          import_eq_suggestions: true
           download_translations: true
           # Let the downloaded translations stay in the working tree; the single
           # create-pull-request step below opens the combined PR.
