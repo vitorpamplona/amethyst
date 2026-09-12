@@ -103,7 +103,9 @@ class BlossomReadAuthTokenProvider(
 
     /**
      * Returns the in-flight signature for [host], starting one if this caller
-     * wins the race. Null when there is no signer to sign with.
+     * wins the race — or an already-completed one carrying the token a leader
+     * cached while this caller was on its way in. Null when there is no signer
+     * to sign with.
      *
      * Leader/follower over [ConcurrentHashMap.putIfAbsent] rather than
      * `computeIfAbsent`: the completion handler removes the map entry, and a job
@@ -112,6 +114,15 @@ class BlossomReadAuthTokenProvider(
      */
     private fun signOnce(host: String): CompletableDeferred<String?>? {
         inFlight[host]?.let { return it }
+
+        // Second look at the cache, because the caller's own miss happened before this
+        // read and a leader caches its token *before* retiring its [inFlight] entry — so
+        // an absent entry here means any token that leader minted is already visible.
+        // Without this look, a signature fast enough to finish inside that gap (a local
+        // key signs in microseconds) loses the single-flight guarantee: every straggler
+        // still between its cache miss and this read finds both empty and signs again,
+        // which is the N-signatures burst [inFlight] exists to collapse.
+        cachedHeader(host)?.let { return CompletableDeferred<String?>(it) }
 
         val signer = signerProvider() ?: return null
 
