@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.feeds
 
-import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
-
 abstract class AdditiveComplexFeedFilter<T, U> : FeedFilter<T>() {
     abstract fun updateListWith(
         oldList: List<T>,

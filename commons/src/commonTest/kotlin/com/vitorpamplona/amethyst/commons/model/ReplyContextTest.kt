@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
