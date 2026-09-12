@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -130,8 +132,11 @@ class NamecoinNameService(
                     } else {
                         NamecoinResolveState.NotFound
                     }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                state.value = NamecoinResolveState.Error(e.message ?: "Unknown error")
+                Log.w("NamecoinNameService", "resolve failed for $identifier", e)
+                state.value = NamecoinResolveState.Error(e.message ?: e::class.simpleName ?: "Unknown error")
             }
         }
         return state

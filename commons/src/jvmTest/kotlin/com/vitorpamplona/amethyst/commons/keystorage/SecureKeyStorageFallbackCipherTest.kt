@@ -18,30 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.feeds
+package com.vitorpamplona.amethyst.commons.keystorage
 
-import com.vitorpamplona.amethyst.commons.model.IAccount
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Test
 
-class ChatroomFeedFilter(
-    val withUser: ChatroomKey,
-    val account: IAccount,
-) : AdditiveFeedFilter<Note>(),
-    ChangesFlowFilter<Note> {
-    fun chatroom() = account.chatroomList.getOrCreatePrivateChatroom(withUser)
-
-    override fun changesFlow() = chatroom().changesFlow()
-
-    // returns the last Note of each user.
-    override fun feedKey(): String = withUser.users.sorted().joinToString(",")
-
-    override fun feed(): List<Note> = chatroom().messages.filter { account.isAcceptable(it) }.sortedWith(DefaultFeedOrder)
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> {
-        val chatroom = chatroom()
-        return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
+class SecureKeyStorageFallbackCipherTest {
+    @Test
+    fun encryptedFileFallbackRoundTrips() {
+        // AES/GCM initialised with IvParameterSpec threw on every JDK, which made
+        // the whole no-keyring fallback (headless Linux, containers) dead code.
+        val storage = SecureKeyStorage.create()
+        val ciphertext = storage.encryptData("nsec1secret", "correct horse")
+        assertNotEquals("nsec1secret", ciphertext)
+        assertEquals("nsec1secret", storage.decryptData(ciphertext, "correct horse"))
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    @Test(expected = Exception::class)
+    fun wrongPasswordIsRejected() {
+        val storage = SecureKeyStorage.create()
+        storage.decryptData(storage.encryptData("nsec1secret", "right"), "wrong")
+    }
 }

@@ -194,12 +194,15 @@ open class Note(
     var otsVerification: VerificationState? = null
 
     // These fields are updated every time an event related to this note is received.
+    @Volatile
     var replies = listOf<Note>()
         private set
 
+    @Volatile
     var reactions = mapOf<String, List<Note>>()
         private set
 
+    @Volatile
     var boosts = listOf<Note>()
         private set
 
@@ -211,6 +214,7 @@ open class Note(
      * (channel-retained) message keeps it strongly reachable. The chat bubble overlays the latest
      * author-matching edit.
      */
+    @Volatile
     var edits = listOf<Note>()
         private set
 
@@ -221,9 +225,11 @@ open class Note(
      * delete). Anchoring them here also replaces the old full-cache scan: the OTS pill folds this
      * list directly. Each attestation memoizes its own blockchain verdict in [Note.otsVerification].
      */
+    @Volatile
     var timestamps = listOf<Note>()
         private set
 
+    @Volatile
     var reports = mapOf<User, List<Note>>()
         private set
 
@@ -234,6 +240,7 @@ open class Note(
      * so `source.author` identifies who labeled it. Used by the hashtag feed to
      * surface posts a follow has tagged and to attribute the label in the UI.
      */
+    @Volatile
     var labels = mapOf<String, List<Note>>()
         private set
 
@@ -358,7 +365,7 @@ open class Note(
             }
 
             is LiveActivitiesEvent -> {
-                noteEvent.relays().ifEmpty { null }?.toSet()
+                noteEvent.relays().firstOrNull()?.let { return it }
             }
 
             is LiveActivitiesChatMessageEvent -> {
@@ -449,51 +456,65 @@ open class Note(
     }
 
     fun addReply(note: Note) {
-        if (note !in replies) {
-            replies = replies + note
-            flowSet?.replies?.invalidateData()
+        syncLock.withLock {
+            if (note !in replies) {
+                replies = replies + note
+                flowSet?.replies?.invalidateData()
+            }
         }
     }
 
     fun removeReply(note: Note) {
-        if (note in replies) {
-            replies = replies - note
-            flowSet?.replies?.invalidateData()
+        syncLock.withLock {
+            if (note in replies) {
+                replies = replies - note
+                flowSet?.replies?.invalidateData()
+            }
         }
     }
 
     fun addEdit(note: Note) {
-        if (note !in edits) {
-            edits = edits + note
-            flowSet?.edits?.invalidateData()
+        syncLock.withLock {
+            if (note !in edits) {
+                edits = edits + note
+                flowSet?.edits?.invalidateData()
+            }
         }
     }
 
     fun removeEdit(note: Note) {
-        if (note in edits) {
-            edits = edits - note
-            flowSet?.edits?.invalidateData()
+        syncLock.withLock {
+            if (note in edits) {
+                edits = edits - note
+                flowSet?.edits?.invalidateData()
+            }
         }
     }
 
     fun addTimestamp(note: Note) {
-        if (note !in timestamps) {
-            timestamps = timestamps + note
-            flowSet?.ots?.invalidateData()
+        syncLock.withLock {
+            if (note !in timestamps) {
+                timestamps = timestamps + note
+                flowSet?.ots?.invalidateData()
+            }
         }
     }
 
     fun removeTimestamp(note: Note) {
-        if (note in timestamps) {
-            timestamps = timestamps - note
-            flowSet?.ots?.invalidateData()
+        syncLock.withLock {
+            if (note in timestamps) {
+                timestamps = timestamps - note
+                flowSet?.ots?.invalidateData()
+            }
         }
     }
 
     fun removeBoost(note: Note) {
-        if (note in boosts) {
-            boosts = boosts - note
-            flowSet?.boosts?.invalidateData()
+        syncLock.withLock {
+            if (note in boosts) {
+                boosts = boosts - note
+                flowSet?.boosts?.invalidateData()
+            }
         }
     }
 
@@ -577,32 +598,44 @@ open class Note(
     }
 
     fun removeReaction(note: Note) {
-        val tags = note.event?.tags ?: emptyArray()
-        val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
+        syncLock.withLock {
+            val tags = note.event?.tags ?: emptyArray()
+            val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
-        if (reactions[reaction]?.contains(note) == true) {
-            reactions[reaction]?.let {
-                if (note in it) {
-                    val newList = it.minus(note)
-                    if (newList.isEmpty()) {
-                        reactions = reactions.minus(reaction)
-                    } else {
-                        reactions = reactions + Pair(reaction, newList)
+            if (reactions[reaction]?.contains(note) == true) {
+                reactions[reaction]?.let {
+                    if (note in it) {
+                        val newList = it.minus(note)
+                        if (newList.isEmpty()) {
+                            reactions = reactions.minus(reaction)
+                        } else {
+                            reactions = reactions + Pair(reaction, newList)
+                        }
+
+                        flowSet?.reactions?.invalidateData()
                     }
-
-                    flowSet?.reactions?.invalidateData()
                 }
             }
         }
     }
 
     fun removeReport(deleteNote: Note) {
-        val author = deleteNote.author ?: return
+        syncLock.withLock {
+            val author = deleteNote.author ?: return
 
-        if (reports[author]?.contains(deleteNote) == true) {
-            reports[author]?.let {
-                reports = reports + Pair(author, it.minus(deleteNote))
-                flowSet?.reports?.invalidateData()
+            if (reports[author]?.contains(deleteNote) == true) {
+                reports[author]?.let {
+                    val newList = it.minus(deleteNote)
+                    // Drop the author key when their last report goes, otherwise
+                    // countReportAuthorsBy() keeps counting a deleted report.
+                    reports =
+                        if (newList.isEmpty()) {
+                            reports.minus(author)
+                        } else {
+                            reports + Pair(author, newList)
+                        }
+                    flowSet?.reports?.invalidateData()
+                }
             }
         }
     }
@@ -630,9 +663,11 @@ open class Note(
     }
 
     fun addBoost(note: Note) {
-        if (note !in boosts) {
-            boosts = boosts + note
-            flowSet?.boosts?.invalidateData()
+        syncLock.withLock {
+            if (note !in boosts) {
+                boosts = boosts + note
+                flowSet?.boosts?.invalidateData()
+            }
         }
     }
 
@@ -908,30 +943,34 @@ open class Note(
     }
 
     fun addReaction(note: Note) {
-        val tags = note.event?.tags ?: emptyArray()
-        val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
+        syncLock.withLock {
+            val tags = note.event?.tags ?: emptyArray()
+            val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
-        val listOfAuthors = reactions[reaction]
-        if (listOfAuthors == null) {
-            reactions = reactions + Pair(reaction, listOf(note))
-            flowSet?.reactions?.invalidateData()
-        } else if (!listOfAuthors.contains(note)) {
-            reactions = reactions + Pair(reaction, listOfAuthors + note)
-            flowSet?.reactions?.invalidateData()
+            val listOfAuthors = reactions[reaction]
+            if (listOfAuthors == null) {
+                reactions = reactions + Pair(reaction, listOf(note))
+                flowSet?.reactions?.invalidateData()
+            } else if (!listOfAuthors.contains(note)) {
+                reactions = reactions + Pair(reaction, listOfAuthors + note)
+                flowSet?.reactions?.invalidateData()
+            }
         }
     }
 
     fun addReport(note: Note) {
-        val author = note.author ?: return
+        syncLock.withLock {
+            val author = note.author ?: return
 
-        val reportsByAuthor = reports[author]
+            val reportsByAuthor = reports[author]
 
-        if (reportsByAuthor == null) {
-            reports = reports + Pair(author, listOf(note))
-            flowSet?.reports?.invalidateData()
-        } else if (!reportsByAuthor.contains(note)) {
-            reports = reports + Pair(author, reportsByAuthor + note)
-            flowSet?.reports?.invalidateData()
+            if (reportsByAuthor == null) {
+                reports = reports + Pair(author, listOf(note))
+                flowSet?.reports?.invalidateData()
+            } else if (!reportsByAuthor.contains(note)) {
+                reports = reports + Pair(author, reportsByAuthor + note)
+                flowSet?.reports?.invalidateData()
+            }
         }
     }
 
@@ -940,25 +979,29 @@ open class Note(
         hashtag: String,
         note: Note,
     ) {
-        val listOfLabelers = labels[hashtag]
-        if (listOfLabelers == null) {
-            labels = labels + Pair(hashtag, listOf(note))
-            flowSet?.labels?.invalidateData()
-        } else if (!listOfLabelers.contains(note)) {
-            labels = labels + Pair(hashtag, listOfLabelers + note)
-            flowSet?.labels?.invalidateData()
+        syncLock.withLock {
+            val listOfLabelers = labels[hashtag]
+            if (listOfLabelers == null) {
+                labels = labels + Pair(hashtag, listOf(note))
+                flowSet?.labels?.invalidateData()
+            } else if (!listOfLabelers.contains(note)) {
+                labels = labels + Pair(hashtag, listOfLabelers + note)
+                flowSet?.labels?.invalidateData()
+            }
         }
     }
 
     /** Detach a LabelEvent note (e.g. deleted) from every hashtag bucket it was in. */
     fun removeLabel(note: Note) {
-        if (labels.none { it.value.contains(note) }) return
+        syncLock.withLock {
+            if (labels.none { it.value.contains(note) }) return
 
-        labels =
-            labels
-                .mapValues { it.value - note }
-                .filterValues { it.isNotEmpty() }
-        flowSet?.labels?.invalidateData()
+            labels =
+                labels
+                    .mapValues { it.value - note }
+                    .filterValues { it.isNotEmpty() }
+            flowSet?.labels?.invalidateData()
+        }
     }
 
     fun addRelaySync(relay: NormalizedRelayUrl) =
@@ -1518,8 +1561,8 @@ open class Note(
                 return true
             }
 
-            if (thisEvent is CommentEvent) {
-                thisEvent.isScoped { it.containsAny(accountChoices.hiddenWordsCase) }
+            if (thisEvent is CommentEvent && thisEvent.isScoped { it.containsAny(accountChoices.hiddenWordsCase) }) {
+                return true
             }
 
             if (thisEvent.anyHashTag { it.containsAny(accountChoices.hiddenWordsCase) }) {
@@ -1550,12 +1593,13 @@ open class Note(
             }
         }
 
-    fun flow(): NoteFlowSet {
-        if (flowSet == null) {
-            createOrDestroyFlowSync(true)
+    fun flow(): NoteFlowSet =
+        // Fast path reads the @Volatile field once; the slow path re-checks under
+        // the same lock createOrDestroyFlowSync() uses, so a concurrent clearFlow()
+        // between the two can't leave us dereferencing a just-nulled set.
+        flowSet ?: syncLock.withLock {
+            flowSet ?: NoteFlowSet(this).also { flowSet = it }
         }
-        return flowSet!!
-    }
 
     fun clearFlow() {
         if (flowSet != null && flowSet?.isInUse() == false) {

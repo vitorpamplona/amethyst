@@ -26,7 +26,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,9 +37,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
@@ -48,32 +48,47 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1200, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "shimmerTranslate",
-    )
+    // Kept as a State (no `by`) and read inside drawBehind: reading it in
+    // composition recomposed every shimmer — six per NoteCardSkeleton — at the
+    // display refresh rate and rebuilt the brush and background modifier each
+    // frame, exactly while the feed is busy parsing events.
+    val translateAnim =
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1000f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 1200, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "shimmerTranslate",
+        )
 
+    val colorScheme = MaterialTheme.colorScheme
     val shimmerColors =
-        listOf(
-            MaterialTheme.colorScheme.surfaceContainerHigh,
-            MaterialTheme.colorScheme.surfaceContainer,
-            MaterialTheme.colorScheme.surfaceContainerHigh,
-        )
+        remember(colorScheme) {
+            listOf(
+                colorScheme.surfaceContainerHigh,
+                colorScheme.surfaceContainer,
+                colorScheme.surfaceContainerHigh,
+            )
+        }
+    val shape = MaterialTheme.shapes.small
 
-    val brush =
-        Brush.linearGradient(
-            colors = shimmerColors,
-            start = Offset(translateAnim - 200f, translateAnim - 200f),
-            end = Offset(translateAnim, translateAnim),
-        )
-
-    Box(modifier.background(brush, MaterialTheme.shapes.small))
+    Box(
+        modifier
+            .clip(shape)
+            .drawBehind {
+                val t = translateAnim.value
+                drawRect(
+                    Brush.linearGradient(
+                        colors = shimmerColors,
+                        start = Offset(t - 200f, t - 200f),
+                        end = Offset(t, t),
+                    ),
+                )
+            },
+    )
 }
 
 @Composable

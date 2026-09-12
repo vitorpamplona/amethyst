@@ -18,6 +18,7 @@ _Audited 2026-06-30 (+ 2026-09-12 split entry). 7 plans: 3 shipped, 2 in-progres
 ## Shipped
 | Plan | Summary |
 | ---- | ------- |
+| [2026-09-12-audit-findings.md](2026-09-12-audit-findings.md) | Bug/performance audit of `commons` + `commonsUI` after the split: 34 verified fixes shipped, 4 deferred with rationale, 6 rejected. |
 | [2026-09-12-commons-ui-split.md](2026-09-12-commons-ui-split.md) | Split the Compose half of `commons` into the new `:commonsUI` module (same packages, `api(:commons)`), so `cli` no longer carries Compose/Skiko; records the classification method and follow-ups. |
 
 ## Archived (shipped)

@@ -32,11 +32,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.collections.immutable.ImmutableList
@@ -65,7 +65,9 @@ fun LoadingAnimation(
 ) {
     val infiniteTransition = rememberInfiniteTransition()
 
-    val rotateAnimation by
+    // Read in graphicsLayer, not composition: `Modifier.rotate(value)` recomposed
+    // the indicator every frame of the loop and rebuilt the sweep gradient.
+    val rotateAnimation =
         infiniteTransition.animateFloat(
             initialValue = 0f,
             targetValue = 360f,
@@ -80,15 +82,17 @@ fun LoadingAnimation(
             label = "UploadGalleryUploadingAnimation",
         )
 
+    val brush = remember(circleColors) { Brush.sweepGradient(circleColors) }
+
     CircularProgressIndicator(
         progress = { 1f },
         modifier =
             Modifier
                 .size(size = indicatorSize)
-                .rotate(degrees = rotateAnimation)
+                .graphicsLayer { rotationZ = rotateAnimation.value }
                 .border(
                     width = circleWidth,
-                    brush = Brush.sweepGradient(circleColors),
+                    brush = brush,
                     shape = CircleShape,
                 ),
         color = MaterialTheme.colorScheme.background,

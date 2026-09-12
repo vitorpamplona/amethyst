@@ -54,7 +54,7 @@ class MetadataFilterAssembler(
     client: INostrClient,
     allKeys: () -> Set<MetadataQueryState>,
 ) : SingleSubEoseManager<MetadataQueryState>(client, allKeys, invalidateAfterEose = true) {
-    override fun distinct(key: MetadataQueryState): Any = key.pubkeys.hashCode()
+    override fun distinct(key: MetadataQueryState): Any = key.pubkeys
 
     override fun updateFilter(
         keys: List<MetadataQueryState>,

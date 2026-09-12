@@ -18,30 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.feeds
+package com.vitorpamplona.amethyst.commons.richtext
 
-import com.vitorpamplona.amethyst.commons.model.IAccount
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.time.measureTime
 
-class ChatroomFeedFilter(
-    val withUser: ChatroomKey,
-    val account: IAccount,
-) : AdditiveFeedFilter<Note>(),
-    ChangesFlowFilter<Note> {
-    fun chatroom() = account.chatroomList.getOrCreatePrivateChatroom(withUser)
-
-    override fun changesFlow() = chatroom().changesFlow()
-
-    // returns the last Note of each user.
-    override fun feedKey(): String = withUser.users.sorted().joinToString(",")
-
-    override fun feed(): List<Note> = chatroom().messages.filter { account.isAcceptable(it) }.sortedWith(DefaultFeedOrder)
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> {
-        val chatroom = chatroom()
-        return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
+class UrlWithoutSchemeTest {
+    @Test
+    fun recognisesSchemelessUrls() {
+        assertTrue(RichTextParser.isUrlWithoutScheme("example.com"))
+        assertTrue(RichTextParser.isUrlWithoutScheme("example.com/path?x=1"))
+        assertTrue(RichTextParser.isUrlWithoutScheme("user@example.com"))
+        assertTrue(RichTextParser.isUrlWithoutScheme("sub.example.com:8080/a-b_c"))
+        assertFalse(RichTextParser.isUrlWithoutScheme("just words"))
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    @Test
+    fun pathologicalInputDoesNotBacktrackExponentially() {
+        // A trailing line terminator forces the regex to fail; with an optional
+        // separator inside the repeated group that failure took 2^n steps
+        // (13 s at n = 26). The composer runs this on every keystroke.
+        val input = "a.b" + "c".repeat(40) + "\r"
+        val elapsed = measureTime { RichTextParser.isUrlWithoutScheme(input) }
+        assertTrue(elapsed.inWholeMilliseconds < 1_000, "took $elapsed")
+    }
 }

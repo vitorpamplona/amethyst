@@ -80,9 +80,11 @@ fun InteractiveChessBoard(
 ) {
     // Track local move count + external version to trigger recomposition when board changes
     var localMoveCount by remember { mutableStateOf(0) }
-    val effectiveVersion = localMoveCount + positionVersion
-    val position = remember(engine, effectiveVersion) { engine.getPosition() }
-    val sideToMove = remember(engine, effectiveVersion) { engine.getSideToMove() }
+    // Two independent counters are two keys, not a sum: a re-synced history
+    // that resets positionVersion while localMoveCount persists must not land
+    // on the same key and serve a stale position.
+    val position = remember(engine, localMoveCount, positionVersion) { engine.getPosition() }
+    val sideToMove = remember(engine, localMoveCount, positionVersion) { engine.getSideToMove() }
     var selectedSquare by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var legalMoves by remember { mutableStateOf<List<String>>(emptyList()) }
 

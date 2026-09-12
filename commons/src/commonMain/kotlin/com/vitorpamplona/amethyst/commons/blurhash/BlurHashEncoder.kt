@@ -83,10 +83,8 @@ class BlurHashEncoder {
 
         val factors = Array(componentX * componentY) { DoubleArray(3) }
 
-        val calculateCosX = !useCache || !CosineCache.hasX(width * componentX)
-        val cosinesX = CosineCache.getArrayForCosinesX(calculateCosX, width, componentX)
-        val calculateCosY = !useCache || !CosineCache.hasY(height * componentY)
-        val cosinesY = CosineCache.getArrayForCosinesY(calculateCosY, height, componentY)
+        val cosinesX = CosineCache.getArrayForCosinesX(useCache, width, componentX)
+        val cosinesY = CosineCache.getArrayForCosinesY(useCache, height, componentY)
 
         val scale = 1.0 / (width * height)
 

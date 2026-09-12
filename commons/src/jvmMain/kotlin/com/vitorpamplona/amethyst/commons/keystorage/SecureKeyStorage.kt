@@ -37,7 +37,7 @@ import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
@@ -78,6 +78,10 @@ actual class SecureKeyStorage private actual constructor() {
         // Encryption constants for fallback
         private const val ALGORITHM = "AES"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
+
+        // AES-GCM must be initialised with GCMParameterSpec (tag length + IV);
+        // IvParameterSpec throws InvalidAlgorithmParameterException on every JDK.
+        private const val GCM_TAG_BITS = 128
         private const val KEY_LENGTH = 256
         private const val ITERATION_COUNT = 100000
         private const val IV_LENGTH = 12 // GCM standard
@@ -393,7 +397,7 @@ actual class SecureKeyStorage private actual constructor() {
         }
     }
 
-    private fun encryptData(
+    internal fun encryptData(
         plaintext: String,
         password: String,
     ): String {
@@ -405,14 +409,14 @@ actual class SecureKeyStorage private actual constructor() {
         val key = SecretKeySpec(secretKey.encoded, ALGORITHM)
 
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, key, IvParameterSpec(iv))
+        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
         val encrypted = cipher.doFinal(plaintext.toByteArray())
 
         val combined = salt + iv + encrypted
         return Base64.getEncoder().encodeToString(combined)
     }
 
-    private fun decryptData(
+    internal fun decryptData(
         ciphertext: String,
         password: String,
     ): String {
@@ -427,7 +431,7 @@ actual class SecureKeyStorage private actual constructor() {
         val key = SecretKeySpec(secretKey.encoded, ALGORITHM)
 
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, key, IvParameterSpec(iv))
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
         val decrypted = cipher.doFinal(encrypted)
 
         return String(decrypted)

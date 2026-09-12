@@ -31,17 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
-
-/**
- * Determines if the current color scheme is light.
- * Uses the luminance of the background color.
- */
-@Composable
-private fun isLightTheme(): Boolean {
-    val background = MaterialTheme.colorScheme.background
-    // Simple luminance check: if any RGB component > 0.5, consider it light
-    return (background.red + background.green + background.blue) / 3 > 0.5f
-}
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
 /**
  * Displays a robohash image based on a seed string (typically a public key).
@@ -61,7 +51,7 @@ fun RobohashImage(
 ) {
     if (loadRobohash) {
         Image(
-            imageVector = CachedRobohash.get(robot, isLightTheme()),
+            imageVector = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
             contentDescription = contentDescription,
             modifier = modifier,
         )
@@ -90,7 +80,7 @@ fun RobohashImage(
 ) {
     if (loadRobohash) {
         Image(
-            painter = rememberVectorPainter(CachedRobohash.get(robot, isLightTheme())),
+            painter = rememberVectorPainter(CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight)),
             contentDescription = contentDescription,
             modifier = modifier,
             alignment = alignment,

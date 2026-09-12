@@ -648,8 +648,10 @@ private fun MoveHistoryDisplay(moves: List<String>) {
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Group moves into pairs (white, black)
-                    moves.chunked(2).forEachIndexed { index, movePair ->
+                    // Group moves into pairs (white, black); remembered so a
+                    // recomposition per relay move doesn't re-chunk the list.
+                    val movePairs = remember(moves) { moves.chunked(2) }
+                    movePairs.forEachIndexed { index, movePair ->
                         // Move number
                         Text(
                             text = "${index + 1}.",

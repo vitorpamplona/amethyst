@@ -34,10 +34,9 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -79,21 +78,28 @@ fun BunkerHeartbeatIndicator(
         when (signerConnectionState) {
             is SignerConnectionState.Connected -> {
                 val infiniteTransition = rememberInfiniteTransition(label = "heartbeat")
-                val scale by infiniteTransition.animateFloat(
-                    initialValue = 0.85f,
-                    targetValue = 1.15f,
-                    animationSpec =
-                        infiniteRepeatable(
-                            animation = tween(800),
-                            repeatMode = RepeatMode.Reverse,
-                        ),
-                    label = "heartbeatScale",
-                )
+                // No `by`: reading the value in composition recomposed the
+                // indicator every frame for as long as a bunker was connected.
+                val scale =
+                    infiniteTransition.animateFloat(
+                        initialValue = 0.85f,
+                        targetValue = 1.15f,
+                        animationSpec =
+                            infiniteRepeatable(
+                                animation = tween(800),
+                                repeatMode = RepeatMode.Reverse,
+                            ),
+                        label = "heartbeatScale",
+                    )
                 Icon(
                     MaterialSymbols.Favorite,
                     contentDescription = "Bunker connected",
                     tint = Color(0xFF4CAF50),
-                    modifier = Modifier.size(20.dp).scale(scale),
+                    modifier =
+                        Modifier.size(20.dp).graphicsLayer {
+                            scaleX = scale.value
+                            scaleY = scale.value
+                        },
                 )
             }
 

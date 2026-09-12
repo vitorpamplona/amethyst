@@ -31,7 +31,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -43,6 +44,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+private val GLOW_BRUSH = Brush.sweepGradient(colors = listOf(Color.Cyan, Color.Magenta, Color.Yellow))
+private val DASH_INTERVALS = floatArrayOf(10f, 10f)
 
 @Composable
 fun AnimatedBorderTextCornerRadius(
@@ -69,25 +73,24 @@ fun AnimatedBorderTextCornerRadius(
         fontSize = fontSize,
         modifier =
             modifier
-                .drawBehind {
-                    val brush =
-                        Brush.sweepGradient(
-                            colors = listOf(Color.Cyan, Color.Magenta, Color.Yellow),
+                .drawWithCache {
+                    // Brush, stroke geometry and corner radius don't change per
+                    // frame; only the dash phase does. Build them once per size.
+                    val strokeWidth = 2.dp.toPx()
+                    val cornerRadius = CornerRadius(6.dp.toPx())
+                    onDrawBehind {
+                        drawRoundRect(
+                            brush = GLOW_BRUSH,
+                            style =
+                                Stroke(
+                                    width = strokeWidth,
+                                    cap = StrokeCap.Round,
+                                    join = StrokeJoin.Round,
+                                    pathEffect = PathEffect.dashPathEffect(DASH_INTERVALS, animatedFloatRestart.value),
+                                ),
+                            cornerRadius = cornerRadius,
                         )
-
-                    drawRoundRect(
-                        brush = brush,
-                        style =
-                            Stroke(
-                                width = 2.dp.toPx(),
-                                cap = StrokeCap.Round,
-                                join = StrokeJoin.Round,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), animatedFloatRestart.value),
-                            ),
-                        cornerRadius =
-                            androidx.compose.ui.geometry
-                                .CornerRadius(6.dp.toPx()),
-                    )
+                    }
                 }.padding(3.dp),
         color = color,
         textAlign = textAlign,

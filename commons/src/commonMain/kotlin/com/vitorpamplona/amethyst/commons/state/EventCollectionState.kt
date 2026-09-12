@@ -173,11 +173,14 @@ class EventCollectionState<T : Any>(
         get() = _items.value.isEmpty()
 
     /**
-     * Schedules a batched update if not already scheduled.
-     * Cancels existing batch job and starts a new one.
+     * Schedules a batched update if not already scheduled (leading-edge
+     * throttle). Cancelling and restarting the timer on every insert instead
+     * would starve the flush on a busy feed: items arriving more often than
+     * [batchDelayMs] would keep resetting the delay and the screen would never
+     * update until the stream paused.
      */
     private fun scheduleBatchUpdate() {
-        batchJob?.cancel()
+        if (batchJob?.isActive == true) return
         batchJob =
             scope.launch {
                 delay(batchDelayMs)

@@ -71,7 +71,10 @@ class StaticSitePublisher(
                 root.isDirectory ->
                     root
                         .walkTopDown()
-                        .filter { it.isFile }
+                        // Never follow a link out of the published tree: a symlink
+                        // to ~ would publish the home directory to a Blossom server.
+                        .onEnter { !Files.isSymbolicLink(it.toPath()) }
+                        .filter { it.isFile && !Files.isSymbolicLink(it.toPath()) && it.canonicalFile.startsWith(root) }
                         .sortedBy { it.invariantPath() }
                         .toList()
                 else -> throw IllegalArgumentException("No such file or directory: ${root.path}")

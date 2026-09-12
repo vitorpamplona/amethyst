@@ -70,9 +70,12 @@ fun ClickableTextColor(
     linkColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit,
 ) {
+    // onClick is baked into the LinkAnnotation, so it must be a key: a recycled
+    // slot with the same label and a new handler would otherwise keep firing
+    // the old target.
     Text(
         text =
-            remember(text) {
+            remember(text, linkColor, onClick) {
                 buildAnnotatedString {
                     appendLink(text, linkColor, onClick)
                 }
@@ -97,7 +100,7 @@ fun ClickableTextNormal(
 ) {
     Text(
         text =
-            remember(text) {
+            remember(text, onClick) {
                 buildAnnotatedString {
                     appendLink(text, onClick)
                 }

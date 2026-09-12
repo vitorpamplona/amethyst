@@ -82,28 +82,13 @@ fun InLineIconRenderer(
             if (fontSize == TextUnit.Unspecified) 22.sp else fontSize.times(1.1f)
         }
 
+    // Remembered like annotatedText below: rebuilding this map handed Text a
+    // fresh unstable Map (plus a Placeholder and lambda per emoji) on every
+    // recomposition of every name/note with a custom emoji.
     val inlineContent =
-        wordsInOrder
-            .mapIndexedNotNull { idx, value ->
-                if (value is CustomEmoji.ImageUrlType) {
-                    "inlineContent$idx" to
-                        InlineTextContent(
-                            Placeholder(
-                                width = placeholderSize,
-                                height = placeholderSize,
-                                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-                            ),
-                        ) {
-                            AsyncImage(
-                                model = value.url,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 0.dp),
-                            )
-                        }
-                } else {
-                    null
-                }
-            }.associate { it.first to it.second }
+        remember(wordsInOrder, placeholderSize) {
+            wordsInOrder.buildInlineContent(placeholderSize)
+        }
 
     val annotatedText =
         remember(wordsInOrder, style) {
@@ -127,3 +112,25 @@ fun InLineIconRenderer(
         modifier = modifier,
     )
 }
+
+private fun ImmutableList<CustomEmoji.Renderable>.buildInlineContent(placeholderSize: TextUnit): Map<String, InlineTextContent> =
+    mapIndexedNotNull { idx, value ->
+        if (value is CustomEmoji.ImageUrlType) {
+            "inlineContent$idx" to
+                InlineTextContent(
+                    Placeholder(
+                        width = placeholderSize,
+                        height = placeholderSize,
+                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+                    ),
+                ) {
+                    AsyncImage(
+                        model = value.url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 0.dp),
+                    )
+                }
+        } else {
+            null
+        }
+    }.associate { it.first to it.second }

@@ -153,8 +153,10 @@ class LiveStreamTopZappersViewModel(
         }
     }
 
-    private fun publish() {
-        val merged = streamContributions.values + goalContributions.values
+    private suspend fun publish() {
+        // Snapshot both maps under the same mutex their writers hold; the two
+        // collectors (channel changes, goal zaps) run on different coroutines.
+        val merged = mutex.withLock { streamContributions.values + goalContributions.values }
         _topZappers.value = LiveActivityTopZappersAggregator.aggregate(merged, limit)
     }
 

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import com.vitorpamplona.quartz.utils.Log
 import org.apache.commons.imaging.Imaging
 import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter
 import java.io.ByteArrayOutputStream
@@ -37,7 +38,9 @@ object MediaCompressor {
      * carries no EXIF, or strip fails.
      */
     fun stripExif(file: File): File {
-        if (!file.name.lowercase().let { it.endsWith(".jpg") || it.endsWith(".jpeg") }) {
+        // Sniff the bytes rather than trusting the name: a camera JPEG handed
+        // over as an extension-less temp file must still lose its GPS tags.
+        if (ImageFormatSniffer.sniff(file) !is ImageFormat.Jpeg) {
             return file
         }
 
@@ -52,7 +55,9 @@ object MediaCompressor {
             val stripped = AmethystTempDir.createTempFile("amethyst_stripped_", ".jpg")
             stripped.writeBytes(baos.toByteArray())
             stripped
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // Never silent: the UI promises the original is stripped before upload.
+            Log.w("MediaCompressor", "EXIF strip failed for ${file.name}; uploading unstripped original", e)
             file
         }
     }

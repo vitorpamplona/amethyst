@@ -29,7 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,9 +76,9 @@ fun SearchPeoplePicker(
 ) {
     if (candidates.isEmpty()) return
     LazyColumn(modifier.heightIn(max = 280.dp)) {
-        items(candidates, key = { it.pubkeyHex }) { candidate ->
+        itemsIndexed(candidates, key = { _, candidate -> candidate.pubkeyHex }) { index, candidate ->
             PickerRow(
-                highlighted = candidates.indexOf(candidate) == highlighted,
+                highlighted = index == highlighted,
                 onClick = { onPick(candidate) },
                 leading = {
                     UserAvatar(
@@ -105,9 +105,9 @@ fun SearchGroupPicker(
 ) {
     if (candidates.isEmpty()) return
     LazyColumn(modifier.heightIn(max = 280.dp)) {
-        items(candidates, key = { it.id }) { candidate ->
+        itemsIndexed(candidates, key = { _, candidate -> candidate.id }) { index, candidate ->
             PickerRow(
-                highlighted = candidates.indexOf(candidate) == highlighted,
+                highlighted = index == highlighted,
                 onClick = { onPick(candidate) },
                 title = candidate.name,
                 subtitle = candidate.subtitle,
@@ -132,9 +132,9 @@ fun SearchKindPicker(
 ) {
     if (candidates.isEmpty()) return
     LazyColumn(modifier.heightIn(max = 280.dp)) {
-        items(candidates, key = { it.alias }) { candidate ->
+        itemsIndexed(candidates, key = { _, candidate -> candidate.alias }) { index, candidate ->
             PickerRow(
-                highlighted = candidates.indexOf(candidate) == highlighted,
+                highlighted = index == highlighted,
                 onClick = { onPick(candidate) },
                 title = candidate.alias,
                 // What the token will actually ask for. `kind:video` is four kinds and

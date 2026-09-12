@@ -26,6 +26,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
 import okhttp3.coroutines.executeAsync
 
 class UrlPreview {
@@ -63,7 +64,7 @@ class UrlPreview {
                                 ?: throw IllegalArgumentException("Website returned unknown mimetype: ${response.headers["Content-Type"]}")
                         when {
                             mimeType.type == "text" && mimeType.subtype == "html" -> {
-                                val metaTags = HtmlParser().parseHtml(response.body.bytes(), mimeType.charset()?.name())
+                                val metaTags = HtmlParser().parseHtml(response.body.readPrefix(MAX_PREVIEW_BYTES), mimeType.charset()?.name())
                                 val data = OpenGraphParser().extractUrlInfo(metaTags)
                                 UrlInfoItem(
                                     url,
@@ -112,3 +113,16 @@ class UrlPreview {
             }
         }
 }
+
+/**
+ * Link previews only need the `<head>` (MetaTagsParser stops at `</head>`), and
+ * the URL is attacker-controlled: any note can point at a host that streams
+ * `text/html` forever. Read at most [max] bytes instead of `bytes()`.
+ */
+private fun ResponseBody.readPrefix(max: Long): ByteArray =
+    source().use { src ->
+        src.request(max)
+        src.buffer.readByteArray(minOf(src.buffer.size, max))
+    }
+
+private const val MAX_PREVIEW_BYTES = 512L * 1024L

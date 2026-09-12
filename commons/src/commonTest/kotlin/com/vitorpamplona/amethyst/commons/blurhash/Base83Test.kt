@@ -18,30 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.feeds
+package com.vitorpamplona.amethyst.commons.blurhash
 
-import com.vitorpamplona.amethyst.commons.model.IAccount
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-class ChatroomFeedFilter(
-    val withUser: ChatroomKey,
-    val account: IAccount,
-) : AdditiveFeedFilter<Note>(),
-    ChangesFlowFilter<Note> {
-    fun chatroom() = account.chatroomList.getOrCreatePrivateChatroom(withUser)
-
-    override fun changesFlow() = chatroom().changesFlow()
-
-    // returns the last Note of each user.
-    override fun feedKey(): String = withUser.users.sorted().joinToString(",")
-
-    override fun feed(): List<Note> = chatroom().messages.filter { account.isAcceptable(it) }.sortedWith(DefaultFeedOrder)
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> {
-        val chatroom = chatroom()
-        return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
+class Base83Test {
+    @Test
+    fun charactersOutsideLatin1DecodeAsZeroInsteadOfThrowing() {
+        // The blurhash string comes from an attacker-controlled imeta tag.
+        assertEquals(0, Base83.decodeAt("€"))
+        assertEquals(0, Base83.decode("€￿"))
+        assertEquals(Base83.decodeFixed2("00"), Base83.decodeFixed2("€€"))
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    @Test
+    fun alphabetRoundTrips() {
+        Base83.ALPHABET.forEachIndexed { i, c -> assertEquals(i, Base83.decodeAt(c.toString())) }
+    }
 }

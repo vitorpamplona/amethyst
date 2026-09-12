@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -50,8 +51,12 @@ fun Modifier.zonedDrawerSwipe(
         var gestureStartPage by remember { mutableIntStateOf(0) }
         var drawerOpened by remember { mutableStateOf(false) }
 
+        // The connection is remembered for the pager's lifetime; read the
+        // current lambda through rememberUpdatedState so a caller that
+        // re-creates openDrawer (new drawer state, account switch) is honoured.
+        val currentOpenDrawer by rememberUpdatedState(openDrawer)
         val connection =
-            remember {
+            remember(pagerState) {
                 object : NestedScrollConnection {
                     override fun onPreScroll(
                         available: Offset,
@@ -68,7 +73,7 @@ fun Modifier.zonedDrawerSwipe(
 
                             if (!wasOnFirstPage && !isInPagerZone) {
                                 drawerOpened = true
-                                openDrawer()
+                                currentOpenDrawer()
                                 return Offset(available.x, 0f)
                             }
                         }
@@ -87,7 +92,7 @@ fun Modifier.zonedDrawerSwipe(
                         // so child LazyRows can scroll first.
                         if (available.x > 0f && gestureStartPage == 0) {
                             drawerOpened = true
-                            openDrawer()
+                            currentOpenDrawer()
                             return Offset(available.x, 0f)
                         }
                         return Offset.Zero
