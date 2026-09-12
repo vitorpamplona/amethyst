@@ -93,6 +93,16 @@ class RichTextParserAudioUrlTest {
     }
 
     @Test
+    fun theVideoPlayerPageIsTheSameTrap() {
+        // nostr.build mirrors the scheme for video: `v_<id>_mp4` is an HTML page, and the file it
+        // is about lives on v.nostr.build.
+        assertFalse(RichTextParser.isVideoUrl("https://e.nostr.build/v_ETvKzX2OdOGmFEp1avRlm5_mp4?t=Clip"))
+        assertNull(RichTextParser.classifyMedia("https://e.nostr.build/v_ETvKzX2OdOGmFEp1avRlm5_mp4?t=Clip", null))
+
+        assertTrue(RichTextParser.isVideoUrl("https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4"))
+    }
+
+    @Test
     fun aSlugEndingInAnExtensionsLettersIsNotMedia() {
         assertFalse(RichTextParser.isAudioUrl("https://example.com/my-thoughts-on-mp3"))
         assertFalse(RichTextParser.isVideoUrl("https://example.com/how-to-rip-a-webm"))

@@ -112,7 +112,7 @@ fun RenderLoaded(
 ) {
     // Bound to a local: `UrlInfoItem` lives in another module, so the null check below cannot
     // smart-cast the property itself.
-    val playableAudio = state.previewInfo.playableAudioUrl
+    val playableMedia = state.previewInfo.playableMediaUrl
 
     when {
         state.previewInfo.mimeType.startsWith("image") -> {
@@ -149,21 +149,21 @@ fun RenderLoaded(
             }
         }
 
-        // An HTML page that declares the audio file it is a player for: nostr.build publishes a
-        // player page per uploaded track and points at the real mp3 from `og:audio`. Play that
-        // file, with the page's `og:image` as cover art, instead of a card that only links out.
-        // `playableAudioUrl` is null unless the page also vouched for the type, so a page with a
-        // junk `og:audio` still falls through to the card below.
-        playableAudio != null -> {
+        // An HTML page that declares the media file it is a player for: nostr.build publishes one
+        // such page per upload and names the real file in `og:video` or `og:audio`. Play that
+        // file, with the page's `og:image` as poster/cover art, instead of a card that only links
+        // out. `playableMediaUrl` is null unless the page's declared type held up, so a page whose
+        // `og:video` is really an embed (YouTube's, say) still falls through to the card below.
+        playableMedia != null -> {
             Box(modifier = HalfVertPadding) {
                 ZoomableContentView(
                     content =
                         MediaUrlVideo(
-                            url = playableAudio,
+                            url = playableMedia,
                             description = state.previewInfo.title.ifBlank { null },
                             uri = callbackUri,
                             artworkUri = state.previewInfo.imageUrlFullPath.ifBlank { null },
-                            mimeType = state.previewInfo.audioType.ifBlank { null },
+                            mimeType = state.previewInfo.playableMediaType,
                         ),
                     roundedCorner = true,
                     contentScale = ContentScale.FillWidth,

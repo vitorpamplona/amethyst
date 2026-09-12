@@ -73,6 +73,8 @@ class UrlPreview {
                                     mimeType.toString(),
                                     data.audio,
                                     data.audioType,
+                                    data.video,
+                                    data.videoType,
                                 )
                             }
 

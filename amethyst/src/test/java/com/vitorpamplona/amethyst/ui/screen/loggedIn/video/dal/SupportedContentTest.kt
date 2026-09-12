@@ -65,6 +65,7 @@ class SupportedContentTest {
         // nostr.build's HTML player page: `_mp3`, not `.mp3`. It used to be admitted into the
         // video feed by a bare endsWith.
         assertTrue(!contentSupport.acceptableUrl("https://e.nostr.build/a_ETvKzX2OdOGmFEp1avRlm5_mp3?t=Aria", null))
+        assertTrue(!contentSupport.acceptableUrl("https://e.nostr.build/v_ETvKzX2OdOGmFEp1avRlm5_mp4?t=Clip", null))
         assertTrue(!contentSupport.acceptableUrl("https://example.com/my-thoughts-on-mp3", null))
         assertTrue(!contentSupport.acceptableUrl("https://example.com/mp4", null))
     }

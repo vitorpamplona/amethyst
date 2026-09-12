@@ -29,6 +29,10 @@ class OpenGraphParser {
         val audio: String = "",
         /** The `og:audio:type` MIME the page declares for [audio], e.g. `audio/mpeg`. */
         val audioType: String = "",
+        /** The `og:video` URL the page declares for itself, verbatim (may be relative). */
+        val video: String = "",
+        /** The `og:video:type` MIME the page declares for [video], e.g. `video/mp4`. */
+        val videoType: String = "",
     )
 
     companion object {
@@ -60,22 +64,41 @@ class OpenGraphParser {
                 "image",
             )
 
-        // The audio file a media-host page is *about*. Media hosts publish a human-facing HTML
-        // player page and point at the real file from here: nostr.build's
-        // `e.nostr.build/a_<id>_mp3` page carries `og:audio` = `a.nostr.build/<id>.mp3`. Without
-        // this the page can only be rendered as a card that links out.
+        // The media file a host page is *about*. Media hosts publish a human-facing HTML player
+        // page and point at the real file from here. nostr.build does exactly this, in both
+        // families: `e.nostr.build/a_<id>_mp3` carries `og:audio` = `a.nostr.build/<id>.mp3`, and
+        // `e.nostr.build/v_<id>_mp4` carries `og:video` = `v.nostr.build/<id>.mp4`. Without these
+        // such a page can only be rendered as a card that links out.
         //
-        // Deliberately `og:` only. `twitter:player:stream` is not included because it is usually a
-        // video stream, and a player pointed at the wrong thing is worse than a link.
+        // `:url` and `:secure_url` are the spec's aliases for the bare key and are read because
+        // hosts disagree on which to emit -- nostr.build writes the bare `og:video`, YouTube only
+        // `og:video:url`. Reading a key is not the same as trusting it: what a page declares here
+        // is filtered by the `:type` below before anything is handed to a player.
+        //
+        // Deliberately `og:` only. `twitter:player:stream` is not included because it is usually
+        // an embed, and a player pointed at the wrong thing is worse than a link.
         private val META_X_AUDIO =
             arrayOf(
                 "og:audio",
+                "og:audio:url",
                 "og:audio:secure_url",
             )
 
         private val META_X_AUDIO_TYPE =
             arrayOf(
                 "og:audio:type",
+            )
+
+        private val META_X_VIDEO =
+            arrayOf(
+                "og:video",
+                "og:video:url",
+                "og:video:secure_url",
+            )
+
+        private val META_X_VIDEO_TYPE =
+            arrayOf(
+                "og:video:type",
             )
 
         private val CONTENT = "content"
@@ -88,6 +111,8 @@ class OpenGraphParser {
         IMAGE,
         AUDIO,
         AUDIO_TYPE,
+        VIDEO,
+        VIDEO_TYPE,
     }
 
     private fun fieldFor(key: String): Field? =
@@ -97,15 +122,27 @@ class OpenGraphParser {
             in META_X_IMAGE -> Field.IMAGE
             in META_X_AUDIO -> Field.AUDIO
             in META_X_AUDIO_TYPE -> Field.AUDIO_TYPE
+            in META_X_VIDEO -> Field.VIDEO
+            in META_X_VIDEO_TYPE -> Field.VIDEO_TYPE
             else -> null
         }
 
+    /**
+     * Reads every `<meta>` the scanner yields, keeping the first value seen for each field.
+     *
+     * There is deliberately no early exit once the fields are filled. The one that used to be here
+     * stopped at title+description+image, which is a set every page completes before it reaches
+     * `og:audio`/`og:video` -- so on nostr.build's player pages it skipped the single field that
+     * makes the page playable. The scan is bounded anyway: [MetaTagsParser] stops at `</head>`.
+     */
     fun extractUrlInfo(metaTags: Sequence<MetaTag>): Result {
         var title = ""
         var description = ""
         var image = ""
         var audio = ""
         var audioType = ""
+        var video = ""
+        var videoType = ""
 
         metaTags.forEach {
             // A meta tag names its key in exactly one of these three attributes, but which one
@@ -123,22 +160,11 @@ class OpenGraphParser {
                 Field.IMAGE -> if (image.isEmpty()) image = it.attr(CONTENT)
                 Field.AUDIO -> if (audio.isEmpty()) audio = it.attr(CONTENT)
                 Field.AUDIO_TYPE -> if (audioType.isEmpty()) audioType = it.attr(CONTENT)
+                Field.VIDEO -> if (video.isEmpty()) video = it.attr(CONTENT)
+                Field.VIDEO_TYPE -> if (videoType.isEmpty()) videoType = it.attr(CONTENT)
                 null -> Unit
             }
-
-            // The early exit now has to wait for the audio pair too: pages put `og:audio` after
-            // `og:image` (nostr.build does), so exiting on title+description+image alone dropped
-            // the very field that makes the page playable. Nothing is scanned twice for it — the
-            // sequence stops at `</head>` either way.
-            if (title.isNotEmpty() &&
-                description.isNotEmpty() &&
-                image.isNotEmpty() &&
-                audio.isNotEmpty() &&
-                audioType.isNotEmpty()
-            ) {
-                return Result(title, description, image, audio, audioType)
-            }
         }
-        return Result(title, description, image, audio, audioType)
+        return Result(title, description, image, audio, audioType, video, videoType)
     }
 }

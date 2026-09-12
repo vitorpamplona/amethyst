@@ -199,4 +199,72 @@ class OpenGraphParserTest {
         assertEquals("", info.audio)
         assertEquals("", info.audioType)
     }
+
+    @Test
+    fun readsTheVideoFileAPlayerPageDeclares() {
+        // The mirror of the audio page above, from the same host:
+        // https://e.nostr.build/v_<id>_mp4 -- `og:type` flips to video.other and the media pair
+        // becomes og:video/og:video:type.
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:type" content="video.other"/>
+                |  <meta property="og:title" content="Clip by Someone"/>
+                |  <meta property="og:image" content="https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4/poster.jpg"/>
+                |  <meta property="og:video" content="https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4"/>
+                |  <meta property="og:video:secure_url" content="https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4"/>
+                |  <meta property="og:video:type" content="video/mp4"/>
+                |  <meta property="og:video:width" content="1280"/>
+                |  <meta property="og:video:height" content="720"/>
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4", info.video)
+        assertEquals("video/mp4", info.videoType)
+        assertEquals("", info.audio)
+    }
+
+    @Test
+    fun readsTheUrlAliasForHostsThatOnlyEmitIt() {
+        // YouTube writes og:video:url and never the bare og:video. Parsing it is not trusting it
+        // -- see UrlInfoItemMediaTest, where this exact declaration is refused on its text/html
+        // type -- but a host that spells it this way with a real file must still be readable.
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:video:url" content="https://www.youtube.com/embed/dQw4w9WgXcQ">
+                |  <meta property="og:video:type" content="text/html">
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("https://www.youtube.com/embed/dQw4w9WgXcQ", info.video)
+        assertEquals("text/html", info.videoType)
+    }
+
+    @Test
+    fun mediaTagsAreReadEvenWhenTheyTrailACompleteCard() {
+        // The regression the removed early exit caused: title, description and image are all
+        // filled before og:audio/og:video appear, so stopping there skipped the media entirely.
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:title" content="T">
+                |  <meta property="og:description" content="D">
+                |  <meta property="og:image" content="https://example.com/i.png">
+                |  <meta property="og:audio" content="https://example.com/a.mp3">
+                |  <meta property="og:audio:type" content="audio/mpeg">
+                |  <meta property="og:video" content="https://example.com/v.mp4">
+                |  <meta property="og:video:type" content="video/mp4">
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("https://example.com/a.mp3", info.audio)
+        assertEquals("https://example.com/v.mp4", info.video)
+    }
 }
