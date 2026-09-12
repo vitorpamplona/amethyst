@@ -2807,4 +2807,21 @@
     <string name="web_bookmark_url_label">URL</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_volume">Volume</string>
+    <string name="health_connect_rationale_headline">O Amethyst lê treinos concluídos para preencher previamente uma publicação de treino para você.</string>
+    <string name="health_connect_rationale_title">Health Connect e Amethyst</string>
+    <string name="health_connect_rationale_intro">O Amethyst é um cliente social do Nostr. A seção Treinos permite publicar um resumo de um treino concluído nos relays do Nostr que você escolher, para que quem segue você veja o que você fez. Em vez de digitar cada número à mão, o Amethyst pode ler o treino que seu relógio ou aplicativo de fitness já salvou no Health Connect e preencher a publicação previamente. Você sempre vê a publicação preenchida e decide se quer publicá-la.</string>
+    <string name="health_connect_rationale_what_title">O que o Amethyst lê e por quê</string>
+    <string name="health_connect_rationale_exercise">Exercício · qual atividade você fez, quando começou e quanto tempo durou — é o treino em si, além do título e da duração da publicação.</string>
+    <string name="health_connect_rationale_steps">Passos · a contagem de passos de uma corrida, caminhada ou trilha.</string>
+    <string name="health_connect_rationale_distance">Distância · o quanto você percorreu, exibido como a distância da corrida, pedalada, caminhada ou natação.</string>
+    <string name="health_connect_rationale_calories">Calorias ativas e totais · a energia gasta no treino. As calorias ativas são usadas quando sua fonte as registra; as calorias totais são a alternativa para fontes que registram apenas a energia total.</string>
+    <string name="health_connect_rationale_elevation">Elevação · o quanto você subiu, que é o que distingue um percurso plano de um acidentado.</string>
+    <string name="health_connect_rationale_heart_rate">Frequência cardíaca · a frequência média e máxima durante o treino, a medida padrão do esforço.</string>
+    <string name="health_connect_rationale_limits_title">O que o Amethyst não faz</string>
+    <string name="health_connect_rationale_limit_window">Lê apenas treinos concluídos nos últimos 7 dias e somente enquanto o editor de Treinos está aberto. Nunca lê em segundo plano.</string>
+    <string name="health_connect_rationale_limit_publish">Nada sai do seu telefone até você tocar em uma sugestão e publicar por conta própria. O Amethyst não tem servidor: a publicação vai para os relays do Nostr que você configurou.</string>
+    <string name="health_connect_rationale_limit_write">Nunca grava nada no Health Connect e nunca solicita seu trajeto de exercício, localização ou qualquer outro tipo de dado de saúde.</string>
+    <string name="health_connect_rationale_limit_optional">Todo o recurso é opcional. Desative-o em Configurações → Configurações de composição, ou revogue as permissões no Health Connect a qualquer momento — o restante do Amethyst continua funcionando.</string>
+    <string name="health_connect_rationale_privacy_policy">Ler a política de privacidade completa</string>
+    <string name="workout_suggestion_connect_details">O que o Amethyst lê</string>
 </resources>

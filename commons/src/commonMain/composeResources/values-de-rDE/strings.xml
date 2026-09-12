@@ -2807,4 +2807,21 @@
     <string name="website">Website</string>
     <string name="workout">Workout</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
+    <string name="health_connect_rationale_headline">Amethyst liest abgeschlossene Workouts, um einen Workout-Beitrag für dich vorauszufüllen.</string>
+    <string name="health_connect_rationale_title">Health Connect und Amethyst</string>
+    <string name="health_connect_rationale_intro">Amethyst ist ein sozialer Nostr-Client. Im Bereich Workouts kannst du eine Zusammenfassung eines abgeschlossenen Workouts an die Nostr-Relays deiner Wahl veröffentlichen, damit die Leute, die dir folgen, sehen können, was du gemacht hast. Statt jede Zahl von Hand einzutippen, kann Amethyst das Workout lesen, das deine Uhr oder Fitness-App bereits in Health Connect gespeichert hat, und den Beitrag vorausfüllen. Du siehst den vorausgefüllten Beitrag immer und entscheidest, ob du ihn veröffentlichst.</string>
+    <string name="health_connect_rationale_what_title">Was Amethyst liest und warum</string>
+    <string name="health_connect_rationale_exercise">Übung · welche Aktivität du gemacht hast, wann sie begann und wie lange sie dauerte — das ist das Workout selbst sowie Titel und Dauer des Beitrags.</string>
+    <string name="health_connect_rationale_steps">Schritte · die Schrittzahl eines Laufs, Spaziergangs oder einer Wanderung.</string>
+    <string name="health_connect_rationale_distance">Distanz · wie weit du gekommen bist, angezeigt als Distanz des Laufs, der Fahrt, des Spaziergangs oder des Schwimmens.</string>
+    <string name="health_connect_rationale_calories">Aktive und gesamte Kalorien · die beim Workout verbrannte Energie. Aktive Kalorien werden verwendet, wenn deine Quelle sie aufzeichnet; gesamte Kalorien sind der Ersatz für Quellen, die nur die Gesamtenergie aufzeichnen.</string>
+    <string name="health_connect_rationale_elevation">Höhenmeter · wie viel du gestiegen bist, was eine flache Fahrt von einer hügeligen unterscheidet.</string>
+    <string name="health_connect_rationale_heart_rate">Herzfrequenz · die durchschnittliche und maximale Herzfrequenz während des Workouts, das übliche Maß für die Anstrengung.</string>
+    <string name="health_connect_rationale_limits_title">Was Amethyst nicht tut</string>
+    <string name="health_connect_rationale_limit_window">Liest nur Workouts, die in den letzten 7 Tagen beendet wurden, und nur während der Workout-Editor geöffnet ist. Im Hintergrund wird nie gelesen.</string>
+    <string name="health_connect_rationale_limit_publish">Nichts verlässt dein Telefon, bis du auf einen Vorschlag tippst und den Beitrag selbst veröffentlichst. Amethyst hat keinen Server: Der Beitrag geht an die Nostr-Relays, die du eingerichtet hast.</string>
+    <string name="health_connect_rationale_limit_write">Schreibt nie etwas in Health Connect und fragt nie nach deiner Trainingsroute, deinem Standort oder anderen Gesundheitsdaten.</string>
+    <string name="health_connect_rationale_limit_optional">Die gesamte Funktion ist optional. Schalte sie unter Einstellungen → Editor-Einstellungen aus oder entziehe die Berechtigungen jederzeit in Health Connect — der Rest von Amethyst funktioniert weiter.</string>
+    <string name="health_connect_rationale_privacy_policy">Vollständige Datenschutzerklärung lesen</string>
+    <string name="workout_suggestion_connect_details">Was Amethyst liest</string>
 </resources>

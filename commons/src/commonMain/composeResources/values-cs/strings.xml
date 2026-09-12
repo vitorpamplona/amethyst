@@ -2821,4 +2821,21 @@
     <string name="web_bookmark_url_label">URL</string>
     <string name="web_bookmark_url_placeholder">https://example.com</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
+    <string name="health_connect_rationale_headline">Amethyst čte dokončené tréninky, aby za vás mohl předvyplnit příspěvek o tréninku.</string>
+    <string name="health_connect_rationale_title">Health Connect a Amethyst</string>
+    <string name="health_connect_rationale_intro">Amethyst je sociální klient sítě Nostr. Jeho sekce Tréninky vám umožňuje zveřejnit souhrn dokončeného tréninku na relaye Nostr, které si zvolíte, aby lidé, kteří vás sledují, viděli, co jste dělali. Místo ručního vypisování každého čísla může Amethyst načíst trénink, který vaše hodinky nebo fitness aplikace už uložily do Health Connect, a příspěvek předvyplnit. Předvyplněný příspěvek vždy uvidíte a sami rozhodnete, zda ho zveřejníte.</string>
+    <string name="health_connect_rationale_what_title">Co Amethyst čte a proč</string>
+    <string name="health_connect_rationale_exercise">Cvičení · jakou aktivitu jste dělali, kdy začala a jak dlouho trvala — to je samotný trénink a zároveň název a doba trvání příspěvku.</string>
+    <string name="health_connect_rationale_steps">Kroky · počet kroků při běhu, chůzi nebo turistice.</string>
+    <string name="health_connect_rationale_distance">Vzdálenost · jak daleko jste se dostali, zobrazená jako vzdálenost běhu, jízdy, chůze nebo plavání.</string>
+    <string name="health_connect_rationale_calories">Aktivní a celkové kalorie · energie spálená při tréninku. Aktivní kalorie se použijí, pokud je váš zdroj zaznamenává; celkové kalorie jsou náhradou pro zdroje, které zaznamenávají pouze celkovou energii.</string>
+    <string name="health_connect_rationale_elevation">Převýšení · kolik jste nastoupali, což odlišuje rovinatou jízdu od kopcovité.</string>
+    <string name="health_connect_rationale_heart_rate">Tepová frekvence · průměrná a maximální tepová frekvence během tréninku, běžné měřítko náročnosti.</string>
+    <string name="health_connect_rationale_limits_title">Co Amethyst nedělá</string>
+    <string name="health_connect_rationale_limit_window">Čte pouze tréninky dokončené za posledních 7 dní, a to jen když je otevřený editor Tréninků. Na pozadí nečte nikdy.</string>
+    <string name="health_connect_rationale_limit_publish">Nic neopustí váš telefon, dokud sami neklepnete na návrh a příspěvek nezveřejníte. Amethyst nemá žádný server: příspěvek jde na relaye Nostr, které jste nastavili.</string>
+    <string name="health_connect_rationale_limit_write">Nikdy nic nezapisuje do Health Connect a nikdy nežádá o trasu vašeho cvičení, polohu ani jiný typ zdravotních údajů.</string>
+    <string name="health_connect_rationale_limit_optional">Celá funkce je volitelná. Vypnete ji v Nastavení → Nastavení editoru, nebo kdykoli odeberete oprávnění v Health Connect — zbytek Amethystu funguje dál.</string>
+    <string name="health_connect_rationale_privacy_policy">Přečíst si celé zásady ochrany soukromí</string>
+    <string name="workout_suggestion_connect_details">Co Amethyst čte</string>
 </resources>

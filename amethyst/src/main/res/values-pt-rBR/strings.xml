@@ -2384,4 +2384,9 @@
     <!-- Health Connect: activity label, shown by Health Connect next to the link into our
          rationale screen. Needs to be an Android resource (not a commons Compose resource)
          because android:label on the manifest entry can only reference @string/. -->
+    <string name="health_connect_rationale_activity_label">Health Connect e Amethyst</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d itens</item>
+    </plurals>
 </resources>
