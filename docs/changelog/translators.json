@@ -75,33 +75,9 @@
     "rchk": ""
   },
   "sinceLastTag": {
-    "tag": "v1.15.1",
-    "since": "2026-09-11T18:52:14-04:00",
+    "tag": "v1.15.2",
+    "since": "2026-09-12T10:34:37-04:00",
     "translators": [
-      {
-        "user": "rajs19420616",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
-        ]
-      },
-      {
-        "user": "davotoula",
-        "languages": [
-          "Czech"
-        ]
-      },
       {
         "user": "vitorpamplona",
         "languages": []
@@ -179,6 +155,10 @@
         "languages": []
       },
       {
+        "user": "davotoula",
+        "languages": []
+      },
+      {
         "user": "crackadoo",
         "languages": []
       },
@@ -243,6 +223,10 @@
         "languages": []
       },
       {
+        "user": "rajs19420616",
+        "languages": []
+      },
+      {
         "user": "Maxblake",
         "languages": []
       },
@@ -267,6 +251,10 @@
         "languages": []
       },
       {
+        "user": "summoner001",
+        "languages": []
+      },
+      {
         "user": "fiddleway",
         "languages": []
       },
@@ -284,6 +272,10 @@
       },
       {
         "user": "hypnotichemionus4",
+        "languages": []
+      },
+      {
+        "user": "maxblake2015",
         "languages": []
       },
       {
