@@ -129,6 +129,17 @@ class BlossomReadAuthTokenProvider(
         val fresh = CompletableDeferred<String?>()
         inFlight.putIfAbsent(host, fresh)?.let { return it }
 
+        // Third look, now that this caller owns the slot. The look above still leaves a
+        // gap: a leader can insert, sign, cache and retire its entry entirely between
+        // that read and the putIfAbsent, so the map is empty again and this caller wins
+        // it. Any leader that retired before this insert cached first, so a token
+        // present now is theirs — take it and give the slot back instead of re-signing.
+        cachedHeader(host)?.let {
+            inFlight.remove(host, fresh)
+            fresh.complete(it)
+            return fresh
+        }
+
         scope
             .launch {
                 val header =
