@@ -81,7 +81,9 @@ val RepliesAndReactionsKinds =
 val RootScopedRepliesKinds =
     listOf(
         CommentEvent.KIND,
-        // NIP-34 PR revisions point at the PR they revise through `E`.
+        // NIP-34 kind 1619 carries the PR it revises in `E` and has no lowercase
+        // `e` at all (see the spec's PR Update example), so this filter is the
+        // only engagement route to a PR's revision chain.
         GitPullRequestUpdateEvent.KIND,
     )
 
@@ -92,12 +94,12 @@ val RepliesAndReactionsKinds2 =
         NIP90StatusEvent.KIND,
         TorrentCommentEvent.KIND,
         GitReplyEvent.KIND,
-        // NIP-34 PR revision (1619) and status events (1630/1631/1632/1633).
-        // Rooted at the target patch/PR/issue via a `root`-marked `e` tag, so
-        // an `e=<targetId>` engagement fetch surfaces the PR's revision chain
-        // and every open/applied/closed/draft transition — the signal
-        // GitStatusIndex needs to answer isClosedOrResolved() for repo rows.
-        GitPullRequestUpdateEvent.KIND,
+        // NIP-34 status events (1630/1631/1632/1633). Rooted at the target
+        // patch/PR/issue via a `root`-marked `e` tag, so an `e=<targetId>`
+        // engagement fetch surfaces every open/applied/closed/draft transition —
+        // the signal GitStatusIndex needs to answer isClosedOrResolved() for
+        // repo rows. PR revisions (1619) anchor with `E` instead and are pulled
+        // by [RootScopedRepliesKinds]; listing them here matched nothing.
         GitStatusOpenEvent.KIND,
         GitStatusAppliedEvent.KIND,
         GitStatusClosedEvent.KIND,

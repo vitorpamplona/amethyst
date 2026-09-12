@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
 import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.NotificationsPerKeyKinds2
 import com.vitorpamplona.amethyst.commons.relayClient.event.watchers.RepliesAndReactionsKinds2
+import com.vitorpamplona.amethyst.commons.relayClient.event.watchers.RootScopedRepliesKinds
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -32,6 +33,7 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -116,25 +118,30 @@ class Nip34NotificationCoverageTest {
 
     /**
      * A status/update event's discovery path when a repo or PR is on screen: the
-     * [`e`=<targetId>][RepliesAndReactionsKinds2] engagement subscription. Without
-     * this the closed/merged pill on a repo listing can never populate — the
-     * status event's only other route to the device is the `#p`=me subscription,
-     * which only fires for accounts that were pre-tagged as participants.
-     * Patches/issues/PRs are self-anchored (they ARE the target, not events
-     * about the target), so they are intentionally NOT expected here.
+     * engagement subscription. Without this the closed/merged pill on a repo
+     * listing can never populate — the status event's only other route to the
+     * device is the `#p`=me subscription, which only fires for accounts that were
+     * pre-tagged as participants. Patches/issues/PRs are self-anchored (they ARE
+     * the target, not events about the target), so they are intentionally NOT
+     * expected here.
+     *
+     * Which of the two engagement filters carries a kind depends on how that kind
+     * anchors itself, so the two halves are asserted separately below: statuses
+     * and replies use a `root`-marked lowercase `e`, PR revisions use NIP-22's
+     * uppercase `E`. Asserting the wrong half passes the kind list while matching
+     * nothing on the wire.
      */
     @Test
-    fun `status and PR-update kinds are pulled by the engagement subscription`() {
-        val threadedActivityKinds =
+    fun `status kinds are pulled by the lowercase-e engagement subscription`() {
+        val eAnchoredActivityKinds =
             setOf(
-                GitPullRequestUpdateEvent.KIND,
                 GitReplyEvent.KIND,
                 GitStatusOpenEvent.KIND,
                 GitStatusAppliedEvent.KIND,
                 GitStatusClosedEvent.KIND,
                 GitStatusDraftEvent.KIND,
             )
-        val missing = threadedActivityKinds - RepliesAndReactionsKinds2.toSet()
+        val missing = eAnchoredActivityKinds - RepliesAndReactionsKinds2.toSet()
         assertTrue(
             "Kinds $missing are missing from RepliesAndReactionsKinds2. When a repo/PR row is " +
                 "on screen the app fetches replies + reactions targeting the visible events — " +
@@ -142,6 +149,28 @@ class Nip34NotificationCoverageTest {
                 "merged pill on a repo listing never populates for anyone who isn't a p-tagged " +
                 "participant of the PR.",
             missing.isEmpty(),
+        )
+    }
+
+    /**
+     * Kind 1619 has no lowercase `e` tag at all — NIP-34's PR Update example carries
+     * only `["E", <pull-request-event-id>]` — so it can only ever arrive through the
+     * uppercase root-scope filter. It sat in [RepliesAndReactionsKinds2] for a while
+     * and matched nothing there.
+     */
+    @Test
+    fun `PR-update kind is pulled by the uppercase-E engagement subscription`() {
+        assertTrue(
+            "GitPullRequestUpdateEvent (1619) is missing from RootScopedRepliesKinds. It anchors " +
+                "at the PR it revises with NIP-22's uppercase `E` and carries no lowercase `e`, " +
+                "so the `#e` engagement filter can never surface a PR's revision chain.",
+            GitPullRequestUpdateEvent.KIND in RootScopedRepliesKinds,
+        )
+        assertFalse(
+            "GitPullRequestUpdateEvent (1619) is back in RepliesAndReactionsKinds2, the `#e` " +
+                "filter's kind list. 1619 has no lowercase `e` tag, so the entry matches nothing " +
+                "and only makes the filter look like it covers PR updates.",
+            GitPullRequestUpdateEvent.KIND in RepliesAndReactionsKinds2,
         )
     }
 }
