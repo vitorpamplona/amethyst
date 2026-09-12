@@ -199,6 +199,7 @@ class UiSharedPreferences(
         val UI_GALLERY_SET = stringPreferencesKey("ui.gallery_set")
         val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
         val UI_USE_TRACKED_BROADCASTS = stringPreferencesKey("ui.use_tracked_broadcasts")
+        val UI_PLAY_YOUTUBE_IN_APP = stringPreferencesKey("ui.play_youtube_in_app")
         val UI_AUTOMATICALLY_CREATE_DRAFTS = stringPreferencesKey("ui.automatically_create_drafts")
         val UI_SHOW_HOME_NEW_THREADS_TAB = booleanPreferencesKey("ui.show_home_new_threads_tab")
         val UI_SHOW_HOME_CONVERSATIONS_TAB = booleanPreferencesKey("ui.show_home_conversations_tab")
@@ -229,6 +230,7 @@ class UiSharedPreferences(
                     automaticallyShowImages = preferences[UI_SHOW_IMAGES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyStartPlayback = preferences[UI_START_PLAYBACK]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyPlayVideos = preferences[UI_PLAY_VIDEOS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
+                    playYouTubeInApp = preferences[UI_PLAY_YOUTUBE_IN_APP]?.let { BooleanType.valueOf(it) } ?: BooleanType.NEVER,
                     automaticallyShowUrlPreview = preferences[UI_SHOW_URL_PREVIEW]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyHideNavigationBars = preferences[UI_HIDE_NAVIGATION_BARS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     automaticallyShowProfilePictures = preferences[UI_SHOW_PROFILE_PICTURES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
@@ -286,6 +288,7 @@ class UiSharedPreferences(
                     preferences[UI_SHOW_IMAGES] = sharedSettings.automaticallyShowImages.name
                     preferences[UI_START_PLAYBACK] = sharedSettings.automaticallyStartPlayback.name
                     preferences[UI_PLAY_VIDEOS] = sharedSettings.automaticallyPlayVideos.name
+                    preferences[UI_PLAY_YOUTUBE_IN_APP] = sharedSettings.playYouTubeInApp.name
                     preferences[UI_SHOW_URL_PREVIEW] = sharedSettings.automaticallyShowUrlPreview.name
                     preferences[UI_HIDE_NAVIGATION_BARS] = sharedSettings.automaticallyHideNavigationBars.name
                     preferences[UI_SHOW_PROFILE_PICTURES] = sharedSettings.automaticallyShowProfilePictures.name

@@ -26,6 +26,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -55,6 +56,8 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
@@ -157,7 +160,10 @@ class NappletBrowserActivity : ComponentActivity() {
     private val backCallback =
         object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
-                if (this@NappletBrowserActivity::webView.isInitialized && webView.canGoBack()) {
+                if (isFullscreen) {
+                    // Back leaves the video, it does not leave the page behind it.
+                    exitFullscreen()
+                } else if (this@NappletBrowserActivity::webView.isInitialized && webView.canGoBack()) {
                     webView.goBack()
                 } else {
                     isEnabled = false
@@ -167,7 +173,90 @@ class NappletBrowserActivity : ComponentActivity() {
         }
 
     private fun syncBackState() {
-        if (this::webView.isInitialized) backCallback.isEnabled = webView.canGoBack()
+        // Fullscreen has its own back behaviour (leave the video), so the callback stays enabled
+        // for it even on a page with no history.
+        if (isFullscreen) {
+            backCallback.isEnabled = true
+        } else if (this::webView.isInitialized) {
+            backCallback.isEnabled = webView.canGoBack()
+        }
+    }
+
+    // --- HTML5 fullscreen ---------------------------------------------------------------------
+
+    /**
+     * The black backdrop holding a page's fullscreen video, or null when not in fullscreen.
+     *
+     * Without the [WebChromeClient.onShowCustomView] pair below, `Element.requestFullscreen()` has
+     * no effect at all: the base implementation does nothing, so the fullscreen button on every
+     * embedded player -- YouTube's included -- is a dead tap. The view WebView hands us is the
+     * video surface detached from the page; it has to be parented somewhere, and returned when the
+     * page (or the viewer) asks to come back.
+     */
+    private var fullscreenContainer: FrameLayout? = null
+
+    /** WebView's "I have taken your view back" callback. Must be answered exactly once. */
+    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
+
+    private val isFullscreen get() = fullscreenContainer != null
+
+    private fun enterFullscreen(
+        view: View,
+        callback: WebChromeClient.CustomViewCallback,
+    ) {
+        if (fullscreenContainer != null) {
+            // A second request without an intervening hide: refuse it, but answer the callback --
+            // an unanswered one wedges the page's player in a half-fullscreen state forever.
+            runCatching { callback.onCustomViewHidden() }
+            return
+        }
+
+        fullscreenCallback = callback
+        fullscreenContainer =
+            FrameLayout(this)
+                .apply {
+                    setBackgroundColor(Color.BLACK)
+                    addView(
+                        view,
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            Gravity.CENTER,
+                        ),
+                    )
+                }.also {
+                    // A sibling of the padded content root, so the video really does reach the
+                    // screen edges instead of inheriting the host's system-bar insets.
+                    addContentView(
+                        it,
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                        ),
+                    )
+                }
+
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
+        syncBackState()
+    }
+
+    private fun exitFullscreen() {
+        val container = fullscreenContainer ?: return
+
+        (container.parent as? ViewGroup)?.removeView(container)
+        container.removeAllViews()
+        fullscreenContainer = null
+
+        // Hands the video surface back to the page. Skipping this leaves the player believing it
+        // is still fullscreen, and the next tap on its button does nothing.
+        runCatching { fullscreenCallback?.onCustomViewHidden() }
+        fullscreenCallback = null
+
+        WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+        syncBackState()
     }
 
     private val brokerConnection =
@@ -298,6 +387,10 @@ class NappletBrowserActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        // Give the video surface back before the WebView is torn down: it belongs to the page, and
+        // destroying the WebView while we still hold one of its views is the corruption described
+        // below in miniature.
+        exitFullscreen()
         // Tell the broker to drop every reference to our reply Messenger BEFORE unbinding — a retained
         // Messenger is a binder, and it would pin this Activity (and its WebView) in `:napplet` for the
         // life of the process. `unbindService` alone does not release it. See [replyMessenger].
@@ -391,6 +484,13 @@ class NappletBrowserActivity : ComponentActivity() {
             filePathCallback: ValueCallback<Array<Uri>>,
             fileChooserParams: FileChooserParams,
         ): Boolean = showFileChooser(filePathCallback, fileChooserParams)
+
+        override fun onShowCustomView(
+            view: View,
+            callback: CustomViewCallback,
+        ) = enterFullscreen(view, callback)
+
+        override fun onHideCustomView() = exitFullscreen()
 
         override fun onProgressChanged(
             view: WebView,

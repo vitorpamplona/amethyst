@@ -57,6 +57,7 @@ class UiSettingsFlow(
     val composeSignature: MutableStateFlow<String> = MutableStateFlow(""),
     val showOnchainWallet: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val playYouTubeInApp: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.NEVER),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -90,6 +91,7 @@ class UiSettingsFlow(
             composeSignature,
             showOnchainWallet,
             showPayToZapChip,
+            playYouTubeInApp,
         )
 
     // emits at every change in any of the propertyes.
@@ -127,6 +129,7 @@ class UiSettingsFlow(
                 flows[27] as String,
                 flows[28] as Boolean,
                 flows[29] as Boolean,
+                flows[30] as BooleanType,
             )
         }
 
@@ -162,6 +165,7 @@ class UiSettingsFlow(
             composeSignature.value,
             showOnchainWallet.value,
             showPayToZapChip.value,
+            playYouTubeInApp.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -287,6 +291,10 @@ class UiSettingsFlow(
             showPayToZapChip.tryEmit(torSettings.showPayToZapChip)
             any = true
         }
+        if (playYouTubeInApp.value != torSettings.playYouTubeInApp) {
+            playYouTubeInApp.tryEmit(torSettings.playYouTubeInApp)
+            any = true
+        }
 
         return any
     }
@@ -342,6 +350,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.composeSignature),
                 MutableStateFlow(uiSettings.showOnchainWallet),
                 MutableStateFlow(uiSettings.showPayToZapChip),
+                MutableStateFlow(uiSettings.playYouTubeInApp),
             )
     }
 }

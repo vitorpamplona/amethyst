@@ -147,6 +147,9 @@ class UiSettingsState(
 
     fun autoPlayVideos() = uiSettingsFlow.automaticallyPlayVideos.value == BooleanType.ALWAYS
 
+    /** Whether a YouTube link opens in the in-app sandboxed browser instead of the external app. */
+    fun playYouTubeInApp() = uiSettingsFlow.playYouTubeInApp.value == BooleanType.ALWAYS
+
     val autoPlayVideosFlow: StateFlow<Boolean> =
         uiSettingsFlow.automaticallyPlayVideos
             .map { it == BooleanType.ALWAYS }

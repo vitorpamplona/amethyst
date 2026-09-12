@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.YouTubeInApp
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
@@ -133,8 +135,17 @@ fun VideoDisplay(
         ) {
             if (isYouTube) {
                 val uri = LocalUriHandler.current
+                val context = LocalContext.current
                 Row(
-                    modifier = Modifier.clickable { runCatching { uri.openUri(imeta.url) } },
+                    // In-app playback opens YouTube's player page in the sandboxed browser; when
+                    // it is off (the default) or the link names no video, this stays the handoff
+                    // to the external app that it has always been.
+                    modifier =
+                        Modifier.clickable {
+                            if (!YouTubeInApp.open(context, imeta.url)) {
+                                runCatching { uri.openUri(imeta.url) }
+                            }
+                        },
                 ) {
                     image?.let {
                         MyAsyncImage(

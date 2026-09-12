@@ -1442,6 +1442,7 @@
     <string name="automatically_load_images_gifs">Image Preview</string>
     <string name="automatically_play_videos">Video Playback</string>
     <string name="autoplay_videos">Autoplay Videos</string>
+    <string name="play_youtube_in_app">Play YouTube in Amethyst</string>
     <string name="automatically_show_url_preview">URL Preview</string>
     <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
     <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
@@ -1659,6 +1660,7 @@
     <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>
     <string name="automatically_play_videos_description">Automatically load videos and GIFs</string>
     <string name="autoplay_videos_description">Automatically play videos when visible on screen</string>
+    <string name="play_youtube_in_app_description">Open YouTube links in the in-app browser instead of the YouTube app</string>
     <string name="automatically_show_url_preview_description">Show URL previews</string>
 
 

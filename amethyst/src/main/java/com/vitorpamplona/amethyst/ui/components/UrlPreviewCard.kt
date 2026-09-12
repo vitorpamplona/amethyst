@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
@@ -66,6 +67,7 @@ fun UrlPreviewCard(
     onCardClick: (() -> Unit)? = null,
 ) {
     val uri = LocalUriHandler.current
+    val context = LocalContext.current
     val popupExpanded =
         remember {
             mutableStateOf(false)
@@ -108,7 +110,9 @@ fun UrlPreviewCard(
                     onClick = {
                         if (onCardClick != null) {
                             onCardClick()
-                        } else {
+                        } else if (!YouTubeInApp.open(context, url)) {
+                            // Not a YouTube video, or in-app playback is off: open it the way this
+                            // card always has.
                             runCatching { uri.openUri(url) }
                         }
                     },

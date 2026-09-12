@@ -170,6 +170,8 @@ fun SettingsScreen(
             SettingsDivider()
             AutoplayVideosTile(sharedPrefs)
             SettingsDivider()
+            PlayYouTubeInAppTile(sharedPrefs)
+            SettingsDivider()
             UrlPreviewTile(sharedPrefs)
             SettingsDivider()
             ProfilePictureTile(sharedPrefs)
@@ -407,6 +409,16 @@ private fun AutoplayVideosTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.PlayCircle,
         title = R.string.autoplay_videos,
         description = R.string.autoplay_videos_description,
+    )
+}
+
+@Composable
+private fun PlayYouTubeInAppTile(sharedPrefs: UiSettingsFlow) {
+    BooleanSwitchTile(
+        flow = sharedPrefs.playYouTubeInApp,
+        icon = MaterialSymbols.SmartDisplay,
+        title = R.string.play_youtube_in_app,
+        description = R.string.play_youtube_in_app_description,
     )
 }
 

@@ -65,6 +65,12 @@ data class UiSettings(
     // be bank or Venmo handles carrying legal names, and this puts them one tap
     // from every note in the feed.
     val showPayToZapChip: Boolean = true,
+    // Whether a YouTube link plays inside Amethyst -- in the sandboxed in-app browser, on
+    // YouTube's IFrame player page -- instead of being handed to the external YouTube app.
+    // Defaults to NEVER: the handoff is the behavior every existing user already has, the
+    // external app plays better (their account, quality, downloads), and an in-app YouTube
+    // page is YouTube's scripts running on a page we opened. Opt-in, not opt-out.
+    val playYouTubeInApp: BooleanType = BooleanType.NEVER,
 )
 
 enum class ThemeType(
