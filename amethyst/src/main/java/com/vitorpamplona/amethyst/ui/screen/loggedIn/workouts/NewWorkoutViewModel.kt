@@ -93,20 +93,30 @@ class NewWorkoutViewModel : ViewModel() {
      */
     fun applyPrefill(route: Route.NewWorkout) {
         route.exercise?.let { ExerciseType.parse(it) }?.let { exercise = it }
-        route.title?.let { title = it }
+        title = route.title ?: ""
 
+        // Every metric is assigned on both branches. Picking a second suggestion has to
+        // REPLACE the form, not merge into it: a gym session carries no distance, so
+        // leaving the previous run's 5 km in the field would publish a workout that
+        // never happened.
         if (route.durationSeconds > 0) {
             hours = (route.durationSeconds / 3600).toString()
             minutes = ((route.durationSeconds % 3600) / 60).toString()
             seconds = (route.durationSeconds % 60).toString()
+        } else {
+            hours = ""
+            minutes = ""
+            seconds = ""
         }
         if (route.distanceMeters > 0) {
             val miles = phonePrefersMiles()
             distanceUnit = if (miles) DistanceTag.MILES else DistanceTag.KILOMETERS
             val value = if (miles) route.distanceMeters / DistanceTag.METERS_PER_MILE else route.distanceMeters / 1000.0
             distance = ((value * 100).roundToInt() / 100.0).toString()
+        } else {
+            distance = ""
         }
-        if (route.calories > 0) calories = route.calories.toString()
+        calories = if (route.calories > 0) route.calories.toString() else ""
 
         route.source?.let { source = it }
         avgHeartRate = route.avgHeartRate

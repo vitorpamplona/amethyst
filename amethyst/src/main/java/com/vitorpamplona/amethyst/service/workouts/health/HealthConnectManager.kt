@@ -36,6 +36,8 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToInt
@@ -53,6 +55,9 @@ class HealthConnectManager(
     private val context: Context,
 ) {
     private val client: HealthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
+
+    /** Writer package -> display label. See [resolveSourceName]. */
+    private val sourceNames = mutableMapOf<String, String>()
 
     companion object {
         private const val TAG = "HealthConnectManager"
@@ -132,25 +137,31 @@ class HealthConnectManager(
             return emptyList()
         }
 
-        return try {
-            val response =
-                client.readRecords(
-                    ReadRecordsRequest(
-                        recordType = ExerciseSessionRecord::class,
-                        timeRangeFilter = TimeRangeFilter.between(since, now),
-                    ),
-                )
-            Log.i(TAG) { "readNewWorkouts: ${response.records.size} exercise session(s) in window $since .. $now" }
-            val mapped = response.records.mapNotNull { mapSession(it) }
-            // Fold split-up sessions of the same activity (a long run broken around
-            // breaks) into one suggestion so the composer offers the whole effort.
-            val merged = WorkoutMerger.mergeCloseWorkouts(mapped)
-            Log.i(TAG) { "readNewWorkouts: mapped ${mapped.size} -> ${merged.size} workout(s) after type/duration filtering and merging" }
-            merged
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "Failed to read workouts from Health Connect", e)
-            emptyList()
+        // The callers are composables launching into rememberCoroutineScope(), i.e.
+        // Dispatchers.Main. Health Connect's own calls suspend, but the PackageManager
+        // lookup in resolveSourceName is a blocking binder call, so the whole read
+        // moves off the UI thread rather than relying on each step to behave.
+        return withContext(Dispatchers.IO) {
+            try {
+                val response =
+                    client.readRecords(
+                        ReadRecordsRequest(
+                            recordType = ExerciseSessionRecord::class,
+                            timeRangeFilter = TimeRangeFilter.between(since, now),
+                        ),
+                    )
+                Log.i(TAG) { "readNewWorkouts: ${response.records.size} exercise session(s) in window $since .. $now" }
+                val mapped = response.records.mapNotNull { mapSession(it) }
+                // Fold split-up sessions of the same activity (a long run broken around
+                // breaks) into one suggestion so the composer offers the whole effort.
+                val merged = WorkoutMerger.mergeCloseWorkouts(mapped)
+                Log.i(TAG) { "readNewWorkouts: mapped ${mapped.size} -> ${merged.size} workout(s) after type/duration filtering and merging" }
+                merged
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "Failed to read workouts from Health Connect", e)
+                emptyList()
+            }
         }
     }
 
@@ -208,11 +219,19 @@ class HealthConnectManager(
      */
     private fun resolveSourceName(packageName: String): String {
         if (packageName.isBlank()) return DEFAULT_SOURCE
-        runCatching {
-            val pm = context.packageManager
-            return pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
-        }
-        return KNOWN_SOURCES[packageName] ?: packageName
+        // Memoized: getApplicationInfo is a blocking binder call, and a week of sessions
+        // almost always comes from the same one or two writer apps, so an uncached lookup
+        // pays for the same round trip once per session.
+        sourceNames[packageName]?.let { return it }
+
+        val resolved =
+            runCatching {
+                val pm = context.packageManager
+                pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
+            }.getOrNull() ?: KNOWN_SOURCES[packageName] ?: packageName
+
+        sourceNames[packageName] = resolved
+        return resolved
     }
 
     /** Aggregates the optional metrics over the session window. Null if aggregation fails. */

@@ -5,3 +5,31 @@ is an open protocol that is able to create a censorship-resistant global "social
 notes and other stuff using relays. It doesn't rely on any trusted central server, hence it is resilient;
 it is based on cryptographic keys and signatures, so it is tamperproof; it does not rely on P2P techniques,
 therefore it works.</p>
+<p><b>What you can do with Amethyst</b></p>
+<ul>
+<li>Post text, photos, videos, long-form articles, polls and voice notes to the relays you choose.</li>
+<li>Follow people, reply, repost, react and quote.</li>
+<li>Send private, end-to-end encrypted direct messages and join group chats.</li>
+<li>Browse dedicated feeds: articles, pictures, short videos, live streams, podcasts, music, communities,
+classifieds, calendars and more.</li>
+<li>Send and receive Bitcoin Lightning zaps.</li>
+<li>Share your workouts &mdash; see below.</li>
+</ul>
+<p><b>Workouts</b></p>
+<p>Amethyst has a Workouts section where you can publish a summary of a run, ride, walk, hike, swim, row
+or gym session so the people who follow you can see what you did. Open the left drawer, tap
+<i>Workouts</i>, then the + button to write one.</p>
+<p>Typing every number by hand is tedious, so Amethyst can pre-fill the post from a workout your watch or
+fitness app already saved to Android Health Connect (Samsung Health, Google Fit, Fitbit, Garmin Connect,
+Strava and others all write there). With your permission, Amethyst reads finished workouts from the last
+7 days and offers them as one-tap suggestions: pick one and the activity, duration, distance, calories,
+heart rate, steps and elevation gain are filled in for you. You review the post and decide whether to
+publish it.</p>
+<p>This is optional and read-only. Amethyst asks for Health Connect permission only when you open the New
+Workout composer, never reads in the background, never writes to Health Connect, never asks for your
+exercise route or location, and never uploads anything until you publish a post yourself. You can switch
+it off under Settings &rarr; Compose Settings, or revoke access in Health Connect at any time. Full
+details are in the privacy policy at
+<a href='https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md' target='_blank' rel='nofollow noopener'>github.com/vitorpamplona/amethyst</a>.</p>
+<p>Amethyst is free and open source (MIT). There is no Amethyst server and no Amethyst account: your
+posts go straight to the Nostr relays you configure.</p>
