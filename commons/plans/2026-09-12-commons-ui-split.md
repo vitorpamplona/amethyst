@@ -84,11 +84,29 @@ next to the `:commons` ones on macOS.
   existing `feeds` package, next to `feeds/custom`). Consumer imports rewritten.
 - **Chess composables moved to `nip64Chess/ui`** in `commonsUI`; the logic
   stays in `commons/…/nip64Chess/`.
+- **`ui/note/ParentNote` + `ReplyContext` moved to `commons/…/model/`** next to
+  `ThreadAssembler` (with the `StubCache` test fixture). No `ui.*` package is
+  left in `commons`.
 
-## Open
+## Decided: `commons` keeps the Compose compiler plugin
 
-- `commons` still applies the Compose *compiler* plugin on purpose (stability
-  inference for its model classes as seen from the apps' composables).
-  Revisit if a `runtime-annotation`-only setup proves sufficient.
-- `ui/note/ParentNote` + `ReplyContext` remain in `commons` under a `ui.*`
-  package name (pure logic; candidate for `model/`).
+Measured rather than guessed. With `composeCompiler { reportsDestination }`
+on the three GUI modules and full (non-incremental, `--rerun`) compiles in
+both configurations, removing the plugin from `commons` flips composable
+parameters typed with unannotated commons classes from runtime-stable to
+unstable:
+
+| Module | unstable params, plugin on | plugin off |
+|---|---|---|
+| `commonsUI` | 20 | 28 |
+| `desktopApp` | 33 | 65 |
+| `amethyst` (fdroidDebug) | 90 | 149 |
+
+The classes involved (`TopFilter`, `TorSettings`, `TorServiceStatus`,
+`ProfileBroadcastStatus`, `ScheduledPost`, `EmojiPackState`,
+`Nip65RelayListState`, `PendingAuthApproval`, `UserSearchEngine`, …) are
+all-`val` classes with no `@Stable`/`@Immutable` annotation; the plugin infers
+their stability and keeps inferring it as they evolve. Hand-annotating them
+would reproduce today's result but rot silently the first time a `var` is
+added, so the plugin stays. Recorded in `commons/build.gradle.kts`.
+

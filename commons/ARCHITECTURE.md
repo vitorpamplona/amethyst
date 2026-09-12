@@ -75,7 +75,7 @@ in `commonsUI`, under the same package.
 ### Domain models & data
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly, and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event-store interfaces + `UserMetadataCache`. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
+| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event-store interfaces + `UserMetadataCache`. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
 | `defaults`     | no  | Static bootstrap data (default relays, channels). |
 
 ¹ `model` uses only the `@Stable`/`@Immutable` runtime annotations — CLI-safe.
@@ -126,7 +126,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 ### UI (Compose — lives in **`commonsUI`**)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/note`, `ui/richtext`, `ui/search`, `ui/notifications`, `ui/screens`, `ui/layouts`, `ui/markdown`, `ui/privacylock`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. **Exception:** `ui/note/ParentNote`+`ReplyContext` (pure thread logic) stay in *this* module. The `ui/feeds` composables (`NewPostsChip`, `RelayReachMarker`…) are in `commonsUI`; the feed DAL that used to share that package now lives in `feeds/` here. |
+| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/note`, `ui/richtext`, `ui/search`, `ui/notifications`, `ui/screens`, `ui/layouts`, `ui/markdown`, `ui/privacylock`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. Nothing under `ui.*` lives in *this* module any more: the feed DAL that used to sit in `ui/feeds` is now `feeds/`, and the reply-context logic that sat in `ui/note` (`replyingDirectlyTo`, `ReplyContext`) is now in `model/` next to `ThreadAssembler`. |
 | `nip23LongContent` | yes | Long-form (NIP-23) article UI: `nip23LongContent/ui/article` (reader) + `…/ui/editor` (authoring). The model lives in `model/nip23LongContent` (here). |
 | `icons`        | yes | `ImageVector` icon definitions + builders, Material Symbols codepoints, the icon-font glyph tables. |
 | `hashtags`     | yes | Custom hashtag `ImageVector`s. |
@@ -232,9 +232,13 @@ compiles: `commonMain` → `jvmAndroid` → platform-specific. See
 
 These are intentionally *documented*, not silently tolerated. Fix opportunistically.
 
-- **`ui/note` in `commons`** still hosts `ParentNote` + `ReplyContext` (pure
-  thread logic used by ViewModels) under a `ui.*` package name. Candidate for
-  `model/` when touched next.
+- **`commons` applies the Compose *compiler* plugin without declaring any
+  composable.** Deliberate, not debt: the plugin's `@StabilityInferred`
+  stamps are what keep unannotated commons classes stable from the apps'
+  point of view. Measured on full recompiles (2026-09-12): without it,
+  unstable composable params go 20→28 in `commonsUI`, 33→65 in `desktopApp`,
+  90→149 in `amethyst`. Don't remove it; if a class must be stable for a
+  hot path, annotate it explicitly as well.
 - **Same package tree in two modules.** Intentional (zero-import-churn split),
   but it means a package's module is not visible from its name. Rule of
   thumb: if it imports Compose UI it is in `commonsUI`; check §2 when unsure.

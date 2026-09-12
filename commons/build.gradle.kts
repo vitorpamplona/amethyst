@@ -11,9 +11,13 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     // Kept on purpose even though no @Composable lives here anymore: the
     // Compose compiler stamps @StabilityInferred on every class it compiles,
-    // which is what lets the apps' composables treat commons models (Note,
-    // User, states) as stable/skippable. Dropping it would silently make all
-    // of them "unstable" from the UI's point of view.
+    // which is what lets the apps' composables treat unannotated commons
+    // classes (TopFilter, TorSettings, ProfileBroadcastStatus, …) as stable.
+    // Measured with Compose compiler reports on full recompiles (2026-09-12):
+    // removing this plugin turns 20→28 composable params unstable in
+    // :commonsUI, 33→65 in :desktopApp and 90→149 in :amethyst. Inference is
+    // also self-maintaining, unlike hand-written @Immutable annotations that
+    // silently lie once a `var` is added — so this stays.
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.serialization)
 }
