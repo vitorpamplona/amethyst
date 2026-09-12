@@ -139,6 +139,10 @@
         <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
         <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
     </plurals>
+    <plurals name="birdex_species_more">
+        <item quantity="one">स %1$d अधिक</item>
+        <item quantity="other">स %1$d अधिक</item>
+    </plurals>
     <string name="ps1_save_title">पीएस१ स्मृति पत्रक अभिलेखन</string>
     <string name="ps1_save_block">खण्ड %1$d</string>
     <string name="ps1_save_empty_slot">रिक्त छेद</string>
@@ -238,6 +242,7 @@
     <string name="number_followers">%1$s अनुचर</string>
     <string name="log_out">निर्गमनांकन</string>
     <string name="show_more">अधिक दिखाएँ</string>
+    <string name="show_less">अल्प दिखाएँ</string>
     <string name="lightning_invoice">लैटनिंग चालान</string>
     <string name="invoice_expired">समयसीमा समाप्त</string>
     <string name="clink_lightning_offer">क्लिंक॰ प्रस्ताव</string>
@@ -1277,6 +1282,8 @@
     <string name="admission">प्रवेशन</string>
     <string name="subscription">ग्राहकता</string>
     <string name="publication">प्रकाशन</string>
+    <string name="publication_untitled_section">शीर्षक रहित विभाग</string>
+    <string name="publication_contents">विषयवस्तु</string>
     <string name="payments_url">भुगतान जालपता</string>
     <string name="target_audience">लक्ष्य दर्शक</string>
     <string name="policies_and_links">नीतियाँ तथा जालयोजक</string>
@@ -1371,6 +1378,15 @@
     <string name="external_id_scope">बाहरी संसाधन पर टिप्पणी</string>
     <string name="url_preview_open_in_browser">जालवीक्षक मे खोलें</string>
     <string name="long_form_reading_minutes">%1$d मिन॰ पठन</string>
+    <string name="search_waiting_on_relays">%2$d में से %1$d पुनःप्रसारकों की प्रतीक्षा में</string>
+    <plurals name="publication_section_count">
+        <item quantity="one">%1$d विभाग</item>
+        <item quantity="other">%1$d विभाग</item>
+    </plurals>
+    <plurals name="publication_more_sections">
+        <item quantity="one">%1$d विभाग अधिक</item>
+        <item quantity="other">%1$d विभाग अधिक</item>
+    </plurals>
     <string name="music_playlist_collaborative">सहयोगात्मक</string>
     <string name="music_playlist_private">निजी</string>
     <string name="music_playlist_unknown_track">अज्ञात अभिलेख</string>
@@ -2191,6 +2207,8 @@
     <string name="dvm_home_status_payment_required">इस सूचनावली कलनविधि के लिए भुगतान आवश्यक</string>
     <string name="dvm_home_status_error">सूचनावली कलनविधि ने एक अपक्रम लौटाया</string>
     <string name="dvm_home_retry">पुनःप्रयास</string>
+    <string name="dvm_offline">असंयोजित</string>
+    <string name="dvm_offline_banner">यह सूचनावली कलनविधि निकटकाल में कोई हृदयस्पन्दन संकेत नहीं भेजी तथा निष्क्रिय हो सकती है</string>
     <string name="temporary_account">यन्त्र ताला लगने पर निर्गमनांकन करें</string>
     <string name="group_relay">चर्चा पुनःप्रसारक</string>
     <string name="share_image">चित्र बाँटें…</string>
@@ -2207,6 +2225,12 @@
     <string name="search_sort_relevance">प्रासंगिकता</string>
     <string name="search_sort_popular">लोकप्रिय</string>
     <string name="search_filters_title">छलनियाँ</string>
+    <string name="search_no_results">कोई परिणाम प्राप्त नहीं</string>
+    <string name="search_no_results_explainer">अल्पतर छलनियों का उपयोग करें अथवा पृथक शब्द।</string>
+    <string name="search_type_to_begin">कुछ टंकण करें ढूँढने के लिए</string>
+    <string name="search_type_to_begin_explainer">ऊपर के छलनियाँ खोज को संकीर्ण करते हैं। वे स्वयम खोजते नहीं।</string>
+    <string name="search_recent">निकटकाल के खोज</string>
+    <string name="search_recent_clear">रिक्त</string>
     <string name="search_filters_reset">पुनःस्थापन</string>
     <string name="search_filters_section_source">स्रोत</string>
     <string name="search_filters_section_sort">इसके अनुसार क्रमबद्ध करें</string>
@@ -2607,6 +2631,23 @@
     <string name="marmot_create_group">समूह बनाएँ</string>
     <string name="marmot_create_group_title">मार्मोट॰ समूह बनाएँ</string>
     <string name="marmot_create_group_footer">एक नया एमएलएस॰ समूह बनेगा। आप सदस्य जोड सकते हैं तत्पश्चात।</string>
+    <string name="marmot_retention_title">नश्वर सन्देश</string>
+    <string name="marmot_retention_off">निष्क्रिय</string>
+    <string name="marmot_retention_1h">एक घण्टा</string>
+    <string name="marmot_retention_1d">एक दिन</string>
+    <string name="marmot_retention_1w">एक सप्ताह</string>
+    <string name="marmot_retention_active">सन्देश अदृश्य हो जाते हैं %1$s पश्चात</string>
+    <string name="marmot_retention_footer">सन्देशों को मिटाया जाएगा सभी सदस्यों के यन्त्रों से इस कालावधि पश्चात। यह आगे परिवर्तनीय नहीं।</string>
+    <string name="marmot_disband_group">समूह विघटन करें</string>
+    <string name="marmot_disband_group_confirm">क्या %1$s को सभी के लिए विघटित किया जाए। संवाद का अन्त होगा सब के लिए तथा पुनः खोला नहीं जा सकता। एक नया समूह का निर्माण करना पडेगा।</string>
+    <string name="marmot_disband_group_action">विघटन</string>
+    <string name="marmot_avatar_url">परिचायक चित्र योजक</string>
+    <string name="marmot_avatar_url_placeholder">https://example.com/avatar.png</string>
+    <string name="marmot_avatar_url_footer">एक एचटीटीपीएस॰ योजक जिसका आवहन सभी सदस्य कर सकते है। इसके स्थान पर आरोहित चित्र का उपयोग करने के लिए इसे रिक्त छोड दें।</string>
+    <string name="marmot_legacy_group_no_avatar_url">इस समूह का निर्माण किया गया था परिचायकचित्र योजकों का अवलम्बन पूर्व। इसीलिए यह केवल आरोहित चित्र का उपयोग कर सकता है। विद्यमान समूहों का उन्नतीकरण नहीं हो सकता। एक नया समूह बनाएँ योजकों का उपयोग करने के लिए।</string>
+    <string name="marmot_enable_encrypted_media">रहस्यीकृत संलग्न अभिलेखों का उपयोग करें</string>
+    <string name="marmot_enable_encrypted_media_explainer">इस समूह में संलग्न अभिलेख पुराने प्रारूप का उपयोग करते हैं। परिवर्तन से रहस्यीकृत श्रव्यदृश्याभिलेख अवयव जोडा जा सकता है समूह में। तथा सभी सदस्य इस परिवर्तन को देख सकेंगे। इसको पूर्ववत नहीं किया जा सकता।</string>
+    <string name="marmot_legacy_group_no_disband">इस समूह का निर्माण किया गया था विघटन का अवलम्बन पूर्व तथा इसका विघटन नहीं किया जा सकता। तो भी आप इसे छोड सकते हैं अथवा अन्य सभी सदस्यों को हटा सकते हैं। विद्यमान समूहों का उन्नतीकरण नहीं हो सकता।</string>
     <string name="marmot_group_default_name">मार्मोट॰ समूह</string>
     <string name="marmot_group_fallback_name">समूह %1$s…</string>
     <string name="marmot_user_fallback_name">%1$s…</string>
@@ -2627,6 +2668,21 @@
     <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
          conversation, from the row's structured fields. %1$s is the member who
          committed the change, %2$s the member it concerns, %3$s the new name. -->
+    <string name="marmot_system_member_added">%1$s ने %2$s को जोडा</string>
+    <string name="marmot_system_member_added_passive">%1$s जुडे</string>
+    <string name="marmot_system_member_removed">%1$s ने %2$s को हटाया</string>
+    <string name="marmot_system_member_removed_passive">%1$s को हटाया गया</string>
+    <string name="marmot_system_member_left">%1$s चले गए</string>
+    <string name="marmot_system_admin_added">%1$s ने %2$s को प्रशासक बनाया</string>
+    <string name="marmot_system_admin_added_passive">%1$s अब एक प्रशासक हैं</string>
+    <string name="marmot_system_admin_removed">%1$s ने %2$s को प्रशासक पद से हटाया</string>
+    <string name="marmot_system_admin_removed_passive">%1$s अब एक प्रशासक नहीं हैं</string>
+    <string name="marmot_system_group_renamed">%1$s ने समूह का नाम %2$s रखा</string>
+    <string name="marmot_system_group_renamed_passive">समूह का नाम %1$s रखा गया</string>
+    <string name="marmot_system_avatar_changed">%1$s ने समूह परिचायकचित्र का परिवर्तन किया</string>
+    <string name="marmot_system_avatar_changed_passive">समूह परिचायकचित्र का परिवर्तन हुआ</string>
+    <string name="marmot_system_group_disbanded">%1$s ने समूह का विघटन किया</string>
+    <string name="marmot_system_group_disbanded_passive">समूह का विघटन हुआ</string>
     <string name="marmot_remove_photo">चित्र हटाएँ</string>
     <string name="marmot_keypackage_relays_not_set_title">कुंचिकापोटली पुनःप्रसारक स्थापित नहीं</string>
     <string name="marmot_keypackage_relays_not_set_message">आपकी कोई कुंचिकापोटली पुनःप्रसारक सूची नहीं अब तक (मिप॰००)। यह सूची अन्य लोगों को बताता है आपकी कुंचिकापोटली कहाँ प्रकाशित है जिससे कि वे आपको समूह चर्चाओं में आमन्त्रित कर सके।\n\nक्या इसके लिए आपके वर्तमान निर्गतपेटिका पुनःप्रसारकों का उपयोग करें।</string>

@@ -405,6 +405,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="napplet_cap_identity">Tożsamość</string>
     <string name="napplet_cap_keys">Operacje klawiatury</string>
     <string name="napplet_cap_relay">Transmitery</string>
+    <string name="napplet_cap_signer">Szyfrowanie</string>
     <string name="napplet_cap_storage">Schowek</string>
     <string name="napplet_cap_value">Płatności</string>
     <string name="napplet_cap_resource">Sieć</string>
@@ -413,6 +414,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="napplet_cap_identity_desc">Odczytaj swój klucz publiczny</string>
     <string name="napplet_cap_keys_desc">Przypisz skróty klawiszowe</string>
     <string name="napplet_cap_relay_desc">Przeczytaj, podpisz i opublikuj swoje wydarzenia</string>
+    <string name="napplet_cap_signer_desc">Zaszyfruj i odszyfruj prywatne wiadomości za pomocą klucza</string>
     <string name="napplet_cap_storage_desc">Własny prywatny schowek</string>
     <string name="napplet_cap_value_desc">Opłać faktury Lightning</string>
     <string name="napplet_cap_resource_desc">Pobierz zasoby sieci web i blossom</string>
@@ -430,6 +432,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="napplet_consent_publish">Ta aplikacja nApplet chce podpisać i opublikować zdarzenie typu %1$d w Twoim imieniu.</string>
     <string name="napplet_consent_publish_preview">Ta aplikacja nApplet chce podpisać i opublikować zdarzenie typu %1$d w Twoim imieniu:</string>
     <string name="napplet_consent_publish_encrypted">Ten nApplet chce wysłać zaszyfrowane wydarzenie jako Ty.</string>
+    <string name="napplet_consent_nip44_encrypt">Ta strona chce zaszyfrować wiadomość do %1$s za pomocą klucza Nostr.</string>
+    <string name="napplet_consent_nip44_decrypt">Ta strona chce odszyfrować wiadomość od %1$s za pomocą klucza Nostr.</string>
     <string name="napplet_consent_query">Ten nApplet chce odczytywać wydarzenia z twoich transmiterów.</string>
     <string name="napplet_consent_storage">Ta aplikacja nApplet chce korzystać ze swojego prywatnego schowka.</string>
     <string name="napplet_consent_pay">Ta aplikacja nApplet chce zapłacić fakturę w systemie Lightning.</string>
@@ -2554,6 +2558,15 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="marmot_failed_to_update">Nie udało się zaktualizować: %1$s</string>
     <string name="marmot_failed_to_create_group">Nie udało się utworzyć grupy: %1$s</string>
     <string name="marmot_failed_to_leave_group">Nie udało się opuścić grupy: %1$s</string>
+    <string name="marmot_enable_encrypted_media_needs_server">Dodaj w ustawieniach serwer multimediów „Blossom” — grupa potrzebuje miejsca, do którego będzie można przesyłać załączniki.</string>
+    <string name="marmot_encrypted_media_enabled_toast">Ta grupa używa zaszyfrowanych załączników</string>
+    <string name="marmot_failed_to_enable_encrypted_media">Nie udało się przełączyć tej grupy na tryb załączników szyfrowanych: %1$s</string>
+    <string name="marmot_group_disbanded_toast">Grupa rozwiązana</string>
+    <string name="marmot_group_disbanding_toast">Zakończenie działalności grupy. Grupa kończy działalność po osiągnięciu porozumienia.</string>
+    <string name="marmot_group_composer_disbanding">Ta grupa zostanie zamknięta. Nadal można ją przeglądać.</string>
+    <string name="marmot_group_composer_leaving">Opuszczasz tę grupę.</string>
+    <string name="marmot_group_composer_removed">Nie jesteś już członkiem tej grupy.</string>
+    <string name="marmot_failed_to_disband">Nie można rozwiązać grupy: %1$s</string>
     <string name="marmot_adding_user">Dodawanie %1$s…</string>
     <string name="marmot_failed_to_add_user">Nie udało się dodać %1$s: %2$s</string>
     <string name="marmot_unknown_error">nieznany błąd</string>

@@ -375,6 +375,7 @@
     <string name="napplet_cap_identity">परिचय</string>
     <string name="napplet_cap_keys">अक्षरफलक कार्य</string>
     <string name="napplet_cap_relay">पुनःप्रसारक</string>
+    <string name="napplet_cap_signer">रहस्यीकरण</string>
     <string name="napplet_cap_storage">भण्डार</string>
     <string name="napplet_cap_value">भुगतान</string>
     <string name="napplet_cap_resource">जाल</string>
@@ -383,6 +384,7 @@
     <string name="napplet_cap_identity_desc">आपकी ख्याप्यकुंचिका पढें</string>
     <string name="napplet_cap_keys_desc">अक्षरफलक द्रुतपथ बन्धन</string>
     <string name="napplet_cap_relay_desc">पढें हस्ताक्षर करें तथा प्रकाशित करें आपके घटनाओं को</string>
+    <string name="napplet_cap_signer_desc">निजी सन्देशों का रहस्यीकरण तथा अरहस्यीकरण करें अपनी कुंचिका से</string>
     <string name="napplet_cap_storage_desc">उसका अपना निजी भण्डार</string>
     <string name="napplet_cap_value_desc">लैटनिंग चालान का भुगतान</string>
     <string name="napplet_cap_resource_desc">जाल तथा ब्लोस्सम॰ संसाधन ले आएँ</string>
@@ -400,6 +402,8 @@
     <string name="napplet_consent_publish">यह नोस्टर संलग्नक्रमक आपके रूप में एक %1$d प्रकार घटना का हस्ताक्षरण तथा प्रकाशन करना चाहता है।</string>
     <string name="napplet_consent_publish_preview">यह नोस्टर संलग्नक्रमक आपके रूप में एक %1$d प्रकार घटना का हस्ताक्षरण तथा प्रकाशन करना चाहता है :</string>
     <string name="napplet_consent_publish_encrypted">यह नोस्टर संलग्नक्रमक आपके रूप में एक रहस्यीकृत घटना भेजना चाहता है।</string>
+    <string name="napplet_consent_nip44_encrypt">यह स्थान आपके नोस्टर कुंचिका से %1$s को एक सन्देश का रहस्यीकरण करना चाहता है।</string>
+    <string name="napplet_consent_nip44_decrypt">यह स्थान आपके नोस्टर कुंचिका से %1$s को एक सन्देश का अरहस्यीकरण करना चाहता है।</string>
     <string name="napplet_consent_query">यह नोस्टर संलग्नक्रमक आपके पुनःप्रसारकों से घटनाओं को पढना चाहता है।</string>
     <string name="napplet_consent_storage">यह नोस्टर संलग्नक्रमक अपना निजी भण्डार का प्रयेग करना चाहता है।</string>
     <string name="napplet_consent_pay">यह नोस्टर संलग्नक्रमक एक लैटनिंग चालान का भुगतान करना चाहता है।</string>
@@ -1201,6 +1205,19 @@
     <string name="home_content_type_music">संगीत तथा ध्वनि</string>
     <string name="home_content_type_podcasts">पुटप्रसार</string>
     <string name="home_content_type_fundraisers">धनसंग्रहण</string>
+    <string name="home_content_type_ratings">मूल्यांकन तथा समीक्षाएँ</string>
+    <string name="rating_stars_out_of_five">मूल्यांकित पाँच में से %1$s</string>
+    <string name="library_learning_resource">पाठ्य संसाधन</string>
+    <string name="library_directory">निर्देशिका</string>
+    <string name="library_blossom_piece">अभिलेख</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d वस्तु</item>
+        <item quantity="other">%1$d वस्तुएँ</item>
+    </plurals>
+    <plurals name="library_directory_more_items">
+        <item quantity="one">%1$d वस्तु अधिक</item>
+        <item quantity="other">%1$d वस्तुएँ अधिक</item>
+    </plurals>
     <string name="settings_section_reminders">अनुस्मारकसूची</string>
     <string name="wallet_connect">धनकोष संयोजन</string>
     <string name="theme">प्रदर्शनशैली</string>
@@ -2323,6 +2340,15 @@
     <string name="marmot_failed_to_update">अद्यतन असफल : %1$s</string>
     <string name="marmot_failed_to_create_group">समूह बनाने में असफल : %1$s</string>
     <string name="marmot_failed_to_leave_group">समूह छोडनें में असफल : %1$s</string>
+    <string name="marmot_enable_encrypted_media_needs_server">पहले एक ब्लोस्सम श्रव्यदृश्याभिलेख सेवासंगणक जोडें स्थापना विकल्पों में। समूह के लिए कोई स्थान आवश्यक है संलग्न अभिलेखों का आरोहण करने के लिए।</string>
+    <string name="marmot_encrypted_media_enabled_toast">यह समूह अब रहस्यीकृत संलग्न अभिलेखों का उपयोग करता है</string>
+    <string name="marmot_failed_to_enable_encrypted_media">इस समूह में रहस्यीकृत संलग्न अभिलेखों का उपयोग सक्षम करने में असफल : %1$s</string>
+    <string name="marmot_group_disbanded_toast">समूह विघटित</string>
+    <string name="marmot_group_disbanding_toast">समूह का अन्त किया जा रहा है। इसका अन्त हो जाएगा जब समूह सहमत होगा।</string>
+    <string name="marmot_group_composer_disbanding">समूह का अन्त किया जा रहा है। आप इसे अभी भी पढ सकते हैं।</string>
+    <string name="marmot_group_composer_leaving">आप इस समूह को छोड रहे हैं।</string>
+    <string name="marmot_group_composer_removed">आप इस समूह के सदस्य अब नहीं रहे।</string>
+    <string name="marmot_failed_to_disband">समूह का विघटन असफल : %1$s</string>
     <string name="marmot_adding_user">जोडा जा रहा है %1$s…</string>
     <string name="marmot_failed_to_add_user">%1$s जोडने में असफल : %2$s</string>
     <string name="marmot_unknown_error">अज्ञात अपक्रम</string>
