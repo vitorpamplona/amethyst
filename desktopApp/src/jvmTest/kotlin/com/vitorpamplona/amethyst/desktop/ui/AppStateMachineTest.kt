@@ -89,6 +89,7 @@ class AppStateMachineTest {
         File(tempDir, ".amethyst").mkdirs()
         storage = mockk(relaxed = true)
         coEvery { storage.getPrivateKey(any()) } returns null
+        coEvery { storage.getPrivateKeyOrThrow(any()) } returns null
         harnessScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         relay = LaunchFixtureRelay.open(LaunchFixture.build(noteCount = 0).events)
     }
