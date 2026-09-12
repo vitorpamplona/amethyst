@@ -47,10 +47,13 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.gif
+import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -108,13 +111,31 @@ fun GifVideoView(
 
             when (state) {
                 is AsyncImagePainter.State.Loading -> {
-                    DisplayBlurHash(
-                        blurhash,
-                        contentDescription,
-                        contentScale,
-                        Modifier.fillMaxSize(),
-                        thumbhash = thumbhash,
-                    )
+                    // Every branch here MUST emit something with a height. [containerModifier]
+                    // only constrains the height when `ratio` is known (imeta `dim` or a cached
+                    // ratio); without one it is a bare fillMaxWidth(), so the box wraps its
+                    // content and an empty loading state collapses the whole note to zero
+                    // height -- no picture, no URL, no spinner, just a gap in the feed until
+                    // the load finishes. DisplayBlurHash renders NOTHING when both hashes are
+                    // absent (placeholderModel returns null), which is exactly the case a
+                    // no-imeta post hits. Mirrors UrlImageView's ladder.
+                    if (blurhash != null || thumbhash != null) {
+                        DisplayBlurHash(
+                            blurhash,
+                            contentDescription,
+                            contentScale,
+                            Modifier.fillMaxSize(),
+                            thumbhash = thumbhash,
+                        )
+                    } else if (ratio != null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            LoadingAnimation(Size40dp, Size6dp)
+                        }
+                    } else {
+                        WaitAndDisplay {
+                            DisplayUrlWithLoadingSymbol(videoUri)
+                        }
+                    }
                 }
 
                 is AsyncImagePainter.State.Success -> {
