@@ -33,10 +33,12 @@ kotlin {
 }
 
 dependencies {
-    // The sandbox runtime depends ONLY on the protocol/contract (commons) and Nostr resolution
+    // The sandbox runtime depends ONLY on the protocol/contract (commons), the shell/shim
+    // Compose resources it serves (commonsUI's NappletWebContract) and Nostr resolution
     // (quartz) — never on :amethyst. This makes it impossible for the `:napplet` process code to
     // reach for Amethyst.instance / LocalCache / Account (which don't exist in that process).
     implementation(project(":commons"))
+    implementation(project(":commonsUI"))
     implementation(project(":quartz"))
 
     implementation(libs.androidx.core.ktx)

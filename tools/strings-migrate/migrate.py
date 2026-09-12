@@ -7,7 +7,7 @@ For the default locale and every values-* locale dir, each named
 <string> or <plurals> element is removed from
   amethyst/src/main/res/<values*>/strings.xml
 and appended (before </resources>) to
-  commons/src/commonMain/composeResources/<values*>/strings.xml
+  commonsUI/src/commonMain/composeResources/<values*>/strings.xml
 creating the commons locale file when a translation exists that commons
 doesn't carry yet. Elements are moved verbatim (raw XML slice), so
 escaping, CDATA and comments inside values survive byte-for-byte and
@@ -25,7 +25,7 @@ import sys
 from fix_escapes import STRING_EL, fix_text, strip_android_only_attrs
 
 APP_RES = "amethyst/src/main/res"
-COMMONS_RES = "commons/src/commonMain/composeResources"
+COMMONS_RES = "commonsUI/src/commonMain/composeResources"
 
 NEW_FILE_TEMPLATE = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
 

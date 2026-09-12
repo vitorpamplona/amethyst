@@ -21,7 +21,7 @@ that has to catch it.
 Repair with:
 
     python3 tools/strings-migrate/fix_escapes.py --no-unwrap-quotes \\
-        commons/src/commonMain/composeResources
+        commonsUI/src/commonMain/composeResources
 
 `--no-unwrap-quotes` is mandatory on already-migrated files: escape conversion is
 idempotent, quote-unwrapping is not, and a second unwrap strips the real display
@@ -77,7 +77,7 @@ def main() -> int:
     print(
         "\nRepair:\n"
         "  python3 tools/strings-migrate/fix_escapes.py --no-unwrap-quotes \\\n"
-        "      commons/src/commonMain/composeResources\n"
+        "      commonsUI/src/commonMain/composeResources\n"
         "(--no-unwrap-quotes is mandatory on already-migrated files.)",
         file=out,
     )

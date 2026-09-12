@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Subset commons/.../material_symbols_outlined.ttf to only the codepoints
+# Subset commonsUI/.../material_symbols_outlined.ttf to only the codepoints
 # referenced from MaterialSymbols.kt. The full Google variable font is ~11 MB
 # (≈3500 glyphs); the subset is ~410 KB.
 #
@@ -13,13 +13,13 @@
 #                   font from Google Fonts.
 #
 # Output:
-#   Overwrites commons/src/commonMain/composeResources/font/material_symbols_outlined.ttf
+#   Overwrites commonsUI/src/commonMain/composeResources/font/material_symbols_outlined.ttf
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-SYMBOLS_KT="$REPO_ROOT/commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/MaterialSymbols.kt"
-TARGET="$REPO_ROOT/commons/src/commonMain/composeResources/font/material_symbols_outlined.ttf"
+SYMBOLS_KT="$REPO_ROOT/commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/MaterialSymbols.kt"
+TARGET="$REPO_ROOT/commonsUI/src/commonMain/composeResources/font/material_symbols_outlined.ttf"
 
 if ! command -v pyftsubset >/dev/null 2>&1; then
     echo "pyftsubset not found. Install with: pip install fonttools brotli" >&2

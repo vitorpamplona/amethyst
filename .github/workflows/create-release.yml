@@ -572,11 +572,12 @@ jobs:
         run: |
           set -euo pipefail
           # The plan at cli/plans/2026-04-21-cli-distribution.md §size-budget
-          # targets < 80 MB, but :commons currently leaks Compose + Skiko as
-          # transitive deps (~40 MB of unused UI jars). Budget is set to
-          # 200 MB until commons is split into core + ui modules — track that
-          # as a follow-up. Until then, this gate just catches pathological
-          # regressions (e.g. accidental :amethyst dep pulling Android libs).
+          # targets < 80 MB. Compose UI + Skiko now live in :commonsUI, which
+          # :cli does not depend on, so the headless :commons no longer drags
+          # ~40 MB of UI jars into the CLI. Budget stays at 200 MB for now
+          # (tighten once a release confirms the new size); this gate catches
+          # pathological regressions (e.g. an accidental :commonsUI/:amethyst
+          # dep pulling UI or Android libs back in).
           fail=0
           for f in dist/*; do
             if [[ -f "$f" ]]; then

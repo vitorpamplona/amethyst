@@ -1,0 +1,89 @@
+# Split `commons` into `commons` (headless) + `commonsUI` (Compose)
+
+**Date:** 2026-09-12
+**Status:** shipped on this branch
+
+## Why
+
+`cli` (`amy`) depends on `:commons`. Until now `:commons` declared Compose
+UI, Coil, Compose resources, markdown and (on JVM) `compose.desktop.currentOs`
+as dependencies, so every CLI distribution dragged ~40 MB of Compose + Skiko
+jars it never loads (`create-release.yml` had a 200 MB budget "until commons
+is split into core + ui modules"; `BUILDING.md` flagged the same for the
+Homebrew bundle). The UI / non-UI boundary documented in
+`commons/ARCHITECTURE.md` §1 was a convention enforced by nothing.
+
+## What
+
+A new KMP module **`:commonsUI`** (same targets and source-set layout as
+`:commons`, plus `skikoMain`) that `api`-depends on `:commons` and owns every
+Compose-dependent file. `:commons` keeps only the Compose *runtime*
+(`@Stable`/`@Immutable`, snapshot state) and `lifecycle-viewmodel`; it no
+longer applies the `org.jetbrains.compose` plugin, has no `composeResources`,
+no Coil, no markdown, no `highlights`, no desktop Compose.
+
+**Files keep their packages.** The split is a build-graph boundary, not a
+package rename: `231` files were `git mv`'d from `commons/src/…` to
+`commonsUI/src/…` and not a single import changed in `amethyst`,
+`desktopApp`, `nappletHost` or `cli`. The generated `Res` class stays at
+`com.vitorpamplona.amethyst.commons.resources` for the same reason.
+
+Consumers: `amethyst`, `desktopApp`, `nappletHost` (for
+`NappletWebContract`, which reads the shell/shim from `composeResources`) and
+`benchmark` (robohash) gained `project(":commonsUI")`. `cli`, `geode`,
+`marmotBench` are untouched and must stay that way.
+
+## Method (reproducible)
+
+1. Classify every `.kt` under `commons/src` as **UI** if it imports
+   `androidx.compose.{ui,foundation,material3,animation}`,
+   `org.jetbrains.compose.*`, `coil3`, `org.jetbrains.skia`,
+   `androidx.lifecycle.compose`, `…commons.resources`, or declares
+   `@Composable`.
+2. Build the intra-module reference graph (imports + same-package simple-name
+   hits) and verify **no headless file references a UI file**. Two real hits
+   surfaced and were fixed by surgery rather than by moving logic into the UI
+   module:
+   - `richtext/GalleryParser` carried a vestigial
+     `@OptIn(ExperimentalLayoutApi::class)` — dropped; it is pure logic.
+   - `privacylock/PrivacyLockState` declared the `LocalPrivacyLockState`
+     CompositionLocal + `lockStateFor()` next to the state machine — the two
+     Compose members moved to `commonsUI/…/privacylock/LocalPrivacyLockState.kt`
+     (same package).
+3. Additionally move the rest of the UI-only packages (`ui/**`, `icons`,
+   `hashtags`, `robohash`, `<feature>/ui`) **unless a headless file depends
+   on the file**. That rule keeps the feed DAL (`ui/feeds/FeedFilter`,
+   `AdditiveFeedFilter`, `ChangesFlowFilter`, `FeedContentState`,
+   `RepostRenderability`, `AdditiveComplexFeedFilter`…) and
+   `ui/note/ParentNote`+`ReplyContext` in `commons` (ViewModels use them).
+4. Tests follow their subject; test fixtures shared with headless tests
+   (`ui/note/StubCache`) stay in `commons`.
+5. Check `expect`/`actual` pairs never straddle the boundary (none did) and
+   that no `internal` declaration is used across it (none was).
+
+## Verified
+
+- `:commons:compileKotlinJvm`, `:commonsUI:compileKotlinJvm`,
+  `:cli:compileKotlin`, `:desktopApp:compileKotlin`,
+  `:nappletHost:compileDebugKotlin`, `:amethyst:compileFdroidDebugKotlin`.
+- `:commons:jvmTest`, `:commonsUI:jvmTest`, `:cli:test`,
+  `:commons:verifyKmpPurity`, `:commonsUI:verifyKmpPurity`.
+- `:cli` runtime classpath no longer contains `org.jetbrains.compose.ui`,
+  `foundation`, `material3`, `skiko` or `coil`.
+
+iOS targets could not be linked in the Linux CI container; the workflow runs
+`:commonsUI:iosSimulatorArm64Test` + `:commonsUI:compileTestKotlinIosArm64`
+next to the `:commons` ones on macOS.
+
+## Follow-ups
+
+- **Tighten the CLI size budget** in `create-release.yml` once a release
+  confirms the new `amy` tarball size (target < 80 MB per
+  `cli/plans/2026-04-21-cli-distribution.md`).
+- **Rename the feed DAL out of `ui.feeds`** (it is the one `ui.*` package
+  that still lives in `commons`); a package rename that touches app imports.
+- **`nip64Chess` → `nip64Chess/ui`** for the composables now in `commonsUI`
+  (module split done, package rename pending).
+- `commons` still applies the Compose *compiler* plugin on purpose (stability
+  inference for its model classes as seen from the apps' composables).
+  Revisit if a `runtime-annotation`-only setup proves sufficient.
