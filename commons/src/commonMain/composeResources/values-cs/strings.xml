@@ -205,6 +205,7 @@
     <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
     <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl ztlumený nebo nahlášen</string>
     <string name="post_not_found">Příspěvek se načítá nebo nemůže být nalezena ve vašem seznamu relací</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Obrázek kanálu</string>
     <string name="referenced_event_not_found">Odkazovaná událost nebyla nalezena</string>
     <string name="could_not_decrypt_the_message">Nepodařilo se dešifrovat zprávu</string>
@@ -234,6 +235,7 @@
     <string name="report_impersonation">Nahlásit zneužívání identity</string>
     <string name="report_illegal_behaviour">Nahlásit nezákonné jednání</string>
     <string name="report_malware">Nahlásit malware</string>
+    <string name="malware">Malware</string>
     <string name="chat_zap_amount_suffix">zapnul(a) %1$s sats</string>
     <string name="chat_zap_anonymous">Anonym</string>
     <string name="chat_raid_is_raiding">provádí raid</string>
@@ -275,6 +277,7 @@
     <string name="send_payment_source_external">Jiná peněženková aplikace</string>
     <string name="send_payment_source_onchain_wallet">On-chain peněženka</string>
     <string name="send_payment_source_cashu_wallet">Cashu peněženka</string>
+    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">Nabídka CLINK</string>
     <string name="send_payment_amount">Částka</string>
     <string name="send_payment_fixed_price">Cena stanovená nabídkou</string>

@@ -1389,6 +1389,7 @@
     <string name="external_id_scope">Skomentuj na zewnętrznym serwisie</string>
     <string name="url_preview_open_in_browser">Otwórz w przeglądarce</string>
     <string name="long_form_reading_minutes">Czas czytania: %1$d min.</string>
+    <string name="search_waiting_on_relays">Oczekuję na %1$d z %2$d transmiterów</string>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d sekcja</item>
         <item quantity="few">%1$d sekcji</item>
@@ -2221,6 +2222,8 @@
     <string name="dvm_home_status_payment_required">Ten algorytm kanału jest płatny</string>
     <string name="dvm_home_status_error">Algorytm kanału zwrócił błąd</string>
     <string name="dvm_home_retry">Ponów</string>
+    <string name="dvm_offline">Offline</string>
+    <string name="dvm_offline_banner">Ten algorytm kanału nie wysłał ostatnio sygnału kontrolnego i może być nieczynny</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="group_relay">Transmiter Czatu</string>
     <string name="share_image">Udostępnij zdjęcie…</string>
@@ -2237,6 +2240,12 @@
     <string name="search_sort_relevance">Trafności</string>
     <string name="search_sort_popular">Popularności</string>
     <string name="search_filters_title">Filtry</string>
+    <string name="search_no_results">Brak wyników wyszukiwania</string>
+    <string name="search_no_results_explainer">Spróbuj mniejszej liczby filtrów lub innego słowa.</string>
+    <string name="search_type_to_begin">Wpisz coś do wyszukania</string>
+    <string name="search_type_to_begin_explainer">Powyższe filtry zawężają zakres wyszukiwania — same w sobie nie przeprowadzają wyszukiwania.</string>
+    <string name="search_recent">Ostatnio wyszukiwane</string>
+    <string name="search_recent_clear">Wyczyść</string>
     <string name="search_filters_reset">Zresetuj</string>
     <string name="search_filters_section_source">Źródła</string>
     <string name="search_filters_section_sort">Sortuj według</string>
@@ -2637,6 +2646,23 @@
     <string name="marmot_create_group">Utwórz Grupę</string>
     <string name="marmot_create_group_title">Utwórz Grupę Marmot</string>
     <string name="marmot_create_group_footer">Zostanie utworzona nowa grupa MLS. Następnie możesz dodać członków.</string>
+    <string name="marmot_retention_title">Znikające wiadomości</string>
+    <string name="marmot_retention_off">Wył.</string>
+    <string name="marmot_retention_1h">1 godz.</string>
+    <string name="marmot_retention_1d">1 dzień</string>
+    <string name="marmot_retention_1w">1 tydzień</string>
+    <string name="marmot_retention_active">Wiadomości znikają za %1$s</string>
+    <string name="marmot_retention_footer">Po upływie tego czasu wiadomości są usuwane z urządzeń wszystkich członków. Nie można tego później zmienić.</string>
+    <string name="marmot_disband_group">Rozwiąż grupę</string>
+    <string name="marmot_disband_group_confirm">Czy chcesz rozwiązać grupę „%1$s” dla wszystkich? Rozmowa zostanie zakończona dla wszystkich członków i nie będzie można jej wznowić — konieczne będzie utworzenie nowej grupy.</string>
+    <string name="marmot_disband_group_action">Rozwiąż</string>
+    <string name="marmot_avatar_url">Link do awatara</string>
+    <string name="marmot_avatar_url_placeholder">https://przyklad.com/avatar.png</string>
+    <string name="marmot_avatar_url_footer">Link https, który każdy użytkownik może otworzyć. Pozostaw to pole puste, aby zamiast tego użyć przesłanego obrazu.</string>
+    <string name="marmot_legacy_group_no_avatar_url">Ta grupa została utworzona, zanim wprowadzono obsługę awatarów w postaci linków, dlatego może korzystać wyłącznie z przesłanego obrazu. Istniejących grup nie można zaktualizować — aby korzystać z linku, należy utworzyć nową grupę.</string>
+    <string name="marmot_enable_encrypted_media">Użyj zaszyfrowanych załączników</string>
+    <string name="marmot_enable_encrypted_media_explainer">Załączniki w tej grupie korzystają ze starszego formatu. Przełączanie dodaje zaszyfrowany komponent multimedialny do grupy, a każdy użytkownik widzi zmianę. Nie można go przełączyć ponownie.</string>
+    <string name="marmot_legacy_group_no_disband">Ta grupa została utworzona, zanim wprowadzono funkcję rozwiązywania grup, i nie można jej rozwiązać. Nadal możesz z niej wyjść lub usunąć wszystkich pozostałych członków. Istniejących grup nie można ulepszyć.</string>
     <string name="marmot_group_default_name">Grupy Marmot</string>
     <string name="marmot_group_fallback_name">Grupa %1$s…</string>
     <string name="marmot_user_fallback_name">%1$s…</string>
@@ -2657,6 +2683,21 @@
     <!-- Marmot kind:1210 group system rows. Rendered as centered captions in the
          conversation, from the row's structured fields. %1$s is the member who
          committed the change, %2$s the member it concerns, %3$s the new name. -->
+    <string name="marmot_system_member_added">%1$s dodał(a) %2$s</string>
+    <string name="marmot_system_member_added_passive">%1$s dołączył(a)</string>
+    <string name="marmot_system_member_removed">%1$s usunął %2$s</string>
+    <string name="marmot_system_member_removed_passive">%1$s został usunięty</string>
+    <string name="marmot_system_member_left">%1$s pozostało</string>
+    <string name="marmot_system_admin_added">%1$s uczynił(a) %2$s administratorem</string>
+    <string name="marmot_system_admin_added_passive">%1$s jest teraz administratorem</string>
+    <string name="marmot_system_admin_removed">%1$s usunął(a) %2$s jako administratora</string>
+    <string name="marmot_system_admin_removed_passive">%1$s nie jest już administratorem</string>
+    <string name="marmot_system_group_renamed">%1$s zmienił nazwę grupy na %2$s</string>
+    <string name="marmot_system_group_renamed_passive">Nazwa grupy została zmieniona na %1$s</string>
+    <string name="marmot_system_avatar_changed">%1$s zmienił(a) awatar grupy</string>
+    <string name="marmot_system_avatar_changed_passive">Zmieniono awatar grupy</string>
+    <string name="marmot_system_group_disbanded">%1$s rozwiązał(a) grupę</string>
+    <string name="marmot_system_group_disbanded_passive">Grupa została rozwiązana</string>
     <string name="marmot_remove_photo">Usuń zdjęcie</string>
     <string name="marmot_keypackage_relays_not_set_title">Nie ustawiono transmiterów KeyPackage</string>
     <string name="marmot_keypackage_relays_not_set_message">Nie masz jeszcze listy transmiterów KeyPackage (MIP-00). Lista ta informuje innych użytkowników, gdzie opublikowano Twój KeyPackage, dzięki czemu mogą zapraszać Cię do czatów grupowych.\n\nUżyj do tego swoich obecnych transmiterów ze skrzynki wysyłkowej?</string>
