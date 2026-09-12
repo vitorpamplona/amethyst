@@ -1977,7 +1977,6 @@ open class ShortNotePostViewModel :
     }
 
     override fun onCleared() {
-        super.onCleared()
         writingAssistant?.close()
         writingAssistant = null
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }

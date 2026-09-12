@@ -102,7 +102,6 @@ class AddToMusicPlaylistViewModel : ViewModel() {
 
     override fun onCleared() {
         liveScanJob?.cancel()
-        super.onCleared()
     }
 
     private suspend fun rescan() {
