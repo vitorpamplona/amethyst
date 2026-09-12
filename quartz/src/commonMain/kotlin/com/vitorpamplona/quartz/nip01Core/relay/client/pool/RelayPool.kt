@@ -267,4 +267,24 @@ class RelayPool(
     ) = listener.onSent(relay, cmdStr, cmd, success)
 
     fun connectedRelaysCount(): Int = relays.count { url, relay -> relay.isConnected() }
+
+    /**
+     * The relays whose socket is up *right now*, read from each pool member's [IRelayClient.isConnected].
+     *
+     * This is the ground truth; [connectedRelays] is a projection of it that only moves on the
+     * [onConnected] / [onDisconnected] callbacks. The two drift whenever a socket dies without a
+     * callback: a relay that sent a WebSocket CLOSE frame leaves OkHttp waiting for a reply that never
+     * comes, so neither `onClosed` nor `onFailure` fires, and a later `cancel()` is silent too. The URL
+     * then sits in [connectedRelays] until the 120s ping path finally fails, while this snapshot has
+     * already dropped it (a removed relay is no longer a member; a still-desired one reads
+     * `isConnected() == false` as soon as its socket closes). Use this for anything a person reads as
+     * "how many relays am I connected to"; keep the flow for change notification.
+     */
+    fun connectedRelayUrls(): Set<NormalizedRelayUrl> {
+        val urls = mutableSetOf<NormalizedRelayUrl>()
+        relays.forEach { url, relay ->
+            if (relay.isConnected()) urls.add(url)
+        }
+        return urls
+    }
 }

@@ -56,7 +56,10 @@ object RelayPurposeSummary {
         val named = mutableMapOf<SubPurpose, MutableSet<NormalizedRelayUrl>>()
         val browsing = mutableSetOf<NormalizedRelayUrl>()
 
-        client.connectedRelaysFlow().value.forEach { relay ->
+        // Same source as the count above it (see NotificationRelayService): the pool's live socket
+        // state, not the callback-maintained flow, so the breakdown never has to explain relays the
+        // pool has already dropped.
+        client.connectedRelays().forEach { relay ->
             client
                 .activeRequests(relay)
                 .values

@@ -50,6 +50,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -299,7 +300,8 @@ class NotificationRelayService : Service() {
      *    Tor, network changes). Without this, the client disconnects 30s after
      *    the UI stops collecting.
      *
-     * 2. connectedRelaysFlow: Updates the persistent notification with relay count.
+     * 2. connectedRelaysFlow + availableRelaysFlow: re-read the pool's live relay count
+     *    (client.connectedRelays()) and refresh the persistent notification.
      *
      * The service does NOT create its own relay subscriptions. Instead, it relies on
      * the AccountFilterAssembler subscription that lives in the Compose tree (LoggedInPage).
@@ -320,17 +322,29 @@ class NotificationRelayService : Service() {
                 }
 
                 launch {
+                    // The two flows are only the *trigger*; the number comes from
+                    // client.connectedRelays(), which reads each pool member's live socket
+                    // state. connectedRelaysFlow() alone over-reported: it is maintained by
+                    // OkHttp callbacks, and a relay that sent a WebSocket CLOSE frame never
+                    // produces one (the app doesn't answer onClosing, so neither onClosed nor
+                    // onFailure fires, and the later cancel() is silent too). After the feeds
+                    // tore down in the background that left hundreds of already-closed relays
+                    // in the flow for minutes, with no subscription to justify a single one of
+                    // them. availableRelaysFlow() is merged in because that is the flow that
+                    // moves when the pool drops such a relay -- the connected flow, by
+                    // definition, doesn't.
+                    //
                     // sample() caps how often we touch the notification. During feed
-                    // load/teardown connectedRelaysFlow churns dozens of times per second;
-                    // posting on every delta blows past Android's notification rate limit
-                    // (~10/s), which silently drops updates and leaves the visible count
-                    // stuck on a stale intermediate value. One refresh per second stays
-                    // well under the limit and always lands the settled count.
-                    Amethyst.instance.client
-                        .connectedRelaysFlow()
+                    // load/teardown these flows churn dozens of times per second; posting on
+                    // every delta blows past Android's notification rate limit (~10/s), which
+                    // silently drops updates and leaves the visible count stuck on a stale
+                    // intermediate value. One refresh per second stays well under the limit
+                    // and always lands the settled count.
+                    val client = Amethyst.instance.client
+                    merge(client.connectedRelaysFlow(), client.availableRelaysFlow())
                         .sample(NOTIFICATION_REFRESH_MS)
-                        .collectLatest { relays ->
-                            val count = relays.size
+                        .collectLatest {
+                            val count = client.connectedRelays().size
                             if (count != connectedRelayCount) {
                                 connectedRelayCount = count
                                 updateNotification(count)
