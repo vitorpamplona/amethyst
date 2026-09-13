@@ -160,7 +160,11 @@ actual class SecureKeyStorage private actual constructor() {
         withContext(Dispatchers.IO) {
             try {
                 when {
-                    vaultActive -> vaultGet(npub)
+                    // A vault miss is NOT proof of absence: the vault only covers the
+                    // aliases a migration pass was given. Phase 1 activates it with just
+                    // the metadata key, and a failed phase 2 leaves every nsec outside
+                    // it. Fall back to the legacy per-alias item before reporting null.
+                    vaultActive -> vaultGet(npub) ?: getFromKeyring(npub)
                     keyringAvailable -> getFromKeyring(npub)
                     else -> getFromFallback(npub)
                 }
@@ -194,6 +198,16 @@ actual class SecureKeyStorage private actual constructor() {
     actual suspend fun getPrivateKeyOrThrow(npub: String): String? =
         withContext(Dispatchers.IO) {
             try {
+                // The vault is authoritative for every alias it covers. Without this the
+                // strict path probes the OS for a per-alias item the migration already
+                // deleted, reads exit 44 / NotFound as "definitively absent", and lets
+                // DesktopAccountStorage.getOrCreateKey mint a fresh AES key over the one
+                // that decrypts accounts.json.enc -- the exact silent wipe this method
+                // exists to prevent. A vault miss still falls through to the strict
+                // per-alias probe, so uncovered aliases keep the strict contract.
+                if (vaultActive) {
+                    vaultGet(npub)?.let { return@withContext it }
+                }
                 if (!keyringAvailable) {
                     return@withContext getFromFallback(npub)
                 }
@@ -404,20 +418,37 @@ actual class SecureKeyStorage private actual constructor() {
         keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(contents))
     }
 
+    /**
+     * Removes [alias] from the vault *and* unlinks any legacy per-alias item still
+     * holding it. An alias the vault does not cover (a partial migration, or a
+     * phase 2 that failed) would otherwise survive a logout as an orphaned secret
+     * in the OS keychain, since [getPrivateKey] can still read it.
+     */
     private fun vaultDelete(alias: String): Boolean {
-        val contents = vaultContents ?: return false
-        val removed = contents.remove(alias) != null
-        if (!removed) return false
-        if (contents.isEmpty()) {
-            return try {
-                keyring().deletePassword(SERVICE_NAME, vaultAlias)
+        val contents = vaultContents
+        val removedFromVault = contents != null && contents.remove(alias) != null
+
+        val removedLegacy =
+            try {
+                keyring().deletePassword(SERVICE_NAME, alias)
                 true
             } catch (_: PasswordAccessException) {
-                true // already gone, still removed from our POV
+                false // no legacy item, fine
+            }
+
+        if (removedFromVault) {
+            if (contents!!.isEmpty()) {
+                try {
+                    keyring().deletePassword(SERVICE_NAME, vaultAlias)
+                } catch (_: PasswordAccessException) {
+                    // already gone, still removed from our POV
+                }
+            } else {
+                keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(contents))
             }
         }
-        keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(contents))
-        return true
+
+        return removedFromVault || removedLegacy
     }
 
     /**

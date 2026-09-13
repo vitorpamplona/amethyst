@@ -362,4 +362,113 @@ class SecureKeyStorageVaultTest {
             storage.enableConsolidatedVault(listOf(weirdAlias))
             assertEquals(weirdValue, storage.getPrivateKey(weirdAlias))
         }
+
+    // --- Interaction with the strict getOrCreate path (proposal 5d31b68e) ---
+
+    /**
+     * Wires the strict macOS probe to the fake backend so the test models real
+     * macOS: `security find-generic-password` sees the OS keychain, returning
+     * exit 0 (Found) while a per-alias item exists and exit 44 (NotFound) once
+     * the migration has deleted it.
+     */
+    private fun wireMacProbe(
+        storage: SecureKeyStorage,
+        backend: CountingKeyring,
+    ) {
+        storage.macSecurityLookup = { service, account ->
+            backend.store[service to account]
+                ?.let { MacSecurityResult.Found(it) }
+                ?: MacSecurityResult.NotFound
+        }
+    }
+
+    @Test
+    fun `strict lookup reads through the vault after migration`() =
+        runBlocking {
+            val alias = "account-metadata-key"
+            val (storage, backend) =
+                newStorageWith { b ->
+                    b.store[CountingKeyring.SERVICE to alias] = "THE-AES-KEY"
+                }
+            wireMacProbe(storage, backend)
+
+            assertEquals("THE-AES-KEY", storage.getPrivateKeyOrThrow(alias))
+
+            storage.enableConsolidatedVault(listOf(alias))
+
+            // The migration deleted the per-alias item, so an unvaulted strict probe
+            // would answer "definitively absent" -- and DesktopAccountStorage would
+            // mint a fresh AES key over the one that decrypts accounts.json.enc,
+            // wiping every account. The vault must answer instead.
+            assertFalse(alias in backend.snapshotAliases())
+            assertEquals(
+                "Strict lookup must read through the vault, not report the migrated alias as absent",
+                "THE-AES-KEY",
+                storage.getPrivateKeyOrThrow(alias),
+            )
+        }
+
+    @Test
+    fun `strict lookup keeps the strict contract for aliases outside the vault`() =
+        runBlocking {
+            val (storage, backend) =
+                newStorageWith { b ->
+                    b.store[CountingKeyring.SERVICE to "account-metadata-key"] = "THE-AES-KEY"
+                }
+            storage.enableConsolidatedVault(listOf("account-metadata-key"))
+
+            // An alias the vault never covered still falls through to the strict probe:
+            // a confirmed miss is null, an ambiguous answer still throws.
+            wireMacProbe(storage, backend)
+            assertNull(storage.getPrivateKeyOrThrow("npub1neverseen"))
+
+            storage.macSecurityLookup = { _, _ -> MacSecurityResult.Ambiguous(128, "user cancelled Keychain dialog") }
+            try {
+                storage.getPrivateKeyOrThrow("npub1neverseen")
+                throw AssertionError("Expected SecureStorageException for an ambiguous answer")
+            } catch (e: SecureStorageException) {
+                assertTrue(e.message?.contains("cancelled") == true)
+            }
+        }
+
+    @Test
+    fun `getPrivateKey falls back to a legacy item the vault does not cover`() =
+        runBlocking {
+            // Phase 1 activates the vault with only the metadata key; a phase 2 that
+            // never ran (or threw, which AccountManager swallows) leaves every nsec
+            // outside it. Those must stay readable, not read as absent.
+            val (storage, _) =
+                newStorageWith { b ->
+                    b.store[CountingKeyring.SERVICE to "account-metadata-key"] = "THE-AES-KEY"
+                    b.store[CountingKeyring.SERVICE to "npub1someaccount"] = "THE-NSEC"
+                }
+
+            storage.enableConsolidatedVault(listOf("account-metadata-key"))
+
+            assertTrue(storage.isVaultActive())
+            assertEquals("THE-AES-KEY", storage.getPrivateKey("account-metadata-key"))
+            assertEquals(
+                "An uncovered alias must fall back to its legacy per-alias item",
+                "THE-NSEC",
+                storage.getPrivateKey("npub1someaccount"),
+            )
+            assertTrue(storage.hasPrivateKey("npub1someaccount"))
+        }
+
+    @Test
+    fun `delete unlinks a legacy item the vault does not cover`() =
+        runBlocking {
+            val (storage, backend) =
+                newStorageWith { b ->
+                    b.store[CountingKeyring.SERVICE to "account-metadata-key"] = "THE-AES-KEY"
+                    b.store[CountingKeyring.SERVICE to "npub1someaccount"] = "THE-NSEC"
+                }
+            storage.enableConsolidatedVault(listOf("account-metadata-key"))
+
+            // Logging out of an account whose nsec never reached the vault must not
+            // leave the secret orphaned in the OS keychain.
+            assertTrue(storage.deletePrivateKey("npub1someaccount"))
+            assertFalse("npub1someaccount" in backend.snapshotAliases())
+            assertNull(storage.getPrivateKey("npub1someaccount"))
+        }
 }

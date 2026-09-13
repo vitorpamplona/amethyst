@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -296,10 +297,12 @@ class AccountManager internal constructor(
             secureStorage.enableConsolidatedVault(aliases)
         } catch (e: kotlin.coroutines.cancellation.CancellationException) {
             throw e
-        } catch (_: Exception) {
-            // Non-fatal: SecureKeyStorage falls back to legacy per-alias reads
-            // for anything the vault does not cover. Users see the old two-prompt
-            // behaviour but nothing breaks.
+        } catch (e: Exception) {
+            // Non-fatal: SecureKeyStorage falls back to legacy per-alias reads for
+            // anything the vault does not cover, so the worst case is the old
+            // multi-prompt behaviour. Log it -- swallowing this silently made a
+            // half-migrated keychain impossible to diagnose from a user report.
+            Log.w("AccountManager", "Consolidated keychain vault bootstrap failed; continuing on legacy per-alias reads", e)
         }
     }
 
