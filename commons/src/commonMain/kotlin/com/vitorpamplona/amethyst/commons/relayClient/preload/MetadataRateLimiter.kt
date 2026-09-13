@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.preload
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Global rate limiter for metadata requests to prevent thundering herd on fast scroll.
@@ -36,16 +38,25 @@ import kotlinx.coroutines.launch
 class MetadataRateLimiter(
     private val maxRequestsPerSecond: Int = 20,
     private val scope: CoroutineScope,
+    /** How long a partial batch may wait for more pubkeys before it is flushed. */
+    private val flushDelayMs: Long = 250,
 ) {
     private val queue = Channel<String>(Channel.BUFFERED)
+
+    // Written from enqueue() (feed/scroll path, any thread) and from the
+    // collector coroutine — a plain HashSet corrupts under that.
+    private val processedLock = KmpLock()
     private val processed = mutableSetOf<String>()
+
+    /** Returns true when [pubkey] was not processed before (and marks it). */
+    private fun markProcessed(pubkey: String) = processedLock.withLock { processed.add(pubkey) }
 
     /**
      * Enqueue a pubkey for metadata fetching.
      * Duplicates within the same batch are automatically filtered.
      */
     fun enqueue(pubkey: String) {
-        if (pubkey !in processed) {
+        if (!isProcessed(pubkey)) {
             queue.trySend(pubkey)
         }
     }
@@ -64,23 +75,27 @@ class MetadataRateLimiter(
     fun start(onRequest: suspend (String) -> Unit) {
         scope.launch {
             val batch = mutableListOf<String>()
-            queue.consumeAsFlow().collect { pubkey ->
-                if (pubkey !in processed) {
+            while (true) {
+                // A partial batch must not wait for the channel to close (it
+                // never does): flush it once the queue has been quiet for
+                // flushDelayMs, otherwise fewer than maxRequestsPerSecond
+                // pubkeys would never be requested at all.
+                val pubkey =
+                    if (batch.isEmpty()) {
+                        queue.receive()
+                    } else {
+                        withTimeoutOrNull(flushDelayMs) { queue.receive() }
+                    }
+
+                if (pubkey != null && markProcessed(pubkey)) {
                     batch.add(pubkey)
-                    processed.add(pubkey)
                 }
 
-                // Process batch when we hit the limit or queue is empty
-                if (batch.size >= maxRequestsPerSecond) {
+                if (batch.size >= maxRequestsPerSecond || (pubkey == null && batch.isNotEmpty())) {
                     processBatch(batch, onRequest)
                     batch.clear()
                     delay(1000) // Wait 1 second before next batch
                 }
-            }
-
-            // Process remaining
-            if (batch.isNotEmpty()) {
-                processBatch(batch, onRequest)
             }
         }
     }
@@ -99,11 +114,11 @@ class MetadataRateLimiter(
      * Call this when switching accounts or clearing cache.
      */
     fun reset() {
-        processed.clear()
+        processedLock.withLock { processed.clear() }
     }
 
     /**
      * Check if a pubkey has already been processed.
      */
-    fun isProcessed(pubkey: String): Boolean = pubkey in processed
+    fun isProcessed(pubkey: String): Boolean = processedLock.withLock { pubkey in processed }
 }

@@ -1,6 +1,6 @@
 // Regression test for the embedded-WebView IME relay's page→host protocol.
 //
-// Loads the REAL shim (commons/src/commonMain/composeResources/files/napplet/shim.js) into real Chromium
+// Loads the REAL shim (commonsUI/src/commonMain/composeResources/files/napplet/shim.js) into real Chromium
 // with the embedded-surface flags set, drives genuine focus/tap/blur gestures, and asserts the `ime.*`
 // envelopes it emits. This is the only honest automated coverage for this code: the half worth protecting
 // is the page↔host contract (real browser focus/gesture behavior), which no JVM unit test of the host-side
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const SHIM = process.argv[2] ?? resolve(HERE, '../../commons/src/commonMain/composeResources/files/napplet/shim.js')
+const SHIM = process.argv[2] ?? resolve(HERE, '../../commonsUI/src/commonMain/composeResources/files/napplet/shim.js')
 const CHROMIUM = process.env.CHROMIUM_PATH ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
 
 const HTML = `<!doctype html><meta charset=utf-8><title>ime</title>

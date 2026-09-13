@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.viewmodels
 
+import com.vitorpamplona.amethyst.commons.feeds.MarmotGroupFeedFilter
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
-import com.vitorpamplona.amethyst.commons.ui.feeds.MarmotGroupFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**

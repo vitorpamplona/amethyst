@@ -30,8 +30,15 @@ object CosineCache {
     // 2 * nBitmaps
     // the cache is enabled by default, it is recommended to disable it only when just a few images
     // are displayed
-    private val cacheCosinesX = LruCache<Int, DoubleArray>(20)
-    private val cacheCosinesY = LruCache<Int, DoubleArray>(20)
+    // Keyed on (size, components) as a pair, not their product: (50, 4) and
+    // (100, 2) both produce a 200-entry table with different contents.
+    private val cacheCosinesX = LruCache<Long, DoubleArray>(20)
+    private val cacheCosinesY = LruCache<Long, DoubleArray>(20)
+
+    private fun key(
+        size: Int,
+        components: Int,
+    ): Long = (size.toLong() shl 32) or components.toLong()
 
     /**
      * Clear calculations stored in memory cache. The cache is not big, but will increase when many
@@ -42,45 +49,46 @@ object CosineCache {
         cacheCosinesY.evictAll()
     }
 
-    fun hasX(idx: Int) = cacheCosinesX.get(idx) != null
-
-    fun hasY(idx: Int) = cacheCosinesY.get(idx) != null
-
-    fun getArrayForCosinesY(
-        calculate: Boolean,
+    private fun computeY(
         height: Int,
         numCompY: Int,
-    ) = when {
-        calculate -> {
-            DoubleArray(height * numCompY) {
-                val y = it / numCompY
-                val j = it % numCompY
-                cos(PI * y * j / height)
-            }.also {
-                cacheCosinesY.put(height * numCompY, it)
-            }
-        }
+    ) = DoubleArray(height * numCompY) {
+        val y = it / numCompY
+        val j = it % numCompY
+        cos(PI * y * j / height)
+    }
 
-        else -> {
-            cacheCosinesY[height * numCompY]!!
-        }
+    private fun computeX(
+        width: Int,
+        numCompX: Int,
+    ) = DoubleArray(width * numCompX) {
+        val x = it / numCompX
+        val i = it % numCompX
+        cos(PI * x * i / width)
+    }
+
+    /**
+     * The Y cosine table for ([height], [numCompY]). With [useCache] the lookup
+     * and the insert are one operation, so a concurrent decoder evicting the
+     * entry between a has()/get() pair can no longer produce a null.
+     */
+    fun getArrayForCosinesY(
+        useCache: Boolean,
+        height: Int,
+        numCompY: Int,
+    ): DoubleArray {
+        if (!useCache) return computeY(height, numCompY)
+        val k = key(height, numCompY)
+        return cacheCosinesY[k] ?: computeY(height, numCompY).also { cacheCosinesY.put(k, it) }
     }
 
     fun getArrayForCosinesX(
-        calculate: Boolean,
+        useCache: Boolean,
         width: Int,
         numCompX: Int,
-    ) = when {
-        calculate -> {
-            DoubleArray(width * numCompX) {
-                val x = it / numCompX
-                val i = it % numCompX
-                cos(PI * x * i / width)
-            }.also { cacheCosinesX.put(width * numCompX, it) }
-        }
-
-        else -> {
-            cacheCosinesX[width * numCompX]!!
-        }
+    ): DoubleArray {
+        if (!useCache) return computeX(width, numCompX)
+        val k = key(width, numCompX)
+        return cacheCosinesX[k] ?: computeX(width, numCompX).also { cacheCosinesX.put(k, it) }
     }
 }

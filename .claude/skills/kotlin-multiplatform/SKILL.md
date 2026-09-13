@@ -383,7 +383,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 | State (business logic) | commonMain or commons/jvmAndroid | Reusable StateFlow patterns |
 | **ViewModels** | **commons/commonMain/viewmodels/** | **StateFlow/SharedFlow + logic shareable, Compose MP lifecycle compatible** |
 | UI formatters (pure) | commons/commonMain | Reusable, no dependencies |
-| UI components (simple) | commons/commonMain | Cards, buttons, dialogs |
+| UI components (simple) | commonsUI/commonMain | Cards, buttons, dialogs (Compose UI never goes in `commons`) |
 | **Screen layouts** | **Platform-specific** | **Window vs Activity, sidebar vs bottom nav** |
 | Navigation | Platform-specific only | Activity vs Window too different |
 | Permissions | Platform-specific only | APIs incompatible |

@@ -30,14 +30,13 @@ class EncryptedBlobInterceptor(
     val cache: EncryptionKeyCache,
 ) : Interceptor {
     private fun Response.decryptOrNullWithErrorCorrection(info: DecryptInformation): Response? {
-        val body = peekBody(Long.MAX_VALUE)
-
-        // Only tries to decrypt if the content-type is a byte array
-        // if (body.contentType().toString() != "application/octet-stream") {
-        //    return null
-        // }
-
-        val bytes = body.bytes()
+        // The whole blob has to be in memory to decrypt it (the AEAD tag covers
+        // all of it), but read the body once and close it: peekBody(MAX) used to
+        // buffer a second full copy and left the original stream — and its
+        // connection-pool slot, since this is a network interceptor — open.
+        val body = this.body
+        val contentType = body.contentType()
+        val bytes = body.use { it.bytes() }
 
         // Tries the correct way first
         // if it fails, tries to decrypt as UTF8 nonce, which was how
@@ -57,7 +56,7 @@ class EncryptedBlobInterceptor(
             .apply {
                 body(
                     decrypted.toResponseBody(
-                        info.mimeType?.toMediaTypeOrNull() ?: body.contentType(),
+                        info.mimeType?.toMediaTypeOrNull() ?: contentType,
                     ),
                 )
                 // removes hints that would make the app requrest partial byte arrays

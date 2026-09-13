@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.commons.viewmodels.thread
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.LevelSignature
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.commons.model.ThreadLevelCalculator
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableSet
 

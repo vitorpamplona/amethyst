@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.privacylock
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.compositionLocalOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -174,23 +171,3 @@ class PrivacyLockState(
         idleTimerJob = null
     }
 }
-
-/**
- * Provided once at the App composition root. Map keyed by [LockScope]; every
- * scope must have an entry (see [lockStateFor] which throws when missing).
- */
-val LocalPrivacyLockState =
-    compositionLocalOf<Map<LockScope, PrivacyLockState>> {
-        error("LocalPrivacyLockState not provided — wrap App() with CompositionLocalProvider")
-    }
-
-/**
- * Convenience accessor used inside gate composables. Reads the map from the
- * ambient [LocalPrivacyLockState] and returns the state holder for [scope].
- * Throws if the scope was not registered at the App root.
- */
-@Composable
-@ReadOnlyComposable
-fun lockStateFor(scope: LockScope): PrivacyLockState =
-    LocalPrivacyLockState.current[scope]
-        ?: error("PrivacyLockState for $scope not registered at App root")

@@ -1,29 +1,24 @@
-
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.DisableCacheInKotlinVersion
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 
-// Disables the Kotlin/Native compiler cache for an iOS test binary so the
-// Compose ui-uikit klib recompiles fresh instead of linking the broken prebuilt
-// cache (see the call site in the `kotlin {}` block). The version guard makes
-// Kotlin re-surface this workaround once we move past 2.4.20, so it can be
-// dropped when a newer Compose/Kotlin pairing fixes the cache. Wrapped in a
-// helper because @OptIn only applies to declarations, not bare statements.
-@OptIn(KotlinNativeCacheApi::class)
-fun TestExecutable.disableUiKitPrebuiltCache() =
-    disableNativeCache(
-        DisableCacheInKotlinVersion.`2_4_20`,
-        "Compose ui-uikit prebuilt cache references UIViewLayoutRegion (iOS 17+); " +
-            "linking the iOS test binary fails under Xcode 16.4.",
-    )
-
+// `:commons` is the HEADLESS half of the shared layer: domain models, state
+// holders, ViewModels, the relay client, services. It is consumed by every
+// front end including the headless `:cli`, so it must never depend on Compose
+// UI (ui / foundation / material3), Coil, Compose resources or Skiko — those
+// live in `:commonsUI`, which sits on top of this module. Only the Compose
+// *runtime* (@Stable/@Immutable + snapshot state) is allowed here.
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    // Kept on purpose even though no @Composable lives here anymore: the
+    // Compose compiler stamps @StabilityInferred on every class it compiles,
+    // which is what lets the apps' composables treat unannotated commons
+    // classes (TopFilter, TorSettings, ProfileBroadcastStatus, …) as stable.
+    // Measured with Compose compiler reports on full recompiles (2026-09-12):
+    // removing this plugin turns 20→28 composable params unstable in
+    // :commonsUI, 33→65 in :desktopApp and 90→149 in :amethyst. Inference is
+    // also self-maintaining, unlike hand-written @Immutable annotations that
+    // silently lie once a `var` is added — so this stays.
     alias(libs.plugins.jetbrainsComposeCompiler)
-    alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.serialization)
 }
 
@@ -70,48 +65,30 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
-    // Compose Multiplatform 1.11.x ships an `org.jetbrains.compose.ui:ui-uikit`
-    // prebuilt Kotlin/Native cache whose CMPLayoutRegion object hard-references
-    // the UIKit class `UIViewLayoutRegion` (introduced in iOS 17). Linking the
-    // iOS *test* executable against that cache under Xcode 16.4 fails with
-    //   ld: Undefined symbols: _OBJC_CLASS_$_UIViewLayoutRegion
-    // because the cached object was built for a newer simulator SDK (18.5) than
-    // the test binary is being linked for (14.0). Disabling the native cache for
-    // the iOS test binaries makes ui-uikit recompile against the active SDK,
-    // where the symbol resolves. See disableUiKitPrebuiltCache() above and
-    // https://kotl.in/disable-native-cache
-    targets.withType<KotlinNativeTarget>().configureEach {
-        binaries.withType<TestExecutable>().configureEach {
-            disableUiKitPrebuiltCache()
-        }
-    }
-
     sourceSets {
         commonMain {
             dependencies {
                 implementation(project(":quartz"))
 
-                // Compose Multiplatform
-                implementation(libs.jetbrains.compose.ui)
-                implementation(libs.jetbrains.compose.foundation)
+                // Compose *runtime* only — @Stable/@Immutable annotations and
+                // snapshot state (mutableStateOf, State) used by state holders.
+                // No ui / foundation / material3 here: that is :commonsUI.
                 implementation(libs.jetbrains.compose.runtime)
-                implementation(libs.jetbrains.compose.material3)
-                implementation(libs.jetbrains.compose.ui.tooling.preview)
 
-                // Lifecycle (KMP since 2.8.0). lifecycle-viewmodel and
-                // lifecycle-runtime-compose ship iOS variants;
-                // lifecycle-viewmodel-compose (the viewModel() Composable
-                // helper) is Android-only and lives in jvmAndroid below.
+                // Lifecycle ViewModel (KMP since 2.8.0, ships iOS variants).
+                // The Compose-side helpers (lifecycle-runtime-compose,
+                // viewModel()) live in :commonsUI.
                 implementation(libs.androidx.lifecycle.viewmodel)
-                implementation(libs.androidx.lifecycle.runtime.compose)
-
-                // Image loading (Coil 3 - KMP). The okhttp network fetcher is
-                // JVM-only and lives in jvmAndroid; iOS will pull coil-ktor
-                // when that target wires its actual.
-                implementation(libs.coil.compose)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
+
+                // okio (KMP, Apache-2.0) for service/image/DeferredDeleteFileSystem,
+                // the ForwardingFileSystem the apps wrap Coil's disk cache in. It
+                // used to arrive transitively through Coil; with Coil in
+                // :commonsUI the Apple targets lost it (JVM still saw it via
+                // OkHttp), so declare the dependency the file actually has.
+                implementation(libs.okio)
 
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
@@ -119,12 +96,6 @@ kotlin {
                 // JSON for custom-feed definitions (KMP — replaces Jackson
                 // for the one commonMain serializer that was blocking iOS).
                 implementation(libs.kotlinx.serialization.json)
-
-                // Compose Multiplatform Resources
-                implementation(libs.jetbrains.compose.components.resources)
-
-                // KMP syntax highlighter (Apache-2.0) for the git code browser.
-                implementation(libs.highlights)
             }
         }
 
@@ -149,39 +120,17 @@ kotlin {
                     // Phase 5 lands.
                     implementation(project(":nestsClient"))
 
-                    // Coil's OkHttp network fetcher (JVM-only). iOS will use
-                    // coil-ktor when the iOS Compose UI ships.
-                    implementation(libs.coil.okhttp)
-
                     // OkHttp (+ coroutines bridge) for the link-preview fetcher
                     // (service/preview/UrlPreview). JVM-only; iOS will swap to
                     // Ktor when its UI ships.
                     implementation(libs.okhttp)
                     implementation(libs.okhttpCoroutines)
-
-                    // Markdown rendering (richtext-commonmark). The single
-                    // consumer (RenderMarkdown.kt) already lives in jvmAndroid.
-                    // iOS support pending Phase 3 markdown decision.
-                    implementation(libs.markdown.commonmark)
-                    implementation(libs.markdown.ui)
-                    implementation(libs.markdown.ui.material3)
-
-                    // viewModel() Compose helper. AndroidX publishes this
-                    // artifact for android/jvmStubs/linuxx64Stubs but not iOS,
-                    // so it stays in jvmAndroid until we either swap to the
-                    // org.jetbrains.androidx.lifecycle variant or accept a
-                    // platform-specific ViewModel access pattern on iOS.
-                    implementation(libs.androidx.lifecycle.viewmodel.compose)
                 }
             }
 
         jvmMain {
             dependsOn(jvmAndroid)
             dependencies {
-                // Desktop-specific Compose
-                implementation(compose.desktop.currentOs)
-                implementation(libs.jetbrains.compose.ui.tooling)
-
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)
 
@@ -205,8 +154,10 @@ kotlin {
         androidMain {
             dependsOn(jvmAndroid)
             dependencies {
-                // Android-specific Compose tooling
-                implementation(libs.androidx.ui.tooling.preview)
+                // androidx.core KTX (Bitmap.scale, prefs.edit {}) used by the
+                // Android actuals. Was reaching us transitively through the
+                // Compose UI artifacts before the :commonsUI split.
+                implementation(libs.androidx.core.ktx)
 
                 // Secure key storage via Android Keystore
                 implementation(libs.androidx.security.crypto.ktx)
@@ -221,16 +172,6 @@ kotlin {
             }
         getByName("iosArm64Main").dependsOn(iosMain)
         getByName("iosSimulatorArm64Main").dependsOn(iosMain)
-
-        // Skiko-backed targets (desktop JVM + iOS) share pixel-format helpers
-        // (org.jetbrains.skia.* resolves on both through Compose). Android is
-        // deliberately NOT in this set — it renders through android.graphics.
-        val skikoMain =
-            create("skikoMain") {
-                dependsOn(commonMain.get())
-            }
-        getByName("jvmMain").dependsOn(skikoMain)
-        iosMain.dependsOn(skikoMain)
 
         getByName("androidHostTest") {
             dependencies {
@@ -259,12 +200,6 @@ kotlin {
     }
 }
 
-compose.resources {
-    publicResClass = true
-    packageOfResClass = "com.vitorpamplona.amethyst.commons.resources"
-    generateResClass = always
-}
-
 // JVM tests run AWT-backed code (ImageIO, Thumbnailator, BufferedImage) — pin
 // headless mode so a stray Toolkit.getDefaultToolkit() in a transitive dep
 // never bounces the macOS Dock during CI/local test runs.
@@ -274,72 +209,5 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-// iOS purity gate — same shape as :quartz:verifyKmpPurity. See the rationale
-// there. Commons gains this gate once FeedDefinitionSerializer.kt has been
-// migrated off Jackson; future commonMain code must not reintroduce JVM-only
-// JSON / HTTP deps.
-val verifyKmpPurity = tasks.register("verifyKmpPurity") {
-    group = "verification"
-    description = "Fails if iOS-targeted source sets import JVM-only deps."
-    val checkedDirs =
-        listOf(
-            "src/commonMain", "src/commonTest",
-            "src/appleMain", "src/appleTest",
-            "src/nativeMain", "src/nativeTest",
-            "src/iosMain", "src/iosTest",
-            "src/skikoMain", "src/skikoTest",
-            "src/iosArm64Main", "src/iosArm64Test",
-            "src/iosSimulatorArm64Main", "src/iosSimulatorArm64Test",
-            "src/linuxMain", "src/linuxTest",
-            "src/linuxX64Main", "src/linuxX64Test",
-            "src/macosMain", "src/macosTest",
-            "src/macosArm64Main", "src/macosArm64Test",
-        ).map { layout.projectDirectory.dir(it).asFile }
-            .filter { it.exists() }
-    inputs.files(checkedDirs)
-    doLast {
-        // Each pattern is paired with a short hint so the failure message
-        // points at the canonical KMP replacement.
-        val forbidden =
-            listOf(
-                "com.fasterxml.jackson" to "Jackson is JVM-only — use kotlinx.serialization",
-                "okhttp3" to "OkHttp is JVM-only — wrap behind expect/actual or use Ktor on iOS",
-                "System.currentTimeMillis" to "use TimeUtils.now()",
-                "Thread.sleep" to "use kotlinx.coroutines.delay or platform-specific actual",
-                "java.util.UUID" to "use kotlin.uuid.Uuid",
-                "kotlin.jvm.Synchronized" to "use KmpLock.withLock {}",
-                // The bare call, not just the annotation: `synchronized(lock) {}` resolves
-                // from kotlin-stdlib-jvm with no import, so it compiles on Android/JVM and
-                // only fails at the iOS compile step. Catch it here instead.
-                "synchronized(" to "`synchronized` is JVM-only — use KmpLock.withLock {}",
-                "kotlin.jvm.Volatile" to "use kotlin.concurrent.Volatile",
-            )
-        val offenders =
-            checkedDirs.flatMap { dir ->
-                dir.walkTopDown()
-                    .filter { it.isFile && it.extension == "kt" }
-                    .flatMap { file ->
-                        file.readLines().withIndex().mapNotNull { (idx, line) ->
-                            val trimmed = line.trimStart()
-                            // Skip KDoc / line-comment lines — those legitimately
-                            // mention forbidden names (migration notes, doc refs).
-                            if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) {
-                                return@mapNotNull null
-                            }
-                            forbidden.firstOrNull { (pattern, _) -> line.contains(pattern) }?.let { (hit, hint) ->
-                                "${file.relativeTo(rootDir)}:${idx + 1}: '$hit' — $hint"
-                            }
-                        }
-                    }
-            }
-        if (offenders.isNotEmpty()) {
-            throw GradleException(
-                "iOS-targeted source sets must not reference JVM-only APIs. " +
-                    "Move the offending code to jvmAndroid/ or behind an expect/actual:\n  " +
-                    offenders.joinToString("\n  "),
-            )
-        }
-    }
-}
-
-tasks.named("check").configure { dependsOn(verifyKmpPurity) }
+// iOS purity gate — shared task, see gradle/kmp-purity.gradle.kts.
+apply(from = rootProject.file("gradle/kmp-purity.gradle.kts"))

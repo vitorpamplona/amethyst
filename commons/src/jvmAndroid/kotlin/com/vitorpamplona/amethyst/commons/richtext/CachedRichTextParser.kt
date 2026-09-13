@@ -37,8 +37,35 @@ object CachedRichTextParser {
     // working set plus a few other feeds' recent entries, so pre-parsed bodies survive
     // until the render reads them and feed switches don't thrash. Each entry is one
     // note's parsed segments — typically single-digit KB.
-    private val richTextCache = ConcurrentLruCache<Int, RichTextViewerState>(500)
-    private val isMarkdownCache = ConcurrentLruCache<Int, Boolean>(200)
+    // Keyed by a 32-bit hash for speed, but every hit re-checks the inputs:
+    // String.hashCode() is trivially collidable ("Aa"/"BB"), and serving one
+    // note's parsed segments (images, invoices, link cards) under another
+    // note's author is not an acceptable failure mode.
+    private class CachedParse(
+        val content: String,
+        val tagsHash: Int,
+        val callbackUri: String?,
+        val authorPubKey: String?,
+        val state: RichTextViewerState,
+    ) {
+        fun matches(
+            content: String,
+            tagsHash: Int,
+            callbackUri: String?,
+            authorPubKey: String?,
+        ) = this.tagsHash == tagsHash &&
+            this.callbackUri == callbackUri &&
+            this.authorPubKey == authorPubKey &&
+            this.content == content
+    }
+
+    private class CachedMarkdown(
+        val content: String,
+        val isMarkdown: Boolean,
+    )
+
+    private val richTextCache = ConcurrentLruCache<Int, CachedParse>(500)
+    private val isMarkdownCache = ConcurrentLruCache<Int, CachedMarkdown>(200)
 
     private fun hashCodeCache(
         content: String,
@@ -75,7 +102,11 @@ object CachedRichTextParser {
         tags: ImmutableListOfLists<String>,
         callbackUri: String? = null,
         authorPubKey: String? = null,
-    ): RichTextViewerState? = richTextCache.get(hashCodeCache(content, tags, callbackUri, authorPubKey))
+    ): RichTextViewerState? =
+        richTextCache
+            .get(hashCodeCache(content, tags, callbackUri, authorPubKey))
+            ?.takeIf { it.matches(content, tags.contentHash(), callbackUri, authorPubKey) }
+            ?.state
 
     fun parseText(
         content: String,
@@ -84,12 +115,13 @@ object CachedRichTextParser {
         authorPubKey: String? = null,
     ): RichTextViewerState {
         val key = hashCodeCache(content, tags, callbackUri, authorPubKey)
+        val tagsHash = tags.contentHash()
         val cached = richTextCache.get(key)
-        return if (cached != null) {
-            cached
+        return if (cached != null && cached.matches(content, tagsHash, callbackUri, authorPubKey)) {
+            cached.state
         } else {
             val newState = RichTextParser().parseText(content, tags, callbackUri, authorPubKey)
-            richTextCache.put(key, newState)
+            richTextCache.put(key, CachedParse(content, tagsHash, callbackUri, authorPubKey, newState))
             newState
         }
     }
@@ -98,9 +130,9 @@ object CachedRichTextParser {
     // notes only pays for the scan once. The decision is purely a function of `content`.
     fun isMarkdown(content: String): Boolean {
         val key = content.hashCode()
-        isMarkdownCache.get(key)?.let { return it }
+        isMarkdownCache.get(key)?.takeIf { it.content == content }?.let { return it.isMarkdown }
         val result = computeIsMarkdown(content)
-        isMarkdownCache.put(key, result)
+        isMarkdownCache.put(key, CachedMarkdown(content, result))
         return result
     }
 

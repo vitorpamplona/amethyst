@@ -175,9 +175,13 @@ device. PRs that introduce any of them will be sent back.
 
 ### KMP source-set discipline
 
-- **Android-only imports don't belong in `commons/commonMain` or
-  `quartz/commonMain`.** Use `expect`/`actual` for platform-specific
-  bits, or move the Android-specific code to `androidMain`.
+- **Android-only imports don't belong in `commons/commonMain`,
+  `commonsUI/commonMain` or `quartz/commonMain`.** Use `expect`/`actual`
+  for platform-specific bits, or move the Android-specific code to
+  `androidMain`.
+- **Compose UI (`ui`/`foundation`/`material3`), Coil and `Res` don't belong
+  in `commons` at all** — that module is on the CLI classpath. Put the file
+  in `commonsUI` (same package) instead.
 
 ### Logging
 

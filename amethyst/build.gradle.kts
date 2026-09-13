@@ -405,6 +405,7 @@ dependencies {
 
     implementation(project(":quartz"))
     implementation(project(":commons"))
+    implementation(project(":commonsUI"))
     implementation(project(":nestsClient"))
     // Agent text stream previews: the raw-QUIC binding plus the QUIC
     // stack under it (for the certificate validator it requires).

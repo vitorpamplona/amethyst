@@ -1,6 +1,6 @@
 ---
 name: feed-patterns
-description: Feed composition and data-access layer patterns in Amethyst. Use when adding or modifying a feed (home, profile, hashtag, bookmarks, notifications, DMs, communities), working with the shared `FeedFilter` / `AdditiveFeedFilter` / `ChangesFlowFilter` / `FeedContentState` in `commons/.../ui/feeds/`, the Android-only `AdditiveComplexFeedFilter` / `FilterByListParams` in `amethyst/.../ui/dal/`, or extending the `FeedViewModel` family in `commons/.../viewmodels/`. Covers how feeds scan `LocalCache`, react to changes, apply ordering, and render through Compose.
+description: Feed composition and data-access layer patterns in Amethyst. Use when adding or modifying a feed (home, profile, hashtag, bookmarks, notifications, DMs, communities), working with the shared `FeedFilter` / `AdditiveFeedFilter` / `ChangesFlowFilter` / `FeedContentState` in `commons/.../feeds/`, the Android-only `AdditiveComplexFeedFilter` / `FilterByListParams` in `amethyst/.../ui/dal/`, or extending the `FeedViewModel` family in `commons/.../viewmodels/`. Covers how feeds scan `LocalCache`, react to changes, apply ordering, and render through Compose.
 ---
 
 # Feed Patterns
@@ -25,7 +25,7 @@ Amethyst's "feed" abstraction is: a `FeedFilter` that decides which notes belong
 │                 ◄── MarmotGroupFeedViewModel                │
 │                                                             │
 │                                                             │
-│ commons/.../ui/feeds/  (shared, KMP)                        │
+│ commons/.../feeds/     (shared, KMP)                        │
 │   IFeedFilter / FeedFilter<T>  (abstract base)              │
 │   IAdditiveFeedFilter / AdditiveFeedFilter<T>               │
 │   ChangesFlowFilter                                         │
@@ -68,7 +68,7 @@ Amethyst's "feed" abstraction is: a `FeedFilter` that decides which notes belong
 
 ### Shared filter bases (commons)
 
-`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/feeds/`:
+`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/feeds/`:
 
 - **`FeedFilter.kt`** — `abstract class FeedFilter<T> : IFeedFilter<T>`. Has `feed(): List<T>` (the sync query against the cache), `feedKey(): String` (identity used to cache), `limit()`, and `loadTop()`.
 - **`AdditiveFeedFilter.kt`** — `abstract class AdditiveFeedFilter<T> : FeedFilter<T>(), IAdditiveFeedFilter<T>`. Adds incremental updates (the "additive" part): `updateListWith(oldList, newItems)` runs `applyFilter(newItems)` and grafts accepted items onto the existing list (re-`sort` + `take(limit())`) without recomputing everything.
@@ -100,7 +100,7 @@ Concrete filters (Home, Hashtag, Profile, Bookmark, Notifications, Communities, 
 
 ## Filter Sharing (Android vs Desktop)
 
-- The filter **base classes** (`FeedFilter`, `AdditiveFeedFilter`, `ChangesFlowFilter`) and feed state (`FeedContentState`) are in `commons/.../ui/feeds/` — **shared**. ViewModels are in `commons/.../viewmodels/` — **shared**.
+- The filter **base classes** (`FeedFilter`, `AdditiveFeedFilter`, `ChangesFlowFilter`) and feed state (`FeedContentState`) are in `commons/.../feeds/` — **shared**. ViewModels are in `commons/.../viewmodels/` — **shared**.
 - The **concrete** filters are platform-local: Android's in `amethyst/.../ui/screen/loggedIn/*/dal/`, Desktop's in `desktopApp/.../feeds/`. `amethyst/.../ui/dal/` keeps Android-only helpers (`AdditiveComplexFeedFilter`, `FilterByListParams`, `DefaultFeedOrder`) plus back-compat typealiases.
 - When porting a feed, share the concrete filter only if both platforms need identical inclusion rules.
 

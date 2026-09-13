@@ -1,7 +1,7 @@
 # Amethyst icon font
 
 Builds `amethyst_icons.ttf` from the Kotlin `ImageVector` icons in
-`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/`.
+`commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/`.
 
 ## Why
 

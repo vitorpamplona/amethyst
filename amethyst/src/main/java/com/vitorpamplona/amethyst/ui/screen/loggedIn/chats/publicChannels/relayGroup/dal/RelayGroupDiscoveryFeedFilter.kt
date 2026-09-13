@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal
 
+import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.GroupDiscoveryConstraint
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.viewmodels
 
+import com.vitorpamplona.amethyst.commons.feeds.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.ui.feeds.ChatroomFeedFilter
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 class ChatroomFeedViewModel(

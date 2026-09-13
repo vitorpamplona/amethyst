@@ -1,11 +1,11 @@
 # Material Symbols Subset
 
 The font shipped at
-`commons/src/commonMain/composeResources/font/material_symbols_outlined.ttf`
+`commonsUI/src/commonMain/composeResources/font/material_symbols_outlined.ttf`
 is a **subset** of Google's [Material Symbols
 Outlined](https://github.com/google/material-design-icons) variable font,
 trimmed to only the codepoints referenced from
-`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/MaterialSymbols.kt`.
+`commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/MaterialSymbols.kt`.
 
 | | Full upstream | Subset |
 |---|---|---|

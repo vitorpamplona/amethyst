@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.home
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
@@ -28,7 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomeOutboxEventsEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedQueryState
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow

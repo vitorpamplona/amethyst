@@ -568,22 +568,22 @@ jobs:
           ( cd "$SRC" && tar czf "$OLDPWD/dist/amy-${VER}-jvm.tar.gz" bin lib )
           echo "Collected: dist/amy-${VER}-jvm.tar.gz"
 
-      - name: Enforce CLI size budget (200 MB per asset)
+      - name: Enforce CLI size budget (120 MB per asset)
         run: |
           set -euo pipefail
-          # The plan at cli/plans/2026-04-21-cli-distribution.md §size-budget
-          # targets < 80 MB, but :commons currently leaks Compose + Skiko as
-          # transitive deps (~40 MB of unused UI jars). Budget is set to
-          # 200 MB until commons is split into core + ui modules — track that
-          # as a follow-up. Until then, this gate just catches pathological
-          # regressions (e.g. accidental :amethyst dep pulling Android libs).
+          # Measured after the :commons / :commonsUI split (1.15.2, Linux x64):
+          # amy-*-jvm.tar.gz 55 MB, amy-*.tar.gz (jlink image) 80 MB, lib/ 60 MB
+          # on disk. The budget sits 50% above the largest asset so a Compose /
+          # Skiko / Android leak (+25-40 MB compressed) trips it, while the
+          # per-OS JRE variance of the jlink image does not. The "Assert no
+          # Compose UI" step above is the precise check; this is the coarse one.
           fail=0
           for f in dist/*; do
             if [[ -f "$f" ]]; then
               size=$(wc -c < "$f")
               mb=$(( size / 1048576 ))
-              if (( size > 209715200 )); then
-                echo "::error file=$f::asset is ${mb} MB — exceeds 200 MB amy budget"
+              if (( size > 125829120 )); then
+                echo "::error file=$f::asset is ${mb} MB — exceeds 120 MB amy budget"
                 fail=1
               else
                 echo "OK: $f — ${mb} MB"

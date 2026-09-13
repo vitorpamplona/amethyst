@@ -43,7 +43,7 @@ It diffs every locale's resource names against its tree's default `values/` and
 exits non-zero listing any orphan. It covers **both** Crowdin-managed resource
 systems — the Android res trees (`amethyst/src/main/res`,
 `commons/src/androidMain/res`) and the Compose-Multiplatform catalog
-(`commons/src/commonMain/composeResources`) — and says which consequence applies:
+(`commonsUI/src/commonMain/composeResources`) — and says which consequence applies:
 lint only polices the Android trees, but an orphan in the Compose catalog is the
 same mistake and leaves a dead translation behind.
 

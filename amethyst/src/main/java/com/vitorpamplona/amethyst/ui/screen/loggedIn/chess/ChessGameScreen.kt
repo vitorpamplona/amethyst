@@ -61,10 +61,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncBanner
-import com.vitorpamplona.amethyst.commons.nip64Chess.LiveChessGameScreen
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBroadcastBanner
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessSyncBanner
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.LiveChessGameScreen
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chess_game_id
 import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found

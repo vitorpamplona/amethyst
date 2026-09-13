@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -67,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.nests_section_live_now
 import com.vitorpamplona.amethyst.commons.resources.nests_section_recently_ended
 import com.vitorpamplona.amethyst.commons.resources.nests_section_scheduled
 import com.vitorpamplona.amethyst.commons.resources.wallet_loading
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
