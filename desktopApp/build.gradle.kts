@@ -35,8 +35,9 @@ dependencies {
     // Quartz Nostr library (will use JVM target)
     implementation(project(":quartz"))
 
-    // Commons library
+    // Commons library (headless) + its Compose UI half
     implementation(project(":commons"))
+    implementation(project(":commonsUI"))
 
     // Lifecycle ViewModel (needed to access ViewModel supertype from commons)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

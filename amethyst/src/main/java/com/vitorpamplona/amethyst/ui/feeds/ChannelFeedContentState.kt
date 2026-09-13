@@ -23,13 +23,13 @@ package com.vitorpamplona.amethyst.ui.feeds
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.commons.feeds.AdditiveComplexFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.commons.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
-import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveComplexFeedFilter
-import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.quartz.utils.Log

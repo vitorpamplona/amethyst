@@ -3,7 +3,7 @@
 Thanks for your interest in improving Amethyst. This document captures the
 expectations, conventions, and review rules for code, documentation, and
 translation contributions across all modules in this repository (`amethyst/`,
-`desktopApp/`, `quartz/`, `commons/`, `cli/`, `quic/`, `nestsClient/`).
+`desktopApp/`, `quartz/`, `commons/`, `commonsUI/`, `cli/`, `quic/`, `nestsClient/`).
 
 By contributing, you agree to license your work under the MIT license. Any
 work contributed where you are not the original author must contain its
@@ -157,7 +157,8 @@ Common Gradle entry points:
 Modules:
 
 - `quartz/` — Nostr KMP library (protocol, crypto, models). **No UI.**
-- `commons/` — Shared Compose Multiplatform UI, icons, ViewModels, flows.
+- `commons/` — Shared headless layer: models, ViewModels, flows, relay client. **No Compose UI** (the CLI depends on it).
+- `commonsUI/` — Shared Compose Multiplatform UI, icons, theme, Compose resources, on top of `commons`.
 - `quic/` — Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport.
 - `nestsClient/` — Audio-rooms client (NIP-53) built on `:quic` and
   `:quartz`.
@@ -175,7 +176,8 @@ of PR churn. Place new code by purpose:
 | What you're adding | Goes in |
 |---|---|
 | Nostr event types, NIPs, tags, signing, crypto, Bech32 | `quartz/commonMain/` |
-| Shared Composables, icons, ViewModels, StateFlows | `commons/commonMain/viewmodels/` or `commons/commonMain/` |
+| Shared ViewModels, StateFlows, relay subscriptions | `commons/commonMain/viewmodels/` or `commons/commonMain/` |
+| Shared Composables, icons, theme | `commonsUI/commonMain/` (same packages as `commons`) |
 | Android-only screen, navigation, system integration | `amethyst/` |
 | Desktop-only window, sidebar, menu bar, shortcut | `desktopApp/` |
 | `amy <verb>` subcommand (thin assembly only) | `cli/src/main/kotlin/.../cli/` |
@@ -188,8 +190,9 @@ Hard rules:
 - `cli/` has **no Nostr protocol or business logic** — it's a thin assembly
   layer over `quartz` + `commons`. If your CLI command needs new behavior,
   extract it into `commons/` first.
-- ViewModels belong in `commons/commonMain/`. Only screens (the Composable
-  that wires layout + navigation) stay in the platform module.
+- ViewModels belong in `commons/commonMain/`; shared composables in
+  `commonsUI/commonMain/`. Only screens (the Composable that wires layout +
+  navigation) stay in the platform module.
 - For platform-specific behavior in a shared file, use `expect`/`actual`.
 
 ## Workflow

@@ -59,6 +59,7 @@ lightcompressor-enhanced = "2.2.1"
 jlatexmath = "1.5"
 markdown = "4d3b3dd173"
 highlights = "1.1.0"
+okio = "3.18.1"
 # JetBrains material3 must track Compose Multiplatform's foundation: CMP 1.12.0 changed
 # the CustomStyle.applyStyle signature, so the stable 1.9.0 (and the 1.11.0-alpha07 that
 # kodein-emoji pulls in) crash at runtime with AbstractMethodError in OutlinedTextField.
@@ -221,6 +222,7 @@ markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", nam
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }
 highlights = { group = "dev.snipme", name = "highlights", version.ref = "highlights" }
+okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}

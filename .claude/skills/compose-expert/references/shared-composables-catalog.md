@@ -1,11 +1,11 @@
 # Shared Composables Catalog
 
-This catalog documents shared UI components in `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/`.
+This catalog documents shared UI components in `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/` (the Compose half of the shared layer; headless state stays in `commons`).
 
 ## Directory Structure
 
 ```
-commons/src/commonMain/kotlin/.../commons/ui/
+commonsUI/src/commonMain/kotlin/.../commons/ui/
 ├── components/    # Reusable UI components
 ├── screens/       # Screen-level composables
 ├── theme/         # Theming and styling
@@ -232,7 +232,7 @@ private val pathData1 = PathData {
 ```
 
 **roboBuilder** - Custom ImageVector.Builder DSL
-- Located in: `commons/robohash/`
+- Located in: `commonsUI/.../commons/robohash/`
 - Pattern: Builder-based, composable paths
 - Parts: Face, Eyes, Mouth, Body, Accessory (0-9 variants each)
 - Colors: Dynamic (fgColor parameter) + Black constants

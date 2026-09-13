@@ -47,7 +47,7 @@ Walk the imports. The usual offenders:
 | `android.util.Log` | Replace with `quartz` `PlatformLog` (already multiplatform). |
 | `android.graphics.Bitmap` | Almost never needed by Amy. Keep in Android and split the function. |
 | `android.net.Uri` | Replace with `kotlinx.io` path types or a plain `String`. |
-| `androidx.compose.*` | Must stay out of `commons/commonMain` unless you're in a Compose-Multiplatform module. Amy doesn't depend on Compose. |
+| `androidx.compose.*` | Compose UI (`ui`/`foundation`/`material3`), Coil and `Res` must stay out of `commons` entirely — they belong in `:commonsUI`, which Amy never depends on. Only the Compose *runtime* (`@Stable`, snapshot state) is allowed in `commons`. |
 
 ### Step 3 — Pick a migration strategy per dependency
 
@@ -66,7 +66,7 @@ Walk the imports. The usual offenders:
 # Target location depends on what it is:
 # - Protocol → quartz/src/commonMain/kotlin/…
 # - Business logic → commons/src/commonMain/kotlin/…
-# - UI → commons/src/commonMain/… (needs Compose Multiplatform)
+# - UI → commonsUI/src/commonMain/… (needs Compose Multiplatform; never used by amy)
 git mv amethyst/src/main/java/com/.../FollowListManager.kt \
        commons/src/commonMain/kotlin/com/.../FollowListManager.kt
 ```

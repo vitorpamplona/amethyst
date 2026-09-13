@@ -52,7 +52,7 @@ class ReactionsFilterAssembler(
     client: INostrClient,
     allKeys: () -> Set<ReactionsQueryState>,
 ) : SingleSubEoseManager<ReactionsQueryState>(client, allKeys, invalidateAfterEose = true) {
-    override fun distinct(key: ReactionsQueryState): Any = key.noteIds.hashCode()
+    override fun distinct(key: ReactionsQueryState): Any = key.noteIds
 
     override fun updateFilter(
         keys: List<ReactionsQueryState>,

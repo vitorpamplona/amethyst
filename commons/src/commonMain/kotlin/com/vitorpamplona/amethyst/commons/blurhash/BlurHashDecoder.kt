@@ -122,10 +122,8 @@ object BlurHashDecoder {
     ): IntArray {
         // use an array for better performance when writing pixel colors
         val imageArray = IntArray(width * height)
-        val calculateCosX = !useCache || !CosineCache.hasX(width * numCompX)
-        val cosinesX = CosineCache.getArrayForCosinesX(calculateCosX, width, numCompX)
-        val calculateCosY = !useCache || !CosineCache.hasY(height * numCompY)
-        val cosinesY = CosineCache.getArrayForCosinesY(calculateCosY, height, numCompY)
+        val cosinesX = CosineCache.getArrayForCosinesX(useCache, width, numCompX)
+        val cosinesY = CosineCache.getArrayForCosinesY(useCache, height, numCompY)
 
         var r = 0.0f
         var g = 0.0f

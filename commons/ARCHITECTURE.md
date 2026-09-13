@@ -4,10 +4,11 @@
 
 | Consumer       | Kind                         | Uses from `commons`                          |
 |----------------|------------------------------|----------------------------------------------|
-| `amethyst`     | Android app (touch-first)    | everything (models, state, ViewModels, UI)   |
-| `desktopApp`   | Desktop JVM app (mouse-first)| everything (models, state, ViewModels, UI)   |
-| `cli` (`amy`)  | Headless JVM CLI (no UI)     | **non-UI only** — models, actions, relay, services |
-| iOS (future)   | iOS app                      | everything; expected to share most UI with Android |
+| `amethyst`     | Android app (touch-first)    | everything (models, state, ViewModels) + `commonsUI` |
+| `desktopApp`   | Desktop JVM app (mouse-first)| everything (models, state, ViewModels) + `commonsUI` |
+| `cli` (`amy`)  | Headless JVM CLI (no UI)     | everything — `commons` is headless by construction; it never sees `commonsUI` |
+| `nappletHost`  | Android WebView sandbox      | napplet contract + `commonsUI` (for the shell/shim Compose resources) |
+| iOS (future)   | iOS app                      | everything + `commonsUI`; expected to share most UI with Android |
 
 `commons` sits **above** `quartz` (the protocol-only Nostr KMP library) and
 **below** the apps. The split between the three is:
@@ -15,10 +16,13 @@
 - **`quartz/`** — Nostr protocol: events, NIPs, crypto, relay framing. No app
   state, no UI, no caches of "what this user follows."
 - **`commons/`** — everything an Amethyst *client* needs that isn't a
-  platform-native screen or navigation shell: domain models (`Note`, `User`),
-  in-memory state holders, ViewModels, the relay-subscription client, shared
-  business services, **and** the Compose UI components that more than one front
-  end renders.
+  platform-native screen, navigation shell, **or Compose UI**: domain models
+  (`Note`, `User`), in-memory state holders, ViewModels, the relay-subscription
+  client, shared business services.
+- **`commonsUI/`** — the Compose UI components that more than one front end
+  renders, plus everything only they need (icons, theme, Coil fetchers,
+  markdown, the `composeResources` strings/fonts and the generated `Res`).
+  Depends on `commons` as `api`. See `commonsUI/ARCHITECTURE.md`.
 - **`amethyst/` & `desktopApp/`** — platform-native screens, navigation
   (bottom-nav vs sidebar), gestures, system integration. They assemble
   `commons` pieces; they should not re-implement them.
@@ -31,29 +35,32 @@
 
 ## 1. The one rule that shapes the package tree: the **UI / non-UI boundary**
 
-`commons` is a single module that contains **both** Compose UI and headless
-logic. That is deliberate (it keeps a feature's model, state, and UI together —
-see §3), but it creates one hard constraint, because **`cli` and any headless
-consumer cannot use Compose**:
+The shared layer is **two modules** with one package tree:
 
-> **CLI-safe code** = does not depend on Compose UI. It may use the
-> `androidx.compose.runtime` *annotations* `@Stable` / `@Immutable` (they are
-> just stability tags) and snapshot state, but it must **not** import
-> `androidx.compose.ui`, `androidx.compose.foundation`,
-> `androidx.compose.material3`, declare `@Composable` functions, or build
-> `ImageVector`s.
+> **`commons` = CLI-safe code.** It does not depend on Compose UI. It may use
+> the `androidx.compose.runtime` *annotations* `@Stable` / `@Immutable` (they
+> are just stability tags) and snapshot state (`mutableStateOf`, `State`), but
+> it must **not** import `androidx.compose.ui`, `androidx.compose.foundation`,
+> `androidx.compose.material3`, Coil, the generated `Res`, declare
+> `@Composable` functions, or build `ImageVector`s. Its `build.gradle.kts`
+> simply has none of those dependencies, so a violation fails to compile.
 >
-> **UI code** = anything that does. It is only usable by the GUI front ends
-> (Android, Desktop, iOS), never by `cli`.
+> **`commonsUI` = UI code.** Anything that does the above. It is only usable
+> by the GUI front ends (Android, Desktop, iOS), never by `cli`.
 
-Compose is an `implementation` dependency of `commonMain`, so `cli` pulling in
-`commons` does **not** force it to render anything — but a `cli` command must
-only reach for CLI-safe packages. When you add code, know which side of this
-line it is on, and put it in a package that matches (§2).
+Both modules share the **same `com.vitorpamplona.amethyst.commons.*` package
+tree** — the split is a module boundary, not a package rename, so a file moves
+between `commons/src/…` and `commonsUI/src/…` without changing its package or
+any consumer's imports. Kotlin resolves same-package declarations across
+modules without imports; the only thing that stops working across the boundary
+is `internal` visibility (a UI file cannot see an `internal` declaration in
+`commons` — make it public or move it).
 
-This boundary is **not** a top-level `ui/` vs `logic/` partition of the whole
-module (we chose to stay feature-oriented, §3). It is a property of each file
-that you keep track of via package placement and the table in §2.
+This boundary is **not** a top-level `ui/` vs `logic/` partition of the package
+tree (we chose to stay feature-oriented, §3). It is a property of each file:
+a feature keeps its logic in `commons/…/<feature>/` and its composables in
+`commonsUI/…/<feature>/ui/` (or `commonsUI/…/<feature>/` for the historical
+flat packages), and the table in §2 says which module each package lives in.
 
 ---
 
@@ -61,12 +68,14 @@ that you keep track of via package placement and the table in §2.
 
 Top-level packages under
 `commonMain/.../commons/`, grouped by concern. **UI?** marks whether the
-package contains Compose UI (and is therefore *not* CLI-safe).
+package contains Compose UI (and therefore lives in **`commonsUI`**, not
+here). "mixed" means the feature's logic is in `commons` and its composables
+in `commonsUI`, under the same package.
 
 ### Domain models & data
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly, and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event-store interfaces + `UserMetadataCache`. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
+| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event-store interfaces + `UserMetadataCache`. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
 | `defaults`     | no  | Static bootstrap data (default relays, channels). |
 
 ¹ `model` uses only the `@Stable`/`@Immutable` runtime annotations — CLI-safe.
@@ -91,17 +100,19 @@ package contains Compose UI (and is therefore *not* CLI-safe).
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
 | `state`        | no² | Small feature `StateFlow` machines (`FollowState`, `UserMetadataState`, `LoadingState`). |
-| `viewmodels`   | no² | Larger list/feed-backed ViewModels (`androidx.lifecycle.ViewModel`). Shared by all GUI front ends; `cli` usually drives the layers below instead. |
-| `feeds`        | no  | `FeedDefinitionRepository` — custom-feed definitions & ordering. |
-| `profile`      | mixed | `ProfileBroadcastStatus` (state) + `EditProfileFields` at the root; the `ProfileBroadcastBanner` composable lives in `profile/ui`. |
+| `viewmodels`   | no² | Larger list/feed-backed ViewModels (`androidx.lifecycle.ViewModel`). Shared by all GUI front ends; `cli` usually drives the layers below instead. The few that hold Compose UI state (`ChatNewMessageState` — `TextFieldValue`; `thread/LevelFeedViewModel` — `LazyListState`) live in `commonsUI` under the same package. |
+| `feeds`        | no  | The feed data-access layer at the root (`FeedFilter`, `AdditiveFeedFilter`, `AdditiveComplexFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `FeedState`, `InvalidatableContent`, `DefaultFeedOrder`, `RepostRenderability`…) plus `feeds/custom` (`FeedDefinitionRepository` — custom-feed definitions & ordering) and `feeds/related`. See the `feed-patterns` skill. |
+| `profile`      | mixed | `ProfileBroadcastStatus` (state) + `EditProfileFields` at the root; the `ProfileBroadcastBanner` composable lives in `commonsUI` `profile/ui`. |
+| `privacylock`  | mixed | Lock state machine + settings here; `LocalPrivacyLockState`/`lockStateFor` (CompositionLocal accessor) in `commonsUI`. |
 
-² may touch `compose.runtime`/`foundation` state types (e.g. `LazyListState`);
-they are shared across the GUI apps. Treat as GUI-shared, not strictly headless.
+² may touch `compose.runtime` state types (snapshot state, `@Stable`); they
+are shared across the GUI apps. A state holder that needs a `foundation`/`ui`
+type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 
 ### Relay client
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `relayClient`  | no  | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) The canonical **per-visible loading** entry points live here: `relayClient/user/` (`observeUser*` — kind-0 metadata) and `relayClient/event/` (`EventFinderFilterAssemblerSubscription`/`observeNote*` — reactions/zaps/reposts). See the `relay-client` skill. |
+| `relayClient`  | mixed | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) The `@Composable` entry points — `relayClient/user/` (`observeUser*` — kind-0 metadata), `relayClient/event/` (`EventFinderFilterAssemblerSubscription`/`observeNote*`), the other `*FilterAssemblerSubscription`s, `KeyDataSourceSubscription`, `auth/AuthApprovalBanner` — are in `commonsUI` under the same packages. See the `relay-client` skill. |
 | `relays`       | no  | Low-level EOSE/relay-timing bookkeeping (`EOSECache`, `EOSERelayList`). |
 
 ### Platform abstractions (`expect`/`actual`)
@@ -112,19 +123,23 @@ they are shared across the GUI apps. Treat as GUI-shared, not strictly headless.
 | `tor`          | no  | Tor manager interface + settings. |
 | `service`      | no  | Cross-cutting services: `BundledUpdate` batching (common); `service/upload` (JVM), `service/nwc`, `service/lnurl` (jvmAndroid). **Singular `service`** — there is no `services`. |
 
-### UI (Compose — **not** CLI-safe)
+### UI (Compose — lives in **`commonsUI`**)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/feeds` (feed DAL + filters — see debt §4), `ui/notifications`, `ui/screens`, `ui/elements`, `ui/layouts`, `ui/markdown`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. |
-| `nip23LongContent` | yes | Long-form (NIP-23) article UI: `nip23LongContent/ui/article` (reader) + `…/ui/editor` (authoring). The model lives in `model/nip23LongContent`. |
-| `icons`        | yes | `ImageVector` icon definitions + builders. |
+| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/note`, `ui/richtext`, `ui/search`, `ui/notifications`, `ui/screens`, `ui/layouts`, `ui/markdown`, `ui/privacylock`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. Nothing under `ui.*` lives in *this* module any more: the feed DAL that used to sit in `ui/feeds` is now `feeds/`, and the reply-context logic that sat in `ui/note` (`replyingDirectlyTo`, `ReplyContext`) is now in `model/` next to `ThreadAssembler`. |
+| `nip23LongContent` | yes | Long-form (NIP-23) article UI: `nip23LongContent/ui/article` (reader) + `…/ui/editor` (authoring). The model lives in `model/nip23LongContent` (here). |
+| `icons`        | yes | `ImageVector` icon definitions + builders, Material Symbols codepoints, the icon-font glyph tables. |
 | `hashtags`     | yes | Custom hashtag `ImageVector`s. |
 | `robohash`     | yes | Procedural robohash avatar `ImageVector` assembly. |
+| `audio`        | mixed | Spectrum/visualizer *data* (`AudioSpectrum`, `SpectrumAnalyzer`…) here; the `VisualizerRenderer`s, `VisualizerRegistry` and the canvas composables in `commonsUI`. |
+| `service/image` | mixed | `CoilImageBridge` + the BlurHash/ThumbHash/Base64/Blossom Coil fetchers are `commonsUI` (they are Coil); the headless image helpers stay here. |
+| `napplet`      | mixed | Protocol/permission logic here; `NappletWebContract` (serves the shell/shim from `composeResources`) in `commonsUI`. |
+| `favorites`, `nip30CustomEmojis`, `nip34Git`, `nip85TrustedAssertions`, `nip53LiveActivities` | mixed | Logic here; each feature's `ui/` (or the flat `FavoriteAppIcon`, `EmojiSuggestionState`) in `commonsUI`. |
 
 ### Mixed (documented debt — see §4)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `nip64Chess`   | mixed | Live-chess feature: game/lobby/subscription logic **and** board/lobby composables in one flat package. Needs a `nip64Chess/ui` split. (Mirrors `quartz/.../nip64Chess`.) |
+| `nip64Chess`   | mixed | Live-chess feature: game/lobby/subscription logic here; board/lobby composables in `commonsUI` under `nip64Chess/ui`. (Mirrors `quartz/.../nip64Chess`.) |
 | `domain`       | no  | Currently only `domain/nip46` (Nostr Connect signer flows). Sparse; candidate to fold into a clearer home. |
 
 ---
@@ -185,10 +200,14 @@ Instead, **layer is the primary axis, NIP is the secondary axis**:
 | Source set    | For |
 |---------------|-----|
 | `commonMain`  | KMP code for **all** targets (Android, JVM, iOS). Gated by `verifyKmpPurity` — no Jackson/OkHttp/`System.currentTimeMillis`/`java.util.UUID`/JVM `@Synchronized`/`@Volatile`. Use the KMP replacements. |
-| `jvmAndroid`  | Shared by Android + Desktop, **not** iOS. Where JVM-bound deps live (`nestsClient`, Coil-OkHttp, markdown, `viewModel()` helper, NWC/LNURL). |
-| `jvmMain`     | Desktop-only (keyring, EXIF, `service/upload`). `dependsOn(jvmAndroid)`. |
-| `androidMain` | Android-only (Keystore, DataStore). `dependsOn(jvmAndroid)`. |
+| `jvmAndroid`  | Shared by Android + Desktop, **not** iOS. Where JVM-bound deps live (`nestsClient`, OkHttp, NWC/LNURL). |
+| `jvmMain`     | Desktop-only (keyring, EXIF, `service/upload`, OS notifications). `dependsOn(jvmAndroid)`. |
+| `androidMain` | Android-only (Keystore, DataStore, the Android `R` string resources used by the napplet host). `dependsOn(jvmAndroid)`. |
 | `iosMain`     | iOS `actual`s. Compile-only spike today. |
+
+`commonsUI` mirrors the same source-set layout (plus `skikoMain`, shared by
+desktop JVM + iOS for `org.jetbrains.skia` pixel helpers); Coil-OkHttp,
+markdown and the `viewModel()` helper live in its `jvmAndroid`.
 
 When adding platform code, prefer the **most common** source set that still
 compiles: `commonMain` → `jvmAndroid` → platform-specific. See
@@ -197,7 +216,8 @@ compiles: `commonMain` → `jvmAndroid` → platform-specific. See
 ### Where does my code go? (quick guide)
 1. **Pure Nostr protocol** (events/NIPs/crypto)? → not here, it's `quartz`.
 2. **A composable** rendered by ≥2 front ends, or that you want iOS to share? →
-   `ui/<area>` or `<feature>/ui`. Never in `cli`.
+   `commonsUI`, in `ui/<area>` or `<feature>/ui` (same package tree as here).
+   Also anything that imports Coil, `Res`, or a `foundation`/`ui` state type.
 3. **A ViewModel / `StateFlow` state holder**? → `viewmodels` or `state` (or
    `<feature>` if feature-scoped). Keep it CLI-safe where practical.
 4. **Relay subscription / filter assembly**? → `relayClient`.
@@ -212,14 +232,16 @@ compiles: `commonMain` → `jvmAndroid` → platform-specific. See
 
 These are intentionally *documented*, not silently tolerated. Fix opportunistically.
 
-- **`nip64Chess` is UI+logic in one flat package.** `LiveChessGame.kt` mixes a
-  state class with composables. Split into `nip64Chess/` (logic) +
-  `nip64Chess/ui/` (composables); this needs file-level surgery (extracting
-  composables out of logic files), not just moves, so it is deferred.
-- **`ui/feeds` holds the feed data-access layer** (`FeedFilter`,
-  `ChangesFlowFilter`, `FeedContentState`), which is logic, not UI, and overlaps
-  conceptually with the top-level `feeds` (custom-feed definitions). Consider
-  moving the DAL out of `ui/`.
+- **`commons` applies the Compose *compiler* plugin without declaring any
+  composable.** Deliberate, not debt: the plugin's `@StabilityInferred`
+  stamps are what keep unannotated commons classes stable from the apps'
+  point of view. Measured on full recompiles (2026-09-12): without it,
+  unstable composable params go 20→28 in `commonsUI`, 33→65 in `desktopApp`,
+  90→149 in `amethyst`. Don't remove it; if a class must be stable for a
+  hot path, annotate it explicitly as well.
+- **Same package tree in two modules.** Intentional (zero-import-churn split),
+  but it means a package's module is not visible from its name. Rule of
+  thumb: if it imports Compose UI it is in `commonsUI`; check §2 when unsure.
 - **`domain` is sparse** (only `nip46`). Either grow it as the home for
   use-case/flow types or rename it to the matching `nip46RemoteSigner` per the
   NIP-second-axis rule.

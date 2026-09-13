@@ -152,26 +152,35 @@ class BasicBundledInsert<T>(
                 isProcessing = true
             }
 
-            processLoop@ while (true) {
-                val batch =
-                    mutex.withLock {
-                        if (queue.isEmpty()) {
-                            isProcessing = false
-                            null
-                        } else {
-                            val items = queue.toSet()
-                            queue.clear()
-                            items
+            try {
+                processLoop@ while (true) {
+                    val batch =
+                        mutex.withLock {
+                            if (queue.isEmpty()) {
+                                isProcessing = false
+                                null
+                            } else {
+                                val items = queue.toSet()
+                                queue.clear()
+                                items
+                            }
                         }
+
+                    if (batch == null) break@processLoop
+
+                    if (batch.isNotEmpty()) {
+                        onUpdate(batch)
                     }
 
-                if (batch == null) break@processLoop
-
-                if (batch.isNotEmpty()) {
-                    onUpdate(batch)
+                    delay(delay)
                 }
-
-                delay(delay)
+            } finally {
+                // Mirrors BasicBundledUpdate: a throw out of onUpdate (or a
+                // cancellation) must not leave isProcessing stuck at true, or
+                // every later invalidateList() would enqueue and return forever.
+                withContext(NonCancellable) {
+                    mutex.withLock { isProcessing = false }
+                }
             }
         }
     }

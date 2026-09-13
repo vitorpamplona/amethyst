@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import kotlinx.collections.immutable.toImmutableList
 
 data class ParagraphImageAnalysis(
@@ -106,7 +105,6 @@ class GalleryParser {
         return imageParagraphs to j
     }
 
-    @OptIn(ExperimentalLayoutApi::class)
     fun processParagraphs(paragraphs: List<ParagraphState>): List<ParagraphState> {
         val result = mutableListOf<ParagraphState>()
 

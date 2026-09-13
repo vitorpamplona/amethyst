@@ -479,7 +479,7 @@ class RichTextParser {
 
         val noProtocolUrlValidator =
             Regex(
-                "(([a-zA-Z0-9_-]+@)?([a-zA-Z0-9_-]+\\.)*[a-zA-Z0-9_-]+[\\.\\:][a-zA-Z0-9_]+([\\/ \\?\\=\\&\\#\\.]?[a-zA-Z0-9_-]+)*\\/?)(.*)",
+                "(([a-zA-Z0-9_-]+@)?([a-zA-Z0-9_-]+\\.)*[a-zA-Z0-9_-]+[\\.\\:][a-zA-Z0-9_]+([\\/ \\?\\=\\&\\#\\.][a-zA-Z0-9_-]+)*\\/?)(.*)",
             )
 
         val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")

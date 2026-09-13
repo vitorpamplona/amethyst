@@ -24,12 +24,14 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
@@ -119,7 +121,11 @@ class UserSearchEngine(
                     _localResults.value = emptyList()
                     _isSearching.value = false
                 }
-            }.launchIn(scope)
+            }
+            // findUsersStartingWith walks the whole user cache; callers pass a
+            // Compose scope, so keep the scan off the main dispatcher.
+            .flowOn(Dispatchers.Default)
+            .launchIn(scope)
     }
 
     private fun startRelaySearch(text: String) {

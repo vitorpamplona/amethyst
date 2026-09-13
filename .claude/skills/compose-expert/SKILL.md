@@ -24,7 +24,7 @@ Visual UI patterns for sharing composables across Android and Desktop.
 
 ## Philosophy: Share by Default
 
-**Default to `commons/commonMain`** unless platform experts indicate otherwise.
+**Default to `commonsUI/commonMain`** (shared composables live in `:commonsUI`, the Compose half of the shared layer; headless state/ViewModels stay in `:commons`) unless platform experts indicate otherwise.
 
 ### Always Share
 
@@ -416,7 +416,7 @@ fun DataScreen(uiState: UiState) {
 }
 ```
 
-**Components** (all in `commons/commonMain`):
+**Components** (all in `commonsUI/commonMain`):
 - `LoadingState` - Progress indicator + message
 - `EmptyState` - Empty message + optional refresh button
 - `ErrorState` - Error message + optional retry button
@@ -527,12 +527,12 @@ fun FeedList(items: List<Item>) {
 
 | Task | Pattern | Location |
 |------|---------|----------|
-| Reusable UI | State hoisting | commons/commonMain |
+| Reusable UI | State hoisting | commonsUI/commonMain |
 | Simple state | remember { mutableStateOf() } | Composable scope |
 | Derived state | derivedStateOf { } | remember block |
 | Async → state | produceState { } | Composable function |
-| Custom icons | roboBuilder + PathData | commons/icons |
-| Loading/Error | LoadingState, ErrorState | commons/ui/components |
+| Custom icons | roboBuilder + PathData | commonsUI/icons |
+| Loading/Error | LoadingState, ErrorState | commonsUI/ui/components |
 | Theme colors | MaterialTheme.colorScheme | Any @Composable |
 | Navigation | Delegate to platform expert | amethyst/, desktopApp/ |
 
@@ -540,7 +540,7 @@ fun FeedList(items: List<Item>) {
 
 ### Creating a Shared Component
 
-1. Start in `commons/src/commonMain/kotlin/.../ui/components/`
+1. Start in `commonsUI/src/commonMain/kotlin/.../ui/components/`
 2. Use Material3 primitives only
 3. Hoist state (parameters for data, callbacks for events)
 4. Add modifier parameter
@@ -551,7 +551,7 @@ fun FeedList(items: List<Item>) {
 
 1. Read current implementation in `amethyst/` or `desktopApp/`
 2. Identify pure visual logic (no platform APIs)
-3. Create in `commons/commonMain` with hoisted state
+3. Create in `commonsUI/commonMain` with hoisted state
 4. Replace platform implementations with shared component
 5. Keep platform-specific wrappers if needed
 

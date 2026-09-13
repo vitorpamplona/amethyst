@@ -1,7 +1,7 @@
 # strings-migrate
 
 Moves string keys from the Android app's `res/` into commons Compose
-resources (`commons/src/commonMain/composeResources`) across **all**
+resources (`commonsUI/src/commonMain/composeResources`) across **all**
 locales in one shot, preserving each element byte-for-byte so Crowdin
 sees a pure move. Both trees are Crowdin-managed with the same android
 layout (see `crowdin.yml`), so a migrated key keeps its translations.

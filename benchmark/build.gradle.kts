@@ -67,6 +67,7 @@ dependencies {
     androidTestImplementation(libs.androidx.benchmark.junit4)
     androidTestImplementation(project(":quartz"))
     androidTestImplementation(project(":commons"))
+    androidTestImplementation(project(":commonsUI"))
 
     // Custom C secp256k1 (libschnorr256k1) for the 3-way Android benchmark
     androidTestImplementation(libs.schnorr256k1.kmp)
