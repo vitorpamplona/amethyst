@@ -80,7 +80,24 @@
     "translators": [
       {
         "user": "vitorpamplona",
-        "languages": []
+        "languages": [
+          "Czech",
+          "German",
+          "Portuguese, Brazilian",
+          "Swedish"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
+        "user": "maxblake2015",
+        "languages": [
+          "Polish"
+        ]
       },
       {
         "user": "greenart7c3",
@@ -251,10 +268,6 @@
         "languages": []
       },
       {
-        "user": "summoner001",
-        "languages": []
-      },
-      {
         "user": "fiddleway",
         "languages": []
       },
@@ -272,10 +285,6 @@
       },
       {
         "user": "hypnotichemionus4",
-        "languages": []
-      },
-      {
-        "user": "maxblake2015",
         "languages": []
       },
       {

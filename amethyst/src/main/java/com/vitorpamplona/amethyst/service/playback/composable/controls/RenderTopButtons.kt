@@ -87,7 +87,7 @@ fun RenderTopButtonsPreview() {
     ThemeComparisonColumn {
         Box(Modifier.background(BitcoinOrange)) {
             RenderTopButtons(
-                mediaData = MediaItemData("http://test.mp4"),
+                mediaData = MediaItemData("https://test.mp4"),
                 hasMultipleQualities = false,
                 qualityButton = {},
                 controllerVisible = remember { mutableStateOf(true) },

@@ -1677,8 +1677,8 @@ fun RelayHeaderPreview() {
                     ),
                     SpamDebugMessage(
                         time = TimeUtils.now() - 24000,
-                        link1 = "http://test1.com",
-                        link2 = "http://test2.com",
+                        link1 = "https://test1.com",
+                        link2 = "https://test2.com",
                     ),
                 ),
             accountViewModel = mockAccountViewModel(),
