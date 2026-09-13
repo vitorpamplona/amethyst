@@ -114,6 +114,13 @@ class OkHttpClientFactoryForRelays(
             .build()
     }
 
+    /**
+     * Closes every idle pooled connection. Call only on a real proxy-route change (see
+     * [evictOnProxyRouteChange]) — connections on a dead route are already unreachable, so this
+     * is hygiene, not correctness, and it empties the pool BOTH clients share.
+     */
+    fun evictPooledConnections() = rootClient.connectionPool.evictAll()
+
     fun buildHttpClient(
         localSocksProxyPort: Int?,
         isMobile: Boolean?,
