@@ -1536,6 +1536,7 @@
     <string name="route_notifications">Aviseringar</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
+    <string name="route_media">Media</string>
     <string name="route_calendars">Kalendrar</string>
     <string name="route_calendar_collections">Kalenderlistor</string>
     <string name="route_chess">Schack</string>
@@ -2387,6 +2388,5 @@
     <!-- Health Connect: activity label, shown by Health Connect next to the link into our
          rationale screen. Needs to be an Android resource (not a commons Compose resource)
          because android:label on the manifest entry can only reference @string/. -->
-    <string name="route_media">Media</string>
     <string name="health_connect_rationale_activity_label">Health Connect och Amethyst</string>
 </resources>
