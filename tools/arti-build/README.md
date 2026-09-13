@@ -11,7 +11,7 @@ JNI wrapper built directly from Arti source.
 | **Size** | ~140MB | ~11MB |
 | **16KB pages** | No | Yes (rustc aligns Android targets to 16 KiB) |
 | **Stop/restart** | Broken (state file lock) | Works (TorClient persists, only SOCKS proxy stops) |
-| **Version** | Behind | Pinned to latest (currently 1.9.0) |
+| **Version** | Behind | Pinned to latest (see [`ARTI_VERSION`](ARTI_VERSION)) |
 
 ## Quick start
 
@@ -98,7 +98,7 @@ repo is checked out.
    ```
 
 4. **Android NDK** — the exact revision in [`ANDROID_NDK_VERSION`](ANDROID_NDK_VERSION)
-   (currently **27.3.13750724**, r27d). Any other revision is refused: it would
+   (currently **30.0.16248370**, r30). Any other revision is refused: it would
    produce a `.so` that does not match the committed one.
    ```bash
    # Via Android Studio: SDK Manager → SDK Tools → NDK (Side by side)
@@ -168,7 +168,7 @@ readelf -p .note.android.ident amethyst/src/main/jniLibs/arm64-v8a/libarti_andro
 readelf -p .comment amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
 ```
 
-For the pinned toolchain that prints `r27d` / `13750724`, clang 18.0.4 and the
+For the pinned toolchain that prints `r30` / `16248370`, clang 21.0.0 and the
 `rustc` version from `rust-toolchain.toml`. `build-arti.sh` runs the first check
 itself after every build.
 
@@ -177,7 +177,7 @@ itself after every build.
 ```
 tools/arti-build/
 ├── README.md            # This file
-├── ARTI_VERSION         # Pinned Arti git tag (e.g., arti-v1.9.0)
+├── ARTI_VERSION         # Pinned Arti git tag (e.g., arti-v2.6.0)
 ├── ANDROID_NDK_VERSION  # Pinned NDK revision — enforced by build-arti.sh (reproducibility)
 ├── CARGO_NDK_VERSION    # cargo-ndk release the pinned output was verified with
 ├── rust-toolchain.toml  # Pinned rustc version + Android targets (reproducibility)

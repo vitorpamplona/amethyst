@@ -7,7 +7,7 @@
 # build scripts. Bump this in lockstep with ARTI_VERSION / Cargo.lock and
 # re-verify (see README.md → "Reproducible builds").
 [toolchain]
-channel = "1.94.1"
+channel = "1.98.1"
 profile = "minimal"
 components = ["rustc", "cargo", "rust-std"]
 # Only the two ABIs we actually ship libarti_android.so for (see jniLibs/). If
