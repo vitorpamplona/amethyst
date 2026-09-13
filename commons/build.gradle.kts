@@ -83,6 +83,13 @@ kotlin {
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
 
+                // okio (KMP, Apache-2.0) for service/image/DeferredDeleteFileSystem,
+                // the ForwardingFileSystem the apps wrap Coil's disk cache in. It
+                // used to arrive transitively through Coil; with Coil in
+                // :commonsUI the Apple targets lost it (JVM still saw it via
+                // OkHttp), so declare the dependency the file actually has.
+                implementation(libs.okio)
+
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
 

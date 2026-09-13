@@ -45,7 +45,16 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Linter (gradle)
-        run: ./gradlew spotlessCheck :quartz:verifyKmpPurity :commons:verifyKmpPurity :commonsUI:verifyKmpPurity
+        # The three metadata compiles resolve commonMain against only the
+        # deps every target shares, which is the Apple classpath — a
+        # dependency that reaches JVM transitively (okio via OkHttp) but is
+        # missing for iOS fails here, on Linux, instead of in test-quartz-ios.
+        run: |
+          ./gradlew spotlessCheck \
+            :quartz:verifyKmpPurity :commons:verifyKmpPurity :commonsUI:verifyKmpPurity \
+            :quartz:compileCommonMainKotlinMetadata \
+            :commons:compileCommonMainKotlinMetadata \
+            :commonsUI:compileCommonMainKotlinMetadata
 
   build-desktop:
     needs: lint
