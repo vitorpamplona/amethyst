@@ -96,7 +96,10 @@ object DirectMessageNotification {
             }
 
         val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.noteUri(chatNote, accountNpub)
+        // The room, not the message: a rumor's nevent cites the gift wrap that delivered it,
+        // which is gone from LocalCache as soon as the process dies and is unfetchable from
+        // any relay. See [NotificationRoutes.chatroomUri].
+        val uri = NotificationRoutes.chatroomUri(chatRoom, accountNpub)
         val replyAction =
             if (decrypt) {
                 null // NIP-04 is read-only in the tray

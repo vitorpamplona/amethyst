@@ -26,6 +26,7 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
 /** Deep-link URIs consumed by `MainActivity.uriToRoute` when a notification is tapped. */
@@ -38,11 +39,31 @@ object NotificationRoutes {
             .hexToByteArray()
             .toNpub()
 
-    /** Opens the note directly (used for replies, mentions, DMs, media, git). */
+    /** Opens the note directly (used for replies, mentions, media, git). */
     fun noteUri(
         note: Note,
         accountNpub: String,
     ): String = note.toNEvent() + ACCOUNT + accountNpub
+
+    /**
+     * Opens a NIP-17 / NIP-04 private chatroom (DM notifications).
+     *
+     * A DM must NOT deep-link through its own note: [Note.toNEvent] cites the kind-1059
+     * gift wrap that delivered the rumor (it has to — the rumor id is the private event's
+     * identity and resolves to nothing on a public relay, see `RumorHostCitationTest`).
+     * Resolving that nevent back to a room needs the wrap *and* seal notes to still be in
+     * the in-memory `LocalCache`. A push usually wakes a cold process, so by the time the
+     * user taps, the cache is empty — and no relay will ever serve that wrap again, so the
+     * tap landed on a `Route.EventRedirect` that could never resolve.
+     *
+     * The room key is derived locally and needs no event at all, so this survives the
+     * process dying. Same idea as [relayGroupUri], which routes a Buzz DM through the
+     * channel's naddr rather than the message.
+     */
+    fun chatroomUri(
+        room: ChatroomKey,
+        accountNpub: String,
+    ): String = "chatroom?id=${room.users.joinToString(",")}&account=$accountNpub"
 
     /** Opens the Notifications tab, scrolled to [scrollToId] (used for zaps, reactions, chess). */
     fun notificationsUri(
@@ -50,7 +71,13 @@ object NotificationRoutes {
         scrollToId: String,
     ): String = "notifications$ACCOUNT$accountNpub$SCROLL_TO$scrollToId"
 
-    /** Opens a Marmot group chatroom (welcome + group message). */
+    /**
+     * Opens a Marmot group chatroom (welcome + group message).
+     *
+     * Note the query here rides on an *opaque* URI (a scheme with no `//`), so its
+     * `?account=` can only be read by [String.findQueryParameterValue] — see the note
+     * there; `java.net.URI.rawQuery` is null for this shape.
+     */
     fun marmotUri(
         nostrGroupId: String,
         accountNpub: String,
