@@ -261,6 +261,36 @@ class AccountManager internal constructor(
     // --- Account loading ---
 
     /**
+     * Phase 1 of the vault migration: fold the account-metadata key into `vault-v1`.
+     *
+     * This MUST complete before any read that needs that key, because the migration
+     * deletes the legacy per-alias item. A storage read that gets there first finds
+     * the item gone and mints a fresh AES key over the one that decrypts
+     * accounts.json.enc, wiping every account. `refreshAccountListOnStartup()` runs
+     * before `loadSavedAccount()` on the startup path and does exactly that read, so
+     * phase 1 is hoisted here and every storage entry point calls it.
+     *
+     * Run-once and idempotent: the flag is set inside the lock, so concurrent
+     * callers serialise and only the first does the work.
+     */
+    private suspend fun ensureVaultMetadataKeyMigrated() {
+        vaultBootstrapMutex.withLock {
+            if (vaultMetadataKeyMigrated) return@withLock
+            vaultMetadataKeyMigrated = true
+            try {
+                secureStorage.enableConsolidatedVault(listOf(DesktopAccountStorage.METADATA_KEY_ALIAS))
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("AccountManager", "Consolidated keychain vault phase 1 failed; continuing on legacy per-alias reads", e)
+            }
+        }
+    }
+
+    private val vaultBootstrapMutex = Mutex()
+    private var vaultMetadataKeyMigrated = false
+
+    /**
      * Two-phase consolidation of every Amethyst-owned keychain item into the
      * single `vault-v1` item that [SecureKeyStorage.enableConsolidatedVault]
      * manages, so cold-boot triggers at most one macOS Keychain Access prompt
@@ -283,8 +313,8 @@ class AccountManager internal constructor(
      * covers.
      */
     private suspend fun bootstrapConsolidatedVault() {
+        ensureVaultMetadataKeyMigrated()
         try {
-            secureStorage.enableConsolidatedVault(listOf(DesktopAccountStorage.METADATA_KEY_ALIAS))
             val npubs = accountStorage.loadAccounts().map { it.npub }
             val aliases = mutableListOf<String>()
             aliases += DesktopAccountStorage.METADATA_KEY_ALIAS
@@ -312,8 +342,9 @@ class AccountManager internal constructor(
             listOf("last_account.txt", "bunker_uri.txt", "nwc_connection.txt")
                 .forEach { File(amethystDir, it).deleteOrWarn("AccountManager", "legacy file") }
 
-            // Consolidate keychain items into vault-v1 so macOS prompts once, not per item.
-            // Runs before any other keychain read on the hot startup path.
+            // Consolidate keychain items into vault-v1 so macOS prompts once, not per
+            // item. Phase 1 may already have run via refreshAccountListOnStartup();
+            // it is run-once, so this call just adds phase 2.
             bootstrapConsolidatedVault()
 
             // Single source of truth: accounts.json.enc
@@ -805,6 +836,9 @@ class AccountManager internal constructor(
     // --- Multi-account management ---
 
     suspend fun refreshAccountList() {
+        // Reads accounts.json.enc, which needs the metadata key -- so the vault
+        // migration has to have happened first. See [ensureVaultMetadataKeyMigrated].
+        ensureVaultMetadataKeyMigrated()
         _allAccounts.value = accountStorage.loadAccounts().toImmutableList()
     }
 
