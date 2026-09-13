@@ -85,8 +85,8 @@ fun ShowQRScreenPreview() {
                 name = "My Name"
                 picture = "Picture"
                 nip05 = null
-                banner = "http://banner.com/test"
-                website = "http://mywebsite.com/test"
+                banner = "https://banner.com/test"
+                website = "https://mywebsite.com/test"
                 about = "This is the about me"
             },
             MetadataEvent(

@@ -285,7 +285,7 @@ private fun Picture(
         onValueChange = { postViewModel.channelPicture.value = it },
         placeholder = {
             Text(
-                text = "http://mygroup.com/logo.jpg",
+                text = "https://mygroup.com/logo.jpg",
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
