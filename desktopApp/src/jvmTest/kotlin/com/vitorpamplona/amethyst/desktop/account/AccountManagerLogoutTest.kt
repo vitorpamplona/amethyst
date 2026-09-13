@@ -46,6 +46,7 @@ class AccountManagerLogoutTest {
     fun setup() {
         storage = mockk(relaxed = true)
         coEvery { storage.getPrivateKey("account-metadata-key") } returns null
+        coEvery { storage.getPrivateKeyOrThrow("account-metadata-key") } returns null
         tempDir = createTempDirectory("acctmgr-logout-test").toFile()
         manager = AccountManager(storage, tempDir)
     }
