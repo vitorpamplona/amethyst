@@ -241,6 +241,14 @@ actual class SecureKeyStorage private actual constructor() {
         }
 
     /**
+     * Whether the macOS `security` CLI probe is used for strict lookups. Reads
+     * `os.name` by default; tests that wire [macSecurityLookup] set it to `true`
+     * so the probe path is exercised on every host, not only on a Mac (the
+     * vault test suite was red on Linux CI for exactly this reason).
+     */
+    internal var isMacOs: () -> Boolean = { defaultIsMacOs() }
+
+    /**
      * Test seam: overridable strategy for the strict macOS lookup. Production wires
      * to [defaultMacSecurityLookup] which spawns `/usr/bin/security`. Tests replace
      * this with a stub so unit tests run hermetically on any OS.
@@ -1007,7 +1015,7 @@ internal fun parseMacSecurityFindResult(
         }
     }
 
-private fun isMacOs(): Boolean = System.getProperty("os.name").orEmpty().startsWith("Mac")
+private fun defaultIsMacOs(): Boolean = System.getProperty("os.name").orEmpty().startsWith("Mac")
 
 /**
  * Production implementation: spawn `/usr/bin/security` and read exit code + streams.

@@ -375,6 +375,9 @@ class SecureKeyStorageVaultTest {
         storage: SecureKeyStorage,
         backend: CountingKeyring,
     ) {
+        // Force the mac probe path regardless of the host OS: the point of the
+        // fake is to exercise it, and CI runs this suite on Linux.
+        storage.isMacOs = { true }
         storage.macSecurityLookup = { service, account ->
             backend.store[service to account]
                 ?.let { MacSecurityResult.Found(it) }
