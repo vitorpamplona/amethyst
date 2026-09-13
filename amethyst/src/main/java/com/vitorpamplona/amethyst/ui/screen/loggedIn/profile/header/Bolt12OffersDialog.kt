@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -55,79 +54,18 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_pay_with_wallet
 import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_amount_sats
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.payViaBolt12Intent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
-import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import kotlinx.coroutines.launch
-
-@Composable
-fun Bolt12PayButton(
-    user: User,
-    accountViewModel: AccountViewModel,
-) {
-    val address =
-        remember(user.pubkeyHex) {
-            Bolt12OfferListEvent.createAddress(user.pubkeyHex)
-        }
-
-    LoadAddressableNote(address, accountViewModel) { note ->
-        if (note != null) {
-            EventFinderFilterAssemblerSubscription(note, accountViewModel)
-            val event by observeNoteEvent<Bolt12OfferListEvent>(note, accountViewModel)
-            val offers =
-                remember(event) {
-                    event?.offers() ?: emptyList()
-                }
-            if (offers.isNotEmpty()) {
-                Bolt12PayButtonWithOffers(offers, accountViewModel)
-            }
-        }
-    }
-}
-
-@Composable
-fun Bolt12PayButtonWithOffers(
-    offers: List<String>,
-    accountViewModel: AccountViewModel,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    FilledTonalButton(
-        modifier =
-            Modifier
-                .padding(horizontal = 3.dp)
-                .width(50.dp),
-        onClick = { expanded = true },
-        contentPadding = ZeroPadding,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Bolt,
-            contentDescription = stringRes(R.string.bolt12_offers),
-        )
-    }
-
-    if (expanded) {
-        Bolt12OffersDialog(
-            offers = offers,
-            accountViewModel = accountViewModel,
-            onDismiss = { expanded = false },
-        )
-    }
-}
 
 @Composable
 fun Bolt12OffersDialog(
@@ -210,7 +148,7 @@ private fun Bolt12OfferRow(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         Text(
-            text = "${offer.take(14)}…${offer.takeLast(6)}",
+            text = abbreviateBolt12Offer(offer),
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurface,
@@ -295,3 +233,10 @@ private fun Bolt12NwcAmountDialog(
         }
     }
 }
+
+/**
+ * The short form every BOLT12 surface shows for an `lno1…` offer: enough of the
+ * head to recognise the prefix, the tail to tell two offers apart. Shared by the
+ * profile chip, this dialog and the offers settings screen so they agree.
+ */
+fun abbreviateBolt12Offer(offer: String): String = "${offer.take(14)}\u2026${offer.takeLast(6)}"

@@ -36,8 +36,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bolt12_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.clink_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_cashu
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_lightning
@@ -76,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon as M3Icon
@@ -84,9 +88,10 @@ private val CashuPurple = Color(0xFFA855F7)
 
 /**
  * One FlowRow of tappable chips for every way to pay this profile: Lightning
- * (lud16, long-press copies the address), the CLINK offer, the NIP-BC on-chain
- * wallet, Cashu nutzaps (shown only when the logged-in user's cashu wallet
- * shares a mint the recipient accepts), and the NIP-A3 payment-target chips.
+ * (lud16, long-press copies the address), the CLINK offer, the NIP-B1 BOLT12
+ * offers (one chip each), the NIP-BC on-chain wallet, Cashu nutzaps (shown only
+ * when the logged-in user's cashu wallet shares a mint the recipient accepts),
+ * and the NIP-A3 payment-target chips.
  * A single FlowRow so the chips wrap together with uniform spacing instead of
  * stacking as separately padded rows.
  */
@@ -113,35 +118,57 @@ fun DisplayPaymentRailChips(
         .collectAsStateWithLifecycle()
     val onchainAvailable = showOnchainWallet && LocalCache.onchainBackend != null
 
-    val address =
+    val targetsAddress =
         remember(baseUser.pubkeyHex) {
             PaymentTargetsEvent.createAddress(baseUser.pubkeyHex)
         }
+    val bolt12Address =
+        remember(baseUser.pubkeyHex) {
+            Bolt12OfferListEvent.createAddress(baseUser.pubkeyHex)
+        }
 
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(targetsAddress, accountViewModel) { targetsNote ->
         val targets =
-            if (note != null) {
-                EventFinderFilterAssemblerSubscription(note, accountViewModel)
-                val event by observeNoteEvent<PaymentTargetsEvent>(note, accountViewModel)
+            if (targetsNote != null) {
+                EventFinderFilterAssemblerSubscription(targetsNote, accountViewModel)
+                val event by observeNoteEvent<PaymentTargetsEvent>(targetsNote, accountViewModel)
                 remember(event) { event?.paymentTargets() ?: emptyList() }
             } else {
                 emptyList()
             }
 
-        if (lud16.isNullOrEmpty() && clinkOffer == null && !onchainAvailable && cashuMintUrl == null && targets.isEmpty()) {
-            return@LoadAddressableNote
-        }
+        LoadAddressableNote(bolt12Address, accountViewModel) { bolt12Note ->
+            val bolt12Offers =
+                if (bolt12Note != null) {
+                    EventFinderFilterAssemblerSubscription(bolt12Note, accountViewModel)
+                    val event by observeNoteEvent<Bolt12OfferListEvent>(bolt12Note, accountViewModel)
+                    remember(event) { event?.offers() ?: emptyList() }
+                } else {
+                    emptyList()
+                }
 
-        RailAndTargetChips(
-            baseUser = baseUser,
-            lud16 = lud16,
-            clinkOffer = clinkOffer,
-            onchainAvailable = onchainAvailable,
-            cashuMintUrl = cashuMintUrl,
-            targets = targets,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+            if (lud16.isNullOrEmpty() &&
+                clinkOffer == null &&
+                bolt12Offers.isEmpty() &&
+                !onchainAvailable &&
+                cashuMintUrl == null &&
+                targets.isEmpty()
+            ) {
+                return@LoadAddressableNote
+            }
+
+            RailAndTargetChips(
+                baseUser = baseUser,
+                lud16 = lud16,
+                clinkOffer = clinkOffer,
+                bolt12Offers = bolt12Offers,
+                onchainAvailable = onchainAvailable,
+                cashuMintUrl = cashuMintUrl,
+                targets = targets,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 }
 
@@ -151,6 +178,7 @@ private fun RailAndTargetChips(
     baseUser: User,
     lud16: String?,
     clinkOffer: NOffer?,
+    bolt12Offers: List<String>,
     onchainAvailable: Boolean,
     cashuMintUrl: String?,
     targets: List<PaymentTarget>,
@@ -160,6 +188,9 @@ private fun RailAndTargetChips(
     fun openSendPayment(method: ProfilePaymentMethod) {
         nav.nav(Route.SendPayment(baseUser.pubkeyHex, method.routeKey))
     }
+
+    // The BOLT12 offer whose pay/copy dialog is open, if any.
+    var bolt12DialogOffer by remember { mutableStateOf<String?>(null) }
 
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -189,6 +220,23 @@ private fun RailAndTargetChips(
                 label = stringRes(Res.string.clink_lightning_offer),
                 copyValue = remember(clinkOffer) { clinkOffer.encode() },
                 onClick = { openSendPayment(ProfilePaymentMethod.CLINK) },
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Bolt,
+                    contentDescription = null,
+                    tint = BitcoinOrange,
+                    modifier = Size16Modifier,
+                )
+            }
+        }
+
+        bolt12Offers.forEach { offer ->
+            ProfilePaymentChip(
+                color = BitcoinOrange,
+                label = stringRes(Res.string.bolt12_lightning_offer),
+                detail = remember(offer) { abbreviateBolt12Offer(offer) },
+                copyValue = offer,
+                onClick = { bolt12DialogOffer = offer },
             ) {
                 Icon(
                     symbol = MaterialSymbols.Bolt,
@@ -238,6 +286,14 @@ private fun RailAndTargetChips(
         targets.forEach { target ->
             PaymentTargetChip(baseUser, target, accountViewModel, nav)
         }
+    }
+
+    bolt12DialogOffer?.let { offer ->
+        Bolt12OffersDialog(
+            offers = listOf(offer),
+            accountViewModel = accountViewModel,
+            onDismiss = { bolt12DialogOffer = null },
+        )
     }
 }
 
