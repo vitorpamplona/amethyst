@@ -70,6 +70,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 sealed class AccountState {
     data object Loading : AccountState()
@@ -279,7 +280,7 @@ class AccountManager internal constructor(
             vaultMetadataKeyMigrated = true
             try {
                 secureStorage.enableConsolidatedVault(listOf(DesktopAccountStorage.METADATA_KEY_ALIAS))
-            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.w("AccountManager", "Consolidated keychain vault phase 1 failed; continuing on legacy per-alias reads", e)
@@ -325,7 +326,7 @@ class AccountManager internal constructor(
                 aliases += nwcKeyAlias(npub)
             }
             secureStorage.enableConsolidatedVault(aliases)
-        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             // Non-fatal: SecureKeyStorage falls back to legacy per-alias reads for
@@ -362,7 +363,7 @@ class AccountManager internal constructor(
                 is SignerType.Remote -> loadBunkerAccount((info.signerType as SignerType.Remote).bunkerUri, activeNpub)
                 is SignerType.ViewOnly -> loadReadOnlyAccount(activeNpub)
             }
-        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.failure(e)
@@ -1009,7 +1010,7 @@ class AccountManager internal constructor(
 
             _nwcConnection.value = parsed
             Result.success(parsed)
-        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.failure(e)
