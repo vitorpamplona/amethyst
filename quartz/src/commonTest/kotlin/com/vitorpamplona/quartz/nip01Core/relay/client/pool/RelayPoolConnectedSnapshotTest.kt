@@ -33,8 +33,9 @@ import kotlin.test.assertEquals
  * [com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.FakeWebSocket.disconnect] is a
  * no-op that never calls back, which is exactly what OkHttp did after a relay sent a CLOSE frame
  * the app never answered: `cancel()` then fired neither `onClosed` nor `onFailure`. The flow used
- * to keep such a relay for minutes; now the pool clears it on removal and on disconnect, and the
- * client reports its own teardown, so neither view depends on that callback.
+ * to keep such a relay for minutes; now the pool clears it on removal and on disconnect itself
+ * (and the real transports report a disconnect synchronously, see [com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket]),
+ * so neither view depends on a callback that may never come.
  */
 class RelayPoolConnectedSnapshotTest {
     private val url = NormalizedRelayUrl("wss://relay.example.com/")

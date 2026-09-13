@@ -154,6 +154,7 @@ class OkHttpWebSocketCloseHandshakeTest {
     private class Recorder : WebSocketListener {
         val opened = CountDownLatch(1)
         val closed = CountDownLatch(1)
+        val closedCount = AtomicInteger(0)
         val closedCode = AtomicInteger(-1)
         val failure = AtomicReference<Throwable?>(null)
 
@@ -169,6 +170,7 @@ class OkHttpWebSocketCloseHandshakeTest {
             reason: String,
         ) {
             closedCode.set(code)
+            closedCount.incrementAndGet()
             closed.countDown()
         }
 
@@ -201,9 +203,39 @@ class OkHttpWebSocketCloseHandshakeTest {
             assertEquals("the relay's status code is what gets reported", 1000, recorder.closedCode.get())
             assertNull("a clean handshake is not a failure", recorder.failure.get())
 
-            // After onClosed the wrapper has let go of its socket, so this must be a no-op.
+            // The session already ended; the usual teardown afterwards must not report it twice.
             socket.disconnect()
+            assertEquals("one terminal report per session", 1, recorder.closedCount.get())
             assertTrue("a closed socket needs a fresh dial", socket.needsReconnect())
+
+            client.dispatcher.executorService.shutdown()
+        }
+    }
+
+    @Test
+    fun `disconnect reports the session end once, synchronously, and drops what OkHttp says afterwards`() {
+        TinyRelay().use { relay ->
+            val recorder = Recorder()
+            val client = OkHttpClient()
+            val socket = OkHttpWebSocket(relay.url, { client }, recorder)
+
+            socket.connect()
+            assertTrue("relay never saw the client", relay.awaitClient())
+            assertTrue("no onOpen", recorder.opened.await(5, TimeUnit.SECONDS))
+
+            socket.disconnect()
+
+            // Reported before disconnect() returned: the relay client dials the replacement
+            // right after this call and must not hear from the old socket later.
+            assertEquals("disconnect() must report synchronously", 1, recorder.closedCount.get())
+            assertEquals(1000, recorder.closedCode.get())
+            assertTrue(socket.needsReconnect())
+
+            // OkHttp's own reaction to cancel() -- a failure on its reader thread -- and the relay's
+            // reaction to the dropped TCP session must both be swallowed.
+            Thread.sleep(500)
+            assertEquals("no second report", 1, recorder.closedCount.get())
+            assertNull("the cancel's failure must not surface", recorder.failure.get())
 
             client.dispatcher.executorService.shutdown()
         }
