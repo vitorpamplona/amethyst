@@ -85,6 +85,29 @@ print_info()    { echo -e "${YELLOW}→ $1${NC}"; }
 # Prerequisites
 # ============================================================================
 
+# Pkg.Revision of an NDK install, or empty if the directory is not one.
+ndk_revision() {
+    sed -n 's/^Pkg\.Revision *= *//p' "$1/source.properties" 2>/dev/null | tr -d '[:space:]' || true
+}
+
+# Path to an ELF tool, preferring the pinned NDK's own llvm-* copy. The NDK
+# ships them on every platform, which keeps the post-build checks working on
+# macOS: there is no readelf in the Xcode command line tools, and Apple's nm
+# cannot read ELF at all, so the checks would otherwise skip or report every
+# symbol missing on exactly the machines most likely to have the wrong NDK.
+ndk_tool() {
+    local name="$1" candidate
+    for candidate in "${ANDROID_NDK_HOME:-}"/toolchains/llvm/prebuilt/*/bin/"llvm-$name"; do
+        if [ -x "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    command -v "$name" 2>/dev/null && return 0
+    command -v "g$name" 2>/dev/null && return 0
+    return 1
+}
+
 check_prerequisites() {
     print_header "Checking prerequisites"
 
@@ -102,43 +125,48 @@ check_prerequisites() {
         print_success "cargo-ndk: $CARGO_NDK_VERSION"
     fi
 
-    # An explicit ANDROID_NDK_HOME wins (it is verified below like any other);
-    # otherwise look for the pinned revision by name in the usual SDK layouts.
-    # Deliberately no wildcard: picking "some NDK" is what let the committed
-    # binaries be built with r25b while the docs asked for r27.
-    if [ -z "${ANDROID_NDK_HOME:-}" ]; then
-        for candidate in \
-            "${ANDROID_NDK_ROOT:-}" \
-            "${ANDROID_HOME:-}/ndk/$NDK_VERSION" \
-            "${ANDROID_SDK_ROOT:-}/ndk/$NDK_VERSION" \
-            "$HOME/Android/Sdk/ndk/$NDK_VERSION" \
-            "$HOME/Library/Android/sdk/ndk/$NDK_VERSION" \
-            "/usr/local/lib/android/sdk/ndk/$NDK_VERSION"; do
-            [ -n "$candidate" ] || continue
-            if [ -d "$candidate" ]; then
-                export ANDROID_NDK_HOME="${candidate%/}"
-                break
-            fi
-        done
-    fi
+    # Find the pinned revision wherever it lives, checking each candidate's own
+    # source.properties and moving on when it does not match. An exported
+    # ANDROID_NDK_HOME / ANDROID_NDK_ROOT is only a hint: CI images (GitHub
+    # runners export both) and IDE installs routinely point them at a bundled
+    # NDK that is not ours, and failing outright there would reject a machine
+    # that has the pinned revision installed right next to it. No wildcard
+    # anywhere: picking "some NDK" is what let the committed binaries be built
+    # with r25b while the docs asked for r27.
+    local candidate revision found_ndk="" rejected=""
+    for candidate in \
+        "${ANDROID_NDK_HOME:-}" \
+        "${ANDROID_NDK_ROOT:-}" \
+        "${ANDROID_HOME:-}/ndk/$NDK_VERSION" \
+        "${ANDROID_SDK_ROOT:-}/ndk/$NDK_VERSION" \
+        "${HOME:-}/Android/Sdk/ndk/$NDK_VERSION" \
+        "${HOME:-}/Library/Android/sdk/ndk/$NDK_VERSION" \
+        "/usr/local/lib/android/sdk/ndk/$NDK_VERSION"; do
+        [ -n "$candidate" ] || continue
+        [ -d "$candidate" ] || continue
 
-    if [ -z "${ANDROID_NDK_HOME:-}" ]; then
-        print_error "Android NDK $NDK_VERSION not found (and ANDROID_NDK_HOME is unset)"
+        revision="$(ndk_revision "$candidate")"
+        if [ "$revision" = "$NDK_VERSION" ]; then
+            found_ndk="${candidate%/}"
+            break
+        fi
+        rejected="${rejected}    ${candidate%/} is ${revision:-not an NDK}"$'\n'
+    done
+
+    if [ -z "$found_ndk" ]; then
+        print_error "Android NDK $NDK_VERSION not found"
+        echo "  It is pinned because another revision produces a .so that does not"
+        echo "  match the committed one (tools/arti-build/ANDROID_NDK_VERSION)."
+        if [ -n "$rejected" ]; then
+            echo "  Looked at, wrong revision:"
+            printf '%s' "$rejected"
+        fi
         echo "  Install it:  sdkmanager \"ndk;$NDK_VERSION\""
         echo "  Or point ANDROID_NDK_HOME at an existing $NDK_VERSION install."
         exit 1
     fi
 
-    local found_ndk
-    found_ndk="$(sed -n 's/^Pkg\.Revision *= *//p' "$ANDROID_NDK_HOME/source.properties" 2>/dev/null | tr -d '[:space:]' || true)"
-    if [ "$found_ndk" != "$NDK_VERSION" ]; then
-        print_error "NDK revision mismatch — this build would not reproduce the shipped .so"
-        echo "  Pinned:   $NDK_VERSION (tools/arti-build/ANDROID_NDK_VERSION)"
-        echo "  Found:    ${found_ndk:-unknown} at $ANDROID_NDK_HOME"
-        echo "  Install:  sdkmanager \"ndk;$NDK_VERSION\""
-        exit 1
-    fi
-
+    export ANDROID_NDK_HOME="$found_ndk"
     print_success "NDK: $ANDROID_NDK_HOME ($NDK_VERSION)"
 
     for target in "${TARGETS[@]}"; do
@@ -279,11 +307,20 @@ verify_jni_symbols() {
         "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy"
     )
 
-    for arch_dir in "$OUTPUT_DIR"/*/; do
-        local lib="$arch_dir$LIB_NAME"
+    local nm_bin
+    nm_bin="$(ndk_tool nm || true)"
+    if [ -z "$nm_bin" ]; then
+        print_error "no nm found (looked in the NDK and on PATH) — cannot verify the JNI exports"
+        exit 1
+    fi
+
+    local failed=0
+    for target in "${TARGETS[@]}"; do
+        local arch
+        arch="$(abi_dir_for "$target")"
+        local lib="$OUTPUT_DIR/$arch/$LIB_NAME"
         [ -f "$lib" ] || continue
 
-        local arch=$(basename "$arch_dir")
         local missing=0
 
         # Read the dynamic symbol table once, into a variable. Piping nm into
@@ -292,7 +329,7 @@ verify_jni_symbols() {
         # reports the pipeline as failed — so every symbol that IS exported gets
         # reported as missing. (Reproducible on any build, old or new.)
         local syms
-        syms="$(nm -D "$lib" 2>/dev/null || true)"
+        syms="$("$nm_bin" -D "$lib" 2>/dev/null || true)"
 
         for sym in "${expected_symbols[@]}"; do
             if [[ "$syms" != *"$sym"* ]]; then
@@ -303,16 +340,27 @@ verify_jni_symbols() {
 
         if [ "$missing" -eq 0 ]; then
             print_success "$arch: All JNI symbols present"
+        else
+            failed=1
         fi
     done
+
+    # Hard failure: a library missing these exports still loads, and then every
+    # ArtiNative call throws UnsatisfiedLinkError at runtime instead.
+    if [ "$failed" -ne 0 ]; then
+        print_error "JNI exports missing — refusing to leave this .so in jniLibs"
+        exit 1
+    fi
 }
 
 verify_ndk_stamp() {
     print_header "Verifying NDK stamp"
 
-    if ! command -v readelf >/dev/null 2>&1; then
-        print_info "readelf not found — skipping (install binutils to enable this check)"
-        return 0
+    local readelf_bin
+    readelf_bin="$(ndk_tool readelf || true)"
+    if [ -z "$readelf_bin" ]; then
+        print_error "no readelf found (looked in the NDK and on PATH) — cannot verify the NDK stamp"
+        exit 1
     fi
 
     # Every NDK-linked shared object carries .note.android.ident, which records
@@ -326,11 +374,17 @@ verify_ndk_stamp() {
         local lib="$OUTPUT_DIR/$arch/$LIB_NAME"
         [ -f "$lib" ] || continue
 
-        if readelf -p .note.android.ident "$lib" 2>/dev/null | grep -qw "$NDK_BUILD_NUMBER"; then
+        # Read the note once into a variable: `readelf | grep -q` would let grep
+        # exit first, kill readelf with SIGPIPE, and fail the pipeline under
+        # `set -o pipefail` — the same trap that made the symbol check above
+        # report every exported symbol as missing.
+        local note
+        note="$("$readelf_bin" -p .note.android.ident "$lib" 2>/dev/null || true)"
+        if grep -qw "$NDK_BUILD_NUMBER" <<< "$note"; then
             print_success "$arch: built by NDK $NDK_VERSION"
         else
             print_error "$arch: not stamped with NDK build $NDK_BUILD_NUMBER — wrong toolchain?"
-            readelf -p .note.android.ident "$lib" 2>/dev/null || true
+            printf '%s\n' "$note"
             exit 1
         fi
     done

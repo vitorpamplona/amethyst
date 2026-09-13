@@ -41,8 +41,9 @@ committed binary wasn't tampered with. **Five** things have to be fixed:
 > `~/Android/Sdk/ndk/*/`, so the committed libraries were produced by r25b while
 > this file told everyone to install r27 — two verifiers could both follow the
 > README and get different, equally "correct" results. `build-arti.sh` now
-> resolves the pinned revision by name, re-reads `source.properties` to confirm
-> it, and re-checks the `.note.android.ident` stamp of every `.so` it produced.
+> reads each candidate's `source.properties` and keeps looking until it finds
+> the pinned revision, then re-checks the `.note.android.ident` stamp of every
+> `.so` it produced.
 >
 > [`CARGO_NDK_VERSION`](CARGO_NDK_VERSION) records the `cargo-ndk` release the
 > pinned output was verified with. `cargo-ndk` only wraps the NDK, so a mismatch
@@ -106,9 +107,13 @@ repo is checked out.
    sdkmanager "ndk;$(cat ANDROID_NDK_VERSION)"
    ```
    `build-arti.sh` finds it automatically under `$ANDROID_HOME/ndk/`,
-   `~/Android/Sdk/ndk/`, `~/Library/Android/sdk/ndk/` or
-   `/usr/local/lib/android/sdk/ndk/`. Set `ANDROID_NDK_HOME` only if yours
-   lives somewhere else — it is version-checked either way.
+   `$ANDROID_SDK_ROOT/ndk/`, `~/Android/Sdk/ndk/`, `~/Library/Android/sdk/ndk/`
+   or `/usr/local/lib/android/sdk/ndk/`. `ANDROID_NDK_HOME` and
+   `ANDROID_NDK_ROOT` are tried first when set, but they are only hints: every
+   candidate is checked against its own `source.properties`, and one at the
+   wrong revision is reported and skipped rather than failing the build. CI
+   images (GitHub runners among them) export both at a bundled NDK that is not
+   ours.
 
 ## Building
 
@@ -168,9 +173,12 @@ readelf -p .note.android.ident amethyst/src/main/jniLibs/arm64-v8a/libarti_andro
 readelf -p .comment amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
 ```
 
-For the pinned toolchain that prints `r30` / `16248370`, clang 21.0.0 and the
-`rustc` version from `rust-toolchain.toml`. `build-arti.sh` runs the first check
-itself after every build.
+For the pinned toolchain the first command prints `r30` and build `16248370`.
+The second prints the `rustc` version from `rust-toolchain.toml`, the NDK's
+`clang` and `LLD`, and a second, different clang string that comes from the
+prebuilt runtime objects the NDK links in — two clang lines there is normal.
+`build-arti.sh` runs the first check itself after every build, using the NDK's
+own `llvm-readelf` so it works the same on macOS.
 
 ## Directory structure
 
@@ -285,13 +293,18 @@ panic = "abort"       # No unwinding (smaller binary)
 
 ### `cargo-ndk` not found
 ```bash
-cargo install cargo-ndk
+cargo install cargo-ndk --version "$(cat CARGO_NDK_VERSION)" --locked
 ```
 
-### NDK not found
+### NDK not found, or "wrong revision"
+Install the pinned revision — the build refuses any other, and the error lists
+every directory it looked at and what it found there:
 ```bash
-export ANDROID_NDK_HOME="$HOME/Android/Sdk/ndk/<version>"
+sdkmanager "ndk;$(cat ANDROID_NDK_VERSION)"
 ```
+Point `ANDROID_NDK_HOME` at it only if it lives outside the standard SDK
+layouts; an `ANDROID_NDK_HOME` left over from another project is skipped, not
+fatal.
 
 ### Rust targets not installed
 ```bash

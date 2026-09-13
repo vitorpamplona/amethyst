@@ -86,8 +86,13 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_getVersion<'
 ) -> JString<'caller> {
     // jni 0.22: the raw environment pointer is FFI-only (`EnvUnowned`); JNI calls
     // need the `Env` that `with_env` borrows for the closure. `resolve` maps an
-    // error to the policy — here a Java RuntimeException plus a null return —
-    // instead of unwinding out of `extern "C"`, which aborts the process.
+    // `Err` to the policy — here a Java RuntimeException plus a null return —
+    // rather than losing it.
+    //
+    // Only the `Err` half is live: the policy's panic half runs through
+    // `catch_unwind`, which catches nothing under this crate's
+    // `panic = "abort"` release profile, so a panic in here still takes the
+    // process down exactly as it did before the migration.
     env.with_env(|env| -> JniResult<JString<'caller>> {
         if JAVA_VM.lock().unwrap().is_none() {
             if let Ok(vm) = env.get_java_vm() {
@@ -134,22 +139,22 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize<'
     // Everything JNI-owned is read inside this closure; the rest of the function
     // is pure Rust that blocks on Tokio, which must not hold an `Env`.
     //
-    // The policy only applies to a panic or an `Err` returned here, and `None`
-    // is `Option::default()`, so both of those land on the same `-1` the old
-    // `Err` arm returned. A jint policy default would have been `0`, which this
-    // API reports as success.
+    // `None` carries a failed read, because it is `Option::default()` and so is
+    // also what the policy yields for an `Err`. Both end at the same `-1` the
+    // old `Err` arm returned. Resolving to `jint` directly would have defaulted
+    // to `0`, the value this API reports as success.
+    //
+    // The already-initialized check deliberately stays *outside* the closure,
+    // against the whole `Option`: threading it through as a sentinel value
+    // would leave that sentinel to be re-tested after the closure, and a
+    // concurrent destroy() landing in between would let it through as the data
+    // directory.
     let data_dir_str: Option<String> = env
         .with_env(|env| -> JniResult<Option<String>> {
             if JAVA_VM.lock().unwrap().is_none() {
                 if let Ok(vm) = env.get_java_vm() {
                     *JAVA_VM.lock().unwrap() = Some(vm);
                 }
-            }
-
-            // Already initialized — the caller-visible "reuse" path still has to
-            // run below, so signal it with an empty string rather than here.
-            if ARTI_CLIENT.lock().unwrap().is_some() {
-                return Ok(Some(String::new()));
             }
 
             Ok(match data_dir.try_to_string(env) {
