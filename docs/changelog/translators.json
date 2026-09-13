@@ -81,16 +81,59 @@
       {
         "user": "vitorpamplona",
         "languages": [
+          "Arabic, Saudi Arabia",
+          "Bengali",
+          "Chinese Simplified",
+          "Chinese Simplified, Singapore",
+          "Chinese Traditional",
+          "Chinese Traditional, Hong Kong",
           "Czech",
+          "Dutch",
+          "English, United Kingdom",
+          "Esperanto",
+          "Finnish",
+          "French",
+          "French, Canada",
           "German",
+          "Greek",
+          "Hindi",
+          "Hungarian",
+          "Indonesian",
+          "Italian",
+          "Japanese",
+          "Korean",
+          "Latvian",
+          "Persian",
+          "Polish",
+          "Portuguese",
           "Portuguese, Brazilian",
-          "Swedish"
+          "Russian",
+          "Rսssian, Սkraine",
+          "Serbian (Cyrillic)",
+          "Slovenian",
+          "Spanish",
+          "Spanish, Mexico",
+          "Spanish, United States",
+          "Swahili, Kenya",
+          "Swedish",
+          "Tamil",
+          "Thai",
+          "Turkish",
+          "Ukrainian",
+          "Uzbek",
+          "Vietnamese"
         ]
       },
       {
         "user": "summoner001",
         "languages": [
           "Hungarian"
+        ]
+      },
+      {
+        "user": "rajs19420616",
+        "languages": [
+          "Hindi"
         ]
       },
       {
@@ -237,10 +280,6 @@
       },
       {
         "user": "flobstr",
-        "languages": []
-      },
-      {
-        "user": "rajs19420616",
         "languages": []
       },
       {

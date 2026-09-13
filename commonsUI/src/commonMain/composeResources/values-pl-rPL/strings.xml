@@ -2440,7 +2440,6 @@
     <string name="hls_content_warning_reason_placeholder">Powód (Opcjonalne)</string>
     <string name="hls_codec_label">Kodek</string>
     <string name="hls_codec_h265">H.265 (lepsza kompresja)</string>
-    <string name="hls_codec_h264"></string>
     <string name="hls_codec_fallback_notice">H.265 nie jest dostępny na tym urządzeniu – wróć do H.264.</string>
     <string name="hls_renditions_label">Wersje</string>
     <string name="hls_renditions_source_format">Rozdzielczość źródłowa: %1$d×%2$d</string>
