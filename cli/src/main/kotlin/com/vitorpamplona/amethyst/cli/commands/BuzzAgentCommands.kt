@@ -221,7 +221,9 @@ object BuzzAgentCommands {
                 BuzzAgentCommands::class.java.getResourceAsStream("/buzz-agent/$name")
                     ?: error("bundled wrapper /buzz-agent/$name missing from the amy jar")
             ).use { input -> out.outputStream().use { input.copyTo(it) } }
-            out.setExecutable(true)
+            // The runner launches the wrapper via `sh -c <path>`, so a missing exec bit would only
+            // surface later as an opaque "permission denied" — fail here with the path instead.
+            check(out.setExecutable(true)) { "could not mark wrapper ${out.absolutePath} executable" }
             return out.absolutePath
         }
         return extract("workflow-agent.sh") to extract("workflow-ship.sh")
