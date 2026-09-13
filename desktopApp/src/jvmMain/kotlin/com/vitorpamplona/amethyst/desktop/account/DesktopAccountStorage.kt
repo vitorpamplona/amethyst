@@ -80,7 +80,16 @@ class DesktopAccountStorage(
     private val onCorruption: (StorageCorruption) -> Unit = {},
 ) : AccountStorage {
     companion object {
-        private const val METADATA_KEY_ALIAS = "account-metadata-key"
+        /**
+         * Alias under which the AES-256-GCM key that encrypts
+         * `accounts.json.enc` is stored in [SecureKeyStorage].
+         *
+         * Exposed as `internal` so [AccountManager.bootstrapConsolidatedVault]
+         * can name it in the phase-1 candidate list. The single source of truth
+         * for the alias string stays here where the key is actually read and
+         * written.
+         */
+        internal const val METADATA_KEY_ALIAS = "account-metadata-key"
         private const val ACCOUNTS_FILE = "accounts.json.enc"
         private const val ACCOUNTS_LOCK_FILE = "accounts.json.enc.lock"
         private const val AES_KEY_SIZE = 32 // 256 bits
