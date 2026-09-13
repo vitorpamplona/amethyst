@@ -420,8 +420,21 @@ class SecureKeyStorageVaultTest {
                 }
             storage.enableConsolidatedVault(listOf("account-metadata-key"))
 
-            // An alias the vault never covered still falls through to the strict probe:
-            // a confirmed miss is null, an ambiguous answer still throws.
+            // An alias the vault never covered still falls through to the strict probe.
+            // Off macOS that probe is javakeyring, which cannot tell a miss from a denial,
+            // so the strict contract there is to throw on any miss.
+            if (!System.getProperty("os.name").orEmpty().startsWith("Mac")) {
+                try {
+                    storage.getPrivateKeyOrThrow("npub1neverseen")
+                    throw AssertionError("Expected SecureStorageException for a non-mac keyring miss")
+                } catch (e: SecureStorageException) {
+                    // Walk the chain: coroutine stack-trace recovery may wrap the original.
+                    assertTrue(generateSequence<Throwable>(e) { it.cause }.any { it is PasswordAccessException })
+                }
+                return@runBlocking
+            }
+
+            // On macOS a confirmed miss is null, an ambiguous answer still throws.
             wireMacProbe(storage, backend)
             assertNull(storage.getPrivateKeyOrThrow("npub1neverseen"))
 
