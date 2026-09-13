@@ -156,8 +156,7 @@ class ActiveSubscriptionsViewModel : ViewModel() {
         withContext(Dispatchers.Default) {
             val client = Amethyst.instance.client
             aggregateSubscriptions(
-                // The pool's live socket state, same as the always-on notification this screen explains.
-                client.connectedRelays().associateWith { relay ->
+                client.connectedRelaysFlow().value.associateWith { relay ->
                     client.activeRequests(relay).values.flatten()
                 },
             )
