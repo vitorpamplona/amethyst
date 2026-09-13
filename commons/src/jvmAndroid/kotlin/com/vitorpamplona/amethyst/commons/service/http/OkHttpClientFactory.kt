@@ -148,15 +148,22 @@ class OkHttpClientFactory(
             .addInterceptor(OnionLocationInterceptor(onionCache))
             .build()
 
-    private val proxyRoutes = ProxyRouteTracker()
-
+    // No connection-pool eviction when the proxy changes. OkHttp's `Address` -- the
+    // pool's lookup key -- includes the proxy (`Address.equalsNonHost`), so a call
+    // is only ever handed a connection opened through the very same route. A
+    // connection left over from an old proxy is already unreachable and simply ages
+    // out of the pool; evicting was defensive, not load-bearing.
+    //
+    // It also cost more than it looked. `evictAll()` empties the ENTIRE shared pool,
+    // and this one factory mints both the proxied and the direct client (see
+    // [DualHttpClientManager]) -- `buildLocalSocksProxy` never returns null, so those
+    // two alternated a single "last proxy" field forever. Every rebuild read as a
+    // route change and dropped every warm connection the other client was using, on
+    // each network-state emission and each resubscribe.
     fun buildHttpClient(
         proxy: Proxy?,
         timeoutSeconds: Int,
     ): OkHttpClient {
-        if (proxyRoutes.shouldEvictFor(proxy)) {
-            rootClient.connectionPool.evictAll()
-        }
         val seconds = if (proxy != null) timeoutSeconds * 3 else timeoutSeconds
         return rootClient
             .newBuilder()
@@ -200,44 +207,5 @@ class OkHttpClientFactory(
         // evict a silently-dropped connection well before the read timeout would
         // otherwise stall a request for the full 30s/90s.
         const val HTTP2_PING_INTERVAL_SECS: Long = 10
-    }
-}
-
-/**
- * Decides when a rebuilt client must drop the pooled connections it shares with every other
- * client [OkHttpClientFactory] mints.
- *
- * The eviction exists so a changed Tor route doesn't leave usable connections behind on the old
- * one. The trap is that a single factory mints BOTH long-lived variants — [DualHttpClientManager]
- * builds `defaultHttpClient` (always SOCKS, because `buildLocalSocksProxy` falls back to 9050
- * rather than returning null) and `defaultHttpClientWithoutProxy` (always null) from the same
- * instance, and they share one `rootClient.connectionPool`. Comparing every build against one
- * "last proxy" field therefore saw the two variants alternate forever: each rebuild looked like a
- * route change and wiped the pool they share. Both `stateIn` flows re-emit on every
- * `isMobileDataProvider` change and every resubscribe (they are `WhileSubscribed(1000)`, collected
- * from a composable), so in practice the pool was emptied whenever the network flapped or the app
- * came back to the foreground — and the next image then paid a fresh DNS + TCP + TLS.
- *
- * Two rules fix it:
- *
- *  - A direct build (`proxy == null`) never evicts. `null` is that variant's permanent route, so
- *    it can never have changed.
- *  - A proxied build evicts only when the proxy differs from the one the PREVIOUS proxied build
- *    used, i.e. the Tor port actually moved.
- *
- * Nothing is lost by being this narrow: OkHttp's `Address` — the connection-pool key — includes
- * the proxy, so a direct connection and a SOCKS connection to the same host are already distinct
- * entries that can never be handed to each other's calls.
- */
-internal class ProxyRouteTracker {
-    private var lastProxy: Proxy? = null
-
-    @Synchronized
-    fun shouldEvictFor(proxy: Proxy?): Boolean {
-        if (proxy == null) return false
-
-        val previous = lastProxy
-        lastProxy = proxy
-        return previous != null && previous != proxy
     }
 }

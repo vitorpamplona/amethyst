@@ -86,16 +86,22 @@ class OkHttpClientFactoryForRelays(
             .addInterceptor(OnionLocationInterceptor(onionCache))
             .build()
 
-    private var lastProxy: Proxy? = null
-
+    // No connection-pool eviction when the proxy changes. OkHttp's `Address` -- the
+    // pool's lookup key -- includes the proxy (`Address.equalsNonHost`), so a call
+    // is only ever handed a connection opened through the very same route. A
+    // connection left over from an old proxy is already unreachable and simply ages
+    // out of the pool; evicting was defensive, not load-bearing.
+    //
+    // It also cost more than it looked. `evictAll()` empties the ENTIRE shared pool,
+    // and this one factory mints both the proxied and the direct client (see
+    // [DualHttpClientManagerForRelays]) -- `buildLocalSocksProxy` never returns null, so those
+    // two alternated a single "last proxy" field forever. Every rebuild read as a
+    // route change and dropped every warm connection the other client was using, on
+    // each network-state emission and each resubscribe.
     fun buildHttpClient(
         proxy: Proxy?,
         timeoutSeconds: Int,
     ): OkHttpClient {
-        if (proxy != lastProxy) {
-            rootClient.connectionPool.evictAll()
-            lastProxy = proxy
-        }
         val seconds = if (proxy != null) timeoutSeconds * 3 else timeoutSeconds
         return rootClient
             .newBuilder()
