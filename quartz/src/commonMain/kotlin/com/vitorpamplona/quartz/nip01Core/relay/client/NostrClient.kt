@@ -493,6 +493,8 @@ class NostrClient(
 
     override fun connectedRelaysFlow() = relayPool.connectedRelays
 
+    override fun connectedRelays() = relayPool.connectedRelayUrls()
+
     override fun availableRelaysFlow() = relayPool.availableRelays
 
     override fun close() {

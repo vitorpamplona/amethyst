@@ -119,6 +119,9 @@ class RelayPool(
         relays.forEach { url, relay ->
             relay.disconnect()
         }
+        // We just tore every socket down; don't leave the answer to the socket layer's
+        // callbacks (see [connectedRelayUrls] for how those can go missing).
+        _connectedRelays.update { emptySet() }
     }
 
     fun sendOrConnectAndSync(
@@ -210,6 +213,9 @@ class RelayPool(
         val relayInPool = relays.remove(relay)
         if (relayInPool != null) {
             relayInPool.disconnect()
+            // A relay that is no longer a member cannot be connected, whatever its socket
+            // layer reports (or fails to report) later.
+            _connectedRelays.update { it - relay }
             return true
         }
         return false
@@ -226,6 +232,7 @@ class RelayPool(
             disconnect()
             relays.clear()
             _availableRelays.update { emptySet() }
+            _connectedRelays.update { emptySet() }
         }
     }
 
@@ -267,4 +274,24 @@ class RelayPool(
     ) = listener.onSent(relay, cmdStr, cmd, success)
 
     fun connectedRelaysCount(): Int = relays.count { url, relay -> relay.isConnected() }
+
+    /**
+     * The relays whose socket is up *right now*, read from each pool member's [IRelayClient.isConnected].
+     *
+     * [connectedRelays] is a projection of this that moves on the [onConnected] / [onDisconnected]
+     * callbacks plus the pool's own removals and [disconnect]. The two can still drift for a relay that
+     * is *still a member* whose socket layer lost a terminal callback: before the OkHttp sockets
+     * answered a relay's CLOSE frame, that was every relay-initiated close (no `onClosed`, no
+     * `onFailure`, and a silent `cancel()` afterwards), and the flow carried such relays for minutes
+     * after the pool had let go of them. Reading the members directly cannot be fooled by a callback
+     * that never came for a relay the pool no longer holds. Use this for anything a person reads as
+     * "how many relays am I connected to"; keep the flow for change notification.
+     */
+    fun connectedRelayUrls(): Set<NormalizedRelayUrl> {
+        val urls = mutableSetOf<NormalizedRelayUrl>()
+        relays.forEach { url, relay ->
+            if (relay.isConnected()) urls.add(url)
+        }
+        return urls
+    }
 }

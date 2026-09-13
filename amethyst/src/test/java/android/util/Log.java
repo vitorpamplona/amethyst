@@ -1,8 +1,17 @@
 package android.util;
 
 public class Log {
-    public static Boolean isLoggable(String tag, Integer msg) {
-        return true;
+    // Primitive signature on purpose: OkHttp's Android platform probe (AndroidLog.enableLogging)
+    // links against `boolean isLoggable(String, int)`, and a boxed variant is a different method.
+    // Answering false keeps OkHttp from installing its Android log handler, which would route
+    // every internal task-runner trace through println() below on the dispatcher threads.
+    public static boolean isLoggable(String tag, int level) {
+        return false;
+    }
+
+    public static int println(int priority, String tag, String msg) {
+        System.out.println(tag + ": " + msg);
+        return 0;
     }
 
     public static int d(String tag, String msg) {

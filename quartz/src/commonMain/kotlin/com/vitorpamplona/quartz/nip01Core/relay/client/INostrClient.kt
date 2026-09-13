@@ -37,6 +37,16 @@ interface INostrClient : AutoCloseable {
 
     fun availableRelaysFlow(): StateFlow<Set<NormalizedRelayUrl>>
 
+    /**
+     * The relays whose socket is up at the moment of the call, read from the pool's members rather
+     * than from the callback-maintained [connectedRelaysFlow]. The flow is for reacting to changes;
+     * this is for reporting a count: it is computed from what the pool actually holds, so a terminal
+     * callback the socket layer never delivered cannot leave a relay in it that the pool has already
+     * dropped (see `RelayPool.connectedRelayUrls`). Defaults to the flow's current value for clients
+     * that have no pool behind them.
+     */
+    fun connectedRelays(): Set<NormalizedRelayUrl> = connectedRelaysFlow().value
+
     fun connect()
 
     fun disconnect()
