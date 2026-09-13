@@ -41,6 +41,12 @@ class DualHttpClientManagerForRelays(
 ) : IHttpClientManager {
     val factory = OkHttpClientFactoryForRelays(userAgent, dns, onionCache)
 
+    init {
+        // One eviction per real Tor route change. See [evictOnProxyRouteChange] for why this is
+        // driven by the port rather than by client rebuilds.
+        scope.evictOnProxyRouteChange(proxyPortProvider, factory::evictPooledConnections)
+    }
+
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->
             factory.buildHttpClient(proxy, mobile)

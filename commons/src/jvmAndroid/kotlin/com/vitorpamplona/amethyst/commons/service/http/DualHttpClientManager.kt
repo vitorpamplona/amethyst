@@ -56,6 +56,12 @@ class DualHttpClientManager(
 ) : IHttpClientManager {
     val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache, usageInterceptor, blossomReadAuth)
 
+    init {
+        // One eviction per real Tor route change. See [evictOnProxyRouteChange] for why this is
+        // driven by the port rather than by client rebuilds.
+        scope.evictOnProxyRouteChange(proxyPortProvider, factory::evictPooledConnections)
+    }
+
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->
             factory.buildHttpClient(proxy, mobile)
