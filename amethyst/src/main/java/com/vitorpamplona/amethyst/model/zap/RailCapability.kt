@@ -46,6 +46,12 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
  * through that rail — matching the existing best-effort behaviour of the
  * actual send paths (Lightning skips pubkeys with no `lnAddress`; on-chain
  * separately warns about lnAddress-only splits that can't be paid on-chain).
+ *
+ * [hasLightning] is the whole Lightning rail, not just BOLT11: a recipient with
+ * no `lnAddress` but a published kind:10058 BOLT12 offer counts when our own
+ * NWC wallet can pay offers, because the zap send path routes them over BOLT12
+ * (see `ZapPaymentHandler`). The chip stays one bolt either way — which flavour
+ * gets used is decided at send time, not in the picker.
  */
 @Immutable
 data class RailCapability(
@@ -143,6 +149,12 @@ object RailCapabilityResolver {
         baseNote: Note,
         cashuState: CashuWalletState,
         payToEnabled: Boolean = false,
+        /**
+         * Whether our default NWC wallet can pay BOLT12 offers
+         * (`AccountZapActions.canZapViaBolt12`). When true, a recipient's published
+         * offer makes them payable on the Lightning rail even without an lnAddress.
+         */
+        bolt12Payable: Boolean = false,
     ): RailCapability {
         val author = baseNote.author?.pubkeyHex
         val splits = baseNote.event?.zapSplitSetup().orEmpty()
@@ -170,7 +182,9 @@ object RailCapabilityResolver {
         val hasLightning =
             lnAddressOnlySplits.isNotEmpty() ||
                 pubKeyRecipients.any { pk ->
-                    LocalCache.getUserIfExists(pk)?.lnAddress() != null
+                    val user = LocalCache.getUserIfExists(pk)
+                    user?.lnAddress() != null ||
+                        (bolt12Payable && user?.bolt12Offers()?.isNotEmpty() == true)
                 }
 
         // On-chain pays the pubkey directly; an event with only lnAddress

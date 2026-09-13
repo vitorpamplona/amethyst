@@ -40,6 +40,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.withTranslation
 import com.vitorpamplona.amethyst.commons.richtext.MathParser
 import ru.noties.jlatexmath.JLatexMathDrawable
 
@@ -130,12 +131,11 @@ fun LatexEquation(
         Canvas(modifier = equationModifier) {
             drawIntoCanvas { canvas ->
                 val native = canvas.nativeCanvas
-                val checkpoint = native.save()
                 // Position the icon's baseline on the text baseline within the padded box.
-                native.translate(0f, drawTopPx)
-                drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
-                drawable.draw(native)
-                native.restoreToCount(checkpoint)
+                native.withTranslation(y = drawTopPx) {
+                    drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
+                    drawable.draw(this)
+                }
             }
         }
         if (trailing.isNotEmpty()) {

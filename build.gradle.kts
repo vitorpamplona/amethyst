@@ -9,18 +9,18 @@ import java.util.Properties
 // compiles this buildscript {} section in an earlier stage that can't see the
 // file's imports (hence the qualified Properties) or share code with the body,
 // but it can publish values — the gate is computed once here and read below
-// via `by extra`.
+// via the project's extra properties.
 buildscript {
     val localProperties = File(rootDir, "local.properties")
-    val sonarProperties by extra(
+    val sonarProperties =
         java.util.Properties().apply {
             if (localProperties.exists()) localProperties.inputStream().use { load(it) }
-        },
-    )
-    val sonarEnabled by extra(
+        }
+    extra.set("sonarProperties", sonarProperties)
+    val sonarEnabled =
         sonarProperties.getProperty("sonar.host.url") != null &&
-            gradle.startParameter.taskNames.any { it.substringAfterLast(":") in setOf("sonar", "sonarqube") },
-    )
+            gradle.startParameter.taskNames.any { it.substringAfterLast(":") in setOf("sonar", "sonarqube") }
+    extra.set("sonarEnabled", sonarEnabled)
     if (sonarEnabled) {
         repositories {
             gradlePluginPortal()
@@ -110,9 +110,9 @@ subprojects {
 // `./gradlew sonar` behaves exactly like passing them via -Dsonar.xxx=... on the
 // command line. sonar.projectKey/projectName default to the root project name
 // ("Amethyst") and only need overriding in local.properties if desired.
-val sonarEnabled: Boolean by extra
+val sonarEnabled = extra["sonarEnabled"] as Boolean
 if (sonarEnabled) {
-    val sonarProperties: Properties by extra
+    val sonarProperties = extra["sonarProperties"] as Properties
     apply(plugin = "org.sonarqube")
 
     sonarProperties

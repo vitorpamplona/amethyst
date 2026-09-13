@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -54,97 +53,19 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
 import com.vitorpamplona.amethyst.commons.resources.show_qr
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import kotlinx.coroutines.launch
-
-@Composable
-fun PaymentButton(
-    user: User,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val address =
-        remember(user.pubkeyHex) {
-            PaymentTargetsEvent.createAddress(user.pubkeyHex)
-        }
-
-    LoadAddressableNote(address, accountViewModel) { note ->
-        if (note != null) {
-            EventFinderFilterAssemblerSubscription(note, accountViewModel)
-            val event by observeNoteEvent<PaymentTargetsEvent>(note, accountViewModel)
-            val targets =
-                remember(event) {
-                    event?.paymentTargets() ?: emptyList()
-                }
-            if (targets.isNotEmpty()) {
-                PaymentButtonWithTargets(user, targets, nav)
-            }
-        }
-    }
-}
-
-@Composable
-fun PaymentButtonWithTargets(
-    user: User,
-    targets: List<PaymentTarget>,
-    nav: INav,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    FilledTonalButton(
-        modifier =
-            Modifier
-                .padding(horizontal = 3.dp)
-                .width(50.dp),
-        onClick = { expanded = true },
-        contentPadding = ZeroPadding,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.AccountBalanceWallet,
-            contentDescription = stringRes(R.string.payment_targets),
-        )
-    }
-
-    if (expanded) {
-        PaymentTargetsDialog(
-            targets = targets,
-            onDismiss = { expanded = false },
-            payInApp = { target ->
-                // Targets one of the user's wallets can pay (lightning, bitcoin)
-                // go to the Send Payment screen, which collects the amount and
-                // confirms in place — no extra dialog. Returns false when no
-                // in-app wallet applies so the dialog falls back to payto://.
-                val route = inAppPaymentRouteFor(user.pubkeyHex, target)
-                if (route != null) {
-                    expanded = false
-                    nav.nav(route)
-                    true
-                } else {
-                    false
-                }
-            },
-        )
-    }
-}
 
 @Composable
 fun PaymentTargetsDialog(

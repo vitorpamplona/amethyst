@@ -58,6 +58,7 @@ class AccountManagerKeyLoginTest {
         val keySlot = slot<String>()
         val valueSlot = slot<String>()
         coEvery { storage.getPrivateKey(capture(keySlot)) } answers { keyStore[keySlot.captured] }
+        coEvery { storage.getPrivateKeyOrThrow(capture(keySlot)) } answers { keyStore[keySlot.captured] }
         coEvery { storage.savePrivateKey(capture(keySlot), capture(valueSlot)) } answers {
             keyStore[keySlot.captured] = valueSlot.captured
         }

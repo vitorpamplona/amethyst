@@ -739,7 +739,6 @@ class LongFormPostViewModel :
     }
 
     override fun onCleared() {
-        super.onCleared()
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 

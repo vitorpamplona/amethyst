@@ -320,7 +320,6 @@ class VoiceReplyViewModel : ViewModel() {
 
     override fun onCleared() {
         cancel()
-        super.onCleared()
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 }

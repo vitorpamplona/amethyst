@@ -129,17 +129,14 @@ class BlossomReadAuthTokenProvider(
         val fresh = CompletableDeferred<String?>()
         inFlight.putIfAbsent(host, fresh)?.let { return it }
 
-        // Winning the slot is not proof that nobody signed. The look above only narrows
-        // the gap — a leader that finished between it and this putIfAbsent has already
-        // cached its token AND retired its entry, so this put landed in a map it had
-        // just emptied and we would sign a duplicate. Only a look from *inside* the slot
-        // closes it: no one else can be leader while we hold the entry, and our put
-        // observed the map after that leader's removal, which its cache write is ordered
-        // before. So a token visible here is the last word, and the right move is to hand
-        // it over and stand down rather than sign again.
-        cachedHeader(host)?.let { cached ->
+        // Third look, now that this caller owns the slot. The look above still leaves a
+        // gap: a leader can insert, sign, cache and retire its entry entirely between
+        // that read and the putIfAbsent, so the map is empty again and this caller wins
+        // it. Any leader that retired before this insert cached first, so a token
+        // present now is theirs — take it and give the slot back instead of re-signing.
+        cachedHeader(host)?.let {
             inFlight.remove(host, fresh)
-            fresh.complete(cached)
+            fresh.complete(it)
             return fresh
         }
 

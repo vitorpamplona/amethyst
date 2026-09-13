@@ -293,7 +293,6 @@ class CashuWalletWizardViewModel : ViewModel() {
     }
 
     override fun onCleared() {
-        super.onCleared()
         discovery?.cancel()
     }
 }
