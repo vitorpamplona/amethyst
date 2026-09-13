@@ -184,6 +184,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -646,6 +647,41 @@ class AppModules(
             dns = surgeDns,
             onionCache = onionLocationCache,
         )
+
+    // Drops pooled connections once per real Tor route change. When the user switches
+    // Tor on, the direct clients' idle sockets to real hosts would otherwise sit in the
+    // pool for its 5-minute keepalive after the user has asked for everything to go
+    // through Tor. No request could use them either way -- OkHttp keys the pool by
+    // `Address`, which includes the proxy, so a connection on a dead route is already
+    // unreachable -- which is why this is hygiene and not correctness, and why it is
+    // fine for it to be a little late.
+    //
+    // Every source here is a plain StateFlow, so subscribing costs nothing. Deliberately
+    // NOT torManager.activePortOrNull: that chains to TorManager.status, whose upstream
+    // is WhileSubscribed and calls service.start() when collected, so a process-lifetime
+    // subscription there would hold Arti's control flow open forever -- the same hazard
+    // the battery ledger above documents and sidesteps the same way.
+    //
+    // Also deliberately not the per-feature Tor switches (imagesViaTor, videosViaTor, ...):
+    // those change which of the two existing clients a request picks, not the route either
+    // one uses, so no pooled connection goes stale.
+    init {
+        applicationIOScope.launch {
+            combine(
+                torPrefs.torType,
+                torPrefs.externalSocksPort,
+                torService.status.map { it.socksPort },
+            ) { torType, externalPort, artiPort -> Triple(torType, externalPort, artiPort) }
+                .distinctUntilChanged()
+                // Only later moves count; the route in force at process construction is the
+                // status quo, and nothing is pooled yet to evict.
+                .drop(1)
+                .collect {
+                    okHttpClients.factory.evictPooledConnections()
+                    okHttpClientForRelays.factory.evictPooledConnections()
+                }
+        }
+    }
 
     // Connects the INostrClient class with okHttp
     val websocketBuilder =
