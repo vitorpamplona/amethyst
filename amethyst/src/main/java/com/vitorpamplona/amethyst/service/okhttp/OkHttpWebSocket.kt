@@ -34,23 +34,25 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import java.util.concurrent.atomic.AtomicBoolean
 
 class OkHttpWebSocket(
     val url: NormalizedRelayUrl,
     val httpClient: (url: NormalizedRelayUrl) -> OkHttpClient,
     val out: WebSocketListener,
 ) : WebSocket {
-    private val lock = Any()
     private var usingOkHttp: OkHttpClient? = null
 
-    /**
-     * The OkHttp socket this adapter currently owns, or null once the session has ended -- by the
-     * relay closing it, by a network failure, or by [disconnect]. Only the owned socket may reach
-     * [out], and the terminal callbacks claim the slot under [lock], so a session ends with exactly
-     * one report however it ends. See quartz's `BasicOkHttpWebSocket` for the full reasoning; the
-     * two adapters differ only in how [needsReconnect] is decided.
-     */
     @Volatile private var socket: okhttp3.WebSocket? = null
+
+    /**
+     * Set once, by whichever of `onClosed`, `onFailure` or [disconnect] ends the session first.
+     * One adapter is one session (the relay client builds a fresh one per dial, and OkHttp binds
+     * exactly one socket to the listener), so a callback only has to ask whether the session
+     * already ended. See quartz's `BasicOkHttpWebSocket` for the full reasoning; the two adapters
+     * differ only in how [needsReconnect] is decided.
+     */
+    private val ended = AtomicBoolean(false)
 
     fun buildRequest() = Request.Builder().url(url.url).build()
 
@@ -77,13 +79,10 @@ class OkHttpWebSocket(
     }
 
     override fun connect() {
+        if (socket != null || ended.get()) return
         val client = httpClient(url)
-        // Under the lock so a callback racing this dial waits until the socket is owned rather
-        // than being dropped as foreign.
-        synchronized(lock) {
-            usingOkHttp = client
-            socket = client.newWebSocket(buildRequest(), OkHttpWebsocketListener(out))
-        }
+        usingOkHttp = client
+        socket = client.newWebSocket(buildRequest(), OkHttpWebsocketListener(out))
     }
 
     inner class OkHttpWebsocketListener(
@@ -105,25 +104,21 @@ class OkHttpWebSocket(
                 }
             }
 
-        /** Only the socket this adapter still owns may reach [out]. */
-        private fun isOwned(webSocket: okhttp3.WebSocket) = synchronized(lock) { socket === webSocket }
-
         /** Claims the session's single terminal report. False if it already ended. */
-        private fun endSession(webSocket: okhttp3.WebSocket): Boolean {
-            val ended = synchronized(lock) { (socket === webSocket).also { if (it) socket = null } }
-            if (ended) {
-                incomingMessages.close()
-                job.cancel()
-                scope.cancel()
-            }
-            return ended
+        private fun endSession(): Boolean {
+            if (!ended.compareAndSet(false, true)) return false
+            socket = null
+            incomingMessages.close()
+            job.cancel()
+            scope.cancel()
+            return true
         }
 
         override fun onOpen(
             webSocket: okhttp3.WebSocket,
             response: Response,
         ) {
-            if (!isOwned(webSocket)) return
+            if (ended.get()) return
             out.onOpen(
                 (response.receivedResponseAtMillis - response.sentRequestAtMillis).toInt(),
                 response.headers["Sec-WebSocket-Extensions"]?.contains("permessage-deflate") ?: false,
@@ -134,7 +129,7 @@ class OkHttpWebSocket(
             webSocket: okhttp3.WebSocket,
             text: String,
         ) {
-            if (!isOwned(webSocket)) return
+            if (ended.get()) return
             // Never blocks (unlimited channel): the OkHttp reader thread must
             // stay free to keep draining the socket.
             incomingMessages.trySendBlocking(text)
@@ -162,7 +157,7 @@ class OkHttpWebSocket(
             code: Int,
             reason: String,
         ) {
-            if (!endSession(webSocket)) return
+            if (!endSession()) return
             out.onClosed(code, reason)
         }
 
@@ -171,7 +166,7 @@ class OkHttpWebSocket(
             t: Throwable,
             response: Response?,
         ) {
-            if (!endSession(webSocket)) return
+            if (!endSession()) return
             out.onFailure(t, response?.code, response?.message)
         }
     }
@@ -195,7 +190,9 @@ class OkHttpWebSocket(
         // waiting): OkHttp's cancel() raises no callback when no reader is left to fail, and when
         // it does the failure arrives later on its own thread. The relay client needs the answer
         // now, and must not hear from this socket again.
-        val closing = synchronized(lock) { socket?.also { socket = null } } ?: return
+        val closing = socket ?: return
+        if (!ended.compareAndSet(false, true)) return
+        socket = null
         closing.cancel()
         out.onClosed(1000, "client disconnect")
     }
