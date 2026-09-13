@@ -1210,6 +1210,10 @@
     <string name="library_learning_resource">Recurso de aprendizagem</string>
     <string name="library_directory">Diretório</string>
     <string name="library_blossom_piece">Registro de arquivo</string>
+    <plurals name="library_directory_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d itens</item>
+    </plurals>
     <plurals name="library_directory_more_items">
         <item quantity="one">mais %1$d item</item>
         <item quantity="other">mais %1$d itens</item>
@@ -2385,8 +2389,4 @@
          rationale screen. Needs to be an Android resource (not a commons Compose resource)
          because android:label on the manifest entry can only reference @string/. -->
     <string name="health_connect_rationale_activity_label">Health Connect e Amethyst</string>
-    <plurals name="library_directory_items">
-        <item quantity="one">%1$d item</item>
-        <item quantity="other">%1$d itens</item>
-    </plurals>
 </resources>
