@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -69,6 +70,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 sealed class AccountState {
     data object Loading : AccountState()
@@ -259,11 +261,92 @@ class AccountManager internal constructor(
 
     // --- Account loading ---
 
+    /**
+     * Phase 1 of the vault migration: fold the account-metadata key into `vault-v1`.
+     *
+     * This MUST complete before any read that needs that key, because the migration
+     * deletes the legacy per-alias item. A storage read that gets there first finds
+     * the item gone and mints a fresh AES key over the one that decrypts
+     * accounts.json.enc, wiping every account. `refreshAccountListOnStartup()` runs
+     * before `loadSavedAccount()` on the startup path and does exactly that read, so
+     * phase 1 is hoisted here and every storage entry point calls it.
+     *
+     * Run-once and idempotent: the flag is set inside the lock, so concurrent
+     * callers serialise and only the first does the work.
+     */
+    private suspend fun ensureVaultMetadataKeyMigrated() {
+        vaultBootstrapMutex.withLock {
+            if (vaultMetadataKeyMigrated) return@withLock
+            vaultMetadataKeyMigrated = true
+            try {
+                secureStorage.enableConsolidatedVault(listOf(DesktopAccountStorage.METADATA_KEY_ALIAS))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("AccountManager", "Consolidated keychain vault phase 1 failed; continuing on legacy per-alias reads", e)
+            }
+        }
+    }
+
+    private val vaultBootstrapMutex = Mutex()
+    private var vaultMetadataKeyMigrated = false
+
+    /**
+     * Two-phase consolidation of every Amethyst-owned keychain item into the
+     * single `vault-v1` item that [SecureKeyStorage.enableConsolidatedVault]
+     * manages, so cold-boot triggers at most one macOS Keychain Access prompt
+     * regardless of how many accounts (each with its own nsec, per-account
+     * bunker ephemeral, and NWC URI) the user has.
+     *
+     * Phase 1 migrates only the `account-metadata-key` (the AES key that
+     * decrypts `accounts.json.enc`). Nothing else can be enumerated before
+     * that file is readable, so this phase runs against a single-alias
+     * candidate list. It is a no-op on fresh installs (no legacy item) and
+     * on already-migrated setups (vault-v1 exists).
+     *
+     * Phase 2 runs after `accounts.json.enc` has been decrypted and the full
+     * npub list is known. For each npub we add the nsec alias itself, the
+     * per-account bunker-ephemeral alias, and the NWC alias. The legacy
+     * shared bunker-ephemeral alias is included for the pre-per-account
+     * migration compatibility branch in [loadBunkerAccount]. Phase 2 is
+     * idempotent (see [SecureKeyStorage.enableConsolidatedVault]) so it is
+     * safe to run on every startup and to include aliases the vault already
+     * covers.
+     */
+    private suspend fun bootstrapConsolidatedVault() {
+        ensureVaultMetadataKeyMigrated()
+        try {
+            val npubs = accountStorage.loadAccounts().map { it.npub }
+            val aliases = mutableListOf<String>()
+            aliases += DesktopAccountStorage.METADATA_KEY_ALIAS
+            aliases += LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS
+            for (npub in npubs) {
+                aliases += npub
+                aliases += bunkerEphemeralKeyAlias(npub)
+                aliases += nwcKeyAlias(npub)
+            }
+            secureStorage.enableConsolidatedVault(aliases)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Non-fatal: SecureKeyStorage falls back to legacy per-alias reads for
+            // anything the vault does not cover, so the worst case is the old
+            // multi-prompt behaviour. Log it -- swallowing this silently made a
+            // half-migrated keychain impossible to diagnose from a user report.
+            Log.w("AccountManager", "Consolidated keychain vault bootstrap failed; continuing on legacy per-alias reads", e)
+        }
+    }
+
     suspend fun loadSavedAccount(): Result<AccountState.LoggedIn> =
         try {
             // Clean up legacy files (one-time)
             listOf("last_account.txt", "bunker_uri.txt", "nwc_connection.txt")
                 .forEach { File(amethystDir, it).deleteOrWarn("AccountManager", "legacy file") }
+
+            // Consolidate keychain items into vault-v1 so macOS prompts once, not per
+            // item. Phase 1 may already have run via refreshAccountListOnStartup();
+            // it is run-once, so this call just adds phase 2.
+            bootstrapConsolidatedVault()
 
             // Single source of truth: accounts.json.enc
             val activeNpub =
@@ -280,7 +363,7 @@ class AccountManager internal constructor(
                 is SignerType.Remote -> loadBunkerAccount((info.signerType as SignerType.Remote).bunkerUri, activeNpub)
                 is SignerType.ViewOnly -> loadReadOnlyAccount(activeNpub)
             }
-        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.failure(e)
@@ -754,6 +837,9 @@ class AccountManager internal constructor(
     // --- Multi-account management ---
 
     suspend fun refreshAccountList() {
+        // Reads accounts.json.enc, which needs the metadata key -- so the vault
+        // migration has to have happened first. See [ensureVaultMetadataKeyMigrated].
+        ensureVaultMetadataKeyMigrated()
         _allAccounts.value = accountStorage.loadAccounts().toImmutableList()
     }
 
@@ -924,7 +1010,7 @@ class AccountManager internal constructor(
 
             _nwcConnection.value = parsed
             Result.success(parsed)
-        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.failure(e)
