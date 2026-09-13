@@ -84,24 +84,23 @@ class OkHttpClientFactory(
 
     // Most images/videos in a feed come from a small set of hosts (e.g. a single
     // Blossom/imgproxy server). OkHttp's default dispatcher caps inflight requests
-    // per host at 5, which serializes feed loading, so we lift that.
+    // per host at 5, which serializes feed loading. Raise the limits so the feed
+    // can parallelize downloads the way a browser does.
     //
-    // The TOTAL, though, has to stay in phone territory. Dispatcher's executor is
-    // an unbounded cached pool (SynchronousQueue), so maxRequests is literally the
-    // thread ceiling: 128 meant up to 128 threads doing 128 concurrent TLS
-    // handshakes on a handset. Nothing upstream bounds the arrival rate either --
-    // Coil's enqueue is unbounded and PrefetchFeedMedia warms ±3 notes on BOTH
-    // sides of the viewport on every visible-range change -- so the queue really
-    // does reach the cap on a fast scroll. Past the point where the radio and the
-    // CPU are saturated, more concurrency doesn't add throughput, it just slices
-    // the same bandwidth thinner and pushes every image's completion out
-    // together, including the one actually on screen. A tighter total lets the
-    // visible images finish and paint while the rest wait their turn.
+    // Resist trimming these on intuition. `maxRequests` is effectively the thread
+    // ceiling (Dispatcher's executor is corePoolSize=0 / maxPoolSize=MAX_VALUE over
+    // a SynchronousQueue), which makes a lower number look free -- but blocked
+    // threads commit little, these hosts are HTTP/2 so concurrent calls to one host
+    // multiplex over a single connection rather than a handshake each, and
+    // `readyAsyncCalls` is strict FIFO with no priority. PrefetchFeedMedia enqueues
+    // notes BEFORE the user reaches them, so a tighter cap makes the image actually
+    // on screen queue behind those prefetches instead of starting straight away.
+    // Change these with a benchmark/ run, not a hunch.
     private val dispatcher =
         Dispatcher().apply {
             if (!HttpClientEnvironment.isEmulator) {
-                maxRequestsPerHost = 8
-                maxRequests = 32
+                maxRequestsPerHost = 16
+                maxRequests = 128
             } else {
                 maxRequestsPerHost = 5
                 maxRequests = 64
