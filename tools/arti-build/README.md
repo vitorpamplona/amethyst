@@ -9,7 +9,7 @@ JNI wrapper built directly from Arti source.
 | | Guardian Project AAR | Custom build |
 |---|---|---|
 | **Size** | ~140MB | ~11MB |
-| **16KB pages** | No | Yes (NDK 25+) |
+| **16KB pages** | No | Yes (rustc aligns Android targets to 16 KiB) |
 | **Stop/restart** | Broken (state file lock) | Works (TorClient persists, only SOCKS proxy stops) |
 | **Version** | Behind | Pinned to latest (currently 1.9.0) |
 
@@ -22,14 +22,32 @@ rebuild if you want to verify binaries, update the Arti version, or modify the J
 
 The shipped `.so` is **built to be reproducible** so anyone — F-Droid, Zapstore,
 or an independent auditor — can rebuild it from this tag and confirm the
-committed binary wasn't tampered with. **Four** things have to be fixed:
+committed binary wasn't tampered with. **Five** things have to be fixed:
 
 | Source of non-determinism | Pinned by |
 |---|---|
 | `rustc` / cargo version | [`rust-toolchain.toml`](rust-toolchain.toml) (rustup auto-installs it) |
+| **Android NDK revision** | [`ANDROID_NDK_VERSION`](ANDROID_NDK_VERSION); `build-arti.sh` refuses to build with any other revision |
 | transitive dependency versions | committed [`Cargo.lock`](Cargo.lock); builds run `cargo --locked` |
 | absolute paths *embedded* in the binary | `--remap-path-prefix` in [`repro-env.sh`](repro-env.sh) |
 | codegen/link **ordering** keyed on the real build path | **canonical build path** (`build-arti.sh` builds in `/tmp/amethyst-arti-build`) |
+
+> **Why the NDK is pinned.** It is not just an SDK detail: the NDK supplies the
+> clang that compiles Arti's C dependencies (`ring`, `zstd-sys`,
+> `libsqlite3-sys`) and the `lld` that links the final `cdylib`, both of which
+> stamp themselves into the binary's `.comment` section next to `rustc`'s own
+> version. Swapping the NDK changes the bytes exactly like swapping `rustc`
+> would. Before this was pinned the build picked the first directory matching
+> `~/Android/Sdk/ndk/*/`, so the committed libraries were produced by r25b while
+> this file told everyone to install r27 — two verifiers could both follow the
+> README and get different, equally "correct" results. `build-arti.sh` now
+> resolves the pinned revision by name, re-reads `source.properties` to confirm
+> it, and re-checks the `.note.android.ident` stamp of every `.so` it produced.
+>
+> [`CARGO_NDK_VERSION`](CARGO_NDK_VERSION) records the `cargo-ndk` release the
+> pinned output was verified with. `cargo-ndk` only wraps the NDK, so a mismatch
+> is a warning rather than an error — but it is the next thing to check if your
+> rebuild does not match.
 
 `repro-env.sh` (sourced by both build scripts) also sets `CARGO_INCREMENTAL=0`
 and a fixed `SOURCE_DATE_EPOCH` derived from the Arti tag. The size-optimized
@@ -74,20 +92,23 @@ repo is checked out.
    rustup target add aarch64-linux-android x86_64-linux-android
    ```
 
-3. **cargo-ndk**
+3. **cargo-ndk** — the release the pinned output was verified with:
    ```bash
-   cargo install cargo-ndk
+   cargo install cargo-ndk --version "$(cat CARGO_NDK_VERSION)" --locked
    ```
 
-4. **Android NDK 25+** (required for 16KB page size support)
+4. **Android NDK** — the exact revision in [`ANDROID_NDK_VERSION`](ANDROID_NDK_VERSION)
+   (currently **27.3.13750724**, r27d). Any other revision is refused: it would
+   produce a `.so` that does not match the committed one.
    ```bash
    # Via Android Studio: SDK Manager → SDK Tools → NDK (Side by side)
    # Or via command line:
-   sdkmanager "ndk;27.0.12077973"
-
-   # Set environment variable
-   export ANDROID_NDK_HOME="$HOME/Android/Sdk/ndk/27.0.12077973"
+   sdkmanager "ndk;$(cat ANDROID_NDK_VERSION)"
    ```
+   `build-arti.sh` finds it automatically under `$ANDROID_HOME/ndk/`,
+   `~/Android/Sdk/ndk/`, `~/Library/Android/sdk/ndk/` or
+   `/usr/local/lib/android/sdk/ndk/`. Set `ANDROID_NDK_HOME` only if yours
+   lives somewhere else — it is version-checked either way.
 
 ## Building
 
@@ -130,7 +151,26 @@ Google Play requires 16KB page-aligned native libraries. Verify with:
 readelf -l amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so | grep LOAD
 ```
 
-The first LOAD segment alignment should be `0x4000` (16384 bytes).
+The first LOAD segment alignment should be `0x4000` (16384 bytes). This comes
+from rustc's Android target spec (`max-page-size=16384`), not from the NDK, so
+it holds for every NDK revision we could build with.
+
+## Checking which toolchain built a `.so`
+
+The shipped binaries say so themselves — useful when a rebuild does not match, or
+when auditing a `.so` you did not build:
+
+```bash
+# NDK release name + build number (the last component of the pinned revision)
+readelf -p .note.android.ident amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
+
+# clang / lld (from the NDK) and rustc versions
+readelf -p .comment amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so
+```
+
+For the pinned toolchain that prints `r27d` / `13750724`, clang 18.0.4 and the
+`rustc` version from `rust-toolchain.toml`. `build-arti.sh` runs the first check
+itself after every build.
 
 ## Directory structure
 
@@ -138,6 +178,8 @@ The first LOAD segment alignment should be `0x4000` (16384 bytes).
 tools/arti-build/
 ├── README.md            # This file
 ├── ARTI_VERSION         # Pinned Arti git tag (e.g., arti-v1.9.0)
+├── ANDROID_NDK_VERSION  # Pinned NDK revision — enforced by build-arti.sh (reproducibility)
+├── CARGO_NDK_VERSION    # cargo-ndk release the pinned output was verified with
 ├── rust-toolchain.toml  # Pinned rustc version + Android targets (reproducibility)
 ├── Cargo.toml           # Rust dependencies and build profile
 ├── Cargo.lock           # Pinned transitive dependency versions (reproducibility)

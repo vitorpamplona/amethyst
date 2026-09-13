@@ -6,7 +6,8 @@
 #   - Rust toolchain: rustup, cargo
 #   - Android targets: rustup target add aarch64-linux-android x86_64-linux-android
 #   - cargo-ndk: cargo install cargo-ndk
-#   - Android NDK 25+ (for 16KB page size support)
+#   - Android NDK: the exact revision pinned in ANDROID_NDK_VERSION
+#     (sdkmanager "ndk;<revision>") — see README.md -> "Reproducible builds"
 #
 # Usage:
 #   ./build-arti.sh              # Build for all targets (arm64 + x86_64)
@@ -25,6 +26,22 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ARTI_VERSION=$(cat "$SCRIPT_DIR/ARTI_VERSION" | tr -d '[:space:]')
+
+# Reproducibility: the NDK ships the clang that compiles Arti's C dependencies
+# (ring, zstd-sys, libsqlite3-sys) and the lld that links the whole cdylib, so
+# its revision is baked into the output bytes exactly like rustc's is — both
+# land in the .comment section of the shipped .so. Pin it here and refuse to
+# build with anything else; the old glob over ~/Android/Sdk/ndk/*/ silently
+# picked up whatever happened to be installed first.
+NDK_VERSION=$(cat "$SCRIPT_DIR/ANDROID_NDK_VERSION" | tr -d '[:space:]')
+# The NDK build number (last component of the revision) is what the linker
+# stamps into .note.android.ident, so it is how we verify the output afterwards.
+NDK_BUILD_NUMBER="${NDK_VERSION##*.}"
+# cargo-ndk only wraps the NDK (it sets CC/AR/linker and the --platform flags),
+# but those flags reach the linker, so record the version we verified with and
+# warn when it differs. Not a hard error: unlike the NDK itself, it has no
+# proven effect on the bytes.
+CARGO_NDK_VERSION=$(cat "$SCRIPT_DIR/CARGO_NDK_VERSION" | tr -d '[:space:]')
 
 # Reproducibility: rustc bakes the *real* (un-remapped) absolute paths of the
 # build artifacts into its codegen/link ORDERING, so --remap-path-prefix alone
@@ -74,14 +91,30 @@ check_prerequisites() {
     command -v git >/dev/null 2>&1 || { print_error "git not found"; exit 1; }
     command -v rustup >/dev/null 2>&1 || { print_error "rustup not found"; exit 1; }
     command -v cargo >/dev/null 2>&1 || { print_error "cargo not found"; exit 1; }
-    command -v cargo-ndk >/dev/null 2>&1 || { print_error "cargo-ndk not found. Install: cargo install cargo-ndk"; exit 1; }
+    command -v cargo-ndk >/dev/null 2>&1 || { print_error "cargo-ndk not found. Install: cargo install cargo-ndk --version $CARGO_NDK_VERSION --locked"; exit 1; }
 
+    local found_cargo_ndk
+    found_cargo_ndk="$(cargo ndk --version 2>/dev/null | awk '{print $2}' || true)"
+    if [ "$found_cargo_ndk" != "$CARGO_NDK_VERSION" ]; then
+        print_info "cargo-ndk ${found_cargo_ndk:-unknown} != pinned $CARGO_NDK_VERSION — if the"
+        print_info "  output does not match the committed .so, try: cargo install cargo-ndk --version $CARGO_NDK_VERSION --locked"
+    else
+        print_success "cargo-ndk: $CARGO_NDK_VERSION"
+    fi
+
+    # An explicit ANDROID_NDK_HOME wins (it is verified below like any other);
+    # otherwise look for the pinned revision by name in the usual SDK layouts.
+    # Deliberately no wildcard: picking "some NDK" is what let the committed
+    # binaries be built with r25b while the docs asked for r27.
     if [ -z "${ANDROID_NDK_HOME:-}" ]; then
-        # Try common locations
         for candidate in \
-            "$HOME/Android/Sdk/ndk/"*/ \
-            "$HOME/Library/Android/sdk/ndk/"*/ \
-            "/usr/local/lib/android/sdk/ndk/"*/; do
+            "${ANDROID_NDK_ROOT:-}" \
+            "${ANDROID_HOME:-}/ndk/$NDK_VERSION" \
+            "${ANDROID_SDK_ROOT:-}/ndk/$NDK_VERSION" \
+            "$HOME/Android/Sdk/ndk/$NDK_VERSION" \
+            "$HOME/Library/Android/sdk/ndk/$NDK_VERSION" \
+            "/usr/local/lib/android/sdk/ndk/$NDK_VERSION"; do
+            [ -n "$candidate" ] || continue
             if [ -d "$candidate" ]; then
                 export ANDROID_NDK_HOME="${candidate%/}"
                 break
@@ -90,11 +123,23 @@ check_prerequisites() {
     fi
 
     if [ -z "${ANDROID_NDK_HOME:-}" ]; then
-        print_error "ANDROID_NDK_HOME not set and NDK not found in common locations"
+        print_error "Android NDK $NDK_VERSION not found (and ANDROID_NDK_HOME is unset)"
+        echo "  Install it:  sdkmanager \"ndk;$NDK_VERSION\""
+        echo "  Or point ANDROID_NDK_HOME at an existing $NDK_VERSION install."
         exit 1
     fi
 
-    print_success "NDK: $ANDROID_NDK_HOME"
+    local found_ndk
+    found_ndk="$(sed -n 's/^Pkg\.Revision *= *//p' "$ANDROID_NDK_HOME/source.properties" 2>/dev/null | tr -d '[:space:]' || true)"
+    if [ "$found_ndk" != "$NDK_VERSION" ]; then
+        print_error "NDK revision mismatch — this build would not reproduce the shipped .so"
+        echo "  Pinned:   $NDK_VERSION (tools/arti-build/ANDROID_NDK_VERSION)"
+        echo "  Found:    ${found_ndk:-unknown} at $ANDROID_NDK_HOME"
+        echo "  Install:  sdkmanager \"ndk;$NDK_VERSION\""
+        exit 1
+    fi
+
+    print_success "NDK: $ANDROID_NDK_HOME ($NDK_VERSION)"
 
     for target in "${TARGETS[@]}"; do
         if ! rustup target list --installed | grep -q "$target"; then
@@ -180,17 +225,22 @@ PATCH
 # Build
 # ============================================================================
 
+# Android ABI directory (as laid out under jniLibs/) for a Rust target triple.
+abi_dir_for() {
+    case "$1" in
+        aarch64-linux-android) echo "arm64-v8a" ;;
+        x86_64-linux-android) echo "x86_64" ;;
+        armv7-linux-androideabi) echo "armeabi-v7a" ;;
+        i686-linux-android) echo "x86" ;;
+    esac
+}
+
 build_for_target() {
     local target="$1"
     print_header "Building for $target"
 
     local arch_dir
-    case "$target" in
-        aarch64-linux-android) arch_dir="arm64-v8a" ;;
-        x86_64-linux-android) arch_dir="x86_64" ;;
-        armv7-linux-androideabi) arch_dir="armeabi-v7a" ;;
-        i686-linux-android) arch_dir="x86" ;;
-    esac
+    arch_dir="$(abi_dir_for "$target")"
 
     local out_dir="$OUTPUT_DIR/$arch_dir"
     mkdir -p "$out_dir"
@@ -236,8 +286,16 @@ verify_jni_symbols() {
         local arch=$(basename "$arch_dir")
         local missing=0
 
+        # Read the dynamic symbol table once, into a variable. Piping nm into
+        # `grep -q` per symbol looks equivalent but is not: grep exits on the
+        # first match, nm dies of SIGPIPE (141), and `set -o pipefail` then
+        # reports the pipeline as failed — so every symbol that IS exported gets
+        # reported as missing. (Reproducible on any build, old or new.)
+        local syms
+        syms="$(nm -D "$lib" 2>/dev/null || true)"
+
         for sym in "${expected_symbols[@]}"; do
-            if ! nm -D "$lib" 2>/dev/null | grep -q "$sym"; then
+            if [[ "$syms" != *"$sym"* ]]; then
                 print_error "$arch: Missing symbol $sym"
                 missing=1
             fi
@@ -245,6 +303,35 @@ verify_jni_symbols() {
 
         if [ "$missing" -eq 0 ]; then
             print_success "$arch: All JNI symbols present"
+        fi
+    done
+}
+
+verify_ndk_stamp() {
+    print_header "Verifying NDK stamp"
+
+    if ! command -v readelf >/dev/null 2>&1; then
+        print_info "readelf not found — skipping (install binutils to enable this check)"
+        return 0
+    fi
+
+    # Every NDK-linked shared object carries .note.android.ident, which records
+    # the target API level, the NDK release name (e.g. r27d) and the NDK build
+    # number. Reading it back proves which toolchain actually produced the
+    # binary, independently of what the environment claimed — this is how the
+    # committed r25b libraries were identified in the first place.
+    for target in "${TARGETS[@]}"; do
+        local arch
+        arch="$(abi_dir_for "$target")"
+        local lib="$OUTPUT_DIR/$arch/$LIB_NAME"
+        [ -f "$lib" ] || continue
+
+        if readelf -p .note.android.ident "$lib" 2>/dev/null | grep -qw "$NDK_BUILD_NUMBER"; then
+            print_success "$arch: built by NDK $NDK_VERSION"
+        else
+            print_error "$arch: not stamped with NDK build $NDK_BUILD_NUMBER — wrong toolchain?"
+            readelf -p .note.android.ident "$lib" 2>/dev/null || true
+            exit 1
         fi
     done
 }
@@ -280,6 +367,7 @@ main() {
     done
 
     verify_jni_symbols
+    verify_ndk_stamp
 
     print_header "Build complete"
     echo ""

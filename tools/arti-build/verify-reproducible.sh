@@ -12,7 +12,9 @@
 #   ./verify-reproducible.sh              # both ABIs (arm64-v8a + x86_64)
 #   ./verify-reproducible.sh --release    # arm64-v8a only (faster)
 #
-# Prerequisites are the same as build-arti.sh (rustup, cargo-ndk, Android NDK).
+# Prerequisites are the same as build-arti.sh (rustup, cargo-ndk, and the exact
+# Android NDK revision pinned in ANDROID_NDK_VERSION — a different revision is
+# refused, because it would change the output bytes).
 # Exit 0 = reproducible, exit 1 = builds differ.
 set -euo pipefail
 

@@ -105,8 +105,9 @@ and each has its own guide:
 > change. Reusing an existing codepoint needs no regeneration.
 
 Both tools have their own prerequisites (`fonttools`/`brotli` for the font; a
-Rust toolchain + Android NDK 25+ for Arti) documented in their READMEs — they
-are **not** required to build Amethyst from the committed sources.
+Rust toolchain + the exact Android NDK revision pinned in
+`tools/arti-build/ANDROID_NDK_VERSION` for Arti) documented in their READMEs —
+they are **not** required to build Amethyst from the committed sources.
 
 ---
 
