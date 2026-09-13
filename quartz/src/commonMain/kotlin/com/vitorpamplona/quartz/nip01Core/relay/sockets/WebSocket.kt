@@ -20,11 +20,26 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.sockets
 
+/**
+ * One socket session towards a relay, as the relay client sees it.
+ *
+ * The contract every implementation keeps, and that [com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient]
+ * relies on for its bookkeeping:
+ *
+ * - A session ends with **exactly one** terminal callback on its [WebSocketListener], `onClosed`
+ *   or `onFailure`, however it ends.
+ * - [disconnect] ends the session itself: it reports `onClosed` **synchronously**, before
+ *   returning, and nothing from that socket reaches the listener afterwards. The relay client
+ *   may dial a new socket immediately, so a late report from the old one -- which OkHttp
+ *   delivers on its own threads for a cancel, and never delivers at all for a relay-initiated
+ *   close it was not allowed to finish -- must be swallowed by the adapter, not forwarded.
+ */
 interface WebSocket {
     fun needsReconnect(): Boolean
 
     fun connect()
 
+    /** Ends the session now. Reports `onClosed` synchronously if one was open; a no-op otherwise. */
     fun disconnect()
 
     fun send(msg: String): Boolean

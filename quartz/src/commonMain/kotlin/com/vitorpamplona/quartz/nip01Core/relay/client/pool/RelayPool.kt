@@ -119,6 +119,10 @@ class RelayPool(
         relays.forEach { url, relay ->
             relay.disconnect()
         }
+        // We just tore every socket down; say so here rather than leaving it to each socket's
+        // own report. The transports do report a disconnect synchronously (see [WebSocket]),
+        // but this flow is what the app reads as "connected", and it must not depend on that.
+        _connectedRelays.update { emptySet() }
     }
 
     fun sendOrConnectAndSync(
@@ -210,6 +214,9 @@ class RelayPool(
         val relayInPool = relays.remove(relay)
         if (relayInPool != null) {
             relayInPool.disconnect()
+            // A relay that is no longer a member cannot be connected, whatever its socket
+            // layer reports (or fails to report) later.
+            _connectedRelays.update { it - relay }
             return true
         }
         return false
@@ -226,6 +233,7 @@ class RelayPool(
             disconnect()
             relays.clear()
             _availableRelays.update { emptySet() }
+            _connectedRelays.update { emptySet() }
         }
     }
 

@@ -47,10 +47,13 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.gif
+import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -72,6 +75,15 @@ fun GifVideoView(
     // remember() to avoid the recompute would cost more (slot read + N equality checks)
     // than the work it saves; that's why this stays as a plain expression.
     val ratio = dimensions?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(videoUri)
+
+    // Mirrors [mediaSizingModifier]: Crop gets fillMaxSize() and a known ratio gets
+    // aspectRatio(), both of which bound the height. Everything else is a bare
+    // fillMaxWidth() that wraps its content, and only THAT case needs a loading state
+    // with intrinsic height to keep the note from collapsing to nothing. Keying the
+    // fallback on `ratio` alone would put raw URL text inside every Crop card cell --
+    // MyAsyncImage passes dimensions/blurhash/thumbhash all null, so a gif in a card
+    // slot hits this on first load, before MediaAspectRatioCache knows its size.
+    val heightIsBounded = contentScale == ContentScale.Crop || ratio != null
     val autoPlay = accountViewModel.settings.autoPlayVideos()
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current
@@ -108,13 +120,29 @@ fun GifVideoView(
 
             when (state) {
                 is AsyncImagePainter.State.Loading -> {
-                    DisplayBlurHash(
-                        blurhash,
-                        contentDescription,
-                        contentScale,
-                        Modifier.fillMaxSize(),
-                        thumbhash = thumbhash,
-                    )
+                    // When the height is unbounded (see [heightIsBounded]) this branch MUST
+                    // emit something with an intrinsic height, or the box wraps nothing and the
+                    // whole note collapses to zero -- no picture, no URL, no spinner, just a gap
+                    // in the feed until the load finishes. DisplayBlurHash renders NOTHING when
+                    // both hashes are absent (placeholderModel returns null), which is exactly
+                    // what a no-imeta post hits. Mirrors UrlImageView's ladder.
+                    if (blurhash != null || thumbhash != null) {
+                        DisplayBlurHash(
+                            blurhash,
+                            contentDescription,
+                            contentScale,
+                            Modifier.fillMaxSize(),
+                            thumbhash = thumbhash,
+                        )
+                    } else if (heightIsBounded) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            LoadingAnimation(Size40dp, Size6dp)
+                        }
+                    } else {
+                        WaitAndDisplay {
+                            DisplayUrlWithLoadingSymbol(videoUri)
+                        }
+                    }
                 }
 
                 is AsyncImagePainter.State.Success -> {

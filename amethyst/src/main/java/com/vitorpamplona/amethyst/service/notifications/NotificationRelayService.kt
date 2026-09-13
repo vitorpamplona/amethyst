@@ -320,6 +320,14 @@ class NotificationRelayService : Service() {
                 }
 
                 launch {
+                    // This flow used to over-report: it is fed by socket callbacks, and until
+                    // the OkHttp adapters answered a relay's CLOSE frame a relay-initiated close
+                    // produced none (no onClosed, no onFailure, and a silent cancel()
+                    // afterwards), so after the feeds tore down in the background it carried
+                    // hundreds of already-dropped relays for minutes. The pool now clears it
+                    // itself whenever it lets a relay go, and every transport reports its
+                    // session end exactly once (see WebSocket), so what it emits is the count.
+                    //
                     // sample() caps how often we touch the notification. During feed
                     // load/teardown connectedRelaysFlow churns dozens of times per second;
                     // posting on every delta blows past Android's notification rate limit
