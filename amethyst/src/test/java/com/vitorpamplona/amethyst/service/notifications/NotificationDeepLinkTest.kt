@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.chatroomRoute
 import com.vitorpamplona.amethyst.ui.isChatroomRoute
 import com.vitorpamplona.amethyst.ui.isPrivateNoteRoute
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
@@ -40,6 +41,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -182,5 +184,34 @@ class NotificationDeepLinkTest {
 
         val dm = them.sign(ChatMessageEvent.build("hi", listOf(PTag(me.pubKey, null))))
         assertEquals(expected, routeFor(dm, account))
+    }
+
+    /**
+     * A room link resolves without touching the account.
+     *
+     * It must not: `uriToRoute` runs against whichever account is current, *before* the
+     * `?account=` switch, so registering the room here would file a DM for account B under
+     * account A. And `nostr:` is exported and browsable, so a web page can post one of these —
+     * which is also why the ids are checked rather than taken as given. The screen registers the
+     * room itself when it opens, on the account that is current by then.
+     */
+    @Test
+    fun aRoomLinkResolvesWithoutTouchingTheAccount() {
+        val account = mockk<Account>(relaxed = true)
+        val uri = NotificationRoutes.chatroomUri(ChatroomKey(setOf(alice)), npub)
+
+        assertEquals(Route.Room(ChatroomKey(setOf(alice))), uriToRoute(uri, account))
+
+        verify(exactly = 0) { account.chatroomList }
+    }
+
+    @Test
+    fun aRoomLinkThatIsNotMadeOfPubkeysIsNotARoute() {
+        assertNull(chatroomRoute("chatroom?id=not-a-pubkey&account=$npub"))
+        assertNull(chatroomRoute("chatroom?id=${alice.dropLast(1)}&account=$npub"))
+        assertNull(chatroomRoute("chatroom?id=${alice.uppercase()}&account=$npub"))
+        // one bad member poisons the whole key — a room is the exact set or nothing
+        assertNull(chatroomRoute("chatroom?id=$alice,nope&account=$npub"))
+        assertNull(chatroomRoute("chatroom?id=&account=$npub"))
     }
 }

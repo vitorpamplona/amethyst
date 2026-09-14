@@ -42,7 +42,6 @@ import com.vitorpamplona.amethyst.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeForPointer
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
@@ -184,22 +183,37 @@ fun isUrlRoute(uri: String) = uri.startsWith("url?id=") || uri.startsWith("nostr
  */
 fun isChatroomRoute(uri: String) = uri.startsWith("chatroom?id=") || uri.startsWith("nostr:chatroom?id=")
 
-fun chatroomRoute(
-    uri: String,
-    account: Account,
-): Route? {
+/**
+ * Note what this deliberately does *not* do: register the room on the account.
+ *
+ * `routeToMessage` would, and that is right for the in-app callers, but wrong here twice over.
+ * `uriToRoute` runs against whichever account is current, *before* `?account=` is read and the
+ * switch happens (`AppNavigation.NavigateIfIntentRequested`), so a DM notification for account B
+ * tapped while A is on screen would insert an empty conversation into **A**'s message list. And
+ * `nostr:` is an exported, browsable scheme, so any web page could post
+ * `nostr:chatroom?id=<hex>&account=…` and inject a room of its choosing.
+ *
+ * Nothing needs it: `ChatroomFeedFilter.chatroom()` calls `getOrCreatePrivateChatroom` when the
+ * screen actually opens, by which point the switch has happened and the room lands on the right
+ * account.
+ *
+ * The ids are still checked here — a room key is a set of pubkeys, so anything that isn't one is
+ * not a room, and a bad deep link should resolve to nothing rather than to an unopenable screen.
+ */
+fun chatroomRoute(uri: String): Route? {
     val users =
         uri
             .findQueryParameterValue("id")
             ?.split(',')
-            ?.filter { it.isNotBlank() }
-            ?.toSet()
-            ?.takeIf { it.isNotEmpty() } ?: return null
+            ?.map { it.trim() }
+            ?.takeIf { it.isNotEmpty() && it.all(::isPubKeyHex) }
+            ?.toSet() ?: return null
 
-    // Registers the room on the account the same way tapping a chat message does, so the
-    // screen has something to render before the first event lands.
-    return routeToMessage(ChatroomKey(users), account = account)
+    return Route.Room(ChatroomKey(users))
 }
+
+/** A bare 32-byte lowercase-hex pubkey, the only thing a chatroom key is made of. */
+private fun isPubKeyHex(value: String) = value.length == 64 && value.all { it in '0'..'9' || it in 'a'..'f' }
 
 /**
  * A NIP-17 private note or reply, addressed by the rumor's own id because its `nevent`
@@ -273,7 +287,7 @@ fun uriToRoute(
         return urlRoute(uri)
     }
     if (isChatroomRoute(uri)) {
-        return chatroomRoute(uri, account)
+        return chatroomRoute(uri)
     }
     if (isPrivateNoteRoute(uri)) {
         return privateNoteRoute(uri)

@@ -20,8 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui
 
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.THREAD_VIEW_KINDS
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeForPointer
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -30,6 +34,10 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.utils.EventFactory
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -67,5 +75,42 @@ class RouteForPointerTest {
         assertNull(routeForPointer(LongTextNoteEvent.KIND, id))
         // a kind:0 IS the person — Route.Profile, not a note
         assertNull(routeForPointer(MetadataEvent.KIND, id))
+    }
+
+    /**
+     * The invariant the shortcut rests on, checked against the thing it claims to mirror rather
+     * than against a second hand-written list: for every kind it answers for, the answer must be
+     * the one [routeFor] gives once the body finally arrives. Walking `THREAD_VIEW_KINDS` itself
+     * means a kind added to it is covered by construction.
+     *
+     * This is what catches an addressable kind slipping in. `routeForInner` routes those by
+     * `addressTag()`, so the shortcut's `Route.Note(id)` would point at a version id that no
+     * relay will serve — a silent dead end, and exactly what the NIP-71 video pair did.
+     */
+    @Test
+    fun everyShortcutKindAgreesWithTheRouteItsBodyWouldHaveTaken() {
+        val account = mockk<Account>(relaxed = true)
+
+        THREAD_VIEW_KINDS.forEach { kind ->
+            val event: Event =
+                EventFactory.create(id, "b".repeat(64), 1, kind, emptyArray(), "", "c".repeat(128))
+
+            assertEquals(
+                "kind $kind (${event::class.simpleName}) disagrees with routeFor",
+                routeFor(event, account),
+                routeForPointer(kind, id),
+            )
+            assertEquals("kind $kind must resolve to the thread view", Route.Note(id), routeForPointer(kind, id))
+        }
+    }
+
+    /**
+     * The regression itself. 21/22 are regular video and take the shortcut; 34235/34236 extend
+     * `AddressableVideoEvent`, are cited by `naddr`, and must wait for the body.
+     */
+    @Test
+    fun addressableVideoKindsDoNotTakeTheShortcut() {
+        assertNull(routeForPointer(VideoHorizontalEvent.KIND, id))
+        assertNull(routeForPointer(VideoVerticalEvent.KIND, id))
     }
 }

@@ -65,10 +65,8 @@ import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.isGeohashedScoped
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.isHashtagScoped
@@ -107,24 +105,31 @@ fun minichatRouteFor(note: Note): Route? {
 private fun Note.isInChatGatherer(): Boolean = inGatherers?.any { it is ConcordChannel || it is RelayGroupChannel || it is PublicChatChannel } == true
 
 /**
- * Kinds whose destination is [Route.Note] — the generic thread view — no matter what the
- * event body turns out to say. Mirrors the `else ->` branch of [routeForInner]: every kind
- * here is a plain, non-addressable note that carries nothing (no channel id, no `a` tag, no
- * chatroom key) that could send it somewhere more specific.
+ * Kinds whose destination is `Route.Note(id)` — the generic thread view — no matter what the
+ * event body turns out to say. Mirrors the `else ->` branch of [routeForInner]: every kind here
+ * is a plain note that carries nothing (no channel id, no `a` tag, no chatroom key) that could
+ * send it somewhere more specific.
  *
- * Used by [routeForPointer] to answer from a NIP-19 pointer alone. Anything NOT listed here
- * has to wait for the body, so it keeps falling through to [Route.EventRedirect].
+ * **An addressable kind can never be listed here**, however plain it looks. [routeForInner]
+ * sends those to `Route.Note(addressTag())` through its `is AddressableEvent` branch, and the
+ * difference is not cosmetic: relays do not serve a replaceable by the id of one of its
+ * versions, so routing by id is a dead end. This bit the NIP-71 video kinds — 21/22 are regular
+ * but 34235/34236 extend `AddressableVideoEvent` — which is why the pair is split below and why
+ * `RouteForPointerTest` walks this list against [routeForInner] itself rather than trusting it.
+ *
+ * `internal` so that test can iterate the real list: a kind added here is covered by
+ * construction, not by someone remembering to add a case.
  */
-private val THREAD_VIEW_KINDS =
+internal val THREAD_VIEW_KINDS =
     intArrayOf(
         TextNoteEvent.KIND,
         CommentEvent.KIND,
         PollEvent.KIND,
         PictureEvent.KIND,
+        // NIP-71 regular video only (21/22). The addressable pair, 34235/34236, is cited by
+        // `naddr` and routed by address — see the warning above.
         VideoNormalEvent.KIND,
         VideoShortEvent.KIND,
-        VideoHorizontalEvent.KIND,
-        VideoVerticalEvent.KIND,
         HighlightEvent.KIND,
         GitIssueEvent.KIND,
         GitPatchEvent.KIND,
