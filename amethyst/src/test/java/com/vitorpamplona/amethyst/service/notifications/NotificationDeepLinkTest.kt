@@ -21,18 +21,25 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.isChatroomRoute
 import com.vitorpamplona.amethyst.ui.isPrivateNoteRoute
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.privateNoteRoute
+import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -150,5 +157,30 @@ class NotificationDeepLinkTest {
     @Test
     fun aPrivateLinkWithoutAnIdIsNotARoute() {
         assertNull(privateNoteRoute("privatenote?id=&account=$npub"))
+    }
+
+    /**
+     * The destination, not just the link: a DM opens the conversation it belongs to. A kind-14
+     * is a [com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable], so both ways into it agree —
+     * the room link a notification now carries, and `routeFor` on the event itself, which is how
+     * the wrap-shaped links still sitting in trays from an older build resolve once the envelope
+     * is opened. Neither is a thread: the thread view is where a *private note* goes, which is a
+     * NIP-17-wrapped kind 1 — the same envelope, but a note posted privately rather than a
+     * message in a room.
+     */
+    @Test
+    fun aDmOpensItsConversationByEitherRoute() {
+        val me = NostrSignerSync(KeyPair())
+        val them = NostrSignerSync(KeyPair())
+        val account = mockk<Account>(relaxed = true)
+        every { account.userProfile().pubkeyHex } returns me.pubKey
+
+        val room = ChatroomKey(setOf(them.pubKey))
+        val expected = Route.Room(room)
+
+        assertEquals(expected, uriToRoute(NotificationRoutes.chatroomUri(room, npub), account))
+
+        val dm = them.sign(ChatMessageEvent.build("hi", listOf(PTag(me.pubKey, null))))
+        assertEquals(expected, routeFor(dm, account))
     }
 }
