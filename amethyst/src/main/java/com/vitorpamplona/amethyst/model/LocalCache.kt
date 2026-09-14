@@ -1440,11 +1440,16 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
-            is WakeUpEvent -> {
-                // Link the referenced events so filterMissingEvents will query
-                // for them when the WakeUp note is in an EventFinder subscription.
-                event.eventIds().mapNotNull { checkGetOrCreateNote(it) }
-            }
+            // A kind:23903 wake-up is deliberately absent here. It is a transport-level
+            // nudge whose `e` tags name the events this device should come online for —
+            // not a conversation entry. Returning them made every wake-up a reply of the
+            // note it pointed at, which put an empty, unrenderable card in that note's
+            // thread (ThreadFeedFilter has no kind whitelist, by design) and inflated its
+            // reply counter. The relay-discovery the link used to buy is already covered:
+            // WakeUpEvent is an EventHintProvider, so addIncomingRelayAsHintToAllRelatedEvents
+            // indexes the delivering relay against every id in linkedEventIds(), and
+            // EventNotificationConsumer.wakeUpFor subscribes an EventFinder on the
+            // referenced notes directly.
 
             is ChannelMessageEvent -> {
                 event.tagsWithoutCitations().filter { it != event.channelId() }.mapNotNull { checkGetOrCreateNote(it) }
