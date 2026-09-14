@@ -20,11 +20,21 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.ui.isChatroomRoute
+import com.vitorpamplona.amethyst.ui.isPrivateNoteRoute
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.findQueryParameterValue
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.privateNoteRoute
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -88,5 +98,57 @@ class NotificationDeepLinkTest {
     @Test
     fun anEmptyParameterValueReadsAsAbsent() {
         assertNull("chatroom?id=&account=$npub".findQueryParameterValue("id"))
+    }
+
+    /**
+     * A rumor's `nevent` names the gift wrap that delivered it, never the rumor — that is the
+     * citation rule `RumorHostCitationTest` pins, and it is why a private note cannot be
+     * deep-linked the ordinary way: the wrap is unfetchable from the account's read relays and
+     * its note stops emitting before it is ever decrypted. So `noteUri` has to switch shapes on
+     * its own; every renderer calls it and none of them knows whether its note arrived sealed.
+     */
+    @Test
+    fun aPrivateNoteIsAddressedByItsRumorIdNotItsEnvelope() {
+        val signer = NostrSignerSync(KeyPair())
+        val rumor = signer.sign(TextNoteEvent.build("psst"))
+        val wrap = GiftWrapEvent.create(rumor, signer.pubKey)
+
+        val note = Note(rumor.id)
+        note.event = rumor
+        note.recordRumorHost(wrap)
+
+        val uri = NotificationRoutes.noteUri(note, npub)
+
+        assertTrue(isPrivateNoteRoute(uri))
+        assertEquals(rumor.id, uri.findQueryParameterValue("id"))
+        assertEquals(npub, uri.findQueryParameterValue("account"))
+        assertFalse("the deep link must not name the wrap", uri.contains(wrap.id))
+        assertFalse("and must not be an nevent of it", uri.startsWith("nevent1"))
+    }
+
+    @Test
+    fun aPublicNoteKeepsItsNeventDeepLink() {
+        val signer = NostrSignerSync(KeyPair())
+        val event = signer.sign(TextNoteEvent.build("hello world"))
+
+        val note = Note(event.id)
+        note.event = event
+
+        val uri = NotificationRoutes.noteUri(note, npub)
+
+        assertEquals(NEvent.create(event.id, null, event.kind, null) + "?account=" + npub, uri)
+    }
+
+    /** The route a private link produces must be flagged, or its screen would REQ the rumor id. */
+    @Test
+    fun thePrivateRouteIsMarkedPrivate() {
+        val uri = NotificationRoutes.privateNoteUri(alice, npub)
+
+        assertEquals(Route.EventRedirect(alice, isPrivate = true), privateNoteRoute(uri))
+    }
+
+    @Test
+    fun aPrivateLinkWithoutAnIdIsNotARoute() {
+        assertNull(privateNoteRoute("privatenote?id=&account=$npub"))
     }
 }

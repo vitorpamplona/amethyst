@@ -39,11 +39,44 @@ object NotificationRoutes {
             .hexToByteArray()
             .toNpub()
 
-    /** Opens the note directly (used for replies, mentions, media, git). */
+    /**
+     * Opens the note directly (used for replies, mentions, media, git).
+     *
+     * A note delivered inside an envelope (a NIP-17 private note or reply) cannot be
+     * addressed this way — see [privateNoteUri].
+     */
     fun noteUri(
         note: Note,
         accountNpub: String,
-    ): String = note.toNEvent() + ACCOUNT + accountNpub
+    ): String =
+        if (note.rumorHost != null) {
+            privateNoteUri(note.idHex, accountNpub)
+        } else {
+            note.toNEvent() + ACCOUNT + accountNpub
+        }
+
+    /**
+     * Opens a NIP-17 private note or reply by the rumor's own id.
+     *
+     * [Note.toNEvent] cannot address one: for a rumor it encodes the kind-1059 gift wrap
+     * that delivered it, because the rumor id must never appear in anything that leaves
+     * for a relay (`RumorHostCitationTest` pins that, and [Note.isPrivateRumor] guards the
+     * publish paths). Two things then go wrong on a tap. The wrap is unfetchable — the
+     * general event finder asks the account's read relays for an id only the DM inbox
+     * relays ever held. And the wrap note emits exactly once, from `consumeRegularEvent`,
+     * *before* it is decrypted, so `routeFor` sees a null `innerEventId` and the redirect
+     * never fires again (the later `event = copyNoContent()` is a plain assignment).
+     *
+     * The rumor id has neither problem: its note emits when the rumor is consumed, and the
+     * always-on one-week gift-wrap tail re-delivers and re-unwraps the envelope on every
+     * cold start, so a push-recent message always comes back on its own. This URI is read
+     * only by `MainActivity.uriToRoute`, inside our own process, and the route it produces
+     * never puts the id in a REQ — see `Route.EventRedirect.isPrivate`.
+     */
+    fun privateNoteUri(
+        rumorId: String,
+        accountNpub: String,
+    ): String = "privatenote?id=$rumorId&account=$accountNpub"
 
     /**
      * Opens a NIP-17 / NIP-04 private chatroom (DM notifications).

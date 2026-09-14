@@ -856,7 +856,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
         composableFromBottomArgs<Route.ShareToDM> { ShareToDMScreen(it.message, it.attachment, accountViewModel, nav) }
 
-        composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
+        composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, it.isPrivate, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.GeoPost> {
             GeoHashPostScreen(

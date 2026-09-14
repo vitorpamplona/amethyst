@@ -38,7 +38,9 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.looking_for_event
 import com.vitorpamplona.amethyst.commons.resources.looking_for_event_title
+import com.vitorpamplona.amethyst.commons.resources.looking_for_private_event
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteLocally
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -63,6 +65,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun LoadRedirectScreen(
     eventId: String?,
+    isPrivate: Boolean,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -87,7 +90,14 @@ fun LoadRedirectScreen(
 
             LoadNote(eventId, accountViewModel) { note ->
                 Text(
-                    text = stringRes(Res.string.looking_for_event, note?.idHex ?: eventId),
+                    // A private id is not something to show a user, and it must not be
+                    // copyable off the screen either.
+                    text =
+                        if (isPrivate) {
+                            stringRes(Res.string.looking_for_private_event)
+                        } else {
+                            stringRes(Res.string.looking_for_event, note?.idHex ?: eventId)
+                        },
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 20.dp),
@@ -96,6 +106,7 @@ fun LoadRedirectScreen(
                 note?.let {
                     WatchAndRedirect(
                         baseNote = it,
+                        isPrivate = isPrivate,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -106,16 +117,23 @@ fun LoadRedirectScreen(
 }
 
 /**
- * Renders nothing: it only holds the per-note relay subscription open (via [observeNote])
- * and pops this entry for the real destination the moment the event lands.
+ * Renders nothing: it only watches [baseNote] and pops this entry for the real destination
+ * the moment the event lands.
+ *
+ * A public note is watched through [observeNote], which also holds a relay subscription open
+ * so the note is actually fetched. A private one is watched through [observeNoteLocally],
+ * which asks no relay: a rumor id must never appear in a REQ, and it does not need to — the
+ * envelope carrying it is re-fetched by the always-on gift-wrap tail, and unwrapping it fires
+ * this flow.
  */
 @Composable
 private fun WatchAndRedirect(
     baseNote: Note,
+    isPrivate: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(baseNote, accountViewModel)
+    val noteState by if (isPrivate) observeNoteLocally(baseNote) else observeNote(baseNote, accountViewModel)
 
     LaunchedEffect(key1 = noteState) {
         val event = noteState.note.event

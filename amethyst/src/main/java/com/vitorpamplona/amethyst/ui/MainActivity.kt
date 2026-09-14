@@ -201,6 +201,17 @@ fun chatroomRoute(
     return routeToMessage(ChatroomKey(users), account = account)
 }
 
+/**
+ * A NIP-17 private note or reply, addressed by the rumor's own id because its `nevent`
+ * names the undeliverable gift wrap instead — see [NotificationRoutes.privateNoteUri].
+ */
+fun isPrivateNoteRoute(uri: String) = uri.startsWith("privatenote?id=") || uri.startsWith("nostr:privatenote?id=")
+
+fun privateNoteRoute(uri: String): Route? {
+    val id = uri.findQueryParameterValue("id") ?: return null
+    return Route.EventRedirect(id, isPrivate = true)
+}
+
 fun isConnectedAppRoute(uri: String) = uri.startsWith("connectedapp?coordinate=") || uri.startsWith("nostr:connectedapp?coordinate=")
 
 /**
@@ -263,6 +274,9 @@ fun uriToRoute(
     }
     if (isChatroomRoute(uri)) {
         return chatroomRoute(uri, account)
+    }
+    if (isPrivateNoteRoute(uri)) {
+        return privateNoteRoute(uri)
     }
     if (isConnectedAppRoute(uri)) {
         return connectedAppRoute(uri)
