@@ -44,15 +44,23 @@ class NwcOutgoingMetadataTest {
     private val recipientHex = "ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b"
     private val payerHex = "f512822a89d2369a386bfeb1e687ccd26ceb6bb33e73b98417499bb9054bff1f"
 
+    private val noteHex = "d".repeat(64)
+
     private fun zapRequest(
         content: String = "great post",
         relays: List<String> = listOf("wss://relay.damus.io"),
+        zappedNoteId: String? = null,
     ) = Event(
         id = "a".repeat(64),
         pubKey = payerHex,
         createdAt = 1756000000L,
         kind = 9734,
-        tags = arrayOf(arrayOf("p", recipientHex), arrayOf("relays", *relays.toTypedArray())),
+        tags =
+            listOfNotNull(
+                zappedNoteId?.let { arrayOf("e", it) },
+                arrayOf("p", recipientHex),
+                arrayOf("relays", *relays.toTypedArray()),
+            ).toTypedArray(),
         content = content,
         sig = "b".repeat(128),
     )
@@ -231,6 +239,72 @@ class NwcOutgoingMetadataTest {
         assertEquals("user@domain.com", parsed.recipientIdentifier())
         // A wallet storing only `nostr` still yields the message.
         assertEquals("for the article", parsed.displayComment())
+    }
+
+    @Test
+    fun theZappedNoteSurvivesTheRoundTrip() {
+        val wire =
+            OptimizedJsonMapper.toJson(
+                PayInvoiceMethod.create("lnbc1", NwcTransactionMetadata.build(zapRequest(zappedNoteId = noteHex), "user@domain.com", "")),
+            )
+        val back = OptimizedJsonMapper.fromJsonTo<Request>(wire) as PayInvoiceMethod
+        val parsed = assertNotNull(NwcTransactionMetadata.parse(back.params?.metadata))
+
+        assertEquals(noteHex, parsed.zappedNoteId())
+        assertEquals(recipientHex, parsed.recipientPubkeyHex(), "the p tag is still read with the e tag in front of it")
+    }
+
+    @Test
+    fun aProfileZapHasNoNote() {
+        val parsed =
+            assertNotNull(
+                NwcTransactionMetadata.parse(mapOf("nostr" to mapOf("tags" to listOf(listOf("p", recipientHex))))),
+            )
+        assertNull(parsed.zappedNoteId())
+    }
+
+    @Test
+    fun tagOrderDoesNotMatter() {
+        val parsed =
+            assertNotNull(
+                NwcTransactionMetadata.parse(
+                    mapOf("nostr" to mapOf("tags" to listOf(listOf("e", noteHex), listOf("p", recipientHex)))),
+                ),
+            )
+        assertEquals(recipientHex, parsed.recipientPubkeyHex())
+        assertEquals(noteHex, parsed.zappedNoteId())
+    }
+
+    @Test
+    fun anAddressableZapPrefersTheAddress() {
+        val address = "30023:$recipientHex:my-article"
+        val parsed =
+            assertNotNull(
+                NwcTransactionMetadata.parse(
+                    mapOf("nostr" to mapOf("tags" to listOf(listOf("e", noteHex), listOf("a", address), listOf("p", recipientHex)))),
+                ),
+            )
+        assertEquals(address, parsed.zappedNoteId())
+    }
+
+    @Test
+    fun aMalformedEventIdIsIgnored() {
+        val parsed =
+            assertNotNull(
+                NwcTransactionMetadata.parse(
+                    mapOf("nostr" to mapOf("tags" to listOf(listOf("e", "not-a-note"), listOf("p", recipientHex)))),
+                ),
+            )
+        assertNull(parsed.zappedNoteId())
+
+        // isHex64 checks only the first 64 chars; a longer id must not slip through.
+        val tooLong =
+            assertNotNull(
+                NwcTransactionMetadata.parse(
+                    mapOf("nostr" to mapOf("tags" to listOf(listOf("e", noteHex + "ff"), listOf("p", recipientHex)))),
+                ),
+            )
+        assertNull(tooLong.zappedNoteId())
     }
 
     @Test
