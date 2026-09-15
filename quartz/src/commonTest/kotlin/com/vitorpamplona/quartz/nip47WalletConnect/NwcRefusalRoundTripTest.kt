@@ -74,8 +74,9 @@ class NwcRefusalRoundTripTest {
                 )
 
             val response = NostrWalletConnectResponseCache(clientSigner).decryptResponse(reply)
-            assertIs<IErrorResponseLike>(response, "$code over ${if (useNip44) "NIP-44" else "NIP-04"}")
-            assertEquals(message, response.errorMessage())
+            val case = "$code over ${if (useNip44) "NIP-44" else "NIP-04"}"
+            assertIs<IErrorResponseLike>(response, case)
+            assertEquals(message, response.errorMessage(), case)
         }
     }
 
