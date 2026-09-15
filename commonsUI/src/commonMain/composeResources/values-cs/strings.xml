@@ -2838,4 +2838,5 @@
     <string name="buzz_persona_publish">Publikovat personu</string>
     <string name="profile_card_follows_you">Sleduje vás</string>
     <string name="profile_card_bot">Bot</string>
+    <string name="bolt12_lightning_offer">Nabídka BOLT12</string>
 </resources>

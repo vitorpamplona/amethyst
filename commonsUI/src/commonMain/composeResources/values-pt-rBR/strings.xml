@@ -2824,4 +2824,5 @@
     <string name="buzz_persona_publish">Publicar persona</string>
     <string name="profile_card_follows_you">Segue você</string>
     <string name="profile_card_bot">Bot</string>
+    <string name="bolt12_lightning_offer">Oferta BOLT12</string>
 </resources>
