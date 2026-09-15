@@ -24,9 +24,18 @@ publishes anything. Publishing a workout is now one optional action on a row of 
 app, the test to apply is: every data type listed is rendered back to the user as their own
 statistic, on a screen that has no posting requirement.
 
+**The dashboard does not depend on Health Connect.** It builds the training log from two sources:
+Health Connect, and the user's own published kind 1301 workout events. A user who never grants a
+health permission still gets the full summary of everything they have logged — Health Connect adds
+the device detail (heart rate, steps, climb) and the workouts they never posted. This matters for
+the declaration's honesty: Health Connect *enriches* a tracking feature that exists on its own
+rather than *being* the feature.
+
 Related code:
 
 - `service/workouts/health/WorkoutStats.kt` — all dashboard arithmetic; pure, unit-tested.
+- `service/workouts/health/TrainingLog.kt` — merges Health Connect with the user's own published
+  workouts, deduping the ones that appear in both.
 - `ui/screen/loggedIn/workouts/fitness/MyFitnessScreen.kt` — the dashboard.
 - `service/workouts/health/HealthConnectManager.kt` — the only place the app touches Health Connect.
 - `ui/screen/loggedIn/workouts/health/HealthConnectRationaleActivity.kt` — the in-app rationale screen.
@@ -39,14 +48,18 @@ Related code:
 > Amethyst is a social client for Nostr, an open decentralized social protocol. It also includes
 > a fitness feature, **My Fitness**, which is what uses Health Connect.
 >
-> My Fitness is a personal training dashboard. It reads the workouts the user's watch or fitness
-> app has already saved to Health Connect and turns them into a picture of how that person is
+> My Fitness is a personal training dashboard. It builds a log of the user's own workouts — from
+> the workouts their watch or fitness app has saved to Health Connect, and from the workout
+> records they have logged in Amethyst itself — and turns it into a picture of how that person is
 > training: how much they did this week and whether that is up or down on last week, how their
 > time splits across running, cycling, walking, swimming and the gym, their best efforts, how
 > many days they trained, and their current streak of consecutive active days.
 >
 > The purpose is to help the user track, monitor, analyze and improve their own physical
-> fitness. The numbers are shown to the person who recorded them. No part of the dashboard
+> fitness. Health Connect is not a precondition for it: the dashboard works from the user's own
+> logged workouts alone, and Health Connect is what lets it also count the sessions their watch
+> recorded and show the device metrics — heart rate, steps and elevation — that a hand-entered
+> workout does not carry. The numbers are shown to the person who recorded them. No part of the dashboard
 > requires posting anything, and nothing is transmitted anywhere to produce it — the summary is
 > computed on the device from Health Connect data and displayed.
 >
@@ -62,7 +75,10 @@ Related code:
 > 2. Open the navigation drawer (hamburger, top-left), and under **Feeds** tap **Workouts**.
 > 3. In the top bar, tap the **chart icon** to open **My Fitness**.
 > 4. The screen explains what will be read and offers **What Amethyst reads** (the full rationale
->    screen) and **Connect**. Tap Connect and grant the permissions.
+>    screen) and **Connect**. Tap Connect and grant the permissions. (If the account has already
+>    logged workouts in Amethyst, the dashboard is already populated from those and the Health
+>    Connect offer appears as a banner above it instead — the feature does not gate on the
+>    permission.)
 > 5. The dashboard appears: "This week" totals with the change against last week; the streak,
 >    active-days and workout-count tiles; the four-week weekly average; the per-activity
 >    breakdown; best efforts; and the recent-workout list.

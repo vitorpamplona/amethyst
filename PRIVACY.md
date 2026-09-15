@@ -36,6 +36,8 @@ Amethyst's **My Fitness** screen (Workouts → the chart icon) summarises your o
 
 This is what the health permissions are for. The summary is computed on your phone and shown to you; nothing is sent anywhere to produce it, and you never have to post anything to use it.
 
+My Fitness also counts the workouts you have logged in Amethyst itself, so it works whether or not you connect Health Connect. Connecting adds the sessions your watch recorded and the details a hand-typed workout does not carry — heart rate, steps and climb.
+
 Separately, you may choose to publish one workout as a Nostr post (a NIP-101e kind 1301 event) so the people who follow you can see it. That takes a deliberate tap on "Share this workout", shows you the pre-filled post, and waits for you to confirm. It is never automatic.
 
 The feature is optional and off until you grant the permissions. Amethyst asks for them only when you open My Fitness or the New Workout composer — never on first launch.

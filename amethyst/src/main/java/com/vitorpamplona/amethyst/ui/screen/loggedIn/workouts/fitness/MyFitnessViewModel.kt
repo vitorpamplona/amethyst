@@ -25,38 +25,61 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
+import com.vitorpamplona.amethyst.service.workouts.health.TrainingLog
 import com.vitorpamplona.amethyst.service.workouts.health.WorkoutStats
+import com.vitorpamplona.amethyst.service.workouts.health.toDetectedWorkout
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 
 /**
  * State holder for the My Fitness dashboard: the user's own training over the last
- * [WorkoutStats.WINDOW_DAYS], read from Health Connect and summarised by [WorkoutStats].
+ * [WorkoutStats.WINDOW_DAYS], summarised by [WorkoutStats].
  *
- * Nothing here publishes or touches the network. The dashboard is the user looking at their
- * own numbers; sharing one of them is a separate, deliberate action from the workout list.
+ * The log is built from both sources Amethyst has — Health Connect, and the user's own published
+ * kind 1301 events (see [TrainingLog]) — so the dashboard is useful before any health permission
+ * is granted and stays useful if one is revoked. Health Connect adds device detail; it is not a
+ * precondition.
+ *
+ * Nothing here publishes or touches the network. The dashboard is the user looking at their own
+ * numbers; sharing one is a separate, deliberate action from the workout list.
  */
 @Stable
 class MyFitnessViewModel : ViewModel() {
+    /** Whether the richer Health Connect source is switched on, and whether it even could be. */
+    enum class HealthConnectStatus {
+        /** Granted and contributing to the log. */
+        CONNECTED,
+
+        /** A provider is installed but Amethyst has no permissions — worth offering. */
+        AVAILABLE,
+
+        /** No provider on this device; there is nothing to offer. */
+        UNAVAILABLE,
+    }
+
     @Immutable
     sealed interface State {
         /** First load, or a reload after a permission change. */
         data object Loading : State
 
-        /** No Health Connect provider on this device — nothing to offer. */
-        data object Unavailable : State
-
-        /** Provider present, permissions not granted yet. */
-        data object NeedsPermission : State
-
-        /** Granted and summarised. [WorkoutStats.Report.isEmpty] covers "nothing recorded yet". */
+        /**
+         * Summarised. [WorkoutStats.Report.isEmpty] covers "nothing logged yet", which is a
+         * normal state rather than an error — a new user has published nothing and may not have
+         * connected Health Connect.
+         */
         data class Ready(
             val report: WorkoutStats.Report,
+            val healthConnect: HealthConnectStatus,
         ) : State
     }
 
@@ -65,28 +88,67 @@ class MyFitnessViewModel : ViewModel() {
 
     private var manager: HealthConnectManager? = null
 
+    /** The pubkey whose workouts this dashboard summarises. Set by the screen before refreshing. */
+    private var pubkeyHex: String? = null
+
+    fun init(pubkeyHex: String) {
+        if (this.pubkeyHex != pubkeyHex) {
+            this.pubkeyHex = pubkeyHex
+            _state.value = State.Loading
+        }
+    }
+
     /**
-     * Refreshes the dashboard. Safe to call on every resume: it re-checks permissions first,
-     * so revoking access in Health Connect drops the screen back to its prompt rather than
+     * Rebuilds the dashboard. Safe to call on every resume: it re-checks permissions as well as
+     * data, so revoking access in Health Connect drops those workouts out of the log rather than
      * leaving stale numbers on display.
      */
     fun refresh(context: Context) {
         viewModelScope.launch {
-            if (!HealthConnectManager.isAvailable(context)) {
-                _state.value = State.Unavailable
-                return@launch
-            }
-
-            val hc = manager ?: HealthConnectManager(context.applicationContext).also { manager = it }
-
-            if (!hc.hasAllPermissions()) {
-                _state.value = State.NeedsPermission
-                return@launch
-            }
-
             val now = Instant.now()
-            val workouts = hc.readWorkouts(now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)), now)
-            _state.value = State.Ready(WorkoutStats.report(workouts, now))
+            val since = now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS))
+
+            val status = healthConnectStatus(context)
+            val fromHealthConnect =
+                if (status == HealthConnectStatus.CONNECTED) {
+                    manager?.readWorkouts(since, now).orEmpty()
+                } else {
+                    emptyList()
+                }
+
+            val fromRelays = publishedWorkouts(since.epochSecond)
+
+            _state.value =
+                State.Ready(
+                    report = WorkoutStats.report(TrainingLog.merge(fromHealthConnect, fromRelays), now),
+                    healthConnect = status,
+                )
+        }
+    }
+
+    private suspend fun healthConnectStatus(context: Context): HealthConnectStatus {
+        if (!HealthConnectManager.isAvailable(context)) return HealthConnectStatus.UNAVAILABLE
+
+        val hc = manager ?: HealthConnectManager(context.applicationContext).also { manager = it }
+        return if (hc.hasAllPermissions()) HealthConnectStatus.CONNECTED else HealthConnectStatus.AVAILABLE
+    }
+
+    /**
+     * The user's own kind 1301 events from the local cache, newer than [sinceEpochSeconds].
+     *
+     * Scans off the main thread: LocalCache holds every event the session has seen, and this
+     * walks all of them.
+     */
+    private suspend fun publishedWorkouts(sinceEpochSeconds: Long): List<DetectedWorkout> {
+        val mine = pubkeyHex ?: return emptyList()
+
+        return withContext(Dispatchers.Default) {
+            LocalCache.notes
+                .filterIntoSet { _, note ->
+                    val event = note.event
+                    event is WorkoutRecordEvent && event.pubKey == mine
+                }.mapNotNull { (it.event as WorkoutRecordEvent).toDetectedWorkout() }
+                .filter { it.startTimeEpochSeconds >= sinceEpochSeconds }
         }
     }
 }

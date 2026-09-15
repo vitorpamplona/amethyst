@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_best_most_steps
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_bests
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_by_activity
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_calories
+import com.vitorpamplona.amethyst.commons.resources.my_fitness_connect_banner
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_connect_button
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_connect_message
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_connect_title
@@ -82,7 +83,6 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_streak
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_this_week
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_time
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_title
-import com.vitorpamplona.amethyst.commons.resources.my_fitness_unavailable
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_bpm
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_kcal
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_vs_last_week
@@ -120,6 +120,10 @@ fun MyFitnessScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    // Which account's workouts to summarise. Re-runs on an account switch, which resets the
+    // dashboard to Loading rather than showing the previous user's numbers.
+    viewModel.init(accountViewModel.userProfile().pubkeyHex)
+
     val permissionLauncher =
         rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
             viewModel.refresh(context)
@@ -139,34 +143,34 @@ fun MyFitnessScreen(
             when (val current = state) {
                 MyFitnessViewModel.State.Loading -> CenteredBox { CircularProgressIndicator() }
 
-                MyFitnessViewModel.State.Unavailable ->
-                    CenteredBox {
-                        Text(
-                            text = stringRes(Res.string.my_fitness_unavailable),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 32.dp),
-                        )
-                    }
-
-                MyFitnessViewModel.State.NeedsPermission ->
-                    ConnectPrompt(
-                        onDetails = { context.startActivity(Intent(context, HealthConnectRationaleActivity::class.java)) },
-                        onConnect = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) },
-                    )
-
                 is MyFitnessViewModel.State.Ready ->
                     if (current.report.isEmpty) {
-                        CenteredBox {
-                            Text(
-                                text = stringRes(Res.string.my_fitness_empty),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 32.dp),
+                        // Nothing logged yet. Offering Health Connect is the useful thing to do
+                        // when it could fill the screen; otherwise just say the log is empty.
+                        if (current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE) {
+                            ConnectPrompt(
+                                onDetails = { context.startActivity(Intent(context, HealthConnectRationaleActivity::class.java)) },
+                                onConnect = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) },
                             )
+                        } else {
+                            CenteredBox {
+                                Text(
+                                    text = stringRes(Res.string.my_fitness_empty),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 32.dp),
+                                )
+                            }
                         }
                     } else {
-                        Dashboard(current.report) { workout, label ->
+                        Dashboard(
+                            report = current.report,
+                            // Only offered when it would actually add something: a device with no
+                            // provider gets no banner to act on.
+                            showConnectBanner = current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE,
+                            onDetails = { context.startActivity(Intent(context, HealthConnectRationaleActivity::class.java)) },
+                            onConnect = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) },
+                        ) { workout, label ->
                             nav.nav(workout.toNewWorkoutRoute(label))
                         }
                     }
@@ -181,6 +185,32 @@ private fun CenteredBox(content: @Composable () -> Unit) {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) { content() }
+}
+
+/**
+ * Shown above a dashboard that is already working, when Health Connect could add device-recorded
+ * workouts to it. Deliberately a strip rather than a blocking card: the summary below it is real,
+ * and this only offers to make it richer.
+ */
+@Composable
+private fun ConnectBanner(
+    onDetails: () -> Unit,
+    onConnect: () -> Unit,
+) {
+    OutlinedCard(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringRes(Res.string.my_fitness_connect_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringRes(Res.string.my_fitness_connect_banner),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onDetails) { Text(stringRes(Res.string.workout_suggestion_connect_details)) }
+                TextButton(onClick = onConnect) { Text(stringRes(Res.string.my_fitness_connect_button)) }
+            }
+        }
+    }
 }
 
 @Composable
@@ -219,6 +249,9 @@ private fun ConnectPrompt(
 @Composable
 private fun Dashboard(
     report: WorkoutStats.Report,
+    showConnectBanner: Boolean,
+    onDetails: () -> Unit,
+    onConnect: () -> Unit,
     onShare: (DetectedWorkout, String) -> Unit,
 ) {
     val miles = remember { prefersMiles() }
@@ -227,6 +260,7 @@ private fun Dashboard(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
+        if (showConnectBanner) ConnectBanner(onDetails = onDetails, onConnect = onConnect)
         ThisWeekCard(report, miles)
         ConsistencyRow(report)
         WindowTotalsCard(report, miles)

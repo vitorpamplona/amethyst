@@ -708,10 +708,11 @@
     <string name="my_fitness_best_most_steps">Most steps</string>
     <string name="my_fitness_best_highest_heart_rate">Highest heart rate</string>
     <string name="my_fitness_recent">Recent workouts</string>
-    <string name="my_fitness_empty">No workouts recorded in the last 4 weeks. Once your watch or fitness app saves one, it shows up here.</string>
+    <string name="my_fitness_empty">Nothing logged in the last 4 weeks. Workouts you post, and any your watch records, show up here.</string>
     <string name="my_fitness_unavailable">Health Connect is not available on this device, so Amethyst has no workouts to summarise.</string>
     <string name="my_fitness_connect_title">Track your training</string>
     <string name="my_fitness_connect_message">Connect Health Connect to see your weekly totals, week-over-week trend, best efforts and training streak. Everything stays on your phone.</string>
+    <string name="my_fitness_connect_banner">Connect Health Connect to add the workouts your watch records, with heart rate, steps and climb.</string>
     <string name="my_fitness_connect_button">Connect</string>
     <string name="my_fitness_share">Share this workout</string>
     <string name="my_fitness_unit_bpm">bpm</string>
