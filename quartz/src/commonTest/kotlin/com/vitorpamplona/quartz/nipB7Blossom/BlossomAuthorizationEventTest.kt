@@ -102,14 +102,9 @@ class BlossomAuthorizationEventTest {
         }
 
     /**
-     * BUD-11 (draft) says base64url without padding, and 1.15.0 shipped exactly that —
-     * and two uploads in three failed in the field. Deployed Blossom servers decode
-     * with a STRICT standard decoder: padding is required and the url-safe alphabet
-     * is rejected (probed 15 Sep 2026: unpadded and url-safe tokens both answer
-     * "invalid base64 token"; padded standard gets past the decoder). Interop wins
-     * over the draft. Several alt lengths so all three `length mod 3` cases are hit;
-     * only some of them need padding, which is exactly why the field failure was
-     * intermittent.
+     * Must survive a strict standard decode, as deployed servers do — see
+     * [BlossomAuthorizationEvent.rawToken]. The alt lengths cover every
+     * `length mod 3` case, since only some of them need padding.
      */
     @Test
     fun authorizationTokenIsStandardPaddedBase64BecauseServersDecodeStrictly() =
@@ -123,7 +118,6 @@ class BlossomAuthorizationEventTest {
                     // kotlin.io.encoding.Base64 (default) is the strict standard decoder:
                     // it throws on missing padding and on `-`/`_`, like Go's StdEncoding.
                     assertEquals(event.toJson(), Base64.decode(token).decodeToString(), "strict standard decode for `$alt`")
-                    assertTrue(token.none { it == '-' || it == '_' }, "url-safe alphabet must not appear for `$alt`, got: $token")
                     if (token.endsWith("=")) sawPadding = true
                 }
             assertTrue(sawPadding, "at least one of these lengths needs padding; if none did, the encoder is still dropping it")

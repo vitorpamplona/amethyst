@@ -40,18 +40,15 @@ class BlossomAuthorizationEvent(
      * This event's JSON as standard Base64 WITH padding — the same encoder as
      * NIP-98's [com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent.rawToken].
      *
-     * NOT what BUD-11 (draft) says. BUD-11 §"HTTP Authorization Header" reads
-     * "the authorization token MUST be encoded as Base64 URL-safe without padding
-     * (Base64url, as used by JWTs)", and 1.15.0 shipped exactly that. Deployed
+     * NOT what BUD-11 (draft) says: "the authorization token MUST be encoded as
+     * Base64 URL-safe without padding (Base64url, as used by JWTs)". Deployed
      * servers decode with a strict standard decoder (Go's base64.StdEncoding in
-     * khatru-based relays): missing padding and the `-`/`_` alphabet are both
-     * "invalid base64 token". Padding is needed whenever the JSON length is not a
-     * multiple of three, so two uploads in three failed in the field (reported
-     * 14 Sep 2026). Until the spec and the reference servers agree, the encoding
-     * every deployed decoder accepts wins. Do not switch this back to
-     * `Base64.UrlSafe` without re-probing a khatru server.
+     * khatru-based servers), which rejects both missing padding and the `-`/`_`
+     * alphabet as "invalid base64 token" — and padding is needed whenever the
+     * JSON length is not a multiple of three. Interop wins over the draft. Do not
+     * switch this back to `Base64.UrlSafe` without re-probing a khatru server.
      */
-    fun rawToken() = TOKEN_BASE64.encode(toJson().encodeToByteArray())
+    fun rawToken() = Base64.encode(toJson().encodeToByteArray())
 
     /**
      * The full `Authorization` header value for a Blossom request:
@@ -64,12 +61,6 @@ class BlossomAuthorizationEvent(
 
         /** Scheme prefix for the `Authorization` header value (BUD-11). */
         const val AUTH_HEADER_SCHEME = "Nostr "
-
-        /**
-         * Token encoding: standard alphabet, `=` padding. See [rawToken] for why
-         * this deliberately ignores BUD-11's base64url MUST.
-         */
-        val TOKEN_BASE64: Base64 = Base64.Default
 
         /**
          * BUD-11 `t=get` read authorization.
