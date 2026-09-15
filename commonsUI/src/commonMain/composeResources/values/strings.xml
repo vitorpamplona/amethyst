@@ -1662,6 +1662,7 @@
     <string name="wallet_no_transactions_for_filter">No transactions match this filter</string>
     <string name="wallet_loading">Loading…</string>
     <string name="wallet_incoming">Received</string>
+    <string name="wallet_open_zapped_note">Open zapped note</string>
     <string name="wallet_outgoing">Sent</string>
     <string name="wallet_refresh">Refresh</string>
     <string name="wallet_filter_all">All</string>
