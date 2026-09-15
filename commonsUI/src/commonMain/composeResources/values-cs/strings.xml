@@ -256,6 +256,7 @@
     <string name="lightning_invoice">Blesková faktura</string>
     <string name="invoice_expired">Vypršela platnost</string>
     <string name="clink_lightning_offer">Nabídka CLINK</string>
+    <string name="bolt12_lightning_offer">Nabídka BOLT12</string>
     <string name="clink_offer_pay_to">Komu</string>
     <string name="clink_confirm_payment_title">Potvrdit platbu</string>
     <string name="clink_offer_amount_sats">Částka (sats)</string>
@@ -2838,5 +2839,4 @@
     <string name="buzz_persona_publish">Publikovat personu</string>
     <string name="profile_card_follows_you">Sleduje vás</string>
     <string name="profile_card_bot">Bot</string>
-    <string name="bolt12_lightning_offer">Nabídka BOLT12</string>
 </resources>

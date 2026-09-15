@@ -246,6 +246,7 @@
     <string name="lightning_invoice">Lightning Faktura</string>
     <string name="invoice_expired">Förfallen</string>
     <string name="clink_lightning_offer">CLINK-erbjudande</string>
+    <string name="bolt12_lightning_offer">BOLT12-erbjudande</string>
     <string name="clink_offer_pay_to">Till</string>
     <string name="clink_confirm_payment_title">Bekräfta betalning</string>
     <string name="clink_offer_amount_sats">Belopp (sats)</string>
@@ -2824,5 +2825,4 @@
     <string name="buzz_persona_publish">Publicera persona</string>
     <string name="profile_card_follows_you">Följer dig</string>
     <string name="profile_card_bot">Bot</string>
-    <string name="bolt12_lightning_offer">BOLT12-erbjudande</string>
 </resources>
