@@ -128,12 +128,12 @@ class HealthConnectManager(
      * are skipped. Returns an empty list (never throws) if Health Connect is
      * unavailable or a read fails.
      */
-    suspend fun readNewWorkouts(
+    suspend fun readWorkouts(
         since: Instant,
         now: Instant = Instant.now(),
     ): List<DetectedWorkout> {
         if (!isAvailable(context)) {
-            Log.i(TAG) { "readNewWorkouts: Health Connect unavailable (status=${HealthConnectClient.getSdkStatus(context)})" }
+            Log.i(TAG) { "readWorkouts: Health Connect unavailable (status=${HealthConnectClient.getSdkStatus(context)})" }
             return emptyList()
         }
 
@@ -150,12 +150,12 @@ class HealthConnectManager(
                             timeRangeFilter = TimeRangeFilter.between(since, now),
                         ),
                     )
-                Log.i(TAG) { "readNewWorkouts: ${response.records.size} exercise session(s) in window $since .. $now" }
+                Log.i(TAG) { "readWorkouts: ${response.records.size} exercise session(s) in window $since .. $now" }
                 val mapped = response.records.mapNotNull { mapSession(it) }
                 // Fold split-up sessions of the same activity (a long run broken around
                 // breaks) into one suggestion so the composer offers the whole effort.
                 val merged = WorkoutMerger.mergeCloseWorkouts(mapped)
-                Log.i(TAG) { "readNewWorkouts: mapped ${mapped.size} -> ${merged.size} workout(s) after type/duration filtering and merging" }
+                Log.i(TAG) { "readWorkouts: mapped ${mapped.size} -> ${merged.size} workout(s) after type/duration filtering and merging" }
                 merged
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

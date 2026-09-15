@@ -114,7 +114,7 @@ fun DetectedWorkoutCarousel(
         workouts =
             if (ok) {
                 val since = Instant.now().minus(Duration.ofDays(HealthConnectManager.LOOKBACK_DAYS))
-                manager.readNewWorkouts(since).sortedByDescending { it.startTimeEpochSeconds }
+                manager.readWorkouts(since).sortedByDescending { it.startTimeEpochSeconds }
             } else {
                 emptyList()
             }
