@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.rpc
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.RawJson
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.utils.Hex
 
 class NwcTransactionMetadata(
     val comment: String?,
@@ -45,8 +46,8 @@ class NwcTransactionMetadata(
         val pubkeyHex: String?,
         val recipientPubkeyHex: String?,
         val content: String?,
-        val zappedEventId: String? = null,
-        val zappedAddress: String? = null,
+        val zappedEventId: String?,
+        val zappedAddress: String?,
     )
 
     fun senderPubkeyHex(): String? = nostr?.pubkeyHex ?: payerData?.pubkey?.let { decodePublicKeyAsHexOrNull(it) }
@@ -109,8 +110,8 @@ class NwcTransactionMetadata(
                         val value = tagList[1] as? String ?: return@forEach
                         when (tagList[0]) {
                             "p" -> if (recipientHex == null) recipientHex = value
-                            "e" -> if (zappedEventId == null && value.length == 64 && Hex.isHex64(value)) zappedEventId = value
-                            "a" -> if (zappedAddress == null) zappedAddress = value
+                            "e" -> if (zappedEventId == null && value.isValid()) zappedEventId = value
+                            "a" -> if (zappedAddress == null) zappedAddress = Address.parse(value)?.toValue()
                         }
                     }
 

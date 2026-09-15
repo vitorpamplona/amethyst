@@ -254,23 +254,16 @@ class NwcOutgoingMetadataTest {
         assertEquals(recipientHex, parsed.recipientPubkeyHex(), "the p tag is still read with the e tag in front of it")
     }
 
+    private fun parseTags(vararg tags: List<String>) = assertNotNull(NwcTransactionMetadata.parse(mapOf("nostr" to mapOf("tags" to tags.toList()))))
+
     @Test
     fun aProfileZapHasNoNote() {
-        val parsed =
-            assertNotNull(
-                NwcTransactionMetadata.parse(mapOf("nostr" to mapOf("tags" to listOf(listOf("p", recipientHex))))),
-            )
-        assertNull(parsed.zappedNoteId())
+        assertNull(parseTags(listOf("p", recipientHex)).zappedNoteId())
     }
 
     @Test
     fun tagOrderDoesNotMatter() {
-        val parsed =
-            assertNotNull(
-                NwcTransactionMetadata.parse(
-                    mapOf("nostr" to mapOf("tags" to listOf(listOf("e", noteHex), listOf("p", recipientHex)))),
-                ),
-            )
+        val parsed = parseTags(listOf("e", noteHex), listOf("p", recipientHex))
         assertEquals(recipientHex, parsed.recipientPubkeyHex())
         assertEquals(noteHex, parsed.zappedNoteId())
     }
@@ -278,33 +271,20 @@ class NwcOutgoingMetadataTest {
     @Test
     fun anAddressableZapPrefersTheAddress() {
         val address = "30023:$recipientHex:my-article"
-        val parsed =
-            assertNotNull(
-                NwcTransactionMetadata.parse(
-                    mapOf("nostr" to mapOf("tags" to listOf(listOf("e", noteHex), listOf("a", address), listOf("p", recipientHex)))),
-                ),
-            )
-        assertEquals(address, parsed.zappedNoteId())
+        assertEquals(address, parseTags(listOf("e", noteHex), listOf("a", address), listOf("p", recipientHex)).zappedNoteId())
+    }
+
+    @Test
+    fun aMalformedAddressFallsBackToTheEventId() {
+        assertEquals(noteHex, parseTags(listOf("e", noteHex), listOf("a", "not-an-address"), listOf("p", recipientHex)).zappedNoteId())
     }
 
     @Test
     fun aMalformedEventIdIsIgnored() {
-        val parsed =
-            assertNotNull(
-                NwcTransactionMetadata.parse(
-                    mapOf("nostr" to mapOf("tags" to listOf(listOf("e", "not-a-note"), listOf("p", recipientHex)))),
-                ),
-            )
-        assertNull(parsed.zappedNoteId())
-
-        // isHex64 checks only the first 64 chars; a longer id must not slip through.
-        val tooLong =
-            assertNotNull(
-                NwcTransactionMetadata.parse(
-                    mapOf("nostr" to mapOf("tags" to listOf(listOf("e", noteHex + "ff"), listOf("p", recipientHex)))),
-                ),
-            )
-        assertNull(tooLong.zappedNoteId())
+        // "noteHex + ff": the id check must bound the length, not just scan 64 hex chars.
+        listOf("not-a-note", noteHex + "ff").forEach { bad ->
+            assertNull(parseTags(listOf("e", bad), listOf("p", recipientHex)).zappedNoteId(), bad)
+        }
     }
 
     @Test
