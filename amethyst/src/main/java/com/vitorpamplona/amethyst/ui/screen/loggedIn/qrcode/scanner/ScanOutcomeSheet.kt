@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_copy
+import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_bunker
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_cashu
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_lightning
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_nostr_unsupported
@@ -137,7 +138,11 @@ private fun explain(payload: ScannedPayload): String =
             }
 
         is ScannedPayload.WalletConnect -> stringRes(Res.string.qr_scanner_kind_wallet)
-        is ScannedPayload.Bunker, is ScannedPayload.NostrConnect -> stringRes(Res.string.qr_scanner_kind_signer)
+        // Split deliberately: Amethyst PUBLISHES bunker:// addresses (it is the signer) and has no
+        // screen that consumes one, so pointing the user at the signer screen -- as this used to --
+        // sends them somewhere that cannot accept it.
+        is ScannedPayload.Bunker -> stringRes(Res.string.qr_scanner_kind_bunker)
+        is ScannedPayload.NostrConnect -> stringRes(Res.string.qr_scanner_kind_signer)
         is ScannedPayload.Lightning -> stringRes(Res.string.qr_scanner_kind_lightning)
         is ScannedPayload.Cashu -> stringRes(Res.string.qr_scanner_kind_cashu)
         is ScannedPayload.Web -> stringRes(Res.string.qr_scanner_kind_web)

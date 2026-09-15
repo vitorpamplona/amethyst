@@ -58,6 +58,50 @@ class UriToRouteTest {
         assertEquals(Route.Hashtag("foo"), uriToRoute("nostr:hashtag?id=foo", account))
     }
 
+    // The QR scanner shows a "can't open this" sheet for anything uriToRoute returns null for, so
+    // what does and does not route here decides what that sheet ever has to explain.
+
+    @Test
+    fun rawWalletConnectUrisRouteWithoutTheDlnwcWrapper() {
+        // Not just the `dlnwc?value=` deep-link form: a wallet's QR code holds the bare URI, and
+        // the fallback at the end of uriToRoute is what catches it.
+        assertEquals(
+            Route.WalletAddNwc(NWC_URI),
+            uriToRoute(NWC_URI, account),
+        )
+    }
+
+    @Test
+    fun everyWalletConnectSchemeSpellingRoutes() {
+        assertEquals(
+            Route.WalletAddNwc(NWC_URI_NO_PLUS),
+            uriToRoute(NWC_URI_NO_PLUS, account),
+        )
+    }
+
+    @Test
+    fun walletConnectDeepLinksStillUnwrapTheValueParameter() {
+        assertEquals(
+            Route.WalletAddNwc(NWC_URI),
+            uriToRoute("dlnwc?value=$NWC_URI", account),
+        )
+    }
+
+    @Test
+    fun bunkerUrisDoNotRouteAnywhere() {
+        // Amethyst *publishes* bunker:// addresses (it is the remote signer); it has no screen that
+        // consumes one. The NIP-46 signer screen pairs nostrconnect:// offers only. Until that
+        // changes, a scanned bunker:// belongs in the scanner's explanation sheet, and the sheet
+        // must not tell the user to take it somewhere that cannot accept it.
+        assertNull(uriToRoute("bunker://$PUBKEY_HEX?relay=wss%3A%2F%2Frelay.example&secret=abc", account))
+    }
+
+    companion object {
+        private const val PUBKEY_HEX = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
+        private const val NWC_URI = "nostr+walletconnect://$PUBKEY_HEX?relay=wss%3A%2F%2Frelay.example&secret=$PUBKEY_HEX"
+        private const val NWC_URI_NO_PLUS = "nostrwalletconnect://$PUBKEY_HEX?relay=wss%3A%2F%2Frelay.example&secret=$PUBKEY_HEX"
+    }
+
     @Test
     fun nostrConnectOfferRoutesToTheSignerScreenCarryingTheUri() {
         val offer = "nostrconnect://" + "b".repeat(64) + "?relay=wss%3A%2F%2Frelay.example.com&secret=abc123"

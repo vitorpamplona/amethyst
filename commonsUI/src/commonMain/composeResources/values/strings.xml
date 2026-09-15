@@ -218,7 +218,8 @@
     <string name="qr_scanner_unsupported_secret">This code carries a private key or a pairing secret, so its contents are not shown here. Use the screen that expects it.</string>
     <string name="qr_scanner_kind_nsec">This is a private key. Paste it on the login screen instead.</string>
     <string name="qr_scanner_kind_wallet">This is a wallet connection. Add it from Wallet settings.</string>
-    <string name="qr_scanner_kind_signer">This is a remote signer. Add it from the NIP-46 signer screen.</string>
+    <string name="qr_scanner_kind_bunker">This is a remote-signer address. Amethyst hands these out so other apps can ask it to sign — it cannot sign in with one.</string>
+    <string name="qr_scanner_kind_signer">This is an app asking to connect to your signer. Open it from the NIP-46 signer screen.</string>
     <string name="qr_scanner_kind_lightning">This is a Lightning invoice.</string>
     <string name="qr_scanner_kind_cashu">This is a Cashu token.</string>
     <string name="qr_scanner_kind_web">This is a web link.</string>
