@@ -73,9 +73,17 @@ class StructuredAppendAccumulator(
 
         if (parts.size < expected) return null
 
-        val joined = (0 until expected).joinToString("") { parts[it] ?: return null }
+        // Built with an explicit loop rather than joinToString: bailing out on a missing index
+        // needs a real `return`, and joinToString is not inline, so a non-local one is illegal
+        // there. The count can be right and an index still missing, if a malformed code
+        // reported an index outside 0 until sequenceSize.
+        val joined = StringBuilder()
+        for (index in 0 until expected) {
+            joined.append(parts[index] ?: return null)
+        }
+
         reset()
-        return joined
+        return joined.toString()
     }
 
     fun reset() {
