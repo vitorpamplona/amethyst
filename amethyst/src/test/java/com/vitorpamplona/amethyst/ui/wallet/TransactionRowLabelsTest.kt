@@ -116,4 +116,29 @@ class TransactionRowLabelsTest {
         // The comment merely repeats the description, so it is not shown twice.
         assertEquals("Test", labels.subtitle)
     }
+
+    /** A note zap's `e` tag reaches the row, so it can open the zapped note. */
+    @Test
+    fun aNoteZapCarriesTheNoteId() {
+        val noteHex = "d".repeat(64)
+        val labels =
+            TransactionRowLabels.resolve(
+                NwcTransaction(
+                    type = "outgoing",
+                    metadata = mapOf("nostr" to mapOf("tags" to listOf(listOf("e", noteHex), listOf("p", recipientHex)))),
+                ),
+                "Sent",
+            )
+        assertEquals(noteHex, labels.zappedNoteId)
+    }
+
+    @Test
+    fun aProfileZapCarriesNoNoteId() {
+        val labels =
+            TransactionRowLabels.resolve(
+                NwcTransaction(type = "outgoing", metadata = mapOf("nostr" to mapOf("tags" to listOf(listOf("p", recipientHex))))),
+                "Sent",
+            )
+        assertNull(labels.zappedNoteId)
+    }
 }
