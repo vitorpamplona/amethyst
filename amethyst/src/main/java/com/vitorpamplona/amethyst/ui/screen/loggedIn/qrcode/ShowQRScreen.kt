@@ -195,6 +195,10 @@ fun PresentQR(
     accountViewModel: AccountViewModel,
     switchToScan: () -> Unit,
 ) {
+    // The other phone's camera needs contrast, and this screen was the one place we showed a QR
+    // code without asking for it (ShareNoteAsQrScreen has done so since it shipped).
+    KeepScreenBrightAndAwake()
+
     RenderName(user, accountViewModel)
 
     Row(

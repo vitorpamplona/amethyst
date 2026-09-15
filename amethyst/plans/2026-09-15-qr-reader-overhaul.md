@@ -1,6 +1,6 @@
 # QR Reader Overhaul
 
-**Status:** queued (design + task plan; nothing implemented yet)
+**Status:** phases 1-5 implemented (see §7 for what shipped and what did not); phase 0 outstanding
 **Goal:** make scanning a QR code in Amethyst fast and near-certain — codes that are small,
 far, dim, glossy, tilted, inverted, on a screen, or already sitting in the gallery should all
 resolve on the first try, and a code the app *can't* route should say so instead of silently
@@ -300,3 +300,50 @@ Half of a scan is the code on the *other* screen.
 
 Animated / BC-UR multi-frame QR *generation*, NFC handoff, and any change to what the four
 existing call sites do with a successful payload.
+
+
+---
+
+## 7. What shipped, and what did not
+
+Implemented in this branch:
+
+| Phase | State |
+| --- | --- |
+| 0 — measurement corpus | **Not done.** No device or emulator in this environment, so the fixture corpus and `QrDecodeCorpusTest` could not be built *or run*, and none of the before/after decode-rate numbers that §1 and §2.1 call for exist yet. The gate it was supposed to provide — "drop zxing-cpp if it doesn't beat ZXing-Java" — has therefore not been exercised. |
+| 1 — in-app CameraX scanner | Done. |
+| 2 — per-frame decode quality | Done. |
+| 3 — explicit outcomes | Done. |
+| 4 — gallery / clipboard import | Done, minus the `ACTION_SEND` share-in target. |
+| 5 — display side | Done. |
+
+### Deviations from the plan above
+
+- **A dialog, not a `Route`.** §2 proposed registering `Route.QrScanner`. One of the four call
+  sites is `KeyTextField` on the *logged-out* login screen, which lives outside the navigation
+  graph entirely, so a route could not serve it. `QrCodeScannerDialog` is a full-screen
+  `Dialog` instead, which also let all four call sites keep their existing
+  `SimpleQrCodeScanner { }` shape — the diff at each is one import.
+- **`ScanOutcome` instead of "close, then explain".** For the sheet in §3 to appear, the scanner
+  has to still be open when the caller decides it cannot use the payload. So the callback returns
+  `ScanOutcome.Handled` / `ScanOutcome.NotSupported` rather than `Unit`, and the camera keeps
+  running through the explanation.
+- **No "found but too small" auto-zoom branch.** §2 listed zooming toward a code whose
+  `Position` spans too little of the frame. That branch is unreachable: if the code decoded, we
+  are done with it. Auto-zoom now only sweeps while *nothing* is decoding, which is the case
+  that actually fails.
+- **`ACTION_SEND` image share-in not wired.** The manifest already has an `ACTION_SEND` image
+  target aimed at new posts; adding a second, distinctly-labelled one is a manifest and routing
+  change that belongs with its own testing rather than bolted onto this branch.
+
+### Still to do
+
+1. **Phase 0, retroactively.** Build the corpus, run `QrDecodeCorpusTest` on a device, record
+   the numbers here, and confirm the engine choice against them. Until that happens, "zxing-cpp
+   beats ZXing-Java on degraded codes" is a well-founded expectation, not a measurement.
+2. **The manual matrix in §4.** None of it has been run — there is no camera in this
+   environment. Every camera-facing behaviour in phases 1, 2 and 4 (binding, focus, torch,
+   auto-zoom, the overlay's coordinate mapping, the photo picker) is compile-verified and
+   reasoned-through only.
+3. **F-Droid packaging sign-off** on the new prebuilt `.so`, per §5.
+4. **The ECC level question** in §5 — still open, and still wants the corpus to answer it.
