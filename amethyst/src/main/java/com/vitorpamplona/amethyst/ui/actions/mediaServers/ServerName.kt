@@ -43,7 +43,7 @@ val DEFAULT_MEDIA_SERVERS: List<ServerName> =
         ServerName("Azzamo", "https://blossom.azzamo.media", ServerType.Blossom),
         ServerName("YakiHonne", "https://blossom.yakihonne.com/", ServerType.Blossom),
         ServerName("Primal", "https://blossom.primal.net/", ServerType.Blossom),
-        ServerName("Sovbit", "https://cdn.sovbit.host", ServerType.Blossom),
+        ServerName("Sovbit", "https://files.sovbit.host", ServerType.Blossom),
         ServerName("Nostr.Download", "https://nostr.download", ServerType.Blossom),
         ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
         ServerName("NostrMedia (Paid)", "https://nostrmedia.com", ServerType.Blossom),
