@@ -117,6 +117,10 @@ private fun PreloadFor(
         // Favorite apps is a device-local launcher grid — nothing to preload from relays.
         NavBarItem.FAVORITE_APPS -> {}
 
+        // My Fitness summarises the user's own Health Connect data on the device. It issues no
+        // REQs, so there is nothing to warm up from relays.
+        NavBarItem.MY_FITNESS -> {}
+
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         -> CalendarsFilterAssemblerSubscription(accountViewModel)
