@@ -39,7 +39,8 @@ import org.junit.runner.RunWith
  *
  * Regenerate both with:
  * ```
- * ./gradlew :amethyst:testFdroidDebugUnitTest --tests '*QrCorpusBaselineTest*' -Dqr.corpus.export=true
+ * ./gradlew :amethyst:testFdroidDebugUnitTest --tests '*QrCorpusBaselineTest*' \\
+ *     -Pamethyst.qr.corpus.export=true
  * ```
  */
 @RunWith(AndroidJUnit4::class)

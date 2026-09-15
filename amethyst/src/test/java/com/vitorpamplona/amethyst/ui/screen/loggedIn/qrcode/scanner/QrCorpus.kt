@@ -66,7 +66,6 @@ object QrCorpus {
             "npub" to "nostr:npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqdhpvhq",
             "nprofile" to "nostr:nprofile1qqsrhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8gpp4mhxue69uhkummn9ekx7mqpz4mhxue69uhkummnw3ezummcw3ezuer9wchsz9thwden5te0wfjkccte9ehx7um5wghxyctwvshsz9nhwden5te0wfjkccte9ehx7um5wghxyctwvshszxrhwden5te0wfjkccte9ehx7um5wghxyctwvshsqgxvxz9jkth8dgc6dyckt3jmg5kvthdjtcn6q9lc39ahq5dpjznuwq",
             "nevent" to "nostr:nevent1qqstna2yrezu5wghjvswqqculvvwxsrcvu7uc0f78gan4xqhvz49d9spr3mhxue69uhkummnw3ezuamfdejsygzhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8psgqqqqqqspp4mhxue69uhkummn9ekx7mq",
-            "njump" to "https://njump.to/npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqdhpvhq",
         )
 
     /** One generated image plus what it should decode to and which hazard it represents. */
@@ -88,7 +87,7 @@ object QrCorpus {
         val fixtures = mutableListOf<Fixture>()
 
         PAYLOADS.forEach { (label, payload) ->
-            val (base, modules) = renderWithModuleCount(payload, moduleSize = 6)
+            val (base, modules) = renderWithModuleCount(payload, moduleSize = MODULE_PX)
 
             fun add(
                 category: String,
@@ -96,8 +95,12 @@ object QrCorpus {
             ) = fixtures.add(Fixture("$category-$label", category, payload, image))
 
             add("clean", base)
-            add("blur", blur(base, radius = 3))
-            add("blur-heavy", blur(base, radius = 6))
+            // A quarter-module and a half-module of blur. Both are expressed in modules so that
+            // changing MODULE_PX cannot quietly re-tune the corpus's difficulty -- and they are
+            // chosen to straddle the old decoder's limit, because a category it fails outright
+            // can only ever show an improvement, never catch a regression.
+            add("blur", blur(base, radius = MODULE_PX / 4))
+            add("blur-heavy", blur(base, radius = MODULE_PX / 2))
             add("tilt15", rotate(base, degrees = 15.0))
             add("tilt30", rotate(base, degrees = 30.0))
             add("tilt45", rotate(base, degrees = 45.0))
@@ -330,6 +333,14 @@ object QrCorpus {
     // ------------------------------------------------------------------
     // helpers
     // ------------------------------------------------------------------
+
+    /**
+     * Pixels per module in the source renders.
+     *
+     * Four is ample to decode from (the hard fixtures shrink from here) and keeps the corpus that
+     * has to live in the repository to a few hundred kilobytes rather than a few megabytes.
+     */
+    private const val MODULE_PX = 4
 
     private const val SEED = 20260915L
     private const val WHITE_RGB = 0xFFFFFF

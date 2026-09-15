@@ -26,6 +26,7 @@ import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.net.URLEncoder
 
 class UriToRouteTest {
     private val account = mockk<Account>()
@@ -81,9 +82,13 @@ class UriToRouteTest {
 
     @Test
     fun walletConnectDeepLinksStillUnwrapTheValueParameter() {
+        // The value has to be percent-encoded, as a real deep link's would be: left raw, its own
+        // `&secret=` reads as a parameter of the OUTER uri and the value comes back truncated.
+        val encoded = URLEncoder.encode(NWC_URI, Charsets.UTF_8.name())
+
         assertEquals(
             Route.WalletAddNwc(NWC_URI),
-            uriToRoute("dlnwc?value=$NWC_URI", account),
+            uriToRoute("dlnwc?value=$encoded", account),
         )
     }
 

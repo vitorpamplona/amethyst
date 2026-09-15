@@ -317,6 +317,12 @@ android {
             project
                 .findProperty("amethyst.arti.integration")
                 ?.let { test.systemProperty("amethyst.arti.integration", it.toString()) }
+            // Opts QrCorpusBaselineTest into rewriting the QR decode corpus under
+            // src/androidTest/assets/qr. Off by default so an ordinary run never dirties
+            // the working tree; Gradle forks the test JVM, so -D alone would not reach it.
+            project
+                .findProperty("amethyst.qr.corpus.export")
+                ?.let { test.systemProperty("amethyst.qr.corpus.export", it.toString()) }
         }
     }
 }

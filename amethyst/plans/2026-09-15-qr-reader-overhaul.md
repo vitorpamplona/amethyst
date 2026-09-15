@@ -310,7 +310,7 @@ Implemented in this branch:
 
 | Phase | State |
 | --- | --- |
-| 0 — measurement corpus | **Not done.** No device or emulator in this environment, so the fixture corpus and `QrDecodeCorpusTest` could not be built *or run*, and none of the before/after decode-rate numbers that §1 and §2.1 call for exist yet. The gate it was supposed to provide — "drop zxing-cpp if it doesn't beat ZXing-Java" — has therefore not been exercised. |
+| 0 — measurement corpus | **Half done.** The corpus and the ZXing-Java baseline are built and measured (see §8); the zxing-cpp half needs a device and is written but unrun, so the gate is armed rather than passed. |
 | 1 — in-app CameraX scanner | Done. |
 | 2 — per-frame decode quality | Done. |
 | 3 — explicit outcomes | Done. |
@@ -347,3 +347,59 @@ Implemented in this branch:
    reasoned-through only.
 3. **F-Droid packaging sign-off** on the new prebuilt `.so`, per §5.
 4. **The ECC level question** in §5 — still open, and still wants the corpus to answer it.
+
+---
+
+## 8. Phase 0: the baseline
+
+`QrCorpus` renders three payloads — an `npub`, an `nprofile` with relay hints, and an `nevent`
+(69, ~330 and ~140 characters, so three different symbol versions) — at 4 pixels per module, then
+degrades each one sixteen ways. Every degradation is expressed as a fraction of a *module*, so
+changing the render scale cannot quietly re-tune the corpus's difficulty.
+
+`QrCorpusBaselineTest` measures **ZXing-Java**, the decoder the old zxing-android-embedded scanner
+used, over that corpus on the JVM. Measured 2026-09-15:
+
+| category | ZXing-Java | what it stands for |
+| --- | --- | --- |
+| clean | 3/3 | sanity — if this ever fails the corpus is broken |
+| blur | 3/3 | a quarter-module out of focus |
+| blur-heavy | **0/3** | half a module out of focus |
+| tilt15 / tilt30 / tilt45 | 2/3 each | held at an angle |
+| perspective | **0/3** | seen off-axis — a code on a wall or table, photographed from the side |
+| low-contrast | 3/3 | a dim screen |
+| very-low-contrast | **0/3** | a very dim screen, or worn print |
+| inverted | 3/3 | light-on-dark |
+| glare | 3/3 | a highlight burning out one corner |
+| moire | 3/3 | photographed off another screen |
+| noise | 2/3 | sensor noise in poor light |
+| far-3px | 3/3 | three pixels per module |
+| far-2px | 2/3 | two pixels per module |
+| far-1.5px | **0/3** | one and a half pixels per module |
+| **TOTAL** | **31/48** | |
+
+Read it as a map of where the old reader gave up. **Perspective is a total loss** — an off-axis
+code, one of the most ordinary framings there is, was simply unreadable. So are heavy blur, very
+low contrast, and anything under two pixels per module.
+
+Two caveats on the number, both of which make 31/48 *flattering* to the old scanner:
+
+- It decodes the **full image** and retries **inverted**. The shipped scanner cropped to a
+  viewfinder rect and alternated inversion across frames, so it had strictly fewer chances.
+- It measures a decoder on a still. It says nothing about focus, zoom or torch, which is where
+  most of this branch's other work went.
+
+So a win measured here is a floor on the real-world difference, not the whole of it.
+
+**The gate is not yet passed.** `QrDecodeCorpusTest` runs zxing-cpp over the identical committed
+images and fails if it reads fewer in any category. It needs a device. Until someone runs it, the
+decoder swap rests on the reasoning in §2.1 — this section just means the measurement is now one
+command away instead of unbuilt.
+
+The corpus costs 776 KB in `amethyst/src/androidTest/assets/qr/` (test APK only, never shipped).
+Regenerate it with:
+
+```bash
+./gradlew :amethyst:testFdroidDebugUnitTest --tests '*QrCorpusBaselineTest*' \
+    -Pamethyst.qr.corpus.export=true
+```

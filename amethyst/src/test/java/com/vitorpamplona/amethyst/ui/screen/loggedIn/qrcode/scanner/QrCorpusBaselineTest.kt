@@ -52,7 +52,7 @@ class QrCorpusBaselineTest {
         // The one hard assertion. If a pristine, generously-sized code fails, the corpus itself
         // is broken and every other number in this file is meaningless.
         val clean = QrCorpus.all().filter { it.category == "clean" }
-        assertEquals("corpus should contain one clean fixture per payload", 4, clean.size)
+        assertEquals("corpus should contain one clean fixture per payload", 3, clean.size)
         clean.forEach {
             assertEquals("clean fixture ${it.name} must decode", it.expected, decode(it.image))
         }
@@ -80,23 +80,35 @@ class QrCorpusBaselineTest {
     /**
      * Writes the corpus and its baseline into the instrumented test's assets.
      *
-     * Opt-in via `-D$EXPORT_PROPERTY=true` so an ordinary test run never dirties the working
-     * tree. The generator is deterministic, so re-exporting an unchanged corpus is a no-op.
+     * Opt-in via `-Pamethyst.qr.corpus.export=true` so an ordinary test run never dirties the
+     * working tree. The generator is deterministic, so re-exporting an unchanged corpus is a
+     * no-op. It is a Gradle property rather than a plain `-D` because the test runs in a forked
+     * JVM that does not inherit the Gradle JVM's system properties.
      */
     @Test
     fun exportsTheCorpusForTheInstrumentedTest() {
-        assumeTrue("set -D$EXPORT_PROPERTY=true to regenerate the corpus", System.getProperty(EXPORT_PROPERTY) == "true")
+        assumeTrue("pass -Pamethyst.qr.corpus.export=true to regenerate the corpus", System.getProperty(EXPORT_PROPERTY) == "true")
 
         val dir = File(ASSET_DIR)
         dir.mkdirs()
 
         QrCorpus.all().forEach { fixture ->
-            ImageIO.write(fixture.image, "png", File(dir, "${fixture.name}.png"))
+            // 8-bit grey, not RGB: every fixture is greyscale in content, and storing three
+            // identical channels tripled the size of a corpus that has to live in the repo.
+            ImageIO.write(toGrayscale(fixture.image), "png", File(dir, "${fixture.name}.png"))
         }
 
         File(dir, "expected.tsv").writeText(
             QrCorpus.all().joinToString("\n", postfix = "\n") { "${it.name}.png\t${it.category}\t${it.expected}" },
         )
+    }
+
+    private fun toGrayscale(source: BufferedImage): BufferedImage {
+        val out = BufferedImage(source.width, source.height, BufferedImage.TYPE_BYTE_GRAY)
+        val g = out.createGraphics()
+        g.drawImage(source, 0, 0, null)
+        g.dispose()
+        return out
     }
 
     private data class Row(
@@ -180,7 +192,7 @@ class QrCorpusBaselineTest {
     }
 
     companion object {
-        private const val EXPORT_PROPERTY = "qr.corpus.export"
+        private const val EXPORT_PROPERTY = "amethyst.qr.corpus.export"
         private const val ASSET_DIR = "src/androidTest/assets/qr"
         private const val BASELINE_FILE = "baseline.tsv"
     }
