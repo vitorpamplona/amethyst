@@ -755,6 +755,44 @@ object UsageKeys {
     const val VERIFY_COUNT = "crypto.verify.count"
     const val VERIFY_US = "crypto.verify.us"
 
+    /**
+     * `ingest.bundles.bg.count` / `ingest.notes.bg.count` — event bundles taken
+     * off the relay firehose, and the notes inside them, split by visibility.
+     *
+     * The denominator for everything below, and on its own the answer to "does
+     * this app process the same firehose with the screen off that it does with
+     * the screen on".
+     */
+    fun ingestBundles(visibility: String): String = "ingest.bundles.$visibility.count"
+
+    fun ingestNotes(visibility: String): String = "ingest.notes.$visibility.count"
+
+    /**
+     * `feeds.fanout.bg.us` / `feeds.fanout.bg.count` — wall time spent handing
+     * one bundle to every feed the account owns, and how many times that ran.
+     *
+     * Timed once around the whole fan-out rather than per feed: at ~48 feeds and
+     * roughly a bundle a second, per-feed timing would cost ~96 clock reads a
+     * second to learn something a profiler already answers better.
+     */
+    fun feedsFanoutUs(visibility: String): String = "feeds.fanout.$visibility.us"
+
+    fun feedsFanoutCount(visibility: String): String = "feeds.fanout.$visibility.count"
+
+    /**
+     * `feeds.skipped.bg.count` — what each feed's reaction to a bundle
+     * accomplished, by [FeedUpdateOutcome] and visibility.
+     *
+     * This is the measurement hypothesis H1 of the CPU diagnosis turns on: if
+     * `skipped` + `unchanged` dwarf `changed`, the fan-out is maintaining feeds
+     * nobody is looking at, and the fix is to stop fanning out rather than to
+     * make each feed faster.
+     */
+    fun feedOutcome(
+        outcome: String,
+        visibility: String,
+    ): String = "feeds.$outcome.$visibility.count"
+
     /** Media (video/audio) playback time — decoder + screen + streaming all at once. */
     const val MEDIA_PLAY_MS = "media.playms"
 

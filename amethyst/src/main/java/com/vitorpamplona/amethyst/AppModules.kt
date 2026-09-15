@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.service.resourceusage.BatteryDrainSampler
+import com.vitorpamplona.amethyst.service.resourceusage.FeedUsageMeter
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
 import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
@@ -870,6 +871,9 @@ class AppModules(
         // after (and independently of) the total: on a kernel where /proc/self/task
         // is unreadable we lose the breakdown, never the total.
         ThreadCpuSampler(resourceUsage, isForeground = { foregroundTracker.isForeground.value }).register()
+        // Sizes the per-bundle feed fan-out (how often, how long, how much of it
+        // backgrounded, and how much of it changes anything a user could see).
+        FeedUsageMeter(resourceUsage) { foregroundTracker.isForeground.value }.install()
         cache.verifyMeter = { elapsedNanos, _ ->
             resourceUsage.add(UsageKeys.VERIFY_COUNT, 1)
             resourceUsage.add(UsageKeys.VERIFY_US, elapsedNanos / 1_000)

@@ -45,6 +45,15 @@ data class UsageSummary(
     val cpuMs: Long,
     val cpuFgMs: Long,
     val cpuBgMs: Long,
+    /** Event bundles taken off the relay firehose, and how many arrived backgrounded. */
+    val ingestBundles: Long,
+    val ingestBundlesBg: Long,
+    val ingestNotes: Long,
+    /** Wall time handing those bundles to every feed the account owns, and its background half. */
+    val feedFanOutMs: Long,
+    val feedFanOutBgMs: Long,
+    /** Per-feed outcomes of that fan-out, keyed by [FeedUpdateOutcome] segment (`skipped`, `changed`, …). */
+    val feedOutcomes: Map<String, Long>,
     val foregroundMs: Long,
     val verifyCount: Long,
     val verifyUs: Long,
@@ -127,6 +136,14 @@ data class UsageSummary(
                 if (bg > 0) cpuBgBuckets[bucket] = bg
             }
 
+            val feedOutcomes = mutableMapOf<String, Long>()
+            for (segment in FeedUsageMeter.outcomeSegments) {
+                val total =
+                    (counters[UsageKeys.feedOutcome(segment, UsageKeys.FG)] ?: 0L) +
+                        (counters[UsageKeys.feedOutcome(segment, UsageKeys.BG)] ?: 0L)
+                if (total > 0) feedOutcomes[segment] = total
+            }
+
             val screens = mutableMapOf<String, Long>()
             for ((key, value) in counters) {
                 if (key.startsWith(UsageKeys.SCREEN_PREFIX) && key.endsWith(".ms") && value > 0) {
@@ -153,6 +170,20 @@ data class UsageSummary(
                 cpuMs = counters[UsageKeys.CPU_MS] ?: 0L,
                 cpuFgMs = counters[UsageKeys.CPU_FG_MS] ?: 0L,
                 cpuBgMs = counters[UsageKeys.CPU_BG_MS] ?: 0L,
+                ingestBundles =
+                    (counters[UsageKeys.ingestBundles(UsageKeys.FG)] ?: 0L) +
+                        (counters[UsageKeys.ingestBundles(UsageKeys.BG)] ?: 0L),
+                ingestBundlesBg = counters[UsageKeys.ingestBundles(UsageKeys.BG)] ?: 0L,
+                ingestNotes =
+                    (counters[UsageKeys.ingestNotes(UsageKeys.FG)] ?: 0L) +
+                        (counters[UsageKeys.ingestNotes(UsageKeys.BG)] ?: 0L),
+                feedFanOutMs =
+                    (
+                        (counters[UsageKeys.feedsFanoutUs(UsageKeys.FG)] ?: 0L) +
+                            (counters[UsageKeys.feedsFanoutUs(UsageKeys.BG)] ?: 0L)
+                    ) / 1_000,
+                feedFanOutBgMs = (counters[UsageKeys.feedsFanoutUs(UsageKeys.BG)] ?: 0L) / 1_000,
+                feedOutcomes = feedOutcomes,
                 foregroundMs = counters[UsageKeys.APP_FG_MS] ?: 0L,
                 verifyCount = counters[UsageKeys.VERIFY_COUNT] ?: 0L,
                 verifyUs = counters[UsageKeys.VERIFY_US] ?: 0L,

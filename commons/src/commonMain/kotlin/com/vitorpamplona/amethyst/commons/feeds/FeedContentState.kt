@@ -149,13 +149,14 @@ class FeedContentState(
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
+                val currentList = oldNotesState.feed.value.list
                 val deletionEvents: List<DeletionEvent> = newItems.mapNotNull { it.event as? DeletionEvent }
 
                 val oldList =
                     if (deletionEvents.isEmpty()) {
-                        oldNotesState.feed.value.list
+                        currentList
                     } else {
-                        oldNotesState.feed.value.list
+                        currentList
                             .filter {
                                 val noteEvent = it.event
                                 if (noteEvent != null) {
@@ -173,14 +174,31 @@ class FeedContentState(
                             }.toImmutableList()
                     }
 
-                val newList =
-                    localFilter
-                        .updateListWith(oldList, newItems)
-                        .distinctBy { it.idHex }
-                        .toImmutableList()
+                val merged = localFilter.updateListWith(oldList, newItems)
 
-                if (!equalImmutableLists(newList, oldNotesState.feed.value.list)) {
+                // An additive filter that matched nothing returns `oldList`
+                // itself, and when no deletion was in the bundle `oldList` IS
+                // the list on screen — so the result cannot differ from it and
+                // everything below is provably wasted. Every bundle is fanned
+                // out to every feed the account owns (~48 on Android), so
+                // without this each one paid a distinctBy (a hash set plus a
+                // copy of up to limit() items), a second copy into an immutable
+                // list, and a full identity walk, only to discard all three.
+                // Identity, not equality: a deletion pass rebuilds `oldList`,
+                // and an override that returns a fresh list falls through to
+                // the general path below.
+                if (merged === currentList) {
+                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.SKIPPED)
+                    return
+                }
+
+                val newList = merged.distinctBy { it.idHex }.toImmutableList()
+
+                if (!equalImmutableLists(newList, currentList)) {
                     updateFeed(newList)
+                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.CHANGED)
+                } else {
+                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.UNCHANGED)
                 }
             } else if (oldNotesState is FeedState.Empty) {
                 val newList =
@@ -190,14 +208,19 @@ class FeedContentState(
                         .toImmutableList()
                 if (newList.isNotEmpty()) {
                     updateFeed(newList)
+                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.CHANGED)
+                } else {
+                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.UNCHANGED)
                 }
             } else {
                 // Refresh Everything
                 refreshSuspended()
+                FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.REBUILT)
             }
         } else {
             // Refresh Everything
             refreshSuspended()
+            FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.REBUILT)
         }
     }
 

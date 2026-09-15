@@ -145,6 +145,17 @@ class ResourceUsageReportAssembler {
             append("| Time in app | ${formatDurationMs(s.foregroundMs)} |\n")
             append("| Background worker runs | ${s.workerRuns} |\n")
             append("| App process starts | ${s.appStarts} |\n")
+            if (s.ingestBundles > 0) {
+                append("| Event bundles ingested | ${s.ingestBundles} (${s.ingestBundlesBg} backgrounded, ${s.ingestNotes} notes) |\n")
+                append("| Feed fan-out | ${formatDurationMs(s.feedFanOutMs)} (${formatDurationMs(s.feedFanOutBgMs)} backgrounded) |\n")
+            }
+            val feedOutcomes =
+                s.feedOutcomes.entries
+                    .sortedByDescending { it.value }
+                    .joinToString(", ") { "${it.key} ${it.value}" }
+            if (feedOutcomes.isNotEmpty()) {
+                append("| Feed updates by outcome | $feedOutcomes |\n")
+            }
             // The two lines this whole diagnosis hangs on: which subsystem
             // burned the CPU, and which burned it while nobody was looking.
             val cpuBuckets =

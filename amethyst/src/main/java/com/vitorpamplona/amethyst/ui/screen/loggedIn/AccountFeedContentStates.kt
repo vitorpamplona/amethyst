@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.ComponentCallbacks2
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.feeds.FeedUpdateMeter
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.model.Account
@@ -331,9 +332,35 @@ class AccountFeedContentStates(
         notificationSummary.initializeSuspend()
     }
 
+    /**
+     * Hands one incoming bundle to every feed this account owns, and reports the
+     * cost to the resource-usage ledger.
+     *
+     * The fan-out is unconditional: every feed below is updated whether or not
+     * it is on screen, and whether or not the app is. That is what the timing
+     * exists to size — see hypothesis H1 in
+     * `amethyst/plans/2026-09-14-cpu-battery-diagnosis.md`. Measured around the
+     * whole loop rather than per feed; the per-feed outcomes come from
+     * `FeedUpdateMeter` inside `FeedContentState`, which already knows whether
+     * it changed anything.
+     */
     fun updateFeedsWith(newNotes: Set<Note>) {
         checkNotInMainThread()
 
+        val meter = FeedUpdateMeter.instance
+        if (meter == null) {
+            fanOutToFeeds(newNotes)
+            return
+        }
+        val startedAt = System.nanoTime()
+        try {
+            fanOutToFeeds(newNotes)
+        } finally {
+            meter.onBundleFanOut(newNotes.size, System.nanoTime() - startedAt)
+        }
+    }
+
+    private fun fanOutToFeeds(newNotes: Set<Note>) {
         homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
         homeReplies.updateFeedWith(newNotes)
