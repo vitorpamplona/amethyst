@@ -37,22 +37,25 @@ class BlossomAuthorizationEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     /**
-     * This event's JSON as Base64url without padding, per BUD-11: "the
-     * authorization token MUST be encoded as Base64 URL-safe without padding
-     * (Base64url, as used by JWTs)".
+     * This event's JSON as standard Base64 WITH padding — the same encoder as
+     * NIP-98's [com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent.rawToken].
      *
-     * Deliberately NOT the same encoder as NIP-98's
-     * [com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent.rawToken],
-     * which stays on standard Base64 because NIP-98 does not specify a variant.
-     * In practice the alphabets coincide here — a token's JSON is printable
-     * ASCII, and a sextet can only reach 62/63 when the third byte of its group
-     * is `>`, `~`, `?` or DEL — so the observable change is the dropped `=`.
+     * NOT what BUD-11 (draft) says. BUD-11 §"HTTP Authorization Header" reads
+     * "the authorization token MUST be encoded as Base64 URL-safe without padding
+     * (Base64url, as used by JWTs)", and 1.15.0 shipped exactly that. Deployed
+     * servers decode with a strict standard decoder (Go's base64.StdEncoding in
+     * khatru-based relays): missing padding and the `-`/`_` alphabet are both
+     * "invalid base64 token". Padding is needed whenever the JSON length is not a
+     * multiple of three, so two uploads in three failed in the field (reported
+     * 14 Sep 2026). Until the spec and the reference servers agree, the encoding
+     * every deployed decoder accepts wins. Do not switch this back to
+     * `Base64.UrlSafe` without re-probing a khatru server.
      */
-    fun rawToken() = BASE64URL.encode(toJson().encodeToByteArray())
+    fun rawToken() = TOKEN_BASE64.encode(toJson().encodeToByteArray())
 
     /**
      * The full `Authorization` header value for a Blossom request:
-     * `Nostr <base64url-event>` (BUD-11, HTTP Authorization Header).
+     * `Nostr <base64-event>` (BUD-11, HTTP Authorization Header).
      */
     fun toAuthorizationHeader() = "$AUTH_HEADER_SCHEME${rawToken()}"
 
@@ -62,8 +65,11 @@ class BlossomAuthorizationEvent(
         /** Scheme prefix for the `Authorization` header value (BUD-11). */
         const val AUTH_HEADER_SCHEME = "Nostr "
 
-        /** BUD-11's required token encoding: URL-safe alphabet, no `=` padding. */
-        val BASE64URL = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
+        /**
+         * Token encoding: standard alphabet, `=` padding. See [rawToken] for why
+         * this deliberately ignores BUD-11's base64url MUST.
+         */
+        val TOKEN_BASE64: Base64 = Base64.Default
 
         /**
          * BUD-11 `t=get` read authorization.

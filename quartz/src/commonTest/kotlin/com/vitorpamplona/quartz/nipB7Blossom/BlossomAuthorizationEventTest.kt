@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipB7Blossom
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
+import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -96,35 +97,36 @@ class BlossomAuthorizationEventTest {
 
             assertTrue(header.startsWith(BlossomAuthorizationEvent.AUTH_HEADER_SCHEME))
             val token = header.removePrefix(BlossomAuthorizationEvent.AUTH_HEADER_SCHEME)
-            val decoded = BlossomAuthorizationEvent.BASE64URL.decode(token).decodeToString()
+            val decoded = Base64.decode(token).decodeToString()
             assertEquals(event.toJson(), decoded)
         }
 
     /**
-     * BUD-11: "the authorization token MUST be encoded as Base64 URL-safe
-     * without padding (Base64url, as used by JWTs)". Padded standard Base64 was
-     * what this produced before, so both halves are worth pinning. Several
-     * lengths, because whether padding appears at all depends on the JSON
-     * length mod 3 — a single sample passes by luck about half the time.
+     * BUD-11 (draft) says base64url without padding, and 1.15.0 shipped exactly that —
+     * and two uploads in three failed in the field. Deployed Blossom servers decode
+     * with a STRICT standard decoder: padding is required and the url-safe alphabet
+     * is rejected (probed 15 Sep 2026: unpadded and url-safe tokens both answer
+     * "invalid base64 token"; padded standard gets past the decoder). Interop wins
+     * over the draft. Several alt lengths so all three `length mod 3` cases are hit;
+     * only some of them need padding, which is exactly why the field failure was
+     * intermittent.
      */
     @Test
-    fun authorizationTokenIsBase64UrlWithoutPadding() =
+    fun authorizationTokenIsStandardPaddedBase64BecauseServersDecodeStrictly() =
         runTest {
+            var sawPadding = false
             listOf("a", "List", "List blobs", "List all of the blobs", "List blobs \u00e1\u00e9\u00ed")
                 .forEach { alt ->
-                    val header = BlossomAuthorizationEvent.createListAuth(signer, alt).toAuthorizationHeader()
-                    val token = header.removePrefix(BlossomAuthorizationEvent.AUTH_HEADER_SCHEME)
+                    val event = BlossomAuthorizationEvent.createListAuth(signer, alt)
+                    val token = event.toAuthorizationHeader().removePrefix(BlossomAuthorizationEvent.AUTH_HEADER_SCHEME)
 
-                    assertTrue(token.none { it == '=' }, "padding must be absent for `$alt`, got: $token")
-                    assertTrue(
-                        token.none { it == '+' || it == '/' },
-                        "standard-alphabet chars must not appear for `$alt`, got: $token",
-                    )
-                    assertTrue(
-                        token.all { it.isLetterOrDigit() || it == '-' || it == '_' },
-                        "token must be base64url for `$alt`, got: $token",
-                    )
+                    // kotlin.io.encoding.Base64 (default) is the strict standard decoder:
+                    // it throws on missing padding and on `-`/`_`, like Go's StdEncoding.
+                    assertEquals(event.toJson(), Base64.decode(token).decodeToString(), "strict standard decode for `$alt`")
+                    assertTrue(token.none { it == '-' || it == '_' }, "url-safe alphabet must not appear for `$alt`, got: $token")
+                    if (token.endsWith("=")) sawPadding = true
                 }
+            assertTrue(sawPadding, "at least one of these lengths needs padding; if none did, the encoder is still dropping it")
         }
 
     /**
