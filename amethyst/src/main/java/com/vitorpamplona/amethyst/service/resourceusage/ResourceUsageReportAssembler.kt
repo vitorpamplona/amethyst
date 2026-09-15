@@ -141,9 +141,26 @@ class ResourceUsageReportAssembler {
             append("| Remote signatures | ${s.signNip46} NIP-46, ${s.signNip55} NIP-55 |\n")
             append("| Battery drain (measured, whole device) | ${s.batteryDrainFg}% in app, ${s.batteryDrainBg}% background |\n")
             append("| App CPU time | ${formatDurationMs(s.cpuMs)} |\n")
+            append("| ... with the app in the background | ${formatDurationMs(s.cpuBgMs)} |\n")
             append("| Time in app | ${formatDurationMs(s.foregroundMs)} |\n")
             append("| Background worker runs | ${s.workerRuns} |\n")
             append("| App process starts | ${s.appStarts} |\n")
+            // The two lines this whole diagnosis hangs on: which subsystem
+            // burned the CPU, and which burned it while nobody was looking.
+            val cpuBuckets =
+                s.cpuMsPerBucket.entries
+                    .sortedByDescending { it.value }
+                    .joinToString(", ") { "${it.key} ${formatDurationMs(it.value)}" }
+            if (cpuBuckets.isNotEmpty()) {
+                append("| CPU by subsystem | $cpuBuckets |\n")
+            }
+            val cpuBgBuckets =
+                s.cpuBgMsPerBucket.entries
+                    .sortedByDescending { it.value }
+                    .joinToString(", ") { "${it.key} ${formatDurationMs(it.value)}" }
+            if (cpuBgBuckets.isNotEmpty()) {
+                append("| CPU by subsystem (background) | $cpuBgBuckets |\n")
+            }
             val subsystems =
                 s.bytesPerSubsystem.entries
                     .sortedByDescending { it.value }

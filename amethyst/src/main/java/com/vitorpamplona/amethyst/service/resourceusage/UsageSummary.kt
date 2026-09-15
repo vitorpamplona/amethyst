@@ -43,6 +43,8 @@ data class UsageSummary(
     val relayConnects: Long,
     val relayConnectFails: Long,
     val cpuMs: Long,
+    val cpuFgMs: Long,
+    val cpuBgMs: Long,
     val foregroundMs: Long,
     val verifyCount: Long,
     val verifyUs: Long,
@@ -64,6 +66,14 @@ data class UsageSummary(
     val signNip55: Long,
     val batteryDrainFg: Long,
     val batteryDrainBg: Long,
+    /**
+     * CPU ms per thread subsystem, summed over both visibilities — "who burned
+     * it". Keys are [ThreadCpuBuckets] constants; empty on a build or kernel
+     * where `/proc/self/task` could not be read.
+     */
+    val cpuMsPerBucket: Map<String, Long>,
+    /** CPU ms per thread subsystem while backgrounded — "who burned it with the screen off". */
+    val cpuBgMsPerBucket: Map<String, Long>,
     /** total rx+tx bytes per subsystem (net roles + "relay"). */
     val bytesPerSubsystem: Map<String, Long>,
     /** cellular-only rx+tx bytes per subsystem — the scarce resource. */
@@ -104,6 +114,19 @@ data class UsageSummary(
                     counters.sumMatching("msg", UsageKeys.MOBILE, UsageKeys.TX)
             if (mobileRelayBytes > 0) mobileSubsystems["relay"] = mobileRelayBytes
 
+            // Exact lookups over the fixed bucket vocabulary rather than a
+            // prefix scan: `cpu.ms`, `cpu.fg.ms` and `cpu.bg.ms` share the
+            // `cpu.` prefix but are totals, not buckets, and a scan would
+            // report a bucket named "fg".
+            val cpuBuckets = mutableMapOf<String, Long>()
+            val cpuBgBuckets = mutableMapOf<String, Long>()
+            for (bucket in ThreadCpuBuckets.ALL) {
+                val bg = counters[UsageKeys.cpuBucket(bucket, UsageKeys.BG)] ?: 0L
+                val total = bg + (counters[UsageKeys.cpuBucket(bucket, UsageKeys.FG)] ?: 0L)
+                if (total > 0) cpuBuckets[bucket] = total
+                if (bg > 0) cpuBgBuckets[bucket] = bg
+            }
+
             val screens = mutableMapOf<String, Long>()
             for ((key, value) in counters) {
                 if (key.startsWith(UsageKeys.SCREEN_PREFIX) && key.endsWith(".ms") && value > 0) {
@@ -128,6 +151,8 @@ data class UsageSummary(
                 relayConnects = counters.sumMatching("connects"),
                 relayConnectFails = counters.sumMatching("connfails"),
                 cpuMs = counters[UsageKeys.CPU_MS] ?: 0L,
+                cpuFgMs = counters[UsageKeys.CPU_FG_MS] ?: 0L,
+                cpuBgMs = counters[UsageKeys.CPU_BG_MS] ?: 0L,
                 foregroundMs = counters[UsageKeys.APP_FG_MS] ?: 0L,
                 verifyCount = counters[UsageKeys.VERIFY_COUNT] ?: 0L,
                 verifyUs = counters[UsageKeys.VERIFY_US] ?: 0L,
@@ -149,6 +174,8 @@ data class UsageSummary(
                 signNip55 = counters[UsageKeys.signs(UsageKeys.SIGNER_NIP55)] ?: 0L,
                 batteryDrainFg = counters[UsageKeys.BATTERY_DRAIN_FG] ?: 0L,
                 batteryDrainBg = counters[UsageKeys.BATTERY_DRAIN_BG] ?: 0L,
+                cpuMsPerBucket = cpuBuckets,
+                cpuBgMsPerBucket = cpuBgBuckets,
                 bytesPerSubsystem = subsystems,
                 mobileBytesPerSubsystem = mobileSubsystems,
                 screenTimeMs = screens,

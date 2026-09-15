@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssem
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatBytes
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatConnHours
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatDurationMs
+import com.vitorpamplona.amethyst.service.resourceusage.ThreadCpuBuckets
 import com.vitorpamplona.amethyst.service.resourceusage.UsageSummary
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -162,6 +163,7 @@ fun ResourceUsageScreen(
                     }
                 }
                 SubsystemSection(weekSummary)
+                CpuSection(weekSummary)
                 ScreenTimeSection(weekSummary)
                 ActivitySection(weekSummary)
                 AlwaysOnServiceSection(weekSummary, nav)
@@ -283,6 +285,67 @@ private fun SubsystemSection(week: UsageSummary) {
 }
 
 /**
+ * Where the processor time went (7 days), by subsystem.
+ *
+ * Ranked by time spent **while the app was closed**, when that exists, because
+ * that is the battery-relevant half: processor time spent drawing a screen the
+ * user is looking at is the app doing its job, while the same time spent with
+ * the screen off is not. The all-day total rides along as context, mirroring
+ * how [SubsystemSection] ranks cellular over total bytes.
+ *
+ * Buckets are thread subsystems, never thread names — see [ThreadCpuBuckets].
+ */
+@Composable
+private fun CpuSection(week: UsageSummary) {
+    val background = week.cpuBgMsPerBucket
+    if (background.isNotEmpty()) {
+        val rows = background.entries.sortedByDescending { it.value }
+        val max = rows.first().value.coerceAtLeast(1L)
+        SettingsSection(R.string.resource_usage_cpu_section) {
+            rows.forEach { (bucket, ms) ->
+                BarRow(
+                    label = cpuBucketLabel(bucket),
+                    value = stringRes(Res.string.resource_usage_cell_of_total, formatDurationMs(ms), formatDurationMs(week.cpuMsPerBucket[bucket] ?: ms)),
+                    fraction = ms.toFloat() / max.toFloat(),
+                )
+            }
+        }
+        return
+    }
+    if (week.cpuMsPerBucket.isEmpty()) return
+    val rows = week.cpuMsPerBucket.entries.sortedByDescending { it.value }
+    val max = rows.first().value.coerceAtLeast(1L)
+    SettingsSection(R.string.resource_usage_cpu_section) {
+        rows.forEach { (bucket, ms) ->
+            BarRow(
+                label = cpuBucketLabel(bucket),
+                value = formatDurationMs(ms),
+                fraction = ms.toFloat() / max.toFloat(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun cpuBucketLabel(bucket: String): String =
+    stringRes(
+        when (bucket) {
+            ThreadCpuBuckets.MAIN -> R.string.resource_usage_cpu_bucket_main
+            ThreadCpuBuckets.RENDER -> R.string.resource_usage_cpu_bucket_render
+            ThreadCpuBuckets.NET -> R.string.resource_usage_cpu_bucket_net
+            ThreadCpuBuckets.DISPATCH -> R.string.resource_usage_cpu_bucket_dispatch
+            ThreadCpuBuckets.POOL -> R.string.resource_usage_cpu_bucket_pool
+            ThreadCpuBuckets.GC -> R.string.resource_usage_cpu_bucket_gc
+            ThreadCpuBuckets.JIT -> R.string.resource_usage_cpu_bucket_jit
+            ThreadCpuBuckets.TOR -> R.string.resource_usage_cpu_bucket_tor
+            ThreadCpuBuckets.MEDIA -> R.string.resource_usage_cpu_bucket_media
+            ThreadCpuBuckets.BINDER -> R.string.resource_usage_cpu_bucket_binder
+            ThreadCpuBuckets.GONE -> R.string.resource_usage_cpu_bucket_gone
+            else -> R.string.resource_usage_cpu_bucket_misc
+        },
+    )
+
+/**
  * Where the screen-on time went (7 days). Route base names only — the
  * ledger never records which profile/hashtag/thread a screen showed.
  */
@@ -392,6 +455,8 @@ private fun ActivitySection(s: UsageSummary) {
         MetricRow(R.string.resource_usage_verifies, s.verifyCount.toString())
         SettingsDivider()
         MetricRow(R.string.resource_usage_cpu, formatDurationMs(s.cpuMs))
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_cpu_bg, formatDurationMs(s.cpuBgMs))
         SettingsDivider()
         MetricRow(R.string.resource_usage_wakelock, formatDurationMs(s.wakelockMs))
         SettingsDivider()

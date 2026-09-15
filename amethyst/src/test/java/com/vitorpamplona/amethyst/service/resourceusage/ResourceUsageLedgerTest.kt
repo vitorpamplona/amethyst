@@ -293,7 +293,7 @@ class ProcessCpuSamplerTest {
             val store = ResourceUsageStore(File(temp.root, "u.json"))
             val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 1L })
             var cpu = 1_000L
-            val sampler = ProcessCpuSampler(accountant) { cpu }
+            val sampler = ProcessCpuSampler(accountant, { true }, { cpu })
 
             cpu = 1_500L
             sampler.sample()
@@ -302,6 +302,36 @@ class ProcessCpuSamplerTest {
 
             val counters = accountant.allDaysIncludingLive()[1L].orEmpty()
             assertEquals(800L, counters[UsageKeys.CPU_MS])
+        }
+
+    /**
+     * The split is the actionable half: CPU burned with the screen off is work
+     * nobody is waiting for. The undimensioned total must keep working so
+     * reports predating the split stay comparable.
+     */
+    @Test
+    fun splitsCpuByVisibilityWithoutLosingTheTotal() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 1L })
+            var cpu = 0L
+            var foreground = true
+            val sampler = ProcessCpuSampler(accountant, { foreground }, { cpu })
+
+            cpu = 300L
+            sampler.sample()
+            foreground = false
+            cpu = 1_000L
+            sampler.sample()
+
+            val counters = accountant.allDaysIncludingLive()[1L].orEmpty()
+            assertEquals(1_000L, counters[UsageKeys.CPU_MS])
+            assertEquals(300L, counters[UsageKeys.CPU_FG_MS])
+            assertEquals(700L, counters[UsageKeys.CPU_BG_MS])
+            assertEquals(
+                counters[UsageKeys.CPU_MS],
+                (counters[UsageKeys.CPU_FG_MS] ?: 0L) + (counters[UsageKeys.CPU_BG_MS] ?: 0L),
+            )
         }
 }
 

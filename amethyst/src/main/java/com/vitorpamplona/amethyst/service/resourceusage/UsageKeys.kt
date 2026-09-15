@@ -716,6 +716,38 @@ object UsageKeys {
     /** Whole-process CPU time (user+system) — the honest aggregate of parsing, crypto, coroutines, and UI. */
     const val CPU_MS = "cpu.ms"
 
+    /**
+     * [CPU_MS] split by visibility. The single most important pair in the
+     * ledger for battery work: CPU burned with the screen off is, by
+     * definition, work no user is waiting for.
+     *
+     * These sum to [CPU_MS] — the same delta is booked to both — so reading all
+     * three does not double-count anything, and old reports that only carry
+     * `cpu.ms` stay comparable.
+     */
+    const val CPU_FG_MS = "cpu.fg.ms"
+    const val CPU_BG_MS = "cpu.bg.ms"
+
+    /**
+     * `cpu.net.bg.ms` — [CPU_MS] attributed to a thread subsystem x visibility
+     * by [ThreadCpuSampler].
+     *
+     * `bucket` is always a [ThreadCpuBuckets] constant, never a thread name:
+     * OkHttp renames its threads after the relay host they are serving, and no
+     * hostname may ever reach a counter key. The bucket vocabulary is fixed at
+     * compile time, so this builder's key space is bounded exactly like the
+     * rest of the ledger's.
+     *
+     * Summing every bucket for one visibility reproduces `cpu.<vis>.ms`,
+     * including the `gone` residual for threads that exited mid-interval.
+     */
+    fun cpuBucket(
+        bucket: String,
+        visibility: String,
+    ): String = "$CPU_BUCKET_PREFIX$bucket.$visibility.ms"
+
+    const val CPU_BUCKET_PREFIX = "cpu."
+
     /** Time with at least one activity STARTED — the denominator that makes the other counters interpretable. */
     const val APP_FG_MS = "app.fgms"
 

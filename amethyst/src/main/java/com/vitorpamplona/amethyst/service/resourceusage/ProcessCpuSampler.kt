@@ -30,9 +30,23 @@ import android.os.Process
  * the accountant's pre-flush hook, so it costs one syscall per flush and
  * nothing while idle. Per-process monotonic: a fresh process simply starts a
  * fresh baseline.
+ *
+ * Each delta is booked twice: to [UsageKeys.CPU_MS] and to the
+ * [UsageKeys.CPU_FG_MS] / [UsageKeys.CPU_BG_MS] pair, by the visibility at
+ * sample time. The split is what makes the number actionable — CPU burned with
+ * the screen off is work nobody is waiting for — while the undimensioned total
+ * keeps reports from before the split comparable. Whole intervals are
+ * attributed to the visibility observed at their end, which is accurate at the
+ * flush cadence (30s) against the timescale that matters here (hours of
+ * background).
+ *
+ * [ThreadCpuSampler] breaks the same total down by subsystem; the two are
+ * independent (separate baselines, separate `/proc` access) so that losing the
+ * per-thread breakdown on a restricted kernel does not cost us the total.
  */
 class ProcessCpuSampler(
     private val accountant: ResourceUsageAccountant,
+    private val isForeground: () -> Boolean,
     private val cpuMs: () -> Long = { Process.getElapsedCpuTime() },
 ) {
     private var lastSampleMs = cpuMs()
@@ -46,6 +60,8 @@ class ProcessCpuSampler(
         val now = cpuMs()
         val delta = now - lastSampleMs
         lastSampleMs = now
-        if (delta > 0) accountant.add(UsageKeys.CPU_MS, delta)
+        if (delta <= 0) return
+        accountant.add(UsageKeys.CPU_MS, delta)
+        accountant.add(if (isForeground()) UsageKeys.CPU_FG_MS else UsageKeys.CPU_BG_MS, delta)
     }
 }

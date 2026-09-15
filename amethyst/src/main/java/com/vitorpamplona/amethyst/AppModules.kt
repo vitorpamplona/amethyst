@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
 import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.SessionTimeIntegrator
+import com.vitorpamplona.amethyst.service.resourceusage.ThreadCpuSampler
 import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.service.safeCacheDir
@@ -864,7 +865,11 @@ class AppModules(
             isForeground = foregroundTracker.isForeground,
             accountant = resourceUsage,
         ).start(applicationIOScope)
-        ProcessCpuSampler(resourceUsage).register()
+        ProcessCpuSampler(resourceUsage, isForeground = { foregroundTracker.isForeground.value }).register()
+        // Breaks the same process total down by thread subsystem. Registered right
+        // after (and independently of) the total: on a kernel where /proc/self/task
+        // is unreadable we lose the breakdown, never the total.
+        ThreadCpuSampler(resourceUsage, isForeground = { foregroundTracker.isForeground.value }).register()
         cache.verifyMeter = { elapsedNanos, _ ->
             resourceUsage.add(UsageKeys.VERIFY_COUNT, 1)
             resourceUsage.add(UsageKeys.VERIFY_US, elapsedNanos / 1_000)
