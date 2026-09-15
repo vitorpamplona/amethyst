@@ -334,16 +334,39 @@ For each hypothesis that survives Phase 2:
 
 ## 6. Order of work
 
-| Step | Work | Gate |
-| --- | --- | --- |
-| 1 | Read `crypto.verify.*` + `cpu.ms` + `app.fgms` from existing reports | Answers H4 for free; sizes the whole problem |
-| 2 | §2.1 `ThreadCpuSampler` + `cpu.fg/bg` split | Ships in the next release; every later step reads its output |
-| 3 | §2.2 + §2.3 ingest/feed/background counters | Answers H1, H2, H5 from production data |
-| 4 | §3 S1/S3/S4 Perfetto + batterystats on a real device | Confirms or kills what step 3 suggested; catches anything the counters are blind to |
-| 5 | H1 fix (the cheap half: `newList === oldList` short-circuit) | Lowest risk, measurable immediately |
-| 6 | H1 fix (collector-gated fan-out) + H2 background gating | Needs the tab-switch-latency guard |
-| 7 | H5 lifecycle-aware loops | Mechanical once located |
-| 8 | H3 relay-count study | Own plan; do not touch before 1–7 |
+| Step | Work | Gate | Status |
+| --- | --- | --- | --- |
+| 1 | Read `crypto.verify.*` + `cpu.ms` + `app.fgms` from existing reports | Answers H4 for free; sizes the whole problem | **needs a device** |
+| 2 | §2.1 `ThreadCpuSampler` + `cpu.fg/bg` split | Ships in the next release; every later step reads its output | **shipped** |
+| 3 | §2.2 ingest/feed counters | Answers H1, H2 from production data | **shipped** |
+| 3b | §2.3 `bg.recompose.count` / `bg.imageload.count` tripwires | Answers H5 | todo |
+| 4 | §3 S1/S3/S4 Perfetto + batterystats on a real device | Confirms or kills what step 3 suggested; catches anything the counters are blind to | **needs a device** |
+| 5 | H1 fix (the cheap half: `newList === oldList` short-circuit) | Lowest risk, measurable immediately | **shipped** |
+| 6 | H1 fix (collector-gated fan-out) + H2 background gating | Needs the tab-switch-latency guard | todo — blocked on step 4 |
+| 7 | H5 lifecycle-aware loops | Mechanical once located | todo — blocked on step 3b |
+| 8 | H3 relay-count study | Own plan; do not touch before 1–7 | todo |
+
+### What has landed so far
+
+Two commits on `claude/cpu-usage-battery-optimization-2sbqhh`:
+
+- **`feat(ledger): attribute CPU time by thread subsystem and visibility`** —
+  `ProcessCpuSampler` now also writes `cpu.fg.ms` / `cpu.bg.ms`; a new
+  `ThreadCpuSampler` diffs `/proc/self/task` per-thread counters into
+  `cpu.<bucket>.<fg|bg>.ms` over a fixed bucket vocabulary
+  (`ThreadCpuBuckets`), with the unattributed remainder booked to `gone` so
+  the buckets sum to the process total. Surfaced on the resource-usage screen
+  and in the sendable report. Thread names never leave the classifier —
+  OkHttp's carry relay hostnames.
+- **`feat(feeds): measure the per-bundle feed fan-out, and skip the work it
+  wastes`** — `FeedUpdateMeter` (commons) + `FeedUsageMeter` (Android) record
+  `ingest.bundles/notes.<vis>.count`, `feeds.fanout.<vis>.us|count` and
+  `feeds.{skipped,changed,unchanged,rebuilt}.<vis>.count`; plus the H1
+  short-circuit, which skips the `distinctBy` + copy + identity-walk when an
+  additive filter returned the on-screen list unchanged.
+
+Both are behaviour-preserving. The field offsets in the `/proc` parse and the
+short-circuit are each pinned by a test verified by mutation.
 
 **Stop condition for Phase 1/2:** we can state, from data, what fraction of
 `cpu.ms` each bucket owns in S1 and in S3, and name the top three call sites.

@@ -5,13 +5,13 @@ _Audited 2026-06-30. 21 plans: 19 shipped (archived), 1 in-progress, 1 queued, 0
 ## In progress
 | Plan | Summary |
 | ---- | ------- |
+| [2026-09-14-cpu-battery-diagnosis.md](2026-09-14-cpu-battery-diagnosis.md) | Diagnose where the app's CPU actually goes, foreground and background. Phase 1 instrumentation shipped (per-thread CPU buckets + `cpu.fg/bg` in the ledger, feed fan-out counters, and the H1 no-op short-circuit); the Perfetto/batterystats protocol and the remaining five hypotheses need a real device. |
 | [2026-09-07-generic-local-filter.md](2026-09-07-generic-local-filter.md) | Local note search moved onto `LocalCache.filter(Filter)` so the search box's tokens narrow local and relay results alike; steps 1–6 shipped, `FilterMatcher` left untouched via a predicate parameter. |
 | [2026-05-24-ios-support.md](2026-05-24-ios-support.md) | Incremental KMP-to-iOS port; quartz/commons iOS targets are configured (Phase 1) but no `iosApp` module exists yet. |
 
 ## Queued
 | Plan | Summary |
 | ---- | ------- |
-| [2026-09-14-cpu-battery-diagnosis.md](2026-09-14-cpu-battery-diagnosis.md) | Diagnose where the app's CPU actually goes, foreground and background: per-thread CPU buckets in the existing ledger, a Perfetto/batterystats protocol on the `benchmark` build, and six falsifiable hypotheses (feed fan-out, background ingest, relay count, verify volume, invisible loops, thread count) — fixes gated on measurement, no feature or on-screen performance removed. |
 | [2026-07-23-push-notification-redesign.md](2026-07-23-push-notification-redesign.md) | Per-kind tray notification redesign — accent colors, status-bar icons, MessagingStyle/BigPictureStyle/colorized zap cards, aggregation, Conversations/Bubbles; closes nutzap/onchain/repost/badge parity gaps. |
 | [2026-06-20-napplet-inter-applet.md](2026-06-20-napplet-inter-applet.md) | NAP-INC / NAP-INTENT inter-applet messaging — deferred; prerequisites (multi-applet hosting, archetype registry, `MESSAGING` capability) not yet built. |
 
