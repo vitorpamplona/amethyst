@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,11 +66,13 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps
 import com.vitorpamplona.amethyst.commons.resources.wallet_incoming
 import com.vitorpamplona.amethyst.commons.resources.wallet_loading
 import com.vitorpamplona.amethyst.commons.resources.wallet_no_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_open_zapped_note
 import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
 import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.formatMonthDayTime
@@ -289,12 +292,23 @@ private fun TransactionItem(
             TransactionRowLabels.resolve(tx, directionLabel)
         }
     val counterpartyPubkeyHex = (labels.title as? TransactionRowLabels.Title.User)?.pubkeyHex
+    val zappedNoteId = labels.zappedNoteId
 
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .then(
+                    // Before the padding, so the whole row height is the target. The
+                    // picture keeps its own tap (profile): picture -> profile, row -> note.
+                    if (zappedNoteId != null) {
+                        Modifier.clickable(onClickLabel = stringRes(Res.string.wallet_open_zapped_note)) {
+                            nav.nav(Route.Note(zappedNoteId))
+                        }
+                    } else {
+                        Modifier
+                    },
+                ).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (counterpartyPubkeyHex != null) {
@@ -368,6 +382,17 @@ private fun TransactionItem(
                     MaterialTheme.colorScheme.onBackground
                 },
         )
+
+        if (zappedNoteId != null) {
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                symbol = MaterialSymbols.ChevronRight,
+                // The row's onClickLabel already announces it.
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
