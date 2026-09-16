@@ -241,7 +241,7 @@ class ImageUploadTesting {
     @Ignore("Returns invalid hash")
     fun testSovbit() =
         runBlocking {
-            testBase(ServerName("sovbit", "https://cdn.sovbit.host", ServerType.Blossom))
+            testBase(ServerName("sovbit", "https://files.sovbit.host", ServerType.Blossom))
         }
 
     @Test()
