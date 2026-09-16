@@ -55,6 +55,8 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
+import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -91,9 +93,7 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_window
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_window_note
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_workouts
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_details
-import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
-import com.vitorpamplona.amethyst.service.workouts.health.WorkoutStats
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -107,12 +107,15 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * The user's own training, summarised: how much they did this week against last, what they
  * spent the time on, their best efforts, and how many days in a row they have shown up.
  *
- * This is the reason Amethyst reads Health Connect at all — the numbers are for the person
- * who recorded them. Publishing one as a note is an optional action from the workout list,
- * never a precondition for seeing any of this.
+ * This is the reason Amethyst reads Health Connect at all — the numbers are for the person who
+ * recorded them. Publishing one as a note is an optional action from the workout list, never a
+ * precondition for seeing any of this.
+ *
+ * Carries no scaffolding of its own so it can be the "Mine" tab of the Workouts screen as well
+ * as its own destination from the drawer.
  */
 @Composable
-fun MyFitnessScreen(
+fun MyFitnessContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -136,45 +139,57 @@ fun MyFitnessScreen(
         onPauseOrDispose {}
     }
 
+    val openRationale = { context.startActivity(Intent(context, HealthConnectRationaleActivity::class.java)) }
+    val requestPermissions = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) }
+
+    when (val current = state) {
+        MyFitnessViewModel.State.Loading -> CenteredBox { CircularProgressIndicator() }
+
+        is MyFitnessViewModel.State.Ready ->
+            if (current.report.isEmpty) {
+                // Nothing logged yet. Offering Health Connect is the useful thing to do when it
+                // could fill the screen; otherwise just say the log is empty.
+                if (current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE) {
+                    ConnectPrompt(onDetails = openRationale, onConnect = requestPermissions)
+                } else {
+                    CenteredBox {
+                        Text(
+                            text = stringRes(Res.string.my_fitness_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 32.dp),
+                        )
+                    }
+                }
+            } else {
+                Dashboard(
+                    report = current.report,
+                    // Only offered when it would actually add something: a device with no
+                    // provider gets no banner to act on.
+                    showConnectBanner = current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE,
+                    onDetails = openRationale,
+                    onConnect = requestPermissions,
+                ) { workout, label ->
+                    nav.nav(workout.toNewWorkoutRoute(label))
+                }
+            }
+    }
+}
+
+/**
+ * The standalone destination, reached from the drawer or a pinned bottom-bar slot. Inside the
+ * Workouts screen the same content is a tab instead — see [MyFitnessContent].
+ */
+@Composable
+fun MyFitnessScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.my_fitness_title), nav) },
     ) { padding ->
         Surface(modifier = Modifier.padding(padding)) {
-            when (val current = state) {
-                MyFitnessViewModel.State.Loading -> CenteredBox { CircularProgressIndicator() }
-
-                is MyFitnessViewModel.State.Ready ->
-                    if (current.report.isEmpty) {
-                        // Nothing logged yet. Offering Health Connect is the useful thing to do
-                        // when it could fill the screen; otherwise just say the log is empty.
-                        if (current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE) {
-                            ConnectPrompt(
-                                onDetails = { context.startActivity(Intent(context, HealthConnectRationaleActivity::class.java)) },
-                                onConnect = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) },
-                            )
-                        } else {
-                            CenteredBox {
-                                Text(
-                                    text = stringRes(Res.string.my_fitness_empty),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 32.dp),
-                                )
-                            }
-                        }
-                    } else {
-                        Dashboard(
-                            report = current.report,
-                            // Only offered when it would actually add something: a device with no
-                            // provider gets no banner to act on.
-                            showConnectBanner = current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE,
-                            onDetails = { context.startActivity(Intent(context, HealthConnectRationaleActivity::class.java)) },
-                            onConnect = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) },
-                        ) { workout, label ->
-                            nav.nav(workout.toNewWorkoutRoute(label))
-                        }
-                    }
-            }
+            MyFitnessContent(accountViewModel, nav)
         }
     }
 }

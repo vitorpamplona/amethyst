@@ -25,12 +25,12 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
+import com.vitorpamplona.amethyst.commons.fitness.TrainingLog
+import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
+import com.vitorpamplona.amethyst.commons.fitness.toDetectedWorkout
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
-import com.vitorpamplona.amethyst.service.workouts.health.TrainingLog
-import com.vitorpamplona.amethyst.service.workouts.health.WorkoutStats
-import com.vitorpamplona.amethyst.service.workouts.health.toDetectedWorkout
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

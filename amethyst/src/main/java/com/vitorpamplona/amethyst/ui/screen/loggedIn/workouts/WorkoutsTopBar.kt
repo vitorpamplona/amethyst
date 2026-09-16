@@ -20,36 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
 
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.my_fitness_open
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.search.asSearchQuery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 
 @Composable
 fun WorkoutsTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
+    showFeedFilter: Boolean,
 ) {
     val list by accountViewModel.account.settings.defaultWorkoutsFollowList
         .collectAsStateWithLifecycle()
@@ -59,21 +52,8 @@ fun WorkoutsTopBar(
     val me = accountViewModel.userProfile().pubkeyHex
     val seed = remember(list, me) { SearchSeed.merge(SearchSeed.ofKinds(WorkoutRecordEvent.KIND), list.asSearchQuery(me)) }
 
-    UserDrawerSearchTopBar(
-        accountViewModel,
-        nav,
-        seed,
-        extraActions = {
-            IconButton(onClick = { nav.nav(Route.MyFitness) }) {
-                Icon(
-                    symbol = MaterialSymbols.AutoMirrored.ShowChart,
-                    contentDescription = stringRes(Res.string.my_fitness_open),
-                    modifier = Size22Modifier,
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                )
-            }
-        },
-    ) {
+    UserDrawerSearchTopBar(accountViewModel, nav, seed) {
+        if (!showFeedFilter) return@UserDrawerSearchTopBar
         WorkoutsTopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,

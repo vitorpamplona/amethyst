@@ -57,6 +57,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -67,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_m
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_title
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_distance_km
 import com.vitorpamplona.amethyst.model.BooleanType
-import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

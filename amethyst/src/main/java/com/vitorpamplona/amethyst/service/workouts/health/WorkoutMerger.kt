@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.workouts.health
 
+import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import kotlin.math.roundToInt
 

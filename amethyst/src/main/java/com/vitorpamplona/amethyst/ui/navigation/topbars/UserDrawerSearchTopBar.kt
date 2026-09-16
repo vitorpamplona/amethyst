@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.navigation.topbars
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -67,7 +66,6 @@ fun UserDrawerSearchTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
     baseFilter: SearchQuery?,
-    extraActions: @Composable RowScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     ShorterTopAppBar(
@@ -82,9 +80,6 @@ fun UserDrawerSearchTopBar(
         },
         navigationIcon = { TopBarNavigationIcon(accountViewModel, nav) },
         actions = {
-            // Screen-specific actions sit left of search, which stays the rightmost affordance
-            // everywhere it appears.
-            extraActions()
             IconButton(onClick = { nav.nav(searchRouteFor(baseFilter)) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }

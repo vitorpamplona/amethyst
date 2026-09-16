@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.workouts.health
+package com.vitorpamplona.amethyst.commons.fitness
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType

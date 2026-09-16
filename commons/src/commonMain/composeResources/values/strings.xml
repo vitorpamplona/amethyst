@@ -683,8 +683,9 @@
     <string name="health_connect_rationale_limit_publish">Nothing leaves your phone until you tap a suggestion and publish the post yourself. Amethyst has no server: the post goes to the Nostr relays you configured.</string>
     <string name="health_connect_rationale_limit_optional">The whole feature is optional. Turn it off under Settings → Compose, or revoke the permissions in Health Connect at any time — the rest of Amethyst keeps working.</string>
     <string name="health_connect_rationale_privacy_policy">Read the full privacy policy</string>
+    <string name="workouts_tab_mine">Mine</string>
+    <string name="workouts_tab_following">Following</string>
     <string name="my_fitness_title">My Fitness</string>
-    <string name="my_fitness_open">My Fitness</string>
     <string name="my_fitness_window">Last 4 weeks</string>
     <string name="my_fitness_window_note">Health Connect serves the last 30 days, so Amethyst summarises four whole weeks. Nothing here leaves your phone.</string>
     <string name="my_fitness_this_week">This week</string>
