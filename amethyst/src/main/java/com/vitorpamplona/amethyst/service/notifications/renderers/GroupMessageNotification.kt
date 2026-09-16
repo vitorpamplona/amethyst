@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
@@ -61,6 +62,14 @@ object GroupMessageNotification {
 
         val accountNpub = NotificationRoutes.accountNpub(account)
         val uri = NotificationRoutes.marmotUri(nostrGroupId, accountNpub)
+        // Withheld when the account has message content turned off — the shortcut it publishes
+        // names the group in the launcher. See [ConversationShortcuts].
+        val conversation =
+            if (account.settings.showMessagesInNotifications.value) {
+                Conversation(NotificationRoutes.marmotShortcutId(nostrGroupId, accountNpub), groupName)
+            } else {
+                null
+            }
         val nm = context.notificationManager()
 
         NotificationEnricher.enrichAndPost(
@@ -81,6 +90,7 @@ object GroupMessageNotification {
                 uri = uri,
                 applicationContext = context,
                 accountPictureUrl = account.userProfile().profilePicture(),
+                conversation = conversation,
                 replyAction =
                     ReplyAction.Marmot(
                         accountNpub = accountNpub,

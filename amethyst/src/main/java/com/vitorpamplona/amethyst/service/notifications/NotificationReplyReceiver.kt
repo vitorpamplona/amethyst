@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -30,8 +31,10 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelAndPrune
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelChildlessGroupSummaries
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.renderReplyState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -67,7 +70,8 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         val eventId = intent.getStringExtra(NotificationUtils.KEY_EVENT_ID)
         if (intent.action != NotificationUtils.REPLY_ACTION &&
             intent.action != NotificationUtils.PUBLIC_REPLY_ACTION &&
-            intent.action != NotificationUtils.MARMOT_REPLY_ACTION
+            intent.action != NotificationUtils.MARMOT_REPLY_ACTION &&
+            intent.action != NotificationUtils.RETRY_REPLY_ACTION
         ) {
             eventId?.let { NotificationUtils.markDismissed(it) }
         }
@@ -76,7 +80,16 @@ class NotificationReplyReceiver : BroadcastReceiver() {
             ContextCompat.getSystemService(context, NotificationManager::class.java)
                 as NotificationManager
 
-        when (intent.action) {
+        // A Retry carries the text it is retrying and the action it was, so it re-enters the
+        // same branch below with the same payload instead of needing a path of its own.
+        val action =
+            if (intent.action == NotificationUtils.RETRY_REPLY_ACTION) {
+                intent.getStringExtra(NotificationUtils.KEY_RETRY_OF)
+            } else {
+                intent.action
+            }
+
+        when (action) {
             NotificationUtils.MARK_READ_ACTION -> {
                 notificationManager.cancelAndPrune(notificationId)
             }
@@ -88,12 +101,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
             }
 
             NotificationUtils.REPLY_ACTION -> {
-                val replyText =
-                    RemoteInput
-                        .getResultsFromIntent(intent)
-                        ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
-                        ?.toString()
-
+                val replyText = replyTextFrom(intent)
                 if (replyText.isNullOrBlank()) return
 
                 val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
@@ -102,35 +110,25 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
                 if (members.isEmpty()) return
 
-                runOnRelay(notificationManager, notificationId, eventId) {
+                runOnRelay(context, notificationManager, notificationId, eventId, replyText, intent) {
                     sendReply(accountNpub, members, replyText)
                 }
             }
 
             NotificationUtils.PUBLIC_REPLY_ACTION -> {
-                val replyText =
-                    RemoteInput
-                        .getResultsFromIntent(intent)
-                        ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
-                        ?.toString()
-
+                val replyText = replyTextFrom(intent)
                 if (replyText.isNullOrBlank()) return
 
                 val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
                 val targetEventId = intent.getStringExtra(NotificationUtils.KEY_TARGET_EVENT_ID) ?: return
 
-                runOnRelay(notificationManager, notificationId, eventId) {
+                runOnRelay(context, notificationManager, notificationId, eventId, replyText, intent) {
                     sendPublicReply(accountNpub, targetEventId, replyText)
                 }
             }
 
             NotificationUtils.MARMOT_REPLY_ACTION -> {
-                val replyText =
-                    RemoteInput
-                        .getResultsFromIntent(intent)
-                        ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
-                        ?.toString()
-
+                val replyText = replyTextFrom(intent)
                 if (replyText.isNullOrBlank()) return
 
                 val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
@@ -138,21 +136,50 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 val replyToInnerId = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_ID)
                 val replyToInnerAuthor = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_AUTHOR)
 
-                runOnRelay(notificationManager, notificationId, eventId) {
+                runOnRelay(context, notificationManager, notificationId, eventId, replyText, intent) {
                     sendMarmotReply(accountNpub, nostrGroupId, replyToInnerId, replyToInnerAuthor, replyText)
                 }
             }
         }
     }
 
+    /**
+     * The text of an inline reply: typed into the shade, or carried by a Retry re-sending one
+     * that failed. A RemoteInput cannot be pre-filled, so a retry has to bring its own copy.
+     */
+    private fun replyTextFrom(intent: Intent): String? =
+        RemoteInput
+            .getResultsFromIntent(intent)
+            ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
+            ?.toString()
+            ?: intent.getStringExtra(NotificationUtils.KEY_REPLY_TEXT)
+
+    /**
+     * Sends [block] and keeps the notification honest about how it went.
+     *
+     * The notification stays up rather than being cancelled on success. That is what every
+     * other messenger does — the reply appears in the thread you replied to — and it is what
+     * makes a failure visible at all: there is something left on screen to put the error on.
+     * It clears the usual way, when the conversation is read in the app.
+     *
+     * The dismissal guard is recorded on **both** outcomes. On success it stops the enrichment
+     * window resurrecting the pre-reply version seconds later; on failure it stops that same
+     * re-render overwriting the error and the Retry that carries the user's text. A nicer
+     * avatar is not worth losing an unsent message to.
+     */
     private fun runOnRelay(
+        context: Context,
         notificationManager: NotificationManager,
         notificationId: Int,
         eventId: String?,
+        replyText: String,
+        source: Intent,
         block: suspend () -> Unit,
     ) {
         val pendingResult = goAsync()
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+        val appContext = context.applicationContext
 
         scope.launch {
             val collectionJob =
@@ -161,19 +188,57 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                         .collect()
                 }
 
+            notificationManager.renderReplyState(appContext, notificationId, ReplyState.Sending(replyText))
+
             try {
                 block()
                 eventId?.let { NotificationUtils.markDismissed(it) }
-                notificationManager.cancelAndPrune(notificationId)
+                notificationManager.renderReplyState(appContext, notificationId, ReplyState.Sent)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("NotificationReply") { "Failed to send reply: ${e.message}" }
+                eventId?.let { NotificationUtils.markDismissed(it) }
+                notificationManager.renderReplyState(
+                    appContext,
+                    notificationId,
+                    ReplyState.Failed(replyText, retryIntent(appContext, notificationId, replyText, source)),
+                )
             } finally {
                 pendingResult.finish()
                 collectionJob.cancel()
                 scope.cancel()
             }
         }
+    }
+
+    /**
+     * A one-tap re-send of exactly what the user typed. Copies [source] — which already holds
+     * the account, room, group or target this reply was addressed to — and adds the text plus
+     * the action to replay, so [onReceive] can route it straight back to the branch it came
+     * from.
+     */
+    private fun retryIntent(
+        applicationContext: Context,
+        notificationId: Int,
+        replyText: String,
+        source: Intent,
+    ): PendingIntent {
+        val intent =
+            Intent(source).apply {
+                setClass(applicationContext, NotificationReplyReceiver::class.java)
+                action = NotificationUtils.RETRY_REPLY_ACTION
+                putExtra(NotificationUtils.KEY_RETRY_OF, source.action)
+                putExtra(NotificationUtils.KEY_REPLY_TEXT, replyText)
+            }
+
+        return PendingIntent.getBroadcast(
+            applicationContext,
+            // The other three request codes for this notification are notId, +1 (mark read)
+            // and +2 (dismiss).
+            notificationId + 3,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
     }
 
     private suspend fun sendReply(

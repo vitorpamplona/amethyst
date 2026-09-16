@@ -98,6 +98,30 @@ object NotificationRoutes {
         accountNpub: String,
     ): String = "chatroom?id=${room.users.joinToString(",")}&account=$accountNpub"
 
+    // ---------------------------------------------------------------------
+    // Conversation shortcut ids
+    //
+    // Stable for the life of the chat and scoped to the account, so the same counterparty
+    // under two logins does not collapse into one launcher entry pointing at the wrong
+    // inbox. Members are sorted because a room key is a set — ordering must not create a
+    // second shortcut for a chat that already has one.
+    // ---------------------------------------------------------------------
+
+    fun chatroomShortcutId(
+        room: ChatroomKey,
+        accountNpub: String,
+    ): String = "dm:$accountNpub:" + room.users.sorted().joinToString(",")
+
+    fun marmotShortcutId(
+        nostrGroupId: String,
+        accountNpub: String,
+    ): String = "marmot:$accountNpub:$nostrGroupId"
+
+    fun relayGroupShortcutId(
+        channelNAddr: String,
+        accountNpub: String,
+    ): String = "relaygroup:$accountNpub:$channelNAddr"
+
     /** Opens the Notifications tab, scrolled to [scrollToId] (used for zaps, reactions, chess). */
     fun notificationsUri(
         accountNpub: String,

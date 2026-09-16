@@ -37,6 +37,7 @@ import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
+import androidx.core.content.LocusIdCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
@@ -80,12 +81,17 @@ object NotificationUtils {
      * [KEY_TARGET_EVENT_ID], which is the note an inline reply is addressed to.
      */
     const val KEY_EVENT_ID = "key_event_id"
+
+    /** The action a [RETRY_REPLY_ACTION] is replaying, so it re-enters the branch it came from. */
+    const val KEY_RETRY_OF = "key_retry_of"
     const val KEY_ACCOUNT_NPUB = "key_account_npub"
     const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
     const val KEY_TARGET_EVENT_ID = "key_target_event_id"
     const val KEY_MARMOT_GROUP_ID = "key_marmot_group_id"
     const val KEY_MARMOT_REPLY_TO_INNER_ID = "key_marmot_reply_to_inner_id"
     const val KEY_MARMOT_REPLY_TO_INNER_AUTHOR = "key_marmot_reply_to_inner_author"
+
+    const val RETRY_REPLY_ACTION = "com.vitorpamplona.amethyst.RETRY_REPLY_ACTION"
 
     const val REPLY_GROUP_KEY_PREFIX = "com.vitorpamplona.amethyst.REPLY_NOTIFICATION"
     private const val REPLY_SUMMARY_ID_BASE = 0x50000
@@ -165,6 +171,22 @@ object NotificationUtils {
             val replyToInnerAuthor: String?,
         ) : ReplyAction
     }
+
+    /**
+     * Identity of the chat a conversation notification belongs to, so the system can treat it
+     * as one — see [ConversationShortcuts] for what that buys and why it needs a shortcut.
+     *
+     * [id] must be stable for the life of the conversation and unique across accounts; [label]
+     * is what the conversation is called, which is not always the sender (a group message is
+     * from a person but belongs to the group).
+     *
+     * Callers pass this only when the account allows message content in notifications: the
+     * shortcut it publishes is readable from the launcher.
+     */
+    data class Conversation(
+        val id: String,
+        val label: String,
+    )
 
     /** A prior message rendered above the main one in a MessagingStyle notification (thread context). */
     data class ParentMessage(
@@ -281,6 +303,7 @@ object NotificationUtils {
         replyAction: ReplyAction? = null,
         publicInlineReply: InlineReplyTarget? = null,
         addMarkRead: Boolean = true,
+        conversation: Conversation? = null,
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
     ) {
@@ -330,6 +353,10 @@ object NotificationUtils {
 
         val contentPendingIntent = contentIntent(applicationContext, notId, uri)
 
+        // Published before the notification that names it: a shortcutId the system cannot
+        // resolve is worse than none, so the id is only stamped below when this succeeded.
+        val shortcutId = conversation?.let { ConversationShortcuts.push(applicationContext, it, uri, sender, avatar) }
+
         val builderPublic =
             NotificationCompat
                 .Builder(applicationContext, channelId)
@@ -359,6 +386,15 @@ object NotificationUtils {
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .setWhen(time * 1000)
+
+        // The three halves of the conversation contract: the shortcut the shade resolves, the
+        // locus that ties this notification to it, and the people it is with. All three have to
+        // be present or the notification is ranked as an ordinary alert.
+        if (shortcutId != null) {
+            builder.setShortcutId(shortcutId)
+            builder.setLocusId(LocusIdCompat(shortcutId))
+        }
+        builder.addPerson(sender)
 
         when (replyAction) {
             is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, id, replyAction))
@@ -524,6 +560,101 @@ object NotificationUtils {
             .Builder(R.drawable.ic_action_mark_read, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
             .build()
+    }
+
+    // ---------------------------------------------------------------------
+    // Inline-reply feedback
+    // ---------------------------------------------------------------------
+
+    /** What became of a reply the user typed into the shade. */
+    sealed interface ReplyState {
+        /** On its way. [text] joins the thread so the user can see what they sent. */
+        data class Sending(
+            val text: String,
+        ) : ReplyState
+
+        /** It went out — drop the marker and leave the thread as it now reads. */
+        data object Sent : ReplyState
+
+        /**
+         * It did not go out. [retry] re-sends the same text on one tap; it carries the text
+         * itself, because a RemoteInput cannot be pre-filled and re-typing it is the thing
+         * this is here to prevent.
+         */
+        data class Failed(
+            val text: String,
+            val retry: PendingIntent,
+        ) : ReplyState
+    }
+
+    /**
+     * Re-renders the live notification for [notId] to say what happened to an inline reply.
+     *
+     * Until this existed a reply typed in the shade was posted into silence: the send either
+     * worked, and the notification vanished with no sign the message had gone, or it threw,
+     * and nothing at all happened — same notification, text gone, user believing it sent. A
+     * failed signature or a dead socket is indistinguishable from success.
+     *
+     * The live notification is the only place the reply can be shown, so it is rebuilt from
+     * itself rather than from scratch: [NotificationCompat.Builder] can recover a builder
+     * from a posted [Notification], and MessagingStyle can be extracted and extended. Callers
+     * that are not conversations (BigText notifications with an inline reply) have no thread
+     * to append to and get `setRemoteInputHistory`, which is the same idea in the shape that
+     * style supports.
+     *
+     * Returns false when nothing is posted under [notId] any more — the user swiped it away
+     * while the reply was in flight. Nothing is re-posted in that case: they are done with it.
+     */
+    fun NotificationManager.renderReplyState(
+        applicationContext: Context,
+        notId: Int,
+        state: ReplyState,
+    ): Boolean {
+        val existing = activeNotifications.firstOrNull { it.id == notId }?.notification ?: return false
+
+        val builder =
+            NotificationCompat
+                .Builder(applicationContext, existing)
+                // The thread already alerted when the message arrived; an update about the
+                // user's own reply must not buzz again.
+                .setOnlyAlertOnce(true)
+
+        val style = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(existing)
+
+        when (state) {
+            is ReplyState.Sending -> {
+                // `null` attributes the message to the MessagingStyle's own user.
+                style?.addMessage(state.text, System.currentTimeMillis(), null as Person?)
+                    ?: builder.setRemoteInputHistory(arrayOf(state.text))
+                builder.setSubText(stringRes(applicationContext, R.string.app_notification_reply_sending))
+            }
+
+            ReplyState.Sent -> {
+                // Sending already put the text in the thread — appending here would double it.
+                builder.setSubText(null)
+            }
+
+            is ReplyState.Failed -> {
+                if (style == null) builder.setRemoteInputHistory(arrayOf(state.text))
+                builder.setSubText(stringRes(applicationContext, R.string.app_notification_reply_failed))
+                // Rebuilt from the posted notification, so the actions come with it; without
+                // clearing, every failed attempt would stack another Retry.
+                builder.clearActions()
+                builder.addAction(
+                    NotificationCompat.Action
+                        .Builder(
+                            R.drawable.ic_action_reply,
+                            stringRes(applicationContext, R.string.app_notification_reply_retry),
+                            state.retry,
+                        ).build(),
+                )
+            }
+        }
+
+        style?.let { builder.setStyle(it) }
+
+        notify(notId, builder.build())
+        return true
     }
 
     // ---------------------------------------------------------------------

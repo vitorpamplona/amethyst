@@ -1000,6 +1000,9 @@
 
     <string name="app_notification_reply_label">Reply</string>
     <string name="app_notification_mark_read_label">Mark Read</string>
+    <string name="app_notification_reply_sending">Sending…</string>
+    <string name="app_notification_reply_failed">Not sent</string>
+    <string name="app_notification_reply_retry">Retry</string>
     <string name="app_notification_me">Me</string>
     <string name="app_notification_new_message">New message</string>
     <string name="app_notification_added_to_group">You\'ve been added to %1$s</string>
