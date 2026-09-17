@@ -534,7 +534,7 @@ reads an optional per-release changelog from
 
 ## Bootstrap runbook (one-time)
 
-> **Status as of v1.15.2:** both Homebrew packages are now live upstream — the
+> **Status as of v1.16.0:** both Homebrew packages are now live upstream — the
 > `amethyst-nostr` cask (`Homebrew/homebrew-cask`, at 1.14.0) and the `amy`
 > formula (`Homebrew/homebrew-core`) both answer 200 on `formulae.brew.sh`, so
 > `bump-homebrew.yml` finally has something to bump. **Winget is still not
@@ -588,7 +588,7 @@ The token then lives only in that maintainer's shell:
 
 ```bash
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.15.2
+scripts/bump-homebrew-cask.sh v1.16.0
 ```
 
 Create one at
@@ -604,7 +604,7 @@ Same split, and it needs **no token at all**. `scripts/bump-winget.sh` drives
 runs fine from macOS or Linux:
 
 ```bash
-scripts/bump-winget.sh v1.15.2
+scripts/bump-winget.sh v1.16.0
 ```
 
 CI (`bump-winget.yml`, `GITHUB_TOKEN` only) does the bookkeeping: downloads the
@@ -690,7 +690,7 @@ Caveats that the maintainer must weigh before submitting:
 - **Bundle size.** The bundle used to be ~70 MB because `:commons` leaked
   Compose/Skiko jars onto the CLI classpath. Compose UI now lives in
   `:commonsUI`, which `:cli` does not depend on: the JVM tarball is ~55 MB
-  and the jlink image tarball ~80 MB (1.15.2, Linux x64). The release
+  and the jlink image tarball ~80 MB (1.16.0, Linux x64). The release
   workflow caps every amy asset at 120 MB.
 
 After the formula merges, the `livecheck` block lets homebrew-core's BrewTestBot
