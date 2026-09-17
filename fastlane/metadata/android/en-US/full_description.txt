@@ -13,23 +13,30 @@ therefore it works.</p>
 <li>Browse dedicated feeds: articles, pictures, short videos, live streams, podcasts, music, communities,
 classifieds, calendars and more.</li>
 <li>Send and receive Bitcoin Lightning zaps.</li>
-<li>Share your workouts &mdash; see below.</li>
+<li>Track your training and share a workout &mdash; see below.</li>
 </ul>
-<p><b>Workouts</b></p>
-<p>Amethyst has a Workouts section where you can publish a summary of a run, ride, walk, hike, swim, row
-or gym session so the people who follow you can see what you did. Open the left drawer, tap
-<i>Workouts</i>, then the + button to write one.</p>
-<p>Typing every number by hand is tedious, so Amethyst can pre-fill the post from a workout your watch or
-fitness app already saved to Android Health Connect (Samsung Health, Google Fit, Fitbit, Garmin Connect,
-Strava and others all write there). With your permission, Amethyst reads finished workouts from the last
-7 days and offers them as one-tap suggestions: pick one and the activity, duration, distance, calories,
-heart rate, steps and elevation gain are filled in for you. You review the post and decide whether to
-publish it.</p>
-<p>This is optional and read-only. Amethyst asks for Health Connect permission only when you open the New
-Workout composer, never reads in the background, never writes to Health Connect, never asks for your
-exercise route or location, and never uploads anything until you publish a post yourself. You can switch
-it off under Settings &rarr; Compose Settings, or revoke access in Health Connect at any time. Full
-details are in the privacy policy at
+<p><b>My Fitness &mdash; track your training</b></p>
+<p>Amethyst includes a personal training dashboard. Open the left drawer and tap <i>My Fitness</i>,
+under <i>You</i>. It summarises the workouts you have logged in Amethyst, and &mdash; with your
+permission &mdash; the ones your watch or fitness app has already saved to Android Health Connect
+(Samsung Health, Google Fit, Fitbit, Garmin Connect, Strava and others all write there). It shows
+you:</p>
+<ul>
+<li>How much you trained this week, and whether that is up or down on last week.</li>
+<li>Your four-week weekly average for time, distance, steps and climb.</li>
+<li>Where your time goes &mdash; running, cycling, walking, hiking, swimming, rowing, the gym.</li>
+<li>Your best efforts: longest distance, longest workout, biggest climb, most steps, highest heart rate.</li>
+<li>How many days you trained, and your current streak of consecutive active days.</li>
+</ul>
+<p>All of it is computed on your phone and shown to you. Nothing is uploaded to produce it, and you
+never have to post anything to use it.</p>
+<p><b>Sharing a workout (optional)</b></p>
+<p>If you want to tell your followers about a particular session, tap <i>Share this workout</i> on any
+row. Amethyst opens a post pre-filled with that workout's figures; you review it and decide whether to
+publish. One workout at a time, always with your confirmation, never automatic.</p>
+<p>The Health Connect integration is read-only. Amethyst never writes to Health Connect, never reads in
+the background, never asks for your exercise route or location, and only ever looks at the last four
+weeks. You can revoke access in Health Connect at any time. Full details are in the privacy policy at
 <a href='https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md' target='_blank' rel='nofollow noopener'>github.com/vitorpamplona/amethyst</a>.</p>
 <p>Amethyst is free and open source (MIT). There is no Amethyst server and no Amethyst account: your
 posts go straight to the Nostr relays you configure.</p>

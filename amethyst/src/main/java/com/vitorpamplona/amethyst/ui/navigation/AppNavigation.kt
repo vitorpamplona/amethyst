@@ -316,6 +316,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletWi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness.MyFitnessScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -467,6 +468,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachments, it.message) }
         composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.MyFitness> { MyFitnessScreen(accountViewModel, nav) }
         composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }

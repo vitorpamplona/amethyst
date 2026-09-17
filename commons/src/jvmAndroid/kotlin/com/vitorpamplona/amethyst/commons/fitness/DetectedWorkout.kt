@@ -18,13 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.workouts.health
+package com.vitorpamplona.amethyst.commons.fitness
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 
+/** Where a workout in the training log came from. */
+enum class WorkoutOrigin {
+    /** Recorded by a watch or fitness app and read from Health Connect. */
+    HEALTH_CONNECT,
+
+    /** A kind 1301 the user published themselves — typed into Amethyst, or posted from another client. */
+    PUBLISHED,
+}
+
 /**
- * A finished workout read from Health Connect and mapped to the fields Amethyst
+ * A finished workout in the user's training log: read from Health Connect, or
+ * recovered from a kind 1301 they published. Carries the fields Amethyst
  * can publish as a NIP-101e kind 1301 event. Platform-neutral and free of any
  * Health Connect types so it can feed the navigation route and the suggestion
  * UI directly.
@@ -49,6 +59,21 @@ data class DetectedWorkout(
     val elevationGainMeters: Double?,
     /** Human-readable name of the app/device that wrote the record (e.g. "Samsung Health"). */
     val source: String,
+    /**
+     * Which store this came from. Defaults to Health Connect because that is where the type
+     * originated and where every constructor but the published-event mapper still builds from.
+     */
+    val origin: WorkoutOrigin = WorkoutOrigin.HEALTH_CONNECT,
+    /**
+     * Whether a kind 1301 for this workout already exists.
+     *
+     * Not the same question as [origin]: a workout read from Health Connect is published the
+     * moment the user shares it, and [TrainingLog.merge] keeps the richer Health Connect copy
+     * rather than the published one — so the survivor is still [WorkoutOrigin.HEALTH_CONNECT]
+     * while a kind 1301 for it is already out there. Anything offering to publish a workout
+     * must read this, not the origin, or it offers to post the same effort twice.
+     */
+    val alreadyPublished: Boolean = false,
     /**
      * How many Health Connect sessions this workout represents. 1 for a raw
      * session; higher when [WorkoutMerger] combined several close-by same-type

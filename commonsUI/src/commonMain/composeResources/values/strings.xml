@@ -684,6 +684,47 @@
     <string name="health_connect_rationale_limit_publish">Nothing leaves your phone until you tap a suggestion and publish the post yourself. Amethyst has no server: the post goes to the Nostr relays you configured.</string>
     <string name="health_connect_rationale_limit_optional">The whole feature is optional. Turn it off under Settings → Compose, or revoke the permissions in Health Connect at any time — the rest of Amethyst keeps working.</string>
     <string name="health_connect_rationale_privacy_policy">Read the full privacy policy</string>
+    <string name="my_fitness_title">My Fitness</string>
+    <string name="my_fitness_window">Last 4 weeks</string>
+    <string name="my_fitness_window_note">The last four whole weeks of your training: the workouts you have published, plus anything Health Connect records on this phone. Amethyst works the summary out on the device and publishes none of it.</string>
+    <string name="my_fitness_this_week">This week</string>
+    <string name="my_fitness_vs_last_week">vs last week</string>
+    <string name="my_fitness_weekly_average">Weekly average</string>
+    <string name="my_fitness_workouts">Workouts</string>
+    <string name="my_fitness_active_days">Active days</string>
+    <string name="my_fitness_streak">Day streak</string>
+    <string name="my_fitness_time">Time</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
+    <string name="my_fitness_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="my_fitness_duration_minutes">%1$dm</string>
+    <string name="my_fitness_duration_seconds">%1$ds</string>
+    <string name="my_fitness_distance">Distance</string>
+    <string name="my_fitness_calories">Calories</string>
+    <string name="my_fitness_steps">Steps</string>
+    <string name="my_fitness_elevation">Climb</string>
+    <string name="my_fitness_avg_heart_rate">Avg HR</string>
+    <string name="my_fitness_max_heart_rate">Max HR</string>
+    <string name="my_fitness_by_activity">By activity</string>
+    <string name="my_fitness_bests">Best efforts</string>
+    <string name="my_fitness_best_longest_distance">Longest distance</string>
+    <string name="my_fitness_best_longest_duration">Longest workout</string>
+    <string name="my_fitness_best_biggest_climb">Biggest climb</string>
+    <string name="my_fitness_best_most_steps">Most steps</string>
+    <string name="my_fitness_best_highest_heart_rate">Highest heart rate</string>
+    <string name="my_fitness_recent">Recent workouts</string>
+    <string name="my_fitness_empty">Nothing logged in the last 4 weeks. Workouts you post, and any your watch records, show up here.</string>
+    <string name="my_fitness_connect_title">Track your training</string>
+    <string name="my_fitness_connect_message">Connect Health Connect to see your weekly totals, week-over-week trend, best efforts and training streak. Everything stays on your phone.</string>
+    <string name="my_fitness_connect_banner">Connect Health Connect to add the workouts your watch records, with heart rate, steps and climb.</string>
+    <string name="my_fitness_connect_button">Connect</string>
+    <string name="my_fitness_share">Share this workout</string>
+    <string name="my_fitness_unit_bpm">bpm</string>
+    <string name="my_fitness_unit_kcal">kcal</string>
+    <string name="my_fitness_unit_km">km</string>
+    <string name="my_fitness_unit_mi">mi</string>
+    <string name="my_fitness_unit_m">m</string>
+    <string name="my_fitness_unit_ft">ft</string>
     <string name="nsite_none_found">No nSites found yet.</string>
     <string name="browser_reload">Reload</string>
     <string name="browser_unsupported">The in-app browser needs Android 11 or newer.</string>
@@ -1255,6 +1296,11 @@
     <string name="call_calling">Calling\u2026</string>
     <string name="call_connecting">Connecting\u2026</string>
     <string name="call_ended">Call ended</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
+    <string name="call_duration_minutes_seconds">%1$02d:%2$02d</string>
+    <string name="call_duration_hours_minutes_seconds">%1$d:%2$02d:%3$02d</string>
     <string name="call_dismiss">Dismiss</string>
     <string name="call_switch_camera">Switch camera</string>
     <string name="call_voice">Voice call</string>

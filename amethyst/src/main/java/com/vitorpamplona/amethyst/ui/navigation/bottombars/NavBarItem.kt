@@ -40,6 +40,7 @@ enum class NavBarItem {
     DISCOVER,
     NOTIFICATIONS,
     PROFILE,
+    MY_FITNESS,
     MY_LISTS,
     BOOKMARKS,
     WEB_BOOKMARKS,
@@ -254,6 +255,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = R.string.workouts,
                 icon = MaterialSymbols.DirectionsRun,
                 resolveRoute = { Route.Workouts },
+            ),
+        NavBarItem.MY_FITNESS to
+            NavBarItemDef(
+                id = NavBarItem.MY_FITNESS,
+                labelRes = R.string.my_fitness,
+                icon = MaterialSymbols.AutoMirrored.ShowChart,
+                resolveRoute = { Route.MyFitness },
             ),
         NavBarItem.GIT_REPOSITORIES to
             NavBarItemDef(
@@ -505,6 +513,7 @@ val BottomBarCategories: List<NavBarCategory> =
             MaterialSymbols.AccountCircle,
             listOf(
                 NavBarItem.PROFILE,
+                NavBarItem.MY_FITNESS,
                 NavBarItem.MY_LISTS,
                 NavBarItem.BOOKMARKS,
                 NavBarItem.WEB_BOOKMARKS,

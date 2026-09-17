@@ -116,6 +116,9 @@ sealed class Route {
 
     @Serializable object Workouts : Route()
 
+    /** The signed-in user's own training summary, read from Health Connect. Not a feed. */
+    @Serializable object MyFitness : Route()
+
     @Serializable object GitRepositories : Route()
 
     @Serializable object Highlights : Route()
