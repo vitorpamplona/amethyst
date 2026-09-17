@@ -429,6 +429,8 @@
     <string name="workout_suggestion_connect_message">Deja que Amethyst lea los entrenamientos terminados de Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) y sugiera una publicación.</string>
     <string name="workout_suggestion_connect_button">Conectar</string>
     <string name="workout_from_health_connect">Desde Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">No se han encontrado nSites todavía.</string>
     <string name="browser_reload">Recargar</string>
     <string name="browser_unsupported">El navegador integrado requiere Android 11 o superior.</string>
@@ -748,6 +750,9 @@
     <string name="call_calling">Llamando…</string>
     <string name="call_connecting">Conectando…</string>
     <string name="call_ended">Llamada finalizada</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Descartar</string>
     <string name="call_switch_camera">Cambiar cámara</string>
     <string name="call_voice">Llamada de voz</string>

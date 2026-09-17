@@ -432,6 +432,8 @@
     <string name="workout_suggestion_connect_message">Amethyst'in Health Connect'ten (Samsung Health, Google Fit, Fitbit, Garmin…) tamamlanan antrenmanları okumasına ve gönderi önerisinde bulunmasına izin ver.</string>
     <string name="workout_suggestion_connect_button">Bağlan</string>
     <string name="workout_from_health_connect">Health Connect'ten</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Henüz hiç nSite bulunamadı.</string>
     <string name="browser_reload">Yenile</string>
     <string name="browser_unsupported">Uygulama içi tarayıcı Android 11 veya daha yeni bir sürüm gerektirir.</string>
@@ -752,6 +754,9 @@
     <string name="call_calling">Aranıyor…</string>
     <string name="call_connecting">Bağlanıyor…</string>
     <string name="call_ended">Arama bitti</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Kapat</string>
     <string name="call_switch_camera">Kamerayı değiştir</string>
     <string name="call_voice">Sesli arama</string>

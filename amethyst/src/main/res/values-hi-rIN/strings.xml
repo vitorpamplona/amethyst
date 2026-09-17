@@ -2390,4 +2390,6 @@
          rationale screen. Needs to be an Android resource (not a commons Compose resource)
          because android:label on the manifest entry can only reference @string/. -->
     <string name="health_connect_rationale_activity_label">स्वास्थ्य संयोजन तथा अमेथिस्ट</string>
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
 </resources>

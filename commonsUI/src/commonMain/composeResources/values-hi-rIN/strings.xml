@@ -666,6 +666,8 @@
     <string name="health_connect_rationale_limit_publish">आपके संचारयन्त्र से तब तक कुछ नहीं जाएगा जब तक आप एक सुझाव नहीं दबाते तथा पत्र का प्रकाशन आप स्वयम नहीं करते। अमेथिस्ट का कोई सेवासंगणक नहीं। पत्र उन नोस्टर पुनःप्रसारकों को जाएगा जिनको आपने समाकृत कर रखे हैं।</string>
     <string name="health_connect_rationale_limit_optional">यह सम्पूर्ण सुविधा विकल्पात्मक है। इसे निष्क्रिय करें स्थापना विकल्पों में सम्पादन पटल में। अथवा स्वास्थ्य संयोजन में अनुमतियाँ का निराकरण करें कभी भी। अमेथिस्ट के शेष भाग कार्य करते रहेंगे।</string>
     <string name="health_connect_rationale_privacy_policy">सम्पूर्ण गोपनीयता नीति पढें</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">कोई नोस्टरस्थान प्राप्त नहीं अब तक।</string>
     <string name="browser_reload">पुनःआवहन</string>
     <string name="browser_unsupported">क्रमकाभ्यन्तर जालवीक्षक के लिए आण्ड्रोइड ग्यारह अथवा नवीनतर आवश्यक।</string>
@@ -1237,6 +1239,9 @@
     <string name="call_calling">आह्वान चालू\u2026</string>
     <string name="call_connecting">संयोजन बन रहा है\u2026</string>
     <string name="call_ended">आह्वान समाप्त</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">हटाएँ</string>
     <string name="call_switch_camera">अन्य चित्रग्राहक</string>
     <string name="call_voice">ध्‍वनि आह्वान</string>
