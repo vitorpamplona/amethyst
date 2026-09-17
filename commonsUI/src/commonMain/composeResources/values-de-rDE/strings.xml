@@ -246,6 +246,7 @@
     <string name="lightning_invoice">Lightning-Rechnung</string>
     <string name="invoice_expired">Abgelaufen</string>
     <string name="clink_lightning_offer">CLINK-Zahlungsanfrage</string>
+    <string name="bolt12_lightning_offer">BOLT12-Angebot</string>
     <string name="clink_offer_pay_to">An</string>
     <string name="clink_confirm_payment_title">Zahlung bestätigen</string>
     <string name="clink_offer_amount_sats">Betrag (Sats)</string>
