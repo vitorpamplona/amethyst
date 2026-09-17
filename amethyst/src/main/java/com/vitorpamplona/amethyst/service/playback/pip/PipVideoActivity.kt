@@ -60,17 +60,22 @@ class PipVideoActivity : ComponentActivity() {
                     // decoder. Arriving without one means the promotion did not survive (a stale
                     // PiP intent after the process was reclaimed), so take a player out now.
                     LaunchedEffect(mediaItem) {
-                        if (playback.promoted.value != null) return@LaunchedEffect
-
                         val pooled =
-                            playback.promoteDetached(
-                                VideoRequest(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.repeatMode),
-                                applicationContext,
-                            )
+                            playback.promoted.value
+                                ?: playback.promoteDetached(
+                                    VideoRequest(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.repeatMode),
+                                    applicationContext,
+                                )
+
                         if (pooled.player.currentMediaItem?.mediaId != mediaItem.item.mediaId) {
                             pooled.player.setMediaItem(mediaItem.item)
                             pooled.player.prepare()
                         }
+
+                        // Applied on both paths, not just the fallback: opening the window is a
+                        // request to play, and the handed-over player may well arrive paused —
+                        // autoplay switched off, AutoReplayLimiter having stopped the loop, or the
+                        // user having paused it before tapping the button.
                         pooled.player.volume = if (DEFAULT_MUTED_SETTING.value) 0f else 1f
                         pooled.player.playWhenReady = true
                     }

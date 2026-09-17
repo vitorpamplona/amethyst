@@ -25,7 +25,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -81,6 +80,12 @@ fun GetVideoController(
     // different video gets its own slot rather than inheriting the previous one's checkout.
     val slot = remember(mediaItem) { Any() }
 
+    // The player this slot currently holds. Deliberately not Compose state: the background timer
+    // below has to see it even while the promotion has taken the video off screen — which is
+    // exactly when `controllerState` is null by design — and it fires while the activity is
+    // STOPPED, where no recomposition could deliver a new value anyway.
+    val heldPlayer = remember(mediaItem) { arrayOfNulls<Player>(1) }
+
     val controllerState by produceState<MediaControllerState?>(null, mediaItem) {
         val playback = Amethyst.instance.videoPlayback
         val request = VideoRequest(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.repeatMode)
@@ -93,6 +98,7 @@ fun GetVideoController(
 
             val pooled = playback.attach(slot, request)
             val player = pooled.player
+            heldPlayer[0] = player
 
             try {
                 // A warm player can be handed back still carrying a prior PlaybackException (e.g. a
@@ -140,6 +146,7 @@ fun GetVideoController(
                 }
             } finally {
                 value = null
+                heldPlayer[0] = null
                 // Safe whether or not the player is promoted: the coordinator only returns it to
                 // the pool once neither this slot nor the promotion is holding it.
                 playback.detach(slot)
@@ -147,7 +154,7 @@ fun GetVideoController(
         }
     }
 
-    ReleasePlayerWhenBackgroundedFor(BACKGROUND_RELEASE_TIMEOUT_MS, controllerState, keepAlive)
+    ReleasePlayerWhenBackgroundedFor(BACKGROUND_RELEASE_TIMEOUT_MS, heldPlayer, keepAlive)
 
     controllerState?.let { inner(it) }
 }
@@ -156,18 +163,17 @@ fun GetVideoController(
  * Flips [keepAlive] to `false` once the host activity has been at ON_PAUSE for [timeoutMs], so the
  * producer upstream hands the player back. ON_RESUME cancels any pending timer and flips it back.
  *
- * A promoted playback is exempt: it is opted into outliving the screen it started on.
+ * A promoted playback is exempt: it is opted into outliving the screen it started on, and detaching
+ * the slot would make the next resume acquire a *second* player for a video the promotion is still
+ * holding — two decoders for one video.
  */
 @Composable
 private fun ReleasePlayerWhenBackgroundedFor(
     timeoutMs: Long,
-    controllerState: MediaControllerState?,
+    heldPlayer: Array<Player?>,
     keepAlive: MutableStateFlow<Boolean>,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    // The observer outlives any single composition pass, so read the player through an updated
-    // holder rather than capturing whatever was in scope when the effect was set up.
-    val currentState by rememberUpdatedState(controllerState)
 
     DisposableEffect(lifecycleOwner, keepAlive) {
         val scope = CoroutineScope(Dispatchers.Main)
@@ -181,7 +187,7 @@ private fun ReleasePlayerWhenBackgroundedFor(
                         timeoutJob =
                             scope.launch {
                                 delay(timeoutMs)
-                                if (!Amethyst.instance.videoPlayback.isPromoted(currentState?.controller)) {
+                                if (!Amethyst.instance.videoPlayback.isPromoted(heldPlayer[0])) {
                                     keepAlive.value = false
                                 }
                             }

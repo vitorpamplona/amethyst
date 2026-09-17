@@ -102,17 +102,12 @@ class VideoPlayback(
     ) {
         if (coordinator.isPromoted(checkout)) return
 
-        coordinator.promoted.value?.let { releaseSystemAudio(it.player) }
+        releaseDisplacedAudio()
         claimSystemAudio(checkout.player)
         coordinator.promote(checkout)
         Log.d(TAG) { "Promoted ${checkout.player.currentMediaItem?.mediaId}" }
 
-        try {
-            context.applicationContext.startService(Intent(context.applicationContext, PlaybackService::class.java))
-        } catch (e: IllegalStateException) {
-            // Losing the race to a backgrounding costs the shade controls, not the playback.
-            Log.w(TAG, "Could not start PlaybackService for the promoted playback", e)
-        }
+        startHost(context)
     }
 
     /** Promotes a playback no slot is showing — a PiP window reopening after a process restart. */
@@ -120,15 +115,29 @@ class VideoPlayback(
         request: VideoRequest,
         context: Context,
     ): PooledPlayer {
+        // Before the coordinator hands the displaced checkout back to the pool: a player must never
+        // return still holding a focus request and a becoming-noisy receiver, or the next muted feed
+        // video that reuses it keeps arbitrating with other apps.
+        releaseDisplacedAudio()
+
         val checkout = coordinator.promoteDetached(request)
         claimSystemAudio(checkout.player)
 
+        startHost(context)
+        return checkout
+    }
+
+    private fun releaseDisplacedAudio() {
+        coordinator.promoted.value?.let { releaseSystemAudio(it.player) }
+    }
+
+    private fun startHost(context: Context) {
         try {
             context.applicationContext.startService(Intent(context.applicationContext, PlaybackService::class.java))
         } catch (e: IllegalStateException) {
+            // Losing the race to a backgrounding costs the shade controls, not the playback.
             Log.w(TAG, "Could not start PlaybackService for the promoted playback", e)
         }
-        return checkout
     }
 
     /**

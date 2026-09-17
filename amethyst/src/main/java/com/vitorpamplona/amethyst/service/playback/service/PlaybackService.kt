@@ -173,10 +173,14 @@ class PlaybackService : MediaSessionService() {
         scope.cancel()
         detach()
 
-        // Hands the player back to its pool. Reached both ways round: an explicit demote stops this
-        // service, and media3 stopping it (pauseAllPlayersAndStopSelf when the task is swiped away
-        // with nothing playing) has to give the slot up too.
-        Amethyst.instance.videoPlayback.demote()
+        // Deliberately does NOT demote. This service hosts the session; it does not own the
+        // playback. PipVideoActivity is launchMode=singleInstance, so it sits in its own task and
+        // survives the main task being swiped off Recents — at which point media3's default
+        // onTaskRemoved calls pauseAllPlayersAndStopSelf() and lands here. Demoting would hand the
+        // player back to the pool out from under a picture-in-picture window that is still on
+        // screen. The same applies to the ForegroundServiceStartNotAllowedException path above.
+        // Whoever promoted gives the slot up (HoldPromotedPlayback), and AppModules.terminate()
+        // sweeps anything still held at process teardown.
 
         // When nothing is playing media3 posts through NotificationManager.notify() and takes the
         // service back out of the foreground, so the notification is NOT owned by the foreground

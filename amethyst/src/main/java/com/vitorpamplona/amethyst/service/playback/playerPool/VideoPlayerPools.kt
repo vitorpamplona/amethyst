@@ -62,8 +62,12 @@ class VideoPlayerPools(
     // and how many the pool may retain, since each one pins a MediaCodec instance.
     private val decoderBudget by lazy { SimultaneousPlaybackCalculator.max(appContext) }
 
-    private var direct: ExoPlayerPool? = null
-    private var proxied: ExoPlayerPool? = null
+    // Volatile because [trimMemory] and [destroy] are not main-thread callers: AppModules.trim runs
+    // from the heap-pressure watchdog on the IO scope, and a stale null read there would silently
+    // skip the reclaim it was woken up to do.
+    @Volatile private var direct: ExoPlayerPool? = null
+
+    @Volatile private var proxied: ExoPlayerPool? = null
 
     private fun newPool(proxied: Boolean): ExoPlayerPool {
         val dataSourceFactory = OkHttpDataSource.Factory(callFactory(proxied))
@@ -131,7 +135,7 @@ class VideoPlayerPools(
         return PooledPlayer(player, pool)
     }
 
-    /** Releases the warm (paused-with-buffer) half of both pools under memory pressure. */
+    /** Releases the warm (paused-with-buffer) half of both pools under memory pressure. Any thread. */
     fun trimMemory() {
         direct?.releaseWarmPool()
         proxied?.releaseWarmPool()
