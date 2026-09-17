@@ -32,17 +32,18 @@ class OptionTag(
     companion object {
         const val TAG_NAME = "option"
 
-        // The code is what identifies the option and what a `response` tag points at, so it is the
-        // only required field. An empty label is kept rather than dropped: discarding the tag would
-        // take the code out of the poll, and a tally built from the codes that survived would count
-        // every vote cast for it as a vote for nothing.
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        // Both fields are required. NIP-88 defines an option as an id "followed by an option
+        // label field", and an option nobody can read is not a choice anyone can make: rendering
+        // it as a blank, tappable row would collect votes for a question the voter never saw.
+        // A poll that ships one is malformed, and the option is dropped rather than shown empty.
+        fun isTag(tag: Array<String>) = tag.has(2) && tag[0] == TAG_NAME && tag[1].isNotEmpty() && tag[2].isNotEmpty()
 
         fun parse(tag: Array<String>): OptionTag? {
-            ensure(tag.has(1)) { return null }
+            ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return OptionTag(tag[1], tag.getOrNull(2) ?: "")
+            ensure(tag[2].isNotEmpty()) { return null }
+            return OptionTag(tag[1], tag[2])
         }
 
         fun assemble(

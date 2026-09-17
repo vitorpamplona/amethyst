@@ -134,17 +134,22 @@ class Nip88PollTagsTest {
     }
 
     @Test
-    fun anOptionKeepsItsCodeEvenWithoutALabel() {
-        // Dropping the whole tag would take the option's code out of the poll, and a tally built
-        // from the surviving codes silently discards every vote cast for it.
-        val option = OptionTag.parse(arrayOf("option", "qj518h583", ""))
-        assertEquals("qj518h583", option?.code)
-        assertEquals("", option?.label)
+    fun anOptionNeedsBothAnIdAndALabel() {
+        assertEquals("qj518h583" to "Yay", OptionTag.parse(arrayOf("option", "qj518h583", "Yay"))?.let { it.code to it.label })
 
-        // A code is what identifies the option, so that is what remains required.
-        assertNull(OptionTag.parse(arrayOf("option", "")))
+        // NIP-88 defines an option as an id "followed by an option label field", and an option
+        // nobody can read is not a choice anyone can make — a blank tappable row would collect
+        // votes for a question the voter never saw. Both fields are required, and isTag agrees
+        // with parse about that.
+        assertNull(OptionTag.parse(arrayOf("option", "qj518h583", "")))
+        assertNull(OptionTag.parse(arrayOf("option", "qj518h583")))
+        assertNull(OptionTag.parse(arrayOf("option", "", "Yay")))
         assertNull(OptionTag.parse(arrayOf("option")))
         assertNull(OptionTag.parse(arrayOf("response", "qj518h583", "Yay")))
+
+        assertTrue(OptionTag.isTag(arrayOf("option", "qj518h583", "Yay")))
+        assertFalse(OptionTag.isTag(arrayOf("option", "qj518h583", "")))
+        assertFalse(OptionTag.isTag(arrayOf("option", "qj518h583")))
     }
 
     @Test
