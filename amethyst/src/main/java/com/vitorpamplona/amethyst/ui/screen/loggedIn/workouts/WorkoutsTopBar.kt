@@ -42,7 +42,6 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 fun WorkoutsTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
-    showFeedFilter: Boolean,
 ) {
     val list by accountViewModel.account.settings.defaultWorkoutsFollowList
         .collectAsStateWithLifecycle()
@@ -53,7 +52,6 @@ fun WorkoutsTopBar(
     val seed = remember(list, me) { SearchSeed.merge(SearchSeed.ofKinds(WorkoutRecordEvent.KIND), list.asSearchQuery(me)) }
 
     UserDrawerSearchTopBar(accountViewModel, nav, seed) {
-        if (!showFeedFilter) return@UserDrawerSearchTopBar
         WorkoutsTopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
@@ -70,7 +68,7 @@ private fun WorkoutsTopNavFilterBar(
     accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
-    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
+    val allLists by followListsModel.workoutRoutes.collectAsStateWithLifecycle()
 
     FeedFilterSpinner(
         placeholderCode = listName,
