@@ -89,7 +89,7 @@ android {
                 .get()
                 .toInt()
         versionName = generateVersionName(libs.versions.app.get(), rootDir)
-        buildConfigField("String", "RELEASE_NOTES_ID", "\"8fce45589ea44df75e828a04c7d70bb4fabedd6ffc1946a920b2f0c7c990ff9f\"")
+        buildConfigField("String", "RELEASE_NOTES_ID", "\"f7914e7a7e293988485439eb2bea29c09c388d54c452c4a19f89e106dbf1969e\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
