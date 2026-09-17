@@ -36,6 +36,30 @@ class ThreadCpuSamplerTest {
     @get:Rule
     val temp = TemporaryFolder()
 
+    /** A tid no fixture uses, so tests that are not about the main thread never hit that branch. */
+    private val noMainTid = -1
+
+    /** Representative kernel `comm` values, capped at 15 chars as the kernel caps them. */
+    private val sampleThreadNames =
+        listOf(
+            "OkHttp TaskRunner",
+            "Okio Watchdog",
+            "DefaultDispatch",
+            "RenderThread",
+            "hwuiTask",
+            "HeapTaskDaemon",
+            "FinalizerDaemon",
+            "Jit thread pool",
+            "Runtime worker",
+            "tokio-runtime-w",
+            "ExoPlayer:Playb",
+            "AudioTrack",
+            "binder:123_4",
+            "pool-3-thread-1",
+            "Thread-9",
+            "queued-work-loo",
+        )
+
     // ------------------------------------------------------------------
     // /proc/<tid>/stat parsing
     // ------------------------------------------------------------------
@@ -317,7 +341,7 @@ class ThreadCpuSamplerTest {
             reader.set(10, "OkHttp TaskRunner", 0)
             reader.set(11, "DefaultDispatch", 0)
 
-            val sampler = ThreadCpuSampler(accountant, { foreground }, reader) { processMs }
+            val sampler = ThreadCpuSampler(accountant, { foreground }, reader, { processMs }, mainTid = noMainTid)
             sampler.register()
 
             // 50 ticks = 500ms of network work in the foreground.
@@ -349,7 +373,7 @@ class ThreadCpuSamplerTest {
             val reader = FakeReader()
             reader.set(10, "OkHttp TaskRunner", 9_999)
 
-            ThreadCpuSampler(accountant, { true }, reader) { 99_990L }.register()
+            ThreadCpuSampler(accountant, { true }, reader, { 99_990L }, mainTid = noMainTid).register()
 
             assertTrue(accountant.allDaysIncludingLive()[0L].orEmpty().isEmpty())
         }
@@ -363,7 +387,7 @@ class ThreadCpuSamplerTest {
             var processMs = 0L
             reader.set(10, "OkHttp TaskRunner", 0)
 
-            val sampler = ThreadCpuSampler(accountant, { true }, reader) { processMs }
+            val sampler = ThreadCpuSampler(accountant, { true }, reader, { processMs }, mainTid = noMainTid)
             sampler.register()
 
             reader.set(11, "DefaultDispatch", 30)
@@ -387,7 +411,7 @@ class ThreadCpuSamplerTest {
             var processMs = 0L
             reader.set(10, "OkHttp TaskRunner", 0)
 
-            val sampler = ThreadCpuSampler(accountant, { true }, reader) { processMs }
+            val sampler = ThreadCpuSampler(accountant, { true }, reader, { processMs }, mainTid = noMainTid)
             sampler.register()
 
             // The live thread accounts for 100ms; the process burned 450ms. The
@@ -412,7 +436,7 @@ class ThreadCpuSamplerTest {
             reader.set(11, "DefaultDispatch", 0)
             reader.set(12, "RenderThread", 0)
 
-            val sampler = ThreadCpuSampler(accountant, { true }, reader) { processMs }
+            val sampler = ThreadCpuSampler(accountant, { true }, reader, { processMs }, mainTid = noMainTid)
             sampler.register()
 
             reader.ticks[10] = 11
@@ -439,7 +463,7 @@ class ThreadCpuSamplerTest {
             var processMs = 0L
             reader.set(10, "OkHttp TaskRunner", 500)
 
-            val sampler = ThreadCpuSampler(accountant, { true }, reader) { processMs }
+            val sampler = ThreadCpuSampler(accountant, { true }, reader, { processMs }, mainTid = noMainTid)
             sampler.register()
 
             // tid 10 exits.
@@ -459,6 +483,78 @@ class ThreadCpuSamplerTest {
             assertNull(counters[UsageKeys.cpuBucket(ThreadCpuBuckets.NET, UsageKeys.FG)])
         }
 
+    /**
+     * The UI thread has to be separable — it is the one whose CPU a user
+     * actually feels. Its `comm` is the truncated process name, which carries
+     * no marker any prefix table could match, so it is identified by tid; when
+     * it was not, main-thread CPU silently landed in `misc`.
+     */
+    @Test
+    fun theMainThreadIsItsOwnBucket() =
+        runTest {
+            val accountant = accountant(backgroundScope)
+            val reader = FakeReader()
+            var processMs = 0L
+            // The name a real Android main thread carries: the truncated app id.
+            reader.set(7, "torpamplona.ame", 0)
+
+            val sampler = ThreadCpuSampler(accountant, { true }, reader, { processMs }, mainTid = 7)
+            sampler.register()
+
+            reader.ticks[7] = 25
+            processMs = 250
+            sampler.sample()
+
+            val counters = accountant.allDaysIncludingLive()[0L].orEmpty()
+            assertEquals(250L, counters[UsageKeys.cpuBucket(ThreadCpuBuckets.MAIN, UsageKeys.FG)])
+            assertNull(counters[UsageKeys.cpuBucket(ThreadCpuBuckets.MISC, UsageKeys.FG)])
+        }
+
+    /** Every bucket the table can emit must be reachable, or its row never renders. */
+    @Test
+    fun everyBucketIsReachable() {
+        val unreachable =
+            ThreadCpuBuckets.ALL.filter { bucket ->
+                when (bucket) {
+                    // Not thread names: one is assigned by tid, the other is a residual.
+                    ThreadCpuBuckets.MAIN, ThreadCpuBuckets.GONE -> false
+                    ThreadCpuBuckets.MISC -> false
+                    else -> sampleThreadNames.none { ThreadCpuBuckets.classify(it) == bucket }
+                }
+            }
+        assertTrue("Buckets no thread name can produce: $unreachable", unreachable.isEmpty())
+    }
+
+    /**
+     * The gap [pruneDeadThreads] cannot see: a tid that exits and is handed to a
+     * new thread BETWEEN two sweeps is never absent from a listing, so the stale
+     * entry survives. Left alone, the new thread's first delta goes negative and
+     * is dropped, and it wears the dead thread's bucket for the rest of its life.
+     */
+    @Test
+    fun aTidRecycledBetweenSweepsIsTreatedAsANewThread() =
+        runTest {
+            val accountant = accountant(backgroundScope)
+            val reader = FakeReader()
+            var processMs = 0L
+            reader.set(10, "OkHttp TaskRunner", 500)
+
+            val sampler = ThreadCpuSampler(accountant, { true }, reader, { processMs }, mainTid = noMainTid)
+            sampler.register()
+
+            // Same tid, now a render thread with a counter that restarted from 0.
+            // No sweep ever observed tid 10 missing.
+            reader.set(10, "RenderThread", 6)
+            processMs = 60
+            sampler.sample()
+
+            val counters = accountant.allDaysIncludingLive()[0L].orEmpty()
+            assertEquals(60L, counters[UsageKeys.cpuBucket(ThreadCpuBuckets.RENDER, UsageKeys.FG)])
+            assertNull(counters[UsageKeys.cpuBucket(ThreadCpuBuckets.NET, UsageKeys.FG)])
+            // Nothing leaked into the residual either.
+            assertNull(counters[UsageKeys.cpuBucket(ThreadCpuBuckets.GONE, UsageKeys.FG)])
+        }
+
     /** An unreadable /proc must cost the breakdown, never a crash. */
     @Test
     fun survivesAnUnreadableProc() =
@@ -475,7 +571,7 @@ class ThreadCpuSamplerTest {
                     override fun readCpuTicks(tid: Int) = -1L
                 }
             var processMs = 0L
-            val sampler = ThreadCpuSampler(accountant, { false }, empty) { processMs }
+            val sampler = ThreadCpuSampler(accountant, { false }, empty, { processMs }, mainTid = noMainTid)
             sampler.register()
 
             processMs = 250

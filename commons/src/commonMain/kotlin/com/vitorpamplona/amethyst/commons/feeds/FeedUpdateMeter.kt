@@ -64,20 +64,30 @@ enum class FeedUpdateOutcome {
  * built in dozens of places and this is a diagnostic, not a dependency.
  */
 interface FeedUpdateMeter {
-    /** One feed's reaction to one bundle. Called ~48 times per bundle on Android. */
-    fun onFeedUpdate(outcome: FeedUpdateOutcome)
-
     /**
-     * One whole fan-out: a bundle of [noteCount] notes handed to every feed,
-     * taking [elapsedNanos].
+     * One feed's reaction to one bundle, and what it cost.
      *
-     * Timed here, around the whole loop, rather than per feed — see
-     * `UsageKeys.feedsFanoutUs` for why (the ledger lives in the Android module).
+     * Called ~48 times per bundle on Android, from inside the feed's own
+     * debounced worker — NOT from the fan-out loop. The loop only enqueues:
+     * every `updateFeedWith` goes through a `BasicBundledInsert`/
+     * `BasicBundledUpdate` that does `scope.launch`, returns immediately, and
+     * coalesces bundles behind a 250ms debounce. Timing the loop would
+     * therefore measure coroutine enqueue, which is why the clock lives next to
+     * the work instead.
+     *
+     * Consequently these calls are fewer than (bundles x feeds): a feed that
+     * coalesced three bundles into one pass reports once, for the real pass.
      */
-    fun onBundleFanOut(
-        noteCount: Int,
+    fun onFeedUpdate(
+        outcome: FeedUpdateOutcome,
         elapsedNanos: Long,
     )
+
+    /**
+     * One bundle arrived and was handed to every feed. Counts only — the cost
+     * of what it triggers is reported asynchronously by [onFeedUpdate].
+     */
+    fun onBundleIngested(noteCount: Int)
 
     companion object {
         @Volatile

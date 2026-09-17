@@ -2272,6 +2272,7 @@
     <string name="resource_usage_subsystem_other">Other</string>
     <string name="resource_usage_cpu_bg">Processor time while closed</string>
     <string name="resource_usage_cpu_section">Processor time by feature (7 days)</string>
+    <string name="resource_usage_cpu_section_bg">Processor time by feature, app closed (7 days)</string>
     <string name="resource_usage_cpu_bucket_main">Screen drawing</string>
     <string name="resource_usage_cpu_bucket_render">Graphics</string>
     <string name="resource_usage_cpu_bucket_net">Relays &amp; networking</string>

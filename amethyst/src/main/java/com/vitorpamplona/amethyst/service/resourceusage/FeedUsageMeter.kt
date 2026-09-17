@@ -39,8 +39,8 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedUpdateOutcome
  * answer is to stop fanning out to feeds nobody is collecting, not to make
  * each feed faster.
  *
- * Cost: [onFeedUpdate] is one map lookup and one atomic increment per feed per
- * bundle — the same hot path [RelayUsageListener] already runs per relay frame.
+ * Cost: [onFeedUpdate] is two map lookups and two atomic increments per feed
+ * pass — the same hot path [RelayUsageListener] already runs per relay frame.
  * Nothing allocates: the outcome-to-key table is built once at class-init,
  * because `enum.name.lowercase()` on this path would be ~48 throwaway strings
  * per bundle.
@@ -49,19 +49,22 @@ class FeedUsageMeter(
     private val accountant: ResourceUsageAccountant,
     private val isForeground: () -> Boolean,
 ) : FeedUpdateMeter {
-    override fun onFeedUpdate(outcome: FeedUpdateOutcome) {
-        accountant.add(keyFor(outcome, isForeground()), 1)
-    }
-
-    override fun onBundleFanOut(
-        noteCount: Int,
+    override fun onFeedUpdate(
+        outcome: FeedUpdateOutcome,
         elapsedNanos: Long,
     ) {
+        val foreground = isForeground()
+        accountant.add(keyFor(outcome, foreground), 1)
+        accountant.add(
+            if (foreground) UsageKeys.FEED_WORK_FG_US else UsageKeys.FEED_WORK_BG_US,
+            elapsedNanos / 1_000,
+        )
+    }
+
+    override fun onBundleIngested(noteCount: Int) {
         val visibility = if (isForeground()) UsageKeys.FG else UsageKeys.BG
         accountant.add(UsageKeys.ingestBundles(visibility), 1)
         accountant.add(UsageKeys.ingestNotes(visibility), noteCount.toLong())
-        accountant.add(UsageKeys.feedsFanoutCount(visibility), 1)
-        accountant.add(UsageKeys.feedsFanoutUs(visibility), elapsedNanos / 1_000)
     }
 
     /** Installs this as the process-wide meter. Idempotent. */
@@ -70,19 +73,26 @@ class FeedUsageMeter(
     }
 
     companion object {
-        /** Key segment per outcome — fixed strings, never a runtime-derived name. */
-        private val OUTCOME_SEGMENTS =
-            mapOf(
-                FeedUpdateOutcome.SKIPPED to "skipped",
-                FeedUpdateOutcome.CHANGED to "changed",
-                FeedUpdateOutcome.UNCHANGED to "unchanged",
-                FeedUpdateOutcome.REBUILT to "rebuilt",
-            )
+        /**
+         * Key segment per outcome.
+         *
+         * A `when` with no `else`, not a map lookup: the compiler then refuses
+         * to build if a [FeedUpdateOutcome] constant is added without a segment,
+         * where a map would instead have thrown at class-init — which on this
+         * class means an `ExceptionInInitializerError` during app startup.
+         */
+        private fun segmentOf(outcome: FeedUpdateOutcome): String =
+            when (outcome) {
+                FeedUpdateOutcome.SKIPPED -> "skipped"
+                FeedUpdateOutcome.CHANGED -> "changed"
+                FeedUpdateOutcome.UNCHANGED -> "unchanged"
+                FeedUpdateOutcome.REBUILT -> "rebuilt"
+            }
 
         /** Every key this meter can emit, indexed by outcome then foreground-ness. */
         private val KEYS: Map<FeedUpdateOutcome, Array<String>> =
             FeedUpdateOutcome.entries.associateWith { outcome ->
-                val segment = OUTCOME_SEGMENTS.getValue(outcome)
+                val segment = segmentOf(outcome)
                 arrayOf(
                     UsageKeys.feedOutcome(segment, UsageKeys.BG),
                     UsageKeys.feedOutcome(segment, UsageKeys.FG),
@@ -95,6 +105,6 @@ class FeedUsageMeter(
         ): String = KEYS.getValue(outcome)[if (foreground) 1 else 0]
 
         /** The outcome key segments, for tests and the report. */
-        val outcomeSegments: Collection<String> get() = OUTCOME_SEGMENTS.values
+        val outcomeSegments: List<String> get() = FeedUpdateOutcome.entries.map(::segmentOf)
     }
 }

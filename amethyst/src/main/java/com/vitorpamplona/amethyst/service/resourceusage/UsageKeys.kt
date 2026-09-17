@@ -768,16 +768,19 @@ object UsageKeys {
     fun ingestNotes(visibility: String): String = "ingest.notes.$visibility.count"
 
     /**
-     * `feeds.fanout.bg.us` / `feeds.fanout.bg.count` — wall time spent handing
-     * one bundle to every feed the account owns, and how many times that ran.
+     * `feeds.work.bg.us` — time actually spent inside feed updates, summed over
+     * every feed pass, split by visibility.
      *
-     * Timed once around the whole fan-out rather than per feed: at ~48 feeds and
-     * roughly a bundle a second, per-feed timing would cost ~96 clock reads a
-     * second to learn something a profiler already answers better.
+     * Measured next to the work rather than around the fan-out loop. The loop
+     * only enqueues: each `updateFeedWith` hands off to a debounced bundler that
+     * launches a coroutine and returns, so a clock around the loop would time
+     * ~48 `launch` calls. See `FeedUpdateMeter.onFeedUpdate`.
+     *
+     * Constants rather than a builder — there are exactly two, and this is
+     * incremented once per feed pass.
      */
-    fun feedsFanoutUs(visibility: String): String = "feeds.fanout.$visibility.us"
-
-    fun feedsFanoutCount(visibility: String): String = "feeds.fanout.$visibility.count"
+    const val FEED_WORK_FG_US = "feeds.work.fg.us"
+    const val FEED_WORK_BG_US = "feeds.work.bg.us"
 
     /**
      * `feeds.skipped.bg.count` — what each feed's reaction to a bundle

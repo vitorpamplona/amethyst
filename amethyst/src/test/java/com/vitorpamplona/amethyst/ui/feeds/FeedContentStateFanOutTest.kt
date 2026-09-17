@@ -31,13 +31,16 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Pins the per-bundle behaviour of [FeedContentState.refreshFromOldState] — the
@@ -51,28 +54,44 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FeedContentStateFanOutTest {
-    private val outcomes = mutableListOf<FeedUpdateOutcome>()
-    private var fanOuts = 0
+    // Written from a Dispatchers.IO worker (the bundler's) and read from the
+    // test thread, so not a plain ArrayList.
+    private val outcomes = CopyOnWriteArrayList<FeedUpdateOutcome>()
+    private val elapsed = CopyOnWriteArrayList<Long>()
 
     private fun installMeter() {
         FeedUpdateMeter.instance =
             object : FeedUpdateMeter {
-                override fun onFeedUpdate(outcome: FeedUpdateOutcome) {
-                    outcomes += outcome
-                }
-
-                override fun onBundleFanOut(
-                    noteCount: Int,
+                override fun onFeedUpdate(
+                    outcome: FeedUpdateOutcome,
                     elapsedNanos: Long,
                 ) {
-                    fanOuts++
+                    outcomes += outcome
+                    elapsed += elapsedNanos
                 }
+
+                override fun onBundleIngested(noteCount: Int) = Unit
             }
     }
 
     @After
     fun tearDown() {
         FeedUpdateMeter.instance = null
+    }
+
+    /**
+     * Waits for a real outcome. The bundle-driven rebuild runs on
+     * `Dispatchers.IO`, not on runTest's scheduler, so a virtual-clock advance
+     * never sees it.
+     */
+    private suspend fun awaitAnOutcome(timeoutMs: Long = 10_000) {
+        withContext(Dispatchers.IO) {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (outcomes.isEmpty() && System.currentTimeMillis() < deadline) {
+                Thread.sleep(5)
+            }
+        }
+        assertTrue("no feed outcome was reported within ${timeoutMs}ms", outcomes.isNotEmpty())
     }
 
     private fun note(id: String) = Note(id.padStart(64, '0'))
@@ -123,6 +142,7 @@ class FeedContentStateFanOutTest {
         state.refreshSuspended()
         assertTrue("fixture should start Loaded", state.feedContent.value is FeedState.Loaded)
         outcomes.clear()
+        elapsed.clear()
         return state
     }
 
@@ -229,6 +249,49 @@ class FeedContentStateFanOutTest {
 
             assertEquals(listOf(FeedUpdateOutcome.REBUILT), outcomes)
             assertEquals(1, filter.loadTopCalls)
+        }
+
+    /**
+     * The expensive outcome, reached the way production actually reaches it.
+     *
+     * A never-opened feed is still [FeedState.Loading], so `updateFeedWith`
+     * takes the full-rebuild branch — NOT `refreshFromOldState`. That branch
+     * used to report nothing at all, which hid a whole-cache scan per feed on
+     * every feed's first bundle: precisely the cost the ledger exists to size.
+     */
+    @Test
+    fun aBundleDrivenRebuildIsReported() =
+        runTest {
+            installMeter()
+            val filter = FakeFilter(top = listOf(note("1")))
+            val state = FeedContentState(filter, backgroundScope, cacheProvider())
+            assertTrue(state.feedContent.value is FeedState.Loading)
+
+            state.updateFeedWith(setOf(note("9")))
+            awaitAnOutcome()
+
+            assertEquals(listOf(FeedUpdateOutcome.REBUILT), outcomes.toList())
+            assertEquals(1, filter.loadTopCalls)
+        }
+
+    /**
+     * Timing must come from the work, not from the enqueue. `updateFeedWith`
+     * hands off to a debounced bundler that launches and returns, so a clock
+     * around the fan-out loop would have measured `launch`.
+     */
+    @Test
+    fun theReportedTimeCoversTheActualPass() =
+        runTest {
+            installMeter()
+            val existing = note("1")
+            val filter = FakeFilter(top = listOf(existing))
+            val state = loadedState(filter, backgroundScope)
+
+            filter.matches = { setOf(existing) }
+            state.refreshFromOldState(setOf(existing))
+
+            assertEquals(1, elapsed.size)
+            assertTrue("elapsed should be a real measurement, was ${elapsed[0]}ns", elapsed[0] > 0)
         }
 
     /** No meter installed (desktop, CLI, tests) must change nothing. */

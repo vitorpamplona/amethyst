@@ -297,30 +297,40 @@ private fun SubsystemSection(week: UsageSummary) {
  */
 @Composable
 private fun CpuSection(week: UsageSummary) {
+    if (week.cpuMsPerBucket.isEmpty()) return
     val background = week.cpuBgMsPerBucket
-    if (background.isNotEmpty()) {
-        val rows = background.entries.sortedByDescending { it.value }
+
+    if (background.isEmpty()) {
+        val rows = week.cpuMsPerBucket.entries.sortedByDescending { it.value }
         val max = rows.first().value.coerceAtLeast(1L)
         SettingsSection(R.string.resource_usage_cpu_section) {
             rows.forEach { (bucket, ms) ->
                 BarRow(
                     label = cpuBucketLabel(bucket),
-                    value = stringRes(Res.string.resource_usage_cell_of_total, formatDurationMs(ms), formatDurationMs(week.cpuMsPerBucket[bucket] ?: ms)),
+                    value = formatDurationMs(ms),
                     fraction = ms.toFloat() / max.toFloat(),
                 )
             }
         }
         return
     }
-    if (week.cpuMsPerBucket.isEmpty()) return
-    val rows = week.cpuMsPerBucket.entries.sortedByDescending { it.value }
-    val max = rows.first().value.coerceAtLeast(1L)
-    SettingsSection(R.string.resource_usage_cpu_section) {
-        rows.forEach { (bucket, ms) ->
+
+    // Ranked by background time but iterating every bucket that burned any CPU,
+    // so a subsystem that only ever runs in the foreground still shows (at zero)
+    // instead of vanishing from a table whose second column is the all-day
+    // total. The heading changes with the ranking — a background-ranked list
+    // under the all-day title reads as a different measurement than it is.
+    val rows =
+        week.cpuMsPerBucket.keys
+            .map { it to (background[it] ?: 0L) }
+            .sortedByDescending { it.second }
+    val max = rows.first().second.coerceAtLeast(1L)
+    SettingsSection(R.string.resource_usage_cpu_section_bg) {
+        rows.forEach { (bucket, bgMs) ->
             BarRow(
                 label = cpuBucketLabel(bucket),
-                value = formatDurationMs(ms),
-                fraction = ms.toFloat() / max.toFloat(),
+                value = stringRes(Res.string.resource_usage_cell_of_total, formatDurationMs(bgMs), formatDurationMs(week.cpuMsPerBucket[bucket] ?: bgMs)),
+                fraction = bgMs.toFloat() / max.toFloat(),
             )
         }
     }

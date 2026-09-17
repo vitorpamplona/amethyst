@@ -38,6 +38,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.TimeSource
 
 @Stable
 class FeedContentState(
@@ -146,6 +147,21 @@ class FeedContentState(
     }
 
     fun refreshFromOldState(newItems: Set<Note>) {
+        val meter = FeedUpdateMeter.instance
+        if (meter == null) {
+            refreshFromOldStateUnmetered(newItems)
+            return
+        }
+        val startedAt = TimeSource.Monotonic.markNow()
+        var outcome = FeedUpdateOutcome.SKIPPED
+        try {
+            outcome = refreshFromOldStateUnmetered(newItems)
+        } finally {
+            meter.onFeedUpdate(outcome, startedAt.elapsedNow().inWholeNanoseconds)
+        }
+    }
+
+    private fun refreshFromOldStateUnmetered(newItems: Set<Note>): FeedUpdateOutcome {
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
@@ -188,17 +204,16 @@ class FeedContentState(
                 // and an override that returns a fresh list falls through to
                 // the general path below.
                 if (merged === currentList) {
-                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.SKIPPED)
-                    return
+                    return FeedUpdateOutcome.SKIPPED
                 }
 
                 val newList = merged.distinctBy { it.idHex }.toImmutableList()
 
-                if (!equalImmutableLists(newList, currentList)) {
+                return if (!equalImmutableLists(newList, currentList)) {
                     updateFeed(newList)
-                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.CHANGED)
+                    FeedUpdateOutcome.CHANGED
                 } else {
-                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.UNCHANGED)
+                    FeedUpdateOutcome.UNCHANGED
                 }
             } else if (oldNotesState is FeedState.Empty) {
                 val newList =
@@ -206,21 +221,21 @@ class FeedContentState(
                         .updateListWith(emptyList(), newItems)
                         .distinctBy { it.idHex }
                         .toImmutableList()
-                if (newList.isNotEmpty()) {
+                return if (newList.isNotEmpty()) {
                     updateFeed(newList)
-                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.CHANGED)
+                    FeedUpdateOutcome.CHANGED
                 } else {
-                    FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.UNCHANGED)
+                    FeedUpdateOutcome.UNCHANGED
                 }
             } else {
                 // Refresh Everything
                 refreshSuspended()
-                FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.REBUILT)
+                return FeedUpdateOutcome.REBUILT
             }
         } else {
             // Refresh Everything
             refreshSuspended()
-            FeedUpdateMeter.instance?.onFeedUpdate(FeedUpdateOutcome.REBUILT)
+            return FeedUpdateOutcome.REBUILT
         }
     }
 
@@ -262,7 +277,35 @@ class FeedContentState(
             invalidateInsertData(newNotes)
         } else {
             // Refresh Everything
-            invalidateData()
+            rebuildFromBundle()
+        }
+    }
+
+    /**
+     * The full-rebuild half of [updateFeedWith] — a scan of the whole event
+     * cache, taken by any feed that is not additive and by every feed on its
+     * first bundle, because a never-opened feed is still [FeedState.Loading].
+     *
+     * Separate from [invalidateData] purely so the ledger can tell the two
+     * apart: [invalidateData] is also what pull-to-refresh and a dozen UI
+     * actions call, and counting those as bundle-driven rebuilds would report
+     * the user's own refreshes as background waste.
+     */
+    private fun rebuildFromBundle() {
+        viewModelScope.launch(Dispatchers.IO) {
+            bundler.invalidate(false) {
+                val meter = FeedUpdateMeter.instance
+                if (meter == null) {
+                    refreshSuspended()
+                } else {
+                    val startedAt = TimeSource.Monotonic.markNow()
+                    try {
+                        refreshSuspended()
+                    } finally {
+                        meter.onFeedUpdate(FeedUpdateOutcome.REBUILT, startedAt.elapsedNow().inWholeNanoseconds)
+                    }
+                }
+            }
         }
     }
 }

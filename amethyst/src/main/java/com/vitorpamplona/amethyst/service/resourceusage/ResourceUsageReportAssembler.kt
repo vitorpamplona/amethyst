@@ -147,7 +147,7 @@ class ResourceUsageReportAssembler {
             append("| App process starts | ${s.appStarts} |\n")
             if (s.ingestBundles > 0) {
                 append("| Event bundles ingested | ${s.ingestBundles} (${s.ingestBundlesBg} backgrounded, ${s.ingestNotes} notes) |\n")
-                append("| Feed fan-out | ${formatDurationMs(s.feedFanOutMs)} (${formatDurationMs(s.feedFanOutBgMs)} backgrounded) |\n")
+                append("| Feed update work | ${formatDurationMs(s.feedWorkMs)} (${formatDurationMs(s.feedWorkBgMs)} backgrounded) |\n")
             }
             val feedOutcomes =
                 s.feedOutcomes.entries

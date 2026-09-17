@@ -337,27 +337,20 @@ class AccountFeedContentStates(
      * cost to the resource-usage ledger.
      *
      * The fan-out is unconditional: every feed below is updated whether or not
-     * it is on screen, and whether or not the app is. That is what the timing
+     * it is on screen, and whether or not the app is. That is what the ledger
      * exists to size — see hypothesis H1 in
-     * `amethyst/plans/2026-09-14-cpu-battery-diagnosis.md`. Measured around the
-     * whole loop rather than per feed; the per-feed outcomes come from
-     * `FeedUpdateMeter` inside `FeedContentState`, which already knows whether
-     * it changed anything.
+     * `amethyst/plans/2026-09-14-cpu-battery-diagnosis.md`.
+     *
+     * Only the bundle is counted here. Each `updateFeedWith` below merely
+     * enqueues onto that feed's debounced bundler and returns, so there is no
+     * elapsed time worth reading at this level; the cost and the outcome are
+     * reported by `FeedContentState` from inside the work itself.
      */
     fun updateFeedsWith(newNotes: Set<Note>) {
         checkNotInMainThread()
 
-        val meter = FeedUpdateMeter.instance
-        if (meter == null) {
-            fanOutToFeeds(newNotes)
-            return
-        }
-        val startedAt = System.nanoTime()
-        try {
-            fanOutToFeeds(newNotes)
-        } finally {
-            meter.onBundleFanOut(newNotes.size, System.nanoTime() - startedAt)
-        }
+        FeedUpdateMeter.instance?.onBundleIngested(newNotes.size)
+        fanOutToFeeds(newNotes)
     }
 
     private fun fanOutToFeeds(newNotes: Set<Note>) {

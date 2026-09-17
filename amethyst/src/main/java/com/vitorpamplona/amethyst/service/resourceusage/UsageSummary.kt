@@ -49,9 +49,9 @@ data class UsageSummary(
     val ingestBundles: Long,
     val ingestBundlesBg: Long,
     val ingestNotes: Long,
-    /** Wall time handing those bundles to every feed the account owns, and its background half. */
-    val feedFanOutMs: Long,
-    val feedFanOutBgMs: Long,
+    /** Time actually spent inside feed updates, summed over every feed pass, and its background half. */
+    val feedWorkMs: Long,
+    val feedWorkBgMs: Long,
     /** Per-feed outcomes of that fan-out, keyed by [FeedUpdateOutcome] segment (`skipped`, `changed`, …). */
     val feedOutcomes: Map<String, Long>,
     val foregroundMs: Long,
@@ -177,12 +177,12 @@ data class UsageSummary(
                 ingestNotes =
                     (counters[UsageKeys.ingestNotes(UsageKeys.FG)] ?: 0L) +
                         (counters[UsageKeys.ingestNotes(UsageKeys.BG)] ?: 0L),
-                feedFanOutMs =
+                feedWorkMs =
                     (
-                        (counters[UsageKeys.feedsFanoutUs(UsageKeys.FG)] ?: 0L) +
-                            (counters[UsageKeys.feedsFanoutUs(UsageKeys.BG)] ?: 0L)
+                        (counters[UsageKeys.FEED_WORK_FG_US] ?: 0L) +
+                            (counters[UsageKeys.FEED_WORK_BG_US] ?: 0L)
                     ) / 1_000,
-                feedFanOutBgMs = (counters[UsageKeys.feedsFanoutUs(UsageKeys.BG)] ?: 0L) / 1_000,
+                feedWorkBgMs = (counters[UsageKeys.FEED_WORK_BG_US] ?: 0L) / 1_000,
                 feedOutcomes = feedOutcomes,
                 foregroundMs = counters[UsageKeys.APP_FG_MS] ?: 0L,
                 verifyCount = counters[UsageKeys.VERIFY_COUNT] ?: 0L,

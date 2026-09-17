@@ -55,12 +55,28 @@ import com.vitorpamplona.quartz.utils.Log
  * **Privacy.** Thread names are read, matched to a compile-time bucket, and
  * dropped — see [ThreadCpuBuckets], which exists because OkHttp names its
  * threads after the relay host they are serving.
+ *
+ * Note that pre-flush hooks also run on [ResourceUsageAccountant
+ * .allDaysIncludingLive], so a sweep happens on every ledger READ too. That is
+ * fine at today's three call sites (opening the usage screen, the alert
+ * evaluator, assembling a report) but this is not a method to put behind a
+ * poll.
  */
 class ThreadCpuSampler(
     private val accountant: ResourceUsageAccountant,
     private val isForeground: () -> Boolean,
     private val reader: ThreadCpuReader = ProcThreadCpuReader(),
     private val processCpuMs: () -> Long = { Process.getElapsedCpuTime() },
+    /**
+     * The main thread's tid, which on Linux equals the pid.
+     *
+     * Identified by tid rather than by name because the main thread's `comm` is
+     * the truncated process name — it carries no marker a prefix table could
+     * match, so without this the UI thread's CPU would silently land in
+     * [ThreadCpuBuckets.MISC]. `WorkerThreadPriorityGovernor` picks it out the
+     * same way.
+     */
+    private val mainTid: Int = Process.myPid(),
 ) {
     /** tid -> bucket. Classified once per tid; pruned when the tid disappears. */
     private val bucketByTid = HashMap<Int, String>()
@@ -101,18 +117,31 @@ class ThreadCpuSampler(
             if (ticks < 0) continue
 
             val previous = ticksByTid.put(tid, ticks)
+
+            // Per-thread CPU only ever increases, so a counter that went DOWN
+            // means the kernel recycled this tid onto a new thread between two
+            // sweeps — the one case pruneDeadThreads cannot catch, because the
+            // tid was never absent from a sweep. Treated as a birth: without
+            // this the new thread's first delta is negative (and dropped), and
+            // it inherits the dead thread's bucket for the rest of its life.
+            val recycled = previous != null && ticks < previous
+            if (recycled) bucketByTid.remove(tid)
+
             val bucket =
                 bucketByTid.getOrPut(tid) {
-                    // A tid with no cached name may have exited too; an unknown
-                    // name is still real CPU, so bucket it as MISC rather than drop it.
-                    reader.readName(tid)?.let(ThreadCpuBuckets::classify) ?: ThreadCpuBuckets.MISC
+                    when {
+                        tid == mainTid -> ThreadCpuBuckets.MAIN
+                        // A tid with no cached name may have exited too; an unknown
+                        // name is still real CPU, so bucket it as MISC rather than drop it.
+                        else -> reader.readName(tid)?.let(ThreadCpuBuckets::classify) ?: ThreadCpuBuckets.MISC
+                    }
                 }
 
             // A thread we have not seen before was born after the last sample, so
             // its whole lifetime falls inside this interval and counts in full.
             // (On the priming pass nothing is emitted, so process start is not
             // double-counted.)
-            val delta = if (previous == null) ticks else ticks - previous
+            val delta = if (previous == null || recycled) ticks else ticks - previous
             if (delta > 0) {
                 perBucketTicks[bucket] = (perBucketTicks[bucket] ?: 0L) + delta
                 attributedTicks += delta
