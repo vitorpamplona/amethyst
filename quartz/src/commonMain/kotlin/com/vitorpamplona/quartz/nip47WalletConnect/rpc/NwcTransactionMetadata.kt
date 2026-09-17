@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.rpc
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.RawJson
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
 class NwcTransactionMetadata(
@@ -44,6 +46,8 @@ class NwcTransactionMetadata(
         val pubkeyHex: String?,
         val recipientPubkeyHex: String?,
         val content: String?,
+        val zappedEventId: String?,
+        val zappedAddress: String?,
     )
 
     fun senderPubkeyHex(): String? = nostr?.pubkeyHex ?: payerData?.pubkey?.let { decodePublicKeyAsHexOrNull(it) }
@@ -53,6 +57,13 @@ class NwcTransactionMetadata(
     fun recipientIdentifier(): String? = recipientData?.identifier?.ifBlank { null }
 
     fun recipientPubkeyHex(): String? = nostr?.recipientPubkeyHex
+
+    /**
+     * The note this zap was for: the `a` address for an addressable target (so the
+     * living version opens, not the one that was zapped), else the `e` id. Null for
+     * a profile zap, which legitimately carries neither.
+     */
+    fun zappedNoteId(): String? = nostr?.zappedAddress ?: nostr?.zappedEventId
 
     /**
      * The message to show for this transaction.
@@ -90,21 +101,26 @@ class NwcTransactionMetadata(
                     val rawPubkey = n["pubkey"] as? String
                     val pubkeyHex = rawPubkey?.let { decodePublicKeyAsHexOrNull(it) }
 
-                    val tags = n["tags"] as? List<*>
-                    val recipientHex =
-                        tags?.firstNotNullOfOrNull { tag ->
-                            val tagList = tag as? List<*>
-                            if (tagList != null && tagList.size >= 2 && tagList[0] == "p") {
-                                tagList[1] as? String
-                            } else {
-                                null
-                            }
+                    var recipientHex: String? = null
+                    var zappedEventId: String? = null
+                    var zappedAddress: String? = null
+                    (n["tags"] as? List<*>)?.forEach { tag ->
+                        val tagList = tag as? List<*> ?: return@forEach
+                        if (tagList.size < 2) return@forEach
+                        val value = tagList[1] as? String ?: return@forEach
+                        when (tagList[0]) {
+                            "p" -> if (recipientHex == null) recipientHex = value
+                            "e" -> if (zappedEventId == null && value.isValid()) zappedEventId = value
+                            "a" -> if (zappedAddress == null) zappedAddress = Address.parse(value)?.toValue()
                         }
+                    }
 
                     NostrZapData(
                         pubkeyHex = pubkeyHex,
                         recipientPubkeyHex = recipientHex,
                         content = n["content"] as? String,
+                        zappedEventId = zappedEventId,
+                        zappedAddress = zappedAddress,
                     )
                 }
 

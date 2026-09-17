@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
 data class TransactionRowLabels(
     val title: Title,
     val subtitle: String?,
+    /** The note a zap was for (event id or `a` address), or null for a profile zap or a plain payment. */
+    val zappedNoteId: String?,
 ) {
     sealed interface Title {
         /** Render the counterparty's profile for this pubkey, falling back to [name]. */
@@ -83,6 +85,7 @@ data class TransactionRowLabels(
             return TransactionRowLabels(
                 title = named ?: Title.Literal(fallback),
                 subtitle = comment ?: fallback.takeIf { named != null },
+                zappedNoteId = parsed?.zappedNoteId(),
             )
         }
     }

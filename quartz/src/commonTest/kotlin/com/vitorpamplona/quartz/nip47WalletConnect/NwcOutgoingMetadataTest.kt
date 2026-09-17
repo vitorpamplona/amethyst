@@ -44,15 +44,23 @@ class NwcOutgoingMetadataTest {
     private val recipientHex = "ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b"
     private val payerHex = "f512822a89d2369a386bfeb1e687ccd26ceb6bb33e73b98417499bb9054bff1f"
 
+    private val noteHex = "d".repeat(64)
+
     private fun zapRequest(
         content: String = "great post",
         relays: List<String> = listOf("wss://relay.damus.io"),
+        zappedNoteId: String? = null,
     ) = Event(
         id = "a".repeat(64),
         pubKey = payerHex,
         createdAt = 1756000000L,
         kind = 9734,
-        tags = arrayOf(arrayOf("p", recipientHex), arrayOf("relays", *relays.toTypedArray())),
+        tags =
+            listOfNotNull(
+                zappedNoteId?.let { arrayOf("e", it) },
+                arrayOf("p", recipientHex),
+                arrayOf("relays", *relays.toTypedArray()),
+            ).toTypedArray(),
         content = content,
         sig = "b".repeat(128),
     )
@@ -231,6 +239,52 @@ class NwcOutgoingMetadataTest {
         assertEquals("user@domain.com", parsed.recipientIdentifier())
         // A wallet storing only `nostr` still yields the message.
         assertEquals("for the article", parsed.displayComment())
+    }
+
+    @Test
+    fun theZappedNoteSurvivesTheRoundTrip() {
+        val wire =
+            OptimizedJsonMapper.toJson(
+                PayInvoiceMethod.create("lnbc1", NwcTransactionMetadata.build(zapRequest(zappedNoteId = noteHex), "user@domain.com", "")),
+            )
+        val back = OptimizedJsonMapper.fromJsonTo<Request>(wire) as PayInvoiceMethod
+        val parsed = assertNotNull(NwcTransactionMetadata.parse(back.params?.metadata))
+
+        assertEquals(noteHex, parsed.zappedNoteId())
+        assertEquals(recipientHex, parsed.recipientPubkeyHex(), "the p tag is still read with the e tag in front of it")
+    }
+
+    private fun parseTags(vararg tags: List<String>) = assertNotNull(NwcTransactionMetadata.parse(mapOf("nostr" to mapOf("tags" to tags.toList()))))
+
+    @Test
+    fun aProfileZapHasNoNote() {
+        assertNull(parseTags(listOf("p", recipientHex)).zappedNoteId())
+    }
+
+    @Test
+    fun tagOrderDoesNotMatter() {
+        val parsed = parseTags(listOf("e", noteHex), listOf("p", recipientHex))
+        assertEquals(recipientHex, parsed.recipientPubkeyHex())
+        assertEquals(noteHex, parsed.zappedNoteId())
+    }
+
+    @Test
+    fun anAddressableZapPrefersTheAddress() {
+        val address = "30023:$recipientHex:my-article"
+        assertEquals(address, parseTags(listOf("e", noteHex), listOf("a", address), listOf("p", recipientHex)).zappedNoteId())
+    }
+
+    @Test
+    fun aMalformedAddressFallsBackToTheEventId() {
+        assertEquals(noteHex, parseTags(listOf("e", noteHex), listOf("a", "not-an-address"), listOf("p", recipientHex)).zappedNoteId())
+    }
+
+    @Test
+    fun aMalformedEventIdIsIgnored() {
+        // "noteHex + ff": the id check must bound the length, not just scan 64 hex chars.
+        listOf("not-a-note", noteHex + "ff").forEach { bad ->
+            assertNull(parseTags(listOf("e", bad), listOf("p", recipientHex)).zappedNoteId(), bad)
+        }
     }
 
     @Test
