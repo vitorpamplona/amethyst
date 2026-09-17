@@ -246,6 +246,7 @@
     <string name="lightning_invoice">Fatura Lightning</string>
     <string name="invoice_expired">Expirada</string>
     <string name="clink_lightning_offer">Oferta CLINK</string>
+    <string name="bolt12_lightning_offer">Oferta BOLT12</string>
     <string name="clink_offer_pay_to">Para</string>
     <string name="clink_confirm_payment_title">Confirmar pagamento</string>
     <string name="clink_offer_amount_sats">Valor (sats)</string>
