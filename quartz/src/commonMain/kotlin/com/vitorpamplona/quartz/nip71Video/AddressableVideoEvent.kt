@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip71Video
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -34,6 +33,7 @@ import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip71Video.tags.DurationTag
 import com.vitorpamplona.quartz.nip71Video.tags.SegmentTag
+import com.vitorpamplona.quartz.nip71Video.tags.TextTrackTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -82,7 +82,9 @@ abstract class AddressableVideoEvent(
 
     override fun duration() = tags.firstNotNullOfOrNull(DurationTag::parse)
 
-    override fun textTrack() = tags.mapNotNull(ETag::parse)
+    // `text-track`, not `e`: reading ETag here returned the event's unrelated `e` tags
+    // (on a divine.video short, its "audio" source pointer) and never a caption track.
+    override fun textTrack() = tags.mapNotNull(TextTrackTag::parse)
 
     override fun segments() = tags.mapNotNull(SegmentTag::parse)
 

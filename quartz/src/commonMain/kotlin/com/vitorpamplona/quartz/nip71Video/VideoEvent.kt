@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip71Video
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip71Video.tags.SegmentTag
+import com.vitorpamplona.quartz.nip71Video.tags.TextTrackTag
 
 @Immutable
 interface VideoEvent : IEvent {
@@ -34,7 +34,7 @@ interface VideoEvent : IEvent {
 
     fun duration(): Int?
 
-    fun textTrack(): List<ETag>
+    fun textTrack(): List<TextTrackTag>
 
     fun segments(): List<SegmentTag>
 

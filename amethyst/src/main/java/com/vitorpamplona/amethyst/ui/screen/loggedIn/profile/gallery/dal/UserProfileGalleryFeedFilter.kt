@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableVideoEvent
 import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 class UserProfileGalleryFeedFilter(
@@ -53,7 +54,10 @@ class UserProfileGalleryFeedFilter(
         val addressableNotes =
             LocalCache.addressables
                 .filter(
-                    listOf(VideoVerticalEvent.KIND, VideoVerticalEvent.KIND),
+                    // Both NIP-71 addressable kinds: acceptableEvent() takes any
+                    // AddressableVideoEvent, so listing 34236 twice silently kept every
+                    // 34235 (horizontal) video out of the gallery.
+                    listOf(VideoVerticalEvent.KIND, VideoHorizontalEvent.KIND),
                     user.pubkeyHex,
                 ) { _, it ->
                     acceptableEvent(it, params, user)
