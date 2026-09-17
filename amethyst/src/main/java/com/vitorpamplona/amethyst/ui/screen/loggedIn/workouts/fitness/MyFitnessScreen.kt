@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
+import com.vitorpamplona.amethyst.commons.fitness.WorkoutOrigin
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -284,34 +285,50 @@ private fun ThisWeekCard(
     miles: Boolean,
 ) {
     SectionCard(stringRes(Res.string.my_fitness_this_week)) {
-        StatGrid(
-            listOf(
-                StatCell(
-                    stringRes(Res.string.my_fitness_workouts),
-                    report.thisWeek.workoutCount.toString(),
-                    null,
-                    WorkoutStats.percentChange(report.thisWeek.workoutCount.toDouble(), report.previousWeek.workoutCount.toDouble()),
-                ),
-                StatCell(
-                    stringRes(Res.string.my_fitness_time),
-                    formatDuration(report.thisWeek.durationSeconds),
-                    null,
-                    WorkoutStats.percentChange(report.thisWeek.durationSeconds.toDouble(), report.previousWeek.durationSeconds.toDouble()),
-                ),
-                StatCell(
-                    stringRes(Res.string.my_fitness_distance),
-                    formatDistanceValue(report.thisWeek.distanceMeters, miles),
-                    distanceUnit(miles),
-                    WorkoutStats.percentChange(report.thisWeek.distanceMeters, report.previousWeek.distanceMeters),
-                ),
-                StatCell(
-                    stringRes(Res.string.my_fitness_calories),
-                    report.thisWeek.calories.toString(),
-                    stringRes(Res.string.my_fitness_unit_kcal),
-                    WorkoutStats.percentChange(report.thisWeek.calories.toDouble(), report.previousWeek.calories.toDouble()),
-                ),
-            ),
-        )
+        // Workouts and time are always worth a cell. Distance and calories are not: a week of
+        // strength work has neither, and a column of zeroes reads as missing data rather than
+        // as "this activity doesn't have that metric". Last week still counts, so a drop to
+        // zero keeps its cell and shows the fall.
+        val cells =
+            buildList {
+                add(
+                    StatCell(
+                        stringRes(Res.string.my_fitness_workouts),
+                        report.thisWeek.workoutCount.toString(),
+                        null,
+                        WorkoutStats.percentChange(report.thisWeek.workoutCount.toDouble(), report.previousWeek.workoutCount.toDouble()),
+                    ),
+                )
+                add(
+                    StatCell(
+                        stringRes(Res.string.my_fitness_time),
+                        formatDuration(report.thisWeek.durationSeconds),
+                        null,
+                        WorkoutStats.percentChange(report.thisWeek.durationSeconds.toDouble(), report.previousWeek.durationSeconds.toDouble()),
+                    ),
+                )
+                if (report.thisWeek.distanceMeters > 0 || report.previousWeek.distanceMeters > 0) {
+                    add(
+                        StatCell(
+                            stringRes(Res.string.my_fitness_distance),
+                            formatDistanceValue(report.thisWeek.distanceMeters, miles),
+                            distanceUnit(miles),
+                            WorkoutStats.percentChange(report.thisWeek.distanceMeters, report.previousWeek.distanceMeters),
+                        ),
+                    )
+                }
+                if (report.thisWeek.calories > 0 || report.previousWeek.calories > 0) {
+                    add(
+                        StatCell(
+                            stringRes(Res.string.my_fitness_calories),
+                            report.thisWeek.calories.toString(),
+                            stringRes(Res.string.my_fitness_unit_kcal),
+                            WorkoutStats.percentChange(report.thisWeek.calories.toDouble(), report.previousWeek.calories.toDouble()),
+                        ),
+                    )
+                }
+            }
+        StatGrid(cells)
     }
 }
 
@@ -333,14 +350,16 @@ private fun WindowTotalsCard(
         val cells =
             buildList {
                 add(StatCell(stringRes(Res.string.my_fitness_time), formatDuration(report.weeklyAverage.durationSeconds), null, null))
-                add(
-                    StatCell(
-                        stringRes(Res.string.my_fitness_distance),
-                        formatDistanceValue(report.weeklyAverage.distanceMeters, miles),
-                        distanceUnit(miles),
-                        null,
-                    ),
-                )
+                if (report.windowTotals.distanceMeters > 0) {
+                    add(
+                        StatCell(
+                            stringRes(Res.string.my_fitness_distance),
+                            formatDistanceValue(report.weeklyAverage.distanceMeters, miles),
+                            distanceUnit(miles),
+                            null,
+                        ),
+                    )
+                }
                 if (report.windowTotals.steps > 0) {
                     add(StatCell(stringRes(Res.string.my_fitness_steps), report.weeklyAverage.steps.toString(), null, null))
                 }
@@ -492,8 +511,13 @@ private fun RecentWorkouts(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = { onShare(workout, label) }) {
-                            Text(stringRes(Res.string.my_fitness_share), style = MaterialTheme.typography.labelMedium)
+                        // Only what is still unpublished can be shared. A workout that came
+                        // back from the relays is already posted: offering to share it again
+                        // would publish a second kind 1301 for the same effort.
+                        if (workout.origin != WorkoutOrigin.PUBLISHED) {
+                            TextButton(onClick = { onShare(workout, label) }) {
+                                Text(stringRes(Res.string.my_fitness_share), style = MaterialTheme.typography.labelMedium)
+                            }
                         }
                     }
                     Text(

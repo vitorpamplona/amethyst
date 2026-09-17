@@ -685,7 +685,7 @@
     <string name="health_connect_rationale_privacy_policy">Read the full privacy policy</string>
     <string name="my_fitness_title">My Fitness</string>
     <string name="my_fitness_window">Last 4 weeks</string>
-    <string name="my_fitness_window_note">Health Connect serves the last 30 days, so Amethyst summarises four whole weeks. Nothing here leaves your phone.</string>
+    <string name="my_fitness_window_note">The last four whole weeks of your training: the workouts you have published, plus anything Health Connect records on this phone. Amethyst works the summary out on the device and publishes none of it.</string>
     <string name="my_fitness_this_week">This week</string>
     <string name="my_fitness_vs_last_week">vs last week</string>
     <string name="my_fitness_weekly_average">Weekly average</string>
@@ -708,7 +708,6 @@
     <string name="my_fitness_best_highest_heart_rate">Highest heart rate</string>
     <string name="my_fitness_recent">Recent workouts</string>
     <string name="my_fitness_empty">Nothing logged in the last 4 weeks. Workouts you post, and any your watch records, show up here.</string>
-    <string name="my_fitness_unavailable">Health Connect is not available on this device, so Amethyst has no workouts to summarise.</string>
     <string name="my_fitness_connect_title">Track your training</string>
     <string name="my_fitness_connect_message">Connect Health Connect to see your weekly totals, week-over-week trend, best efforts and training streak. Everything stays on your phone.</string>
     <string name="my_fitness_connect_banner">Connect Health Connect to add the workouts your watch records, with heart rate, steps and climb.</string>
