@@ -439,6 +439,8 @@
     <string name="workout_suggestion_connect_message">Ļaujiet Amethyst nolasīt pabeigtus treniņus no Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) un ieteikt ziņu.</string>
     <string name="workout_suggestion_connect_button">Savienot</string>
     <string name="workout_from_health_connect">No Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSites vēl nav atrasti.</string>
     <string name="browser_reload">Ielādēt atkārtoti</string>
     <string name="browser_unsupported">Lietotnes pārlūkprogrammai nepieciešama Android 11 vai jaunāka versija.</string>
@@ -756,6 +758,9 @@
     <string name="call_calling">Zvana…</string>
     <string name="call_connecting">Savienojas…</string>
     <string name="call_ended">Zvans beigts</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Aizvērt</string>
     <string name="call_switch_camera">Mainīt kameru</string>
     <string name="call_voice">Balss zvans</string>

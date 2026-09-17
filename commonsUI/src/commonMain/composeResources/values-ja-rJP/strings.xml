@@ -431,6 +431,8 @@
     <string name="workout_suggestion_connect_message">AmethystがHealth Connect（Samsung Health、Google Fit、Fitbit、Garmin…）から完了したワークアウトを読み取り、投稿を提案できるようにしましょう。</string>
     <string name="workout_suggestion_connect_button">接続する</string>
     <string name="workout_from_health_connect">Health Connectから</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSitesはまだ見つかりません。</string>
     <string name="browser_reload">再読み込み</string>
     <string name="browser_unsupported">アプリ内ブラウザにはAndroid 11以降が必要です。</string>
@@ -752,6 +754,9 @@
     <string name="call_calling">発信中…</string>
     <string name="call_connecting">接続中…</string>
     <string name="call_ended">通話終了</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">閉じる</string>
     <string name="call_switch_camera">カメラ切替</string>
     <string name="call_voice">音声通話</string>

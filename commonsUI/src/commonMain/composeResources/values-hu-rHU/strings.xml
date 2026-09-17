@@ -667,6 +667,8 @@
     <string name="health_connect_rationale_limit_publish">Semmi sem hagyja el az Ön eszközét, amíg rá nem koppint egy javaslatra, és saját maga közzé nem teszi a bejegyzést. Az Amethyst nem használ kiszolgálót: a bejegyzés az Ön által beállított Nostr-átjátszókra kerül.</string>
     <string name="health_connect_rationale_limit_optional">Egyetlen funkció sem kötelező. Bármikor kikapcsolhatja a Beállítások → Írás menüpontban, vagy visszavonhatja a Health Connectben megadott engedélyeket; az Amethyst többi része továbbra is működni fog.</string>
     <string name="health_connect_rationale_privacy_policy">Olvassa el a teljes adatvédelmi nyilatkozatot</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Még nem találhatók nOldalak.</string>
     <string name="browser_reload">Újratöltés</string>
     <string name="browser_unsupported">Az alkalmazáson belüli böngészőhöz Android 11 vagy újabb verzió szükséges.</string>
@@ -1238,6 +1240,9 @@
     <string name="call_calling">Hívás\u2026</string>
     <string name="call_connecting">Kapcsolódás\u2026</string>
     <string name="call_ended">A hívás befejeződött</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Eltüntetés</string>
     <string name="call_switch_camera">Kameraváltás</string>
     <string name="call_voice">Hanghívás</string>

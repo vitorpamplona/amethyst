@@ -427,6 +427,8 @@
     <string name="workout_suggestion_connect_message">Cho phép Amethyst đọc bài tập đã hoàn thành từ Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) và đề xuất bài đăng.</string>
     <string name="workout_suggestion_connect_button">Kết nối</string>
     <string name="workout_from_health_connect">Từ Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Chưa tìm thấy nSite nào.</string>
     <string name="browser_reload">Tải lại</string>
     <string name="browser_unsupported">Trình duyệt trong ứng dụng yêu cầu Android 11 trở lên.</string>
@@ -745,6 +747,9 @@
     <string name="call_calling">Đang gọi…</string>
     <string name="call_connecting">Đang kết nối…</string>
     <string name="call_ended">Cuộc gọi đã kết thúc</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Bỏ qua</string>
     <string name="call_switch_camera">Đổi camera</string>
     <string name="call_voice">Cuộc gọi thoại</string>

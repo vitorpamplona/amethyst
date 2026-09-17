@@ -444,6 +444,8 @@
     <string name="workout_suggestion_connect_button">ربط</string>
     <string name="workout_suggestion_distance_km">%1$s كم</string>
     <string name="workout_from_health_connect">من Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">لم يتم العثور على nSites بعد.</string>
     <string name="browser_reload">إعادة التحميل</string>
     <string name="browser_unsupported">يحتاج المتصفح المدمج إلى Android 11 أو أحدث.</string>
@@ -766,6 +768,9 @@
     <string name="call_calling">جارٍ الاتصال…</string>
     <string name="call_connecting">جارٍ الاتصال…</string>
     <string name="call_ended">انتهت المكالمة</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">تجاهل</string>
     <string name="call_switch_camera">تبديل الكاميرا</string>
     <string name="call_voice">مكالمة صوتية</string>

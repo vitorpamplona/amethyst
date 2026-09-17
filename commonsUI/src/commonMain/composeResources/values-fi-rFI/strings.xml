@@ -428,6 +428,8 @@
     <string name="workout_suggestion_connect_message">Anna Amethystin lukea valmiit harjoitukset Health Connectista (Samsung Health, Google Fit, Fitbit, Garmin…) ja ehdottaa julkaisua.</string>
     <string name="workout_suggestion_connect_button">Yhdistä</string>
     <string name="workout_from_health_connect">Health Connectista</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSitejä ei löydy vielä.</string>
     <string name="browser_reload">Lataa uudelleen</string>
     <string name="browser_unsupported">Sovelluksen sisäinen selain vaatii Android 11 tai uudemman.</string>
@@ -745,6 +747,9 @@
     <string name="call_calling">Soitetaan…</string>
     <string name="call_connecting">Yhdistetään…</string>
     <string name="call_ended">Puhelu päättyi</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Ohita</string>
     <string name="call_switch_camera">Vaihda kameraa</string>
     <string name="call_voice">Äänipuhelu</string>
