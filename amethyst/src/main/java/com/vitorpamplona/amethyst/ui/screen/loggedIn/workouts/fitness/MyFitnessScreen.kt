@@ -38,7 +38,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -94,7 +93,10 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_window_note
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_workouts
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_details
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity
@@ -141,8 +143,17 @@ fun MyFitnessScreen(
     val openRationale = { context.startActivity(Intent(context, HealthConnectRationaleActivity::class.java)) }
     val requestPermissions = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) }
 
-    Scaffold(
+    // DisappearingScaffold + AppBottomBar, like every other pinnable destination: My Fitness can
+    // be pinned to the bottom bar, and a bare Scaffold would make that bar vanish on arrival.
+    DisappearingScaffold(
+        isInvertedLayout = false,
         topBar = { TopBarWithBackButton(stringRes(Res.string.my_fitness_title), nav) },
+        bottomBar = {
+            AppBottomBar(Route.MyFitness, nav, accountViewModel) { route ->
+                if (route != Route.MyFitness) nav.navBottomBar(route)
+            }
+        },
+        accountViewModel = accountViewModel,
     ) { padding ->
         Surface(modifier = Modifier.padding(padding)) {
             when (val current = state) {

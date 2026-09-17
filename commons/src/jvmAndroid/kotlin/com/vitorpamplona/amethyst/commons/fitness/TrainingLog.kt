@@ -94,7 +94,10 @@ object TrainingLog {
 fun WorkoutRecordEvent.toDetectedWorkout(): DetectedWorkout? {
     val activity = activityType() ?: return null
 
-    val duration = durationSeconds() ?: return null
+    // effectiveDurationSeconds, not durationSeconds: a POWR-dialect record carries `start`/`end`
+    // and no `duration` tag, so the raw accessor returns null and the workout would vanish from
+    // the log entirely. WorkoutDisplay already reads it through the same helper.
+    val duration = effectiveDurationSeconds() ?: return null
     if (duration <= 0) return null
 
     return DetectedWorkout(

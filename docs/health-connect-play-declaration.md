@@ -33,9 +33,9 @@ rather than *being* the feature.
 
 Related code:
 
-- `service/workouts/health/WorkoutStats.kt` — all dashboard arithmetic; pure, unit-tested.
-- `service/workouts/health/TrainingLog.kt` — merges Health Connect with the user's own published
-  workouts, deduping the ones that appear in both.
+- `commons/.../commons/fitness/WorkoutStats.kt` — all dashboard arithmetic; pure, unit-tested.
+- `commons/.../commons/fitness/TrainingLog.kt` — merges Health Connect with the user's own
+  published workouts, deduping the ones that appear in both.
 - `ui/screen/loggedIn/workouts/fitness/MyFitnessScreen.kt` — the dashboard.
 - `service/workouts/health/HealthConnectManager.kt` — the only place the app touches Health Connect.
 - `ui/screen/loggedIn/workouts/health/HealthConnectRationaleActivity.kt` — the in-app rationale screen.

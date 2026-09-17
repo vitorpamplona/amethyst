@@ -30,6 +30,8 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.StepsTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.TitleTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutEndTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutStartTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutStartTimeTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -121,6 +123,24 @@ class PublishedWorkoutMappingTest {
     @Test
     fun `an event with no recognisable activity is skipped`() {
         assertNull(event(DurationTag.assemble(1800)).toDetectedWorkout())
+    }
+
+    /**
+     * POWR-dialect records carry `start`/`end` and no `duration` tag. Reading the raw duration
+     * accessor drops them from the log entirely.
+     */
+    @Test
+    fun `a POWR record with start and end but no duration tag is kept`() {
+        val workout =
+            event(
+                ExerciseTag.assemble(ExerciseType.CYCLING),
+                WorkoutStartTag.assemble(createdAt - 3600),
+                WorkoutEndTag.assemble(createdAt - 387),
+            ).toDetectedWorkout()
+
+        assertNotNull(workout)
+        assertEquals(3213, workout!!.durationSeconds)
+        assertEquals(createdAt - 3600, workout.startTimeEpochSeconds)
     }
 
     @Test

@@ -25,19 +25,14 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.amethyst.commons.fitness.TrainingLog
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
-import com.vitorpamplona.amethyst.commons.fitness.toDetectedWorkout
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
-import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
-import kotlinx.coroutines.Dispatchers
+import com.vitorpamplona.amethyst.service.workouts.health.publishedWorkoutsOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 
@@ -116,7 +111,7 @@ class MyFitnessViewModel : ViewModel() {
                     emptyList()
                 }
 
-            val fromRelays = publishedWorkouts(since.epochSecond)
+            val fromRelays = publishedWorkoutsOf(pubkeyHex ?: return@launch, since.epochSecond)
 
             _state.value =
                 State.Ready(
@@ -131,24 +126,5 @@ class MyFitnessViewModel : ViewModel() {
 
         val hc = manager ?: HealthConnectManager(context.applicationContext).also { manager = it }
         return if (hc.hasAllPermissions()) HealthConnectStatus.CONNECTED else HealthConnectStatus.AVAILABLE
-    }
-
-    /**
-     * The user's own kind 1301 events from the local cache, newer than [sinceEpochSeconds].
-     *
-     * Scans off the main thread: LocalCache holds every event the session has seen, and this
-     * walks all of them.
-     */
-    private suspend fun publishedWorkouts(sinceEpochSeconds: Long): List<DetectedWorkout> {
-        val mine = pubkeyHex ?: return emptyList()
-
-        return withContext(Dispatchers.Default) {
-            LocalCache.notes
-                .filterIntoSet { _, note ->
-                    val event = note.event
-                    event is WorkoutRecordEvent && event.pubKey == mine
-                }.mapNotNull { (it.event as WorkoutRecordEvent).toDetectedWorkout() }
-                .filter { it.startTimeEpochSeconds >= sinceEpochSeconds }
-        }
     }
 }

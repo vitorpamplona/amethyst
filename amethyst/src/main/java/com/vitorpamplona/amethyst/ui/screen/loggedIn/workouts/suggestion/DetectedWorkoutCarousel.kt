@@ -58,6 +58,8 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
+import com.vitorpamplona.amethyst.commons.fitness.TrainingLog
+import com.vitorpamplona.amethyst.commons.fitness.WorkoutOrigin
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -69,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_t
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_distance_km
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
+import com.vitorpamplona.amethyst.service.workouts.health.publishedWorkoutsOf
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity
@@ -108,13 +111,21 @@ fun DetectedWorkoutCarousel(
     var granted by remember { mutableStateOf<Boolean?>(null) }
     var workouts by remember { mutableStateOf<List<DetectedWorkout>>(emptyList()) }
 
+    val myPubkey = accountViewModel.userProfile().pubkeyHex
+
     val reload: suspend () -> Unit = {
         val ok = manager.hasAllPermissions()
         granted = ok
         workouts =
             if (ok) {
                 val since = Instant.now().minus(Duration.ofDays(HealthConnectManager.LOOKBACK_DAYS))
-                manager.readWorkouts(since).sortedByDescending { it.startTimeEpochSeconds }
+                // Offering a workout the user already shared would publish a second kind 1301 for
+                // the same effort. merge() flags the Health Connect copies that match something
+                // already posted, so drop those; what is left is genuinely unshared.
+                TrainingLog
+                    .merge(manager.readWorkouts(since), publishedWorkoutsOf(myPubkey, since.epochSecond))
+                    .filter { it.origin == WorkoutOrigin.HEALTH_CONNECT && !it.alreadyPublished }
+                    .sortedByDescending { it.startTimeEpochSeconds }
             } else {
                 emptyList()
             }
