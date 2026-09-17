@@ -17,8 +17,8 @@ permission is not a permitted/valid use case."*
 The app changed, not just the wording. Amethyst now has **My Fitness**, a personal training
 dashboard that summarises the user's own Health Connect workouts for them: weekly totals,
 week-over-week movement, a per-activity breakdown, best efforts, active days and a training
-streak. It is reached from the Workouts screen and works fully whether or not the user ever
-publishes anything. Publishing a workout is now one optional action on a row of that dashboard.
+streak. It is its own destination in the navigation drawer, under "You", and works fully whether
+or not the user ever publishes anything. Publishing a workout is now one optional action on a row of that dashboard.
 
 **The permissions serve the dashboard.** If the declaration below is ever re-read against the
 app, the test to apply is: every data type listed is rendered back to the user as their own
@@ -72,22 +72,33 @@ Related code:
 ## 2. Reviewer walkthrough
 
 > 1. Install and open Amethyst, and sign in (a key can be generated in-app).
-> 2. Open the navigation drawer (hamburger, top-left), and under **Feeds** tap **Workouts**.
-> 3. In the top bar, tap the **chart icon** to open **My Fitness**.
-> 4. The screen explains what will be read and offers **What Amethyst reads** (the full rationale
+> 2. Open the navigation drawer (hamburger, top-left). **My Fitness** is the second entry under
+>    **You**, the first section — directly below Profile. Tap it.
+> 3. The screen explains what will be read and offers **What Amethyst reads** (the full rationale
 >    screen) and **Connect**. Tap Connect and grant the permissions. (If the account has already
 >    logged workouts in Amethyst, the dashboard is already populated from those and the Health
 >    Connect offer appears as a banner above it instead — the feature does not gate on the
 >    permission.)
-> 5. The dashboard appears: "This week" totals with the change against last week; the streak,
+> 4. The dashboard appears: "This week" totals with the change against last week; the streak,
 >    active-days and workout-count tiles; the four-week weekly average; the per-activity
 >    breakdown; best efforts; and the recent-workout list.
-> 6. Everything above is the tracking feature. To see the optional sharing path, tap **Share this
->    workout** on any row — it opens a pre-filled composer that the user must confirm.
+> 5. Everything above is the tracking feature. To see the optional sharing path, tap **Share this
+>    workout** on a row in Recent workouts — it opens a pre-filled composer that the user must
+>    confirm. The button appears only on workouts that have not been published yet, so a workout
+>    is never offered for sharing twice.
 >
-> Note for a fresh test device: the dashboard needs Health Connect to actually hold finished
-> exercise sessions from the last four weeks, written by some fitness app or watch. With an empty
-> Health Connect database it correctly reports that nothing has been recorded.
+> My Fitness can also be pinned to the bottom bar, under Settings, like any other destination.
+>
+> Notes for testing:
+>
+> - The dashboard summarises two sources: workouts read from Health Connect, and workout records
+>   the account has published from Amethyst. On a fresh device with an empty Health Connect
+>   database and an account that has never logged a workout, it correctly reports that nothing has
+>   been recorded — there is no data to summarise, which is not a failure of the feature.
+> - To see it populated, either grant Health Connect access on a device whose fitness app or watch
+>   has saved sessions in the last four weeks, or log one in the app: drawer → **Feeds** →
+>   **Workouts** → **+**. A workout logged that way appears in the dashboard without any health
+>   permission at all.
 
 ## 3. Per-permission justification
 

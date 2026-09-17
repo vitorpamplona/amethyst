@@ -32,7 +32,7 @@ Configuration, cached events, keys, drafts, and other operational data live in t
 
 ### Health and fitness data (Health Connect)
 
-Amethyst's **My Fitness** screen (Workouts → the chart icon) summarises your own training for you: how much you did this week against last week, how your time splits across activities, your best efforts, how many days you trained, and your current streak. It builds that picture from the workouts your watch or fitness app has already saved to **Android Health Connect**.
+Amethyst's **My Fitness** screen (drawer → You → My Fitness) summarises your own training for you: how much you did this week against last week, how your time splits across activities, your best efforts, how many days you trained, and your current streak. It builds that picture from the workouts your watch or fitness app has already saved to **Android Health Connect**.
 
 This is what the health permissions are for. The summary is computed on your phone and shown to you; nothing is sent anywhere to produce it, and you never have to post anything to use it.
 

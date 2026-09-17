@@ -16,10 +16,11 @@ classifieds, calendars and more.</li>
 <li>Track your training and share a workout &mdash; see below.</li>
 </ul>
 <p><b>My Fitness &mdash; track your training</b></p>
-<p>Amethyst includes a personal training dashboard. Open the left drawer, tap <i>Workouts</i>, then
-the chart icon in the top bar. With your permission it reads the workouts your watch or fitness app
-has already saved to Android Health Connect (Samsung Health, Google Fit, Fitbit, Garmin Connect,
-Strava and others all write there) and shows you:</p>
+<p>Amethyst includes a personal training dashboard. Open the left drawer and tap <i>My Fitness</i>,
+under <i>You</i>. It summarises the workouts you have logged in Amethyst, and &mdash; with your
+permission &mdash; the ones your watch or fitness app has already saved to Android Health Connect
+(Samsung Health, Google Fit, Fitbit, Garmin Connect, Strava and others all write there). It shows
+you:</p>
 <ul>
 <li>How much you trained this week, and whether that is up or down on last week.</li>
 <li>Your four-week weekly average for time, distance, steps and climb.</li>
