@@ -113,6 +113,21 @@ fun ScanBounds.toViewPath(mapping: ScanViewMapping): Path =
 
 fun ScanBounds.centerInView(mapping: ScanViewMapping): Offset = mapping.map(ScanPoint(centerX, centerY))
 
+/**
+ * [longestSide] expressed in view pixels.
+ *
+ * Needed because [longestSide] is measured in the decoder's image space: comparing it directly
+ * against a distance in view space silently shrinks or grows the hit area by the preview's scale
+ * factor, which on a 1280x720 analysis frame shown on a 1080p-wide screen is off by nearly 2x.
+ */
+fun ScanBounds.longestSideInView(mapping: ScanViewMapping): Float {
+    val a = mapping.map(topLeft)
+    val b = mapping.map(topRight)
+    val c = mapping.map(bottomRight)
+    val d = mapping.map(bottomLeft)
+    return maxOf((a - b).getDistance(), (b - c).getDistance(), (c - d).getDistance(), (d - a).getDistance())
+}
+
 /** Four corner brackets marking where to aim. Purely decorative — we decode the whole frame. */
 fun DrawScope.drawViewfinderBrackets(color: Color) {
     val side = minOf(size.width, size.height) * 0.68f

@@ -211,11 +211,19 @@ fun isMarmotGroupRoute(uri: String) = uri.startsWith("marmot:")
 fun isActiveSubscriptionsRoute(uri: String) = uri.startsWith("activesubs", true) || uri.startsWith("nostr:activesubs", true)
 
 /**
- * The launcher shortcut (res/xml/shortcuts.xml) fires `nostr:scanqr`, caught by MainActivity's
- * existing nostr-scheme filter. A pseudo-uri rather than a hardcoded component, because debug and
- * benchmark builds carry an applicationId suffix that a hardcoded targetPackage would miss.
+ * The launcher shortcut (res/xml/shortcuts.xml) fires `amethyst:scanqr`, caught by MainActivity's
+ * existing scheme filter. A pseudo-uri rather than a hardcoded component, because debug and
+ * benchmark builds carry an applicationId suffix a hardcoded targetPackage would miss, and
+ * manifest placeholders are not substituted into resource XML.
+ *
+ * `nostr:scanqr` is still accepted so an older pinned shortcut keeps working, but the shortcut
+ * itself uses our own scheme: an implicit `nostr:` VIEW intent can be answered by any Nostr client
+ * installed alongside us.
  */
-fun isScanQrRoute(uri: String) = uri.equals("scanqr", true) || uri.equals("nostr:scanqr", true)
+fun isScanQrRoute(uri: String) =
+    uri.equals("scanqr", true) ||
+        uri.equals("amethyst:scanqr", true) ||
+        uri.equals("nostr:scanqr", true)
 
 private val MARMOT_HEX = Regex("^[0-9a-fA-F]+$")
 

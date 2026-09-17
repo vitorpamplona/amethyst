@@ -436,15 +436,15 @@ private fun QrCameraScanner(
     state.rejected?.let { payload ->
         ScanOutcomeSheet(
             payload = payload,
-            onDismiss = { state.dismissRejection() },
+            onDismiss = { state.dismissRejection(SystemClock.elapsedRealtime()) },
             onOpenLink = { url ->
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
-                state.dismissRejection()
+                state.dismissRejection(SystemClock.elapsedRealtime())
                 currentOnDismiss()
             },
             onCopy = { text ->
                 copyToClipboard(context, text)
-                state.dismissRejection()
+                state.dismissRejection(SystemClock.elapsedRealtime())
             },
         )
     }
@@ -538,7 +538,8 @@ private fun pickCandidateAt(
         .mapNotNull { candidate ->
             val bounds = candidate.bounds ?: return@mapNotNull null
             val center = bounds.centerInView(mapping)
-            val radius = maxOf(bounds.longestSide, MIN_TAP_RADIUS_PX)
+            // In view pixels, to match `distance`. bounds.longestSide is image-space.
+            val radius = maxOf(bounds.longestSideInView(mapping), MIN_TAP_RADIUS_PX)
             val distance = (center - tap).getDistance()
             if (distance <= radius) candidate to distance else null
         }.minByOrNull { it.second }

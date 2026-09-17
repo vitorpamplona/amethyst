@@ -96,12 +96,25 @@ object QrImageImport {
             ?.takeIf { it.isNotEmpty() }
     }
 
-    /** An image sitting on the clipboard, or null when there is none. */
+    /**
+     * An image sitting on the clipboard, or null when there is none.
+     *
+     * The MIME check matters: a copied link is a clip with a uri too, and without it every such
+     * clip went to the bitmap decoder and the clipboard *text* was never reachable — Paste could
+     * not paste an npub, which is most of what it is for.
+     */
     fun clipboardImage(context: Context): Uri? {
         val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return null
         val clip = clipboard.primaryClip ?: return null
         if (clip.itemCount == 0) return null
-        return clip.getItemAt(0)?.uri
+
+        val uri = clip.getItemAt(0)?.uri ?: return null
+        val declared = (0 until clip.description.mimeTypeCount).map { clip.description.getMimeType(it) }
+        val looksLikeImage =
+            declared.any { it.startsWith("image/") } ||
+                context.contentResolver.getType(uri)?.startsWith("image/") == true
+
+        return uri.takeIf { looksLikeImage }
     }
 
     private fun decodeAt(
@@ -116,6 +129,13 @@ object QrImageImport {
         return try {
             if (upscale) upscaled = original.scale(original.width * 2, original.height * 2)
             decoder.decode(upscaled ?: original, DecodeEffort.Thorough)
+        } catch (e: OutOfMemoryError) {
+            // Not an Exception, so a plain `catch (e: Exception)` misses it. The retry ladder
+            // deliberately re-decodes at inSampleSize = 1, and a modern phone camera hands us
+            // 50-108 MP: ~400 MB as ARGB_8888, which is well past the heap on most devices.
+            // Failing to read a picture must never take the app down with it.
+            Log.w("QrScanner", "Ran out of memory decoding a picked image", e)
+            emptyList()
         } catch (e: Exception) {
             Log.w("QrScanner", "Could not decode picked image", e)
             emptyList()
@@ -154,6 +174,9 @@ object QrImageImport {
                     inPreferredConfig = Bitmap.Config.ARGB_8888
                 }
             context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+        } catch (e: OutOfMemoryError) {
+            Log.w("QrScanner", "Ran out of memory loading a picked image", e)
+            null
         } catch (e: Exception) {
             Log.w("QrScanner", "Could not load picked image", e)
             null

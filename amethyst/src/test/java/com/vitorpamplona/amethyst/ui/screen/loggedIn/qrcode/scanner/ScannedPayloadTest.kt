@@ -119,6 +119,23 @@ class ScannedPayloadTest {
     }
 
     @Test
+    fun `an ncryptsec is secret even though nothing can parse it`() {
+        // Nip19Parser's regex lists ncryptsec1 but parseComponents has no branch for it, so it
+        // returns null and the payload lands in Unknown. Unknown is not secret, which put an
+        // encrypted private key on screen with a Copy button -- the exact thing containsSecret
+        // exists to prevent. Classification must not depend on whether we can decode the thing.
+        val payload = classifyScannedPayload(NCRYPTSEC_FIXTURE)
+
+        assertTrue("an encrypted private key must never be echoed", payload.containsSecret)
+    }
+
+    @Test
+    fun `key material is secret whatever case it arrives in`() {
+        assertTrue(classifyScannedPayload(NCRYPTSEC_FIXTURE.uppercase()).containsSecret)
+        assertTrue(classifyScannedPayload("nostr:$NCRYPTSEC_FIXTURE").containsSecret)
+    }
+
+    @Test
     fun `public payloads are not marked secret`() {
         assertFalse(classifyScannedPayload(npub).containsSecret)
         assertFalse(classifyScannedPayload(pubkeyHex).containsSecret)
@@ -135,5 +152,9 @@ class ScannedPayloadTest {
     companion object {
         /** A throwaway key, generated here so no real secret ever reaches a source file. */
         private val NSEC_FIXTURE = ByteArray(32) { (it + 1).toByte() }.toNsec()
+
+        /** Shape only — nothing here can decrypt it, and classification must not need to. */
+        private const val NCRYPTSEC_FIXTURE =
+            "ncryptsec1qgg9947rlpvqu76pj5ecreduf9jxhselq2nae2kghhvd5g7dgjtcxfqtd67p9m0w57lspw8gsq6yphnm8623nsl8xn9j4jdzz84zm3frztj3z7s35vpzmqf6ksu8r89qk5z2zxfmu5gv8th8wclt0h4p"
     }
 }

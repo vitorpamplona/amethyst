@@ -106,6 +106,20 @@ sealed interface ScannedPayload {
         val npub: String,
     ) : ScannedPayload
 
+    /**
+     * Key material we can recognise but not decode — chiefly an `ncryptsec`, which
+     * `Nip19Parser` lists in its regex but has no branch to parse, so it would otherwise land in
+     * [Unknown] and be echoed to the screen.
+     *
+     * Deliberately classified by *prefix*, not by parse success: whether a payload is dangerous
+     * to display cannot depend on whether we happen to be able to read it.
+     */
+    data class EncryptedKey(
+        override val raw: String,
+    ) : ScannedPayload {
+        override val containsSecret get() = true
+    }
+
     /** Decoded fine, but it is not anything Amethyst knows how to act on. */
     data class Unknown(
         override val raw: String,
@@ -142,6 +156,12 @@ fun classifyScannedPayload(text: String): ScannedPayload {
     if (lower.startsWith("nostrconnect:")) return ScannedPayload.NostrConnect(raw)
     if (WALLET_CONNECT_PREFIXES.any { lower.startsWith(it) }) return ScannedPayload.WalletConnect(raw)
     if (lower.startsWith("cashu") || lower.startsWith("creq")) return ScannedPayload.Cashu(raw)
+
+    // Before the NIP-19 scan, and by prefix rather than by parse: an ncryptsec cannot be decoded
+    // here, so waiting to find out what it is would mean deciding it is harmless.
+    if (lower.startsWith("ncryptsec1") || lower.startsWith("nostr:ncryptsec1")) {
+        return ScannedPayload.EncryptedKey(raw)
+    }
     if (LIGHTNING_PREFIXES.any { lower.startsWith(it) }) return ScannedPayload.Lightning(raw)
 
     Nip19Parser.uriToRoute(raw)?.let { return ScannedPayload.Nostr(raw, it.entity) }

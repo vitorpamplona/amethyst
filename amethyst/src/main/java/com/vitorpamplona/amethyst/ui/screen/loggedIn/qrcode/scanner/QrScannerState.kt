@@ -123,6 +123,12 @@ class QrScannerState {
         if (found.isEmpty()) {
             candidates = emptyList()
             msSinceLastDetection = nowMs - lastDetectionMs
+            // Drop a half-captured multi-part code once its parts stop arriving, or its
+            // "Captured 1 of 3 parts" hint sticks on screen forever and hides every other hint.
+            if (sequenceProgress != null && msSinceLastDetection > StructuredAppendAccumulator.DEFAULT_TIMEOUT_MS) {
+                sequence.reset()
+                sequenceProgress = null
+            }
             return null
         }
 
@@ -173,11 +179,20 @@ class QrScannerState {
         candidates = emptyList()
     }
 
-    /** Dismissing the sheet clears the dedupe latch so the user can retry the very same code. */
-    fun dismissRejection() {
+    /**
+     * Dismissing the sheet resumes scanning.
+     *
+     * The dedupe latch is deliberately LEFT in place. Clearing it - so the user could retry the
+     * very same code - meant that the offending code, still sitting in front of the lens, decoded
+     * again on the next frame and re-opened the sheet immediately: "Scan again" became a button
+     * that could not be escaped. Keeping the latch lets the camera run; pointing at the same code
+     * again after [DEDUPE_MS] still re-triggers it, which is the retry that was actually wanted.
+     */
+    fun dismissRejection(nowMs: Long) {
         rejected = null
-        lastSubmittedText = null
-        lastSubmittedAt = 0
+        // Restart the latch from now, so the grace period is measured from when the user dismissed
+        // the sheet rather than from when the code was first read.
+        lastSubmittedAt = nowMs
     }
 
     private fun updateDarkness(
