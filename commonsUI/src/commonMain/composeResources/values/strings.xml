@@ -1296,6 +1296,11 @@
     <string name="call_calling">Calling\u2026</string>
     <string name="call_connecting">Connecting\u2026</string>
     <string name="call_ended">Call ended</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
+    <string name="call_duration_minutes_seconds">%1$02d:%2$02d</string>
+    <string name="call_duration_hours_minutes_seconds">%1$d:%2$02d:%3$02d</string>
     <string name="call_dismiss">Dismiss</string>
     <string name="call_switch_camera">Switch camera</string>
     <string name="call_voice">Voice call</string>
