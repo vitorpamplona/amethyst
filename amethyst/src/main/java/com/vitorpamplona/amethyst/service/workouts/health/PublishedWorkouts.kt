@@ -24,30 +24,26 @@ import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.amethyst.commons.fitness.toDetectedWorkout
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
- * The workouts [pubkeyHex] has published, from [sinceEpochSeconds] onwards, as the cache currently
- * holds them.
+ * The workouts [pubkeyHex] has published, as a live view of the cache.
  *
  * Shared by the My Fitness dashboard, which counts them, and the New Workout carousel, which uses
  * them to avoid offering a workout the user already shared. Both need the same view of "what have
  * I already posted", and two answers to that question would mean the carousel offering something
  * the dashboard knows is a duplicate.
  *
- * Scans off the main thread: LocalCache holds every event the session has seen and this walks all
- * of them. It reports only what is already cached — it issues no REQ of its own.
+ * [LocalCache.observeEvents] rather than a scan: it is indexed by kind and author, so it neither
+ * walks every note in the cache nor needs re-running on a timer — the dashboard updates itself
+ * when a relay delivers a workout, including the one the user just published.
+ *
+ * Reports only what the cache holds; it issues no REQ of its own.
  */
-suspend fun publishedWorkoutsOf(
-    pubkeyHex: String,
-    sinceEpochSeconds: Long,
-): List<DetectedWorkout> =
-    withContext(Dispatchers.Default) {
-        LocalCache.notes
-            .filterIntoSet { _, note ->
-                val event = note.event
-                event is WorkoutRecordEvent && event.pubKey == pubkeyHex
-            }.mapNotNull { (it.event as WorkoutRecordEvent).toDetectedWorkout() }
-            .filter { it.startTimeEpochSeconds >= sinceEpochSeconds }
-    }
+fun publishedWorkoutsOf(pubkeyHex: String): Flow<List<DetectedWorkout>> =
+    LocalCache
+        .observeEvents<WorkoutRecordEvent>(
+            Filter(kinds = listOf(WorkoutRecordEvent.KIND), authors = listOf(pubkeyHex)),
+        ).map { events -> events.mapNotNull { it.toDetectedWorkout() } }

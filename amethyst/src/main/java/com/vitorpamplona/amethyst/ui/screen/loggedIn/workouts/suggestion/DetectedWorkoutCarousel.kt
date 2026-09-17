@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.health.HealthConne
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.labelRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.symbol
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -123,7 +124,7 @@ fun DetectedWorkoutCarousel(
                 // the same effort. merge() flags the Health Connect copies that match something
                 // already posted, so drop those; what is left is genuinely unshared.
                 TrainingLog
-                    .merge(manager.readWorkouts(since), publishedWorkoutsOf(myPubkey, since.epochSecond))
+                    .merge(manager.readWorkouts(since), publishedWorkoutsOf(myPubkey).first())
                     .filter { it.origin == WorkoutOrigin.HEALTH_CONNECT && !it.alreadyPublished }
                     .sortedByDescending { it.startTimeEpochSeconds }
             } else {

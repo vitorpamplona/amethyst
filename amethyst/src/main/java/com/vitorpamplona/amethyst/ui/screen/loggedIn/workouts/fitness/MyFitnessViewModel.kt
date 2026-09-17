@@ -25,13 +25,22 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.amethyst.commons.fitness.TrainingLog
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.service.workouts.health.publishedWorkoutsOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -64,7 +73,7 @@ class MyFitnessViewModel : ViewModel() {
 
     @Immutable
     sealed interface State {
-        /** First load, or a reload after a permission change. */
+        /** First load, before Health Connect has been checked. */
         data object Loading : State
 
         /**
@@ -78,46 +87,72 @@ class MyFitnessViewModel : ViewModel() {
         ) : State
     }
 
-    private val _state = MutableStateFlow<State>(State.Loading)
-    val state: StateFlow<State> = _state.asStateFlow()
+    private val pubkeyHex = MutableStateFlow<String?>(null)
+
+    /**
+     * Health Connect's contribution. A push source: the platform has no change feed we can
+     * observe, so [refresh] re-reads it when the screen resumes or a permission is granted.
+     */
+    private val fromHealthConnect = MutableStateFlow<List<DetectedWorkout>>(emptyList())
+
+    /** Null until the first [refresh] resolves, which is what keeps the screen on [State.Loading]. */
+    private val healthConnectStatus = MutableStateFlow<HealthConnectStatus?>(null)
 
     private var manager: HealthConnectManager? = null
 
-    /** The pubkey whose workouts this dashboard summarises. Set by the screen before refreshing. */
-    private var pubkeyHex: String? = null
-
-    fun init(pubkeyHex: String) {
-        if (this.pubkeyHex != pubkeyHex) {
-            this.pubkeyHex = pubkeyHex
-            _state.value = State.Loading
+    /**
+     * The user's published workouts, live. Re-subscribes on an account switch; a workout arriving
+     * from a relay — or the one the user just posted — lands here without a refresh.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val fromRelays: Flow<List<DetectedWorkout>> =
+        pubkeyHex.flatMapLatest { me ->
+            if (me == null) flowOf(emptyList()) else publishedWorkoutsOf(me)
         }
+
+    val state: StateFlow<State> =
+        combine(fromHealthConnect, fromRelays, healthConnectStatus) { healthConnect, published, status ->
+            if (status == null) {
+                State.Loading
+            } else {
+                val now = Instant.now()
+                val since = now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)).epochSecond
+
+                State.Ready(
+                    report =
+                        WorkoutStats.report(
+                            TrainingLog.merge(healthConnect, published.filter { it.startTimeEpochSeconds >= since }),
+                            now,
+                        ),
+                    healthConnect = status,
+                )
+            }
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State.Loading)
+
+    /** The account whose workouts this dashboard summarises. */
+    fun init(pubkeyHex: String) {
+        this.pubkeyHex.value = pubkeyHex
     }
 
     /**
-     * Rebuilds the dashboard. Safe to call on every resume: it re-checks permissions as well as
-     * data, so revoking access in Health Connect drops those workouts out of the log rather than
-     * leaving stale numbers on display.
+     * Re-reads Health Connect. Safe to call on every resume: it re-checks permissions as well as
+     * data, so revoking access drops those workouts out of the log rather than leaving stale
+     * numbers on display. The published side needs no refresh — it is observed.
      */
     fun refresh(context: Context) {
         viewModelScope.launch {
-            val now = Instant.now()
-            val since = now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS))
-
             val status = healthConnectStatus(context)
-            val fromHealthConnect =
+
+            fromHealthConnect.value =
                 if (status == HealthConnectStatus.CONNECTED) {
-                    manager?.readWorkouts(since, now).orEmpty()
+                    val now = Instant.now()
+                    manager?.readWorkouts(now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)), now).orEmpty()
                 } else {
                     emptyList()
                 }
 
-            val fromRelays = publishedWorkoutsOf(pubkeyHex ?: return@launch, since.epochSecond)
-
-            _state.value =
-                State.Ready(
-                    report = WorkoutStats.report(TrainingLog.merge(fromHealthConnect, fromRelays), now),
-                    healthConnect = status,
-                )
+            healthConnectStatus.value = status
         }
     }
 

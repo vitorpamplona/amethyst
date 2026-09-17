@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness
 
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.my_fitness_duration_hours_minutes
+import com.vitorpamplona.amethyst.commons.resources.my_fitness_duration_minutes
+import com.vitorpamplona.amethyst.commons.resources.my_fitness_duration_seconds
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_ft
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_km
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_m
@@ -40,17 +43,24 @@ import kotlin.math.roundToLong
  */
 internal fun prefersMiles(): Boolean = phonePrefersMiles()
 
-/** `7h 12m` / `42m` / `45s` — a total, so hours run past 24 rather than wrapping. */
+/**
+ * `7h 12m` / `42m` / `45s` — a total, so hours run past 24 rather than wrapping.
+ *
+ * The unit suffixes come from string resources: "h"/"m"/"s" are English abbreviations, and the
+ * order of the two parts is not universal either, so both belong to the translator rather than
+ * to this function.
+ */
+@Composable
 internal fun formatDuration(totalSeconds: Long): String {
-    if (totalSeconds <= 0) return "0m"
+    if (totalSeconds <= 0) return stringRes(Res.string.my_fitness_duration_minutes, 0)
 
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
 
     return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m"
-        else -> "${totalSeconds}s"
+        hours > 0 -> stringRes(Res.string.my_fitness_duration_hours_minutes, hours, minutes)
+        minutes > 0 -> stringRes(Res.string.my_fitness_duration_minutes, minutes)
+        else -> stringRes(Res.string.my_fitness_duration_seconds, totalSeconds)
     }
 }
 

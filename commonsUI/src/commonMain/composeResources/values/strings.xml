@@ -694,6 +694,11 @@
     <string name="my_fitness_active_days">Active days</string>
     <string name="my_fitness_streak">Day streak</string>
     <string name="my_fitness_time">Time</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
+    <string name="my_fitness_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="my_fitness_duration_minutes">%1$dm</string>
+    <string name="my_fitness_duration_seconds">%1$ds</string>
     <string name="my_fitness_distance">Distance</string>
     <string name="my_fitness_calories">Calories</string>
     <string name="my_fitness_steps">Steps</string>
