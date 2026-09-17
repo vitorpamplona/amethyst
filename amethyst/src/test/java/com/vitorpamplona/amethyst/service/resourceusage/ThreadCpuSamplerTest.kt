@@ -118,21 +118,40 @@ class ThreadCpuSamplerTest {
         if (!taskDir.isDirectory) return
 
         val reader = ProcThreadCpuReader(taskDir)
-        val tids = reader.listTids()
-        assertTrue("/proc/self/task listed no threads", tids.isNotEmpty())
 
-        fun totalTicks() = tids.sumOf { reader.readCpuTicks(it).coerceAtLeast(0) }
+        // Compared over the threads alive at BOTH ends, not over a tid list
+        // captured once. A JVM retires GC and JIT threads at unpredictable
+        // moments, and a tid that has gone reads as -1 — so a fixed list can
+        // total LESS after the burn than before it and fail a test about a
+        // monotonic counter. Over the intersection the sum cannot regress,
+        // because per-thread CPU only ever increases.
+        fun sample(): Map<Int, Long> =
+            reader
+                .listTids()
+                .associateWith { reader.readCpuTicks(it) }
+                .filterValues { it >= 0 }
 
-        val before = totalTicks()
-        // Well past one clock tick (10ms at 100Hz) of real user time, so the
-        // counter has to move if the offsets point at utime/stime.
-        val deadline = System.nanoTime() + 300_000_000L
+        val before = sample()
+        assertTrue("/proc/self/task listed no readable threads", before.isNotEmpty())
+
+        // Well past one clock tick (10ms at 100Hz) of real user time on THIS
+        // thread, which cannot be the one that exits, so the counter has to
+        // move if the offsets point at utime/stime.
+        val deadline = System.nanoTime() + 400_000_000L
         var sink = 0L
         while (System.nanoTime() < deadline) sink += System.nanoTime() % 7
         assertTrue(sink >= 0)
 
-        val after = totalTicks()
-        assertTrue("CPU ticks did not grow after burning CPU: $before -> $after", after > before)
+        val after = sample()
+        val survivors = before.keys.intersect(after.keys)
+        assertTrue("no thread survived the burn", survivors.isNotEmpty())
+
+        val beforeTicks = survivors.sumOf { before.getValue(it) }
+        val afterTicks = survivors.sumOf { after.getValue(it) }
+        assertTrue(
+            "CPU ticks did not grow after burning CPU: $beforeTicks -> $afterTicks over ${survivors.size} threads",
+            afterTicks > beforeTicks,
+        )
         assertTrue("Implausible tick rate: ${reader.ticksPerSecond}", reader.ticksPerSecond in 1..10_000)
     }
 
