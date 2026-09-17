@@ -145,7 +145,7 @@ class KindRegistryTest {
         // a word. The list is here so adding a kind to RenderableKinds is a decision about
         // whether it earns a name, rather than silence.
         assertEquals(
-            listOf(24, 54, 1018, 1111, 1337, 1808, 10001, 10003, 30000, 30001, 30053, 30296, 30297, 30817, 31337),
+            listOf(24, 54, 1018, 1111, 1337, 1808, 10001, 10003, 30000, 30001, 30005, 30053, 30296, 30297, 30817, 31337),
             RenderableKinds.ALL.filter { KindRegistry.nameFor(it) == null }.sorted(),
         )
     }

@@ -106,8 +106,10 @@ class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
                     .apply { normalizedMime?.let { setMimeType(it) } }
                     .setSubtitleConfigurations(
                         // Feed videos autoplay muted, so a caption track is what makes them
-                        // legible — flag the first one default and let ExoPlayer select it.
-                        // RenderCaptions draws the cues and offers the toggle to turn them off.
+                        // legible — flag the first one default and let ExoPlayer select it, and
+                        // RenderCaptions draws the cues. There is no way to turn them off yet:
+                        // the player's button row is a user-configured set, so a CC toggle needs
+                        // to be added there rather than hard-coded into the overlay.
                         key.captions.mapIndexed { index, track ->
                             track.toSubtitleConfiguration(isDefault = index == 0)
                         },

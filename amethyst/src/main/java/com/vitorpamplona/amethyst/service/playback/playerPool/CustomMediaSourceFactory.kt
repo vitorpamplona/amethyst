@@ -141,7 +141,13 @@ class CustomMediaSourceFactory(
         return this
     }
 
+    // Retained as well as forwarded: the subtitle sources in withSideLoadedSubtitles are built per
+    // call rather than living in allFactories, so this is the only way they can be given the same
+    // retry/backoff behaviour the player configured for everything else.
+    private var loadErrorHandlingPolicy: LoadErrorHandlingPolicy? = null
+
     override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: LoadErrorHandlingPolicy): MediaSource.Factory {
+        this.loadErrorHandlingPolicy = loadErrorHandlingPolicy
         allFactories.forEach { it.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy) }
         return this
     }
@@ -209,6 +215,7 @@ class CustomMediaSourceFactory(
                 } else {
                     SingleSampleMediaSource
                         .Factory(dataSource)
+                        .apply { loadErrorHandlingPolicy?.let { setLoadErrorHandlingPolicy(it) } }
                         .createMediaSource(subtitles[index - 1], C.TIME_UNSET)
                 }
             }

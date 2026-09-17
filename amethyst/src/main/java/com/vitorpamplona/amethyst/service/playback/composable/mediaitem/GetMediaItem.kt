@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
@@ -94,7 +96,19 @@ fun GetMediaItem(
 ) {
     val mediaItem by produceCachedState(cache = mediaItemCache, key = data)
 
-    mediaItem?.let {
+    // produceCachedState re-remembers on a new key and starts at null while the replacement is
+    // built off-thread. Rendering that null would drop the whole player subtree for a frame and
+    // rebuild it — a visible blink — and for the one case that changes the key mid-playback
+    // (captions resolving after the first frame) the warm-pool check then declines to re-set an
+    // item carrying the same mediaId, so the blink would buy nothing. Keep drawing the item we
+    // already have until its replacement exists.
+    val previous = remember { mutableStateOf<LoadedMediaItem?>(null) }
+    val current = mediaItem
+    if (current != null && previous.value !== current) {
+        SideEffect { previous.value = current }
+    }
+
+    (current ?: previous.value)?.let {
         inner(it)
     }
 }

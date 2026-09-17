@@ -121,9 +121,15 @@ fun RenderVideoCurationSet(
             )
         }
 
+        // An empty strip has two very different causes. Encrypted content we could not read means
+        // the members are there and private; no content at all means the list is simply empty, and
+        // calling that "Private list" would be a lie — to its own author most of all, who can read
+        // everything in it.
+        val membersAreHidden = items.isEmpty() && noteEvent.content.isNotBlank()
+
         Text(
             text =
-                if (items.isEmpty()) {
+                if (membersAreHidden) {
                     stringRes(R.string.video_curation_set_private_items)
                 } else {
                     pluralStringResource(R.plurals.video_curation_set_video_count, items.size, items.size)

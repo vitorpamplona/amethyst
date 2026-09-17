@@ -106,7 +106,15 @@ private fun RenderVideoCredit(
                         // toBestDisplayName() is read inside the row so a profile that lands later
                         // still renames the credit.
                         name = "@" + it.toBestDisplayName(),
-                        confirmed = { AcceptedCollaboration(target.pubKey, videoAddress, accountViewModel) },
+                        confirmed = {
+                            // Only a role-marked credit is an invite someone can accept, and each
+                            // lookup costs a LocalCache note plus a relay REQ per credit per
+                            // rendered card. Asking for every `mention` and `inspired-by` would
+                            // spend a subscription per feed item on an event that cannot exist.
+                            if (credit.label.isCollaborationRole()) {
+                                AcceptedCollaboration(target.pubKey, videoAddress, accountViewModel)
+                            }
+                        },
                         onClick = { nav.nav(Route.Profile(target.pubKey)) },
                     )
                 }
@@ -114,7 +122,7 @@ private fun RenderVideoCredit(
 
         is CreditTarget.Video ->
             CreditRow(
-                label = credit.label?.takeUnless { it == MENTION_MARKER } ?: stringRes(R.string.video_credit_references),
+                label = workLabel(credit.label),
                 name = target.address.dTag.take(SHORT_REF_LENGTH),
                 onClick = {
                     nav.nav(Route.Note(target.address.toTag()))
@@ -123,7 +131,7 @@ private fun RenderVideoCredit(
 
         is CreditTarget.Event ->
             CreditRow(
-                label = if (credit.label == AUDIO_MARKER) stringRes(R.string.video_credit_audio_from) else credit.label.orEmpty(),
+                label = workLabel(credit.label),
                 name = target.eventId.take(SHORT_REF_LENGTH),
                 onClick = { nav.nav(Route.Note(target.eventId)) },
             )
@@ -205,6 +213,20 @@ private fun personLabel(marker: String?): String =
         // Anything else is a role the video's author typed ("Collaborator", "Director"): print it.
         else -> marker
     }
+
+// The same treatment for a credited work. Both reference kinds route through here so an `e` tag
+// and an `a` tag carrying the same marker read identically — the `e` path used to print the raw
+// protocol token, so a `mention` showed up in the UI as the literal word "mention".
+@Composable
+private fun workLabel(marker: String?): String =
+    when (marker) {
+        AUDIO_MARKER -> stringRes(R.string.video_credit_audio_from)
+        MENTION_MARKER, null -> stringRes(R.string.video_credit_references)
+        else -> marker
+    }
+
+/** True for a marker that names a role rather than describing a reference. */
+private fun String?.isCollaborationRole(): Boolean = this != null && this != MENTION_MARKER && this != INSPIRED_BY_MARKER && this != AUDIO_MARKER
 
 private const val INSPIRED_BY_MARKER = "inspired-by"
 private const val MENTION_MARKER = "mention"
