@@ -211,6 +211,159 @@ class WakeCountersTest {
             assertEquals(10L, accountant.allDaysIncludingLive()[0L].orEmpty()[wakeKeyBg()])
         }
 
+    // ------------------------------------------------------------------
+    // WakeWorkTracker — "and then what", the half that decides a wake's cost
+    // ------------------------------------------------------------------
+
+    private fun tracker(
+        accountant: ResourceUsageAccountant,
+        now: () -> Long,
+    ) = WakeWorkTracker(accountant, { false }, { false }, now)
+
+    /** Activity inside one window extends it; it is booked once, when it settles. */
+    @Test
+    fun oneBurstIsOneWindowSpanningItsFirstToLastActivity() =
+        runTest {
+            val accountant = accountant(backgroundScope)
+            var now = 0L
+            val t = tracker(accountant) { now }
+
+            t.onActivity() // window opens at 0
+            now = 200
+            t.onActivity()
+            now = 1_500
+            t.onActivity() // still the same burst: last activity at 1500
+
+            // Nothing is booked while the window is open.
+            assertEquals(0L, t.closedWindows)
+
+            now = 20_000
+            t.closeIfSettled()
+
+            val counters = accountant.allDaysIncludingLive()[0L].orEmpty()
+            assertEquals(1L, counters[UsageKeys.wakeWorkWindows(UsageKeys.BG)])
+            assertEquals(1_500L, counters[UsageKeys.wakeWorkMs(UsageKeys.BG)])
+        }
+
+    /**
+     * The number the whole counter exists for: the same wake count can mean very
+     * different things, and only the busy time tells them apart.
+     */
+    @Test
+    fun twoBurstsAreTwoWindowsWithTheirOwnSpans() =
+        runTest {
+            val accountant = accountant(backgroundScope)
+            var now = 0L
+            val t = tracker(accountant) { now }
+
+            t.onActivity()
+            now = 100
+            t.onActivity() // window A: 100ms
+
+            now = 60_000
+            t.onActivity() // silence exceeded -> A closes, B opens
+            now = 63_000
+            t.onActivity() // window B: 3000ms
+            now = 80_000
+            t.closeIfSettled()
+
+            val counters = accountant.allDaysIncludingLive()[0L].orEmpty()
+            assertEquals(2L, counters[UsageKeys.wakeWorkWindows(UsageKeys.BG)])
+            assertEquals(3_100L, counters[UsageKeys.wakeWorkMs(UsageKeys.BG)])
+            // And the shape, which the total alone would hide.
+            assertEquals(1L, counters[UsageKeys.wakeWorkSpan(100, mobile = false, foreground = false)])
+            assertEquals(1L, counters[UsageKeys.wakeWorkSpan(3_000, mobile = false, foreground = false)])
+        }
+
+    /**
+     * A flush landing mid-burst must not cut one busy period in two — that would
+     * halve every span and double the window count.
+     */
+    @Test
+    fun aFlushDuringAnActiveBurstDoesNotCloseIt() =
+        runTest {
+            val accountant = accountant(backgroundScope)
+            var now = 0L
+            val t = tracker(accountant) { now }
+
+            t.onActivity()
+            now = 1_000
+            t.onActivity()
+
+            now = 2_000
+            t.closeIfSettled() // only 1s of silence: still busy
+
+            assertEquals(0L, t.closedWindows)
+            assertTrue(accountant.allDaysIncludingLive()[0L].orEmpty().isEmpty())
+        }
+
+    /**
+     * Without pre-flush closing, a device that slept right after a burst would
+     * never book that burst — the next activity might be hours away.
+     */
+    @Test
+    fun aSettledWindowIsBookedByTheFlushHookNotByTheNextActivity() =
+        runTest {
+            val accountant = accountant(backgroundScope)
+            var now = 0L
+            val t = tracker(accountant) { now }
+
+            t.onActivity()
+            now = 500
+            t.onActivity()
+
+            now = 30_000
+            t.closeIfSettled()
+            assertEquals(1L, t.closedWindows)
+
+            // Idempotent: a second flush with no new activity books nothing more.
+            now = 40_000
+            t.closeIfSettled()
+            assertEquals(1L, t.closedWindows)
+            assertEquals(1L, accountant.allDaysIncludingLive()[0L].orEmpty()[UsageKeys.wakeWorkWindows(UsageKeys.BG)])
+        }
+
+    /** A wake that settles instantly is still a wake — it just has a zero-length span. */
+    @Test
+    fun aSingleFrameWakeIsStillCountedAsAWindow() =
+        runTest {
+            val accountant = accountant(backgroundScope)
+            var now = 0L
+            val t = tracker(accountant) { now }
+
+            t.onActivity()
+            now = 30_000
+            t.closeIfSettled()
+
+            val counters = accountant.allDaysIncludingLive()[0L].orEmpty()
+            assertEquals(1L, counters[UsageKeys.wakeWorkWindows(UsageKeys.BG)])
+            assertNull(counters[UsageKeys.wakeWorkMs(UsageKeys.BG)])
+            assertEquals(1L, counters[UsageKeys.wakeWorkSpan(0, mobile = false, foreground = false)])
+        }
+
+    /**
+     * Histogram bucket names come from the bounds, so two histograms with
+     * different prefixes can share one — `relay.life` and `wakework.span` both
+     * produce `lt5s`. Reading a bucket by segment match therefore reports relay
+     * session lifetimes as busy-window lengths, which is how this was found:
+     * the repo's own `newKeysDoNotDisturbSummary` guard went red.
+     */
+    @Test
+    fun spanBucketsDoNotAbsorbTheRelayLifeHistogram() =
+        runTest {
+            val counters =
+                mapOf(
+                    // A relay session that lived 3s — a `relay.life.lt5s.*` key.
+                    UsageKeys.relayLife(3_000, mobile = false, foreground = false) to 7L,
+                    // One genuine busy window of 3s — a `wakework.span.lt5s.*` key.
+                    UsageKeys.wakeWorkSpan(3_000, mobile = false, foreground = false) to 1L,
+                )
+
+            val summary = UsageSummary.from(counters)
+
+            assertEquals(mapOf("lt5s" to 1L), summary.wakeWorkSpans)
+        }
+
     /** Relay wakes must not silently join the HTTP-defined "radio bursts" figure. */
     @Test
     fun relayWakesStayOutOfTheHttpBurstTotal() =

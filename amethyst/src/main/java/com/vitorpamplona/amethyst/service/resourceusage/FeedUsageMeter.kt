@@ -48,11 +48,18 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedUpdateOutcome
 class FeedUsageMeter(
     private val accountant: ResourceUsageAccountant,
     private val isForeground: () -> Boolean,
+    /**
+     * Extends the busy window this pass belongs to — see [WakeWorkTracker].
+     * A feed pass is the tail of the wake that delivered the events, and the
+     * device cannot suspend until it is done.
+     */
+    private val onFeedPass: () -> Unit = {},
 ) : FeedUpdateMeter {
     override fun onFeedUpdate(
         outcome: FeedUpdateOutcome,
         elapsedNanos: Long,
     ) {
+        onFeedPass()
         val foreground = isForeground()
         accountant.add(keyFor(outcome, foreground), 1)
         accountant.add(

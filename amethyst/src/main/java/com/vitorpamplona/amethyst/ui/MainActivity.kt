@@ -85,6 +85,10 @@ class MainActivity : AppCompatActivity() {
 
         Log.d("ActivityLifecycle") { "MainActivity.onCreate $this" }
 
+        // Frames actually drawn, by visibility — the passive half of the CPU
+        // diagnosis's UI tripwire. Runs on its own thread, never on main.
+        Amethyst.instance.frameMetrics.attach(this)
+
         setContent {
             StringResSetup()
             AmethystTheme {
@@ -145,6 +149,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         Log.d("ActivityLifecycle") { "MainActivity.onDestroy $this" }
+
+        // Releases the listener's own HandlerThread; without this a recreated
+        // activity (a rotation, a theme change) leaks one per instance.
+        Amethyst.instance.frameMetrics.detach(this)
 
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
 

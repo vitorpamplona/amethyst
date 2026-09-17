@@ -483,6 +483,25 @@ private fun ActivitySection(s: UsageSummary) {
             MetricRow(R.string.resource_usage_relay_wakes, "${s.relayWakes} (${s.relayWakesBg})")
             SettingsDivider()
         }
+        // How long each wake kept the app busy: the half that decides what a
+        // wake costs, since the device cannot suspend again until it settles.
+        if (s.wakeWorkWindowsBg > 0) {
+            MetricRow(
+                R.string.resource_usage_busy_windows,
+                "${s.wakeWorkWindowsBg} (${formatDurationMs(s.wakeWorkBgMs)}, ~${s.wakeWorkBgMs / s.wakeWorkWindowsBg}ms each)",
+            )
+            SettingsDivider()
+        }
+        // A backgrounded window is not drawn, so this should read zero. It is a
+        // tripwire, not a metric — non-zero names a surface drawing unseen.
+        if (s.uiFramesBg > 0) {
+            MetricRow(R.string.resource_usage_frames_bg, s.uiFramesBg.toString())
+            SettingsDivider()
+        }
+        if (s.imageDecodes > 0) {
+            MetricRow(R.string.resource_usage_image_decodes, "${s.imageDecodes} (${s.imageDecodesBg})")
+            SettingsDivider()
+        }
         MetricRow(R.string.resource_usage_wakelock, formatDurationMs(s.wakelockMs))
         SettingsDivider()
         MetricRow(R.string.resource_usage_worker_runs, s.workerRuns.toString())

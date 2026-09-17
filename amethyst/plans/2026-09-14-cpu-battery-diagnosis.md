@@ -340,7 +340,7 @@ For each hypothesis that survives Phase 2:
 | 2 | §2.1 `ThreadCpuSampler` + `cpu.fg/bg` split | Ships in the next release; every later step reads its output | **shipped** |
 | 3 | §2.2 ingest/feed counters | Answers H1, H2 from production data | **shipped** |
 | 3a | Wake-up counters: device awake-vs-asleep, relay wake cadence | Covers the energy term CPU counters structurally cannot | **shipped** |
-| 3b | §2.3 `bg.recompose.count` / `bg.imageload.count` tripwires | Answers H5 | todo |
+| 3b | §2.3 background tripwires (frames drawn, image decodes) | Answers H5 | **shipped** |
 | 4 | §3 S1/S3/S4 Perfetto + batterystats on a real device | Confirms or kills what step 3 suggested; catches anything the counters are blind to | **needs a device** |
 | 5 | H1 fix (the cheap half: `newList === oldList` short-circuit) | Lowest risk, measurable immediately | **shipped** |
 | 6 | H1 fix (collector-gated fan-out) + H2 background gating | Needs the tab-switch-latency guard | todo — blocked on step 4 |
@@ -374,6 +374,25 @@ Two commits on `claude/cpu-usage-battery-optimization-2sbqhh`:
 - **wake-up counters** — `device.awake.<vis>.ms` / `device.sleep.<vis>.ms`
   (`DeviceSleepSampler`) and `relay.wakes.<net>.<vis>`
   (`RelayWakeEstimator`).
+- **wake cost and background tripwires** — `wakework.windows.<vis>.count`,
+  `wakework.<vis>.ms` and a `wakework.span.*` histogram (`WakeWorkTracker`);
+  `ui.frames.<vis>.*` / `ui.slowframes.<vis>.count` (`FrameMetricsCollector`);
+  `coil.decodes.<vis>.count` / `coil.fetches.<vis>.count`
+  (`ImageUsageListener`).
+
+### Why "frames drawn" replaced "recompositions while backgrounded"
+
+§2.3 originally asked for `bg.recompose.count`. Recomposition turns out not to
+be **passively** observable: the in-process hooks that can see it
+(`withFrameNanos`, a self-reposting `Choreographer` callback) keep the frame
+clock running by asking, so on a battery investigation the measurement would
+manufacture the work it claims to measure.
+`Window.OnFrameMetricsAvailableListener` fires only when a frame really was
+produced, asks for nothing, and reports the half that actually costs energy —
+GPU and display pipeline rather than the composition upstream of it. A
+backgrounded window is not drawn, so `ui.frames.bg.count` reading zero closes
+that half of H5 with evidence, and anything else names a surface still drawing
+unseen.
 
 Everything is behaviour-preserving. The `/proc` field offsets, the short-circuit,
 each audit fix, and the two wake counters are pinned by tests verified by
@@ -398,8 +417,12 @@ feeds nobody is watching; and whether signature verification is material.
    relays server-ping every 30-70s. That energy costs almost no CPU.
    `relay.wakes.*` is the closest available proxy and is why it was added.
 3. **Wake-ups, not milliseconds, dominate background energy.** Covered now by
-   `device.awake/sleep`, but only device-wide — the ledger can say the device
-   never slept, not that Amethyst is what kept it awake.
+   `device.awake/sleep` (how much the device ran at all), `relay.wakes` (how
+   often relay traffic pulled it out of idle) and `wakework.*` (how long it
+   stayed busy each time — a wake is not a fixed price, since the device cannot
+   suspend again until the work settles). Still device-wide for the first: the
+   ledger can say the device never slept, not that Amethyst is what kept it
+   awake.
 
 So the ledger is built for **correlation across a corpus of reports** ("devices
 with high `cpu.bg.ms` also show high `battery.drain.bg`"), not for attribution

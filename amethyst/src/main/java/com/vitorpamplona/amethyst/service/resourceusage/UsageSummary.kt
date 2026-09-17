@@ -86,6 +86,22 @@ data class UsageSummary(
     val relayWakes: Long,
     val relayWakesBg: Long,
     /**
+     * Busy windows opened by those wakes and the time spent inside them. The
+     * wake count says how often; this says how long the device could not go back
+     * to sleep, which is what decides the cost.
+     */
+    val wakeWorkWindowsBg: Long,
+    val wakeWorkBgMs: Long,
+    /** Busy-window durations by histogram bucket — the shape a mean would hide. */
+    val wakeWorkSpans: Map<String, Long>,
+    /** Frames actually drawn. Backgrounded frames should be ~0; anything else is a surface still drawing unseen. */
+    val uiFramesFg: Long,
+    val uiFramesBg: Long,
+    val uiSlowFramesFg: Long,
+    /** Image decodes — the CPU-bearing half of an image. Backgrounded decodes are work nobody can see. */
+    val imageDecodes: Long,
+    val imageDecodesBg: Long,
+    /**
      * CPU ms per thread subsystem, summed over both visibilities — "who burned
      * it". Keys are [ThreadCpuBuckets] constants; empty on a build or kernel
      * where `/proc/self/task` could not be read.
@@ -152,6 +168,12 @@ data class UsageSummary(
                     (counters[UsageKeys.feedOutcome(segment, UsageKeys.FG)] ?: 0L) +
                         (counters[UsageKeys.feedOutcome(segment, UsageKeys.BG)] ?: 0L)
                 if (total > 0) feedOutcomes[segment] = total
+            }
+
+            val wakeSpans = mutableMapOf<String, Long>()
+            for (bucket in UsageKeys.wakeWorkSpanBuckets) {
+                val total = UsageKeys.wakeWorkSpanKeys(bucket).sumOf { counters[it] ?: 0L }
+                if (total > 0) wakeSpans[bucket] = total
             }
 
             val screens = mutableMapOf<String, Long>()
@@ -221,6 +243,16 @@ data class UsageSummary(
                 relayWakesBg =
                     (counters[UsageKeys.relayWakes(mobile = true, foreground = false)] ?: 0L) +
                         (counters[UsageKeys.relayWakes(mobile = false, foreground = false)] ?: 0L),
+                wakeWorkWindowsBg = counters[UsageKeys.wakeWorkWindows(UsageKeys.BG)] ?: 0L,
+                wakeWorkBgMs = counters[UsageKeys.wakeWorkMs(UsageKeys.BG)] ?: 0L,
+                wakeWorkSpans = wakeSpans,
+                uiFramesFg = counters[UsageKeys.uiFrames(UsageKeys.FG)] ?: 0L,
+                uiFramesBg = counters[UsageKeys.uiFrames(UsageKeys.BG)] ?: 0L,
+                uiSlowFramesFg = counters[UsageKeys.uiSlowFrames(UsageKeys.FG)] ?: 0L,
+                imageDecodes =
+                    (counters[UsageKeys.coilDecodes(UsageKeys.FG)] ?: 0L) +
+                        (counters[UsageKeys.coilDecodes(UsageKeys.BG)] ?: 0L),
+                imageDecodesBg = counters[UsageKeys.coilDecodes(UsageKeys.BG)] ?: 0L,
                 cpuMsPerBucket = cpuBuckets,
                 cpuBgMsPerBucket = cpuBgBuckets,
                 bytesPerSubsystem = subsystems,

@@ -448,6 +448,20 @@ object UsageKeys {
             mobile: Boolean,
             foreground: Boolean,
         ): String = keys[indexOf(ms)][dimIndex(mobile, foreground)]
+
+        /**
+         * Every dimensioned key for one bucket name.
+         *
+         * Readers must total a bucket from these rather than from
+         * [sumMatching] on the bucket name: bucket names are derived from the
+         * bounds, so two histograms with different prefixes can and do share
+         * one (`relay.life` and `wakework.span` both have `lt5s`), and segment
+         * matching would silently add them together.
+         */
+        fun keysFor(name: String): List<String> {
+            val index = names.indexOf(name)
+            return if (index < 0) emptyList() else keys[index].toList()
+        }
     }
 
     /**
@@ -894,6 +908,107 @@ object UsageKeys {
     fun deviceAwakeMs(visibility: String): String = "device.awake.$visibility.ms"
 
     fun deviceSleepMs(visibility: String): String = "device.sleep.$visibility.ms"
+
+    /**
+     * `wakework.windows.bg.count` / `wakework.bg.ms` — how many times the app
+     * went from idle to busy, and how long it stayed busy each time.
+     *
+     * The companion to [relayWakes], and the half that decides the cost. A wake
+     * is not a fixed price: the device cannot suspend again until everything the
+     * wake set off has finished, so 300 wakes that settle in 20ms are cheap and
+     * 300 that each keep the app busy for two seconds are not. The count alone
+     * cannot tell those apart.
+     *
+     * A window opens on the first activity after [WAKE_SETTLE_GAP_MS] of silence
+     * and closes at the last activity before the next such gap. Fed by inbound
+     * relay frames AND completed feed passes, because the work a frame sets off
+     * outlives the frame itself — that downstream processing is exactly the
+     * "until things come down again" this measures.
+     */
+    fun wakeWorkWindows(visibility: String): String = "wakework.windows.$visibility.count"
+
+    fun wakeWorkMs(visibility: String): String = "wakework.$visibility.ms"
+
+    /**
+     * Silence that ends a busy window. Equal to [RelayWakeEstimator.WAKE_GAP_MS]
+     * so a window corresponds to the wake [relayWakes] counted, rather than to
+     * some other slicing of the same timeline.
+     */
+    const val WAKE_SETTLE_GAP_MS = 10_000L
+
+    /**
+     * `wakework.span.lt250ms.wifi.bg` — distribution of busy-window durations.
+     *
+     * A mean would hide the shape that matters: a handful of long windows and a
+     * mass of short ones is a completely different problem from a uniform
+     * middle, and only one of them is fixed by making the per-event path faster.
+     */
+    fun wakeWorkSpan(
+        elapsedMs: Long,
+        mobile: Boolean,
+        foreground: Boolean,
+    ): String = WAKE_SPAN.key(elapsedMs, mobile, foreground)
+
+    private val WAKE_SPAN =
+        MsHistogram("wakework.span", longArrayOf(50, 250, 1_000, 5_000)) {
+            if (it < 1_000) "${it}ms" else "${it / 1000}s"
+        }
+
+    fun wakeWorkSpanBucket(elapsedMs: Long): String = WAKE_SPAN.nameOf(elapsedMs)
+
+    /** Every bucket name the span histogram can emit, in ascending order. */
+    val wakeWorkSpanBuckets: List<String> get() = WAKE_SPAN.names.toList()
+
+    /**
+     * The dimensioned keys for one span bucket.
+     *
+     * Exact keys, never [sumMatching] on the bucket name: `relay.life` and
+     * `wakework.span` both produce an `lt5s`, and matching by segment would
+     * report relay session lifetimes as busy-window lengths.
+     */
+    fun wakeWorkSpanKeys(bucket: String): List<String> = WAKE_SPAN.keysFor(bucket)
+
+    /**
+     * `ui.frames.bg.count` / `ui.frames.bg.ms` / `ui.slowframes.bg.count` —
+     * frames the app actually drew, by visibility.
+     *
+     * This is the honest version of the "recompositions while backgrounded"
+     * tripwire the diagnosis plan asked for. Recomposition is not passively
+     * observable: the only in-process hooks that see it (`withFrameNanos`, a
+     * self-reposting Choreographer callback) keep the frame clock running by
+     * asking, so measuring it would manufacture the very work being measured.
+     * Frames drawn are reported by the platform through
+     * `Window.OnFrameMetricsAvailableListener` only when a frame really happened,
+     * and they are also the thing that costs energy — GPU plus the display
+     * pipeline, not the composition itself.
+     *
+     * A backgrounded window is not drawn, so `ui.frames.bg.count` should be ~0.
+     * Reading zero closes that half of hypothesis H5 with evidence; reading
+     * anything else names a window still drawing when nobody is looking.
+     */
+    fun uiFrames(visibility: String): String = "ui.frames.$visibility.count"
+
+    fun uiFrameMs(visibility: String): String = "ui.frames.$visibility.ms"
+
+    /** Frames over [SLOW_FRAME_MS] — unambiguously slow at any refresh rate 30Hz or above. */
+    fun uiSlowFrames(visibility: String): String = "ui.slowframes.$visibility.count"
+
+    const val SLOW_FRAME_MS = 32L
+
+    /**
+     * `coil.decodes.bg.count` / `coil.fetches.bg.count` — image work, by visibility.
+     *
+     * Named `coil`, not `image`: `image` is an [HTTP_ROLES] segment and the
+     * reserved-segment rule forbids reusing it, however unrelated the sums look
+     * today. `net.image.*` already counts the BYTES an image cost; this counts
+     * the CPU-bearing half, which is the decode.
+     *
+     * Decoding anything while backgrounded is a tripwire, not a metric: nobody
+     * can see the result.
+     */
+    fun coilDecodes(visibility: String): String = "coil.decodes.$visibility.count"
+
+    fun coilFetches(visibility: String): String = "coil.fetches.$visibility.count"
 
     /**
      * Measured battery drain (percent points while discharging), split by

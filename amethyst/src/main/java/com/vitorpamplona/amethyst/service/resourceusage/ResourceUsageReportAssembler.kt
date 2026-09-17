@@ -147,6 +147,23 @@ class ResourceUsageReportAssembler {
             if (s.relayWakes > 0) {
                 append("| Relay wake-ups | ${s.relayWakes} (${s.relayWakesBg} while app closed) |\n")
             }
+            if (s.wakeWorkWindowsBg > 0) {
+                val perWindow = s.wakeWorkBgMs / s.wakeWorkWindowsBg
+                append("| Busy windows while closed | ${s.wakeWorkWindowsBg}, ${formatDurationMs(s.wakeWorkBgMs)} total (~${perWindow}ms each) |\n")
+            }
+            val spans =
+                s.wakeWorkSpans.entries
+                    .sortedByDescending { it.value }
+                    .joinToString(", ") { "${it.key} ${it.value}" }
+            if (spans.isNotEmpty()) {
+                append("| Busy window lengths | $spans |\n")
+            }
+            if (s.uiFramesFg + s.uiFramesBg > 0) {
+                append("| Frames drawn | ${s.uiFramesFg} (${s.uiSlowFramesFg} slow), ${s.uiFramesBg} while closed |\n")
+            }
+            if (s.imageDecodes > 0) {
+                append("| Image decodes | ${s.imageDecodes} (${s.imageDecodesBg} while closed) |\n")
+            }
             append("| App CPU time | ${formatDurationMs(s.cpuMs)} |\n")
             append("| ... with the app in the background | ${formatDurationMs(s.cpuBgMs)} |\n")
             append("| Time in app | ${formatDurationMs(s.foregroundMs)} |\n")

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.images
 
 import android.content.Context
 import android.os.Build
+import coil3.EventListener
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.Uri
@@ -82,6 +83,10 @@ class ImageLoaderSetup {
             // Signs the BUD-01 retry when a gated host answers 401. Null keeps every
             // fetch anonymous (tests, pre-configuration call sites).
             readAuth: BlossomReadAuthTokenProvider? = null,
+            // Counts decodes/fetches into the resource-usage ledger. Passed in
+            // rather than read from `Amethyst.instance`: this file is reachable
+            // from the `:napplet` process, where that property is never set.
+            usageListener: EventListener? = null,
         ) {
             // ONE strategy for the whole ImageLoader. DeDupeConcurrentRequestStrategy
             // coordinates through a map of in-flight fetches that it owns, so it only
@@ -99,6 +104,7 @@ class ImageLoaderSetup {
                     .memoryCache(memoryCache)
                     .precision(Precision.INEXACT)
                     .logger(debugLogger)
+                    .apply { usageListener?.let { eventListener(it) } }
                     .components {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             add(AvifAnimatedDecoderFactory()) // handle animated AVIF that Coil's AnimatedImageDecoder misses

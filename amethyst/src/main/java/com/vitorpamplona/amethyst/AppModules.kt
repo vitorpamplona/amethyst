@@ -110,7 +110,9 @@ import com.vitorpamplona.amethyst.service.resourceusage.DeviceSleepSampler
 import com.vitorpamplona.amethyst.service.resourceusage.FeedUsageMeter
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
+import com.vitorpamplona.amethyst.service.resourceusage.FrameMetricsCollector
 import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
+import com.vitorpamplona.amethyst.service.resourceusage.ImageUsageListener
 import com.vitorpamplona.amethyst.service.resourceusage.MeteringNostrSigner
 import com.vitorpamplona.amethyst.service.resourceusage.ProcessCpuSampler
 import com.vitorpamplona.amethyst.service.resourceusage.RadioBurstEstimator
@@ -124,6 +126,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.SessionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.ThreadCpuSampler
 import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
+import com.vitorpamplona.amethyst.service.resourceusage.WakeWorkTracker
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
@@ -371,6 +374,22 @@ class AppModules(
     val resourceUsageStore = ResourceUsageStore(File(appContext.filesDir, ResourceUsageStore.FILE_NAME))
 
     val resourceUsage = ResourceUsageAccountant(resourceUsageStore, applicationIOScope)
+
+    /**
+     * How long the app stays busy after each wake. Declared here rather than
+     * inside the ledger `init` block because both the relay listener and the feed
+     * meter feed it — a frame wakes us, and the feed pass it sets off is what
+     * decides when we can go back to sleep.
+     */
+    val wakeWork =
+        WakeWorkTracker(
+            accountant = resourceUsage,
+            isMobile = { connManager.isMobileOrFalse.value },
+            isForeground = { foregroundTracker.isForeground.value },
+        )
+
+    /** Frames actually drawn, attached to MainActivity's window. */
+    val frameMetrics = FrameMetricsCollector(resourceUsage) { foregroundTracker.isForeground.value }
 
     // Estimates radio wake-ups from HTTP burst patterns — bytes alone don't
     // predict battery; scattered small requests each pay the radio ramp+tail.
@@ -855,6 +874,7 @@ class AppModules(
                 accountant = resourceUsage,
                 isMobile = { connManager.isMobileOrFalse.value },
                 isForeground = { foregroundTracker.isForeground.value },
+                onInboundFrame = wakeWork::onActivity,
             ),
         )
         RelayConnectionTimeIntegrator(
@@ -876,9 +896,14 @@ class AppModules(
         // the battery sampler — and the counter no CPU figure can substitute for,
         // since background energy is dominated by wake-ups, not by CPU ms.
         DeviceSleepSampler(resourceUsage, isForeground = { foregroundTracker.isForeground.value }).register()
+        wakeWork.register()
         // Sizes the per-bundle feed fan-out (how often, how long, how much of it
         // backgrounded, and how much of it changes anything a user could see).
-        FeedUsageMeter(resourceUsage) { foregroundTracker.isForeground.value }.install()
+        FeedUsageMeter(
+            resourceUsage,
+            isForeground = { foregroundTracker.isForeground.value },
+            onFeedPass = wakeWork::onActivity,
+        ).install()
         cache.verifyMeter = { elapsedNanos, _ ->
             resourceUsage.add(UsageKeys.VERIFY_COUNT, 1)
             resourceUsage.add(UsageKeys.VERIFY_US, elapsedNanos / 1_000)
@@ -1158,6 +1183,7 @@ class AppModules(
             thumbnailCache = thumbnailDiskCache,
             backgroundScope = applicationIOScope,
             readAuth = blossomReadAuthTokens,
+            usageListener = ImageUsageListener(resourceUsage) { foregroundTracker.isForeground.value },
         )
     }
 
