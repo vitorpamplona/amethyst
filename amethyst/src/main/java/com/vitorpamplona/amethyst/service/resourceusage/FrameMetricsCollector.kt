@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.service.resourceusage
 import android.app.Activity
 import android.os.Handler
 import android.os.HandlerThread
+import android.provider.Settings
 import android.view.FrameMetrics
 import android.view.Window
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Counts frames the app actually drew, split by visibility, plus the slow ones.
@@ -53,6 +55,15 @@ import android.view.Window
  * uses in shipping apps — doing three counter increments on a dedicated
  * background thread, never on main. At 120Hz that is on the order of ten
  * microseconds per second of rendering.
+ *
+ * It is nonetheless the only counter in the ledger that touches the rendering
+ * path at all, and the only one whose cost could not be measured off-device, so
+ * it has a runtime off switch in the shape `WorkerThreadPriorityGovernor` uses —
+ * which also makes it A/B-able on a real device without a rebuild:
+ * ```
+ * adb shell settings put global amethyst_frame_metrics 0   # off
+ * adb shell settings delete global amethyst_frame_metrics  # back on
+ * ```
  */
 class FrameMetricsCollector(
     private val accountant: ResourceUsageAccountant,
@@ -77,6 +88,10 @@ class FrameMetricsCollector(
     /** Attaches to an activity's window. Safe to call more than once; the second call is a no-op. */
     fun attach(activity: Activity) {
         if (thread != null) return
+        if (!isEnabled(activity)) {
+            Log.i(TAG) { "Frame metrics disabled via $SETTING_KEY" }
+            return
+        }
         // Its own thread rather than the main looper: the whole point is to not
         // add work to the thread whose frames are being measured.
         val handlerThread = HandlerThread("frame-metrics").apply { start() }
@@ -87,10 +102,22 @@ class FrameMetricsCollector(
             .onFailure { detach(activity) }
     }
 
+    private fun isEnabled(activity: Activity): Boolean =
+        runCatching {
+            Settings.Global.getInt(activity.contentResolver, SETTING_KEY, 1) != 0
+        }.getOrDefault(true)
+
     fun detach(activity: Activity) {
         runCatching { activity.window.removeOnFrameMetricsAvailableListener(listener) }
         thread?.quitSafely()
         thread = null
         handler = null
+    }
+
+    companion object {
+        private const val TAG = "FrameMetrics"
+
+        /** `Settings.Global` kill switch; any value of 0 disables the collector. */
+        const val SETTING_KEY = "amethyst_frame_metrics"
     }
 }

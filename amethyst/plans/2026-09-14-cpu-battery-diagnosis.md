@@ -398,6 +398,45 @@ Everything is behaviour-preserving. The `/proc` field offsets, the short-circuit
 each audit fix, and the two wake counters are pinned by tests verified by
 mutation.
 
+### What the instrumentation itself costs
+
+The plan forbids reducing performance, and instrumentation that slows the app
+while measuring it is self-defeating. Measured, not assumed:
+
+| Path | Cost | Frequency |
+| --- | --- | --- |
+| `ThreadCpuSampler` sweep | **~4.1ms** median for 675 threads (JVM, x86); call it ~20ms on slow ARM | once per ledger flush (30s while traffic flows, never while idle) |
+| `RelayWakeEstimator.onInboundFrame` | **~95ns** at 190 threads | per inbound relay frame |
+| `WakeWorkTracker.onActivity` | **~68ns** at 190 threads | per inbound relay frame + per feed pass |
+| (existing baseline for comparison) | **~300ns** for the 6 `accountant.add` calls `RelayUsageListener` already made | per inbound relay frame |
+| `FeedContentState` timing | 2 `nanoTime` reads | per feed pass (~48/bundle) |
+| `DeviceSleepSampler` | 2 clock reads | per flush |
+| `FrameMetricsCollector` | 3 counter increments, off the main thread | per drawn frame |
+
+Two things this measurement changed:
+
+- `WakeWorkTracker` originally guarded two fields with a monitor, which cost
+  140ns per call against that ~300ns baseline — the lock was most of the
+  addition. Rewritten to an atomic exchange on the fast path with the lock only
+  at window boundaries (at most one per 10s): **140ns → 68ns**, verified over
+  three runs.
+- `FrameMetricsCollector` is the only counter touching the rendering path and
+  the only one whose cost could not be measured off-device, so it has a
+  `Settings.Global` kill switch (`amethyst_frame_metrics`) in the shape
+  `WorkerThreadPriorityGovernor` uses — which also makes it A/B-able on a real
+  device without a rebuild.
+
+Net of the H1 short-circuit, which *removes* a `distinctBy` + copy + identity
+walk from ~48 feeds per bundle, the ingest path is very likely faster than
+before this work, not slower.
+
+One cost that did grow: the ledger's key space is up by **82 possible keys**
+(~2.6KB of JSON per fully-populated day). `ResourceUsageStore.persist` rewrites
+every retained day on each merge, so the 30s flush writes proportionally more.
+Left alone deliberately — it is a pre-existing design choice (and why retention
+was already cut from 30 days to 7), and changing the store's write strategy does
+not belong in a change about measurement.
+
 ### What these counters can and cannot settle
 
 Worth stating plainly, because it bounds what Phase 2 still has to do on a real

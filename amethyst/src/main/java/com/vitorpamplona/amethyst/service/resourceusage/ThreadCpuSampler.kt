@@ -45,6 +45,14 @@ import com.vitorpamplona.quartz.utils.Log
  * for once. Buffers are reused ([ProcThreadCpuReader]); the sweep allocates a
  * bounded map, not per-thread garbage.
  *
+ * Measured on a 675-thread JVM process: **~4.1ms median per sweep**, plus ~7.6ms
+ * once for the names. Expect several times that on a slow ARM device, so call it
+ * ~20ms every 30s — under 0.1% of a core, on `Dispatchers.IO`, on threads
+ * `WorkerThreadPriorityGovernor` has already demoted to nice 10 so the sweep
+ * yields to the UI. This is the most expensive thing the ledger does; it is
+ * still the cheapest way to answer where the CPU goes from inside a release
+ * build.
+ *
  * **Threads that exit are not lost.** A thread that dies between two samples
  * takes its last interval's CPU with it, which would quietly under-report
  * exactly the short-lived-thread churn we are hunting. Instead the sampler also
