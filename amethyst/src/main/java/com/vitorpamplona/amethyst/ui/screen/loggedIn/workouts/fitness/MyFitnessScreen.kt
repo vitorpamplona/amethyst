@@ -56,7 +56,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
-import com.vitorpamplona.amethyst.commons.fitness.WorkoutOrigin
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -511,10 +510,11 @@ private fun RecentWorkouts(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
-                        // Only what is still unpublished can be shared. A workout that came
-                        // back from the relays is already posted: offering to share it again
-                        // would publish a second kind 1301 for the same effort.
-                        if (workout.origin != WorkoutOrigin.PUBLISHED) {
+                        // Only what is still unpublished can be shared. Offering to share a
+                        // workout that is already posted would publish a second kind 1301 for
+                        // the same effort — whether it came back from a relay, or is the
+                        // Health Connect copy of one the user shared earlier.
+                        if (!workout.alreadyPublished) {
                             TextButton(onClick = { onShare(workout, label) }) {
                                 Text(stringRes(Res.string.my_fitness_share), style = MaterialTheme.typography.labelMedium)
                             }

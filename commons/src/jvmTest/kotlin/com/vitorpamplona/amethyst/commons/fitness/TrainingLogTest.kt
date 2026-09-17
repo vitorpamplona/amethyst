@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.fitness
 
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -49,6 +50,8 @@ class TrainingLogTest {
         elevationGainMeters = null,
         source = "test",
         origin = origin,
+        // Matches the real mappers: anything recovered from a relay is by definition published.
+        alreadyPublished = origin == WorkoutOrigin.PUBLISHED,
     )
 
     @Test
@@ -80,6 +83,52 @@ class TrainingLogTest {
         assertEquals("hc", merged[0].id)
         // The Health Connect copy wins because it carries the metrics the post dropped.
         assertEquals(150, merged[0].avgHeartRate)
+    }
+
+    /**
+     * The survivor is Health Connect data, so its origin cannot answer "has this been posted?".
+     * Without the flag the dashboard offers to share it again and the user posts a second
+     * kind 1301 for the same effort.
+     */
+    @Test
+    fun `the surviving copy remembers that the workout was already published`() {
+        val hc = listOf(workout("hc", WorkoutOrigin.HEALTH_CONNECT, noon))
+        val published = listOf(workout("pub", WorkoutOrigin.PUBLISHED, noon + 60))
+
+        val merged = TrainingLog.merge(hc, published)
+
+        assertEquals(1, merged.size)
+        assertEquals(WorkoutOrigin.HEALTH_CONNECT, merged[0].origin)
+        assertTrue(merged[0].alreadyPublished)
+    }
+
+    @Test
+    fun `a health connect workout that was never shared is not marked published`() {
+        val hc = listOf(workout("hc", WorkoutOrigin.HEALTH_CONNECT, noon))
+        val published = listOf(workout("pub", WorkoutOrigin.PUBLISHED, noon + TrainingLog.DEDUPE_TOLERANCE_SECONDS + 1))
+
+        val merged = TrainingLog.merge(hc, published)
+
+        assertEquals(2, merged.size)
+        assertFalse(merged.first { it.id == "hc" }.alreadyPublished)
+        assertTrue(merged.first { it.id == "pub" }.alreadyPublished)
+    }
+
+    /** Only the matching session is flagged; an unrelated one in the same log is left alone. */
+    @Test
+    fun `flagging one workout does not flag the rest of the log`() {
+        val hc =
+            listOf(
+                workout("shared", WorkoutOrigin.HEALTH_CONNECT, noon),
+                workout("private", WorkoutOrigin.HEALTH_CONNECT, noon - 86_400),
+            )
+        val published = listOf(workout("pub", WorkoutOrigin.PUBLISHED, noon))
+
+        val merged = TrainingLog.merge(hc, published)
+
+        assertEquals(2, merged.size)
+        assertTrue(merged.first { it.id == "shared" }.alreadyPublished)
+        assertFalse(merged.first { it.id == "private" }.alreadyPublished)
     }
 
     @Test

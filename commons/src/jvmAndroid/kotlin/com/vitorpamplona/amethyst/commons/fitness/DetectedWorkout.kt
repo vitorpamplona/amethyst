@@ -65,6 +65,16 @@ data class DetectedWorkout(
      */
     val origin: WorkoutOrigin = WorkoutOrigin.HEALTH_CONNECT,
     /**
+     * Whether a kind 1301 for this workout already exists.
+     *
+     * Not the same question as [origin]: a workout read from Health Connect is published the
+     * moment the user shares it, and [TrainingLog.merge] keeps the richer Health Connect copy
+     * rather than the published one — so the survivor is still [WorkoutOrigin.HEALTH_CONNECT]
+     * while a kind 1301 for it is already out there. Anything offering to publish a workout
+     * must read this, not the origin, or it offers to post the same effort twice.
+     */
+    val alreadyPublished: Boolean = false,
+    /**
      * How many Health Connect sessions this workout represents. 1 for a raw
      * session; higher when [WorkoutMerger] combined several close-by same-type
      * sessions (e.g. a long run split around breaks) into a single suggestion.

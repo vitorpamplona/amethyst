@@ -50,17 +50,31 @@ object TrainingLog {
      * from their watch — the Health Connect copy wins: it carries the metrics the published
      * event may have dropped (heart rate, steps, climb), and its start time is the recorded one
      * rather than a publish timestamp.
+     *
+     * The winner keeps the loser's one piece of information: that a kind 1301 for this workout
+     * exists. Dropping the published copy would otherwise lose that fact, and the survivor —
+     * still flagged as Health Connect data — would read as never posted. See
+     * [DetectedWorkout.alreadyPublished].
      */
     fun merge(
         healthConnect: List<DetectedWorkout>,
         published: List<DetectedWorkout>,
     ): List<DetectedWorkout> {
+        val flagged =
+            healthConnect.map { recorded ->
+                if (published.any { recorded.isProbablySameWorkoutAs(it) }) {
+                    recorded.copy(alreadyPublished = true)
+                } else {
+                    recorded
+                }
+            }
+
         val deduped =
             published.filterNot { candidate ->
                 healthConnect.any { it.isProbablySameWorkoutAs(candidate) }
             }
 
-        return (healthConnect + deduped).sortedByDescending { it.startTimeEpochSeconds }
+        return (flagged + deduped).sortedByDescending { it.startTimeEpochSeconds }
     }
 
     private fun DetectedWorkout.isProbablySameWorkoutAs(other: DetectedWorkout): Boolean =
@@ -97,5 +111,7 @@ fun WorkoutRecordEvent.toDetectedWorkout(): DetectedWorkout? {
         elevationGainMeters = elevationGain()?.toMeters()?.takeIf { it > 0 },
         source = workoutSource() ?: "",
         origin = WorkoutOrigin.PUBLISHED,
+        // It came back from a relay, so by definition it is already out there.
+        alreadyPublished = true,
     )
 }

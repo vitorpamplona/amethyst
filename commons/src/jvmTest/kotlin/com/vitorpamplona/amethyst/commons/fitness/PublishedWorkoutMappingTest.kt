@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutStartTi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PublishedWorkoutMappingTest {
@@ -73,6 +74,8 @@ class PublishedWorkoutMappingTest {
         assertEquals(6000, workout.steps)
         assertEquals(createdAt - 3600, workout.startTimeEpochSeconds)
         assertEquals(WorkoutOrigin.PUBLISHED, workout.origin)
+        // Recovered from a relay, so the dashboard must not offer to publish it again.
+        assertTrue(workout.alreadyPublished)
     }
 
     /** Miles on the wire must land as metres in the log, or every total is wrong by 1.6x. */
