@@ -184,6 +184,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
+import com.vitorpamplona.amethyst.ui.note.types.RenderGeocache
+import com.vitorpamplona.amethyst.ui.note.types.RenderGeocacheFoundLog
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestEvent
@@ -374,6 +376,8 @@ import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
@@ -1062,6 +1066,10 @@ private fun FullBleedNoteCompose(
                     RenderBirdDetection(baseNote)
                 } else if (noteEvent is Ps1SaveEvent) {
                     RenderPs1Save(baseNote)
+                } else if (noteEvent is GeocacheListingEvent) {
+                    RenderGeocache(baseNote)
+                } else if (noteEvent is GeocacheFoundLogEvent) {
+                    RenderGeocacheFoundLog(baseNote, accountViewModel)
                 } else if (noteEvent is RoadEventReportEvent) {
                     RenderRoadEventReport(baseNote)
                 } else if (noteEvent is RoadEventConfirmationEvent) {

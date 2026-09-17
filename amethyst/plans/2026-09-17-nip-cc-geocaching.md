@@ -1,8 +1,9 @@
 # NIP-CC (Geocaching) — gap analysis for Quartz and Amethyst
 
-Status: **step 1 done** — the Quartz protocol package (`quartz/…/nipCCGeocaching/`) and its
-tests are in. Nothing in `amethyst/` or `commons/` touches NIP-CC yet, so the app is still blind
-to geocaches; §3 onwards is unstarted.
+Status: **steps 1–2 done** — the Quartz protocol package (`quartz/…/nipCCGeocaching/`) with its
+tests, and the Amethyst read path: caches and found logs are stored, rendered, searchable, and
+appear in the geohash/AroundMe feeds. Steps 3 onwards (cache detail screen, composing, the
+verification QR flow, curation lists) are unstarted.
 
 Spec: <https://github.com/nostr-protocol/nips/blob/master/CC.md> (merged into
 `master`; listed in the NIPs README at line 117 and in the kind tables for
@@ -223,10 +224,32 @@ These are the parts worth a careful reviewer, not the event codecs:
    `indexable-content.golden` fixture and the `searchable-kinds.md` table. The layout follows
    nip88Polls: a folder per subject, each with its event, `TagArrayExt`, `TagArrayBuilderExt`
    and `tags/`.
-2. Read path in Amethyst: `LocalCache` + `GeocacheCard` + `NoteCompose` dispatch
-   + the one-line `PostsByGeohashKinds` addition. Caches become visible in the
-   existing geohash/AroundMe feeds with zero new navigation.
-3. Cache detail screen + NIP-22 logs (mostly wiring existing comment UI).
+2. ~~Read path in Amethyst.~~ **Done** — `GeocacheCard`/`GeocacheFoundLogCard` in `commonsUI`
+   (map-hero slot, D/T/S and modifier badges, ROT13 hint with tap-to-reveal), `Geocache.kt`
+   wrappers in `amethyst/` supplying the osmdroid `LocationPreviewMap`, `LocalCache` consume +
+   `computeReplyTo`, dispatch in `NoteCompose` and `ThreadFeedView`, the one-line
+   `PostsByGeohashKinds` addition, and the search window (`RenderableKinds` + a `kind:geocache`
+   alias).
+
+   Two things worth knowing about how it was wired:
+
+   - **The found-log proof badge is computed, never assumed.** A `verification` tag is a string
+     until it has been checked against the listing's key, the log's own author and the cache it
+     claims, so `RenderGeocacheFoundLog` loads and observes the listing and runs
+     `GeocacheVerificationValidator`. Until the listing arrives the state is `UNKNOWN` and the
+     card shows no badge — never an optimistic one. A verification that fails the check renders
+     as a warning rather than silently as "no proof".
+   - **"Claimed" comes off the listing's own `F` tag**, not from the cache's found logs. `F` is
+     authoritative once published and travels inside the event; the provisional timestamp-ordered
+     winner needs every verified log for the cache, so it belongs on the detail screen that
+     subscribes to them rather than on a feed card reading whatever replies happen to be in
+     memory.
+3. Cache detail screen + NIP-22 logs (mostly wiring existing comment UI). This is where the
+   `dnf`/`note`/`maintenance` badge belongs: kind 1111 has no card of its own in `NoteCompose`,
+   it falls through to the generic text body, so badging a log type means touching the path every
+   NIP-22 comment in the app takes — worth doing once there is a cache thread to do it for. It is
+   also where the provisional first-to-find winner and the "multiple DNFs mean the cache is gone"
+   status heuristic go.
 4. Write path: found logs, then DNF/note comments.
 5. Verification: QR scan → ephemeral `7517` → embedded in the found log.
 6. First-to-find / `F` lock-in, and the archived rendering rules.

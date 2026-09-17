@@ -177,6 +177,29 @@
     <string name="road_event_speed_camera">Speed camera</string>
     <string name="road_event_traffic_jam">Traffic jam</string>
     <string name="road_event_unknown">Road event</string>
+
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
+    <string name="geocache_unnamed">Geocache</string>
+    <string name="geocache_type_traditional">Traditional</string>
+    <string name="geocache_type_multi">Multi-cache</string>
+    <string name="geocache_type_mystery">Mystery</string>
+    <string name="geocache_size_micro">Micro</string>
+    <string name="geocache_size_small">Small</string>
+    <string name="geocache_size_regular">Regular</string>
+    <string name="geocache_size_large">Large</string>
+    <string name="geocache_size_other">Other size</string>
+    <string name="geocache_difficulty">Difficulty %1$d/5</string>
+    <string name="geocache_terrain">Terrain %1$d/5</string>
+    <string name="geocache_first_to_find">First to find</string>
+    <string name="geocache_is_art">Artwork</string>
+    <string name="geocache_mission">Key Quest</string>
+    <string name="geocache_needs_verification">Verified finds</string>
+    <string name="geocache_claimed">Claimed</string>
+    <string name="geocache_archived">Archived</string>
+    <string name="geocache_hint_tap_to_reveal">Hint hidden — tap to reveal</string>
+    <string name="geocache_found_it">Found it!</string>
+    <string name="geocache_verified_find">Verified find</string>
+    <string name="geocache_invalid_proof">Proof does not check out</string>
     <string name="podcast_value_zap_split_hint">Zaps to this are split between:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>

@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
@@ -62,6 +63,7 @@ val PostsByGeohashKinds =
         WikiNoteEvent.KIND,
         RoadEventReportEvent.KIND,
         RoadEventConfirmationEvent.KIND,
+        GeocacheListingEvent.KIND,
     )
 
 fun filterPostsByGeohash(
