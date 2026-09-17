@@ -132,7 +132,6 @@ class ChessViewModelNew(
     fun clearFocusedGame() = logic.clearFocusedGame()
 
     override fun onCleared() {
-        super.onCleared()
         logic.stopPolling()
     }
 

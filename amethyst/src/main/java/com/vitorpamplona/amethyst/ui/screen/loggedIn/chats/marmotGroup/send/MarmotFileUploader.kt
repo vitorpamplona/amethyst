@@ -119,7 +119,6 @@ class MarmotFileUploader(
             // imprecisely.
             val canonicalMediaType = MarmotMediaType.canonicalize(mimeType) ?: GENERIC_MEDIA_TYPE
             val cipher = EncryptedMediaV2Cipher(exporterSecret, canonicalMediaType, filename)
-            val v2Cipher = cipher
 
             item.orchestrator.uploadEncrypted(
                 uri = media.uri,
@@ -142,21 +141,19 @@ class MarmotFileUploader(
                 // compression and metadata stripping — because that is what the
                 // key was derived from.
                 val reference =
-                    v2Cipher?.let {
-                        EncryptedMediaReferenceV2(
-                            locators =
-                                listOf(
-                                    MediaLocatorV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, serverResult.url),
-                                ),
-                            ciphertextSha256 = it.ciphertextSha256,
-                            plaintextSha256 = it.plaintextSha256,
-                            nonce = it.nonce,
-                            mediaType = it.mediaType,
-                            filename = filename,
-                            dim = serverResult.fileHeader.dim?.toString(),
-                            thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,
-                        )
-                    }
+                    EncryptedMediaReferenceV2(
+                        locators =
+                            listOf(
+                                MediaLocatorV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, serverResult.url),
+                            ),
+                        ciphertextSha256 = cipher.ciphertextSha256,
+                        plaintextSha256 = cipher.plaintextSha256,
+                        nonce = cipher.nonce,
+                        mediaType = cipher.mediaType,
+                        filename = filename,
+                        dim = serverResult.fileHeader.dim?.toString(),
+                        thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,
+                    )
                 results.add(
                     Mip04UploadResult(
                         url = serverResult.url,

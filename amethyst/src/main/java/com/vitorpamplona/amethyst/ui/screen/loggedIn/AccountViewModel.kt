@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
+import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Dao
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
@@ -65,7 +66,6 @@ import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuild
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
@@ -1196,7 +1196,7 @@ class AccountViewModel(
             .isNotEmpty()
 
     /** True when a BOLT12 offer can be paid in-app: an NWC wallet is set and advertises `pay` (nwc#2). */
-    fun canPayBolt12ViaNwc(): Boolean = hasNwcWallet() && account.zaps.defaultWalletSupportsBolt12Pay()
+    fun canPayBolt12ViaNwc(): Boolean = account.zaps.canZapViaBolt12()
 
     /**
      * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
@@ -2647,7 +2647,6 @@ class AccountViewModel(
         com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
             .clear()
         feedStates.destroy()
-        super.onCleared()
     }
 
     fun loadMentions(

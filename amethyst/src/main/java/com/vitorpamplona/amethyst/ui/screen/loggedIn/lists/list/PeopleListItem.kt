@@ -87,7 +87,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 private const val PREVIEW_LIST_TITLE = "Sample List Title"
 private const val PREVIEW_LIST_DESCRIPTION = "Sample List Description"
-private const val PREVIEW_LIST_IMAGE = "http://some.com/image.png"
+private const val PREVIEW_LIST_IMAGE = "https://some.com/image.png"
 
 @Preview()
 @Composable

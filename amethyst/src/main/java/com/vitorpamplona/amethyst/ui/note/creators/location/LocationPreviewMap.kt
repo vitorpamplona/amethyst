@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.note.creators.location
 import android.graphics.ColorFilter
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
-import android.graphics.drawable.BitmapDrawable
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.drawable.toDrawable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -159,7 +159,7 @@ fun LocationPreviewMap(
         remember(pinColor, pinEmoji) {
             if (pinColor != null && pinEmoji != null) {
                 val bitmap = roadEventPinBitmap(pinEmoji, pinColor.toArgb(), context.resources.displayMetrics.density)
-                BitmapDrawable(context.resources, bitmap)
+                bitmap.toDrawable(context.resources)
             } else {
                 null
             }

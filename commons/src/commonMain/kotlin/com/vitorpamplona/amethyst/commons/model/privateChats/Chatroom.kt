@@ -135,7 +135,13 @@ class Chatroom : NotesGatherer {
 
     fun senderIntersects(keySet: Set<HexKey>): Boolean = activeSenders.any { it.pubkeyHex in keySet }
 
-    fun pruneMessagesToTheLatestOnly(): Set<Note> {
+    fun pruneMessagesToTheLatestOnly(): Set<Note> =
+        // Same lock as addMessageSync/removeMessageSync: the snapshot, the
+        // rewrite of `messages` and the change emission must not interleave
+        // with a gift wrap being decrypted into this room.
+        syncLock.withLock { pruneMessagesToTheLatestOnlyLocked() }
+
+    private fun pruneMessagesToTheLatestOnlyLocked(): Set<Note> {
         val sorted = messages.sortedWith(DefaultFeedOrder)
 
         val toKeep =

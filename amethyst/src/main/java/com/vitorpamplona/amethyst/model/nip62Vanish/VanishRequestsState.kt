@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 @Stable
 data class VanishEventItem(
@@ -124,7 +125,10 @@ class VanishRequestsState(
                         }
                 )
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // A cancelled check has no result. Reporting ERROR would show the relay as
+            // having answered badly when it was never asked.
+            if (e is CancellationException) throw e
             item.complianceResults.update {
                 it + (relay to ComplianceStatus.ERROR)
             }

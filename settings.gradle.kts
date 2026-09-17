@@ -25,7 +25,6 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
-        maven { url = uri("https://raw.githubusercontent.com/guardianproject/gpmaven/master") }
     }
 }
 
@@ -37,6 +36,7 @@ include(":baselineprofile")
 include(":quartz")
 include(":geode")
 include(":commons")
+include(":commonsUI")
 include(":quic")
 include(":nestsClient")
 include(":marmotQuic")

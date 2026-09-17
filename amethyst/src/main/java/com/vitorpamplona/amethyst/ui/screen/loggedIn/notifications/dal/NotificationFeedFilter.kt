@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
@@ -28,7 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -139,6 +139,9 @@ class NotificationFeedFilter(
                 AttestationRequestEvent.KIND,
             )
 
+        // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
+        // events already on relays still arrive and still have to be routed.
+        @Suppress("DEPRECATION")
         val NOTIFICATION_KINDS =
             // Kinds that RENDER as a row on the Notifications tab. This is a
             // display gate over whatever is already in LocalCache — it plays no
@@ -268,6 +271,9 @@ class NotificationFeedFilter(
 
         // Shared with EventNotificationConsumer so push notifications and the
         // in-app feed apply the same per-kind "is this event for me" rule.
+        // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
+        // events already on relays still arrive and still have to be routed.
+        @Suppress("DEPRECATION")
         fun tagsAnEventByUser(
             note: Note,
             authorHex: HexKey,

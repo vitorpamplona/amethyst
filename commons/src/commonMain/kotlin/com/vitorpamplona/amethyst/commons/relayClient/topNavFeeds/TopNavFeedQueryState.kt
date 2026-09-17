@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 

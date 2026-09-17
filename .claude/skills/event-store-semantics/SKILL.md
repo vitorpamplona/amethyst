@@ -143,8 +143,11 @@ messages quoted below (they surface as the NIP-01 `OK false` reason).
 kinds. A `BEFORE INSERT` trigger deletes any stored version that is *older* — meaning
 `created_at` smaller, **or equal `created_at` with lexicographically larger id** (NIP-01
 lowest-id-wins). Inserting a version that is *not* newer under that ordering leaves the stored
-row in place and fails the unique index → rejected (`UNIQUE constraint failed`). Net contract:
-exactly one version stored; newest wins; ties broken by lowest id; older re-inserts blocked.
+row in place and fails the unique index → rejected with `RejectionReason.SUPERSEDED`
+(`duplicate: a newer version of this replaceable event is already stored`), which the relay
+session answers with `OK true` exactly like an id duplicate (NIP-01 `duplicate:` prefix; same
+reply nostr-rs-relay gives). Net contract: exactly one version stored; newest wins; ties broken
+by lowest id; older re-inserts blocked but acknowledged as already covered.
 
 **STORE-W02 — addressable supersession.** Same as W01 with unique index
 `(kind, pubkey, d_tag)` over `30000 ≤ kind < 40000`. Nuance: `d_tag` is populated from the

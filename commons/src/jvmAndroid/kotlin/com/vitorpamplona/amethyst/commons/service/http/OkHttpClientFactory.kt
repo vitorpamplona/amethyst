@@ -86,6 +86,16 @@ class OkHttpClientFactory(
     // Blossom/imgproxy server). OkHttp's default dispatcher caps inflight requests
     // per host at 5, which serializes feed loading. Raise the limits so the feed
     // can parallelize downloads the way a browser does.
+    //
+    // Resist trimming these on intuition. `maxRequests` is effectively the thread
+    // ceiling (Dispatcher's executor is corePoolSize=0 / maxPoolSize=MAX_VALUE over
+    // a SynchronousQueue), which makes a lower number look free -- but blocked
+    // threads commit little, these hosts are HTTP/2 so concurrent calls to one host
+    // multiplex over a single connection rather than a handshake each, and
+    // `readyAsyncCalls` is strict FIFO with no priority. PrefetchFeedMedia enqueues
+    // notes BEFORE the user reaches them, so a tighter cap makes the image actually
+    // on screen queue behind those prefetches instead of starting straight away.
+    // Change these with a benchmark/ run, not a hunch.
     private val dispatcher =
         Dispatcher().apply {
             if (!HttpClientEnvironment.isEmulator) {
@@ -138,16 +148,22 @@ class OkHttpClientFactory(
             .addInterceptor(OnionLocationInterceptor(onionCache))
             .build()
 
-    private var lastProxy: Proxy? = null
-
+    // No connection-pool eviction when the proxy changes. OkHttp's `Address` -- the
+    // pool's lookup key -- includes the proxy (`Address.equalsNonHost`), so a call
+    // is only ever handed a connection opened through the very same route. A
+    // connection left over from an old proxy is already unreachable and simply ages
+    // out of the pool; evicting was defensive, not load-bearing.
+    //
+    // It also cost more than it looked. `evictAll()` empties the ENTIRE shared pool,
+    // and this one factory mints both the proxied and the direct client (see
+    // [DualHttpClientManager]) -- `buildLocalSocksProxy` never returns null, so those
+    // two alternated a single "last proxy" field forever. Every rebuild read as a
+    // route change and dropped every warm connection the other client was using, on
+    // each network-state emission and each resubscribe.
     fun buildHttpClient(
         proxy: Proxy?,
         timeoutSeconds: Int,
     ): OkHttpClient {
-        if (proxy != lastProxy) {
-            rootClient.connectionPool.evictAll()
-            lastProxy = proxy
-        }
         val seconds = if (proxy != null) timeoutSeconds * 3 else timeoutSeconds
         return rootClient
             .newBuilder()
@@ -161,6 +177,13 @@ class OkHttpClientFactory(
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .build()
     }
+
+    /**
+     * Closes every idle pooled connection. Call only on a real proxy-route change (see
+     * [evictOnProxyRouteChange]) — connections on a dead route are already unreachable, so this
+     * is hygiene, not correctness, and it empties the pool BOTH clients share.
+     */
+    fun evictPooledConnections() = rootClient.connectionPool.evictAll()
 
     fun buildHttpClient(
         localSocksProxyPort: Int?,

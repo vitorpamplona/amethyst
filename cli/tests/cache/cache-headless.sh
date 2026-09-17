@@ -3,8 +3,8 @@
 # cache-headless.sh — verifies the file-backed event store is the
 # source of truth for `amy` reads.
 #
-# Two amy identities (A and B) talk to a local nostr-rs-relay. We
-# assert that:
+# Two amy identities (A and B) talk to a local embedded relay
+# (`amy serve`, i.e. geode). We assert that:
 #
 #   1. After A runs `amy create`, A's local store contains the bootstrap
 #      events (kind:0 / 3 / 10002 / 10050 / 10051 …).
@@ -39,10 +39,13 @@ RESULTS_FILE="$STATE_DIR/results-$RUN_TS.tsv"
 
 AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 
-# Reuse the relay binary the marmot harness builds.
+# Loopback relay = `amy serve` (geode), booted from $AMY_BIN by
+# start_local_relay in headless/helpers.sh. 127.0.0.2 only for parity
+# with the DM and Marmot harnesses: Quartz's isLocalHost() now covers all
+# of 127.0.0.0/8, so it is stripped from parsed relay lists exactly like
+# 127.0.0.1. Nothing here depends on that parse — amy publishes to and
+# reads from the relay it was told about.
 RELAY_HOST="${RELAY_HOST:-127.0.0.2}"
-RELAY_REPO="${RELAY_REPO:-$TESTS_DIR/marmot/state-headless/nostr-rs-relay}"
-RELAY_BIN="$RELAY_REPO/target/release/nostr-rs-relay"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8092}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
@@ -72,14 +75,11 @@ mkdir -p "$STATE_DIR" "$LOG_DIR"
 
 # shellcheck source=../lib.sh
 source "$TESTS_DIR/lib.sh"
-# shellcheck source=../marmot/setup.sh — provides start_local_relay / stop_local_relay
-source "$TESTS_DIR/marmot/setup.sh"
-# shellcheck source=../headless/helpers.sh
+# shellcheck source=../headless/helpers.sh — amy wrappers + start_local_relay / stop_local_relay
 source "$TESTS_DIR/headless/helpers.sh"
 
-# Keep the dm setup's preflight (just checks for amy + the relay) but
-# define our own identity bootstrap so we don't pull in DM-specific
-# wiring.
+# Keep the dm setup's preflight (just checks for amy) but define our own
+# identity bootstrap so we don't pull in DM-specific wiring.
 # shellcheck source=../dm/setup.sh
 source "$TESTS_DIR/dm/setup.sh"
 

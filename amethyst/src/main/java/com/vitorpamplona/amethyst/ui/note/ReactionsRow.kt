@@ -216,6 +216,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -225,6 +226,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -1480,10 +1482,15 @@ fun zapClick(
 
         choices.size == 1 -> {
             // One-tap fast path is Lightning-only. If the recipient can't
-            // receive Lightning (no lud16/lud06), firing a zap here would just
-            // fail — open the picker instead so the rail-aware chip can route to
-            // cashu / on-chain / reload.
-            val caps = RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
+            // receive Lightning (no lud16/lud06, and no BOLT12 offer our wallet
+            // can pay), firing a zap here would just fail — open the picker
+            // instead so the rail-aware chip can route to cashu / on-chain / reload.
+            val caps =
+                RailCapabilityResolver.peek(
+                    baseNote,
+                    accountViewModel.account.cashuWalletState,
+                    bolt12Payable = accountViewModel.account.zaps.canZapViaBolt12(),
+                )
             if (caps.hasLightning) {
                 onZapStarts()
                 accountViewModel.zap(
@@ -2124,16 +2131,26 @@ fun observeZapRailCapability(
 ): RailCapability {
     val cashuState = accountViewModel.account.cashuWalletState
     val author = baseNote.author
-    // These four are deliberately read only to drive the recompute below — do NOT
-    // delete them as "unused". Each observe* call ALSO subscribes the relay fetch
-    // (so a not-yet-seen kind:0 / kind:10019 gets pulled in while the popup is
-    // open), and each value is a remember() key so railCapability recomputes when
-    // it arrives. RailCapabilityResolver.peek re-reads everything itself; these
-    // just say *when* to re-run it.
+    // Every value below up to `showOnchainWallet` is deliberately read only to drive
+    // the recompute — do NOT delete them as "unused". Each observe* call ALSO
+    // subscribes the relay fetch (so a not-yet-seen kind:0 / kind:10019 / kind:10058
+    // gets pulled in while the popup is open), and each value is a remember() key so
+    // railCapability recomputes when it arrives. RailCapabilityResolver.peek re-reads
+    // everything itself; these just say *when* to re-run it.
     val cashuMints by cashuState.mints.collectAsStateWithLifecycle()
     val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
     val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }
     val nutzapInfo = author?.let { observeNoteEvent<NutzapInfoEvent>(it.nutzapInfoNote, accountViewModel).value }
+    // BOLT12 route inputs, same contract: the recipient's kind:10058 offer list
+    // (rides in UserMetadataForKeyKinds beside kind:0) and our default NWC wallet,
+    // whose `pay` support decides whether that offer makes them Lightning-payable.
+    val bolt12OfferList = author?.let { observeNoteEvent<Bolt12OfferListEvent>(it.bolt12OfferListNote, accountViewModel).value }
+    val nip47State = accountViewModel.account.nip47SignerState
+    val defaultWalletUri by nip47State.defaultWalletUri.collectAsStateWithLifecycle()
+    // The wallet's kind:13194 info (its `pay` support) is a plain cache read inside
+    // canZapViaBolt12(); this counter is what recomputes when it lands after opening.
+    val walletInfoUpdates by remember(nip47State) { nip47State.infoCache?.updates ?: MutableStateFlow(0) }
+        .collectAsStateWithLifecycle()
     // Honors the user's "show on-chain wallet" preference: off hides the on-chain
     // rail from the zap chips too, matching the wallet screen, profile chips, and
     // Send Payment screen.
@@ -2180,11 +2197,20 @@ fun observeZapRailCapability(
         cashuEntries,
         recipientInfo,
         nutzapInfo,
+        bolt12OfferList,
+        defaultWalletUri,
+        walletInfoUpdates,
         showPayToChip,
         recipientPayTo,
         payToApps,
     ) {
-        val rc = RailCapabilityResolver.peek(baseNote, cashuState, showPayToChip)
+        val rc =
+            RailCapabilityResolver.peek(
+                baseNote,
+                cashuState,
+                showPayToChip,
+                bolt12Payable = accountViewModel.account.zaps.canZapViaBolt12(),
+            )
         if (onchainEnabled) {
             rc.copy(onchainMaxSpendableSats = onchainFunds?.maxSpendableSats)
         } else {

@@ -26,6 +26,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
 import okhttp3.coroutines.executeAsync
 
 class UrlPreview {
@@ -63,9 +64,20 @@ class UrlPreview {
                                 ?: throw IllegalArgumentException("Website returned unknown mimetype: ${response.headers["Content-Type"]}")
                         when {
                             mimeType.type == "text" && mimeType.subtype == "html" -> {
-                                val metaTags = HtmlParser().parseHtml(response.body.bytes(), mimeType.charset()?.name())
+                                val metaTags = HtmlParser().parseHtml(response.body.readPrefix(MAX_PREVIEW_BYTES), mimeType.charset()?.name())
                                 val data = OpenGraphParser().extractUrlInfo(metaTags)
-                                UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
+                                UrlInfoItem(
+                                    url,
+                                    data.title,
+                                    data.description,
+                                    data.image,
+                                    mimeType.toString(),
+                                    data.audio,
+                                    data.audioType,
+                                    data.video,
+                                    data.videoType,
+                                    data.type,
+                                )
                             }
 
                             mimeType.type == "image" -> {
@@ -73,6 +85,16 @@ class UrlPreview {
                             }
 
                             mimeType.type == "video" -> {
+                                UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+                            }
+
+                            // A URL with no audio extension that turns out to serve audio anyway
+                            // (`/download?id=7`) used to land in the `else` below and throw, losing
+                            // the note's link entirely. The renderer plays it off the MIME. `image`
+                            // carries the URL for the same reason the video branch above does: it
+                            // is what UrlInfoItem.fetchComplete reads to decide the fetch produced
+                            // something renderable.
+                            mimeType.type == "audio" -> {
                                 UrlInfoItem(url, image = url, mimeType = mimeType.toString())
                             }
 
@@ -91,3 +113,16 @@ class UrlPreview {
             }
         }
 }
+
+/**
+ * Link previews only need the `<head>` (MetaTagsParser stops at `</head>`), and
+ * the URL is attacker-controlled: any note can point at a host that streams
+ * `text/html` forever. Read at most [max] bytes instead of `bytes()`.
+ */
+private fun ResponseBody.readPrefix(max: Long): ByteArray =
+    source().use { src ->
+        src.request(max)
+        src.buffer.readByteArray(minOf(src.buffer.size, max))
+    }
+
+private const val MAX_PREVIEW_BYTES = 512L * 1024L

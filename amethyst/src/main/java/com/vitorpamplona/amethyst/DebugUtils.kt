@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizedUrls
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlin.time.DurationUnit
@@ -92,6 +93,16 @@ fun collectMemorySnapshot(context: Context): MemorySnapshot {
 private const val STATE_DUMP_TAG = "STATE DUMP"
 
 fun debugState(context: Context) {
+    // Everything below is logged at DEBUG, and every argument is built eagerly (the
+    // eager Log.d overload, not the lambda one). Gate on the level that would drop
+    // those lines, because the arguments are the expensive part: nine materialising
+    // LargeCache.filter scans over notes/addressables/users/channels, plus three
+    // passes calling Event.countMemory() — which walks every tag of every cached
+    // event. MainActivity.onPause() calls this unconditionally, so without the gate
+    // a release build (minLevel WARN) did all of that on every backgrounding and
+    // threw the result away. Benchmark builds sit at INFO and paid it too.
+    if (Log.minLevel > LogLevel.DEBUG) return
+
     val totalMemoryMb = Runtime.getRuntime().totalMemory() / (1024 * 1024)
     val freeMemoryMb = Runtime.getRuntime().freeMemory() / (1024 * 1024)
     val maxMemoryMb = Runtime.getRuntime().maxMemory() / (1024 * 1024)

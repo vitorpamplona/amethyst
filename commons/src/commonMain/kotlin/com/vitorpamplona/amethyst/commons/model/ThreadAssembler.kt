@@ -223,7 +223,7 @@ class OnlyLatestVersionSet : MutableSet<Note> {
         }
     }
 
-    override fun addAll(elements: Collection<Note>): Boolean = elements.map { add(it) }.any()
+    override fun addAll(elements: Collection<Note>): Boolean = elements.fold(false) { changed, it -> add(it) || changed }
 
     override val size: Int
         get() = set.size
@@ -243,7 +243,7 @@ class OnlyLatestVersionSet : MutableSet<Note> {
 
     override fun retainAll(elements: Collection<Note>): Boolean = set.retainAll(elements)
 
-    override fun removeAll(elements: Collection<Note>): Boolean = elements.map { remove(it) }.any()
+    override fun removeAll(elements: Collection<Note>): Boolean = elements.fold(false) { changed, it -> remove(it) || changed }
 
     override fun remove(element: Note): Boolean {
         element.address()?.let {

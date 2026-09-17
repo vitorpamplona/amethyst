@@ -71,6 +71,22 @@ val RepliesAndReactionsKinds =
         AttestationEvent.KIND,
     )
 
+/**
+ * NIP-22 keeps the conversation root in the **uppercase** `E` tag and only the direct
+ * parent in lowercase `e`. A comment two or more levels deep therefore never carries
+ * `e`=<rootId>, so an `e`-only engagement filter sees only the first level of a
+ * 1111 thread — the rest used to appear only once ThreadScreen opened its own `E`
+ * subscription. These kinds are the ones that anchor themselves with `E`.
+ */
+val RootScopedRepliesKinds =
+    listOf(
+        CommentEvent.KIND,
+        // NIP-34 kind 1619 carries the PR it revises in `E` and has no lowercase
+        // `e` at all (see the spec's PR Update example), so this filter is the
+        // only engagement route to a PR's revision chain.
+        GitPullRequestUpdateEvent.KIND,
+    )
+
 val RepliesAndReactionsKinds2 =
     listOf(
         DeletionEvent.KIND,
@@ -78,12 +94,12 @@ val RepliesAndReactionsKinds2 =
         NIP90StatusEvent.KIND,
         TorrentCommentEvent.KIND,
         GitReplyEvent.KIND,
-        // NIP-34 PR revision (1619) and status events (1630/1631/1632/1633).
-        // Rooted at the target patch/PR/issue via a `root`-marked `e` tag, so
-        // an `e=<targetId>` engagement fetch surfaces the PR's revision chain
-        // and every open/applied/closed/draft transition — the signal
-        // GitStatusIndex needs to answer isClosedOrResolved() for repo rows.
-        GitPullRequestUpdateEvent.KIND,
+        // NIP-34 status events (1630/1631/1632/1633). Rooted at the target
+        // patch/PR/issue via a `root`-marked `e` tag, so an `e=<targetId>`
+        // engagement fetch surfaces every open/applied/closed/draft transition —
+        // the signal GitStatusIndex needs to answer isClosedOrResolved() for
+        // repo rows. PR revisions (1619) anchor with `E` instead and are pulled
+        // by [RootScopedRepliesKinds]; listing them here matched nothing.
         GitStatusOpenEvent.KIND,
         GitStatusAppliedEvent.KIND,
         GitStatusClosedEvent.KIND,
@@ -145,6 +161,22 @@ fun filterRepliesAndReactionsToNotes(
                             tags = mapOf("e" to sortedList),
                             since = since,
                             limit = 100,
+                        ),
+                ),
+                // Its own filter on purpose: tag names inside one filter are ANDed, so folding
+                // "E" into the "e" filter above would only match comments carrying both.
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.ENGAGEMENT,
+                            accountPubKeys = listOfNotNull(accountPubKey),
+                            kinds = RootScopedRepliesKinds,
+                            tags = mapOf("E" to sortedList),
+                            since = since,
+                            // Matches the ceiling of the direct-reply filter above: this is the
+                            // rest of the same thread, not a second conversation.
+                            limit = 1000,
                         ),
                 ),
                 RelayBasedFilter(

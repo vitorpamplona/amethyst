@@ -2,6 +2,7 @@
 
 Release notes for Amethyst, one file per version. Files are named with zero-padded version numbers so they sort correctly in any file browser. Use [`TEMPLATE.md`](TEMPLATE.md) as the starting point for the next release.
 
+- [v1.15.2 — Media Previews, Nested Replies, and Health Connect](v1.15.02.md)
 - [v1.15.1 — Release Build Fix](v1.15.01.md)
 - [v1.15.0 — Marmot Updates, a Advanced Search Box, and Books, DVM Updates](v1.15.00.md)
 - [v1.14.0 — Highlights, Relay Login, and a Much Faster Start](v1.14.00.md)

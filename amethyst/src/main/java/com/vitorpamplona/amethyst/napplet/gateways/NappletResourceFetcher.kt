@@ -60,6 +60,7 @@ import java.net.URLDecoder
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Fetches a resource URL on an applet's behalf — the applet has no direct network
@@ -162,7 +163,10 @@ class NappletResourceFetcher(
                 return failure(ERROR_BLOCKED, e.message)
             } catch (_: InterruptedIOException) {
                 return failure(ERROR_TIMEOUT)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                // Cancellation is not an upstream failure — do not report it to the
+                // napplet as one, and do not keep the request alive past it.
+                if (e is CancellationException) throw e
                 return failure(ERROR_NETWORK)
             }
         }

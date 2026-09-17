@@ -1356,4 +1356,7 @@
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <!-- Health Connect: activity label, shown by Health Connect next to the link into our
+         rationale screen. Needs to be an Android resource (not a commons Compose resource)
+         because android:label on the manifest entry can only reference @string/. -->
 </resources>

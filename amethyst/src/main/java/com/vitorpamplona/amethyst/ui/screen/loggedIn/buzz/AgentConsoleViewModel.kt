@@ -310,7 +310,6 @@ class AgentConsoleViewModel : ViewModel() {
     override fun onCleared() {
         stopObserving()
         stopWatching()
-        super.onCleared()
     }
 
     /** One decrypted observer telemetry frame rendered on the Observer tab. */

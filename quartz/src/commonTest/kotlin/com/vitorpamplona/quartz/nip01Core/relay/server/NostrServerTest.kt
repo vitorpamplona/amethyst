@@ -120,8 +120,13 @@ class NostrServerTest {
             server.close()
         }
 
+    /**
+     * NIP-01: `["OK", <id>, true, "duplicate: already have this event"]`. A client
+     * resends any event whose OK has not landed, so a duplicate must read as
+     * success — OK false would make every such resend look like a rejection.
+     */
     @Test
-    fun duplicateEventReturnsOkFalse() =
+    fun duplicateEventReturnsOkTrueWithDuplicatePrefix() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
@@ -138,7 +143,72 @@ class NostrServerTest {
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(2, okMessages.size)
             assertTrue(okMessages[0].contains(",true,"))
-            assertTrue(okMessages[1].contains(",false,"))
+            assertTrue(okMessages[1].contains(",true,"))
+            assertTrue(okMessages[1].contains("duplicate:"))
+
+            server.close()
+        }
+
+    /**
+     * STORE-W01: a replaceable event older than the stored version is not written,
+     * and the relay acknowledges it the way nostr-rs-relay does — `OK true` with the
+     * NIP-01 `duplicate:` prefix — rather than leaking the unique-index text as a
+     * rejection the client would keep retrying.
+     */
+    @Test
+    fun olderReplaceableIsAcknowledgedAsDuplicateNotRejected() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val store = EventStore(null)
+            val server = createServer(dispatcher, store)
+            val collector = MessageCollector()
+            val c1 = server.connect(collector.sendCallback)
+
+            val newer = testEvent(id = hexId(2), kind = 0, createdAt = 2000L)
+            val older = testEvent(id = hexId(3), kind = 0, createdAt = 1000L)
+            c1.insert(newer)
+            c1.insert(older)
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(2, okMessages.size)
+            assertTrue(okMessages[0].contains(",true,"))
+            assertTrue(okMessages[1].contains(",true,"), "older version must be acked, got ${okMessages[1]}")
+            assertTrue(okMessages[1].contains("duplicate:"), "older version must carry the duplicate: prefix")
+
+            val stored = store.query<Event>(Filter(kinds = listOf(0)))
+            assertEquals(listOf(newer.id), stored.map { it.id }, "the newer version stays the only stored one")
+
+            server.close()
+        }
+
+    /**
+     * STORE-W02 tie: two addressable events with the same `d` tag and the same
+     * `created_at` — the lower id wins, the other is acknowledged as superseded.
+     * This is the exact shape MDK's `wn keys publish` produces when it mints a
+     * second KeyPackage within the same second as the first.
+     */
+    @Test
+    fun sameSecondAddressableTieLoserIsAcknowledgedAsDuplicate() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val store = EventStore(null)
+            val server = createServer(dispatcher, store)
+            val collector = MessageCollector()
+            val c1 = server.connect(collector.sendCallback)
+
+            val dTag = arrayOf(arrayOf("d", "kp"))
+            val lowerId = testEvent(id = hexId(4), kind = 30443, createdAt = 5000L, tags = dTag)
+            val higherId = testEvent(id = hexId(5), kind = 30443, createdAt = 5000L, tags = dTag)
+            c1.insert(lowerId)
+            c1.insert(higherId)
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(2, okMessages.size)
+            assertTrue(okMessages[1].contains(",true,"), "tie loser must be acked, got ${okMessages[1]}")
+            assertTrue(okMessages[1].contains("duplicate:"))
+
+            val stored = store.query<Event>(Filter(kinds = listOf(30443)))
+            assertEquals(listOf(lowerId.id), stored.map { it.id }, "lowest id wins the tie")
 
             server.close()
         }

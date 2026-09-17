@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import kotlin.test.Test
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RichTextParserAudioUrlTest {
@@ -77,5 +78,50 @@ class RichTextParserAudioUrlTest {
     fun urlExtensionIsTheFallbackWithoutAMimeType() {
         assertTrue(RichTextParser.isAudioContent(null, "https://example.com/a.mp3"))
         assertFalse(RichTextParser.isAudioContent(null, "https://example.com/a.mp4"))
+    }
+
+    @Test
+    fun theExtensionMustBeIntroducedByADot() {
+        // The note that found this: nostr.build hands out an HTML player page whose path ends in
+        // `_mp3`, not `.mp3`. Verified with curl -- it answers `Content-Type: text/html`, so
+        // routing it to the player can only ever produce a spinner.
+        assertFalse(RichTextParser.isAudioUrl("https://e.nostr.build/a_ETvKzX2OdOGmFEp1avRlm5_mp3?t=Aria&by=The+Fishcake"))
+        assertNull(RichTextParser.classifyMedia("https://e.nostr.build/a_ETvKzX2OdOGmFEp1avRlm5_mp3?t=Aria&by=The+Fishcake", null))
+
+        // The file that page is about, which does have the dot.
+        assertTrue(RichTextParser.isAudioUrl("https://a.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp3"))
+    }
+
+    @Test
+    fun theVideoPlayerPageIsTheSameTrap() {
+        // nostr.build mirrors the scheme for video: `v_<id>_mp4` is an HTML page, and the file it
+        // is about lives on v.nostr.build.
+        assertFalse(RichTextParser.isVideoUrl("https://e.nostr.build/v_ETvKzX2OdOGmFEp1avRlm5_mp4?t=Clip"))
+        assertNull(RichTextParser.classifyMedia("https://e.nostr.build/v_ETvKzX2OdOGmFEp1avRlm5_mp4?t=Clip", null))
+
+        assertTrue(RichTextParser.isVideoUrl("https://v.nostr.build/ETvKzX2OdOGmFEp1avRlm5.mp4"))
+    }
+
+    @Test
+    fun aSlugEndingInAnExtensionsLettersIsNotMedia() {
+        assertFalse(RichTextParser.isAudioUrl("https://example.com/my-thoughts-on-mp3"))
+        assertFalse(RichTextParser.isVideoUrl("https://example.com/how-to-rip-a-webm"))
+        assertFalse(RichTextParser.isImageUrl("https://example.com/blog/png"))
+        assertNull(RichTextParser.classifyMedia("https://example.com/my-thoughts-on-mp3", null))
+    }
+
+    @Test
+    fun aDotInTheHostIsNotAnExtension() {
+        // The last dot of `https://files.mp3/download` sits before a `/`, so it opens a host
+        // name, not a file extension.
+        assertFalse(RichTextParser.isAudioUrl("https://files.mp3/download"))
+        assertFalse(RichTextParser.isAudioUrl("https://example.com/mp3"))
+    }
+
+    @Test
+    fun mixedCaseExtensionsResolve() {
+        // The lower+UPPER doubled lists never covered these; matching case-insensitively does.
+        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.Mp3"))
+        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.mP3?x=1"))
     }
 }

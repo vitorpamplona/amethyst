@@ -180,7 +180,6 @@ open class NewHlsVideoViewModel : ViewModel() {
     }
 
     override fun onCleared() {
-        super.onCleared()
         currentJob?.cancel()
     }
 

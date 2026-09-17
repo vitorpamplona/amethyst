@@ -61,7 +61,7 @@ class AuthOutcomeTest {
             phase: RelayAuthSnapshot.Phase,
             successCount: Int = 0,
         ) {
-            state.value = state.value.put(relay, RelayAuthSnapshot(phase, null, successCount))
+            state.value = state.value.putting(relay, RelayAuthSnapshot(phase, null, successCount))
         }
     }
 

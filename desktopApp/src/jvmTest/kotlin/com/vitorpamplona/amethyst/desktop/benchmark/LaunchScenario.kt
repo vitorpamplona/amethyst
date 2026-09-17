@@ -95,6 +95,7 @@ object LaunchScenario {
             val tempHome = createTempDirectory("launch-scenario").toFile()
             val storage = mockk<SecureKeyStorage>(relaxed = true)
             coEvery { storage.getPrivateKey(any()) } returns null
+            coEvery { storage.getPrivateKeyOrThrow(any()) } returns null
             File(tempHome, ".amethyst").mkdirs()
 
             val account = AccountManager(storage, tempHome)

@@ -31,8 +31,8 @@ files:
   # commons (Compose Multiplatform resources, consumed by amethyst + desktopApp).
   # Same android layout + language mapping as the amethyst source so a key reads
   # identically whichever module owns it after the note-ui-commons extraction.
-  - source: commons/src/commonMain/composeResources/values/strings.xml
-    translation: commons/src/commonMain/composeResources/values-%android_code%/%original_file_name%
+  - source: commonsUI/src/commonMain/composeResources/values/strings.xml
+    translation: commonsUI/src/commonMain/composeResources/values-%android_code%/%original_file_name%
     type: android
     skip_untranslated_strings: true
     languages_mapping:

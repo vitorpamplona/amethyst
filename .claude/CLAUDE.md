@@ -3,7 +3,7 @@
 ## Project Overview
 
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
-over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons`, `amethyst`,
+over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons`, `commonsUI`, `amethyst`,
 `desktopApp`, `cli`, plus the audio-rooms transport stack `quic` + `nestsClient`. Quartz should
 contain implementations of Nostr specifications and utilities to help implement them. Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). The Desktop
@@ -48,11 +48,18 @@ amethyst/
 │       ├── androidMain/   # Android-specific (crypto, storage)
 │       ├── jvmMain/       # Desktop JVM-specific
 │       └── iosMain/       # iOS-specific
-├── commons/        # Shared UI components (convert to KMP)
+├── commons/        # Shared HEADLESS layer (models, state, ViewModels, relay client) — CLI-safe
 │   └── src/
-│       ├── commonMain/    # Shared composables, icons, state
-│       ├── androidMain/   # Android-specific UI utilities
-│       └── jvmMain/       # Desktop-specific UI utilities
+│       ├── commonMain/    # Domain models, state holders, ViewModels, services
+│       ├── jvmAndroid/    # JVM-bound services shared by Android + Desktop
+│       ├── androidMain/   # Android-specific actuals (Keystore, DataStore)
+│       └── jvmMain/       # Desktop-specific actuals (keyring, upload pipeline)
+├── commonsUI/      # Shared Compose UI on top of commons (composables, icons, theme, Coil, resources)
+│   └── src/
+│       ├── commonMain/    # Shared composables, icons, theme, composeResources (strings/fonts)
+│       ├── jvmAndroid/    # Markdown renderer, Coil OkHttp fetchers
+│       ├── androidMain/   # Android Coil bridge
+│       └── jvmMain/       # Desktop Coil bridge (+ skikoMain shared with iOS)
 ├── quic/           # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport (audio-rooms transport)
 │   └── src/
 │       ├── commonMain/    # Protocol, frame/packet codecs, TLS state machine
@@ -70,12 +77,20 @@ amethyst/
 
 **Sharing Philosophy:**
 - `quartz/` = Nostr business logic, protocol, data (no UI)
-- `commons/` = Shared code for every front end (Android, Desktop, iOS, and the
-  headless `cli`): domain models, state holders, ViewModels, the relay client,
-  shared services, **and** the Compose UI that ≥1 GUI front end renders. The
-  package taxonomy, the CLI-safe / UI boundary, and a "where does my code go?"
-  guide are documented in **`commons/ARCHITECTURE.md`** — read it before adding
-  a new package or dropping code into `commons`.
+- `commons/` = Shared **headless** code for every front end (Android, Desktop,
+  iOS, and the headless `cli`): domain models, state holders, ViewModels, the
+  relay client, shared services. It may use the Compose *runtime*
+  (`@Stable`/`@Immutable`, snapshot state) but never Compose UI, Coil or
+  Compose resources — the build enforces this: `commons` has no such deps.
+- `commonsUI/` = Shared **Compose UI** that ≥1 GUI front end renders
+  (composables, `ui/theme`, icons, robohash, Coil fetchers, markdown, the
+  `composeResources` strings/fonts and the generated `Res` class). Depends on
+  `commons` (as `api`); `cli` never depends on it. Files keep their
+  `com.vitorpamplona.amethyst.commons.*` packages — the split is a module
+  boundary, not a package rename. The package taxonomy, the CLI-safe / UI
+  boundary, and a "where does my code go?" guide are documented in
+  **`commons/ARCHITECTURE.md`** (+ `commonsUI/ARCHITECTURE.md`) — read them
+  before adding a new package or dropping code into either module.
 - `quic/` = Transport library (QUIC + HTTP/3 + WebTransport); reusable for any
   KMP project that needs MoQ. Has no Android-framework dependencies.
 - `nestsClient/` = MoQ + audio-rooms client; takes `:quic` as transport,
@@ -88,7 +103,7 @@ amethyst/
 - `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
 - `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic
   allowed). May also depend on `:geode` (for `amy serve`, which embeds the
-  standalone relay); never on `:amethyst` or `:desktopApp`.
+  standalone relay); never on `:commonsUI`, `:amethyst` or `:desktopApp`.
 
 **Plans per module:** design docs for new subsystems live in the owning
 module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`, `commons/plans/`).
@@ -180,16 +195,19 @@ etc. instead of re-implementing them.
 
 **Share vs keep platform-native:**
 
-- **Share** → `quartz/commonMain/` (business logic, data models, protocol) and
-  `commons/commonMain/` (major UI components, **ViewModels** under
-  `viewmodels/`, icons). ViewModels are platform-agnostic state + logic
-  (StateFlow/SharedFlow), so they belong in `commons`.
+- **Share** → `quartz/commonMain/` (business logic, data models, protocol),
+  `commons/commonMain/` (**ViewModels** under `viewmodels/`, state holders,
+  relay client, services — headless) and `commonsUI/commonMain/` (major UI
+  components, icons, theme). ViewModels are platform-agnostic state + logic
+  (StateFlow/SharedFlow), so they belong in `commons`; anything that imports
+  `androidx.compose.ui`/`foundation`/`material3`, Coil, or `Res` belongs in
+  `commonsUI`.
 - **Keep native** → screen composables/scaffolding (Desktop `Window` vs Android
   `Activity`), navigation (sidebar vs bottom nav), platform interactions
   (gestures, keyboard shortcuts), system integrations (notifications, file
   pickers).
 
-When extracting a composable: move it to `commons/commonMain/` (see
+When extracting a composable: move it to `commonsUI/commonMain/` (see
 `/compose-expert`), add expect/actual for any platform behavior (see
 `/kotlin-multiplatform`), then point both Android and Desktop at the shared
 version. `quartz/` is protocol-only — no composables.
@@ -216,7 +234,7 @@ version. `quartz/` is protocol-only — no composables.
 ## Dependency Licensing
 
 **MANDATORY whenever you introduce a new third-party dependency** — in *any*
-module (`quartz`, `commons`, `amethyst`, `desktopApp`, `cli`, `quic`,
+module (`quartz`, `commons`, `commonsUI`, `amethyst`, `desktopApp`, `cli`, `quic`,
 `nestsClient`, …), whether you add it to `gradle/libs.versions.toml` or to a
 module's `build.gradle.kts`: determine its license **before** wiring it in.
 Amethyst ships under the **MIT** license, so a copyleft dependency linked into a
@@ -253,9 +271,9 @@ JVM). See `/kotlin-multiplatform` for the expect/actual and source-set patterns.
 ## Icons
 
 The Material Symbols font bundled at
-`commons/src/commonMain/composeResources/font/material_symbols_outlined.ttf`
+`commonsUI/src/commonMain/composeResources/font/material_symbols_outlined.ttf`
 is a **subset** that only contains the glyphs referenced from
-`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/MaterialSymbols.kt`.
+`commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/MaterialSymbols.kt`.
 
 **MANDATORY:** Whenever you add a new icon — i.e. introduce a
 `MaterialSymbol("\uXXXX")` codepoint that wasn't already referenced anywhere in
@@ -274,21 +292,21 @@ regenerating.
 
 ### Amethyst's own icons are also a font
 
-The icons in `commons/.../commons/icons/*.kt` (Like, Reply, Reposted, Zap, …) are
+The icons in `commonsUI/.../commons/icons/*.kt` (Like, Reply, Reposted, Zap, …) are
 **also** compiled into a font, `composeResources/font/amethyst_icons.ttf`, and drawn
 as glyphs via `AmethystIconGlyph`. Drawing an `ImageVector` rasterises its paths into
 a per-instance cached layer, so a feed re-rasterised the same glyph once per card;
 a glyph is a blit from the shared text atlas. Measured: frame P90 **-10.7%**,
 overrun P90 **-17.4%** on the feed scroll benchmark.
 
-**MANDATORY:** whenever you add or change an icon under `commons/.../commons/icons/`,
+**MANDATORY:** whenever you add or change an icon under `commonsUI/.../commons/icons/`,
 regenerate the font *and* its codepoint table together:
 
 ```bash
 python3 tools/icon-font/build_icon_font.py \
-  commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons \
-  commons/src/commonMain/composeResources/font/amethyst_icons.ttf \
-  commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/AmethystIcons.kt
+  commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons \
+  commonsUI/src/commonMain/composeResources/font/amethyst_icons.ttf \
+  commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/AmethystIcons.kt
 ```
 
 Both outputs must be committed together: codepoints are assigned in filename order,

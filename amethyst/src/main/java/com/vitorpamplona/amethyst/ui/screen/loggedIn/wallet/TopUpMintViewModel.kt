@@ -267,7 +267,6 @@ class TopUpMintViewModel : ViewModel() {
         // The pipeline runs on the AccountViewModel scope, not this VM's, so it would
         // outlive the screen — cancel it when the screen goes away.
         job?.cancel()
-        super.onCleared()
     }
 }
 

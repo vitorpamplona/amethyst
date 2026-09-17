@@ -49,6 +49,7 @@ class AccountManagerLoadAccountTest {
         storage = mockk(relaxed = true)
         // Return null so DesktopAccountStorage generates a fresh AES key
         coEvery { storage.getPrivateKey("account-metadata-key") } returns null
+        coEvery { storage.getPrivateKeyOrThrow("account-metadata-key") } returns null
         tempDir = createTempDirectory("acctmgr-load-test").toFile()
         amethystDir = File(tempDir, ".amethyst")
         amethystDir.mkdirs()

@@ -245,8 +245,8 @@ class LastResortKeyPackageReuseTest {
 
         override suspend fun load(): ByteArray? = bytes
 
-        override suspend fun save(data: ByteArray) {
-            bytes = data
+        override suspend fun save(snapshot: ByteArray) {
+            bytes = snapshot
         }
 
         override suspend fun delete() {

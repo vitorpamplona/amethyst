@@ -201,6 +201,9 @@ class EventNotificationConsumer(
             .onFailure { Log.d(TAG) { "Skipping non-decodable npub $npub: ${it.message}" } }
             .getOrNull()
 
+    // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
+    // events already on relays still arrive and still have to be routed.
+    @Suppress("DEPRECATION")
     private suspend fun dispatchForAccount(
         event: Event,
         account: Account,

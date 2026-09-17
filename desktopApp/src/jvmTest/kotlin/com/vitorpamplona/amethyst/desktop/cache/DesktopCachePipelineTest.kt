@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.cache
 
+import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopFollowingFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopNotificationFeedFilter

@@ -561,7 +561,7 @@ class MarmotConvergenceEngine(
 
         return mutex.withLock {
             val ctx = contexts[groupId] ?: return@withLock null
-            if (rewound && selectedTipId != null) {
+            if (rewound) {
                 adoptBranch(ctx, graph, selectedTipId, inputs.baseId)
             }
             // Keep the states of branches that LOST but stay eligible: losing
@@ -576,7 +576,7 @@ class MarmotConvergenceEngine(
                 .forEach { tipId ->
                     var cursor: String? = tipId
                     while (cursor != null && cursor !in canonical) {
-                        graph.statesById[cursor]?.let { ctx.candidateStates[cursor!!] = it }
+                        graph.statesById[cursor]?.let { ctx.candidateStates[cursor] = it }
                         cursor = graph.parentOf[cursor]
                     }
                 }

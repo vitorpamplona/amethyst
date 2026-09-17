@@ -63,6 +63,18 @@ val PostsAndChatMessagesToAddresses =
         LiveActivitiesChatMessageEvent.KIND,
     )
 
+/**
+ * NIP-22 keeps the conversation root in the **uppercase** `A` tag and only the direct
+ * parent in lowercase `a`. A comment on a comment of an article therefore never carries
+ * `a`=<address>, so an `a`-only engagement filter sees only the first level of that
+ * 1111 thread — the rest used to appear only once ThreadScreen opened its own `A`
+ * subscription.
+ */
+val RootScopedRepliesToAddressesKinds =
+    listOf(
+        CommentEvent.KIND,
+    )
+
 val DeletionKindList =
     listOf(
         DeletionEvent.KIND,
@@ -139,6 +151,22 @@ fun filterRepliesAndReactionsToAddresses(
                         kinds = TextNoteKindList,
                         tags = mapOf("q" to sortedList),
                         since = since,
+                        limit = 1000,
+                    ),
+            ),
+            // Its own filter on purpose: tag names inside one filter are ANDed, so folding
+            // "A" into the "a" filter above would only match comments carrying both.
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    ExplainedFilter(
+                        purpose = SubPurpose.ENGAGEMENT,
+                        accountPubKeys = listOfNotNull(accountPubKey),
+                        kinds = RootScopedRepliesToAddressesKinds,
+                        tags = mapOf("A" to sortedList),
+                        since = since,
+                        // Matches the ceiling of the direct-reply filter above: this is the
+                        // rest of the same thread, not a second conversation.
                         limit = 1000,
                     ),
             ),

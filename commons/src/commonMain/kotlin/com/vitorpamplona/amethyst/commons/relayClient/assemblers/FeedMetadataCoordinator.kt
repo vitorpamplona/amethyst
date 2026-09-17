@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataPreloader
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.PrioritizedSubscriptionQueue
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubscriptionPriority
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -86,6 +88,26 @@ class FeedMetadataCoordinator(
     private val inFlightBatchedMetadata = mutableSetOf<HexKey>()
     private val inFlightBatchedKind3 = mutableSetOf<HexKey>()
 
+    // The six sets above are touched from the caller's thread (Compose scroll
+    // callbacks) and from the batched REQ coroutines on IO; a plain HashSet
+    // corrupts under that interleaving. Every read-filter-then-add goes
+    // through [claim] or an explicit lock.
+    private val queueLock = KmpLock()
+
+    /**
+     * Atomically returns the members of [candidates] not yet in [set] and marks
+     * them, so two callers racing on the same pubkeys cannot both claim them.
+     */
+    private fun claim(
+        set: MutableSet<HexKey>,
+        candidates: Collection<HexKey>,
+    ): List<HexKey> =
+        queueLock.withLock {
+            val fresh = candidates.filter { it !in set }.distinct()
+            set.addAll(fresh)
+            fresh
+        }
+
     /**
      * Start processing the subscription queue.
      * Call once when coordinator is created.
@@ -142,13 +164,9 @@ class FeedMetadataCoordinator(
                 .mapNotNull { it.event }
                 .flatMap { event -> event.tags.mapNotNull { ETag.parseId(it) } }
 
-        val allReferencedIds =
-            (repostBoostedIds + quotedNoteIds)
-                .filter { it !in queuedBoostedIds }
-                .distinct()
+        val allReferencedIds = claim(queuedBoostedIds, repostBoostedIds + quotedNoteIds)
 
         if (allReferencedIds.isNotEmpty()) {
-            queuedBoostedIds.addAll(allReferencedIds)
             val referencedFilter =
                 Filter(
                     ids = allReferencedIds,
@@ -161,23 +179,13 @@ class FeedMetadataCoordinator(
         }
 
         // Extract unique authors that we haven't already queued
-        val authors =
-            notes
-                .mapNotNull { it.author?.pubkeyHex }
-                .filter { it !in queuedPubkeys }
-                .distinct()
+        val authors = claim(queuedPubkeys, notes.mapNotNull { it.author?.pubkeyHex })
 
         // Extract unique note IDs that we haven't already queued
-        val noteIds =
-            notes
-                .map { it.idHex }
-                .filter { it !in queuedNoteIds }
-                .distinct()
+        val noteIds = claim(queuedNoteIds, notes.map { it.idHex })
 
         // Queue metadata first (highest priority)
         if (authors.isNotEmpty()) {
-            queuedPubkeys.addAll(authors)
-
             // Use preloader if available for rate-limited loading
             if (preloader != null) {
                 notes.mapNotNull { it.author }.forEach { user ->
@@ -201,8 +209,6 @@ class FeedMetadataCoordinator(
 
         // Queue reactions second (lower priority)
         if (noteIds.isNotEmpty()) {
-            queuedNoteIds.addAll(noteIds)
-
             val reactionsFilter =
                 Filter(
                     kinds = listOf(ReactionEvent.KIND),
@@ -221,10 +227,8 @@ class FeedMetadataCoordinator(
      * Useful for loading follower/following metadata.
      */
     fun loadMetadataForPubkeys(pubkeys: List<HexKey>) {
-        val newPubkeys = pubkeys.filter { it !in queuedPubkeys }
+        val newPubkeys = claim(queuedPubkeys, pubkeys)
         if (newPubkeys.isEmpty()) return
-
-        queuedPubkeys.addAll(newPubkeys)
 
         val filter =
             Filter(
@@ -243,10 +247,8 @@ class FeedMetadataCoordinator(
      * Load reactions for specific note IDs.
      */
     fun loadReactionsForNotes(noteIds: List<HexKey>) {
-        val newNoteIds = noteIds.filter { it !in queuedNoteIds }
+        val newNoteIds = claim(queuedNoteIds, noteIds)
         if (newNoteIds.isEmpty()) return
-
-        queuedNoteIds.addAll(newNoteIds)
 
         val filter =
             Filter(
@@ -274,22 +276,29 @@ class FeedMetadataCoordinator(
         timeoutMs: Long = 5_000L,
     ) {
         val newPubkeys =
-            pubkeys
-                .asSequence()
-                .filter { it !in queuedPubkeys && it !in inFlightBatchedMetadata }
-                .distinct()
-                .toList()
+            queueLock.withLock {
+                pubkeys
+                    .asSequence()
+                    .filter { it !in queuedPubkeys && it !in inFlightBatchedMetadata }
+                    .distinct()
+                    .toList()
+                    .also { inFlightBatchedMetadata.addAll(it) }
+            }
         if (newPubkeys.isEmpty()) return
-        inFlightBatchedMetadata.addAll(newPubkeys)
 
         scope.launch {
-            val filter =
-                Filter(
-                    kinds = listOf(MetadataEvent.KIND),
-                    authors = newPubkeys.take(100),
-                    limit = newPubkeys.size,
-                )
-            val filterMap = indexRelays.associateWith { listOf(filter) }
+            // One filter per 100 authors, like loadKind3Batched: a single
+            // `take(100)` filter used to mark the whole list as asked-for while
+            // only ever requesting the first hundred.
+            val filters =
+                newPubkeys.chunked(100).map { chunk ->
+                    Filter(
+                        kinds = listOf(MetadataEvent.KIND),
+                        authors = chunk,
+                        limit = chunk.size,
+                    )
+                }
+            val filterMap = indexRelays.associateWith { filters }
             val subId = newSubId()
             val gate = BatchEoseGate(scope, target = indexRelays.size)
 
@@ -316,10 +325,12 @@ class FeedMetadataCoordinator(
             val eosedRelays = gate.awaitAll(timeoutMs)
             client.unsubscribe(subId)
 
-            if (eosedRelays > 0) {
-                queuedPubkeys.addAll(newPubkeys)
+            queueLock.withLock {
+                if (eosedRelays > 0) {
+                    queuedPubkeys.addAll(newPubkeys)
+                }
+                inFlightBatchedMetadata.removeAll(newPubkeys.toSet())
             }
-            inFlightBatchedMetadata.removeAll(newPubkeys.toSet())
         }
     }
 
@@ -345,16 +356,18 @@ class FeedMetadataCoordinator(
         onEose: () -> Unit = {},
     ) {
         val newPubkeys =
-            pubkeys
-                .asSequence()
-                .filter { it !in queuedKind3Pubkeys && it !in inFlightBatchedKind3 }
-                .distinct()
-                .toList()
+            queueLock.withLock {
+                pubkeys
+                    .asSequence()
+                    .filter { it !in queuedKind3Pubkeys && it !in inFlightBatchedKind3 }
+                    .distinct()
+                    .toList()
+                    .also { inFlightBatchedKind3.addAll(it) }
+            }
         if (newPubkeys.isEmpty()) {
             onEose()
             return
         }
-        inFlightBatchedKind3.addAll(newPubkeys)
 
         scope.launch {
             val filters =
@@ -392,10 +405,12 @@ class FeedMetadataCoordinator(
             val eosedRelays = gate.awaitAll(timeoutMs)
             client.unsubscribe(subId)
 
-            if (eosedRelays > 0) {
-                queuedKind3Pubkeys.addAll(newPubkeys)
+            queueLock.withLock {
+                if (eosedRelays > 0) {
+                    queuedKind3Pubkeys.addAll(newPubkeys)
+                }
+                inFlightBatchedKind3.removeAll(newPubkeys.toSet())
             }
-            inFlightBatchedKind3.removeAll(newPubkeys.toSet())
 
             onEose()
         }
@@ -406,11 +421,14 @@ class FeedMetadataCoordinator(
      */
     fun clear() {
         priorityQueue.clear()
-        queuedPubkeys.clear()
-        queuedNoteIds.clear()
-        queuedKind3Pubkeys.clear()
-        inFlightBatchedMetadata.clear()
-        inFlightBatchedKind3.clear()
+        queueLock.withLock {
+            queuedPubkeys.clear()
+            queuedNoteIds.clear()
+            queuedBoostedIds.clear()
+            queuedKind3Pubkeys.clear()
+            inFlightBatchedMetadata.clear()
+            inFlightBatchedKind3.clear()
+        }
     }
 
     /**

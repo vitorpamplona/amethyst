@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -68,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_favorite_relay
 import com.vitorpamplona.amethyst.commons.resources.relay_group_message_count_short_capped
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.WarmNip11
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo

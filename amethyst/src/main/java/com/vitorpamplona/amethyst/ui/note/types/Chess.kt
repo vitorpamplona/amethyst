@@ -46,7 +46,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameViewer
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessGameViewer
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chess_accept
 import com.vitorpamplona.amethyst.commons.resources.chess_decline

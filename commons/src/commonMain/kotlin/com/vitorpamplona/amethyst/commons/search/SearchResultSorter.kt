@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.currentTimeSeconds
@@ -46,7 +48,7 @@ object SearchResultSorter {
 
         var score = 0.0
         val content = event.content.lowercase()
-        val tokens = query.split("\\s+".toRegex())
+        val tokens = query.split(WHITESPACE)
 
         // Exact phrase match in content
         if (content.contains(query)) {
@@ -56,8 +58,7 @@ object SearchResultSorter {
         // Per-token scoring
         for (token in tokens) {
             if (token.isEmpty()) continue
-            val wordBoundary = "\\b${Regex.escape(token)}\\b".toRegex()
-            if (wordBoundary.containsMatchIn(content)) {
+            if (wordBoundaryRegex(token).containsMatchIn(content)) {
                 score += 5.0
             } else if (content.contains(token)) {
                 score += 2.0
@@ -88,4 +89,20 @@ object SearchResultSorter {
 
         return score
     }
+
+    private val WHITESPACE = Regex("\\s+")
+
+    // scoreEvent runs once per result with the same query tokens; compiling a
+    // Pattern per (event, token) pair made a 500-result sort build thousands.
+    // Small, lock-guarded (sorts can run from several search coroutines).
+    private val cacheLock = KmpLock()
+    private val wordBoundaryCache = mutableMapOf<String, Regex>()
+
+    private fun wordBoundaryRegex(token: String): Regex =
+        cacheLock.withLock {
+            wordBoundaryCache[token] ?: Regex("\\b${Regex.escape(token)}\\b").also {
+                if (wordBoundaryCache.size > 64) wordBoundaryCache.clear()
+                wordBoundaryCache[token] = it
+            }
+        }
 }

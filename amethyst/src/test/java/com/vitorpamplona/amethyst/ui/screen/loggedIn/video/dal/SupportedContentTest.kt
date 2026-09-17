@@ -53,4 +53,20 @@ class SupportedContentTest {
         assertTrue(!contentSupport.acceptableUrl("https://example.com/file.docx", "application/docx")) // Unsupported extension/mime
         assertTrue(!contentSupport.acceptableUrl("https://example.com/file.docx", null)) // Unsupported extension/mime
     }
+
+    @Test
+    fun extensionsAreMatchedOnlyAfterADot() {
+        // The undotted spelling the production filters actually pass (RichTextParser.videoExt).
+        val contentSupport = SupportedContent(emptyList(), emptySet(), setOf("mp4", "mp3", "jpg"))
+
+        assertTrue(contentSupport.acceptableUrl("https://example.com/clip.mp4", null))
+        assertTrue(contentSupport.acceptableUrl("https://example.com/clip.MP4?sig=a", null))
+
+        // nostr.build's HTML player page: `_mp3`, not `.mp3`. It used to be admitted into the
+        // video feed by a bare endsWith.
+        assertTrue(!contentSupport.acceptableUrl("https://e.nostr.build/a_ETvKzX2OdOGmFEp1avRlm5_mp3?t=Aria", null))
+        assertTrue(!contentSupport.acceptableUrl("https://e.nostr.build/v_ETvKzX2OdOGmFEp1avRlm5_mp4?t=Clip", null))
+        assertTrue(!contentSupport.acceptableUrl("https://example.com/my-thoughts-on-mp3", null))
+        assertTrue(!contentSupport.acceptableUrl("https://example.com/mp4", null))
+    }
 }

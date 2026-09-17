@@ -38,7 +38,7 @@ class PartialTokensTest {
     fun aHalfWrittenFromOpensThePeoplePicker() {
         val picker = pickerAtEnd("zaps from:ali")
         assertTrue(picker is ActivePicker.People)
-        assertEquals(KeyField.FROM, (picker as ActivePicker.People).keyField)
+        assertEquals(KeyField.FROM, picker.keyField)
         assertEquals("ali", picker.token.partial)
         assertEquals(5, picker.token.start)
     }
@@ -65,7 +65,7 @@ class PartialTokensTest {
     fun aHalfWrittenDateOpensTheCalendar() {
         val picker = pickerAtEnd("since:2026-0")
         assertTrue(picker is ActivePicker.Calendar)
-        assertEquals(DateField.SINCE, (picker as ActivePicker.Calendar).dateField)
+        assertEquals(DateField.SINCE, picker.dateField)
     }
 
     @Test

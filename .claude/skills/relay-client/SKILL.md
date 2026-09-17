@@ -17,7 +17,7 @@ The layer between `LocalCache`/`Account` and the raw relay connection. Ensures c
 
 ## Layout
 
-All under `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/relayClient/`:
+All under `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/relayClient/` (the `@Composable` entry points — `observeUser*`, `*FilterAssemblerSubscription`, `KeyDataSourceSubscription` — sit in the same package but in `commonsUI/src/commonMain/…`, the Compose half of the shared layer):
 
 ```
 relayClient/

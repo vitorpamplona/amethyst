@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal
 
+import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.video.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -48,7 +48,7 @@ class VideoFeedFilter(
         SupportedContent(
             blockedUrls = listOf("youtu.be", "youtube.com"),
             mimeTypes = SUPPORTED_VIDEO_FEED_MIME_TYPES_SET,
-            supportedFileExtensions = (RichTextParser.videoExtensions + RichTextParser.imageExtensions).toSet(),
+            supportedFileExtensions = (RichTextParser.videoExt + RichTextParser.imageExt).toSet(),
         )
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultStoriesFollowList.value.code

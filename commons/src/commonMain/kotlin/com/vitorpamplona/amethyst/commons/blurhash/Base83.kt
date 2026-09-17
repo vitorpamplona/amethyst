@@ -57,12 +57,12 @@ object Base83 {
     fun decodeAt(
         str: String,
         at: Int = 0,
-    ): Int = charMap[str[at].code]
+    ): Int = valueOf(str[at])
 
     fun decodeFixed2(
         str: String,
         from: Int = 0,
-    ): Int = charMap[str[from].code] * 83 + charMap[str[from + 1].code]
+    ): Int = valueOf(str[from]) * 83 + valueOf(str[from + 1])
 
     fun decode(
         str: String,
@@ -71,12 +71,23 @@ object Base83 {
     ): Int {
         var result = 0
         for (i in from until to) {
-            result = result * 83 + charMap[str[i].code]
+            result = result * 83 + valueOf(str[i])
         }
         return result
     }
 
     val ALPHABET: CharArray = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~".toCharArray()
+
+    /**
+     * Value of [c] in the base-83 alphabet, or 0 for any character outside it.
+     * Blurhashes come from attacker-controlled `imeta` tags, so a non-Latin-1
+     * character must degrade to a wrong colour, not an
+     * ArrayIndexOutOfBoundsException out of the image fetcher.
+     */
+    private fun valueOf(c: Char): Int {
+        val code = c.code
+        return if (code < charMap.size) charMap[code] else 0
+    }
 
     private val charMap =
         ALPHABET

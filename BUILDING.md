@@ -96,7 +96,7 @@ and each has its own guide:
 
 | Artifact | Committed at | Regenerate when | Guide |
 |---|---|---|---|
-| **Material Symbols subset font** | `commons/src/commonMain/composeResources/font/material_symbols_outlined.ttf` | You add/remove a `MaterialSymbol("\uXXXX")` codepoint in `MaterialSymbols.kt`, or bump the upstream font | [`tools/material-symbols-subset/README.md`](tools/material-symbols-subset/README.md) — run `./tools/material-symbols-subset/subset.sh` |
+| **Material Symbols subset font** | `commonsUI/src/commonMain/composeResources/font/material_symbols_outlined.ttf` | You add/remove a `MaterialSymbol("\uXXXX")` codepoint in `MaterialSymbols.kt`, or bump the upstream font | [`tools/material-symbols-subset/README.md`](tools/material-symbols-subset/README.md) — run `./tools/material-symbols-subset/subset.sh` |
 | **Arti (Tor) native libs** | `amethyst/src/main/jniLibs/*.so` | You update the pinned Arti version, change the JNI wrapper, or want to reproduce the binaries | [`tools/arti-build/README.md`](tools/arti-build/README.md) |
 
 > **Material Symbols is mandatory after icon changes.** The bundled font is a
@@ -105,8 +105,9 @@ and each has its own guide:
 > change. Reusing an existing codepoint needs no regeneration.
 
 Both tools have their own prerequisites (`fonttools`/`brotli` for the font; a
-Rust toolchain + Android NDK 25+ for Arti) documented in their READMEs — they
-are **not** required to build Amethyst from the committed sources.
+Rust toolchain + the exact Android NDK revision pinned in
+`tools/arti-build/ANDROID_NDK_VERSION` for Arti) documented in their READMEs —
+they are **not** required to build Amethyst from the committed sources.
 
 ---
 
@@ -466,8 +467,8 @@ Homebrew removes the quarantine attribute on its own downloads.
 > with `dry_run=true` — the sign+notarize step runs regardless of `dry_run` and
 > now prints the per-file notary log on a non-`Accepted` verdict. If it comes
 > back `Invalid`, the fix is to codesign the dylibs *inside* those jars before
-> zipping (and/or strip the unused `skiko`/Compose jars from the CLI image — the
-> `:commons` core/ui split the size budget already flags). The **desktop** app
+> zipping (the unused `skiko`/Compose jars left the CLI image with the
+> `:commons` / `:commonsUI` split). The **desktop** app
 > bundles the same jars through Compose/jpackage notarization, so run a desktop
 > dry-run too; its in-jar handling differs and is likewise unverified.
 
@@ -533,7 +534,7 @@ reads an optional per-release changelog from
 
 ## Bootstrap runbook (one-time)
 
-> **Status as of v1.15.1:** both Homebrew packages are now live upstream — the
+> **Status as of v1.15.2:** both Homebrew packages are now live upstream — the
 > `amethyst-nostr` cask (`Homebrew/homebrew-cask`, at 1.14.0) and the `amy`
 > formula (`Homebrew/homebrew-core`) both answer 200 on `formulae.brew.sh`, so
 > `bump-homebrew.yml` finally has something to bump. **Winget is still not
@@ -587,7 +588,7 @@ The token then lives only in that maintainer's shell:
 
 ```bash
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.15.1
+scripts/bump-homebrew-cask.sh v1.15.2
 ```
 
 Create one at
@@ -603,7 +604,7 @@ Same split, and it needs **no token at all**. `scripts/bump-winget.sh` drives
 runs fine from macOS or Linux:
 
 ```bash
-scripts/bump-winget.sh v1.15.1
+scripts/bump-winget.sh v1.15.2
 ```
 
 CI (`bump-winget.yml`, `GITHUB_TOKEN` only) does the bookkeeping: downloads the
@@ -686,9 +687,11 @@ Caveats that the maintainer must weigh before submitting:
 - **Pre-built-jar scrutiny.** homebrew-core prefers source builds; downloading
   a jar bundle is an accepted-but-reviewed pattern for JVM tools. Be ready to
   justify it (sandboxed Gradle can't fetch Maven deps).
-- **Bundle size.** The bundle is ~70 MB today because `:commons` leaks
-  Compose/Skiko jars onto the CLI classpath. Trimming that (a `:commons`
-  core/ui split) would shrink it and smooth review — tracked as a follow-up.
+- **Bundle size.** The bundle used to be ~70 MB because `:commons` leaked
+  Compose/Skiko jars onto the CLI classpath. Compose UI now lives in
+  `:commonsUI`, which `:cli` does not depend on: the JVM tarball is ~55 MB
+  and the jlink image tarball ~80 MB (1.15.2, Linux x64). The release
+  workflow caps every amy asset at 120 MB.
 
 After the formula merges, the `livecheck` block lets homebrew-core's BrewTestBot
 auto-open version-bump PRs on each stable release — no token or workflow on our

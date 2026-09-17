@@ -37,7 +37,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
@@ -163,6 +166,16 @@ class AccountZapActions(
     }
 
     /**
+     * True when this account can settle a BOLT12 zap at all: an NWC wallet is
+     * configured and the default one advertises `pay`. The sender-side half of the
+     * BOLT12 route; the recipient-side half is a published kind:10058 offer.
+     */
+    fun canZapViaBolt12(): Boolean =
+        account.settings.nwcWallets.value
+            .isNotEmpty() &&
+            defaultWalletSupportsBolt12Pay()
+
+    /**
      * Sends a NIP-B1 BOLT12 zap to [recipientPubKey] over the default NWC wallet.
      *
      * Signs a kind 9737 intent, pays [offer] via the nwc#2 `pay` method with the
@@ -173,6 +186,14 @@ class AccountZapActions(
      * still happened; [onError] reports "paid, no receipt"). [zappedEvent] is null for
      * a profile zap. Requires an NWC wallet (see [hasNwcWallet]); BOLT12 zaps have no
      * external-wallet or LNURL fallback because only NWC returns the proof.
+     *
+     * Outcomes are split by what they say about the money:
+     *  - [onNotPaid]: the wallet answered with an error. The wallet does the offer →
+     *    invoice exchange itself, so a stale or dead offer lands here too. Whether a
+     *    retry is safe depends on the code — `PAYMENT_FAILED` may be a timeout with the
+     *    HTLC still in flight — see `Bolt12LightningFallback`.
+     *  - [onError]: paid but no valid receipt, or nothing conclusive. Never retry.
+     *  - [onTimeout]: the wallet never answered. Unknown state — never retry.
      */
     suspend fun sendBolt12Zap(
         zappedEvent: Event?,
@@ -183,15 +204,21 @@ class AccountZapActions(
         zapType: LnZapEvent.ZapType,
         // (messageResId, detail) — the caller localizes; detail carries a wallet error, if any.
         onError: (Int, String?) -> Unit,
+        // (code, detail) — the wallet refused or failed the payment; no funds moved.
+        onNotPaid: suspend (NwcErrorCode?, String?) -> Unit,
+        onTimeout: () -> Unit,
         onProcessed: () -> Unit,
     ) {
         // NONZAP means "pay, but publish no receipt" — settle the offer without binding
         // a zap intent or emitting a 9736, matching the privacy of a bolt11 NONZAP.
         if (zapType == LnZapEvent.ZapType.NONZAP) {
-            sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
+            sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats), onTimeout) { response ->
                 account.scope.launch {
-                    if (response is IErrorResponseLike) onError(R.string.bolt12_payment_failed, response.errorMessage())
-                    onProcessed()
+                    try {
+                        if (response is IErrorResponseLike) onNotPaid(response.nwcErrorCode(), response.errorMessage())
+                    } finally {
+                        onProcessed()
+                    }
                 }
             }
             return
@@ -211,7 +238,7 @@ class AccountZapActions(
 
         val payerNote = Bolt12ZapBuilder.payerNote(intent)
 
-        sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats, payerNote)) { response ->
+        sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats, payerNote), onTimeout) { response ->
             account.scope.launch {
                 // try/finally so a failure while assembling/publishing the receipt (e.g. a
                 // remote signer error) still steps progress and surfaces an error, instead
@@ -234,7 +261,7 @@ class AccountZapActions(
                             }
                         }
 
-                        is IErrorResponseLike -> onError(R.string.bolt12_payment_failed, response.errorMessage())
+                        is IErrorResponseLike -> onNotPaid(response.nwcErrorCode(), response.errorMessage())
 
                         else -> onError(R.string.bolt12_zap_paid_no_receipt, null)
                     }
@@ -374,3 +401,11 @@ class AccountZapActions(
         return this
     }
 }
+
+/** The NIP-47 error code on a failed reply, whichever error shape the wallet used. */
+private fun Response.nwcErrorCode(): NwcErrorCode? =
+    when (this) {
+        is NwcErrorResponse -> error?.code
+        is PayInvoiceErrorResponse -> error?.code
+        else -> null
+    }

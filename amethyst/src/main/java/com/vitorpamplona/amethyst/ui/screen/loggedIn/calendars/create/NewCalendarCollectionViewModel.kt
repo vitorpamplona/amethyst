@@ -109,7 +109,6 @@ class NewCalendarCollectionViewModel : ViewModel() {
 
     override fun onCleared() {
         liveScanJob?.cancel()
-        super.onCleared()
     }
 
     fun toggle(address: Address) {

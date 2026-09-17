@@ -107,6 +107,26 @@ actual class SecureKeyStorage private actual constructor() {
             }
         }
 
+    /**
+     * Android backend: EncryptedSharedPreferences.contains + getString has no
+     * ambiguous-error state comparable to macOS Keychain user-cancel/deny, so
+     * "key not present" and "key present" are the only two null outcomes.
+     * Any thrown exception is a genuine failure and propagates.
+     */
+    actual suspend fun getPrivateKeyOrThrow(npub: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                val key = KEY_PREFIX + npub
+                if (!encryptedPrefs.contains(key)) {
+                    null
+                } else {
+                    encryptedPrefs.getString(key, null)
+                }
+            } catch (e: Exception) {
+                throw SecureStorageException("Failed to retrieve private key", e)
+            }
+        }
+
     actual suspend fun deletePrivateKey(npub: String): Boolean =
         withContext(Dispatchers.IO) {
             try {

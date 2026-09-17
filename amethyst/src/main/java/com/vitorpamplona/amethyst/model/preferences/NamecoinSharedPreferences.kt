@@ -166,7 +166,8 @@ class NamecoinSharedPreferences(
             } else {
                 emptyList()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
             emptyList()
         }
 

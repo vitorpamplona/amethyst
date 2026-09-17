@@ -56,6 +56,7 @@ class AccountManagerStateTransitionTest {
     fun setup() {
         storage = mockk(relaxed = true)
         coEvery { storage.getPrivateKey("account-metadata-key") } returns null
+        coEvery { storage.getPrivateKeyOrThrow("account-metadata-key") } returns null
         tempDir = createTempDirectory("acctmgr-state-test").toFile()
         amethystDir = File(tempDir, ".amethyst")
         amethystDir.mkdirs()

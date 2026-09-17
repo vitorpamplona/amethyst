@@ -3,20 +3,21 @@
 # setup.sh — amy-only preflight + identity bootstrap for the
 # NIP-17 DM interop harness. Much slimmer than the Marmot setup:
 #
-#   - Builds `amy` (same retry-on-503 logic as setup.sh).
-#   - Builds nostr-rs-relay if missing.
+#   - Builds `amy` (same retry-on-503 logic as setup.sh). The loopback
+#     relay is `amy serve` (geode), so amy is the only binary needed.
 #   - Bootstraps two fresh amy identities (A and D), each with its own
 #     `--data-dir`, both pointed at the loopback relay.
 #   - Publishes kind:10050 (plus NIP-65) for both so NIP-17's strict
 #     recipient-inbox routing has something to resolve to.
 #
-# The heavy `start_local_relay` / `stop_local_relay` helpers live in
-# the Marmot harness's setup.sh and are sourced by the top-level harness.
+# The `start_local_relay` / `stop_local_relay` helpers (embedded
+# `amy serve`) live in ../headless/helpers.sh and are sourced by the
+# top-level harness.
 
-# --- preflight (amy + relay only, no wn / Marmot patches) -------------------
+# --- preflight (amy only, no wn / Marmot patches, no Rust) -------------------
 preflight_dm() {
   banner "Preflight (DM harness)"
-  for cmd in jq git cargo; do
+  for cmd in jq git curl; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
       fail_msg "missing required tool: $cmd"
       exit 1
@@ -43,29 +44,6 @@ preflight_dm() {
   [[ -x "$AMY_BIN" ]] || { fail_msg "amy still missing after build"; exit 1; }
   info "amy: $AMY_BIN"
 
-  # nostr-rs-relay (same build path as the Marmot harness).
-  if [[ ! -x "$RELAY_BIN" ]]; then
-    if [[ "$NO_BUILD" -eq 1 ]]; then
-      fail_msg "nostr-rs-relay not found at $RELAY_BIN and --no-build set"; exit 1
-    fi
-    if [[ ! -d "$RELAY_REPO/.git" ]]; then
-      step "cloning nostr-rs-relay into $RELAY_REPO"
-      git clone --depth 1 https://github.com/scsibug/nostr-rs-relay "$RELAY_REPO" \
-        2>&1 | tee -a "$LOG_FILE"
-    fi
-    local attempt max=4
-    for attempt in $(seq 1 $max); do
-      step "building nostr-rs-relay (attempt $attempt/$max, ~3 min first run)"
-      ( cd "$RELAY_REPO" && cargo build --release --bin nostr-rs-relay ) \
-        2>&1 | tee -a "$LOG_FILE"
-      [[ -x "$RELAY_BIN" ]] && break
-      [[ "$attempt" -lt "$max" ]] && warn "nostr-rs-relay build failed — retrying"
-    done
-    [[ -x "$RELAY_BIN" ]] || {
-      fail_msg "nostr-rs-relay still missing after $max attempts"; exit 1
-    }
-  fi
-  info "relay bin: $RELAY_BIN"
 }
 
 # --- amy identity wrappers ---------------------------------------------------

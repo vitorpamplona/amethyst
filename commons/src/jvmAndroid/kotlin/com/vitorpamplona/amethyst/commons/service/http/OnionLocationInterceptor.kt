@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.Response
 
@@ -47,9 +48,25 @@ class OnionLocationInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val response = chain.proceed(chain.request())
         val onionLocation = response.header("Onion-Location")
-        if (onionLocation != null) {
+        if (onionLocation != null && isOnionService(onionLocation)) {
             cache.put(chain.request().url.host, onionLocation)
         }
         return response
+    }
+
+    private companion object {
+        /**
+         * Only a `.onion` target may be cached. [OnionUrlRewriteInterceptor]
+         * re-points every Tor request for the host at the cached location and
+         * deliberately allows https → http because the Tor circuit provides the
+         * transport security — a guarantee that only holds for onion services.
+         * A clearnet (or attacker-supplied) `Onion-Location` would otherwise
+         * redirect LNURL/NIP-05/media traffic to an arbitrary plaintext host
+         * for the cache TTL.
+         */
+        fun isOnionService(location: String): Boolean {
+            val host = location.toHttpUrlOrNull()?.host ?: return false
+            return host.endsWith(".onion", ignoreCase = true)
+        }
     }
 }

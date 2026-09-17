@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -47,7 +48,6 @@ import com.vitorpamplona.amethyst.commons.resources.mark_all_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_all_known_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_all_new_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_as_read_dialog_title
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection

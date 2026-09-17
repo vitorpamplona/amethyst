@@ -258,7 +258,6 @@ class WorkflowRunBoardViewModel : ViewModel() {
 
     override fun onCleared() {
         stopWatching()
-        super.onCleared()
     }
 
     companion object {

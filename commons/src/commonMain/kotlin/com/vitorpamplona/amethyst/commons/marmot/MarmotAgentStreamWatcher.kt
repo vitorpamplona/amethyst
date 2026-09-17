@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * What a front end renders for one live agent text stream.
@@ -203,6 +204,9 @@ class MarmotAgentStreamWatcher(
                 try {
                     quic.subscribe(candidate, start.streamId.hexToByteArray(), startEvent.id.hexToByteArray())
                 } catch (e: Exception) {
+                    // Without this a cancelled watcher keeps dialling the remaining
+                    // candidates instead of stopping.
+                    if (e is CancellationException) throw e
                     Log.d("MarmotAgentStreamWatcher") { "candidate $candidate unusable: ${e.message}" }
                     continue
                 }
@@ -222,6 +226,7 @@ class MarmotAgentStreamWatcher(
                         )
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.d("MarmotAgentStreamWatcher") { "stream from $candidate ended: ${e.message}" }
             } finally {
                 runCatching { stream.close() }

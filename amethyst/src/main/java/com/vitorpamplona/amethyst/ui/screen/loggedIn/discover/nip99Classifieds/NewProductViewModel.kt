@@ -612,7 +612,6 @@ open class NewProductViewModel :
     }
 
     override fun onCleared() {
-        super.onCleared()
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 

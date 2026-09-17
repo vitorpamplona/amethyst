@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.desktop.viewmodels
 
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel

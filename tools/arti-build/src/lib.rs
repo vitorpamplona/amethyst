@@ -1,6 +1,7 @@
-use jni::JNIEnv;
-use jni::objects::{JClass, JString, JObject, GlobalRef};
-use jni::sys::{jint, jstring};
+use jni::{jni_sig, jni_str, EnvUnowned};
+use jni::errors::{LogErrorAndDefault, Result as JniResult, ThrowRuntimeExAndDefault};
+use jni::objects::{Global, JClass, JObject, JString};
+use jni::sys::jint;
 use jni::JavaVM;
 
 use arti_client::{BootstrapBehavior, TorClient};
@@ -21,7 +22,7 @@ use anyhow::Result;
 static ARTI_CLIENT: Mutex<Option<Arc<TorClient<PreferredRuntime>>>> = Mutex::new(None);
 static TOKIO_RUNTIME: Mutex<Option<tokio::runtime::Runtime>> = Mutex::new(None);
 static JAVA_VM: Mutex<Option<JavaVM>> = Mutex::new(None);
-static LOG_CALLBACK: Mutex<Option<GlobalRef>> = Mutex::new(None);
+static LOG_CALLBACK: Mutex<Option<Global<JObject<'static>>>> = Mutex::new(None);
 static SOCKS_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
 // The background directory download started by initialize(). It holds an Arc<TorClient>, so
 // destroy() must abort it too — otherwise the client cannot drop, the state file lock is never
@@ -42,16 +43,21 @@ fn send_log_to_java(message: String) {
     let callback_opt = LOG_CALLBACK.lock().unwrap();
 
     if let (Some(vm), Some(callback)) = (vm_opt.as_ref(), callback_opt.as_ref()) {
-        if let Ok(mut env) = vm.attach_current_thread() {
+        // jni 0.22 only hands out an `Env` inside a closure, borrowed from an
+        // attachment pinned to the stack; it also pushes a local-reference frame
+        // per call, so `jmessage` is released when the closure returns instead of
+        // accumulating on this long-lived logging thread.
+        let _ = vm.attach_current_thread(|env| -> JniResult<()> {
             if let Ok(jmessage) = env.new_string(&message) {
                 let _ = env.call_method(
-                    callback.as_obj(),
-                    "onLogLine",
-                    "(Ljava/lang/String;)V",
-                    &[(&jmessage).into()]
+                    &**callback,
+                    jni_str!("onLogLine"),
+                    jni_sig!("(Ljava/lang/String;)V"),
+                    &[(&jmessage).into()],
                 );
             }
-        }
+            Ok(())
+        });
     }
 }
 
@@ -74,52 +80,92 @@ macro_rules! log_error {
 // ============================================================================
 
 #[no_mangle]
-pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_getVersion(
-    env: JNIEnv,
-    _class: JClass,
-) -> jstring {
-    if JAVA_VM.lock().unwrap().is_none() {
-        if let Ok(vm) = env.get_java_vm() {
-            *JAVA_VM.lock().unwrap() = Some(vm);
+pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_getVersion<'caller>(
+    mut env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+) -> JString<'caller> {
+    // jni 0.22: the raw environment pointer is FFI-only (`EnvUnowned`); JNI calls
+    // need the `Env` that `with_env` borrows for the closure. `resolve` maps an
+    // `Err` to the policy — here a Java RuntimeException plus a null return —
+    // rather than losing it.
+    //
+    // Only the `Err` half is live: the policy's panic half runs through
+    // `catch_unwind`, which catches nothing under this crate's
+    // `panic = "abort"` release profile, so a panic in here still takes the
+    // process down exactly as it did before the migration.
+    env.with_env(|env| -> JniResult<JString<'caller>> {
+        if JAVA_VM.lock().unwrap().is_none() {
+            if let Ok(vm) = env.get_java_vm() {
+                *JAVA_VM.lock().unwrap() = Some(vm);
+            }
         }
-    }
 
-    let version = format!("Arti {} (custom build with rustls)", env!("CARGO_PKG_VERSION"));
-    let output = env.new_string(version).expect("Couldn't create java string!");
-    output.into_raw()
+        let version = format!("Arti {} (custom build with rustls)", env!("CARGO_PKG_VERSION"));
+        env.new_string(version)
+    })
+    .resolve::<ThrowRuntimeExAndDefault>()
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_setLogCallback(
-    env: JNIEnv,
-    _class: JClass,
-    callback: JObject,
+pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_setLogCallback<'caller>(
+    mut env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+    callback: JObject<'caller>,
 ) {
-    if JAVA_VM.lock().unwrap().is_none() {
-        if let Ok(vm) = env.get_java_vm() {
-            *JAVA_VM.lock().unwrap() = Some(vm);
+    env.with_env(|env| -> JniResult<()> {
+        if JAVA_VM.lock().unwrap().is_none() {
+            if let Ok(vm) = env.get_java_vm() {
+                *JAVA_VM.lock().unwrap() = Some(vm);
+            }
         }
-    }
 
-    if let Ok(global_ref) = env.new_global_ref(callback) {
-        *LOG_CALLBACK.lock().unwrap() = Some(global_ref);
-        log_info!("Log callback registered");
-    }
+        if let Ok(global_ref) = env.new_global_ref(&callback) {
+            *LOG_CALLBACK.lock().unwrap() = Some(global_ref);
+            log_info!("Log callback registered");
+        }
+        Ok(())
+    })
+    .resolve::<ThrowRuntimeExAndDefault>()
 }
 
 /// Initialize Arti runtime and bootstrap the TorClient.
 /// The TorClient is created once and reused for the app's lifetime.
 #[no_mangle]
-pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
-    mut env: JNIEnv,
-    _class: JClass,
-    data_dir: JString,
+pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize<'caller>(
+    mut env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+    data_dir: JString<'caller>,
 ) -> jint {
-    if JAVA_VM.lock().unwrap().is_none() {
-        if let Ok(vm) = env.get_java_vm() {
-            *JAVA_VM.lock().unwrap() = Some(vm);
-        }
-    }
+    // Everything JNI-owned is read inside this closure; the rest of the function
+    // is pure Rust that blocks on Tokio, which must not hold an `Env`.
+    //
+    // `None` carries a failed read, because it is `Option::default()` and so is
+    // also what the policy yields for an `Err`. Both end at the same `-1` the
+    // old `Err` arm returned. Resolving to `jint` directly would have defaulted
+    // to `0`, the value this API reports as success.
+    //
+    // The already-initialized check deliberately stays *outside* the closure,
+    // against the whole `Option`: threading it through as a sentinel value
+    // would leave that sentinel to be re-tested after the closure, and a
+    // concurrent destroy() landing in between would let it through as the data
+    // directory.
+    let data_dir_str: Option<String> = env
+        .with_env(|env| -> JniResult<Option<String>> {
+            if JAVA_VM.lock().unwrap().is_none() {
+                if let Ok(vm) = env.get_java_vm() {
+                    *JAVA_VM.lock().unwrap() = Some(vm);
+                }
+            }
+
+            Ok(match data_dir.try_to_string(env) {
+                Ok(s) => Some(s),
+                Err(e) => {
+                    log_error!("Failed to convert data_dir: {:?}", e);
+                    None
+                }
+            })
+        })
+        .resolve::<LogErrorAndDefault>();
 
     // Already initialized — skip
     if ARTI_CLIENT.lock().unwrap().is_some() {
@@ -127,12 +173,9 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
         return 0;
     }
 
-    let data_dir_str: String = match env.get_string(&data_dir) {
-        Ok(s) => s.into(),
-        Err(e) => {
-            log_error!("Failed to convert data_dir: {:?}", e);
-            return -1;
-        }
+    let data_dir_str: String = match data_dir_str {
+        Some(s) => s,
+        None => return -1,
     };
 
     log_info!("Initializing Arti with data directory: {}", data_dir_str);
@@ -220,7 +263,9 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
             .create_unbootstrapped_async()
             .await
         {
-            Ok(c) => Arc::new(c),
+            // Arti 2.4.0 made every TorClient constructor return an Arc<TorClient>
+            // (TorClient itself is no longer Clone), so there is nothing to wrap here.
+            Ok(c) => c,
             Err(e) => {
                 log_error!("Failed to create Tor client: {:?}", e);
                 return -3;
@@ -267,7 +312,7 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
 /// Can be called multiple times — stops any existing listener first.
 #[no_mangle]
 pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_startSocksProxy(
-    _env: JNIEnv,
+    _env: EnvUnowned,
     _class: JClass,
     port: jint,
 ) -> jint {
@@ -494,7 +539,7 @@ async fn handle_socks_connection(
 /// Stop the SOCKS proxy listener. The TorClient stays alive.
 #[no_mangle]
 pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksProxy(
-    _env: JNIEnv,
+    _env: EnvUnowned,
     _class: JClass,
 ) -> jint {
     log_info!("Stopping SOCKS proxy...");
@@ -532,7 +577,7 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksPro
 /// measurable signal for a guess.
 #[no_mangle]
 pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_bootstrapProgressPermille(
-    _env: JNIEnv,
+    _env: EnvUnowned,
     _class: JClass,
 ) -> jint {
     match ARTI_CLIENT.lock().unwrap().as_ref() {
@@ -550,7 +595,7 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_bootstrapPro
 /// leaving the UI wrong and the exit-rotation self-heal disabled.
 #[no_mangle]
 pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_isBootstrapped(
-    _env: JNIEnv,
+    _env: EnvUnowned,
     _class: JClass,
 ) -> jint {
     match ARTI_CLIENT.lock().unwrap().as_ref() {
@@ -573,7 +618,7 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_isBootstrapp
 /// (and re-bootstrap).
 #[no_mangle]
 pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy(
-    _env: JNIEnv,
+    _env: EnvUnowned,
     _class: JClass,
 ) -> jint {
     log_info!("Destroying Arti client");

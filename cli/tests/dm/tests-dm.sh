@@ -3,7 +3,7 @@
 # tests-dm.sh — NIP-17 DM interop tests for two `amy` clients.
 #
 # Identity A (sender) and Identity D (recipient) each live in their own
-# --data-dir and share one loopback nostr-rs-relay. Tests cover:
+# --data-dir and share one loopback embedded relay (`amy serve` / geode). Tests cover:
 #
 #   dm-01   text round-trip (both directions)
 #   dm-02   dm list surfaces prior exchange with type:text discriminator

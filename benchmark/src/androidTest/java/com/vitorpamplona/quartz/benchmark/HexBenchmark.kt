@@ -136,7 +136,7 @@ class HexBenchmark {
     /** The pre-existing two-pass way to safely decode an id, for comparison with [hexDecode64OrNull]. */
     @Test
     fun hexIsHex64ThenDecode() {
-        r.measureRepeated { if (Hex.isHex64(hex)) Hex.decode(hex) else null }
+        r.measureRepeated { if (Hex.isHex64(hex)) Hex.decode(hex) }
     }
 
     @Test

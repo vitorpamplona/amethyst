@@ -461,9 +461,9 @@ class MarmotPublishBeforeApplyTest {
 
         override suspend fun saveRetainedEpochs(
             nostrGroupId: String,
-            epochs: List<ByteArray>,
+            retainedSecrets: List<ByteArray>,
         ) {
-            retained[nostrGroupId] = epochs
+            retained[nostrGroupId] = retainedSecrets
         }
 
         override suspend fun loadRetainedEpochs(nostrGroupId: String): List<ByteArray> = retained[nostrGroupId] ?: emptyList()
