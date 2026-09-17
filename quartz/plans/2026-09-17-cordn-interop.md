@@ -40,12 +40,18 @@ The engine is reusable but **not yet binding-agnostic**: it lives inside
 Extracting it is the prerequisite for this work and is worth doing on its own merits.
 
 The transport has to be written from scratch: **ContextVM is MCP-over-Nostr and nothing in Quartz
-speaks it.** Reviewing the full spec set (§6) puts the scope at **7 of 12 CEPs** — the core spec,
-CEP-4/19 (encryption), CEP-6/17 (discovery), CEP-35 (stateless discovery), and the two big ones
-CEP-22 (bounded oversized transfer) and CEP-41 (open streams), which together are most of the work
-and nearly all of the risk. Payments (CEP-8) and common tool schemas (CEP-15) are confirmed
-unused by cordn. Only 3 of the 7 are **Final**; the rest, including both big ones, are **Draft**
-(§6.6). The result is a general MCP-over-Nostr client, reusable well beyond cordn.
+speaks it.** Scope is **the core spec plus all 12 CEPs** (§6.2), so `:contextvm` is a complete
+MCP-over-Nostr implementation rather than a cordn adapter — cordn only exercises 7 of the 13
+documents, but the rest are cheap next to the two large transfer profiles and several ride on NIPs
+we already have. Only **CEP-4, CEP-6 and CEP-16** are Final; the core spec and the other nine CEPs
+are Draft, including CEP-22 and CEP-41 (§6.7).
+
+Because the CEPs are symmetric, compliance is not demonstrable against cordn alone. §6.4 defines
+five test tiers, and the one that does not exist yet is **Tier C: a Kotlin fixture server that
+misbehaves on demand.** No real server sends a non-monotonic `progress`, a stale `pong` nonce or a
+mismatched digest, yet those are MUST-fail requirements — so the fixture is a first-class Stage 2
+deliverable, not scaffolding. Two CEPs (8 and 15) also need **RFC 8785 JCS**, which Quartz does not
+have; it lands in `quartz/…/utils/` as a shared primitive.
 
 Recommended sequencing: **Stage 0 (vectors) → Stage 1 (extract engine) → decide → Stage 2+.**
 Do not start Stage 2 before the §4.1 decision, because if it goes the wrong way every KeyPackage
@@ -216,20 +222,22 @@ NIP-44 (and NIP-59) for the ContextVM gift wrap, NIP-19 bech32/TLV for `cordn1�
 Blossom (`nipB7Blossom`), `INostrClient` and the `accessories/` one-shot helpers for relay I/O,
 and `NostrSigner` for both identities.
 
-## 6. ContextVM: full surface review
+## 6. ContextVM: full surface review and compliance matrix
 
 We have to write this from scratch — nothing in Quartz speaks it, and the only SDKs are TypeScript
-and Rust. This section is the complete protocol surface so Stage 2 can be scoped honestly.
+and Rust. **Scope decision: implement the whole CEP list**, not just the subset cordn exercises.
+That makes `:contextvm` a complete MCP-over-Nostr implementation rather than a cordn adapter, and
+it means compliance has to be demonstrable per CEP rather than "cordn works".
 
 **Clean-room sourcing.** Everything below is derived from the specification documents in
-`ContextVM/contextvm-docs` (the `docs/contextvm-docs` submodule of the SDK, cloned at
+`ContextVM/contextvm-docs` (the `docs/contextvm-docs` submodule of the SDK, at
 `src/content/docs/reference/`), **not** from the LGPL SDK source (§7). Implementers should work
-from those documents. Note that the docs repo carries **no LICENSE file** — the protocol is free
-to implement, but do not paste spec prose into our repo; paraphrase.
+from those documents. The docs repo carries **no LICENSE file** — the protocol is free to
+implement, but do not paste spec prose into our repo; paraphrase.
 
 ### 6.1 The core spec is small
 
-`spec/ctxvm-draft-spec.md` (352 lines, Draft) is nearly all it is:
+`spec/ctxvm-draft-spec.md` (352 lines, Draft) is nearly all of the base protocol:
 
 - **One event kind, 25910**, ephemeral (NIP-01 range 20000–30000). `content` is the stringified
   MCP JSON-RPC message, preserved exactly. Nostr metadata lives only in tags: `p` addresses the
@@ -243,33 +251,43 @@ client must already be subscribed when the response is published or the response
 there is no REQ-after-the-fact recovery. That shapes our subscription lifecycle more than anything
 else in the spec.
 
-### 6.2 CEP inventory and scope
+### 6.2 Compliance matrix
 
-Twelve CEPs exist. Seven are load-bearing for cordn; five are not.
+Thirteen documents: the core spec plus 12 CEPs. `Rules` is the rule-id prefix this plan assigns
+for citing individual requirements, following the `STORE-Fxx` convention the `event-store-semantics`
+skill established — so a future divergence can be named precisely instead of described. `Gate` is
+what has to pass before we claim compliance; the test catalog is §6.5.
 
-| CEP | Status | What it adds | Needed |
-| --- | ------ | ------------ | ------ |
-| **4** Encryption Support | Final | NIP-44 encrypt the signed inner 25910 event, place it in a NIP-59 gift wrap (kind 1059) with **no rumor layer**. `support_encryption` tag. | **Yes** |
-| **19** Ephemeral Gift Wraps | Draft | Kind **21059**, identical structure/semantics to 1059 but in the ephemeral range so relays do not persist the envelope. `support_encryption_ephemeral`. | **Yes** — cordn-web pins `EPHEMERAL` |
-| **6** Public Server Announcements | Final | Addressable **11316** (server), **11317** tools, **11318** resources, **11319** resource templates, **11320** prompts. `content` is the stringified initialize/list result. Discovery tags: `name`, `about`, `picture`, `website`, `support_*`. | **Yes** (read side) |
-| **35** Stateless Session Discovery | Draft, Informational | Discovery tags ride the **first direct message each side sends** in a session — role-oriented, not initialize-oriented. Unknown discovery tags MUST be preserved. | **Yes** — cordn-web sets `isStateless: true` |
-| **22** Oversized Payload Transfer | Draft | Bounded reassembly over `notifications/progress`. `progressToken` is the transfer id. Frames `start`/`accept`/`chunk`/`end`/`abort`, `completionMode: "render"`, SHA-256 digest + `totalBytes` + `totalChunks`. | **Yes** — coordinator enables it; a large `msg_fetch_many` reply needs it |
-| **41** Open-Ended Streams | Draft | Long-lived streams over the same envelope. Frames `start`/`accept`/`chunk`/`ping`/`pong`/`close`/`abort`. | **Yes** — `msg_sub_many` is built on it |
-| **16** Client Public Key Injection | Final, Informational | Server transport injects `_meta.clientPubkey` into inbound requests. | **Server-side**, but load-bearing (§6.3.11) |
-| **17** Server Relay List Metadata | Draft | NIP-65 **kind 10002**, `r` tags, unmarked by default in the ContextVM profile. | Recommended — lets a `cordn1…` ref with no relay hints still resolve |
-| **23** Server Profile Metadata | Draft | Servers MAY publish **kind 0** and **kind 1**. | Optional — free win for a coordinator picker; we already render kind 0 |
-| **24** Server Reviews | Draft | NIP-22 **kind 1111** anchored to the `11316:<pubkey>:` `a` coordinate. | Optional — we already have NIP-22 |
-| **8** Capability Pricing and Payment | Draft | `cap` pricing tags, `pmi` payment-method ids, `payment_interaction` negotiation (`transparent` vs `explicit_gating`), payment notifications/errors. | **No** — verified zero payment references anywhere in cordn |
-| **15** Common Tool Schemas | Draft | RFC 8785 (JCS) hash of normalized tool schemas, `io.contextvm/common-schema` `_meta` namespace, NIP-73 discovery. | **No** — irrelevant to a client with 11 fixed tools |
-| **21** PMI Recommendations | Draft, Informational | Naming guidance for CEP-8 PMIs. | **No** (depends on CEP-8) |
+| Spec | Status | Surface | Rules | Gate |
+| ---- | ------ | ------- | ----- | ---- |
+| **Core** draft spec | Draft | Kind 25910, `content` = stringified JSON-RPC, `p`/`e` tags, optional MCP lifecycle | `CVM-CORE-*` | A + B |
+| **CEP-4** Encryption | **Final** | NIP-44 encrypt the *signed* inner 25910 event into a NIP-59 wrap (kind 1059), **no rumor layer**; `support_encryption` | `CVM-4-*` | A + B + **D** |
+| **CEP-19** Ephemeral Gift Wraps | Draft | Kind **21059**, identical semantics to 1059 but ephemeral; `support_encryption_ephemeral`; MUST fall back to 1059 | `CVM-19-*` | A + B |
+| **CEP-6** Public Announcements | **Final** | Addressable **11316** server, **11317** tools, **11318** resources, **11319** resource templates, **11320** prompts; discovery tags `name`/`about`/`picture`/`website`/`support_*` | `CVM-6-*` | A + B |
+| **CEP-17** Relay List Metadata | Draft | NIP-65 **kind 10002**, unmarked `r` tags in the ContextVM profile; bootstrap vs advertised relays are distinct | `CVM-17-*` | A + B |
+| **CEP-35** Stateless Discovery | Draft, Info | Discovery tags on the **first direct message each side sends**; unknown tags MUST be preserved; `p`/`e` excluded from the learned surface | `CVM-35-*` | A + C |
+| **CEP-22** Oversized Transfer | Draft | Bounded reassembly over `notifications/progress`; `progressToken` = transfer id; `start`/`accept`/`chunk`/`end`/`abort`; `completionMode: "render"`; SHA-256 digest + `totalBytes` + `totalChunks` | `CVM-22-*` | A + B + C |
+| **CEP-41** Open Streams | Draft | Long-lived streams, same envelope; `start`/`accept`/`chunk`/`ping`/`pong`/`close`/`abort`; per-sender `progress`; contiguous `chunkIndex` | `CVM-41-*` | A + B + C |
+| **CEP-16** Client Pubkey Injection | **Final**, Info | Server injects `_meta.clientPubkey` into inbound requests; opt-in, default off | `CVM-16-*` | A + C (server role) |
+| **CEP-8** Pricing and Payment | Draft | `cap`/`pmi`/`payment_interaction`/`direct_payment`/`change` tags; transparent notification lifecycle vs `explicit_gating` JSON-RPC errors (`-32042`, `-32043`, `-32602`); canonical invocation identity | `CVM-8-*` | A + C + **E** |
+| **CEP-15** Common Tool Schemas | Draft | RFC 8785 JCS hash of `{name, normalized inputSchema, normalized outputSchema?}`; `io.contextvm/common-schema` `_meta`; NIP-73 `i`/`k` tags | `CVM-15-*` | A + B |
+| **CEP-21** PMI Recommendations | Draft, Info | PMI naming conventions, `-direct` suffix for bearer settlement | `CVM-21-*` | A |
+| **CEP-23** Server Profile Metadata | Draft | Server-published **kind 0** and optional **kind 1** | `CVM-23-*` | A + B |
+| **CEP-24** Server Reviews | Draft | NIP-22 **kind 1111** anchored to the `11316:<pubkey>:` `a` coordinate | `CVM-24-*` | A + B |
 
-Design the module so CEP-8 is not *precluded* — a priced coordinator is plausible later — but do
-not build it.
+Gate legend (method in §6.4): **A** rule-derived unit tests · **B** live integration against a
+real counterparty · **C** adversarial tests against our own fixture server · **D** cross-
+implementation vector exchange · **E** wallet integration.
 
-### 6.3 The subtle parts
+Status reality check: only **CEP-4, CEP-6 and CEP-16** are Final. The core spec and the nine other
+CEPs are Draft, including both large transfer profiles. Per the CEP guidelines a CEP reaches Final
+only once its reference implementation lands, so "Draft" here means the spec text may still move,
+not that it is unimplemented. Budget for churn (§6.7).
 
-These are where a naive implementation passes unit tests and then fails against the live
-coordinator. Each is a spec MUST and should become a test.
+### 6.3 The high-risk rules
+
+These are where an implementation passes its own unit tests and then diverges against a real peer.
+Each is a spec MUST and each maps to a named test in §6.5.
 
 1. **CEP-41 has two ordering fields, and they are not interchangeable.** `progress` orders *all*
    frames (control frames included) and is explicitly **not** a chunk counter. `chunkIndex` starts
@@ -302,10 +320,10 @@ coordinator. Each is a spec MUST and should become a test.
 10. **The inner event is fully signed, not a rumor.** CEP-4's flow signs the 25910 event *first*,
     then NIP-44-encrypts the whole thing into the wrap. Receivers verify the inner signature, and
     response correlation uses the **inner** `id`, not the gift wrap's.
-11. **Three separate correlation identifiers coexist**: the nostr `e` tag (event level), the
-    JSON-RPC `id` (MCP level), and `progressToken` (CEP-22/41 transfer level). Plus
-    `_meta.clientPubkey` (CEP-16) as the coordinator's authenticated caller identity — which is the
-    mechanism §4.2's KeyPackage binding ultimately rests on.
+11. **Four separate correlation identifiers coexist**: the nostr `e` tag (event level), the
+    JSON-RPC `id` (MCP level), `progressToken` (CEP-22/41 transfer level), and CEP-8's canonical
+    invocation identity (payment level). Plus `_meta.clientPubkey` (CEP-16) as the authenticated
+    caller identity — the mechanism §4.2's KeyPackage binding ultimately rests on.
 12. **Ephemeral delivery has no replay.** Per §6.1, subscribe before you publish. Combined with
     per-identity subscriptions (§8.2), each identity needs its own live `#p` subscription on 25910
     plus both gift wrap kinds.
@@ -314,54 +332,190 @@ coordinator. Each is a spec MUST and should become a test.
 14. **`close.lastChunkIndex` is optional and meaningful.** Present, it is a completeness bound and
     every index `0..lastChunkIndex` must have arrived; omitted, the stream was open-ended and no
     bound is asserted. Senders omit it for live feeds.
+15. **CEP-8 excludes `params._meta` from the canonical invocation identity, but forwards it at
+    execution.** The exclusion exists because MCP clients regenerate `progressToken` per call, so
+    without it two semantically identical invocations never match one paid authorization. Getting
+    this backwards either breaks retry matching or strips transport metadata from the handler.
+16. **CEP-8 forbids silent fallback.** A server that will not accept `explicit_gating` MUST NOT
+    quietly use the transparent lifecycle; and a client that required `explicit_gating` SHOULD NOT
+    auto-satisfy transparent `payment_required` notifications. A naive payment handler that pays
+    whatever it is asked to pay violates the client half of this.
+17. **CEP-15's hash is a verification target, not a label.** The whole point is that two servers
+    documenting a tool differently produce the same hash. A client that trusts the advertised
+    `schemaHash` without recomputing it from the tool definition gains nothing from the CEP.
 
-### 6.4 Build list for `:contextvm`
+### 6.4 Conformance method
+
+Five tiers, because the CEPs are symmetric and no single counterparty exercises all of them.
+
+**Tier A — rule-derived unit tests.** Every MUST/MUST NOT in a CEP becomes a named test carrying
+its rule id, asserted against pure codecs and frame state machines with no network. This is where
+the negative cases live and it is the bulk of the value: the CEP-22/41 validation sections are
+written almost entirely as failure conditions. Offline, fast, runs in `commonTest`.
+
+**Tier B — live integration against a real counterparty.** `ghcr.io/cordn-msg/cordn:latest` with
+`CORDN_STORAGE_BACKEND=memory` and `CORDN_ANNOUNCED=false` boots in one command and enables
+CEP-22 and CEP-41. It covers the core spec, CEP-4/19, CEP-6/17 and the happy paths of 22/41.
+`cordn/packages/test-utils/src/mockRelay.ts` exists if we want a relay stub instead of a public
+relay. Tagged as an integration suite, not run on every build.
+
+**Tier C — adversarial tests against our own fixture server.** This is the tier that does not
+exist yet and has to be built: **a Kotlin `:contextvm` test fixture that can play the server role
+and misbehave on demand.** No real server will send a non-monotonic `progress`, a second `start`
+on a live token, a `pong` with a stale nonce, a digest that does not match, or a
+`payment_required` in a session where `explicit_gating` was accepted — but our client must handle
+all of them correctly, and several are outright MUST-fail requirements. The fixture is also the
+only practical way to test CEP-16 (a server-side obligation) and the server half of CEP-8.
+Building it is a first-class Stage 2 deliverable, not test scaffolding.
+
+**Tier D — cross-implementation vector exchange.** For the crypto surface, agreeing with ourselves
+is not evidence. Generate CEP-4 wrap/unwrap vectors and CEP-22/41 frame sequences, check them in
+under `quartz/src/commonTest/resources/contextvm/`, and verify both directions against the
+reference implementation the way `TsMlsWelcomeInteropTest` does for MLS. Ask upstream to adopt them
+(§10) — a shared vector set helps every non-TypeScript implementation and is a cheap contribution.
+
+**Tier E — wallet integration.** CEP-8's client role is a payment *handler*, so compliance is only
+demonstrable end to end against a real rail. `bitcoin-lightning-bolt11` is the one recommended PMI
+(CEP-21) and we already have NIP-47 NWC and NIP-57 zaps in Quartz, so this is integration, not new
+payment code. Regtest or a small-amount live wallet; gated behind a manual test tag.
+
+**Shared prerequisite: RFC 8785 (JCS).** Both CEP-8 (canonical invocation identity) and CEP-15
+(schema hash) require it, and **Quartz has no JCS implementation** — I checked; the
+`canonicalize` hits in the tree are IPv6, media types and relay URLs, all unrelated. So JCS is its
+own build item with its own vector suite (the RFC's test vectors, plus the number-formatting edge
+cases that make JCS genuinely tricky: `1E30`, `-0`, very small and very large doubles). Put it in
+`quartz/…/utils/` rather than in `:contextvm` — it is a generic primitive and NIP work may want it.
+
+### 6.5 Per-CEP test catalog
+
+Tier A cases, grouped by rule prefix. Negative cases are marked ✗ — they are the majority by
+design, and a suite without them proves nothing.
+
+**`CVM-CORE`** — round-trip every message class (request, response, error, notification);
+`content` is a *string*, not an embedded object (a plausible early bug); reject a non-25910 kind;
+`e`-tag correlation maps a response to its request; ✗ a response published before we subscribed is
+unrecoverable (asserts the §6.1 lifecycle rule rather than pretending it works); the
+`initialize` → `notifications/initialized` sequence; and the stateless path succeeding with no
+initialize at all.
+
+**`CVM-4`** — inner event is signed and verifies; wrap `p` tag names the recipient; two wraps of
+the same payload have **different** outer pubkeys (fresh key per wrap); decrypt recovers the inner
+event byte-for-byte; correlation uses the inner `id`; ✗ inner signature invalid → reject; ✗
+unsupported wrap kind → reject; conversation-key symmetry both directions. Tier D vectors here.
+
+**`CVM-19`** — prefer 21059 when both peers advertise `support_encryption_ephemeral`; MUST fall
+back to 1059 when the peer does not; 21059 and 1059 decode identically; subscription filters
+include both kinds.
+
+**`CVM-6`** — parse each of 11316–11320 (`content` is a stringified initialize/list result);
+replaceable semantics keep the newest `created_at` per `(kind, pubkey)`; all discovery tags parsed;
+optional tags absent → no failure; discovery tags seen on a first direct message are treated as
+equivalent to announcement tags (the CEP-6/CEP-35 overlap).
+
+**`CVM-17`** — unmarked `r` tag means read **and** write; `read`/`write` markers honored when
+present; latest-wins replacement; bootstrap relays are publication targets and MUST NOT be assumed
+operational; absent 10002 → fall back to configured relays.
+
+**`CVM-35`** — client sends capability/negotiation tags on its first direct message and omits them
+after; server tags are learned from the first direct server→client message even when it is not an
+initialize result; **unknown tags preserved** and reachable via a raw accessor; `p` and `e` excluded
+from the learned surface; a feature tag on a later message is message-local and does not mutate the
+session baseline.
+
+**`CVM-22`** — happy path reassembles and validates; out-of-order chunks inside the buffer window
+reassemble correctly by `progress`; nothing is surfaced upward before validation succeeds; ✗ digest
+mismatch; ✗ `totalBytes` mismatch; ✗ `totalChunks` mismatch; ✗ `chunk` before `accept` in a
+stateless flow; ✗ non-monotonic `progress`; ✗ `end` with unresolved gaps; ✗ unknown
+`completionMode`; ✗ declared totals over local policy rejected at `start`; ✗ transfer started for a
+request with no `progressToken`; `abort` is terminal.
+
+**`CVM-41`** — happy path streams incrementally; zero-chunk stream (`close` straight after
+`start`) succeeds; `close` with `lastChunkIndex` and every index present succeeds; `close` without
+`lastChunkIndex` on an open-ended feed succeeds; the final JSON-RPC response is still required and
+delivered after `close`; idle → `ping` → `pong` keeps the stream alive; ✗ no `pong` before probe
+timeout fails the stream; ✗ `pong` with unknown, duplicate or expired nonce is not liveness
+evidence; ✗ nonce over 64 bytes rejected; ✗ second `start` on a live `progressToken`; ✗
+non-contiguous `chunkIndex` at `close`; ✗ `close` with `lastChunkIndex` and a missing index; ✗
+frames after `close` or `abort` ignored; `pong.progress` unrelated to `ping.progress` (asserts
+§6.3.2 explicitly).
+
+**`CVM-16`** — the fixture server injects `_meta.clientPubkey` derived from the event pubkey;
+injection is off by default; our client never sends `clientPubkey` itself (a client-supplied value
+would be a spoof, and the coordinator's §4.2 binding depends on it being server-derived).
+
+**`CVM-8`** — `cap` tag parses fixed (`"100"`) and range (`"100-1000"`) prices with the
+`tool:`/`prompt:`/`resource:` prefixes; PMI intersection selection picks a mutually supported
+method; absent `payment_interaction` means `transparent`; a requested `explicit_gating` accepted by
+the server is disclosed on the first direct response; ✗ requested `explicit_gating` not accepted
+MUST NOT silently become transparent, and our handler MUST NOT auto-pay transparent
+`payment_required` in that session (§6.3.16); `-32602` shape on an unsupported mode; `-32042`
+`Payment Required` carries one or more `payment_options`; `-32043` `Payment Pending` with
+`retry_after`; mid-session mode upsert re-discloses on transition to `explicit_gating`; canonical
+identity is stable across a changed JSON-RPC `id`, a changed outer event id, and a regenerated
+`progressToken` (the `_meta` exclusion); transparent idempotency — the same outer event id is not
+charged twice; `ttl` expiry; at most one `direct_payment` tag, first supported PMI wins; `change`
+tag parsed on `payment_accepted`.
+
+**`CVM-15`** — normalization strips `title`/`description`/`examples`/`default`/`deprecated`/
+`readOnly`/`writeOnly` and `x-*` keys **at every nesting level**; the same tool documented
+differently yields the same hash (the CEP's whole purpose); adding an `outputSchema` changes the
+hash; `$ref` bundled into a self-contained representation, with ✗ no network resolution attempted;
+`i`/`k` NIP-73 tags emitted and parsed; and the key client-side rule — **recompute the hash from
+the tool definition and reject a mismatched advertised `schemaHash`** rather than trusting it.
+
+**`CVM-21`** — PMI format matches `[a-z0-9-]+`; `-direct` suffix detected as bearer-settlement
+capable; unknown PMI degrades gracefully rather than failing the session.
+
+**`CVM-23`** — parse a server `kind 0` as NIP-01 metadata (reuses existing Quartz code); `kind 1`
+notes from a server pubkey carry no special semantics.
+
+**`CVM-24`** — top-level review builds both uppercase `A`/`K`/`P` and lowercase `a`/`k`/`p` with
+`k = 11316`; a reply keeps uppercase `A`/`K`/`P` at the root announcement while using lowercase
+`e` for the parent comment and `k = 1111`; the discovery filter returns reviews for a given server.
+
+### 6.6 Build list for `:contextvm`
 
 Ordered so each item is testable before the next depends on it:
 
-| # | Component | Notes |
-| - | --------- | ----- |
-| 1 | Kinds, tags, frame types, JSON-RPC 2.0 codec | Pure data; port the constant set from the spec |
-| 2 | Minimal MCP client | `initialize`, `notifications/initialized`, `tools/call`, typed errors, `_meta`/`progressToken` plumbing. Not a full MCP SDK — cordn uses tools only |
-| 3 | CEP-4/19 gift wrap | NIP-44 + 1059/21059 on existing `nip44Encryption` and `nip59Giftwrap`. Pin `REQUIRED` (§8.6) |
-| 4 | Correlation + subscription lifecycle | `#p` subscriptions on 25910 + both wrap kinds, `e`-tag routing, the subscribe-before-publish rule of §6.1, per-identity scoping |
-| 5 | CEP-35 discovery-tag learning | First-message exchange each way; preserve unknown tags |
-| 6 | CEP-6/17 server discovery | 11316–11320 readers + NIP-65 10002 relay resolution. Reuses `INostrClient` `accessories/` one-shots |
-| 7 | CEP-22 receiver | Frame state machine, bounded reassembly, admission control on `totalBytes`/`totalChunks`, digest verify |
-| 8 | CEP-41 receiver + writer | The two-counter state machine, keepalive, incremental delivery as a `Flow`, the dual completion of §6.3.3 |
-| 9 | CEP-22 sender | Only needed if we ever post a >64 KiB `msg_post`; defer until a real case appears |
-| 10 | Dual-signer plumbing | Account `NostrSigner` for stable, local keypair for ephemeral |
+| # | Component | Gate | Notes |
+| - | --------- | ---- | ----- |
+| 1 | Kinds, tags, frame types, JSON-RPC 2.0 codec | A | Pure data |
+| 2 | Minimal MCP client | A + B | `initialize`, `notifications/initialized`, `tools/call`, `tools/list`, typed errors, `_meta`/`progressToken` plumbing |
+| 3 | CEP-4/19 gift wrap | A + B + D | On existing `nip44Encryption` + `nip59Giftwrap`. Pin `REQUIRED` (§8.6) |
+| 4 | Correlation + subscription lifecycle | A + B | `#p` subscriptions on 25910 + both wrap kinds, `e`-tag routing, subscribe-before-publish, per-identity scoping |
+| 5 | CEP-35 discovery-tag learning | A | First-message exchange, unknown-tag preservation, raw accessor |
+| 6 | CEP-6/17/23 server discovery | A + B | 11316–11320 + 10002 + kind 0. Reuses `INostrClient` `accessories/` one-shots |
+| 7 | **Fixture server (Tier C)** | — | Plays the server role, misbehaves on demand. Unblocks every adversarial test below |
+| 8 | CEP-22 receiver | A + B + C | Frame machine, bounded reassembly, admission control, digest verify |
+| 9 | CEP-41 receiver + writer | A + B + C | Two-counter machine, keepalive, `Flow` delivery, dual completion |
+| 10 | CEP-22 sender | A + C | Proactive fragmentation with relay-size margin |
+| 11 | RFC 8785 JCS | A | In `quartz/…/utils/`, not here — shared by 8 and 15 (§6.4) |
+| 12 | CEP-15 common tool schemas | A + B | Normalization, hash, `i`/`k` tags, recompute-and-verify |
+| 13 | CEP-8 + CEP-21 payments | A + C + E | Both lifecycles, canonical identity, PMI registry; handler on NIP-47 NWC |
+| 14 | CEP-16 injection (server role) | A + C | Only meaningful in the fixture server and any server we later expose |
+| 15 | CEP-24 reviews | A + B | Thin layer on existing NIP-22 |
+| 16 | Dual-signer plumbing | A + B | Account `NostrSigner` for stable, local keypair for ephemeral |
 
 Sizing reference: the SDK's client-side surface (`src/core` + `src/transport/nostr-client` +
-oversized-transfer + open-stream, tests excluded) is ~5.4k lines of TypeScript. Items 7 and 8 are
-the bulk of it and the bulk of the risk.
+oversized-transfer + open-stream, tests excluded) is ~5.4k lines of TypeScript, and that excludes
+payments, the server role and the announcement manager. Items 8, 9 and 13 are the bulk of the work
+and the bulk of the risk.
 
-Reusable beyond cordn: this is a general MCP-over-Nostr client. Any future Amethyst work that
-wants to call a remote MCP server — or expose one — lands here rather than in a feature module.
+Reusable beyond cordn: this is a general MCP-over-Nostr client *and* the beginnings of a server.
+Any future Amethyst work that wants to call a remote MCP server — or expose one — lands here
+rather than in a feature module.
 
-### 6.5 Conformance strategy
+### 6.7 Spec stability risk
 
-No official ContextVM test vectors exist as far as I can find (worth asking upstream — see §10).
-So conformance has to be built:
+Only CEP-4, CEP-6 and CEP-16 are **Final**. Everything else, including the core spec and both
+transfer profiles, is **Draft** — and CEP-8 (722 lines), CEP-41 (534) and CEP-15 (502) are the
+three largest documents. Per the CEP guidelines, Final requires a completed reference
+implementation, so Draft here means the text can still move.
 
-- **Rule-derived unit tests.** Every MUST in §6.3 and in CEP-22/41's validation sections becomes a
-  test against the frame state machines, including the negative cases: non-monotonic `progress`, a
-  second `start` on a live token, `close` with unresolved gaps, a `pong` with an unknown nonce,
-  digest mismatch, `totalBytes` mismatch.
-- **Live integration against the reference coordinator.** `ghcr.io/cordn-msg/cordn:latest` with
-  `CORDN_STORAGE_BACKEND=memory` and `CORDN_ANNOUNCED=false` boots in one command and enables both
-  CEP-22 and CEP-41. `cordn/packages/test-utils/src/mockRelay.ts` exists if we want a relay stub
-  rather than a public one.
-- **Ask upstream for vectors**, and offer ours. A shared vector set for CEP-22/41 framing would
-  benefit every non-TypeScript implementation and is a cheap contribution.
-
-### 6.6 Spec stability risk
-
-Only CEP-4, CEP-6 and CEP-16 are **Final**. Everything cordn actually depends on beyond the core —
-CEP-19, CEP-22, CEP-41, CEP-35 — is **Draft**, and the core spec itself is Draft. CEP-22 and CEP-41
-are also the two largest and most intricate documents. Budget for churn, keep the frame state
-machines isolated behind a narrow interface, and pin which CEP revision we implemented in the
-module's README so a future reader can diff.
+Mitigations: keep each CEP's rules behind a narrow interface so a revision is a localized change;
+record the implemented revision (commit hash of `contextvm-docs`) in the module README and in each
+rule-id group; and make the Tier A suite the tripwire — when a CEP revises, the diff against our
+named rules says exactly what to change.
 
 ## 7. Licensing
 
@@ -509,19 +663,27 @@ Sourcing discipline, restated because it constrains the whole stage: implement f
 specification documents in `ContextVM/contextvm-docs`, **not** from the LGPL SDK (§7). Whoever
 takes this should avoid reading the SDK source at all; §6 was written so they do not have to.
 
-Substages, matching §6.4's build list:
+Substages, matching §6.6's build list. Each ships when its rule-id group in §6.5 is green at the
+tier §6.2 assigns it:
 
 - **2a — wire layer.** Items 1–4: constants and codecs, the minimal MCP client, CEP-4/19 gift wrap
   pinned to `REQUIRED` (§8.6), and the correlation + subscription lifecycle. Ships when a
-  `tools/list` round-trips against the reference coordinator in Docker.
-- **2b — discovery.** Items 5–6: CEP-35 first-message tag learning and CEP-6/17 announcement and
+  `tools/list` round-trips against the reference coordinator in Docker and `CVM-CORE`/`CVM-4`/
+  `CVM-19` pass, with CEP-4 vectors exchanged both ways (Tier D).
+- **2b — discovery.** Items 5–6: CEP-35 first-message tag learning, CEP-6/17/23 announcement and
   relay resolution. Ships when a coordinator pubkey alone is enough to connect.
-- **2c — transfer profiles.** Items 7–8: the CEP-22 receiver and the CEP-41 receiver/writer. This
-  is the bulk of the work and the bulk of the risk; §6.3 items 1–7 and 13–14 all live here. Ships
-  when `msg_sub_many` streams a live backlog and a >64 KiB `msg_fetch_many` reassembles with a
-  verified digest.
-- **2d — deferred.** Item 9 (CEP-22 *sender*) until a real >64 KiB `msg_post` exists. Not CEP-8,
-  not CEP-15 — but do not architect them out (§6.2).
+- **2c — fixture server.** Item 7, and the gate for everything after it. A Kotlin `:contextvm`
+  test double that plays the server role and can be told to violate any rule in §6.5. Without it
+  the adversarial half of CEP-22/41 and all of CEP-16 are untestable.
+- **2d — transfer profiles.** Items 8–10: CEP-22 receiver, CEP-41 receiver/writer, CEP-22 sender.
+  The bulk of the work and the risk; §6.3 items 1–7, 13 and 14 all live here. Ships when
+  `msg_sub_many` streams a live backlog, a >64 KiB `msg_fetch_many` reassembles with a verified
+  digest, and every ✗ case in `CVM-22`/`CVM-41` fails the way the spec requires.
+- **2e — JCS and schemas.** Items 11–12: RFC 8785 in `quartz/…/utils/` against the RFC's own
+  vectors plus number-formatting edge cases, then CEP-15 on top of it.
+- **2f — payments and the rest.** Items 13–16: CEP-8 both lifecycles with the NIP-47 NWC handler
+  (Tier E), CEP-16 injection in the fixture, CEP-24 reviews on existing NIP-22, dual-signer
+  plumbing. Lowest priority — cordn needs none of it — but it is what makes the module complete.
 
 Two constraints that shape the API and are easy to discover too late:
 
@@ -569,8 +731,11 @@ CEP-22/41 are where an implementation that "works" quietly diverges.
 
 - Multi-device (§4.6) — nothing interoperable to build.
 - Reusing any `Marmot*`/`Mip*` type for cordn.
-- A Kotlin ContextVM *server* — `cordn-rs` exists, is faster, and shares the SQLite schema. If we
-  ever want a coordinator, run theirs.
+- A production Kotlin ContextVM *server*. The Tier C fixture (§6.4) plays the server role for
+  tests only. For a real coordinator, `cordn-rs` exists, is faster, and shares the SQLite schema —
+  run theirs. The fixture is deliberately not hardened for deployment.
+- A full MCP SDK. `:contextvm` implements the client surface the CEPs define plus the fixture's
+  server role, not MCP's sampling/roots/elicitation breadth.
 - Bridging a Marmot group and a cordn group into one MLS group. Possible in principle once §4.1
   and §4.4 are resolved, but it is a separate design with its own trust questions.
 
@@ -587,8 +752,8 @@ CEP-22/41 are where an implementation that "works" quietly diverges.
 5. **Whose coordinator?** The privacy analysis reads very differently for a self-hosted
    per-community coordinator versus the shipped public default.
 6. **Are there ContextVM conformance vectors?** None found in `contextvm-docs` or the SDK. Ask
-   upstream, and offer ours — a shared CEP-22/41 framing vector set helps every non-TypeScript
-   implementation and is a cheap contribution (§6.5).
+   upstream, and offer ours — a shared CEP-4 wrap and CEP-22/41 framing vector set helps every
+   non-TypeScript implementation and is a cheap contribution (Tier D, §6.4).
 7. **How stable are CEP-22 and CEP-41?** Both are Draft, both are the largest CEPs, and both are
    mandatory for cordn. A breaking revision mid-implementation is the main schedule risk in
    Stage 2c. Worth asking whether either is close to Final.
@@ -599,3 +764,11 @@ CEP-22/41 are where an implementation that "works" quietly diverges.
 9. **The ContextVM spec repo has no LICENSE.** Implementing a protocol from a published spec is
    normal and fine, but if we want to quote rule text into KDoc or the module README, ask upstream
    to add one (CC-BY or similar) rather than assuming.
+10. **Should the Tier C fixture server become a shared conformance harness?** It is the piece the
+    ecosystem is missing — a counterparty that can violate any rule on demand. Offering it
+    upstream would make it the de facto ContextVM test suite, which is influence worth having but
+    also a maintenance commitment beyond our own needs.
+11. **Is CEP-8 worth implementing at all, or just not precluding?** It is 722 lines, needs Tier E
+    wallet integration, and no coordinator we know of prices anything. The full-list decision says
+    build it; if that is really "build it when someone charges", say so now and 2f drops to a
+    stub that surfaces `-32042` to the user instead of paying.
