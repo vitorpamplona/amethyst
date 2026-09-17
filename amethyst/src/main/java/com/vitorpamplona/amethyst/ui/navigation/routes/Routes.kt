@@ -573,6 +573,20 @@ sealed class Route {
 
     @Serializable data class QRDisplay(
         val pubkey: String,
+        /**
+         * Opens straight into the scanner instead of showing this user's own code. Set by the
+         * launcher shortcut, whose entire purpose is to skip that step.
+         */
+        val startScanning: Boolean = false,
+    ) : Route()
+
+    /**
+     * Decodes a QR out of an image the user shared into Amethyst, then goes wherever it points.
+     *
+     * [uri] is the shared image's content uri, as a string so the route stays serializable.
+     */
+    @Serializable data class ScanQrImage(
+        val uri: String,
     ) : Route()
 
     @Serializable data class ContentDiscovery(

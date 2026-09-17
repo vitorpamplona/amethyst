@@ -43,6 +43,7 @@ class ShareIntentRoutingTest {
         assertEquals(ShareTarget.PICTURE, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsPictureAlias"))
         assertEquals(ShareTarget.SHORT_VIDEO, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsShortVideoAlias"))
         assertEquals(ShareTarget.VIDEO, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsVideoAlias"))
+        assertEquals(ShareTarget.SCAN_QR, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ScanQrCodeAlias"))
     }
 
     @Test

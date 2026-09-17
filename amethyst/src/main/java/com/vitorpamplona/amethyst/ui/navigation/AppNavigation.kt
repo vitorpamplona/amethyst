@@ -248,6 +248,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.SendPaymentScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.PublicChatsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
@@ -566,7 +567,8 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.EmojiPackMetadataEdit> { EmojiPackMetadataScreen(it.dTag, accountViewModel, nav) }
         composableFromBottomArgs<Route.EmojiPackSelection> { EmojiPackSelectionScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 
-        composableFromBottomArgs<Route.QRDisplay> { ShowQRScreen(it.pubkey, accountViewModel, nav) }
+        composableFromBottomArgs<Route.QRDisplay> { ShowQRScreen(it.pubkey, accountViewModel, nav, it.startScanning) }
+        composableFromBottomArgs<Route.ScanQrImage> { ScanQrImageScreen(it.uri, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.ManualZapSplitPayment> { PayViaIntentScreen(it.paymentId, accountViewModel, nav) }
 
@@ -1078,6 +1080,9 @@ private fun NavigateIfIntentRequested(
             ShareTarget.DIRECT_MESSAGE -> if (isBaseRoute<Route.ShareToDM>(nav.controller)) return
             ShareTarget.NEW_POST -> if (isBaseRoute<Route.NewShortNote>(nav.controller)) return
             ShareTarget.PICTURE, ShareTarget.SHORT_VIDEO, ShareTarget.VIDEO -> Unit
+            // Always re-runs: the route carries the image, so a second share of a different
+            // picture must decode that one rather than sit on the previous result.
+            ShareTarget.SCAN_QR -> Unit
         }
 
         // saves the intent to avoid processing again
@@ -1103,6 +1108,8 @@ private fun NavigateIfIntentRequested(
             ShareTarget.SHORT_VIDEO -> nav.navToSharedFeed(Route.Shorts(attachments = attachments, message = message))
             ShareTarget.VIDEO -> nav.navToSharedFeed(Route.Video(attachments = attachments, message = message))
             ShareTarget.NEW_POST -> nav.newStack(Route.NewShortNote(message = message, attachment = attachments.firstOrNull()))
+            ShareTarget.SCAN_QR ->
+                attachments.firstOrNull()?.let { nav.newStack(Route.ScanQrImage(it.toString())) }
         }
 
         // Consume the launch intent so a later recomposition can't re-fire
@@ -1207,6 +1214,8 @@ private fun NavigateIfIntentRequested(
                                 if (!consumesSharesInPlace(nav.controller) && (message != null || attachment != null)) {
                                     nav.newStack(Route.NewShortNote(message = message, attachment = attachment))
                                 }
+
+                            ShareTarget.SCAN_QR -> attachment?.let { nav.newStack(Route.ScanQrImage(it.toString())) }
                         }
                     } else {
                         val uri = intent.data?.toString()

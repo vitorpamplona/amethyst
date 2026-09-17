@@ -122,6 +122,7 @@ fun ShowQRScreen(
     pubkey: HexKey,
     accountViewModel: AccountViewModel,
     nav: INav,
+    startScanning: Boolean = false,
 ) {
     LoadUser(pubkey, accountViewModel) { user ->
         if (user != null) {
@@ -129,6 +130,7 @@ fun ShowQRScreen(
                 user = user,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                startScanning = startScanning,
             )
         }
     }
@@ -140,6 +142,7 @@ fun ShowQRScreen(
     user: User,
     accountViewModel: AccountViewModel,
     nav: INav,
+    startScanning: Boolean = false,
 ) {
     Scaffold(
         topBar = {
@@ -162,7 +165,7 @@ fun ShowQRScreen(
             verticalArrangement = Arrangement.SpaceAround,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ShowQRBody(user, accountViewModel, nav)
+            ShowQRBody(user, accountViewModel, nav, startScanning)
         }
     }
 }
@@ -172,8 +175,11 @@ fun ShowQRBody(
     user: User,
     accountViewModel: AccountViewModel,
     nav: INav,
+    startScanning: Boolean = false,
 ) {
-    var presenting by remember { mutableStateOf(true) }
+    // The launcher shortcut lands here already scanning; everything else starts on the user's own
+    // code with a Scan button.
+    var presenting by remember { mutableStateOf(!startScanning) }
     if (presenting) {
         PresentQR(user, accountViewModel) {
             presenting = false

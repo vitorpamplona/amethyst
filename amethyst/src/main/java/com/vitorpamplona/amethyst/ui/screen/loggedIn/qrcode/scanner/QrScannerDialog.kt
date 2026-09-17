@@ -579,7 +579,8 @@ private fun pasteFromClipboard(
     if (!text.isNullOrBlank()) onText(text) else onEmpty()
 }
 
-private fun copyToClipboard(
+/** Shared with the shared-image scan screen, which offers the same action on the same sheet. */
+internal fun copyToClipboard(
     context: Context,
     text: String,
 ) {

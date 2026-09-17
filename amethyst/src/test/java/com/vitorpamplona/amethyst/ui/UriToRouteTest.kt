@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -90,6 +91,23 @@ class UriToRouteTest {
             Route.WalletAddNwc(NWC_URI),
             uriToRoute("dlnwc?value=$encoded", account),
         )
+    }
+
+    @Test
+    fun theLauncherShortcutOpensTheScannerDirectly() {
+        // res/xml/shortcuts.xml fires `nostr:scanqr`. If this stops resolving, long-pressing the
+        // app icon silently lands on the home feed instead of the camera.
+        val signed = mockk<Account>()
+        every { signed.signer } returns mockk { every { pubKey } returns PUBKEY_HEX }
+
+        val expected = Route.QRDisplay(PUBKEY_HEX, startScanning = true)
+        assertEquals(expected, uriToRoute("nostr:scanqr", signed))
+        assertEquals(expected, uriToRoute("scanqr", signed))
+    }
+
+    @Test
+    fun theShortcutRouteIsNotConfusedWithOtherNostrUris() {
+        assertNull(uriToRoute("nostr:scanqrcode", account))
     }
 
     @Test
