@@ -441,7 +441,7 @@ actual class SecureKeyStorage private actual constructor() {
             }
 
         if (removedFromVault) {
-            if (contents!!.isEmpty()) {
+            if (contents.isEmpty()) {
                 try {
                     keyring().deletePassword(SERVICE_NAME, vaultAlias)
                 } catch (_: PasswordAccessException) {
