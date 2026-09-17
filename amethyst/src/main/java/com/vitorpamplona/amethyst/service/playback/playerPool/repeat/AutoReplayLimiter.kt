@@ -26,7 +26,7 @@ import androidx.media3.common.Player
 /**
  * Caps how many times a video loops on its own under [Player.REPEAT_MODE_ONE].
  *
- * Feed videos are configured to repeat forever (keepPlaying → REPEAT_MODE_ONE in
+ * Feed videos are configured to repeat forever (repeatMode → REPEAT_MODE_ONE in
  * PlaybackService), which keeps decoders, network and the screen busy long after the
  * user stopped watching. This listener lets a video play [maxAutoPlays] full times and
  * then pauses it, so continuing requires an explicit press of the play button.

@@ -117,14 +117,14 @@ class VideoPlayerPools(
     fun acquire(
         proxyPort: Int?,
         videoUri: String?,
-        loop: Boolean,
+        repeatMode: Boolean,
     ): PooledPlayer {
         val pool = pool(proxyPort)
         val player = pool.acquirePlayer(appContext, videoUri)
 
         // Applied on every checkout, not just on a fresh build: a warm player carries whatever the
         // last view left on it.
-        player.repeatMode = if (loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        player.repeatMode = if (repeatMode) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
         player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
         player.volume = 0f
 

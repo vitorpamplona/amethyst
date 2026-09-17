@@ -94,7 +94,7 @@ fun PodcastEpisodeAudioPlayer(
             mimeType = audio.mediaType,
             aspectRatio = null,
             proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(audio.url),
-            keepPlaying = false,
+            repeatMode = false,
             waveformData = waveform,
         ) { mediaItem ->
             GetVideoController(

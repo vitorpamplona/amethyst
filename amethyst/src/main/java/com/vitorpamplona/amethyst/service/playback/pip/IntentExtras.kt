@@ -59,7 +59,7 @@ class IntentExtras {
                 mimeType = intent.getString("mimeType"),
                 aspectRatio = if (ratio > 0) ratio else null,
                 proxyPort = if (port > 0) port else null,
-                keepPlaying = intent.getBoolean("keepPlaying", true),
+                repeatMode = intent.getBoolean("repeatMode", true),
                 waveformData = intent.getFloatArray("wavefrontData")?.toList()?.let { WaveformData(it) },
                 isLiveStream = intent.getBoolean("isLiveStream", false),
             )
@@ -78,7 +78,7 @@ class IntentExtras {
                 data.mimeType?.let { putString("mimeType", it) }
                 data.aspectRatio?.let { putFloat("aspectRatio", it) }
                 data.proxyPort?.let { putInt("proxyPort", it) }
-                putBoolean("keepPlaying", data.keepPlaying)
+                putBoolean("repeatMode", data.repeatMode)
                 data.waveformData?.let { putFloatArray("wavefrontData", it.wave.toFloatArray()) }
                 putBoolean("isLiveStream", data.isLiveStream)
 

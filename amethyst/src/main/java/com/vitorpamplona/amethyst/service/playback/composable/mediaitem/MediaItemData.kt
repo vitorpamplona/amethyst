@@ -35,7 +35,7 @@ data class MediaItemData(
     val mimeType: String? = null,
     val aspectRatio: Float? = null,
     val proxyPort: Int? = null,
-    val keepPlaying: Boolean = true,
+    val repeatMode: Boolean = true,
     val waveformData: WaveformData? = null,
     // True only for true live streams (e.g. kind 30311). On-demand HLS
     // (e.g. multi-rendition NIP-71 videos) must leave this false so that

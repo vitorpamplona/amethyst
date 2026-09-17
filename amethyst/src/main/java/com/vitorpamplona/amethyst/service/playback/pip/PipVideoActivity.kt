@@ -65,7 +65,7 @@ class PipVideoActivity : ComponentActivity() {
                             Amethyst.instance.videoPlayerPools.acquire(
                                 mediaItem.src.proxyPort,
                                 mediaItem.item.mediaId,
-                                mediaItem.src.keepPlaying,
+                                mediaItem.src.repeatMode,
                             )
                         if (pooled.player.currentMediaItem?.mediaId != mediaItem.item.mediaId) {
                             pooled.player.setMediaItem(mediaItem.item)

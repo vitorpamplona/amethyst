@@ -159,7 +159,7 @@ fun RenderAudioWithWaveform(
                 mimeType = mimeType,
                 aspectRatio = null,
                 proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(mediaUrl),
-                keepPlaying = false,
+                repeatMode = false,
                 waveformData = waveform,
             ) { mediaItem ->
                 GetVideoController(

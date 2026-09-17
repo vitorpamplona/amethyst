@@ -92,7 +92,7 @@ fun GetVideoController(
             // again and the pool's URI affinity returns the same instance, buffer and position
             // intact, so the video drops back inline exactly where it left off.
             while (true) {
-                val pooled = pools.acquire(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.keepPlaying)
+                val pooled = pools.acquire(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.repeatMode)
                 val player = pooled.player
                 var handedOver = false
 

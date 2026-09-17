@@ -76,7 +76,7 @@ fun VideoViewInner(
         mimeType = mimeType,
         aspectRatio = aspectRatio,
         proxyPort = proxyPort,
-        keepPlaying = true,
+        repeatMode = true,
         waveformData = waveform,
         isLiveStream = isLiveStream,
         blurhash = blurhash,

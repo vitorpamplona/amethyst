@@ -232,7 +232,7 @@ fun MusicTrackHeader(
                         mimeType = audioMimeType,
                         aspectRatio = null,
                         proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(url),
-                        keepPlaying = false,
+                        repeatMode = false,
                         waveformData = syntheticWaveform,
                     ) { mediaItem ->
                         GetVideoController(
