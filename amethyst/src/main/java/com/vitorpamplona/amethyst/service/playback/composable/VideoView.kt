@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
@@ -46,6 +47,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Immutable
 class WaveformData(
@@ -73,6 +76,7 @@ fun VideoView(
     thumbhash: String? = null,
     isLiveStream: Boolean = false,
     hash: String? = null,
+    captions: ImmutableList<CaptionTrack> = persistentListOf(),
 ) {
     val borderModifier =
         if (roundedCorner) {
@@ -83,7 +87,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream, hash = hash)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream, hash = hash, captions = captions)
 }
 
 @Composable
@@ -107,6 +111,7 @@ fun VideoView(
     accountViewModel: AccountViewModel,
     thumbhash: String? = null,
     hash: String? = null,
+    captions: ImmutableList<CaptionTrack> = persistentListOf(),
 ) {
     val initialAutoStart = if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback()
     // Reset the manual-show toggle when the video URI changes so a recycled feed slot
@@ -180,6 +185,7 @@ fun VideoView(
                     dim = dimensions,
                     hash = hash,
                     thumbhash = thumbhash,
+                    captions = captions,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )
@@ -236,6 +242,7 @@ fun VideoView(
                     dim = dimensions,
                     hash = hash,
                     thumbhash = thumbhash,
+                    captions = captions,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )

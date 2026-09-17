@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip71Video
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip71Video.credits.VideoCredit
 import com.vitorpamplona.quartz.nip71Video.tags.SegmentTag
 import com.vitorpamplona.quartz.nip71Video.tags.TextTrackTag
 
@@ -39,6 +40,12 @@ interface VideoEvent : IEvent {
     fun segments(): List<SegmentTag>
 
     fun participants(): List<PTag>
+
+    /**
+     * Everyone and everything this video credits, with the word the publisher used for each.
+     * See [com.vitorpamplona.quartz.nip71Video.credits.VideoCredits].
+     */
+    fun credits(): List<VideoCredit>
 
     fun hashtags(): List<String>
 

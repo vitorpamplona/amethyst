@@ -87,6 +87,10 @@ class RenderableKindsTest {
                 1163,
                 32176,
                 39092,
+                // subtitle tracks: their cue text is indexed so a store can find what was said in
+                // a video, but the track has no card of its own — a hit here would be a wall of
+                // WebVTT rather than the video it belongs to.
+                39307,
                 // git: the repo itself is searchable, its patch/issue/status traffic is not
                 818,
                 1617,

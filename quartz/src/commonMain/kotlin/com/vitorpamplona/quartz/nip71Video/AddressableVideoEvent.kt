@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip71Video.credits.VideoCredits
 import com.vitorpamplona.quartz.nip71Video.tags.DurationTag
 import com.vitorpamplona.quartz.nip71Video.tags.SegmentTag
 import com.vitorpamplona.quartz.nip71Video.tags.TextTrackTag
@@ -85,6 +86,8 @@ abstract class AddressableVideoEvent(
     // `text-track`, not `e`: reading ETag here returned the event's unrelated `e` tags
     // (on a divine.video short, its "audio" source pointer) and never a caption track.
     override fun textTrack() = tags.mapNotNull(TextTrackTag::parse)
+
+    override fun credits() = VideoCredits.parse(tags)
 
     override fun segments() = tags.mapNotNull(SegmentTag::parse)
 

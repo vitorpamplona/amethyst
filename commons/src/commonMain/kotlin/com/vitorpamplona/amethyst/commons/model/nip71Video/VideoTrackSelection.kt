@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
+import com.vitorpamplona.quartz.nip71Video.tags.HlsImetaTag
 
 /**
  * Picks the `imeta` entry a NIP-71 event's player should load.
@@ -58,7 +59,7 @@ import com.vitorpamplona.quartz.nip71Video.VideoMeta
  * keeps the placeholder and the layout intact when the master turns out to be the bare one.
  */
 fun VideoEvent.selectVideoTrack(): VideoMeta? {
-    val imetas = imetaTags()
+    val imetas = imetaTags().flatMap { it.withHlsVariant() }
     if (imetas.size <= 1) return imetas.firstOrNull()
 
     val candidates = imetas.filter { it.canBeTheVideo() }
@@ -79,6 +80,20 @@ fun VideoEvent.selectVideoTrack(): VideoMeta? {
     // Presentation metadata is filled from every imeta, not just the playable candidates: a poster
     // is routinely published as its own `image/*` entry, which canBeTheVideo() excludes.
     return selected.withLadderMetadataFrom(imetas)
+}
+
+// A publisher that keeps one imeta per video and hangs its adaptive manifest off the
+// non-standard `hls` property (divine.video does; see [HlsImetaTag]) describes a ladder NIP-71
+// would have written as a second imeta. Expand it into one, listed first so the HLS preference
+// below reaches it, and drop the fields that describe the progressive file specifically: `x` and
+// `size` are that blob's digest and byte count, and a manifest is neither.
+private fun VideoMeta.withHlsVariant(): List<VideoMeta> {
+    val manifest = hls?.takeIf { it.isNotBlank() && it != url } ?: return listOf(this)
+
+    return listOf(
+        copy(url = manifest, mimeType = HlsImetaTag.MIME_TYPE, hash = null, size = null, hls = null),
+        copy(hls = null),
+    )
 }
 
 // A NIP-71 event asserts it is a video, so an imeta is a candidate unless it says otherwise:

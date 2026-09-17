@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nip71Video
 import com.vitorpamplona.amethyst.commons.relayClient.video.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -30,6 +31,9 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip71Video.credits.CreditTarget
+import com.vitorpamplona.quartz.nip71Video.credits.VideoCredit
+import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -54,6 +58,12 @@ import org.junit.Test
 class DivineVideoInteropTest {
     private val video =
         """{"id":"fa5a793b24edfe109f8d02ad6aa6cde77b0a923566f891df403049721b46e8d9","pubkey":"4d7dccc0a5116daa057348ef79c573873cddd9eff066fc6a5f3d37e8264afbeb","created_at":1789661586,"kind":34236,"tags":[["d","c855df3d07ba963e9097d5a151b0c14a0a3d494e4ff9b04a389bc0b5f5c16862"],["text-track","https://media.divine.video/283a420202b620a9a326598b85bfcf0e8cb4ab4d52b947c628d8c29a1313006b","wss://relay.divine.video","captions","en"],["text-track","39307:4d7dccc0a5116daa057348ef79c573873cddd9eff066fc6a5f3d37e8264afbeb:subtitles:c855df3d07ba963e9097d5a151b0c14a0a3d494e4ff9b04a389bc0b5f5c16862","wss://relay.divine.video","captions","en"],["imeta","url https://media.divine.video/c855df3d07ba963e9097d5a151b0c14a0a3d494e4ff9b04a389bc0b5f5c16862","m video/mp4","image https://media.divine.video/e1d22b85609cb105dff64b4a402f13982a942dc59aee67218e6e3652c8597d2d","dim 1080x1920","x c855df3d07ba963e9097d5a151b0c14a0a3d494e4ff9b04a389bc0b5f5c16862","size 6579464","blurhash TQHxc{D%X7_Nw{nio#RiRjaJX8oz"],["title","Xmas Already??"],["summary","In the words of Jack Skellington from The Nightmare Before Christmas, \"What's this?\" 😭"],["t","retail"],["published_at","1789661611"],["duration","6"],["alt","Xmas Already??"],["allow_audio_reuse","true"],["e","218af5fc90d66a16ce273f00a4e412a71443441c04c67d1e34ff99c654871d3d","wss://relay.divine.video","audio"],["c2pa_manifest_id","urn:c2pa:b1d12836-a60f-4398-a081-c8f047483ab4"],["verification","verified_mobile"],["client","Divine","31990:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:divine-mobile","wss://relay.divine.video"]],"content":"In the words of Jack Skellington from The Nightmare Before Christmas, \"What's this?\" 😭","sig":"c32a6486480465d3c4c695d8eee52868eb9c5e085fe54827478f7e183fea0602e969fa82476053136ae766536ec9ed7f0d4c9d009c5fb6991a2099696c66fc33"}"""
+
+    private val videoWithCredits =
+        """{"id":"085e909ec9acecdc0833b56162d358f057539bd56a12dabb3c4a76eba13ab176","pubkey":"62e04946ab28d27866f9c29a2c1b88e5ddca31a87110208249fd88693bc406f1","created_at":1789666628,"kind":34236,"tags":[["d","1de7ec53cfc7db7f4e0490aa76ac26408bc9052d287cd5565b96881085929972"],["imeta","url https://media.divine.video/1de7ec53cfc7db7f4e0490aa76ac26408bc9052d287cd5565b96881085929972","m video/mp4"],["title","ShowHole"],["a","34236:0db19e8f1b13e03cd07379edd37a71f07b08a4fb5e7eac222ba1d2c823807075:f11e7f9e2f0e11e80056893152f1850897d4f9164515e567ce13e443b953e305","wss://relay.divine.video","mention"],["p","0db19e8f1b13e03cd07379edd37a71f07b08a4fb5e7eac222ba1d2c823807075","wss://relay.divine.video","inspired-by"],["e","6a8edc14380fdd347ae9c8861b008e4771b885bfb55f1899979bd7a9515b3221","wss://relay.divine.video","audio"],["client","Divine","31990:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:divine-mobile","wss://relay.divine.video"]],"content":"","sig":""}"""
+
+    private val subtitleEvent =
+        """{"id":"5a1c96f3f24b18ee1a9dbb5be04b60e4d7bb8f5e2dd1f2a9e9cf9f5f14b0e1f1","pubkey":"4d7dccc0a5116daa057348ef79c573873cddd9eff066fc6a5f3d37e8264afbeb","created_at":1789661600,"kind":39307,"tags":[["d","subtitles:c855df3d07ba963e9097d5a151b0c14a0a3d494e4ff9b04a389bc0b5f5c16862"],["a","34236:4d7dccc0a5116daa057348ef79c573873cddd9eff066fc6a5f3d37e8264afbeb:c855df3d07ba963e9097d5a151b0c14a0a3d494e4ff9b04a389bc0b5f5c16862"],["url","https://media.divine.video/283a420202b620a9a326598b85bfcf0e8cb4ab4d52b947c628d8c29a1313006b"],["m","text/vtt"],["l","en"],["client","Divine","31990:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:divine-mobile","wss://relay.divine.video"]],"content":"WEBVTT\n\n1\n00:00:00.000 --> 00:00:02.500\nWe just started putting out Christmas stuff\n\n","sig":""}"""
 
     private val repost =
         """{"id":"20a0663382290c769b1fbd5e6ad84593d1f848fa75689e4ee4d6263aad5c8760","pubkey":"f67d985c0bfbf87eaa33b056f1d38ad991a6aa625b138bddb2a838bdbac29f40","created_at":1789666347,"kind":16,"tags":[["k","34236"],["a","34236:5ab67f7d7fed4f781008c0ec0d26c8113f9fb46094a8346246c70c75e75db9fb:8de0dcf06982b86aca7189ae50a8c3fe8605917433044ad62c146b723b877025"],["p","5ab67f7d7fed4f781008c0ec0d26c8113f9fb46094a8346246c70c75e75db9fb"],["e","ab074d5a577635b9d34281b31ea32170d54b09cfb4cbfcc4ae6a28f52653fca1"],["client","Divine","31990:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:divine-mobile","wss://relay.divine.video"]],"content":"","sig":"4513526b886a1d9e1fb12a181a48811dc8765afd901458959a674d3e9d234b761a5cd2551c75cbe4210543f30c5a74b16720281acf88e11e09a67b0b219e3d3d"}"""
@@ -140,6 +150,38 @@ class DivineVideoInteropTest {
     }
 
     @Test
+    fun theTwoFormsOfTheSameCaptionTrackCollapseIntoOne() {
+        val video = Event.fromJson(video) as VideoVerticalEvent
+        val refs = video.captionTracks()
+
+        // One `text-track` is directly loadable, the other has to be fetched first.
+        assertEquals(
+            listOf("https://media.divine.video/283a420202b620a9a326598b85bfcf0e8cb4ab4d52b947c628d8c29a1313006b"),
+            refs.direct.map { it.url },
+        )
+        assertEquals(1, refs.pending.size)
+        assertEquals(
+            TextTrackEvent.KIND,
+            refs.pending
+                .first()
+                .address.kind,
+        )
+        assertEquals(
+            "en",
+            refs.pending
+                .first()
+                .tag.language,
+        )
+
+        // The pending one resolves to the very same file, so the player gets one configuration,
+        // not two identical entries in its track menu.
+        val resolved = (Event.fromJson(subtitleEvent) as TextTrackEvent).toCaptionTrack(refs.pending.first().tag)
+        assertEquals("text/vtt", resolved?.mimeType)
+        assertEquals("en", resolved?.language)
+        assertEquals(1, mergeCaptionTracks(refs.direct, listOfNotNull(resolved)).size)
+    }
+
+    @Test
     fun aRepostResolvesBothTheCoordinateAndTheVersionId() {
         val event = Event.fromJson(repost)
 
@@ -184,6 +226,94 @@ class DivineVideoInteropTest {
     }
 
     @Test
+    fun creditsReadTheMarkerWhicheverSlotItIsIn() {
+        // divine-mobile: ["p", <pubkey>, <relay>, "inspired-by"] and ["e", <id>, <relay>, "audio"].
+        val credits = (Event.fromJson(videoWithCredits) as VideoVerticalEvent).credits()
+
+        val person = credits.filterIsInstance<VideoCredit>().first { it.target is CreditTarget.Person }
+        assertEquals("0db19e8f1b13e03cd07379edd37a71f07b08a4fb5e7eac222ba1d2c823807075", (person.target as CreditTarget.Person).pubKey)
+        assertEquals("inspired-by", person.label)
+
+        val video = credits.first { it.target is CreditTarget.Video }
+        assertEquals("mention", video.label)
+        assertEquals(34236, (video.target as CreditTarget.Video).address.kind)
+
+        val audio = credits.first { it.target is CreditTarget.Event }
+        assertEquals("audio", audio.label)
+        assertEquals("6a8edc14380fdd347ae9c8861b008e4771b885bfb55f1899979bd7a9515b3221", (audio.target as CreditTarget.Event).eventId)
+    }
+
+    @Test
+    fun aRoleInTheRelaySlotIsReadAsTheLabelAndNotAsAHint() {
+        // divine-web's collaborator invite writes ["p", <pubkey>, "<role>"] — no relay hint at all,
+        // so the slot PTag reads for a hint holds the label instead.
+        val invite =
+            VideoVerticalEvent(
+                id = "a".repeat(64),
+                pubKey = "b".repeat(64),
+                createdAt = 1789666628,
+                tags = arrayOf(arrayOf("d", "vid"), arrayOf("p", "c".repeat(64), "Collaborator")),
+                content = "",
+                sig = "",
+            )
+
+        val credit = invite.credits().single()
+        assertEquals("Collaborator", credit.label)
+        assertEquals("c".repeat(64), (credit.target as CreditTarget.Person).pubKey)
+    }
+
+    @Test
+    fun aBareETagOnAVideoIsNotACredit() {
+        // No marker means nothing is being credited — printing "references <id>" for a stray
+        // threading tag would invent an attribution the publisher never made.
+        val stray =
+            VideoVerticalEvent(
+                id = "a".repeat(64),
+                pubKey = "b".repeat(64),
+                createdAt = 1789666628,
+                tags = arrayOf(arrayOf("d", "vid"), arrayOf("e", "d".repeat(64)), arrayOf("e", "e".repeat(64), "", "root")),
+                content = "",
+                sig = "",
+            )
+
+        assertTrue(stray.credits().isEmpty())
+    }
+
+    @Test
+    fun aCollaborationResponseNamesTheVideoItAccepts() {
+        val event = Event.fromJson(collabResponse)
+
+        assertTrue(event is VideoCollaborationEvent)
+        val response = event as VideoCollaborationEvent
+        assertEquals(
+            "34236:32d84a21bb7702c538d5ddd3f9086e86e8b73e5d5cb2e67861eaca36708597e6:d67650d7e97d50a35f491ef24f463b4b408026b5b08c0bc9dbc8359cf4b8aa05",
+            response.video()?.toValue(),
+        )
+        assertEquals("Collaborator", response.role())
+        assertTrue(response.isAccepted())
+        // Keyed by the video coordinate, so the credited person's answer can be addressed directly
+        // instead of scanning every 34238 for one that points back here.
+        assertEquals(response.video()?.toValue(), response.dTag())
+    }
+
+    @Test
+    fun aResponseWithoutAStatusStillCounts() {
+        // divine-web publishes no `status` — it only emits the event on approval at all.
+        val webShape =
+            VideoCollaborationEvent(
+                id = "a".repeat(64),
+                pubKey = "b".repeat(64),
+                createdAt = 1789666628,
+                tags = arrayOf(arrayOf("a", "34236:${"c".repeat(64)}:vid"), arrayOf("d", "0e1cbb2c-1b5a-4f1f-9f0e-2c6b2c8a9f11")),
+                content = "",
+                sig = "",
+            )
+
+        assertTrue(webShape.isAccepted())
+        assertEquals("34236:${"c".repeat(64)}:vid", webShape.video()?.toValue())
+    }
+
+    @Test
     fun aVideoListParsesButCarriesItsItemsEncrypted() {
         val event = Event.fromJson(videoList)
 
@@ -192,22 +322,9 @@ class DivineVideoInteropTest {
         assertEquals("my_vine_list", list.dTag())
         assertEquals("My List", list.title())
         assertEquals("My favorite vines and videos", list.description())
-        // Divine keeps every member in the NIP-51 encrypted `content`, so nothing is public.
-        // Amethyst has no consumer for kind 30005 today: LocalCache drops it as unsupported and
-        // no screen renders it. Kept as a marker for when that changes.
+        // Divine keeps every member in the NIP-51 encrypted `content`, so nothing is public and
+        // only the list's owner can decrypt the members; RenderVideoCurationSet says so rather
+        // than rendering an empty strip as though the list were broken.
         assertTrue(list.publicItems().isEmpty())
-    }
-
-    @Test
-    fun aCollabResponseIsStillAnUntypedEvent() {
-        // Kind 34238 is Divine's own "collaborator accepted" record. It sits in the addressable
-        // range and keys itself by the video coordinate, but Quartz has no class for it, so it
-        // parses as a bare Event, is NOT addressable, and LocalCache drops it as unsupported.
-        // Amethyst therefore never shows a video's collaborators.
-        val event = Event.fromJson(collabResponse)
-
-        assertEquals(34238, event.kind)
-        assertEquals(Event::class, event::class)
-        assertTrue(event !is AddressableEvent)
     }
 }

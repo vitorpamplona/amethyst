@@ -23,9 +23,12 @@ package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 val mediaItemCache = MediaItemCache()
 
@@ -46,10 +49,21 @@ fun GetMediaItem(
     dim: DimensionTag? = null,
     hash: String? = null,
     thumbhash: String? = null,
+    captions: ImmutableList<CaptionTrack> = persistentListOf(),
     inner: @Composable (LoadedMediaItem) -> Unit,
 ) {
     val data =
-        remember(videoUri) {
+        // Captions join the key. They resolve asynchronously — a `text-track` that names a
+        // kind-39307 coordinate has to reach LocalCache first — so keying on the URI alone would
+        // lock in the caption-less item built on the first frame. The list only ever goes empty ->
+        // resolved, so this rebuilds at most once.
+        //
+        // What that rebuild reaches depends on when it lands. A feed video is mounted long before
+        // it is scrolled into view and played, so the item carrying the tracks is the one the
+        // controller loads. For a video already playing, GetVideoController's warm-path check sees
+        // the same mediaId and deliberately does not re-set the item, so the late tracks wait for
+        // the next mount rather than restarting playback under the viewer.
+        remember(videoUri, captions) {
             MediaItemData(
                 videoUri = videoUri,
                 authorName = authorName,
@@ -66,6 +80,7 @@ fun GetMediaItem(
                 dim = dim,
                 hash = hash,
                 thumbhash = thumbhash,
+                captions = captions,
             )
         }
 

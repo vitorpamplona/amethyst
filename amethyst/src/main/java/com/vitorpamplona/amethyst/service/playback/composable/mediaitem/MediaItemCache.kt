@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import android.os.Bundle
 import androidx.core.net.toUri
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +63,25 @@ class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
             return null
         }
 
+        // A side-loaded track needs its media type declared: a NIP-71 `text-track` says nothing
+        // about the format, and a blossom-hosted one is `https://host/<sha256>` with no extension
+        // for ExoPlayer to infer from either. A track flagged default is the one ExoPlayer
+        // selects without being asked.
+        internal fun CaptionTrack.toSubtitleConfiguration(isDefault: Boolean = false): MediaItem.SubtitleConfiguration =
+            MediaItem.SubtitleConfiguration
+                .Builder(url.toUri())
+                .setMimeType(mimeType)
+                .setLanguage(language)
+                .setLabel(label())
+                .setSelectionFlags(if (isDefault) C.SELECTION_FLAG_DEFAULT else 0)
+                .build()
+
+        private fun CaptionTrack.label(): String? =
+            when {
+                language != null && type != null -> "$language \u00B7 $type"
+                else -> language ?: type
+            }
+
         // Restrict `.m3u8` matching to the path component so a query param or
         // fragment that happens to mention .m3u8 (e.g. `?ref=a.m3u8`) on an
         // MP4 URI doesn't misroute to HlsMediaSource.
@@ -83,7 +104,14 @@ class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
                     .setMediaId(key.videoUri)
                     .setUri(key.videoUri)
                     .apply { normalizedMime?.let { setMimeType(it) } }
-                    .setMediaMetadata(
+                    .setSubtitleConfigurations(
+                        // Feed videos autoplay muted, so a caption track is what makes them
+                        // legible — flag the first one default and let ExoPlayer select it.
+                        // RenderCaptions draws the cues and offers the toggle to turn them off.
+                        key.captions.mapIndexed { index, track ->
+                            track.toSubtitleConfiguration(isDefault = index == 0)
+                        },
+                    ).setMediaMetadata(
                         MediaMetadata
                             .Builder()
                             .setArtist(key.authorName?.ifBlank { null })

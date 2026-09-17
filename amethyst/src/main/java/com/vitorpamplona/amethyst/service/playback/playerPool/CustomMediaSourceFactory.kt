@@ -29,6 +29,8 @@ import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.SingleSampleMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
@@ -104,6 +106,7 @@ class CustomMediaSourceFactory(
     dataSourceFactory: DataSource.Factory,
 ) : MediaSource.Factory {
     private val cachingDataSource: DataSource.Factory = videoCache.get(dataSourceFactory)
+    private val plainDataSource: DataSource.Factory = dataSourceFactory
 
     private val cachingFactory: MediaSource.Factory =
         DefaultMediaSourceFactory(cachingDataSource)
@@ -119,9 +122,10 @@ class CustomMediaSourceFactory(
     //
     // The cost of bypassing it: HLS items skip what DefaultMediaSourceFactory wraps around the
     // source — side-loaded subtitleConfigurations (MergingMediaSource), clipping, ad insertion, and
-    // live target-offset defaults. None are reachable today (MediaItemCache sets none of them, and
-    // the live setters aren't on the MediaSource.Factory interface), but anything added later must
-    // be mirrored here.
+    // live target-offset defaults. Subtitles ARE reachable now (MediaItemCache side-loads NIP-71
+    // `text-track` captions), so createMediaSource below mirrors that wrap for the HLS path;
+    // clipping and ad insertion remain unused, and the live setters aren't on the
+    // MediaSource.Factory interface. Anything else added later must be mirrored here too.
     private val cachingHlsFactory: MediaSource.Factory = hlsFactory(cachingDataSource)
     private val nonCachingHlsFactory: MediaSource.Factory = hlsFactory(dataSourceFactory)
 
@@ -161,7 +165,16 @@ class CustomMediaSourceFactory(
             } else {
                 if (bypassCache) nonCachingFactory else cachingFactory
             }
-        val source = factory.createMediaSource(mediaItem)
+        // DefaultMediaSourceFactory is what merges side-loaded subtitle tracks into the playback
+        // source. The explicit HLS factory above does not, so on that path a caption track would
+        // load into nothing; mirror the wrap here. Progressive items already got it from the
+        // Default factory, so they must NOT be wrapped again.
+        val source =
+            if (hls) {
+                withSideLoadedSubtitles(factory.createMediaSource(mediaItem), mediaItem, bypassCache)
+            } else {
+                factory.createMediaSource(mediaItem)
+            }
 
         // Logs the routing inputs directly rather than a re-derived label, so it can't drift from
         // shouldBypassCache.
@@ -170,6 +183,37 @@ class CustomMediaSourceFactory(
                 "mime=${mediaItem.localConfiguration?.mimeType} -> ${source::class.java.simpleName} id=$id"
         }
         return source
+    }
+
+    /**
+     * Rebuilds what [DefaultMediaSourceFactory] does for `subtitleConfigurations`: each side-loaded
+     * track becomes its own single-sample source, merged alongside the video.
+     *
+     * Subtitle files are small, immutable documents, so they follow the video's cache decision —
+     * a track fetched beside a cached VOD playlist is worth keeping too, and one beside a live
+     * stream is not worth a cache entry for a stream that is never replayed.
+     */
+    private fun withSideLoadedSubtitles(
+        source: MediaSource,
+        mediaItem: MediaItem,
+        bypassCache: Boolean,
+    ): MediaSource {
+        val subtitles = mediaItem.localConfiguration?.subtitleConfigurations.orEmpty()
+        if (subtitles.isEmpty()) return source
+
+        val dataSource = if (bypassCache) plainDataSource else cachingDataSource
+        val sources =
+            Array(subtitles.size + 1) { index ->
+                if (index == 0) {
+                    source
+                } else {
+                    SingleSampleMediaSource
+                        .Factory(dataSource)
+                        .createMediaSource(subtitles[index - 1], C.TIME_UNSET)
+                }
+            }
+
+        return MergingMediaSource(*sources)
     }
 
     // Only the explicit event-kind flag (kind:30311 live activities). Returns false when the flag
