@@ -28,6 +28,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * What became of a reply the user typed into the shade.
@@ -90,6 +91,24 @@ fun NotificationManager.renderReplyState(
     applicationContext: Context,
     notId: Int,
     state: ReplyState,
+): Boolean =
+    try {
+        renderReplyStateOrThrow(applicationContext, notId, state)
+    } catch (e: Exception) {
+        // Feedback must never break the thing it reports on. Reading the live notification
+        // and posting it back both go through the system, and both can throw (a revoked
+        // POST_NOTIFICATIONS between check and notify, say) — and this runs either side of
+        // the send, where an escape would cost the user the reply itself.
+        Log.w(TAG, "Could not render the reply state", e)
+        false
+    }
+
+private const val TAG = "InlineReplyFeedback"
+
+private fun NotificationManager.renderReplyStateOrThrow(
+    applicationContext: Context,
+    notId: Int,
+    state: ReplyState,
 ): Boolean {
     val existing = activeNotifications.firstOrNull { it.id == notId }?.notification ?: return false
 
@@ -123,16 +142,24 @@ fun NotificationManager.renderReplyState(
         is ReplyState.Failed -> {
             if (style == null) builder.setRemoteInputHistory(arrayOf(state.text))
             builder.setSubText(stringRes(applicationContext, R.string.app_notification_reply_failed))
-            // Rebuilt from the posted notification, so the actions come with it; without
-            // clearing, every failed attempt would stack another Retry.
+
+            val retryLabel = stringRes(applicationContext, R.string.app_notification_reply_retry)
+
+            // Rebuilt from the posted notification, so its actions come with it — and a bare
+            // clearActions() would take Reply and Mark Read with them, leaving a failed reply
+            // with no way to write a different one. Keep them, drop any Retry left by an
+            // earlier attempt so repeated failures don't stack, then add this one.
+            val kept =
+                (0 until NotificationCompat.getActionCount(existing))
+                    .mapNotNull { NotificationCompat.getAction(existing, it) }
+                    .filter { it.title?.toString() != retryLabel }
+
             builder.clearActions()
+            kept.forEach { builder.addAction(it) }
             builder.addAction(
                 NotificationCompat.Action
-                    .Builder(
-                        R.drawable.ic_action_reply,
-                        stringRes(applicationContext, R.string.app_notification_reply_retry),
-                        state.retry,
-                    ).build(),
+                    .Builder(R.drawable.ic_action_reply, retryLabel, state.retry)
+                    .build(),
             )
         }
     }

@@ -28,7 +28,9 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -82,28 +84,35 @@ object ConversationShortcuts {
         uri: String,
         person: Person,
         icon: Bitmap?,
-    ): String? {
-        val target =
-            Intent(context, MainActivity::class.java).apply {
-                // A shortcut intent without an action is rejected outright.
-                action = Intent.ACTION_VIEW
-                data = uri.toUri()
-            }
+    ): String? =
+        try {
+            val target =
+                Intent(context, MainActivity::class.java).apply {
+                    // A shortcut intent without an action is rejected outright.
+                    action = Intent.ACTION_VIEW
+                    data = uri.toUri()
+                }
 
-        val shortcut =
-            ShortcutInfoCompat
-                .Builder(context, conversation.id)
-                .setShortLabel(conversation.label)
-                .setLongLabel(conversation.label)
-                .setIntent(target)
-                // Without this the system drops the shortcut as soon as it leaves the
-                // dynamic list, and the conversation loses its history and its ranking.
-                .setLongLived(true)
-                .setPerson(person)
-                .apply { icon?.let { setIcon(IconCompat.createWithAdaptiveBitmap(it)) } }
-                .build()
+            val shortcut =
+                ShortcutInfoCompat
+                    .Builder(context, conversation.id)
+                    .setShortLabel(conversation.label)
+                    .setLongLabel(conversation.label)
+                    .setIntent(target)
+                    // Without this the system drops the shortcut as soon as it leaves the
+                    // dynamic list, and the conversation loses its history and its ranking.
+                    .setLongLived(true)
+                    .apply {
+                        // A group is not a person. Attaching the speaker would make the
+                        // launcher entry's face flip to whoever last spoke while the label
+                        // stayed the group, and would rank the chat as that one contact.
+                        if (!conversation.isGroup) setPerson(person)
+                        // Plain, not adaptive: `icon` is already circle-cropped, and the
+                        // adaptive mask would crop that circle a second time — zoomed, with
+                        // the edges clipped off.
+                        icon?.let { setIcon(IconCompat.createWithBitmap(it)) }
+                    }.build()
 
-        return try {
             if (ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)) {
                 conversation.id
             } else {
@@ -111,10 +120,13 @@ object ConversationShortcuts {
                 null
             }
         } catch (e: Exception) {
+            // Builder.build() throws on a malformed shortcut (an empty label, say) and it is
+            // inside the guard for that reason: this runs from postConversation, whose caller
+            // swallows exceptions, so a throw escaping here would silently drop the whole
+            // notification rather than just its conversation status.
             Log.d(TAG) { "Could not publish a shortcut for ${conversation.label}: ${e.message}" }
             null
         }
-    }
 
     /**
      * Drops every conversation this account published into the launcher.
@@ -134,14 +146,32 @@ object ConversationShortcuts {
     ) {
         val scope = ":$accountNpub:"
         try {
+            // Every list the system keeps, not just the dynamic one. `pushDynamicShortcut`
+            // evicts the least-recently-used shortcut from the dynamic list when the cap is
+            // reached, and a long-lived shortcut that has been used in a notification is kept
+            // in the system *cache* rather than deleted — so the conversations most likely to
+            // have fallen out of the dynamic list are exactly the ones a dynamic-only sweep
+            // would leave behind, which is the leak this is here to close.
             val mine =
                 ShortcutManagerCompat
-                    .getDynamicShortcuts(context)
-                    .map { it.id }
+                    .getShortcuts(
+                        context,
+                        ShortcutManagerCompat.FLAG_MATCH_DYNAMIC or
+                            ShortcutManagerCompat.FLAG_MATCH_CACHED or
+                            ShortcutManagerCompat.FLAG_MATCH_PINNED,
+                    ).map { it.id }
                     .filter { it.contains(scope) }
 
             if (mine.isEmpty()) return
 
+            // A shortcut the user pinned to their home screen cannot be deleted by us, only
+            // disabled — so disable first, then remove. Without this a pinned conversation
+            // would survive the logout as a live tile.
+            ShortcutManagerCompat.disableShortcuts(
+                context,
+                mine,
+                stringRes(context, R.string.app_notification_shortcut_account_removed),
+            )
             ShortcutManagerCompat.removeLongLivedShortcuts(context, mine)
         } catch (e: Exception) {
             Log.d(TAG) { "Could not clear shortcuts for $accountNpub: ${e.message}" }

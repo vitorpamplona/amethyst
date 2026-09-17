@@ -182,6 +182,13 @@ object NotificationUtils {
     data class Conversation(
         val id: String,
         val label: String,
+        /**
+         * The chat's own picture, when it has one. Null falls back to the message sender's
+         * avatar, which is the right face for a one-to-one DM and the wrong one for a group —
+         * hence [isGroup], which suppresses that fallback along with the sender `Person`.
+         */
+        val iconUrl: String? = null,
+        val isGroup: Boolean = false,
     )
 
     /** A prior message rendered above the main one in a MessagingStyle notification (thread context). */
@@ -351,7 +358,14 @@ object NotificationUtils {
 
         // Published before the notification that names it: a shortcutId the system cannot
         // resolve is worse than none, so the id is only stamped below when this succeeded.
-        val shortcutId = conversation?.let { ConversationShortcuts.push(applicationContext, it, uri, sender, avatar) }
+        val shortcutId =
+            conversation?.let {
+                val conversationIcon =
+                    it.iconUrl?.let { url -> loadBitmap(url, applicationContext)?.let { bmp -> circleCrop(bmp) } }
+                        ?: avatar.takeUnless { _ -> it.isGroup }
+
+                ConversationShortcuts.push(applicationContext, it, uri, sender, conversationIcon)
+            }
 
         val builderPublic =
             NotificationCompat

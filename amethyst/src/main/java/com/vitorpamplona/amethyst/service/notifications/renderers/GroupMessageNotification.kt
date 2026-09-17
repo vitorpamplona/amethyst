@@ -66,7 +66,13 @@ object GroupMessageNotification {
         // names the group in the launcher. See [ConversationShortcuts].
         val conversation =
             if (account.settings.showMessagesInNotifications.value) {
-                Conversation(NotificationRoutes.marmotShortcutId(nostrGroupId, accountNpub), groupName)
+                // No iconUrl: a Marmot group's avatar is an encrypted Blossom blob, not a
+                // URL an image loader can take.
+                Conversation(
+                    id = NotificationRoutes.marmotShortcutId(nostrGroupId, accountNpub),
+                    label = groupName,
+                    isGroup = true,
+                )
             } else {
                 null
             }

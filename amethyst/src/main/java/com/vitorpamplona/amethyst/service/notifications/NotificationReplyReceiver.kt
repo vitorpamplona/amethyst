@@ -187,8 +187,6 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                         .collect()
                 }
 
-            notificationManager.renderReplyState(appContext, notificationId, ReplyState.Sending(replyText))
-
             // Stops "Sending…" becoming a lie the shade keeps telling. A broadcast receiver is
             // killed around ten seconds in, and a NIP-17 send can outlive that on its own — an
             // Amber round trip, a relay publish, proof-of-work mining — so whatever is on
@@ -209,6 +207,9 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 }
 
             try {
+                // Inside the try: everything from here on must reach the `finally`, which is
+                // what calls pendingResult.finish() and releases the broadcast.
+                notificationManager.renderReplyState(appContext, notificationId, ReplyState.Sending(replyText))
                 block()
                 // Joined, not just cancelled: if the watchdog is already inside its render, the
                 // two notify() calls would land in an undefined order and the shade could keep

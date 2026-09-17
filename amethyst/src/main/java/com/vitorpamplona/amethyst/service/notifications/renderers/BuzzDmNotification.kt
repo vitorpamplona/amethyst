@@ -92,7 +92,12 @@ object BuzzDmNotification {
         // pin a shortcut to. The message-content gate is the early return at the top.
         val conversation =
             channelNAddr?.let {
-                Conversation(NotificationRoutes.relayGroupShortcutId(it, accountNpub), channel.toBestDisplayName())
+                Conversation(
+                    id = NotificationRoutes.relayGroupShortcutId(it, accountNpub),
+                    label = channel.toBestDisplayName(),
+                    iconUrl = channel.profilePicture(),
+                    isGroup = true,
+                )
             }
 
         val nm = context.notificationManager()
