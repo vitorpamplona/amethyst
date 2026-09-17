@@ -76,6 +76,16 @@ data class UsageSummary(
     val batteryDrainFg: Long,
     val batteryDrainBg: Long,
     /**
+     * Wall time the device was running vs suspended while this app was
+     * backgrounded. Device-wide, like the battery figures. A large awake share
+     * with little to show for it is the wake-up problem no CPU counter reveals.
+     */
+    val deviceAwakeBgMs: Long,
+    val deviceSleepBgMs: Long,
+    /** Inbound relay frames arriving after >10s of pool-wide silence — the wake cadence relays impose. */
+    val relayWakes: Long,
+    val relayWakesBg: Long,
+    /**
      * CPU ms per thread subsystem, summed over both visibilities — "who burned
      * it". Keys are [ThreadCpuBuckets] constants; empty on a build or kernel
      * where `/proc/self/task` could not be read.
@@ -205,6 +215,12 @@ data class UsageSummary(
                 signNip55 = counters[UsageKeys.signs(UsageKeys.SIGNER_NIP55)] ?: 0L,
                 batteryDrainFg = counters[UsageKeys.BATTERY_DRAIN_FG] ?: 0L,
                 batteryDrainBg = counters[UsageKeys.BATTERY_DRAIN_BG] ?: 0L,
+                deviceAwakeBgMs = counters[UsageKeys.deviceAwakeMs(UsageKeys.BG)] ?: 0L,
+                deviceSleepBgMs = counters[UsageKeys.deviceSleepMs(UsageKeys.BG)] ?: 0L,
+                relayWakes = counters.sumMatching("wakes"),
+                relayWakesBg =
+                    (counters[UsageKeys.relayWakes(mobile = true, foreground = false)] ?: 0L) +
+                        (counters[UsageKeys.relayWakes(mobile = false, foreground = false)] ?: 0L),
                 cpuMsPerBucket = cpuBuckets,
                 cpuBgMsPerBucket = cpuBgBuckets,
                 bytesPerSubsystem = subsystems,

@@ -59,6 +59,8 @@ class RelayUsageListener(
     private val isMobile: () -> Boolean,
     private val isForeground: () -> Boolean,
     private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+    /** Counts how often inbound relay traffic pulls the device out of idle. */
+    private val wakes: RelayWakeEstimator = RelayWakeEstimator(accountant, isMobile, isForeground, nowMs),
 ) : RelayConnectionListener {
     /**
      * Relay -> when its current session became ready. Touched from the per-relay
@@ -193,6 +195,8 @@ class RelayUsageListener(
         val bytes = msgStr.length.toLong()
         val mobile = isMobile()
         val fg = isForeground()
+        // Before the byte counters: this is about arrival timing, not volume.
+        wakes.onInboundFrame()
         accountant.add(UsageKeys.relayMsg(mobile, fg, received = true), bytes)
         accountant.add(UsageKeys.relayVerb(msg.label(), received = true, mobile, fg), bytes)
 

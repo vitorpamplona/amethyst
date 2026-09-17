@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap
  * contain one of these segments silently joins that sum:
  *
  *     rx  tx  msg  connms  connects  connfails  reqs  bursts  activems
- *     worker  runs  + every value in [HTTP_ROLES]
+ *     worker  runs  wakes  + every value in [HTTP_ROLES]
  *
  * Concretely: a key named `relay.rx.event.mobile.bg` would be counted by
  * `traffic(MOBILE, BG)` *in addition to* `relay.msg.mobile.bg.rx`, doubling the
@@ -159,6 +159,28 @@ object UsageKeys {
 
     private val RELAY_MSG_RX = dimKeys("relay.msg", RX)
     private val RELAY_MSG_TX = dimKeys("relay.msg", TX)
+
+    /**
+     * `relay.wakes.mobile.bg` — inbound relay frames that arrived after
+     * `RelayWakeEstimator.WAKE_GAP_MS` of silence across ALL relays: an estimate
+     * of how often relay traffic pulls the device (and the radio) out of idle.
+     *
+     * Deliberately NOT named `bursts`. [radioBursts] is summed by segment
+     * membership into the report's single "radio bursts" figure, which is
+     * defined as HTTP-caused; folding relay wakes into it would silently
+     * redefine an existing number instead of adding a new one.
+     *
+     * Why this is not already answered by [relayConnMs]: connection-time cannot
+     * tell a quiet connection from a chatty one, and ~90% of production relays
+     * server-ping every 30-70s (see the 2026-07-12 ping study), so a large pool
+     * imposes a wake cadence that no byte or time counter makes visible.
+     */
+    fun relayWakes(
+        mobile: Boolean,
+        foreground: Boolean,
+    ): String = RELAY_WAKES[dimIndex(mobile, foreground)]
+
+    private val RELAY_WAKES = dimKeys("relay.wakes")
 
     /** `relay.connms.mobile.bg` — Σ(open relay connections × elapsed ms). */
     fun relayConnMs(
@@ -850,6 +872,28 @@ object UsageKeys {
     const val SIGNER_LOCAL = "local"
     const val SIGNER_NIP46 = "nip46"
     const val SIGNER_NIP55 = "nip55"
+
+    /**
+     * `device.awake.bg.ms` / `device.sleep.bg.ms` — wall time split into time the
+     * device was actually running versus suspended, attributed by OUR visibility.
+     *
+     * The difference between [android.os.SystemClock.elapsedRealtime] (counts
+     * sleep) and [android.os.SystemClock.uptimeMillis] (does not). With the
+     * screen off an Android device suspends the SoC, and the energy cost of
+     * background work is dominated by how often something wakes it, not by how
+     * many CPU milliseconds it then uses: the same [CPU_BG_MS] spread over
+     * thousands of wake-ups instead of dozens is the difference between a
+     * healthy app and a dead battery. No CPU counter can show that; this pair
+     * can.
+     *
+     * Device-wide, not app-isolated — like [BATTERY_DRAIN_FG] / [BATTERY_DRAIN_BG],
+     * and for the same reason: it is the ground truth the app's own counters get
+     * correlated against across many reports. A device that never sleeps while
+     * Amethyst is backgrounded is the finding, whoever is holding it awake.
+     */
+    fun deviceAwakeMs(visibility: String): String = "device.awake.$visibility.ms"
+
+    fun deviceSleepMs(visibility: String): String = "device.sleep.$visibility.ms"
 
     /**
      * Measured battery drain (percent points while discharging), split by

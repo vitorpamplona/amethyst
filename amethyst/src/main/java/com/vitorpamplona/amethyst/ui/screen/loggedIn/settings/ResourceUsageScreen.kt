@@ -468,6 +468,21 @@ private fun ActivitySection(s: UsageSummary) {
         SettingsDivider()
         MetricRow(R.string.resource_usage_cpu_bg, formatDurationMs(s.cpuBgMs))
         SettingsDivider()
+        // Whole-device, like the battery rows. Shown as a share because the
+        // absolute number means nothing without the window it covers: what
+        // matters is whether the device got to sleep at all while we were closed.
+        if (s.deviceAwakeBgMs + s.deviceSleepBgMs > 0) {
+            val window = s.deviceAwakeBgMs + s.deviceSleepBgMs
+            MetricRow(
+                R.string.resource_usage_device_awake,
+                "${formatDurationMs(s.deviceAwakeBgMs)} (${s.deviceAwakeBgMs * 100 / window}%)",
+            )
+            SettingsDivider()
+        }
+        if (s.relayWakes > 0) {
+            MetricRow(R.string.resource_usage_relay_wakes, "${s.relayWakes} (${s.relayWakesBg})")
+            SettingsDivider()
+        }
         MetricRow(R.string.resource_usage_wakelock, formatDurationMs(s.wakelockMs))
         SettingsDivider()
         MetricRow(R.string.resource_usage_worker_runs, s.workerRuns.toString())

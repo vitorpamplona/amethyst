@@ -140,6 +140,13 @@ class ResourceUsageReportAssembler {
             append("| Decryptions | ${s.decryptCount} (${formatDurationMs(s.decryptUs / 1_000)} CPU) |\n")
             append("| Remote signatures | ${s.signNip46} NIP-46, ${s.signNip55} NIP-55 |\n")
             append("| Battery drain (measured, whole device) | ${s.batteryDrainFg}% in app, ${s.batteryDrainBg}% background |\n")
+            if (s.deviceAwakeBgMs + s.deviceSleepBgMs > 0) {
+                val awakePct = s.deviceAwakeBgMs * 100 / (s.deviceAwakeBgMs + s.deviceSleepBgMs)
+                append("| Device awake while app closed (whole device) | ${formatDurationMs(s.deviceAwakeBgMs)} of ${formatDurationMs(s.deviceAwakeBgMs + s.deviceSleepBgMs)} ($awakePct%) |\n")
+            }
+            if (s.relayWakes > 0) {
+                append("| Relay wake-ups | ${s.relayWakes} (${s.relayWakesBg} while app closed) |\n")
+            }
             append("| App CPU time | ${formatDurationMs(s.cpuMs)} |\n")
             append("| ... with the app in the background | ${formatDurationMs(s.cpuBgMs)} |\n")
             append("| Time in app | ${formatDurationMs(s.foregroundMs)} |\n")

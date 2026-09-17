@@ -339,6 +339,7 @@ For each hypothesis that survives Phase 2:
 | 1 | Read `crypto.verify.*` + `cpu.ms` + `app.fgms` from existing reports | Answers H4 for free; sizes the whole problem | **needs a device** |
 | 2 | §2.1 `ThreadCpuSampler` + `cpu.fg/bg` split | Ships in the next release; every later step reads its output | **shipped** |
 | 3 | §2.2 ingest/feed counters | Answers H1, H2 from production data | **shipped** |
+| 3a | Wake-up counters: device awake-vs-asleep, relay wake cadence | Covers the energy term CPU counters structurally cannot | **shipped** |
 | 3b | §2.3 `bg.recompose.count` / `bg.imageload.count` tripwires | Answers H5 | todo |
 | 4 | §3 S1/S3/S4 Perfetto + batterystats on a real device | Confirms or kills what step 3 suggested; catches anything the counters are blind to | **needs a device** |
 | 5 | H1 fix (the cheap half: `newList === oldList` short-circuit) | Lowest risk, measurable immediately | **shipped** |
@@ -365,8 +366,46 @@ Two commits on `claude/cpu-usage-battery-optimization-2sbqhh`:
   short-circuit, which skips the `distinctBy` + copy + identity-walk when an
   additive filter returned the on-screen list unchanged.
 
-Both are behaviour-preserving. The field offsets in the `/proc` parse and the
-short-circuit are each pinned by a test verified by mutation.
+- **`fix(ledger): correct four counters that were measuring the wrong thing`** —
+  an audit found `MAIN` unreachable (UI-thread CPU was landing in `misc`), the
+  fan-out timer measuring coroutine enqueue rather than work, `feeds.rebuilt.*`
+  never firing from the path that causes rebuilds, and a tid recycled between
+  sweeps inheriting the dead thread's bucket.
+- **wake-up counters** — `device.awake.<vis>.ms` / `device.sleep.<vis>.ms`
+  (`DeviceSleepSampler`) and `relay.wakes.<net>.<vis>`
+  (`RelayWakeEstimator`).
+
+Everything is behaviour-preserving. The `/proc` field offsets, the short-circuit,
+each audit fix, and the two wake counters are pinned by tests verified by
+mutation.
+
+### What these counters can and cannot settle
+
+Worth stating plainly, because it bounds what Phase 2 still has to do on a real
+device.
+
+**They can** say whether the app burns CPU with the screen off and which
+subsystem burns it; whether the feed fan-out does useful work or maintains ~48
+feeds nobody is watching; and whether signature verification is material.
+
+**They cannot** measure energy. Three specific gaps:
+
+1. **CPU ms is not joules.** A millisecond on a big core at 2.8 GHz is roughly
+   an order of magnitude more energy than one on a little core at 600 MHz. The
+   buckets are unweighted milliseconds.
+2. **Radio tail energy is invisible to CPU accounting.** The 2026-07-12 ping
+   study already found the dominant proxy is connection-time, because ~90% of
+   relays server-ping every 30-70s. That energy costs almost no CPU.
+   `relay.wakes.*` is the closest available proxy and is why it was added.
+3. **Wake-ups, not milliseconds, dominate background energy.** Covered now by
+   `device.awake/sleep`, but only device-wide — the ledger can say the device
+   never slept, not that Amethyst is what kept it awake.
+
+So the ledger is built for **correlation across a corpus of reports** ("devices
+with high `cpu.bg.ms` also show high `battery.drain.bg`"), not for attribution
+from a single one. `adb shell dumpsys batterystats` gives per-app wake-up counts,
+wakelock attribution and radio state directly, on one device, today — which is
+why step 4 remains the gate and not a formality.
 
 **Stop condition for Phase 1/2:** we can state, from data, what fraction of
 `cpu.ms` each bucket owns in S1 and in S3, and name the top three call sites.
