@@ -92,10 +92,10 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.playback.background.BackgroundPlayback
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
-import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
+import com.vitorpamplona.amethyst.service.playback.playerPool.VideoPlayerPools
 import com.vitorpamplona.amethyst.service.pow.PowJobRestorer
 import com.vitorpamplona.amethyst.service.pow.PowJobStore
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
@@ -1066,6 +1066,19 @@ class AppModules(
         VideoCacheFactory.new(appContext)
     }
 
+    // Process-wide ExoPlayer pools (direct + proxied). These used to live inside PlaybackService,
+    // which made every on-screen video go through a MediaSession just to get a player. The decoder
+    // budget they ration is a process resource and playback has to outlive both the Activity and an
+    // account switch, so the pools belong here.
+    val videoPlayerPools: VideoPlayerPools by lazy {
+        Log.d("AppModules", "VideoPlayerPools Init")
+        VideoPlayerPools(appContext, { videoCache }, okHttpClients::getDynamicCallFactory, { blossomResolver })
+    }
+
+    // The one playback the user detached from the feed (picture-in-picture today). Owns the single
+    // MediaSession, and with it the notification, lock screen and audio focus.
+    val backgroundPlayback = BackgroundPlayback()
+
     // image cache in disk for coil
     val diskCache: DiskCache by lazy {
         Log.d("AppModules", "ImageCacheFactory Init")
@@ -1341,8 +1354,8 @@ class AppModules(
     fun terminate(appContext: Context) {
         pokeyReceiver.unregister(appContext)
         notificationDispatcher.stop()
-        BackgroundMedia.removeBackgroundControllerAndReleaseIt()
-        PlaybackServiceClient.shutdown()
+        backgroundPlayback.demote()
+        videoPlayerPools.destroy()
         alwaysOnNotificationServiceManager.stop()
         // Best-effort flush before the scope is cancelled. Android rarely calls onTerminate in
         // production, but when it does we get one last chance to persist the cache.
@@ -1400,6 +1413,11 @@ class AppModules(
 
     fun trim(level: Int) {
         _trimLevelEvents.tryEmit(level)
+        // Warm (paused-but-prepared) players each pin a MediaCodec instance, so they are the first
+        // thing to give up under real pressure. Checked-out players are left alone.
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
+            videoPlayerPools.trimMemory()
+        }
         // Backgrounding is a natural moment to flush the usage ledger too.
         resourceUsage.flushAsync()
         applicationIOScope.launch {

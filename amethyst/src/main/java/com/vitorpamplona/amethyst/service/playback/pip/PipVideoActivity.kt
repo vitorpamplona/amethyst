@@ -30,11 +30,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.playback.background.HoldBackgroundPlayback
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
-import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
+import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 
@@ -45,19 +49,42 @@ class PipVideoActivity : ComponentActivity() {
 
         setContent {
             val videoData by rememberVideoDataFromIntents()
-            videoData?.let { mediaItemData ->
-                // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
-                val muted = remember(mediaItemData) { DEFAULT_MUTED_SETTING.value }
+            val background = Amethyst.instance.backgroundPlayback
+            val promoted by background.current.collectAsStateWithLifecycle()
 
+            videoData?.let { mediaItemData ->
                 GetMediaItem(mediaItemData) { mediaItem ->
-                    GetVideoController(
-                        mediaItem = mediaItem,
-                        muted = muted,
-                        play = true,
-                        // PiP IS the opt-in for background playback — never release on background.
-                        releaseOnBackgroundTimeout = false,
-                    ) { controllerState ->
-                        RegisterBackgroundMedia(controllerState)
+                    // Normally the player was already promoted by the button that opened this
+                    // window, and the handover cost nothing: same player, same buffer, same
+                    // decoder. Arriving without one means the promotion did not survive (a stale
+                    // PiP intent after the process was reclaimed), so take a player out now.
+                    LaunchedEffect(mediaItem) {
+                        if (background.current.value != null) return@LaunchedEffect
+
+                        val pooled =
+                            Amethyst.instance.videoPlayerPools.acquire(
+                                mediaItem.src.proxyPort,
+                                mediaItem.item.mediaId,
+                                mediaItem.src.keepPlaying,
+                            )
+                        if (pooled.player.currentMediaItem?.mediaId != mediaItem.item.mediaId) {
+                            pooled.player.setMediaItem(mediaItem.item)
+                            pooled.player.prepare()
+                        }
+                        pooled.player.volume = if (DEFAULT_MUTED_SETTING.value) 0f else 1f
+                        pooled.player.playWhenReady = true
+                        background.promote(pooled, applicationContext)
+                    }
+
+                    promoted?.let { playback ->
+                        val controllerState =
+                            remember(playback) {
+                                MediaControllerState(controller = playback.player, pooled = playback.pooled)
+                            }
+
+                        // Leaving this window gives the slot up, which stops PlaybackService and
+                        // takes the notification down with it.
+                        HoldBackgroundPlayback(playback.player)
                         RegisterControllerReceiver(controllerState)
                         WatchControllerForActions(mediaItemData, controllerState)
                         RenderPipVideo(controllerState, mediaItemData.waveformData)

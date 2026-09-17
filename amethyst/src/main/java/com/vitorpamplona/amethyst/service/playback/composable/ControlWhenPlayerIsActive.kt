@@ -30,7 +30,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.Player
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
+import com.vitorpamplona.amethyst.Amethyst
 
 @Composable
 fun ControlWhenPlayerIsActive(
@@ -53,7 +53,7 @@ fun ControlWhenPlayerIsActive(
                 // if it is visible, was supposed to start automatically, but it's not
 
                 // If something else is playing, play on mute.
-                if (BackgroundMedia.hasBackgroundButNot(mediaControllerState)) {
+                if (Amethyst.instance.backgroundPlayback.hasPromotedOtherThan(controller)) {
                     controller.volume = 0f
                 }
                 controller.play()
@@ -83,15 +83,14 @@ fun ControlWhenPlayerIsActive(
     // video when it comes back. The scroll-based mutex above only reacts to
     // on-screen position, which doesn't change on background — so without
     // this, videos play forever behind another app.
-    // Skip the explicit BackgroundMedia (PiP) instance: the user opted that
-    // one into keep-playing.
+    // Skip a promoted playback: the user opted that one into outliving the screen.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, mediaControllerState) {
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> {
-                        if (controller.isPlaying && !BackgroundMedia.isMutex(mediaControllerState)) {
+                        if (controller.isPlaying && !Amethyst.instance.backgroundPlayback.isPromoted(controller)) {
                             controller.pause()
                         }
                     }
@@ -101,7 +100,7 @@ fun ControlWhenPlayerIsActive(
                             isClosestToTheCenterOfTheScreen.value &&
                             !controller.isPlaying
                         ) {
-                            if (BackgroundMedia.hasBackgroundButNot(mediaControllerState)) {
+                            if (Amethyst.instance.backgroundPlayback.hasPromotedOtherThan(controller)) {
                                 controller.volume = 0f
                             }
                             controller.play()
@@ -125,8 +124,7 @@ fun ControlWhenPlayerIsActive(
  * the 30s release timer in [GetVideoController] — pause immediately, release
  * the controller after the timeout, reassemble on resume.
  *
- * Skips the explicit BackgroundMedia (PiP) instance: that one is opted in to
- * keep-playing.
+ * Skips a promoted playback: that one is opted in to outliving the screen.
  */
 @Composable
 fun PauseControllerWhenInBackground(mediaControllerState: MediaControllerState) {
@@ -137,7 +135,7 @@ fun PauseControllerWhenInBackground(mediaControllerState: MediaControllerState) 
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_PAUSE &&
                     controller.isPlaying &&
-                    !BackgroundMedia.isMutex(mediaControllerState)
+                    !Amethyst.instance.backgroundPlayback.isPromoted(controller)
                 ) {
                     controller.pause()
                 }

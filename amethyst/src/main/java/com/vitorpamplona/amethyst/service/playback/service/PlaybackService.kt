@@ -21,135 +21,127 @@
 package com.vitorpamplona.amethyst.service.playback.service
 
 import android.app.ForegroundServiceStartNotAllowedException
-import android.content.ComponentCallbacks2
+import android.app.PendingIntent
 import android.content.Intent
-import android.net.Uri
+import android.content.res.Resources
 import android.os.Build
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.net.toUri
-import androidx.media3.common.C
-import androidx.media3.common.Player
+import androidx.media3.common.MediaItem
+import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DataSource
-import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.ResolvingDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.datasource.DataSourceBitmapLoader
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.service.http.DynamicCallFactory
-import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
-import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
-import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
-import com.vitorpamplona.amethyst.service.playback.playerPool.MediaSessionPool
-import com.vitorpamplona.amethyst.service.playback.playerPool.SimultaneousPlaybackCalculator
-import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.amethyst.service.playback.background.PromotedPlayback
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
+import com.vitorpamplona.amethyst.service.playback.playerPool.MetadataArtworkBitmapLoader
+import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
+/**
+ * Hosts the single MediaSession for whichever playback the user has promoted out of the feed, and
+ * nothing else.
+ *
+ * It used to own the player pools and mint a MediaSession per on-screen video. That is what put a
+ * "video paused" card in the shade for posts the user had never opened: media3 shows a notification
+ * for any session whose player is merely *prepared*, and every video scrolling through a feed is
+ * prepared. Players now come from
+ * [com.vitorpamplona.amethyst.service.playback.playerPool.VideoPlayerPools] in AppModules, and this
+ * service exists only while
+ * [com.vitorpamplona.amethyst.service.playback.background.BackgroundPlayback] holds a promotion —
+ * so the session that exists is, by construction, the one the user means to control. No election,
+ * no filtering.
+ */
+@OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
-    private var poolNoProxy: MediaSessionPool? = null
-    private var poolWithProxy: MediaSessionPool? = null
-
-    @OptIn(UnstableApi::class)
-    fun newPool(
-        videoCache: VideoCache,
-        okHttpClient: DynamicCallFactory,
-        blossomServerResolver: BlossomServerResolver,
-    ): MediaSessionPool {
-        val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
-
-        val resolvingDataSourceFactory: DataSource.Factory =
-            ResolvingDataSource.Factory(
-                dataSourceFactory,
-                ResolvingDataSource.Resolver { dataSpec: DataSpec ->
-                    val originalUri: Uri = dataSpec.uri
-                    val scheme = originalUri.scheme
-                    if (scheme != null && blossomServerResolver.canResolve(scheme)) {
-                        val serverUrl =
-                            runBlocking {
-                                blossomServerResolver.findServers(originalUri.toString())
-                            }
-                        if (serverUrl != null) {
-                            return@Resolver dataSpec.withUri(serverUrl.serverUrl.toUri())
-                        }
-                    }
-                    dataSpec
-                },
-            )
-
-        // The device's concurrent-decoder ceiling bounds both how many players may be checked out
-        // at once (the session cache) and how many the pool may retain, since a session and a warm
-        // pool entry each pin one MediaCodec instance.
-        val decoderBudget = SimultaneousPlaybackCalculator.max(applicationContext)
-
-        return MediaSessionPool(
-            exoPlayerPool =
-                ExoPlayerPool(
-                    ExoPlayerBuilder(videoCache, resolvingDataSourceFactory),
-                    poolSize = decoderBudget,
-                ),
-            dataSourceFactory = resolvingDataSourceFactory,
-            appContext = applicationContext,
-            maxSessions = decoderBudget,
-            reset = { session, keepPlaying ->
-                (session.player as ExoPlayer).apply {
-                    repeatMode = if (keepPlaying) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-                    videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-                    volume = 0f
-                }
-            },
-        )
-    }
-
-    @OptIn(UnstableApi::class)
-    fun lazyPool(proxyPort: Int): MediaSessionPool {
-        return if (proxyPort <= 0) {
-            // no proxy
-            poolNoProxy?.let { return it }
-
-            val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactory(false)
-            val videoCache = Amethyst.instance.videoCache
-            val blossomServerResolver = Amethyst.instance.blossomResolver
-
-            // creates new
-            newPool(videoCache, okHttpClient, blossomServerResolver)
-                .also {
-                    poolNoProxy = it
-                    // Kick off the player pool warmup as soon as we know this pool is being used.
-                    // It runs async on the main looper, yielding between builds, so the very first
-                    // session still acquires synchronously while subsequent ones can grab a warm
-                    // ExoPlayer instead of paying the build cost on the main thread.
-                    it.exoPlayerPool.create(applicationContext)
-                }
-        } else {
-            poolWithProxy?.let { return it }
-
-            // creates brand new
-            // proxy port can change without affecting the pool because
-            // the choice of okhttp is resolved in newCall
-            val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactory(true)
-            val videoCache = Amethyst.instance.videoCache
-            val blossomServerResolver = Amethyst.instance.blossomResolver
-
-            newPool(videoCache, okHttpClient, blossomServerResolver)
-                .also {
-                    poolWithProxy = it
-                    it.exoPlayerPool.create(applicationContext)
-                }
-        }
-    }
+    private var session: MediaSession? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("PlaybackService", "PlaybackService.onCreate")
+        Log.d(TAG, "PlaybackService.onCreate")
+
+        scope.launch {
+            Amethyst.instance.backgroundPlayback.current.collect { promoted ->
+                if (promoted != null) {
+                    attach(promoted)
+                } else {
+                    // The slot was given up: nothing is left for this service to host.
+                    detach()
+                    stopSelf()
+                }
+            }
+        }
+    }
+
+    /**
+     * Points the session at the promoted player. Reuses the existing session via setPlayer rather
+     * than rebuilding one: media3 requires a replacement player on the same application looper,
+     * which pooled players always are, and swapping in place keeps the notification from flickering
+     * away and back when one promotion replaces another.
+     */
+    private fun attach(promoted: PromotedPlayback) {
+        val existing = session
+        if (existing != null) {
+            existing.player = promoted.player
+            bindSessionActivity(existing, promoted.player.currentMediaItem)
+            return
+        }
+
+        val built =
+            MediaSession
+                .Builder(applicationContext, promoted.player)
+                .setBitmapLoader(bitmapLoader)
+                .build()
+
+        bindSessionActivity(built, promoted.player.currentMediaItem)
+        session = built
+
+        // Nothing binds this service with a MediaController any more, so the session has to be
+        // registered by hand — that registration is what gives media3 a notification to post.
+        addSession(built)
+    }
+
+    private fun detach() {
+        session?.let {
+            removeSession(it)
+            it.release()
+        }
+        session = null
+    }
+
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
+
+    /**
+     * Makes tapping the notification open the nostr event the media came from.
+     *
+     * The request code is shared across videos on purpose: PendingIntent identity already includes
+     * the Intent's data URI (Intent.filterEquals), so two different posts get two different pending
+     * intents regardless.
+     */
+    private fun bindSessionActivity(
+        session: MediaSession,
+        mediaItem: MediaItem?,
+    ) {
+        val callbackUri = mediaItem?.mediaMetadata?.extras?.getString(MediaItemCache.EXTRA_CALLBACK_URI) ?: return
+        session.setSessionActivity(
+            PendingIntent.getActivity(
+                applicationContext,
+                0,
+                Intent(Intent.ACTION_VIEW, callbackUri.toUri(), applicationContext, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            ),
+        )
     }
 
     override fun onStartCommand(
@@ -167,7 +159,7 @@ class PlaybackService : MediaSessionService() {
             // from the background with ForegroundServiceStartNotAllowedException. There is no
             // playback to keep alive in this path, so swallow it and stop the service.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is ForegroundServiceStartNotAllowedException) {
-                Log.w("PlaybackService") { "Foreground service start not allowed; stopping PlaybackService" }
+                Log.w(TAG) { "Foreground service start not allowed; stopping PlaybackService" }
                 stopSelf()
                 START_NOT_STICKY
             } else {
@@ -175,28 +167,21 @@ class PlaybackService : MediaSessionService() {
             }
         }
 
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        // Since API 34 the OS only delivers UI_HIDDEN and BACKGROUND; BACKGROUND (process on
-        // the system LRU list) is the real reclaim-pressure signal, so release the warm pool then.
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
-            poolNoProxy?.exoPlayerPool?.releaseWarmPool()
-            poolWithProxy?.exoPlayerPool?.releaseWarmPool()
-        }
-    }
-
     override fun onDestroy() {
-        Log.d("PlaybackService", "PlaybackService.onDestroy")
+        Log.d(TAG, "PlaybackService.onDestroy")
 
-        poolWithProxy?.destroy()
-        poolNoProxy?.destroy()
+        scope.cancel()
+        detach()
+
+        // Hands the player back to its pool. Reached both ways round: an explicit demote stops this
+        // service, and media3 stopping it (pauseAllPlayersAndStopSelf when the task is swiped away
+        // with nothing playing) has to give the slot up too.
+        Amethyst.instance.backgroundPlayback.demote()
 
         // When nothing is playing media3 posts through NotificationManager.notify() and takes the
         // service back out of the foreground, so the notification is NOT owned by the foreground
-        // service and nothing cancels it when the service dies. Without this, stopping the service
-        // (swipe from recents with android:stopWithTask, or the OS reclaiming the process) leaves
-        // a "video paused" notification in the shade for a session that no longer exists, pointing
-        // at a post the user never opened.
+        // service and nothing cancels it when the service dies. Without this it survives the
+        // service — and the process — and sits in the shade backed by nothing.
         removeMediaNotification()
 
         super.onDestroy()
@@ -204,99 +189,76 @@ class PlaybackService : MediaSessionService() {
 
     /**
      * Mirrors media3's own (private) MediaNotificationManager.removeNotification(): both the
-     * foreground detach and the explicit cancel are needed to clear the notification on every API
-     * level, because it may have been posted through either path.
+     * foreground detach and the explicit cancel are needed, because the notification may have been
+     * posted through either path depending on whether playback was running at the time.
      */
-    @OptIn(UnstableApi::class)
     private fun removeMediaNotification() {
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         NotificationManagerCompat.from(this).cancel(DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID)
     }
 
     /**
-     * Decides which playback — if any — owns the media notification.
+     * Artwork comes from arbitrary nostr imeta URLs, so it routinely arrives far larger than the
+     * platform's metadata bitmap ceiling, and android.media.session.MediaSession.setMetadata() then
+     * re-scales it inside MediaMetadata.Builder.build(). media3 stores the *same* Bitmap instance
+     * under both METADATA_KEY_DISPLAY_ICON and METADATA_KEY_ALBUM_ART, so build() scales that one
+     * instance twice. AOSP leaves the source alone, but on ROMs that recycle it while scaling the
+     * second pass throws "cannot use a recycled source in createBitmap" on the main thread, inside
+     * a Guava callback the app cannot intercept.
      *
-     * media3 hands us whichever session just fired a player event and, left to itself, shows a
-     * notification for any session whose player is merely *prepared*
-     * (MediaNotificationManager.shouldShowNotification only checks for a non-empty timeline and a
-     * non-IDLE state). Every video that scrolls into a feed is prepared, muted and paused the
-     * moment it leaves the centre of the screen, so that default puts a "video paused" notification
-     * in the shade for media the user never chose to play — and leaves it there, because the
-     * paused-state notification goes out through NotificationManager.notify() rather than the
-     * foreground service.
-     *
-     * The order below is the users' expectation of which playback they are controlling:
-     * 1. Picture-in-picture / background media — the one playback explicitly detached from the feed.
-     * 2. An on-screen video playing with the volume up.
-     * 3. An on-screen video playing muted.
-     * 4. Media that has already played out loud and is now paused (a music track, a podcast, a
-     *    voice note): keeps its notification so it can be resumed from the shade.
-     *
-     * Anything else — every muted, autoplayed, scrolled-past feed video — owns no notification.
-     *
-     * Note this must override [onUpdateNotificationAsync], not [onUpdateNotification]: the base
-     * MediaSessionService.onUpdateNotification(session, startInForegroundRequired) only forwards to
-     * the deprecated single-argument overload, whose whole body sets a `defaultMethodCalled` flag.
-     * The notification is then always posted by onUpdateNotificationAsync for the session *media3*
-     * picked, so calling super.onUpdateNotification() with a different session — as this class used
-     * to — changed nothing at all.
+     * media3 does size-limit artwork (SizeLimitedBitmapLoader), but it reads the ceiling from
+     * Resources.getSystem() and falls back to the full display width when
+     * config_mediaMetadataBitmapMaxSize can't be resolved by name, while the framework itself reads
+     * it from the context that created the session. Capping it here, the same way the framework
+     * measures it, keeps build() from scaling at all.
      */
-    @OptIn(UnstableApi::class)
-    override fun onUpdateNotificationAsync(
-        session: MediaSession,
-        startInForegroundRequired: Boolean,
-    ): ListenableFuture<Void?> {
-        electNotificationOwner()?.let {
-            return super.onUpdateNotificationAsync(it, startInForegroundRequired)
-        }
+    private val bitmapLoader: BitmapLoader by lazy {
+        val decoder =
+            DataSourceBitmapLoader
+                .Builder(applicationContext)
+                .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
+                // Subsampling only halves, so decoding straight to the ceiling can land at half the
+                // size the session would have accepted (a 1080px image under a 900px ceiling decodes
+                // to 540px). Decoding to just under 2x and letting MetadataArtworkBitmapLoader scale
+                // precisely is the same recipe media3 uses for its own default loader.
+                .setMaximumOutputDimension((metadataBitmapMaxSize() * 2 - 1).coerceAtLeast(1))
+                .build()
 
-        // Nothing qualifies. `startInForegroundRequired` can still be true in the narrow window
-        // where a player has playWhenReady set but has not reached isPlaying yet (media3 counts
-        // BUFFERING as engaged, the pool's playing tier does not); dropping the notification there
-        // would leave the service claiming the foreground with nothing posted, so defer to media3
-        // and let the next event — the one that flips isPlaying — settle it.
-        if (startInForegroundRequired) {
-            return super.onUpdateNotificationAsync(session, startInForegroundRequired)
-        }
-
-        removeMediaNotification()
-        return Futures.immediateFuture(null)
+        MetadataArtworkBitmapLoader(decoder, ::metadataBitmapMaxSize)
     }
 
-    private fun electNotificationOwner(): MediaSession? {
-        val pools = listOfNotNull(poolNoProxy, poolWithProxy)
-        val background = BackgroundMedia.bgInstance?.id?.let { id -> pools.firstNotNullOfOrNull { it.getSession(id) } }
-
-        if (background != null && background.player.isPlaying) return background
-
-        val playing = pools.flatMap { it.playingContent() }
-        playing.firstOrNull { it.session.player.volume > 0f }?.let { return it.session }
-        playing.firstOrNull()?.let { return it.session }
-
-        // Nothing is playing: a paused picture-in-picture, and then any media that has already
-        // played out loud, keep the notification so the user can resume from the shade.
-        if (background != null) return background
-
-        return pools.firstNotNullOfOrNull { it.lastPlayedAudibly() }
+    // getIdentifier() is a by-name lookup, so it is resolved once; the dimension itself is re-read
+    // per load because it is a dp value and the app survives display-size changes without a restart.
+    private val metadataBitmapMaxSizeResId by lazy {
+        resources.getIdentifier("config_mediaMetadataBitmapMaxSize", "dimen", "android")
     }
 
-    // Return a MediaSession to link with the MediaController that is making
-    // this request.
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        val id = controllerInfo.connectionHints.getString("id") ?: return null
-        val proxyPort = controllerInfo.connectionHints.getInt("proxyPort")
-        val keepPlaying = controllerInfo.connectionHints.getBoolean("keepPlaying", true)
-        // Optional warm-pool affinity hint: when the pool still has a paused ExoPlayer
-        // holding this exact URI, the new session reuses it so the buffer survives.
-        val preferredMediaId = controllerInfo.connectionHints.getString(HINT_VIDEO_URI)
-        val manager = lazyPool(proxyPort)
-        return manager.getSession(id, keepPlaying, applicationContext, preferredMediaId)
+    /**
+     * Mirrors how android.media.session.MediaSession derives its metadata bitmap ceiling: the
+     * framework dimension config_mediaMetadataBitmapMaxSize, resolved from the app context so it
+     * matches the value the platform compares against. Falls back to AOSP's 320dp default when the
+     * (hidden, framework-internal) resource can't be resolved by name.
+     */
+    private fun metadataBitmapMaxSize(): Int {
+        val resolved =
+            if (metadataBitmapMaxSizeResId != 0) {
+                try {
+                    resources.getDimensionPixelSize(metadataBitmapMaxSizeResId)
+                } catch (e: Resources.NotFoundException) {
+                    Log.w(TAG, "config_mediaMetadataBitmapMaxSize could not be read", e)
+                    0
+                }
+            } else {
+                0
+            }
+        return if (resolved > 0) resolved else (DEFAULT_METADATA_BITMAP_DP * resources.displayMetrics.density).toInt()
     }
 
     companion object {
-        const val HINT_ID = "id"
-        const val HINT_PROXY_PORT = "proxyPort"
-        const val HINT_KEEP_PLAYING = "keepPlaying"
-        const val HINT_VIDEO_URI = "videoUri"
+        private const val TAG = "PlaybackService"
+
+        // AOSP default for config_mediaMetadataBitmapMaxSize, used when the framework resource
+        // can't be resolved by name on a given ROM.
+        private const val DEFAULT_METADATA_BITMAP_DP = 320
     }
 }

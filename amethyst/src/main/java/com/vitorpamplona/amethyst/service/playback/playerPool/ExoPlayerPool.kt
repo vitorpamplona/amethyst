@@ -218,7 +218,7 @@ class ExoPlayerPool(
      * Queues the return on this pool's single main-thread scope. Contract: returns queued before
      * [destroy] is called run before destroy's teardown — both serialize on the same scope and
      * [mutex] — so a caller may tear its sessions down synchronously and then destroy the pool
-     * (see MediaSessionPool.destroy).
+     * (see VideoPlayerPools.destroy).
      */
     fun releasePlayerAsync(player: ExoPlayer) {
         scope.launch {

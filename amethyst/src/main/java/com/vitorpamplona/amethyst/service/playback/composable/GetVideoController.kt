@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
@@ -31,153 +31,148 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.Player
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
-import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 internal const val BACKGROUND_RELEASE_TIMEOUT_MS = 30_000L
 
-@OptIn(ExperimentalCoroutinesApi::class)
+/**
+ * Checks a pooled [androidx.media3.exoplayer.ExoPlayer] out for the duration of this composable and
+ * hands it to [inner] as a [MediaControllerState].
+ *
+ * There is no MediaSession and no MediaController here. An inline video is a surface the user
+ * scrolled past, not something the system needs to know about: it gets a player straight from the
+ * process-wide pool, with no session to register, no binder bind to wait on, and no entry in the
+ * notification shade. Only a playback the user explicitly promotes — see
+ * [com.vitorpamplona.amethyst.service.playback.background.BackgroundPlayback] — claims the one
+ * MediaSession that PlaybackService owns.
+ */
 @Composable
 fun GetVideoController(
     mediaItem: LoadedMediaItem,
     muted: Boolean = false,
     play: Boolean = false,
-    // Opt-out for callers whose lifecycle owner is already a background-playback
-    // surface (PiP): there, the 30s timer would fire as soon as the activity
-    // enters PiP mode and race the controller build / `RegisterBackgroundMedia`
-    // registration, killing the just-attached controller and blanking the
-    // window. The opt-out skips the timer entirely for those callers.
-    releaseOnBackgroundTimeout: Boolean = true,
     inner: @Composable (mediaControllerState: MediaControllerState) -> Unit,
 ) {
     val context = LocalContext.current
 
-    // After the app has been in the background for BACKGROUND_RELEASE_TIMEOUT_MS,
-    // drop the MediaController so the underlying ExoPlayer + codec/buffer can be
-    // returned to the pool. On resume the flow is rebuilt, the new session reuses
-    // the same paused player from the warm pool (keyed by URI), and the onEach
-    // warm-pool fast path keeps position and buffered data intact.
+    // After the app has been in the background for BACKGROUND_RELEASE_TIMEOUT_MS, hand the player
+    // back so its codec and buffer return to the pool. On resume the player is re-acquired, and the
+    // pool's URI affinity gives back the same warm instance with its position and buffer intact.
     //
-    // This gate is a StateFlow and not a Compose MutableState on purpose. The timeout
-    // fires while the activity is STOPPED, and Compose pauses its frame clock below
-    // Lifecycle.STARTED, so a state write there cannot recompose: `remember(keepAlive.value)`
-    // would never re-run, and ON_START/ON_RESUME flip the flag back to true in the same main
-    // thread message, before any frame — so the release never happened at all. Collecting a
-    // flow instead keeps the decision off the frame clock: flatMapLatest cancels the inner
-    // callbackFlow the moment the flag drops, which releases the MediaController (and with it
-    // the session, its ExoPlayer and its media notification) while the app is still stopped.
+    // This gate is a StateFlow and not a Compose MutableState on purpose. The timeout fires while
+    // the activity is STOPPED, and Compose pauses its frame clock below Lifecycle.STARTED, so a
+    // state write there cannot recompose — and ON_START/ON_RESUME flip the flag back to true in the
+    // same main thread message, before any frame, so the release would never happen at all.
+    // Collecting a flow keeps the decision off the frame clock.
     val keepAlive = remember { MutableStateFlow(true) }
 
-    val controllerState by remember(mediaItem) {
-        keepAlive.flatMapLatest { alive ->
-            if (!alive) return@flatMapLatest flowOf<MediaControllerState?>(null)
+    val controllerState by produceState<MediaControllerState?>(null, mediaItem) {
+        val pools = Amethyst.instance.videoPlayerPools
+        val background = Amethyst.instance.backgroundPlayback
 
-            PlaybackServiceClient
-                .controllerAsFlow(
-                    videoUri = mediaItem.src.videoUri,
-                    proxyPort = mediaItem.src.proxyPort,
-                    keepPlaying = mediaItem.src.keepPlaying,
-                    context = context,
-                ).onEach { state ->
-                    Log.d("PlaybackService") { "Controller instance: ${state.controller}" }
+        keepAlive.collectLatest { alive ->
+            if (!alive) {
+                value = null
+                return@collectLatest
+            }
 
-                    // A warm-pool ExoPlayer can be handed back still carrying a prior
-                    // PlaybackException (e.g. a decoder-init failure from an earlier acquire). The
-                    // re-prepare below clears it before WatchPlaybackErrors ever attaches, so this
-                    // is the only place the stale error — and its decoder/codec cause chain — is
-                    // observable. Logged so a "Can't play this video" blink that self-heals can be
-                    // attributed to warm-pool reuse rather than a genuinely undecodable stream.
-                    state.controller.playerError?.let { err ->
-                        Log.w(ERROR_LOG_TAG) { "Controller arrived carrying error for ${mediaItem.item.mediaId}: ${err.describe()}" }
+            // One checkout at a time, re-taken after a promotion ends. Promoting hands ownership
+            // of the player to BackgroundPlayback; when the user gives the slot up we take a player
+            // again and the pool's URI affinity returns the same instance, buffer and position
+            // intact, so the video drops back inline exactly where it left off.
+            while (true) {
+                val pooled = pools.acquire(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.keepPlaying)
+                val player = pooled.player
+                var handedOver = false
+
+                try {
+                    // A warm player can be handed back still carrying a prior PlaybackException
+                    // (e.g. a decoder-init failure from an earlier checkout). The prepare below
+                    // clears it before WatchPlaybackErrors ever attaches, so this is the only place
+                    // the stale error is observable. Logged so a "Can't play this video" blink that
+                    // self-heals can be attributed to pool reuse rather than an undecodable stream.
+                    player.playerError?.let { err ->
+                        Log.w(ERROR_LOG_TAG) { "Player arrived carrying error for ${mediaItem.item.mediaId}: ${err.describe()}" }
                     }
 
-                    // The default ExoPlayer volume is 1f and the MediaSessionPool reset lambda
-                    // sets it to 0f when the player is acquired, so the controller arrives at 0f.
-                    // Read first and only push an IPC if the value actually needs to change —
-                    // with several feed videos preloading at once each volume= write was a
-                    // round-trip to the service for nothing.
-                    val targetVolume =
+                    player.volume =
                         when {
-                            BackgroundMedia.isPlaying() -> 0f
+                            // Stay silent behind the playback the user detached from the feed.
+                            background.isPlaying() -> 0f
                             muted -> 0f
                             else -> 1f
                         }
-                    if (state.controller.volume != targetVolume) {
-                        state.controller.volume = targetVolume
-                        Log.d("PlaybackService") { "OnEach volume=$targetVolume" }
-                    }
 
-                    if (play) {
-                        state.controller.playWhenReady = true
-                    }
+                    if (play) player.playWhenReady = true
 
-                    // Warm-pool fast path: when the underlying ExoPlayer was retained paused-with-
-                    // buffer for this exact MediaItem, the MediaController's local mirror already
-                    // shows the matching mediaId. Calling setMediaItem in that case would reset the
-                    // player and discard the buffer — exactly what the warm pool exists to avoid.
-                    // We still re-prepare if the player ended up IDLE somehow (e.g. it was demoted
-                    // to cold and resurfaced, or hit an error before we attached).
+                    // Warm fast path: when the pool returned the player that already holds this
+                    // exact item, calling setMediaItem would reset it and throw the buffer away —
+                    // exactly what the pool exists to avoid. Still re-prepare if it ended up IDLE.
                     val targetMediaId = mediaItem.item.mediaId
-                    val needsLoad = state.controller.currentMediaItem?.mediaId != targetMediaId
-                    if (needsLoad) {
-                        // Cold load: a fresh decoder/codec instance gets allocated here. If a
-                        // second controller for the same URI is still alive (see liveControllers
-                        // in PlaybackServiceClient), this prepare() is where MediaCodec.start()
-                        // can collide and fail.
-                        Log.d("PlaybackService") { "Cold load (setMediaItem+prepare) for $targetMediaId" }
-                        state.controller.setMediaItem(mediaItem.item)
-                        state.controller.prepare()
-                    } else if (state.controller.playbackState == Player.STATE_IDLE) {
-                        Log.d("PlaybackService") { "Warm controller in STATE_IDLE — re-preparing" }
-                        state.controller.prepare()
+                    if (player.currentMediaItem?.mediaId != targetMediaId) {
+                        Log.d(TAG) { "Cold load (setMediaItem+prepare) for $targetMediaId" }
+                        player.setMediaItem(mediaItem.item)
+                        player.prepare()
+                    } else if (player.playbackState == Player.STATE_IDLE) {
+                        Log.d(TAG) { "Warm player in STATE_IDLE — re-preparing" }
+                        player.prepare()
                     }
+
+                    value = MediaControllerState(controller = player, pooled = pooled)
+
+                    // Suspends for as long as this player stays the feed's. If it is never promoted
+                    // this is where the producer waits out the rest of the composable's life.
+                    background.current.first { it?.player === player }
+                    handedOver = true
+
+                    // Detached: hand `null` down so the scroll mutex, the lifecycle pause and the
+                    // on-screen controls all leave composition instead of pausing or re-playing the
+                    // video the user is now watching in the picture-in-picture window.
+                    value = null
+
+                    background.current.first { it?.player !== player }
+                } finally {
+                    value = null
+                    // A promoted player belongs to the slot now: it keeps playing after this
+                    // composable is gone, and goes back to the pool when the slot is given up.
+                    if (!handedOver) pooled.release()
                 }
+            }
         }
-    }.collectAsState(null)
-
-    if (releaseOnBackgroundTimeout) {
-        ReleaseControllerWhenBackgroundedFor(
-            timeoutMs = BACKGROUND_RELEASE_TIMEOUT_MS,
-            controllerState = controllerState,
-            keepAlive = keepAlive,
-        )
     }
 
-    controllerState?.let {
-        inner(it)
-    }
+    ReleasePlayerWhenBackgroundedFor(BACKGROUND_RELEASE_TIMEOUT_MS, controllerState, keepAlive)
+
+    controllerState?.let { inner(it) }
 }
 
 /**
- * Flips [keepAlive] to `false` after the host activity has been at ON_PAUSE for
- * [timeoutMs], so the gated flow upstream releases the MediaController. ON_RESUME
- * cancels any pending timer and flips it back to `true` so the controller is
- * reacquired.
+ * Flips [keepAlive] to `false` once the host activity has been at ON_PAUSE for [timeoutMs], so the
+ * producer upstream hands the player back. ON_RESUME cancels any pending timer and flips it back.
  *
- * The BackgroundMedia (PiP) controller is exempt — it's opted into background
- * playback and must keep its MediaController alive past the timeout.
+ * A promoted playback is exempt: it is opted into outliving the screen it started on.
  */
 @Composable
-private fun ReleaseControllerWhenBackgroundedFor(
+private fun ReleasePlayerWhenBackgroundedFor(
     timeoutMs: Long,
     controllerState: MediaControllerState?,
     keepAlive: MutableStateFlow<Boolean>,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    val currentControllerState by rememberUpdatedState(controllerState)
+    // The observer outlives any single composition pass, so read the player through an updated
+    // holder rather than capturing whatever was in scope when the effect was set up.
+    val currentState by rememberUpdatedState(controllerState)
 
     DisposableEffect(lifecycleOwner, keepAlive) {
         val scope = CoroutineScope(Dispatchers.Main)
@@ -191,8 +186,7 @@ private fun ReleaseControllerWhenBackgroundedFor(
                         timeoutJob =
                             scope.launch {
                                 delay(timeoutMs)
-                                val cs = currentControllerState
-                                if (cs == null || !BackgroundMedia.isMutex(cs)) {
+                                if (!Amethyst.instance.backgroundPlayback.isPromoted(currentState?.controller)) {
                                     keepAlive.value = false
                                 }
                             }
@@ -216,3 +210,5 @@ private fun ReleaseControllerWhenBackgroundedFor(
         }
     }
 }
+
+private const val TAG = "VideoPlayback"

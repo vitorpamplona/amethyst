@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import com.vitorpamplona.amethyst.service.playback.playerPool.PooledPlayer
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -35,6 +36,10 @@ class MediaControllerState(
     // each composable has an ID.
     val id: String = Uuid.random().toString(),
     val controller: Player,
+    // The pool checkout behind [controller], when this state came from the video player pool. A
+    // promotion needs it because a player must go home to the pool it was built for (direct vs
+    // proxied traffic is baked in). Null only where a Player is driven directly, i.e. tests.
+    val pooled: PooledPlayer? = null,
     // visibility onscreen
     val visibility: VisibilityData = VisibilityData(),
     // latest unrecoverable playback error, or null when playback is healthy. Set by the

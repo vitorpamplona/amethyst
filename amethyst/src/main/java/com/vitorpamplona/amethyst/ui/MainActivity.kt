@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.NotificationRelayService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -146,7 +145,9 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         Log.d("ActivityLifecycle") { "MainActivity.onDestroy $this" }
 
-        BackgroundMedia.removeBackgroundControllerAndReleaseIt()
+        // Deliberately does NOT give up the background playback slot: a promoted playback runs in
+        // its own window (picture-in-picture) and is meant to outlive this Activity. It is released
+        // when the user gives the slot up, or when PlaybackService is torn down.
 
         super.onDestroy()
     }

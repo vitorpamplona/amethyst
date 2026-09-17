@@ -503,10 +503,17 @@
             android:theme="@style/noAnimTheme"
         />
 
+        <!--
+            stopWithTask=false: this service only runs while the user has promoted a playback out
+            of the feed, and swiping the app from recents must not cut that off mid-sentence.
+            media3's default onTaskRemoved keeps the service alive only while something is actually
+            playing and calls pauseAllPlayersAndStopSelf() otherwise, so an idle service still goes
+            away on its own.
+        -->
         <service
             android:name=".service.playback.service.PlaybackService"
             android:foregroundServiceType="mediaPlayback"
-            android:stopWithTask="true"
+            android:stopWithTask="false"
             android:exported="true"
             tools:ignore="ExportedService">
             <intent-filter>
