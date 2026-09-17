@@ -92,7 +92,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
-import com.vitorpamplona.amethyst.service.playback.background.BackgroundPlayback
+import com.vitorpamplona.amethyst.service.playback.background.VideoPlayback
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.playerPool.VideoPlayerPools
@@ -1075,9 +1075,10 @@ class AppModules(
         VideoPlayerPools(appContext, { videoCache }, okHttpClients::getDynamicCallFactory, { blossomResolver })
     }
 
-    // The one playback the user detached from the feed (picture-in-picture today). Owns the single
-    // MediaSession, and with it the notification, lock screen and audio focus.
-    val backgroundPlayback = BackgroundPlayback()
+    // Who holds which pooled player: every on-screen slot, plus the one playback the user detached
+    // from the feed (picture-in-picture today), which owns the single MediaSession and with it the
+    // notification, lock screen and audio focus.
+    val videoPlayback: VideoPlayback by lazy { VideoPlayback(videoPlayerPools) }
 
     // image cache in disk for coil
     val diskCache: DiskCache by lazy {
@@ -1354,7 +1355,7 @@ class AppModules(
     fun terminate(appContext: Context) {
         pokeyReceiver.unregister(appContext)
         notificationDispatcher.stop()
-        backgroundPlayback.demote()
+        videoPlayback.destroy()
         videoPlayerPools.destroy()
         alwaysOnNotificationServiceManager.stop()
         // Best-effort flush before the scope is cancelled. Android rarely calls onTerminate in

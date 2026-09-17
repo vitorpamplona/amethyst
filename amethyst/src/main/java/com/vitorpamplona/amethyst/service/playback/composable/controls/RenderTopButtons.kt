@@ -202,7 +202,7 @@ fun RenderTopButtons(
             // Hand the *running* player over rather than letting the PiP window acquire a second
             // one for the same URI: the promoted player keeps its buffer, position and decoder, so
             // there is no gap in which the pool could reclaim it for headroom and open PiP black.
-            controllerState.pooled?.let { Amethyst.instance.backgroundPlayback.promote(it, context) }
+            controllerState.pooled?.let { Amethyst.instance.videoPlayback.promote(it, context) }
             PipVideoActivity.callIn(mediaData, controllerState.visibility.bounds, context.getActivity())
         },
         onZoomClick =

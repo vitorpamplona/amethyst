@@ -53,7 +53,7 @@ fun ControlWhenPlayerIsActive(
                 // if it is visible, was supposed to start automatically, but it's not
 
                 // If something else is playing, play on mute.
-                if (Amethyst.instance.backgroundPlayback.hasPromotedOtherThan(controller)) {
+                if (Amethyst.instance.videoPlayback.hasPromotedOtherThan(controller)) {
                     controller.volume = 0f
                 }
                 controller.play()
@@ -90,7 +90,7 @@ fun ControlWhenPlayerIsActive(
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> {
-                        if (controller.isPlaying && !Amethyst.instance.backgroundPlayback.isPromoted(controller)) {
+                        if (controller.isPlaying && !Amethyst.instance.videoPlayback.isPromoted(controller)) {
                             controller.pause()
                         }
                     }
@@ -100,7 +100,7 @@ fun ControlWhenPlayerIsActive(
                             isClosestToTheCenterOfTheScreen.value &&
                             !controller.isPlaying
                         ) {
-                            if (Amethyst.instance.backgroundPlayback.hasPromotedOtherThan(controller)) {
+                            if (Amethyst.instance.videoPlayback.hasPromotedOtherThan(controller)) {
                                 controller.volume = 0f
                             }
                             controller.play()
@@ -135,7 +135,7 @@ fun PauseControllerWhenInBackground(mediaControllerState: MediaControllerState) 
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_PAUSE &&
                     controller.isPlaying &&
-                    !Amethyst.instance.backgroundPlayback.isPromoted(controller)
+                    !Amethyst.instance.videoPlayback.isPromoted(controller)
                 ) {
                     controller.pause()
                 }

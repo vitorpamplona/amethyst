@@ -37,9 +37,9 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.service.playback.background.PromotedPlayback
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
 import com.vitorpamplona.amethyst.service.playback.playerPool.MetadataArtworkBitmapLoader
+import com.vitorpamplona.amethyst.service.playback.playerPool.PooledPlayer
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -58,7 +58,7 @@ import kotlinx.coroutines.launch
  * prepared. Players now come from
  * [com.vitorpamplona.amethyst.service.playback.playerPool.VideoPlayerPools] in AppModules, and this
  * service exists only while
- * [com.vitorpamplona.amethyst.service.playback.background.BackgroundPlayback] holds a promotion —
+ * [com.vitorpamplona.amethyst.service.playback.background.VideoPlayback] holds a promotion —
  * so the session that exists is, by construction, the one the user means to control. No election,
  * no filtering.
  */
@@ -72,7 +72,7 @@ class PlaybackService : MediaSessionService() {
         Log.d(TAG, "PlaybackService.onCreate")
 
         scope.launch {
-            Amethyst.instance.backgroundPlayback.current.collect { promoted ->
+            Amethyst.instance.videoPlayback.promoted.collect { promoted ->
                 if (promoted != null) {
                     attach(promoted)
                 } else {
@@ -90,7 +90,7 @@ class PlaybackService : MediaSessionService() {
      * which pooled players always are, and swapping in place keeps the notification from flickering
      * away and back when one promotion replaces another.
      */
-    private fun attach(promoted: PromotedPlayback) {
+    private fun attach(promoted: PooledPlayer) {
         val existing = session
         if (existing != null) {
             existing.player = promoted.player
@@ -176,7 +176,7 @@ class PlaybackService : MediaSessionService() {
         // Hands the player back to its pool. Reached both ways round: an explicit demote stops this
         // service, and media3 stopping it (pauseAllPlayersAndStopSelf when the task is swiped away
         // with nothing playing) has to give the slot up too.
-        Amethyst.instance.backgroundPlayback.demote()
+        Amethyst.instance.videoPlayback.demote()
 
         // When nothing is playing media3 posts through NotificationManager.notify() and takes the
         // service back out of the foreground, so the notification is NOT owned by the foreground

@@ -36,11 +36,12 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.service.playback.background.HoldBackgroundPlayback
+import com.vitorpamplona.amethyst.service.playback.background.HoldPromotedPlayback
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.service.playback.coordinator.VideoRequest
 
 class PipVideoActivity : ComponentActivity() {
     @OptIn(UnstableApi::class)
@@ -49,8 +50,8 @@ class PipVideoActivity : ComponentActivity() {
 
         setContent {
             val videoData by rememberVideoDataFromIntents()
-            val background = Amethyst.instance.backgroundPlayback
-            val promoted by background.current.collectAsStateWithLifecycle()
+            val playback = Amethyst.instance.videoPlayback
+            val promoted by playback.promoted.collectAsStateWithLifecycle()
 
             videoData?.let { mediaItemData ->
                 GetMediaItem(mediaItemData) { mediaItem ->
@@ -59,13 +60,12 @@ class PipVideoActivity : ComponentActivity() {
                     // decoder. Arriving without one means the promotion did not survive (a stale
                     // PiP intent after the process was reclaimed), so take a player out now.
                     LaunchedEffect(mediaItem) {
-                        if (background.current.value != null) return@LaunchedEffect
+                        if (playback.promoted.value != null) return@LaunchedEffect
 
                         val pooled =
-                            Amethyst.instance.videoPlayerPools.acquire(
-                                mediaItem.src.proxyPort,
-                                mediaItem.item.mediaId,
-                                mediaItem.src.repeatMode,
+                            playback.promoteDetached(
+                                VideoRequest(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.repeatMode),
+                                applicationContext,
                             )
                         if (pooled.player.currentMediaItem?.mediaId != mediaItem.item.mediaId) {
                             pooled.player.setMediaItem(mediaItem.item)
@@ -73,18 +73,17 @@ class PipVideoActivity : ComponentActivity() {
                         }
                         pooled.player.volume = if (DEFAULT_MUTED_SETTING.value) 0f else 1f
                         pooled.player.playWhenReady = true
-                        background.promote(pooled, applicationContext)
                     }
 
-                    promoted?.let { playback ->
+                    promoted?.let { pooled ->
                         val controllerState =
-                            remember(playback) {
-                                MediaControllerState(controller = playback.player, pooled = playback.pooled)
+                            remember(pooled) {
+                                MediaControllerState(controller = pooled.player, pooled = pooled)
                             }
 
-                        // Leaving this window gives the slot up, which stops PlaybackService and
+                        // Leaving this window gives the surface up, which stops PlaybackService and
                         // takes the notification down with it.
-                        HoldBackgroundPlayback(playback.player)
+                        HoldPromotedPlayback(pooled.player)
                         RegisterControllerReceiver(controllerState)
                         WatchControllerForActions(mediaItemData, controllerState)
                         RenderPipVideo(controllerState, mediaItemData.waveformData)

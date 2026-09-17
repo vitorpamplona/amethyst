@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.Player
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
+import com.vitorpamplona.amethyst.service.playback.coordinator.VideoRequest
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +42,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 internal const val BACKGROUND_RELEASE_TIMEOUT_MS = 30_000L
@@ -54,7 +54,7 @@ internal const val BACKGROUND_RELEASE_TIMEOUT_MS = 30_000L
  * scrolled past, not something the system needs to know about: it gets a player straight from the
  * process-wide pool, with no session to register, no binder bind to wait on, and no entry in the
  * notification shade. Only a playback the user explicitly promotes — see
- * [com.vitorpamplona.amethyst.service.playback.background.BackgroundPlayback] — claims the one
+ * [com.vitorpamplona.amethyst.service.playback.background.VideoPlayback] — claims the one
  * MediaSession that PlaybackService owns.
  */
 @Composable
@@ -77,9 +77,13 @@ fun GetVideoController(
     // Collecting a flow keeps the decision off the frame clock.
     val keepAlive = remember { MutableStateFlow(true) }
 
+    // One slot per (place on screen, video). Keyed on the item so a recycled feed row showing a
+    // different video gets its own slot rather than inheriting the previous one's checkout.
+    val slot = remember(mediaItem) { Any() }
+
     val controllerState by produceState<MediaControllerState?>(null, mediaItem) {
-        val pools = Amethyst.instance.videoPlayerPools
-        val background = Amethyst.instance.backgroundPlayback
+        val playback = Amethyst.instance.videoPlayback
+        val request = VideoRequest(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.repeatMode)
 
         keepAlive.collectLatest { alive ->
             if (!alive) {
@@ -87,67 +91,58 @@ fun GetVideoController(
                 return@collectLatest
             }
 
-            // One checkout at a time, re-taken after a promotion ends. Promoting hands ownership
-            // of the player to BackgroundPlayback; when the user gives the slot up we take a player
-            // again and the pool's URI affinity returns the same instance, buffer and position
-            // intact, so the video drops back inline exactly where it left off.
-            while (true) {
-                val pooled = pools.acquire(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.repeatMode)
-                val player = pooled.player
-                var handedOver = false
+            val pooled = playback.attach(slot, request)
+            val player = pooled.player
 
-                try {
-                    // A warm player can be handed back still carrying a prior PlaybackException
-                    // (e.g. a decoder-init failure from an earlier checkout). The prepare below
-                    // clears it before WatchPlaybackErrors ever attaches, so this is the only place
-                    // the stale error is observable. Logged so a "Can't play this video" blink that
-                    // self-heals can be attributed to pool reuse rather than an undecodable stream.
-                    player.playerError?.let { err ->
-                        Log.w(ERROR_LOG_TAG) { "Player arrived carrying error for ${mediaItem.item.mediaId}: ${err.describe()}" }
-                    }
-
-                    player.volume =
-                        when {
-                            // Stay silent behind the playback the user detached from the feed.
-                            background.isPlaying() -> 0f
-                            muted -> 0f
-                            else -> 1f
-                        }
-
-                    if (play) player.playWhenReady = true
-
-                    // Warm fast path: when the pool returned the player that already holds this
-                    // exact item, calling setMediaItem would reset it and throw the buffer away —
-                    // exactly what the pool exists to avoid. Still re-prepare if it ended up IDLE.
-                    val targetMediaId = mediaItem.item.mediaId
-                    if (player.currentMediaItem?.mediaId != targetMediaId) {
-                        Log.d(TAG) { "Cold load (setMediaItem+prepare) for $targetMediaId" }
-                        player.setMediaItem(mediaItem.item)
-                        player.prepare()
-                    } else if (player.playbackState == Player.STATE_IDLE) {
-                        Log.d(TAG) { "Warm player in STATE_IDLE — re-preparing" }
-                        player.prepare()
-                    }
-
-                    value = MediaControllerState(controller = player, pooled = pooled)
-
-                    // Suspends for as long as this player stays the feed's. If it is never promoted
-                    // this is where the producer waits out the rest of the composable's life.
-                    background.current.first { it?.player === player }
-                    handedOver = true
-
-                    // Detached: hand `null` down so the scroll mutex, the lifecycle pause and the
-                    // on-screen controls all leave composition instead of pausing or re-playing the
-                    // video the user is now watching in the picture-in-picture window.
-                    value = null
-
-                    background.current.first { it?.player !== player }
-                } finally {
-                    value = null
-                    // A promoted player belongs to the slot now: it keeps playing after this
-                    // composable is gone, and goes back to the pool when the slot is given up.
-                    if (!handedOver) pooled.release()
+            try {
+                // A warm player can be handed back still carrying a prior PlaybackException (e.g. a
+                // decoder-init failure from an earlier checkout). The prepare below clears it before
+                // WatchPlaybackErrors ever attaches, so this is the only place the stale error is
+                // observable. Logged so a "Can't play this video" blink that self-heals can be
+                // attributed to pool reuse rather than a genuinely undecodable stream.
+                player.playerError?.let { err ->
+                    Log.w(ERROR_LOG_TAG) { "Player arrived carrying error for ${mediaItem.item.mediaId}: ${err.describe()}" }
                 }
+
+                player.volume =
+                    when {
+                        // Stay silent behind the playback the user detached from the feed.
+                        playback.isPlaying() -> 0f
+                        muted -> 0f
+                        else -> 1f
+                    }
+
+                if (play) player.playWhenReady = true
+
+                // Warm fast path: when the pool returned the player that already holds this exact
+                // item, calling setMediaItem would reset it and throw the buffer away — exactly what
+                // the pool exists to avoid. Still re-prepare if it ended up IDLE.
+                val targetMediaId = mediaItem.item.mediaId
+                if (player.currentMediaItem?.mediaId != targetMediaId) {
+                    Log.d(TAG) { "Cold load (setMediaItem+prepare) for $targetMediaId" }
+                    player.setMediaItem(mediaItem.item)
+                    player.prepare()
+                } else if (player.playbackState == Player.STATE_IDLE) {
+                    Log.d(TAG) { "Warm player in STATE_IDLE — re-preparing" }
+                    player.prepare()
+                }
+
+                val state = MediaControllerState(controller = player, pooled = pooled)
+
+                // While this player is promoted it belongs to the detached playback, not to the
+                // feed: hand `null` down so the scroll mutex, the lifecycle pause and the on-screen
+                // controls all leave composition instead of pausing or re-playing the video the user
+                // is watching in the picture-in-picture window. The slot keeps its claim throughout,
+                // so giving the window up simply drops the same player — buffer, position and
+                // decoder intact — back inline.
+                playback.promoted.collect { promoted ->
+                    value = if (promoted?.player === player) null else state
+                }
+            } finally {
+                value = null
+                // Safe whether or not the player is promoted: the coordinator only returns it to
+                // the pool once neither this slot nor the promotion is holding it.
+                playback.detach(slot)
             }
         }
     }
@@ -186,7 +181,7 @@ private fun ReleasePlayerWhenBackgroundedFor(
                         timeoutJob =
                             scope.launch {
                                 delay(timeoutMs)
-                                if (!Amethyst.instance.backgroundPlayback.isPromoted(currentState?.controller)) {
+                                if (!Amethyst.instance.videoPlayback.isPromoted(currentState?.controller)) {
                                     keepAlive.value = false
                                 }
                             }
