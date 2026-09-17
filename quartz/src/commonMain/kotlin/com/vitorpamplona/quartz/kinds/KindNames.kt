@@ -319,6 +319,10 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
@@ -401,6 +405,10 @@ object KindNames {
             ChatMessageRelayListEvent.KIND to KindName("DM Relays", "17"),
             ClassifiedsEvent.KIND to KindName("Classifieds", "99"),
             CommentEvent.KIND to KindName("Comments", "22"),
+            GeocacheListingEvent.KIND to KindName("Geocache", "CC"),
+            GeocacheFoundLogEvent.KIND to KindName("Geocache Found Log", "CC"),
+            GeocacheVerificationEvent.KIND to KindName("Geocache Verification", "CC"),
+            GeocacheCurationListEvent.KIND to KindName("Geocache Curation List", "CC"),
             CommunityDefinitionEvent.KIND to KindName("Community Def", "72"),
             CommunityListEvent.KIND to KindName("Community List", "72"),
             CommunityPostApprovalEvent.KIND to KindName("Community Post", "72"),

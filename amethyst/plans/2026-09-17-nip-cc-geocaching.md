@@ -1,6 +1,8 @@
 # NIP-CC (Geocaching) — gap analysis for Quartz and Amethyst
 
-Status: **analysis / not started**. Nothing in the repo implements NIP-CC today.
+Status: **step 1 done** — the Quartz protocol package (`quartz/…/nipCCGeocaching/`) and its
+tests are in. Nothing in `amethyst/` or `commons/` touches NIP-CC yet, so the app is still blind
+to geocaches; §3 onwards is unstarted.
 
 Spec: <https://github.com/nostr-protocol/nips/blob/master/CC.md> (merged into
 `master`; listed in the NIPs README at line 117 and in the kind tables for
@@ -23,11 +25,13 @@ ROT13 hints so they don't spoil.
 
 ### Confirmed with a grep, not from memory
 
+At the time of the survey,
 ```
 grep -rn "37516\|7517\|37517\|[Gg]eocach" --include=*.kt
 ```
-returns only incidental hex substrings in unrelated tests. There is **no**
-geocaching code in `quartz`, `commons`, `commonsUI`, `amethyst`, or `cli`.
+returned only incidental hex substrings in unrelated tests — no geocaching code anywhere in
+`quartz`, `commons`, `commonsUI`, `amethyst`, or `cli`. The Quartz half of that gap is now
+closed; the rest stands.
 
 ## 2. Quartz — new code
 
@@ -214,8 +218,11 @@ These are the parts worth a careful reviewer, not the event codecs:
 
 ## 5. Suggested sequencing
 
-1. Quartz protocol package + tests + the three registration files. Self-contained,
-   verifiable with `./gradlew :quartz:test`, no UI decisions.
+1. ~~Quartz protocol package + tests + the three registration files.~~ **Done** — 79 tests in
+   `quartz/src/commonTest/…/nipCCGeocaching/`, plus the three new rows in the
+   `indexable-content.golden` fixture and the `searchable-kinds.md` table. The layout follows
+   nip88Polls: a folder per subject, each with its event, `TagArrayExt`, `TagArrayBuilderExt`
+   and `tags/`.
 2. Read path in Amethyst: `LocalCache` + `GeocacheCard` + `NoteCompose` dispatch
    + the one-line `PostsByGeohashKinds` addition. Caches become visible in the
    existing geohash/AroundMe feeds with zero new navigation.
