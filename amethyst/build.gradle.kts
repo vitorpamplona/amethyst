@@ -510,9 +510,11 @@ dependencies {
     implementation(libs.accompanist.permissions)
 
     // For QR generation
-    // ZXing core encodes the QR codes we display; zxing-cpp decodes the ones we scan.
+    // ZXing core encodes the QR codes we display. Decoding is zxing-cpp, which we build
+    // from source ourselves -- see tools/zxing-cpp-build -- rather than pulling a prebuilt
+    // AAR nobody in this tree could verify; the .so lives in src/main/jniLibs and its
+    // Kotlin wrapper is vendored at src/main/java/zxingcpp.
     implementation(libs.zxing)
-    implementation(libs.zxing.cpp)
 
     // OpenStreetMap tiles for road event location maps (kind 1315/1316)
     implementation(libs.osmdroid.android)

@@ -93,8 +93,6 @@ jcodec = "0.2.5"
 commonsImaging = "1.0.0-alpha6"
 thumbnailator = "0.4.21"
 zxing = "3.5.4"
-# zxing-cpp: Apache-2.0. Native QR/barcode detector used by the in-app CameraX scanner.
-zxingCpp = "3.1.1"
 webkit = "1.17.0"
 # Cross-process UI embedding (SurfaceControlViewHost wrapper) for the in-app browser surface. Apache-2.0.
 privacysandboxUi = "1.0.0-alpha17"
@@ -253,7 +251,6 @@ vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", ver
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
-zxing-cpp = { group = "io.github.zxing-cpp", name = "android", version.ref = "zxingCpp" }
 androidx-window-core-android = { group = "androidx.window", name = "window-core-android", version.ref = "windowCoreAndroid" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlinTest" }
