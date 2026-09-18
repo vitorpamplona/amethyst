@@ -196,8 +196,9 @@ The ABI list therefore lives in three places that must agree: `splits.abi` in
 `amethyst/build.gradle.kts`, `targets` in `rust-toolchain.toml`, and `TARGETS`
 in `build-arti.sh`. (`verify-reproducible.sh` has no copy of its own — it asks
 `build-arti.sh --print-abis`, so it can never hash a different set than the one
-it just rebuilt.) The `verifyArtiAbis` Gradle task, wired into `preBuild`, fails
-the build when an ABI split has no `libarti_android.so` **or** has one that is
+it just rebuilt.) The `verifyNativeAbis` Gradle task, wired into `preBuild`, fails
+the build when an ABI split is missing any committed native library
+(`libarti_android.so`, `libzxingcpp_android.so`) **or** has one that is
 not an ELF of that architecture — a truncated file or arm64's library copied
 into `x86/` loads as nothing on device, exactly like a missing one, and unlike a
 missing one it looks fine in `git status`.

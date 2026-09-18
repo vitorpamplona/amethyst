@@ -67,13 +67,26 @@ afterEvaluate {
     }
 }
 
-// Every ABI we split the APK for, and therefore every ABI that needs its own
-// libarti_android.so under src/main/jniLibs/ (see tools/arti-build/). The two
-// lists drifted once: the splits shipped four ABIs while Arti was built for two,
-// so the armeabi-v7a and x86 APKs installed and ran with the dependencies' native
-// libraries all present (secp256k1's JNI ships every ABI) and Tor alone dead for
-// the life of the install. `verifyArtiAbis` below keeps them in step.
+// Every ABI we split the APK for, and therefore every ABI that needs its own copy of each
+// library we build and commit ourselves under src/main/jniLibs/. The lists drifted once: the
+// splits shipped four ABIs while Arti was built for two, so the armeabi-v7a and x86 APKs
+// installed and ran with the dependencies' native libraries all present (secp256k1's JNI ships
+// every ABI) and Tor alone dead for the life of the install. `verifyNativeAbis` below keeps
+// them in step.
 val shippedAbis = listOf("x86", "x86_64", "arm64-v8a", "armeabi-v7a")
+
+// The libraries that guard covers, and how to rebuild one when it is missing. Both are built
+// from source by tools/ rather than pulled prebuilt, so both can go missing the same way — and
+// a QR scanner that cannot load is as silently broken on that install as a dead Tor.
+val committedNativeLibs =
+    mapOf(
+        "libarti_android.so" to { abi: String, triple: String ->
+            "./tools/arti-build/build-arti.sh --target=$triple"
+        },
+        "libzxingcpp_android.so" to { abi: String, _: String ->
+            "./tools/zxing-cpp-build/build-zxingcpp.sh --abi $abi"
+        },
+    )
 
 android {
     namespace = "com.vitorpamplona.amethyst"
@@ -92,10 +105,14 @@ android {
     // libraries") — three different APKs from the same source, which is
     // exactly what F-Droid's rebuild verification cannot have.
     //
-    // Read straight from the Arti pin rather than copied into the version
-    // catalog: the two can then never drift, and bumping ANDROID_NDK_VERSION
-    // (which also means rebuilding the .so) moves the packaging toolchain with
-    // it. See tools/arti-build/README.md → "Reproducible builds".
+    // Read straight from the pin rather than copied into the version catalog:
+    // the two can then never drift, and bumping ANDROID_NDK_VERSION (which also
+    // means rebuilding the .so files) moves the packaging toolchain with it.
+    // That one file is the repo's only NDK pin -- tools/arti-build/build-arti.sh
+    // and tools/zxing-cpp-build/build-zxingcpp.sh read it too, so every
+    // committed .so is produced and stripped by the same revision. It lives
+    // under tools/arti-build for history; it is not Arti's alone. See
+    // tools/arti-build/README.md → "Reproducible builds".
     ndkVersion =
         providers
             .fileContents(layout.settingsDirectory.file("tools/arti-build/ANDROID_NDK_VERSION"))
@@ -341,6 +358,17 @@ android {
             // symbols to drop) and makes that comparison exact. Dependency .so files
             // are still stripped, with the NDK pinned by ndkVersion above.
             keepDebugSymbols += "**/libarti_android.so"
+
+            // Same guarantee for the QR decoder, for a different reason. Unlike Arti's, this
+            // library is *not* currently rewritten by AGP's pass -- verified by running the
+            // pinned NDK's `llvm-strip --strip-unneeded` over the committed file and getting
+            // identical bytes -- because tools/zxing-cpp-build strips it with that very same
+            // llvm-strip, which makes a second pass idempotent. That idempotence is a property
+            // of one NDK revision, though, and reading it back from the APK should not depend
+            // on a strip pass staying a no-op across bumps. Excluding it makes
+            // `unzip -p app.apk lib/<abi>/libzxingcpp_android.so | sha256sum` match
+            // src/main/jniLibs by construction, at no size cost.
+            keepDebugSymbols += "**/libzxingcpp_android.so"
         }
     }
 
@@ -381,20 +409,20 @@ android {
 // only surfaces at System.loadLibrary time on a user's device — where
 // TorManager's flow swallows the UnsatisfiedLinkError and leaves the status Off
 // forever. Checked at build time instead, against the same list the splits use.
-val verifyArtiAbis =
-    tasks.register("verifyArtiAbis") {
+val verifyNativeAbis =
+    tasks.register("verifyNativeAbis") {
         group = "verification"
-        description = "Checks that every ABI in the APK splits has a libarti_android.so for that architecture."
+        description = "Checks that every ABI in the APK splits has each committed native library, built for that architecture."
 
         val jniLibs = file("src/main/jniLibs")
         val abis = shippedAbis
-        // Per ABI: the Rust target triple (so a failure names the exact build
-        // command) and the ELF identity the library must have — 32/64-bit class
-        // (header byte 4) and e_machine (bytes 18-19, little-endian on every
-        // Android ABI we ship). Existence alone is not enough: a truncated file,
-        // an empty placeholder, or arm64's .so copied into x86/ all load as
-        // nothing on device, which is the same silent dead Tor this task exists
-        // to prevent — and unlike a missing file, those look fine in git.
+        val libs = committedNativeLibs
+        // Per ABI: the Rust target triple (so an Arti failure names the exact build command) and
+        // the ELF identity every library must have — 32/64-bit class (header byte 4) and
+        // e_machine (bytes 18-19, little-endian on every Android ABI we ship). Existence alone is
+        // not enough: a truncated file, an empty placeholder, or arm64's .so copied into x86/ all
+        // load as nothing on device, which is the same silent failure this task exists to prevent
+        // — and unlike a missing file, those look fine in git.
         val expected =
             mapOf(
                 "arm64-v8a" to Triple("aarch64-linux-android", 2, 0xB7),
@@ -405,48 +433,51 @@ val verifyArtiAbis =
 
         doLast {
             val bitness = mapOf(1 to "32-bit", 2 to "64-bit")
-            val problems = mutableListOf<Pair<String, String>>()
+            val problems = mutableListOf<Triple<String, String, String>>()
 
-            abis.forEach { abi ->
-                val lib = File(jniLibs, "$abi/libarti_android.so")
-                val want = expected[abi]
-                val header = ByteArray(20)
-                val read = if (lib.isFile) lib.inputStream().use { it.read(header) } else -1
+            libs.keys.forEach { libName ->
+                abis.forEach { abi ->
+                    val lib = File(jniLibs, "$abi/$libName")
+                    val want = expected[abi]
+                    val header = ByteArray(20)
+                    val read = if (lib.isFile) lib.inputStream().use { it.read(header) } else -1
 
-                val problem =
-                    when {
-                        !lib.isFile -> "no libarti_android.so"
-                        want == null -> "no expected ELF identity recorded for this ABI"
-                        read < header.size ||
-                            header[0] != 0x7F.toByte() ||
-                            header[1] != 'E'.code.toByte() ||
-                            header[2] != 'L'.code.toByte() ||
-                            header[3] != 'F'.code.toByte() -> "not an ELF file (truncated or corrupt)"
-                        header[4].toInt() != want.second ->
-                            "${bitness[header[4].toInt()] ?: "unknown-class"} ELF, expected ${bitness[want.second]}"
-                        else -> {
-                            val machine = (header[18].toInt() and 0xFF) or ((header[19].toInt() and 0xFF) shl 8)
-                            if (machine != want.third) {
-                                "built for ELF machine 0x%02x, expected 0x%02x".format(machine, want.third)
-                            } else {
-                                null
+                    val problem =
+                        when {
+                            !lib.isFile -> "no $libName"
+                            want == null -> "no expected ELF identity recorded for this ABI"
+                            read < header.size ||
+                                header[0] != 0x7F.toByte() ||
+                                header[1] != 'E'.code.toByte() ||
+                                header[2] != 'L'.code.toByte() ||
+                                header[3] != 'F'.code.toByte() -> "not an ELF file (truncated or corrupt)"
+                            header[4].toInt() != want.second ->
+                                "${bitness[header[4].toInt()] ?: "unknown-class"} ELF, expected ${bitness[want.second]}"
+                            else -> {
+                                val machine = (header[18].toInt() and 0xFF) or ((header[19].toInt() and 0xFF) shl 8)
+                                if (machine != want.third) {
+                                    "built for ELF machine 0x%02x, expected 0x%02x".format(machine, want.third)
+                                } else {
+                                    null
+                                }
                             }
                         }
-                    }
 
-                if (problem != null) problems += abi to problem
+                    if (problem != null) problems += Triple(libName, abi, problem)
+                }
             }
 
             if (problems.isNotEmpty()) {
                 throw GradleException(
                     buildString {
-                        appendLine("libarti_android.so is missing or wrong for ${problems.size} ABI split(s):")
-                        problems.forEach { (abi, problem) -> appendLine("    $abi: $problem") }
-                        appendLine("Those APK splits would install with Tor permanently unavailable.")
-                        appendLine("Rebuild them (tools/arti-build/README.md):")
-                        problems.forEach { (abi, _) ->
+                        appendLine("Committed native libraries are missing or wrong for ${problems.size} (library, ABI split) pair(s):")
+                        problems.forEach { (libName, abi, problem) -> appendLine("    $libName / $abi: $problem") }
+                        appendLine("Those APK splits would install with that library permanently unavailable.")
+                        appendLine("Rebuild them:")
+                        problems.forEach { (libName, abi, _) ->
                             val triple = expected[abi]?.first ?: "<add the Rust target for $abi>"
-                            appendLine("    ./tools/arti-build/build-arti.sh --target=$triple")
+                            val rebuild = libs[libName]?.invoke(abi, triple) ?: "<no rebuild command recorded for $libName>"
+                            appendLine("    $rebuild")
                         }
                         append("…or drop the ABI from `shippedAbis` in amethyst/build.gradle.kts.")
                     },
@@ -455,7 +486,9 @@ val verifyArtiAbis =
         }
     }
 
-tasks.named("preBuild") { dependsOn(verifyArtiAbis) }
+tasks.named("preBuild") {
+    dependsOn(verifyNativeAbis)
+}
 
 // androidx.appfunctions-compiler runs in a per-module mode by default,
 // emitting only the dispatcher Kotlin code. The aggregator that builds

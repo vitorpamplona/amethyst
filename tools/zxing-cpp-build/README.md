@@ -30,8 +30,10 @@ verify the binaries, bump the zxing-cpp version, or change the build flags.
 ```
 
 Prerequisites: `git`, `cmake`, `ninja`, and the exact NDK revision in
-[`ANDROID_NDK_VERSION`](ANDROID_NDK_VERSION) — which is deliberately the same revision
-`tools/arti-build` pins, so one NDK install serves both native builds.
+[`tools/arti-build/ANDROID_NDK_VERSION`](../arti-build/ANDROID_NDK_VERSION). That is the
+repo's single NDK pin, not a copy: `build-zxingcpp.sh`, `build-arti.sh` and `:amethyst`'s
+`ndkVersion` all read that one file, so one NDK install serves every native build and the
+three can never drift apart.
 
 ## Reproducible builds
 
@@ -39,7 +41,7 @@ Five things have to be fixed, and each is:
 
 | Source of non-determinism | Pinned by |
 |---|---|
-| compiler + linker version | [`ANDROID_NDK_VERSION`](ANDROID_NDK_VERSION); `build-zxingcpp.sh` refuses any other revision |
+| compiler + linker version | [`tools/arti-build/ANDROID_NDK_VERSION`](../arti-build/ANDROID_NDK_VERSION); `build-zxingcpp.sh` refuses any other revision |
 | upstream source | [`ZXING_CPP_VERSION`](ZXING_CPP_VERSION), cloned at that tag and nothing else |
 | absolute paths baked into `__FILE__`, assertions, debug records | `-ffile-prefix-map` / `-fdebug-prefix-map` in [`repro-env.sh`](repro-env.sh) |
 | timestamps | `SOURCE_DATE_EPOCH`, derived from the pinned tag's commit rather than from build time; `__DATE__`/`__TIME__` redacted |
