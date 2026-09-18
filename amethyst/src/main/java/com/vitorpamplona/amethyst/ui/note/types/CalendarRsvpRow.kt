@@ -45,9 +45,13 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_not_going
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import org.jetbrains.compose.resources.stringResource
 
@@ -193,6 +197,8 @@ private fun sendRsvp(
     val aTag = ATag(targetAddress, relayHint)
     val pTag = PTag(targetAddress.pubKeyHex)
     val dTag = rsvpDTagFor(targetAddress)
+    val appointment = LocalCache.getAddressableNoteIfExists(targetAddress)?.event
+    val others = rsvpParticipantTags(appointment, targetAddress.pubKeyHex, myPubKey)
 
     accountViewModel.launchSigner {
         accountViewModel.account.signAndComputeBroadcast(
@@ -201,7 +207,33 @@ private fun sendRsvp(
                 status = status,
                 calendarEventAuthor = pTag,
                 dTag = dTag,
-            ),
+            ) {
+                pTags(others)
+            },
         )
     }
+}
+
+/**
+ * The [appointment]'s own NIP-52 `p` tags, minus [hostPubKey] (already tagged as the event author)
+ * and minus [myPubKey]. Tagging them on the RSVP is what puts it in every invitee's inbox: the
+ * broadcaster resolves `p` tags to inbox relays, so without these the RSVP only reaches the host.
+ *
+ * Empty when the appointment isn't cached yet; the a-tag still routes the RSVP through the host.
+ */
+fun rsvpParticipantTags(
+    appointment: Event?,
+    hostPubKey: String,
+    myPubKey: String,
+): List<PTag> {
+    val participants =
+        when (appointment) {
+            is CalendarTimeSlotEvent -> appointment.participants()
+            is CalendarDateSlotEvent -> appointment.participants()
+            else -> return emptyList()
+        }
+
+    return participants
+        .distinctBy { it.pubKey }
+        .filter { it.pubKey != hostPubKey && it.pubKey != myPubKey }
 }
