@@ -107,6 +107,7 @@ enum class VideoPlayerAction {
     Download,
     PictureInPicture,
     Cast,
+    Captions,
 }
 
 @Serializable
@@ -127,6 +128,7 @@ val DefaultVideoPlayerButtonItems =
         VideoPlayerButtonItem(VideoPlayerAction.Mute, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Quality, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Cast, VideoButtonLocation.TopBar),
+        VideoPlayerButtonItem(VideoPlayerAction.Captions, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Share, VideoButtonLocation.OverflowMenu),
         VideoPlayerButtonItem(VideoPlayerAction.Download, VideoButtonLocation.OverflowMenu),
         VideoPlayerButtonItem(VideoPlayerAction.PictureInPicture, VideoButtonLocation.OverflowMenu),

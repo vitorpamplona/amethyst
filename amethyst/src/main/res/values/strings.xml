@@ -2775,6 +2775,8 @@
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <string name="my_fitness">My Fitness</string>
+    <string name="captions_turn_on">Turn on captions</string>
+    <string name="captions_turn_off">Turn off captions</string>
     <string name="kind_video_list">Video List</string>
     <string name="kind_video_collaboration">Video Collaboration</string>
     <string name="kind_video_subtitles">Video Subtitles</string>

@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -98,6 +99,8 @@ fun RenderTopButtonsPreview() {
                 onPictureInPictureClick = {},
                 onZoomClick = {},
                 onOverflowQualityClick = {},
+                captionsEnabled = true,
+                onCaptionsClick = {},
                 modifier = Modifier,
                 accountViewModel = mockAccountViewModel(),
             )
@@ -142,6 +145,29 @@ fun RenderTopButtons(
     }
     val videoGroup = getVideoTrackGroup(tracks)
     val hasMultipleQualities = videoGroup != null && videoGroup.length > 1
+
+    // Captions are side-loaded from the event's `text-track` tags (MediaItemCache flags the first
+    // one default), so the button reflects whether the player currently has the text track on.
+    // Toggling disables the whole track type rather than deselecting one group: with a single
+    // side-loaded track those are the same thing, and the type-level switch survives the player
+    // picking a different track later.
+    //
+    // The choice lives on the player instance, so it holds for as long as that player does —
+    // including the next video the warm pool hands it to — and resets when it is released. Making
+    // it stick across sessions would mean another synced setting; this is the scope of a button.
+    var captionsEnabled by remember(player) { mutableStateOf(!player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)) }
+    val onCaptionsClick =
+        remember(player) {
+            {
+                val enabled = player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
+                player.trackSelectionParameters =
+                    player.trackSelectionParameters
+                        .buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
+                        .build()
+                captionsEnabled = enabled
+            }
+        }
 
     val overflowQualityOpen = remember { mutableStateOf(false) }
 
@@ -210,6 +236,8 @@ fun RenderTopButtons(
                 }
             },
         onOverflowQualityClick = { overflowQualityOpen.value = true },
+        captionsEnabled = captionsEnabled,
+        onCaptionsClick = onCaptionsClick,
         modifier = modifier,
         accountViewModel = accountViewModel,
     )
@@ -237,10 +265,15 @@ fun RenderTopButtons(
     onPictureInPictureClick: () -> Unit,
     onZoomClick: (() -> Unit)?,
     onOverflowQualityClick: () -> Unit,
+    captionsEnabled: Boolean,
+    onCaptionsClick: () -> Unit,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
     val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
+    val captionsIcon = if (captionsEnabled) MaterialSymbols.ClosedCaption else MaterialSymbols.ClosedCaptionDisabled
+    val captionsContentDescription =
+        stringRes(if (captionsEnabled) R.string.captions_turn_off else R.string.captions_turn_on)
     val shareDialogVisible = remember { mutableStateOf(false) }
     val castDialogVisible = remember { mutableStateOf(false) }
     val castSessionState by Amethyst.instance.castRegistry.sessionState
@@ -297,21 +330,28 @@ fun RenderTopButtons(
             VideoPlayerAction.Cast -> {
                 BuildConfig.IS_CASTING_AVAILABLE && mediaData.videoUri.startsWith("http", ignoreCase = true)
             }
+
+            // A video with no `text-track` has nothing to toggle, so the button stays out of the
+            // row entirely rather than sitting there inert.
+            VideoPlayerAction.Captions -> {
+                mediaData.captions.isNotEmpty()
+            }
         }
 
     val canFullscreen = onZoomClick != null
+    val hasCaptions = mediaData.captions.isNotEmpty()
     // ImmutableList so Compose can treat the action lists as stable parameters when they're
     // passed through to AnimatedOverflowMenuButton — a plain List is unstable and forces the
     // overflow tree to recompose whenever any unrelated parent state ticks.
     val topBarActions =
-        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
+        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported, hasCaptions) {
             buttonItems
                 .filter { it.location == VideoButtonLocation.TopBar && isAvailable(it.action) }
                 .map { it.action }
                 .toImmutableList()
         }
     val overflowActions =
-        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
+        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported, hasCaptions) {
             buttonItems
                 .filter { it.location == VideoButtonLocation.OverflowMenu && isAvailable(it.action) }
                 .map { it.action }
@@ -377,6 +417,15 @@ fun RenderTopButtons(
                         onClick = onCastButtonClick,
                     )
                 }
+
+                VideoPlayerAction.Captions -> {
+                    AnimatedTopBarIconButton(
+                        controllerVisible = controllerVisible,
+                        symbol = captionsIcon,
+                        contentDescription = captionsContentDescription,
+                        onClick = onCaptionsClick,
+                    )
+                }
             }
         }
 
@@ -394,6 +443,9 @@ fun RenderTopButtons(
                 onCastClick = onCastButtonClick,
                 castIcon = castIcon,
                 castContentDescription = castContentDescription,
+                onCaptionsClick = onCaptionsClick,
+                captionsIcon = captionsIcon,
+                captionsContentDescription = captionsContentDescription,
             )
         }
 
