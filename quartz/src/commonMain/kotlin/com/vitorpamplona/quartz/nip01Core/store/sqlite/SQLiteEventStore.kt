@@ -519,7 +519,7 @@ class SQLiteEventStore(
             // ROLLBACK shouldn't mask the original cause.
             runCatching { db.execSQL("ROLLBACK TRANSACTION TO SAVEPOINT $sp") }
             runCatching { db.execSQL("RELEASE SAVEPOINT $sp") }
-            classifyRowError(e)
+            classifyRowError(e, event, db)
         }
     }
 
@@ -531,8 +531,25 @@ class SQLiteEventStore(
      * I/O error, schema drift) is the store failing to write an acceptable
      * event: `Failed`, so a rising count is loud instead of blending into
      * the duplicate tally.
+     *
+     * Message text is the fast path, not the contract: which exception a
+     * driver throws and what it puts in `getMessage()` is the driver's
+     * business. Android's `SQLiteConnection` wraps constraint failures in
+     * an `android.database.SQLException` carrying a **null** message,
+     * where the bundled JVM driver spells out
+     * `UNIQUE constraint failed: …`. Classifying off text alone therefore
+     * turned every duplicate into a `Failed` on Android — an `OK false`
+     * the client retries forever. So [db] is asked instead: this runs after
+     * the savepoint rollback, so the connection shows the pre-insert state
+     * and the two questions that separate a duplicate from a genuine write
+     * failure ("is this id already here?", "does a stored version already
+     * beat this one?") have exact answers, on every driver.
      */
-    private fun classifyRowError(e: Throwable): IEventStore.InsertOutcome {
+    private fun classifyRowError(
+        e: Throwable,
+        event: Event,
+        db: SQLiteConnection,
+    ): IEventStore.InsertOutcome {
         val message = e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED
         // A second copy of an event the store already holds trips the unique index on
         // event_headers.id. That is not a refusal of the event but a statement that it
@@ -542,23 +559,106 @@ class SQLiteEventStore(
         if (message.contains(DUPLICATE_ID_CONSTRAINT)) {
             return IEventStore.InsertOutcome.Rejected(RejectionReason.DUPLICATE)
         }
-        // The replaceable / addressable unique indexes fire only when the supersession
-        // trigger found nothing older to delete, i.e. the stored version already wins
-        // (STORE-W01/W02). Same shape as a duplicate: nothing to write, `OK true`.
-        if (message.contains(SUPERSEDED_CONSTRAINT)) {
-            return IEventStore.InsertOutcome.Rejected(RejectionReason.SUPERSEDED)
-        }
-        val refusal =
+        // Trigger RAISEs and the immutability guards name themselves, and leave no
+        // database-visible trace to ask about, so they are decided by text alone.
+        val namedRefusal =
             message.contains("blocked:") ||
                 message.contains("duplicate:") ||
                 message.contains(RejectionReason.PREFIX_REPLACED) ||
-                message.contains("not allowed") ||
-                message.contains("constraint", ignoreCase = true)
-        return if (refusal) {
+                message.contains("not allowed")
+        if (namedRefusal) return IEventStore.InsertOutcome.Rejected(message)
+
+        // Ask the database the two questions the unique indexes answer, in the
+        // order that makes the answer driver-independent. The id question goes
+        // first because *which* index a re-offered replaceable event trips is up
+        // to SQLite: re-inserting a stored replaceable byte-for-byte violates
+        // both `event_headers.id` and `replaceable_idx`, and only the id lookup
+        // says the same thing on every driver ("already have this event" — which
+        // is also the truer sentence). It costs one point lookup on an already
+        // open connection, on the rejected path only.
+        if (isAlreadyStored(event.id, db)) {
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.DUPLICATE)
+        }
+        // The replaceable / addressable unique indexes fire only when the supersession
+        // trigger found nothing older to delete, i.e. the stored version already wins
+        // (STORE-W01/W02). Same shape as a duplicate: nothing to write, `OK true`.
+        if (message.contains(SUPERSEDED_CONSTRAINT) || isSupersededByStored(event, db)) {
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.SUPERSEDED)
+        }
+
+        return if (message.contains("constraint", ignoreCase = true)) {
             IEventStore.InsertOutcome.Rejected(message)
         } else {
             IEventStore.InsertOutcome.Failed(message)
         }
+    }
+
+    /**
+     * Whether [id] is already in `event_headers` — the unique index on
+     * `event_headers.id` restated as a question, for drivers that don't say
+     * which index they tripped. Any failure answers "no": the point is to
+     * recognize a duplicate, and a connection too broken to answer is a
+     * write failure, which is what the caller falls through to.
+     */
+    private fun isAlreadyStored(
+        id: String,
+        db: SQLiteConnection,
+    ): Boolean =
+        runCatching {
+            db.prepare("SELECT 1 FROM event_headers WHERE id = ? LIMIT 1").use { stmt ->
+                stmt.bindText(1, id)
+                stmt.step()
+            }
+        }.getOrDefault(false)
+
+    /**
+     * Whether a stored version already beats [event] at its replaceable /
+     * addressable coordinate (STORE-W01/W02) — the exact complement of
+     * [displacedBy]'s predicate, so a stored row that the supersession
+     * trigger *would* have deleted doesn't count. That precision matters
+     * here: this is the fallback for unrecognized failures, and a disk
+     * error while inserting a winning replaceable event must stay `Failed`
+     * rather than turn into a silent `OK true`. An equal id is the
+     * duplicate case and is answered before this one.
+     */
+    private fun isSupersededByStored(
+        event: Event,
+        db: SQLiteConnection,
+    ): Boolean {
+        val addressable = event.kind.isAddressable() && event is AddressableEvent
+        val sql =
+            when {
+                event.kind.isReplaceable() ->
+                    """
+                    SELECT 1 FROM event_headers
+                    WHERE kind = ? AND pubkey = ?
+                      AND (created_at > ? OR (created_at = ? AND id < ?))
+                    LIMIT 1
+                    """.trimIndent()
+
+                addressable ->
+                    """
+                    SELECT 1 FROM event_headers
+                    WHERE kind = ? AND pubkey = ? AND d_tag = ?
+                      AND kind >= 30000 AND kind < 40000
+                      AND (created_at > ? OR (created_at = ? AND id < ?))
+                    LIMIT 1
+                    """.trimIndent()
+
+                else -> return false
+            }
+        return runCatching {
+            db.prepare(sql).use { stmt ->
+                var i = 1
+                stmt.bindLong(i++, event.kind.toLong())
+                stmt.bindText(i++, event.pubKey)
+                if (addressable) stmt.bindText(i++, (event as AddressableEvent).dTag())
+                stmt.bindLong(i++, event.createdAt)
+                stmt.bindLong(i++, event.createdAt)
+                stmt.bindText(i, event.id)
+                stmt.step()
+            }
+        }.getOrDefault(false)
     }
 
     inner class Transaction internal constructor(
