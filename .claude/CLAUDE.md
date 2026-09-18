@@ -5,7 +5,12 @@
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
 over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons`, `commonsUI`, `amethyst`,
 `desktopApp`, `cli`, plus the audio-rooms transport stack `quic` + `nestsClient`. Quartz should
-contain implementations of Nostr specifications and utilities to help implement them. Commons stores
+contain implementations of Nostr specifications and utilities to help implement them — NIPs under
+`nipXX` packages, and whole non-NIP protocol families beside them: `marmot/` (MLS over Nostr,
+`mipXX`), `cordn/` (MLS over an MCP coordinator, `specXX`), `contextvm/` (MCP over Nostr, `cepXX`),
+`concord/` (`cordXX`), `buzz/`, plus the binding-agnostic RFC 9420 engine in `mls/`. A new protocol
+over Nostr belongs here as a package, not as a Gradle module; `quic`/`nestsClient`/`marmotQuic` are
+modules because they are transports with no Nostr in them. Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). The Desktop
 App is designed to be mouse first and so uses a completely different screen and navigation
 architecture while sharing the back end components with the android counterpart. `cli` ships `amy`,

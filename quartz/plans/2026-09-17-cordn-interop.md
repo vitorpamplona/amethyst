@@ -1,10 +1,10 @@
 # Cordn interop: extract the MLS core, then add a second binding
 
 Status: Stages 1, 2 and the core of 3 landed. The RFC 9420 engine is `quartz/…/mls/` and imports
-nothing from `marmot/` — a binding supplies its rules through `MlsGroupPolicy`. `:contextvm`
-implements the core spec plus all 12 CEPs on the client side, with the Tier C fixture server, at
-174 tests. `:cordn` implements the MLS profile, the eleven coordinator tools, the seal, envelopes, group
-refs and the sync rules, at 49 tests. Stage 0 (cordn-side vectors) and Stage 4 (app integration)
+nothing from `marmot/` — a binding supplies its rules through `MlsGroupPolicy`. `quartz/…/contextvm/`
+implements the core spec plus all 12 CEPs on the client side, with the Tier C fixture server;
+`quartz/…/cordn/` implements the MLS profile, the eleven coordinator tools, the seal, envelopes,
+group refs and the sync rules, verified against ts-mls in both directions. Stage 0 (cordn-side vectors) and Stage 4 (app integration)
 are open. §4.1 turned out not to gate the binding — see Stage 3 — but remains a real
 incompatibility between the two ecosystems.
 
@@ -25,10 +25,11 @@ Sources checked on 2026-09-17:
 - `ContextVM/sdk` @ `b5d1e4e` (2026-09-17), version `0.13.17` — **LGPL-3.0**, see §7. Read only to
   confirm deployed defaults, never as an implementation source
 
-Verification status: `:quartz:jvmTest` now passes in a container (5054 tests), so the MLS
-interop claims in §3 are execution-verified rather than read-verified. `:contextvm:jvmTest`
-passes at 172. `testAndroidHostTest` remains unrun — Maven Central rate-limits the Android
-secp256k1 artifact through the agent proxy.
+Verification status: `:quartz:jvmTest` passes in a container at 5330 tests, covering the MLS
+engine, ContextVM and cordn, so the interop claims in §3 are execution-verified rather than
+read-verified. `:quartz:testAndroidHostTest` passes too, apart from four pre-existing failures in
+`NostrServerTest` and `LiveNegentropyIndexStoreTest` that predate this work (confirmed by running
+them at the parent commit).
 
 ## 1. Executive summary
 
@@ -696,10 +697,10 @@ reuse it and needs its own manager over the same `MlsGroup`. Class names were le
 move — `MlsGroupManager` under `marmot/groups/` reads correctly and renaming four classes would
 have churned 22 files across five modules for clarity the package path already gives.
 
-### Stage 2 — `:contextvm` module (clean-room) — LANDED
+### Stage 2 — ContextVM (clean-room) — LANDED
 
-Shipped as `:contextvm`, a KMP module (jvm + android host tests) with `:quartz` as an `api`
-dependency, implemented from the specification documents rather than the LGPL SDK. 172 tests,
+Shipped as `quartz/…/contextvm/`, implemented from the specification documents rather than the
+LGPL SDK. 172 tests,
 green on jvm. What is in:
 
 | Build item | Where |
@@ -799,11 +800,19 @@ CEP-22/41 are where an implementation that "works" quietly diverges.
 
 ### Stage 3 — the cordn binding — LANDED (core), app work outstanding
 
-Shipped as **`:cordn`**, not `quartz/…/cordn/`: the coordinator client needs `:contextvm`, and
-`:contextvm` already depends on `:quartz`, so the binding cannot live inside quartz without a
-cycle. Both are `api` dependencies. Packages follow the spec documents (`spec00Coordinator`,
-`spec01GroupMetadata`, `spec02Envelopes`, `spec03Payloads`, `appGroupRef`) plus `groups/` and
-`sync/`. 49 tests on jvm, 33 on the Android target.
+Shipped as `quartz/…/cordn/`, as this plan originally said. Packages follow the spec documents
+(`spec00Coordinator`, `spec01GroupMetadata`, `spec02Envelopes`, `spec03Payloads`, `appGroupRef`)
+plus `groups/` and `sync/`.
+
+Both ContextVM and cordn spent a while as separate Gradle modules and were folded back in. The
+stated reason for `:cordn` — "the coordinator client needs `:contextvm`, and quartz cannot depend
+on it without a cycle" — was circular: it only held because `:contextvm` had been put outside
+quartz first, on the grounds that it was "a peer of `:quic`". That analogy does not survive
+contact: `:quic` is a transport library with no Nostr in it at all, while ContextVM is nothing
+but Nostr — kind 25910 events, NIP-59 gift wraps, relay subscriptions. Meanwhile `marmot/`
+(18,876 LOC) is a complete non-NIP protocol family living inside quartz, `concord/` is another,
+and neither new module had a single platform-specific file. Both now compile for every quartz
+target, including iOS and linuxX64, which they never did as jvm+android modules.
 
 | Item | Where |
 | ---- | ----- |
@@ -841,7 +850,7 @@ Five findings, all caught by tests or by reading the reference rather than the p
    malformed tuple — right for an `nprofile`, wrong here, where dropping the tail turns a ref
    naming a coordinator into one that reaches for a default. `appGroupRef` parses strictly and
    still ignores unknown types.
-5. **`:contextvm`'s fixture could not answer a second call.** It echoed a constant JSON-RPC id,
+5. **ContextVM's fixture could not answer a second call.** It echoed a constant JSON-RPC id,
    which passed every contextvm test because each made exactly one call, and hung the first
    cordn test that made two. The handler now takes the request id, and two contextvm tests pin
    the behaviour: a second call correlates, and a stale id is ignored rather than resolving the
@@ -856,9 +865,9 @@ second pass reveals the stall.
 [Staircase](https://code.relay.tools/opensauce/staircase) (`d9dd1a0`, MIT), an
 independent Kotlin cordn client that vendors this project's own MLS engine.**
 
-`cordn/interop/CordnLifecycleInteropTest` walks the whole lifecycle against
+`quartz/…/cordn/interop/CordnLifecycleInteropTest` walks the whole lifecycle against
 fixtures **ts-mls** generated (Staircase's `conformance/fixtures/gen`, vendored
-under `cordn/src/jvmTest/resources/tsmls/`): read their KeyPackage and agree on
+under `quartz/src/commonTest/resources/tsmls/`): read their KeyPackage and agree on
 its `kp_ref`, unseal their commit under the published epoch exporter, join from
 their Welcome, derive the same epoch exporter byte for byte, apply their
 `0xC04D` metadata commit, and read their application message end to end. 15
@@ -909,7 +918,7 @@ can parse everything correctly and still emit something nobody accepts, and that
 failure keeps our own tests green while every peer silently drops us. So
 `KotlinArtifactProducerTest` builds a group under `CordnGroupPolicy`, adds a real
 ts-mls KeyPackage, sends an application message and commits a metadata change,
-and `cordn/interop/verify-with-ts-mls.sh` hands the result to Staircase's
+and `quartz/interop/verify-with-ts-mls.sh` hands the result to Staircase's
 `verify.ts`. ts-mls joins from our Welcome, reads our metadata, derives the same
 epoch-1 and epoch-2 exporters, decrypts our message, checks the AAD sender and
 envelope id, and applies our commit — **ten checks, all passing on the first
@@ -918,7 +927,7 @@ exactly that check and exits 1.
 
 That gate lives in a script rather than the test suite because it needs a cordn
 checkout with `pnpm install` and a staircase checkout. The producer half runs
-unconditionally in `:cordn:jvmTest`.
+unconditionally in `:quartz:jvmTest`.
 
 **Run it under Node, not bun.** Staircase's own `run.sh` uses bun, and bun's
 WebCrypto has no X25519 DHKEM, so ts-mls there cannot open a Welcome at all —
@@ -973,7 +982,7 @@ Still open in Stage 3:
 7. **How stable are CEP-22 and CEP-41?** Both are Draft, both are the largest CEPs, and both are
    mandatory for cordn. A breaking revision mid-implementation is the main schedule risk in
    Stage 2c. Worth asking whether either is close to Final.
-8. **Should `:contextvm` be published separately?** It is a general MCP-over-Nostr client with no
+8. **Should ContextVM be published separately?** It is a general MCP-over-Nostr client with no
    Amethyst or cordn dependency. If the Nostr ecosystem wants a JVM/KMP ContextVM implementation,
    this is it — but that is a maintenance commitment, and the answer changes how carefully the
    public API needs designing in Stage 2a.
