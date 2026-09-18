@@ -79,6 +79,12 @@
     "since": "2026-09-17T13:39:51-04:00",
     "translators": [
       {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
         "user": "maxblake2015",
         "languages": [
           "Polish"
@@ -254,10 +260,6 @@
       },
       {
         "user": "D4rkFIow",
-        "languages": []
-      },
-      {
-        "user": "summoner001",
         "languages": []
       },
       {
