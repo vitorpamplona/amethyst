@@ -23,6 +23,7 @@ package com.vitorpamplona.contextvm.core
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcCodec
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcId
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcRequest
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -130,11 +131,14 @@ class CvmMessageEventTest {
 
     private fun event(tags: Array<Array<String>>) =
         CvmMessageEvent(
-            id = "c".repeat(64),
-            pubKey = "d".repeat(64),
-            createdAt = 1_700_000_000L,
-            tags = tags,
-            content = JsonRpcCodec.encode(ping),
-            sig = "e".repeat(128),
+            Event(
+                id = "c".repeat(64),
+                pubKey = "d".repeat(64),
+                createdAt = 1_700_000_000L,
+                kind = CvmMessageEvent.KIND,
+                tags = tags,
+                content = JsonRpcCodec.encode(ping),
+                sig = "e".repeat(128),
+            ),
         )
 }

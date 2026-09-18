@@ -33,13 +33,18 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * A ContextVM message: kind 25910, carrying a stringified MCP JSON-RPC message
- * in `content`.
+ * A typed view over a ContextVM message event: kind 25910, carrying a
+ * stringified MCP JSON-RPC message in `content`.
  *
- * The ContextVM layering is deliberately thin — the MCP message is preserved
- * byte-for-byte and only addressing and correlation move into tags:
- *  - `p` names the peer this message is for
- *  - `e` references the request event a response answers
+ * This wraps an [Event] rather than extending it. Quartz mints event subclasses
+ * through its own kind-to-class factory, which knows nothing about 25910, so an
+ * event signed or parsed anywhere is always a plain [Event] — a subclass would
+ * only ever exist where we constructed one by hand, and claiming a signer could
+ * return one is simply false.
+ *
+ * The ContextVM layering is deliberately thin: the MCP message is preserved
+ * byte-for-byte and only addressing and correlation move into tags, `p` for the
+ * peer and `e` for the request a response answers.
  *
  * `content` is a **JSON string**, not an embedded JSON object. The spec's
  * examples show it unstringified for readability, which is an easy trap; rule
@@ -49,18 +54,19 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * that was already live when the peer published it (`CVM-CORE-06`).
  */
 class CvmMessageEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: TagArray,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    val event: Event,
+) {
+    val id: HexKey get() = event.id
+    val pubKey: HexKey get() = event.pubKey
+    val createdAt: Long get() = event.createdAt
+    val tags: TagArray get() = event.tags
+    val content: String get() = event.content
+
     /** The peer this message is addressed to, or null when untagged. */
-    fun recipient(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
+    fun recipient(): HexKey? = event.tags.firstNotNullOfOrNull(PTag::parseKey)
 
     /** The request event id this message answers, or null when it is not a response. */
-    fun inReplyTo(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+    fun inReplyTo(): HexKey? = event.tags.firstNotNullOfOrNull(ETag::parseId)
 
     /**
      * The JSON-RPC message in `content`.
@@ -68,7 +74,7 @@ class CvmMessageEvent(
      * @throws com.vitorpamplona.contextvm.jsonrpc.JsonRpcFormatException when
      *   `content` is not a well-formed JSON-RPC 2.0 message.
      */
-    fun message(): JsonRpcMessage = JsonRpcCodec.decode(content)
+    fun message(): JsonRpcMessage = JsonRpcCodec.decode(event.content)
 
     /**
      * The discovery tags this message carries, per CEP-35.
@@ -76,10 +82,13 @@ class CvmMessageEvent(
      * Routing tags are excluded; everything else is preserved, including tags we
      * do not understand, because CEP-35 makes forward compatibility the default.
      */
-    fun discoveryTags(): List<Tag> = tags.filter { it.isNotEmpty() && !CvmTags.isRouting(it[0]) }
+    fun discoveryTags(): List<Tag> = event.tags.filter { it.isNotEmpty() && !CvmTags.isRouting(it[0]) }
 
     companion object {
         const val KIND = CvmKinds.MESSAGE
+
+        /** Wraps [event] when it is a ContextVM message, or returns null. */
+        fun fromOrNull(event: Event) = if (event.kind == KIND) CvmMessageEvent(event) else null
 
         /**
          * Template for a message addressed to [recipient], optionally answering
@@ -94,10 +103,16 @@ class CvmMessageEvent(
             inReplyTo: HexKey? = null,
             extraTags: List<Tag> = emptyList(),
             createdAt: Long = TimeUtils.now(),
-        ) = eventTemplate<CvmMessageEvent>(KIND, JsonRpcCodec.encode(message), createdAt) {
+        ) = eventTemplate<Event>(KIND, JsonRpcCodec.encode(message), createdAt) {
             addAll(assembleTags(recipient, inReplyTo, extraTags))
         }
 
+        /**
+         * Signs a message for [recipient].
+         *
+         * Returns a plain [Event] because that is what the signer produces; wrap
+         * it with [fromOrNull] when a typed view is wanted.
+         */
         suspend fun create(
             message: JsonRpcMessage,
             recipient: HexKey,
@@ -105,7 +120,7 @@ class CvmMessageEvent(
             inReplyTo: HexKey? = null,
             extraTags: List<Tag> = emptyList(),
             createdAt: Long = TimeUtils.now(),
-        ): CvmMessageEvent =
+        ): Event =
             signer.sign(
                 createdAt,
                 KIND,
