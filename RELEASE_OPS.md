@@ -345,13 +345,20 @@ java.lang.IllegalStateException: something blew up
 	at onh.B(r8-map-id-12c710927a584543dbe1e2e867db95460bc44482efe53283f86798648c1cfc00:7)
 ```
 
-That is not lost information, it is encoded information. Run it back through the
-mapping:
+That is not lost information, it is encoded information. Paste the report in and
+run it:
 
 ```bash
-scripts/retrace.sh amethyst-googleplay-mapping-v1.13.1.txt.gz crash.txt
-# or:  pbpaste | scripts/retrace.sh amethyst-googleplay-mapping-v1.13.1.txt.gz
+scripts/retrace.sh crash-report.txt
+pbpaste | scripts/retrace.sh            # or straight off the clipboard
 ```
+
+Nothing else to supply. A report's first line names its own build —
+`java.lang.IllegalStateException: 1.16.0-PLAY` — so the script resolves the tag
+(`v1.16.0`) and the flavor (`PLAY` → `googleplay`), downloads that release's
+mapping asset and caches it. For a bare stack trace with no such header, name
+the build yourself with `--release v1.16.0 --flavor play`; for a build you made
+locally, pass its `mapping.txt` directly.
 
 ```
 java.lang.IllegalStateException: something blew up
@@ -366,29 +373,40 @@ trace's line number cannot be trusted even in the pre-obfuscation builds, where
 optimization was already inlining. Retracing is not a tax obfuscation imposed;
 it is how you read an optimized build at all.
 
-**Which mapping?** Never guess. The `r8-map-id-<hash>` in the trace *is* the
-`pg_map_id` header of the mapping that produced it, so:
+**The wrong mapping is worse than none** — it produces confident, wrong names.
+So the script refuses to guess: the `r8-map-id-<hash>` in the trace *is* the
+`pg_map_id` header of the mapping that built it, and the two are compared before
+anything is printed:
 
-```bash
-gh release download <tag> -p 'amethyst-*-mapping-*.txt.gz'
-zcat amethyst-googleplay-mapping-<tag>.txt.gz | grep -m1 pg_map_id
+```
+error: this mapping did not build this report.
+       report:  deadbeef...
+       mapping: 12c71092... (amethyst-googleplay-mapping-v1.16.0.txt.gz)
 ```
 
-If the hashes match, that is the right file, full stop. (`googleplay` vs
-`fdroid` matters — the two flavors are separate R8 runs with different
-mappings.)
+`--force` overrides if you really mean it. (`googleplay` vs `fdroid` matters —
+the two flavors are separate R8 runs with different mappings.)
 
 **Per channel:**
 
 | Where the report came from | What to do |
 |---|---|
 | Play Console / Android vitals | Nothing. AGP embeds the mapping in the `.aab` (`BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`), so Play deobfuscates automatically. |
-| A GitHub issue, Nostr DM, F-Droid, Zapstore, Accrescent | `scripts/retrace.sh` against that release's mapping asset. |
-| A build you made locally | `scripts/retrace.sh amethyst/build/outputs/mapping/<variant>/mapping.txt` |
+| A NIP-17 DM from the in-app crash reporter, a GitHub issue, F-Droid, Zapstore, Accrescent | `scripts/retrace.sh <report>` — it reads the build off line 1 and fetches the mapping. |
+| A build you made locally | `scripts/retrace.sh amethyst/build/outputs/mapping/<variant>/mapping.txt report.txt` |
 
 `scripts/retrace.sh` downloads the R8 version named in the mapping's own header
 from Google's Maven and caches it, so it needs no pinned tooling and keeps
-working across AGP bumps.
+working across AGP bumps. It needs no `gh` auth either — release assets on a
+public repo are plain HTTPS downloads.
+
+Two details of the report format in `ReportAssembler` exist for this and should
+not be "tidied" away: the headline carries the **fully qualified** exception
+class (a bare `simpleName` obfuscates to `a`, which retrace cannot resolve
+because it has no package), and stack frames are written as `    at <frame>`
+(retrace only rewrites frames it recognises, and it recognises them by the
+leading `at`). The script repairs the missing `at` on reports from older builds,
+but new reports should not need repairing.
 
 **Do not delete mapping assets from old releases.** They are the only copy —
 CI's are gone when the job ends, and a mapping cannot be regenerated after the
