@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.contextvm.fixture
 
+import com.vitorpamplona.contextvm.cep04Encryption.CvmGiftWrap
 import com.vitorpamplona.contextvm.core.CvmKinds
 import com.vitorpamplona.contextvm.core.CvmMessageEvent
-import com.vitorpamplona.contextvm.crypto.CvmGiftWrap
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcNotification
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcRequest

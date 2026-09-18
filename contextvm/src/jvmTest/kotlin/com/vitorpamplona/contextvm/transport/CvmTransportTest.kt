@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.contextvm.transport
 
+import com.vitorpamplona.contextvm.cep04Encryption.CvmGiftWrap
+import com.vitorpamplona.contextvm.cep04Encryption.EncryptionMode
 import com.vitorpamplona.contextvm.core.CvmKinds
 import com.vitorpamplona.contextvm.core.CvmTags
-import com.vitorpamplona.contextvm.crypto.CvmGiftWrap
-import com.vitorpamplona.contextvm.crypto.EncryptionMode
 import com.vitorpamplona.contextvm.fixture.CvmFixtureServer
 import com.vitorpamplona.contextvm.fixture.FixtureFaults
 import com.vitorpamplona.contextvm.fixture.InMemoryRelayPool

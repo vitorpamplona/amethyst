@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.contextvm.mcp
 
-import com.vitorpamplona.contextvm.crypto.CvmGiftWrap
-import com.vitorpamplona.contextvm.crypto.EncryptionMode
+import com.vitorpamplona.contextvm.cep04Encryption.CvmGiftWrap
+import com.vitorpamplona.contextvm.cep04Encryption.EncryptionMode
+import com.vitorpamplona.contextvm.cep22OversizedTransfer.OversizedTransferSender
+import com.vitorpamplona.contextvm.cep41OpenStreams.OpenStreamFrame
 import com.vitorpamplona.contextvm.fixture.CvmFixtureServer
 import com.vitorpamplona.contextvm.fixture.InMemoryRelayPool
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcCodec
@@ -30,8 +32,6 @@ import com.vitorpamplona.contextvm.jsonrpc.JsonRpcFailure
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcId
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcSuccess
 import com.vitorpamplona.contextvm.transfer.ProgressToken
-import com.vitorpamplona.contextvm.transfer.oversized.OversizedTransferSender
-import com.vitorpamplona.contextvm.transfer.stream.OpenStreamFrame
 import com.vitorpamplona.contextvm.transport.CvmTransport
 import com.vitorpamplona.contextvm.transport.DualSigner
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair

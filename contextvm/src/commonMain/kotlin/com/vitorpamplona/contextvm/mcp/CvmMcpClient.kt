@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.contextvm.mcp
 
+import com.vitorpamplona.contextvm.cep22OversizedTransfer.OversizedFrame
+import com.vitorpamplona.contextvm.cep22OversizedTransfer.OversizedLimits
+import com.vitorpamplona.contextvm.cep22OversizedTransfer.OversizedProgressResult
+import com.vitorpamplona.contextvm.cep22OversizedTransfer.OversizedTransferReceiver
+import com.vitorpamplona.contextvm.cep41OpenStreams.OpenStreamEvent
+import com.vitorpamplona.contextvm.cep41OpenStreams.OpenStreamFrame
+import com.vitorpamplona.contextvm.cep41OpenStreams.OpenStreamPolicy
+import com.vitorpamplona.contextvm.cep41OpenStreams.OpenStreamReceiver
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcFailure
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcId
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage
@@ -28,14 +36,6 @@ import com.vitorpamplona.contextvm.jsonrpc.JsonRpcRequest
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcSuccess
 import com.vitorpamplona.contextvm.transfer.ProgressEnvelope
 import com.vitorpamplona.contextvm.transfer.ProgressToken
-import com.vitorpamplona.contextvm.transfer.oversized.OversizedFrame
-import com.vitorpamplona.contextvm.transfer.oversized.OversizedLimits
-import com.vitorpamplona.contextvm.transfer.oversized.OversizedProgressResult
-import com.vitorpamplona.contextvm.transfer.oversized.OversizedTransferReceiver
-import com.vitorpamplona.contextvm.transfer.stream.OpenStreamEvent
-import com.vitorpamplona.contextvm.transfer.stream.OpenStreamFrame
-import com.vitorpamplona.contextvm.transfer.stream.OpenStreamPolicy
-import com.vitorpamplona.contextvm.transfer.stream.OpenStreamReceiver
 import com.vitorpamplona.contextvm.transport.CvmTransport
 import com.vitorpamplona.contextvm.transport.DualSigner
 import com.vitorpamplona.quartz.nip01Core.core.Tag
@@ -137,7 +137,7 @@ class CvmMcpClient(
         onStreamFragment: (String) -> Unit = {},
     ): ToolCallResult {
         val id = nextId()
-        val token = ProgressToken.Text("call-${(id as JsonRpcId.Num).value}")
+        val token = ProgressToken.Text("call-${id.value}")
 
         var oversized: OversizedTransferReceiver? = null
         var stream: OpenStreamReceiver? = null

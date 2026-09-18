@@ -671,20 +671,26 @@ green on jvm. What is in:
 | ---------- | ----- |
 | 1 constants, tags, JSON-RPC codec | `core/CvmKinds`, `core/CvmTags`, `jsonrpc/` |
 | 2 minimal MCP client | `mcp/CvmMcpClient`, `mcp/McpMethods` |
-| 3 CEP-4/19 gift wrap | `crypto/CvmGiftWrap` (pins `REQUIRED`) |
+| 3 CEP-4/19 gift wrap | `cep04Encryption/CvmGiftWrap` (pins `REQUIRED`) |
 | 4 correlation + subscription lifecycle | `transport/CvmTransport` |
-| 5 CEP-35 discovery learning | `discovery/SessionDiscovery` |
-| 6 CEP-6/17/23 discovery | `discovery/ServerDiscovery` |
+| 5 CEP-35 discovery learning | `cep35Discovery/SessionDiscovery` |
+| 6 CEP-6/17/23 discovery | `cep06Announcements/`, `cep17RelayList/ServerRelay` |
 | 7 **fixture server (Tier C)** | `fixture/CvmFixtureServer`, `fixture/InMemoryRelayPool` |
-| 8 CEP-22 receiver | `transfer/oversized/OversizedTransferReceiver` |
-| 9 CEP-41 receiver | `transfer/stream/OpenStreamReceiver` |
-| 10 CEP-22 sender | `transfer/oversized/OversizedTransferSender` |
+| 8 CEP-22 receiver | `cep22OversizedTransfer/OversizedTransferReceiver` |
+| 9 CEP-41 receiver | `cep41OpenStreams/OpenStreamReceiver` |
+| 10 CEP-22 sender | `cep22OversizedTransfer/OversizedTransferSender` |
 | 11 RFC 8785 JCS | `quartz/…/utils/jcs/JsonCanonicalization` |
-| 12 CEP-15 schemas | `schema/CommonToolSchema` |
-| 13 CEP-8 + CEP-21 | `payment/` |
+| 12 CEP-15 schemas | `cep15CommonSchemas/CommonToolSchema` |
+| 13 CEP-8 + CEP-21 | `cep08Payments/` |
 | 14 CEP-16 injection | in the fixture's server role |
-| 15 CEP-24 reviews | `discovery/ServerDiscovery.ServerReview` |
+| 15 CEP-24 reviews | `cep24Reviews/ServerReview` |
 | 16 dual-signer | `transport/DualSigner` |
+
+Source is organized one package per CEP (`cep04Encryption/`, `cep08Payments/`, …), matching the
+`nipXX` convention in `quartz` and `mipXX` in `marmot`; only what the core draft spec defines
+(`core/`, `jsonrpc/`, `transport/`, `mcp/`) and the CEP-22/41 shared framing (`transfer/`) keep
+names, having no CEP number to carry. `contextvm/README.md` records the four placements that are
+judgment calls.
 
 Four findings worth carrying forward, all caught by tests rather than review:
 

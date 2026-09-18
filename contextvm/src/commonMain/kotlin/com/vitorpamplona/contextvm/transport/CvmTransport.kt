@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.contextvm.transport
 
+import com.vitorpamplona.contextvm.cep04Encryption.CvmGiftWrap
+import com.vitorpamplona.contextvm.cep35Discovery.SessionDiscovery
 import com.vitorpamplona.contextvm.core.CvmKinds
 import com.vitorpamplona.contextvm.core.CvmMessageEvent
-import com.vitorpamplona.contextvm.crypto.CvmGiftWrap
-import com.vitorpamplona.contextvm.discovery.SessionDiscovery
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcFailure
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcId
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage

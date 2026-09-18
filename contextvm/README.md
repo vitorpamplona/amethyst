@@ -22,20 +22,38 @@ named failures rather than as silent divergence.
 
 | Spec | Status | Implemented in |
 | ---- | ------ | -------------- |
-| Core draft spec | Draft | `core/`, `jsonrpc/`, `transport/` |
-| CEP-4 Encryption | Final | `crypto/CvmGiftWrap` |
-| CEP-6 Public Announcements | Final | `discovery/ServerAnnouncement` |
-| CEP-8 Pricing and Payment | Draft | `payment/` |
-| CEP-15 Common Tool Schemas | Draft | `schema/CommonToolSchema` |
-| CEP-16 Client Pubkey Injection | Final | `fixture/` (server role) |
-| CEP-17 Relay List Metadata | Draft | `discovery/ServerRelay` |
-| CEP-19 Ephemeral Gift Wraps | Draft | `crypto/CvmGiftWrap` |
-| CEP-21 PMI Recommendations | Draft | `payment/Pmi` |
-| CEP-22 Oversized Transfer | Draft | `transfer/oversized/` |
-| CEP-23 Server Profile Metadata | Draft | `discovery/` (kind 0 via quartz) |
-| CEP-24 Server Reviews | Draft | `discovery/ServerReview` |
-| CEP-35 Stateless Discovery | Draft | `discovery/SessionDiscovery` |
-| CEP-41 Open Streams | Draft | `transfer/stream/` |
+| Core draft spec | Draft | `core/`, `jsonrpc/`, `transport/`, `mcp/` |
+| CEP-4 Encryption | Final | `cep04Encryption/CvmGiftWrap` |
+| CEP-6 Public Announcements | Final | `cep06Announcements/` |
+| CEP-8 Pricing and Payment | Draft | `cep08Payments/` |
+| CEP-15 Common Tool Schemas | Draft | `cep15CommonSchemas/CommonToolSchema` |
+| CEP-16 Client Pubkey Injection | Final | `mcp/McpMethods` (the `_meta` key), `fixture/` (server role) |
+| CEP-17 Relay List Metadata | Draft | `cep17RelayList/ServerRelay` |
+| CEP-19 Ephemeral Gift Wraps | Draft | `cep04Encryption/CvmGiftWrap` |
+| CEP-21 PMI Recommendations | Draft | `cep08Payments/PaymentSession` |
+| CEP-22 Oversized Transfer | Draft | `cep22OversizedTransfer/` |
+| CEP-23 Server Profile Metadata | Draft | `cep06Announcements/DiscoverySurface` (kind 0 via quartz) |
+| CEP-24 Server Reviews | Draft | `cep24Reviews/ServerReview` |
+| CEP-35 Stateless Discovery | Draft | `cep35Discovery/SessionDiscovery` |
+| CEP-41 Open Streams | Draft | `cep41OpenStreams/` |
+
+### Why the packages are named this way
+
+Each CEP gets its own `cepNNName/` package, the way `quartz` uses `nipXX` and
+`marmot` uses `mipXX`: a spec number in the path is what makes "is this rule
+implemented, and where" answerable without grep. Four placements are judgment
+calls rather than mechanics:
+
+- **CEP-19 lives in `cep04Encryption/`.** Choosing the wrap kind (21059 with the
+  1059 fallback) and building the wrap are one negotiation inside
+  `CvmGiftWrap`; a separate package would split a single method from its caller.
+- **CEP-16 has no package.** It is a `_meta` key name plus the server-side
+  obligation to inject it — a key constant and fixture behaviour, not a
+  subsystem.
+- **`transfer/ProgressEnvelope`** stays cross-cutting because CEP-22 and CEP-41
+  share that framing; it is the `marmot/foundation/` analogue.
+- **`core/`, `jsonrpc/`, `transport/`, `mcp/`** keep names because the core draft
+  spec is not a CEP and has no number to carry.
 
 RFC 8785 (JCS), required by CEP-8 and CEP-15, lives in
 `quartz/…/utils/jcs/JsonCanonicalization.kt` — it is a generic primitive, not a
