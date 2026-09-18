@@ -197,6 +197,41 @@ Good news: the expensive parts already exist and were built for road events
   `./tools/material-symbols-subset/subset.sh` and committing the regenerated
   `.ttf`, or the icon renders as tofu.
 
+## 3.5 Interoperability — checked against the network, not just the spec
+
+Two other implementations exist: **treasures.to** (the originating client, whose caches are the
+spec's examples) and **Lightning Piggy** (`BenGWeeks/lightning-piggy-mobile`, whose
+`src/services/nostrPlacesService.ts` is a readable second opinion). A corpus of real events was
+pulled off relay.damus.io / nos.lol / relay.primal.net / nostr.wine with `amy fetch` and is
+pinned at `quartz/src/commonTest/resources/nipcc.interop.json`; `NipCCInteropTest` parses it.
+
+What the network confirmed:
+
+- **The `g` ladder really is 3..9.** All 60 sampled listings published exactly that band, and
+  Lightning Piggy's builder loops `for (n = 3; n <= 9; n++)`. The bounded `geoMipMap` overload
+  matches.
+- `a` on a found log is a plain `37516:<pubkey>:<d>`; the composite `<finder-hex>:<naddr>` on an
+  embedded 7517 is exactly as specified. Both parse.
+- `archived` really does appear in `t` alongside cache types on live listings, and real `F`
+  lock-ins and `n` modifiers exist. The split parsers handle them.
+- Listings carry `client`, `expiration`, NIP-32 `L`/`l`, `content-warning` and payout hints we
+  model nothing for; ignoring them is harmless.
+
+**The one real divergence: `hint`.** NIP-CC contradicts itself — the tag table says "plaintext"
+and the example is plaintext, while the Clients section asks for ROT13 — and the network split
+down the middle: of 34 sampled hints, **17 plaintext and 17 ROT13**, consistent within each
+author but not across them. Either fixed reading spoils half the caches in the world. So
+`HintObfuscation` picks per hint, showing whichever of the two rotations scores worse against
+English letter frequency, and the card *toggles* rather than revealing once, so a wrong guess
+costs a tap instead of the hint.
+
+Worth raising upstream: the spec should say which form goes on the wire. Until it does, a writer
+has to pick, and this code writes ROT13 — the reference client's choice, and the one that fails
+safe (a reader assuming plaintext sees noise, not the answer).
+
+Note the trap if anyone revisits the heuristic: counting vowels is backwards. ROT13 maps `n→a`,
+`r→e`, `h→u`, `b→o`, so English ciphertext usually has *more* vowels than its plaintext.
+
 ## 4. Security review items
 
 These are the parts worth a careful reviewer, not the event codecs:

@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
-import com.vitorpamplona.quartz.nipCCGeocaching.listing.rot13
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.HintObfuscation
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.CacheSize
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.CacheType
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.TypeModifier
@@ -160,7 +160,7 @@ fun GeocacheCard(
     val size = remember(noteEvent) { noteEvent.cacheSize() }
     val difficulty = remember(noteEvent) { noteEvent.difficulty() }
     val terrain = remember(noteEvent) { noteEvent.terrain() }
-    val hint = remember(noteEvent) { noteEvent.hint()?.trim()?.ifBlank { null } }
+    val hint = remember(noteEvent) { noteEvent.hintOnWire()?.trim()?.ifBlank { null } }
     val mission = remember(noteEvent) { noteEvent.mission()?.trim()?.ifBlank { null } }
     val isArchived = remember(noteEvent) { noteEvent.isArchived() }
     val isFirstToFind = remember(noteEvent) { noteEvent.isFirstToFind() }
@@ -317,19 +317,22 @@ private fun CacheBadges(
 }
 
 /**
- * The hint, ROT13'd until tapped.
+ * The hint, obfuscated until tapped — and a *toggle*, not a one-way reveal.
  *
- * NIP-CC asks clients to encode hints so they don't spoil; the tag itself is plaintext, so the
- * rotation is the display and the tap undoes it. Rotating is its own inverse, so one flag and
- * one call serve both directions.
+ * Publishers disagree about whether `hint` goes on the wire as plaintext or ROT13 (see
+ * [HintObfuscation]), so which of the two forms is the readable one is a guess. Toggling makes
+ * a wrong guess cost a second tap instead of the hint: whichever way round this cache was
+ * written, both forms are one tap apart.
  */
 @Composable
 private fun SpoilerHint(hint: String) {
+    val hidden = remember(hint) { HintObfuscation.hidden(hint) }
+    val revealedText = remember(hint) { HintObfuscation.revealed(hint) }
     var revealed by remember(hint) { mutableStateOf(false) }
 
     Column(Modifier.clickable { revealed = !revealed }) {
         Text(
-            text = if (revealed) hint else rot13(hint),
+            text = if (revealed) revealedText else hidden,
             style = MaterialTheme.typography.bodyMedium,
             color = if (revealed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.placeholderText,
             maxLines = 3,

@@ -113,10 +113,14 @@ class GeocacheListingEvent(
 
     fun isFirstToFind() = tags.isFirstToFind()
 
-    fun hint() = tags.hint()
+    /** The `hint` tag exactly as published, in whichever form its author chose. */
+    fun hintOnWire() = tags.hint()
 
-    /** The hint, ROT13'd for display so a reader does not spoil themselves by scrolling past it. */
-    fun hintRot13() = tags.hint()?.let(::rot13)
+    /** The hint form safe to show before the reader asks. See [HintObfuscation]. */
+    fun hintHidden() = tags.hintHidden()
+
+    /** The hint form the reader gets when they ask. See [HintObfuscation]. */
+    fun hintRevealed() = tags.hintRevealed()
 
     fun mission() = tags.mission()
 
@@ -197,7 +201,9 @@ class GeocacheListingEvent(
 
             type?.let { cacheType(it) }
             if (modifiers.isNotEmpty()) typeModifiers(modifiers)
-            hint?.let { hint(it) }
+            // Written rot13'd: it is what the reference client does, and it is the choice that
+            // degrades safely — a reader assuming plaintext sees noise rather than the answer.
+            hint?.let { hint(rot13(it)) }
             mission?.let { mission(it) }
             verificationPubKey?.let { verificationKey(it) }
             images?.let { cacheImages(it) }

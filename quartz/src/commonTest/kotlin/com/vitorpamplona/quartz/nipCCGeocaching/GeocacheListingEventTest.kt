@@ -79,7 +79,7 @@ class GeocacheListingEventTest {
         assertEquals(1, cache.terrain())
         assertEquals(CacheSize.SMALL, cache.cacheSize())
         assertEquals(CacheType.TRADITIONAL, cache.cacheType())
-        assertEquals("In the branches", cache.hint())
+        assertEquals("In the branches", cache.hintOnWire())
         assertEquals(listOf("https://blossom.primal.net/74efe.jpg"), cache.images())
         assertEquals("u4xsu6ryb", cache.location())
         assertEquals(7, cache.geohashes().size)

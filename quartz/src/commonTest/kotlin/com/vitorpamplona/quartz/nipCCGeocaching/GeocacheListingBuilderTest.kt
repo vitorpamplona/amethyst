@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipCCGeocaching
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheGeohash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.HintObfuscation
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.rot13
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.CacheSize
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.CacheType
@@ -64,7 +65,9 @@ class GeocacheListingBuilderTest {
         assertEquals(listOf("1"), template.tags.values("T"))
         assertEquals(listOf("small"), template.tags.values("S"))
         assertEquals(listOf("traditional"), template.tags.values("t"))
-        assertEquals(listOf("In the branches"), template.tags.values("hint"))
+        // Published rot13'd: the reference client does it, and it is the choice that fails
+        // safe — a reader assuming plaintext sees noise rather than the answer.
+        assertEquals(listOf("Va gur oenapurf"), template.tags.values("hint"))
     }
 
     @Test
@@ -204,11 +207,74 @@ class GeocacheListingBuilderTest {
     }
 
     @Test
-    fun theHintAccessorOffersBothForms() {
-        val cache = GeocacheListingEvent("id", "a".repeat(64), 1L, arrayOf(arrayOf("hint", "In the branches")), "", "sig")
+    fun theHiddenHintIsTheFormThatReadsLessLikeProse() {
+        // Publishers disagree about which form goes on the wire, so the reader must not be
+        // handed the readable one either way round. Both of these carry the same hint; only
+        // the encoding differs.
+        val encoded = GeocacheListingEvent("id", "a".repeat(64), 1L, arrayOf(arrayOf("hint", "Va gur oenapurf")), "", "sig")
+        val plain = GeocacheListingEvent("id", "a".repeat(64), 1L, arrayOf(arrayOf("hint", "In the branches")), "", "sig")
 
-        assertEquals("In the branches", cache.hint())
-        assertEquals("Va gur oenapurf", cache.hintRot13())
-        assertNull(GeocacheListingEvent("id", "a".repeat(64), 1L, emptyArray(), "", "sig").hintRot13())
+        assertEquals("Va gur oenapurf", encoded.hintOnWire())
+        assertEquals("Va gur oenapurf", encoded.hintHidden())
+        assertEquals("In the branches", encoded.hintRevealed())
+
+        assertEquals("In the branches", plain.hintOnWire())
+        assertEquals("Va gur oenapurf", plain.hintHidden())
+        assertEquals("In the branches", plain.hintRevealed())
+
+        assertNull(GeocacheListingEvent("id", "a".repeat(64), 1L, emptyArray(), "", "sig").hintRevealed())
+    }
+
+    @Test
+    fun theProseTestSurvivesTheVowelTrap() {
+        // The obvious heuristic — count vowels — is backwards here, and quietly so. ROT13 maps
+        // n→a, r→e, h→u and b→o, all common in English, so ciphertext usually has MORE vowels
+        // than its plaintext: "In the branches" has 4 of 13, "Va gur oenapurf" has 6 of 13.
+        // These are the real hints that broke it, taken off the relays.
+        listOf(
+            "In the branches",
+            "Under the bench.",
+            "Third tree",
+            "Look up",
+            "Small",
+            "Hiding in the top of the wall",
+            "Between the tree and the lathe cactus",
+        ).forEach { plain ->
+            assertTrue(HintObfuscation.isProse(plain), "<$plain> should read as English")
+            assertTrue(!HintObfuscation.isProse(rot13(plain)), "<${rot13(plain)}> should not read as English")
+            assertEquals(plain, HintObfuscation.revealed(rot13(plain)), "encoded <$plain> should decode")
+            assertEquals(plain, HintObfuscation.revealed(plain), "plain <$plain> should stay put")
+        }
+    }
+
+    @Test
+    fun theTwoHintFormsAreAlwaysEachOthersRotation() {
+        // Whatever the heuristic decides, it only ever chooses between these two — it never
+        // invents or drops text.
+        listOf("In the branches", "Va gur oenapurf", "Small", "\u00dfaum", "123 !?").forEach { onWire ->
+            assertEquals(onWire, rot13(rot13(onWire)))
+            assertEquals(
+                setOf(onWire, rot13(onWire)),
+                setOf(HintObfuscation.hidden(onWire), HintObfuscation.revealed(onWire)),
+                "<$onWire>",
+            )
+        }
+    }
+
+    @Test
+    fun buildTakesPlaintextAndRoundTripsThroughTheWireForm() {
+        val template =
+            GeocacheListingEvent.build(
+                name = "n",
+                description = "",
+                geohash = "u4xsu6ryb",
+                difficulty = 1,
+                terrain = 1,
+                size = CacheSize.SMALL,
+                hint = "In the branches",
+            )
+        val cache = GeocacheListingEvent("id", "a".repeat(64), 1L, template.tags, template.content, "sig")
+
+        assertEquals("In the branches", cache.hintRevealed())
     }
 }

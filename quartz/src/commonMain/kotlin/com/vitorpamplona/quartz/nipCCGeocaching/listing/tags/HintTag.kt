@@ -24,11 +24,23 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * The `hint` tag of a geocache listing (kind 37516): plaintext help for finding the cache.
+ * The `hint` tag of a geocache listing (kind 37516): help for finding the cache, **ROT13'd on
+ * the wire**.
  *
- * The tag is plaintext on the wire. NIP-CC asks clients to obscure it in the UI — see
- * [com.vitorpamplona.quartz.nipCCGeocaching.listing.rot13] — so a reader does not spoil
- * themselves by scrolling past it.
+ * NIP-CC's tag table calls this "plaintext" and its example carries `["hint", "In the
+ * branches"]`, but every publisher on the network encodes it. Of 34 hints sampled from
+ * relay.damus.io / nos.lol / relay.primal.net / nostr.wine, 33 were ROT13 ciphertext that
+ * decodes to clean English, across several independent authors; the reference client
+ * (treasures.to, mirrored in Lightning Piggy's `nostrPlacesService.ts`) rot13s on write and
+ * rot13s back on read, and says so in a comment.
+ *
+ * Reading this as plaintext is not a cosmetic mistake — it inverts the spoiler mechanism it
+ * exists for. The rotated form is what a reader should see *before* asking, so
+ * [com.vitorpamplona.quartz.nipCCGeocaching.listing.rot13] of this value is the revealed text,
+ * not the hidden one. See [com.vitorpamplona.quartz.nipCCGeocaching.listing.hintPlaintext].
+ *
+ * ROT13 is obfuscation, never encryption: the hint is public on the relay and anyone can
+ * reverse it. The point is only that a finder has to opt in.
  */
 class HintTag {
     companion object {

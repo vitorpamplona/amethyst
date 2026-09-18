@@ -84,7 +84,18 @@ fun TagArray.hasTypeModifier(modifier: TypeModifier) = typeModifiers()[modifier.
 
 fun TagArray.isFirstToFind() = hasTypeModifier(TypeModifier.FIRST_TO_FIND)
 
+/**
+ * The `hint` tag exactly as published.
+ *
+ * Which form that is — plaintext or ROT13 — depends on the publisher; see [HintObfuscation].
+ */
 fun TagArray.hint() = firstNotNullOfOrNull(HintTag::parse)
+
+/** The hint form safe to show before the reader asks. See [HintObfuscation]. */
+fun TagArray.hintHidden() = hint()?.let(HintObfuscation::hidden)
+
+/** The hint form the reader gets when they ask. See [HintObfuscation]. */
+fun TagArray.hintRevealed() = hint()?.let(HintObfuscation::revealed)
 
 /** The first `mission` tag. A listing must not carry more than one; extras are ignored. */
 fun TagArray.mission() = firstNotNullOfOrNull(MissionTag::parse)
