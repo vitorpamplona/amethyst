@@ -73,8 +73,17 @@ class GeocacheFoundLogEvent(
 
     fun embeddedVerification() = tags.embeddedVerification()
 
-    /** Whether a verification event is attached at all. Says nothing about whether it is valid. */
-    fun isVerified() = tags.embeddedVerification() != null
+    /**
+     * Whether a `verification` tag is attached at all.
+     *
+     * Says nothing about whether it holds up — only
+     * [com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationValidator]
+     * answers that. Named for what it checks rather than `isVerified`, which invites exactly the
+     * mistake of treating an attached string as proof.
+     *
+     * Cheap enough for a render path: it does not parse the payload.
+     */
+    fun hasVerificationAttached() = tags.hasEmbeddedVerification()
 
     companion object {
         const val KIND = 7516

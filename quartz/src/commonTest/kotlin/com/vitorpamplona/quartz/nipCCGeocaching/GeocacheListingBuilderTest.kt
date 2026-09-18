@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.CacheType
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.TypeModifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -116,6 +117,42 @@ class GeocacheListingBuilderTest {
         assertFalse(GeocacheGeohash.isPreciseEnough("u4xsu6ry", CacheSize.MICRO))
         assertTrue(GeocacheGeohash.isPreciseEnough("u4xsu6ryb", CacheSize.MICRO))
         assertFalse(GeocacheGeohash.isPreciseEnough("u4xsu6r", CacheSize.REGULAR))
+    }
+
+    @Test
+    fun aGeohashTooCoarseToTagIsRefusedRatherThanSignedWithoutALocation() {
+        // The ladder starts at 3 characters, so a coarser geohash yields no `g` tag at all — and
+        // `g` is required. Silently signing that produces a listing that fails its own
+        // isWellFormed(), which the caller only discovers after publishing it.
+        listOf("", "u", "u4").forEach { tooCoarse ->
+            assertFailsWith<IllegalArgumentException>("<$tooCoarse> should not build") {
+                GeocacheListingEvent.build(
+                    name = "n",
+                    description = "",
+                    geohash = tooCoarse,
+                    difficulty = 1,
+                    terrain = 1,
+                    size = CacheSize.SMALL,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun theCoarsestBuildableCacheIsStillWellFormed() {
+        val template =
+            GeocacheListingEvent.build(
+                name = "n",
+                description = "",
+                geohash = "u4x",
+                difficulty = 1,
+                terrain = 1,
+                size = CacheSize.SMALL,
+            )
+        val cache = GeocacheListingEvent("id", "a".repeat(64), 1L, template.tags, template.content, "sig")
+
+        assertEquals(listOf("u4x"), template.tags.values("g"))
+        assertTrue(cache.isWellFormed())
     }
 
     @Test

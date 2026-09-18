@@ -77,7 +77,7 @@ class GeocacheLogsTest {
         assertEquals(cacheAddress, log.geocache())
         assertEquals("37516:$owner:first-treasure-1748619568668", log.geocacheId())
         assertEquals(listOf("37516:$owner:first-treasure-1748619568668"), log.linkedAddressIds())
-        assertTrue(!log.isVerified())
+        assertTrue(!log.hasVerificationAttached())
     }
 
     @Test
@@ -88,6 +88,64 @@ class GeocacheLogsTest {
         assertEquals("Found it!", template.content)
         assertEquals(listOf(cacheAddress.toValue()), template.tags.values("a"))
         assertEquals(listOf(relay.url), template.tags.first { it[0] == "a" }.drop(2))
+    }
+
+    @Test
+    fun aLogPointingAtSomethingThatIsNotACacheHasNoCache() {
+        // The `a` tag is whatever its author wrote. Resolving it unfiltered files a "Found it!"
+        // under an unrelated addressable — an article, a calendar event — and hands a caller a
+        // note of the wrong type to cast.
+        listOf(
+            "30023:$owner:an-article",
+            "31923:$owner:a-calendar-slot",
+            "30000:$owner:a-people-list",
+        ).forEach { coordinate ->
+            val log =
+                GeocacheFoundLogEvent("1".repeat(64), finder, 1L, arrayOf(arrayOf("a", coordinate)), "Found it!", "sig")
+
+            assertNull(log.geocache(), "<$coordinate> should not resolve as a geocache")
+            assertNull(log.geocacheId())
+        }
+    }
+
+    @Test
+    fun theUndefinedLegacyListingKindStillResolves() {
+        // NIP-CC references 37515 without defining it; a log naming one is still about a cache.
+        val log =
+            GeocacheFoundLogEvent("1".repeat(64), finder, 1L, arrayOf(arrayOf("a", "37515:$owner:old-cache")), "Found it!", "sig")
+
+        assertEquals("old-cache", log.geocache()?.dTag)
+    }
+
+    @Test
+    fun theCheapVerificationGateAgreesWithTheParsedOne() {
+        // hasVerificationAttached() reads tag names so a feed does not run the JSON parser on
+        // every recomposition. It must still answer the same question the parse does for a
+        // well-formed payload, and must not claim proof for a tag with an empty value.
+        val withProof =
+            GeocacheFoundLogEvent(
+                "1".repeat(64),
+                finder,
+                1L,
+                arrayOf(arrayOf("a", cacheAddress.toValue()), arrayOf("verification", "{\"anything\":1}")),
+                "Found it!",
+                "sig",
+            )
+        val withoutProof =
+            GeocacheFoundLogEvent("1".repeat(64), finder, 1L, arrayOf(arrayOf("a", cacheAddress.toValue())), "Found it!", "sig")
+        val emptyProof =
+            GeocacheFoundLogEvent(
+                "1".repeat(64),
+                finder,
+                1L,
+                arrayOf(arrayOf("a", cacheAddress.toValue()), arrayOf("verification", "")),
+                "Found it!",
+                "sig",
+            )
+
+        assertTrue(withProof.hasVerificationAttached())
+        assertTrue(!withoutProof.hasVerificationAttached())
+        assertTrue(!emptyProof.hasVerificationAttached())
     }
 
     @Test

@@ -22,18 +22,21 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.FoundLogProof
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheCard
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheFoundLogCard
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationValidator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Entry for a NIP-CC geocache listing (kind 37516): decodes the [Note] and renders the shared
@@ -72,6 +75,14 @@ fun RenderGeocache(baseNote: Note) {
  * loaded and observed — which also asks the relays for it — and until it arrives the answer is
  * [FoundLogProof.UNKNOWN], which the card renders as no badge at all rather than an optimistic
  * one.
+ *
+ * Two things are deliberately kept off the composition thread's critical path:
+ *
+ * - The cheap gate is [GeocacheFoundLogEvent.hasVerificationAttached], which reads tag names.
+ *   Parsing the embedded 7517 means running the payload through the JSON parser and the event
+ *   factory, and a feed must not pay for that on every recomposition of every log.
+ * - Validating it costs a SHA-256 and a secp256k1 verification, which is not a composition-thread
+ *   amount of work, so it runs in [produceState] on [Dispatchers.Default].
  */
 @Composable
 fun RenderGeocacheFoundLog(
@@ -80,8 +91,9 @@ fun RenderGeocacheFoundLog(
 ) {
     val noteEvent = baseNote.event as? GeocacheFoundLogEvent ?: return
     val address = remember(noteEvent) { noteEvent.geocache() }
+    val hasProof = remember(noteEvent) { noteEvent.hasVerificationAttached() }
 
-    if (!noteEvent.isVerified() || address == null) {
+    if (!hasProof || address == null) {
         GeocacheFoundLogCard(noteEvent, FoundLogProof.NONE)
         return
     }
@@ -90,16 +102,28 @@ fun RenderGeocacheFoundLog(
         if (cacheNote == null) {
             GeocacheFoundLogCard(noteEvent, FoundLogProof.UNKNOWN)
         } else {
-            val listing by observeNoteEvent<GeocacheListingEvent>(cacheNote, accountViewModel)
+            // Read through the note rather than observeNoteEvent<GeocacheListingEvent>: that
+            // helper's cast is erased, so it hands back whatever the address resolved to and the
+            // ClassCastException lands at this read site. The address comes from the log's `a`
+            // tag — attacker-controlled — so the cast has to be the checked kind.
+            val noteState by observeNote(cacheNote, accountViewModel)
+            val listing = noteState.note.event as? GeocacheListingEvent
 
-            val proof =
-                remember(noteEvent, listing) {
+            val proof by
+                produceState(FoundLogProof.UNKNOWN, noteEvent, listing) {
                     val cache = listing
-                    when {
-                        cache == null -> FoundLogProof.UNKNOWN
-                        GeocacheVerificationValidator.isValid(noteEvent, cache) -> FoundLogProof.VALID
-                        else -> FoundLogProof.INVALID
-                    }
+                    value =
+                        if (cache == null) {
+                            FoundLogProof.UNKNOWN
+                        } else {
+                            withContext(Dispatchers.Default) {
+                                if (GeocacheVerificationValidator.isValid(noteEvent, cache)) {
+                                    FoundLogProof.VALID
+                                } else {
+                                    FoundLogProof.INVALID
+                                }
+                            }
+                        }
                 }
 
             GeocacheFoundLogCard(noteEvent, proof)

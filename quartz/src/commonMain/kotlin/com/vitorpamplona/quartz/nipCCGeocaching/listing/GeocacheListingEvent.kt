@@ -179,6 +179,15 @@ class GeocacheListingEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GeocacheListingEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
+            // The `g` ladder starts at 3 characters, so a coarser geohash produces no `g` tag at
+            // all — and `g` is required. Without this the builder happily signs a listing that
+            // fails its own isWellFormed(), and the caller finds out after publishing it.
+            // This is the floor for a *well-formed* event; NIP-CC's submission rule is stricter
+            // (8+, 9+ for micro) and is [GeocacheGeohash.isPreciseEnough]'s job at the composer.
+            require(geohash.length >= GeocacheGeohash.MIN_TAGGED) {
+                "a geocache needs a geohash of at least ${GeocacheGeohash.MIN_TAGGED} characters, got \"$geohash\""
+            }
+
             dTag(dTag)
             cacheName(name)
             cacheLocation(geohash)

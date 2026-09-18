@@ -20,15 +20,40 @@
  */
 package com.vitorpamplona.quartz.nipCCGeocaching.foundLog
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.tags.EmbeddedVerificationTag
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.tags.GeocacheTag
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 
-fun TagArray.geocache() = firstNotNullOfOrNull(GeocacheTag::parseAddress)
+/** Whether [kind] is a geocache listing — 37516, or the referenced-but-undefined 37515. */
+private fun isGeocacheKind(kind: Int) = kind == GeocacheListingEvent.KIND || kind == GeocacheListingEvent.LEGACY_KIND
 
-fun TagArray.geocacheId() = firstNotNullOfOrNull(GeocacheTag::parseAddressId)
+/**
+ * The geocache this log is about.
+ *
+ * Restricted to the listing kinds on purpose. The `a` tag is whatever its author wrote, and
+ * nothing stops a found log from pointing at an article, a calendar event or a profile badge —
+ * so a consumer that resolves it unfiltered files a "Found it!" under an unrelated addressable,
+ * or hands a caller a note of the wrong type. A log naming a non-cache is malformed, and reads
+ * as absent.
+ */
+fun TagArray.geocache(): Address? = firstNotNullOfOrNull(GeocacheTag::parseAddress)?.takeIf { isGeocacheKind(it.kind) }
+
+/** The raw `a` value, for the same reason and with the same restriction as [geocache]. */
+fun TagArray.geocacheId(): String? = geocache()?.toValue()
 
 fun TagArray.logImages() = mapNotNull(ImageTag::parse)
+
+/**
+ * Whether a `verification` tag is present at all.
+ *
+ * Cheap: it looks at tag names only. [embeddedVerification] has to run the payload through the
+ * JSON parser and the event factory, which is not something a composable should do on every
+ * recomposition just to decide whether there is anything to check.
+ */
+fun TagArray.hasEmbeddedVerification() = fastAny(EmbeddedVerificationTag::isTag)
 
 fun TagArray.embeddedVerification() = firstNotNullOfOrNull(EmbeddedVerificationTag::parse)
