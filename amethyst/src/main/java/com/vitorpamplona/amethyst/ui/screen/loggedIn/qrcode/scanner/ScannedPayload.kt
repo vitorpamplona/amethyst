@@ -107,14 +107,17 @@ sealed interface ScannedPayload {
     ) : ScannedPayload
 
     /**
-     * Key material we can recognise but not decode — chiefly an `ncryptsec`, which
-     * `Nip19Parser` lists in its regex but has no branch to parse, so it would otherwise land in
-     * [Unknown] and be echoed to the screen.
+     * Key material we can recognise but not decode. Two things land here:
      *
-     * Deliberately classified by *prefix*, not by parse success: whether a payload is dangerous
-     * to display cannot depend on whether we happen to be able to read it.
+     * - an `ncryptsec`, which `Nip19Parser` lists in its regex but has no branch to parse;
+     * - an `nsec` the parser rejected — truncated by a half-finished copy, or transcribed with a
+     *   typo into whatever generated the code. It is still a private key, and a damaged one
+     *   still shows all but a few of its characters.
+     *
+     * Both are classified by *prefix*, not by parse success: whether a payload is dangerous to
+     * display cannot depend on whether we happen to be able to read it.
      */
-    data class EncryptedKey(
+    data class PrivateKey(
         override val raw: String,
     ) : ScannedPayload {
         override val containsSecret get() = true
@@ -160,11 +163,17 @@ fun classifyScannedPayload(text: String): ScannedPayload {
     // Before the NIP-19 scan, and by prefix rather than by parse: an ncryptsec cannot be decoded
     // here, so waiting to find out what it is would mean deciding it is harmless.
     if (lower.startsWith("ncryptsec1") || lower.startsWith("nostr:ncryptsec1")) {
-        return ScannedPayload.EncryptedKey(raw)
+        return ScannedPayload.PrivateKey(raw)
     }
     if (LIGHTNING_PREFIXES.any { lower.startsWith(it) }) return ScannedPayload.Lightning(raw)
 
     Nip19Parser.uriToRoute(raw)?.let { return ScannedPayload.Nostr(raw, it.entity) }
+
+    // An nsec the parser would not take. The parse is tried first so a well-formed one still
+    // becomes a [ScannedPayload.Nostr] and keeps the routing that logging in by scanning one
+    // depends on — but a damaged one must not fall through to [ScannedPayload.Unknown], where
+    // the sheet prints the payload on screen with a Copy button next to it.
+    if (lower.startsWith("nsec1") || lower.startsWith("nostr:nsec1")) return ScannedPayload.PrivateKey(raw)
 
     if (HEX_64.matches(raw)) {
         val npub = runCatching { NPub.create(raw.lowercase()) }.getOrNull()

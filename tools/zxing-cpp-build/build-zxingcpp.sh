@@ -13,15 +13,22 @@
 #   ./build-zxingcpp.sh --out DIR        # write .so somewhere else (verify uses this)
 #
 # Prerequisites: git, cmake, ninja, and the exact NDK revision in
-# ANDROID_NDK_VERSION. Any other revision is refused — it would change the
-# output bytes, which is the whole point.
+# tools/arti-build/ANDROID_NDK_VERSION. Any other revision is refused — it
+# would change the output bytes, which is the whole point.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 ZXING_VERSION="$(tr -d '[:space:]' < "$SCRIPT_DIR/ZXING_CPP_VERSION")"
-NDK_VERSION="$(tr -d '[:space:]' < "$SCRIPT_DIR/ANDROID_NDK_VERSION")"
+# One pin for the whole repo, deliberately not a copy of our own. :amethyst
+# already reads this same file for `ndkVersion` (the NDK that strips whatever
+# lands in src/main/jniLibs), so a second copy here could only ever be a way
+# to disagree with the toolchain that packages the .so we produce — the exact
+# byte-level drift the pin exists to prevent. Bumping it rebuilds both
+# libarti_android.so and libzxingcpp_android.so, which is correct: they must
+# be built and stripped by one NDK.
+NDK_VERSION="$(tr -d '[:space:]' < "$PROJECT_ROOT/tools/arti-build/ANDROID_NDK_VERSION")"
 
 # Canonical build path. Codegen and link ordering can key on the real build
 # directory even with path remapping in place, so everyone builds here or
@@ -33,9 +40,10 @@ OUTPUT_DIR="$PROJECT_ROOT/amethyst/src/main/jniLibs"
 LIB_NAME="libzxingcpp_android.so"
 MIN_SDK_VERSION=26
 
-# Every ABI the app splits on. Unlike Tor — an optional feature that ships on
-# two ABIs — a QR scanner that does not load is a broken core feature, and the
-# decoder this replaced was pure Java and worked everywhere.
+# Every ABI the app splits on. A QR scanner that does not load is a broken core
+# feature — the decoder this replaced was pure Java and worked everywhere — so
+# every split gets one, and :amethyst's verifyNativeAbis fails the build if one
+# is missing or built for the wrong architecture.
 ABIS=(arm64-v8a armeabi-v7a x86 x86_64)
 
 while [ $# -gt 0 ]; do

@@ -86,9 +86,26 @@ class StructuredAppendAccumulator(
         return joined.toString()
     }
 
+    /**
+     * Drops a half-captured sequence whose parts stopped arriving, and says whether it did.
+     *
+     * Kept here, against this accumulator's own last-update clock, because that is the only clock
+     * that measures the right thing. The caller cannot substitute "nothing has been decoded at
+     * all": walking away from a half-scanned poster and pointing the camera at an ordinary code
+     * keeps decoding something on every frame, so that clock never advances and the abandoned
+     * sequence is never dropped.
+     */
+    fun dropIfStale(nowMs: Long): Boolean {
+        if (expected == 0) return false
+        if (nowMs - lastUpdateMs <= timeoutMs) return false
+        reset()
+        return true
+    }
+
     fun reset() {
         sequenceId = null
         expected = 0
+        lastUpdateMs = 0
         parts.clear()
     }
 

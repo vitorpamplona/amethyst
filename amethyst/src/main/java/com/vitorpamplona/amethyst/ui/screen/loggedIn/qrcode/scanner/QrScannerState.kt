@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
@@ -80,7 +81,7 @@ class QrScannerState {
     private var darkSinceMs = 0L
 
     /** Milliseconds since anything at all was decoded — what auto-zoom watches. */
-    var msSinceLastDetection by mutableStateOf(0L)
+    var msSinceLastDetection by mutableLongStateOf(0L)
         private set
 
     private var lastDetectionMs = 0L
@@ -107,6 +108,10 @@ class QrScannerState {
         frame = scan.frame
         updateDarkness(scan.brightness, nowMs)
 
+        // Checked on every frame, not just on empty ones: an abandoned half-capture is abandoned
+        // whether or not the camera is busy reading something else.
+        if (sequence.dropIfStale(nowMs)) sequenceProgress = null
+
         // Seed the clock on the first frame. Left at zero, the very first empty frame would read
         // as "nothing decoded since the epoch" and send auto-zoom hunting before the user has had
         // a chance to aim.
@@ -123,12 +128,6 @@ class QrScannerState {
         if (found.isEmpty()) {
             candidates = emptyList()
             msSinceLastDetection = nowMs - lastDetectionMs
-            // Drop a half-captured multi-part code once its parts stop arriving, or its
-            // "Captured 1 of 3 parts" hint sticks on screen forever and hides every other hint.
-            if (sequenceProgress != null && msSinceLastDetection > StructuredAppendAccumulator.DEFAULT_TIMEOUT_MS) {
-                sequence.reset()
-                sequenceProgress = null
-            }
             return null
         }
 
@@ -154,7 +153,14 @@ class QrScannerState {
         nowMs: Long,
     ): String? {
         candidates = emptyList()
-        return accept(result.text, nowMs)
+        // Deliberately bypasses the dedupe window. That window exists to stop ONE code decoding
+        // thirty times a second from firing the caller thirty times; a tap is one decision by a
+        // person, and swallowing it makes the highlight a target that can be tapped with nothing
+        // happening. The latch is still armed, so the camera frames that follow -- the tapped
+        // code is very probably still in view -- do not fire it again.
+        lastSubmittedText = result.text
+        lastSubmittedAt = nowMs
+        return result.text
     }
 
     /**
