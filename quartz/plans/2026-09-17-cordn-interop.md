@@ -1,7 +1,13 @@
 # Cordn interop: extract the MLS core, then add a second binding
 
-Status: Queued. Research complete; no code written. Blocked on one upstream protocol decision
-(§4.1) before any of Stage 2+ is worth starting.
+Status: Stage 2 landed. `:contextvm` implements the core spec plus all 12 CEPs on the client
+side, with the Tier C fixture server, at 172 tests. Stages 0 (cordn-side vectors), 1 (extract the
+MLS engine) and 3-4 (the cordn binding and app integration) are open. Stage 3 is the one gated on
+the §4.1 upstream decision.
+
+Correction to an earlier gate in this plan: §4.1 does **not** block Stage 2. ContextVM is
+credential-agnostic and has no MLS dependency at all, so the transport was safe to build first;
+only Stage 3's KeyPackage work depends on that decision.
 
 Sources checked on 2026-09-17:
 
@@ -16,9 +22,10 @@ Sources checked on 2026-09-17:
 - `ContextVM/sdk` @ `b5d1e4e` (2026-09-17), version `0.13.17` — **LGPL-3.0**, see §7. Read only to
   confirm deployed defaults, never as an implementation source
 
-Not verified by execution: this container could not run `:quartz:jvmTest` (no Gradle dependency
-cache and Maven Central returns HTTP 429 through the agent proxy), so every claim below about our
-own code comes from reading it, not from a green test run. Stage 0 exists to fix that.
+Verification status: `:quartz:jvmTest` now passes in a container (5054 tests), so the MLS
+interop claims in §3 are execution-verified rather than read-verified. `:contextvm:jvmTest`
+passes at 172. `testAndroidHostTest` remains unrun — Maven Central rate-limits the Android
+secp256k1 artifact through the agent proxy.
 
 ## 1. Executive summary
 
@@ -47,16 +54,17 @@ we already have. Only **CEP-4, CEP-6 and CEP-16** are Final; the core spec and t
 are Draft, including CEP-22 and CEP-41 (§6.7).
 
 Because the CEPs are symmetric, compliance is not demonstrable against cordn alone. §6.4 defines
-five test tiers, and the one that does not exist yet is **Tier C: a Kotlin fixture server that
-misbehaves on demand.** No real server sends a non-monotonic `progress`, a stale `pong` nonce or a
-mismatched digest, yet those are MUST-fail requirements — so the fixture is a first-class Stage 2
-deliverable, not scaffolding. Two CEPs (8 and 15) also need **RFC 8785 JCS**, which Quartz does not
-have; it lands in `quartz/…/utils/` as a shared primitive.
+five test tiers. **Tier C — a Kotlin fixture server that misbehaves on demand — is built**
+(`contextvm/…/fixture/`) and is what makes the negative half testable: no real server sends a
+non-monotonic `progress`, a stale `pong` nonce or a mismatched digest, yet those are MUST-fail
+requirements. **RFC 8785 JCS** is built too, in `quartz/…/utils/jcs/`, shared by CEP-8 and CEP-15.
+Tiers B (live coordinator), D (cross-implementation vectors) and E (a real wallet) remain open.
 
-Recommended sequencing: **Stage 0 (vectors) → Stage 1 (extract engine) → decide → Stage 2+.**
-Do not start Stage 2 before the §4.1 decision, because if it goes the wrong way every KeyPackage
-is permanently ecosystem-bound and "interop" degrades to Amethyst speaking two unrelated
-protocols.
+Sequencing, as revised in practice: **Stage 2 (the transport) was built first**, because
+ContextVM has no MLS dependency and so no dependency on the §4.1 decision. What that decision
+gates is **Stage 3**, the cordn binding: if it goes the wrong way every KeyPackage is permanently
+ecosystem-bound and "interop" degrades to Amethyst speaking two unrelated protocols. Remaining
+order: Stage 0 (cordn-side vectors) → Stage 1 (extract the MLS engine) → decide §4.1 → Stage 3-4.
 
 ## 2. The coordinator protocol surface
 
@@ -653,7 +661,55 @@ Risk: `MlsGroup.kt` is 4,505 lines and carries the convergence/lifecycle logic. 
 strictly mechanical — extraction and parameterization, no logic edits — so the diff stays
 reviewable and the test suite is a real check.
 
-### Stage 2 — `:contextvm` module (clean-room)
+### Stage 2 — `:contextvm` module (clean-room) — LANDED
+
+Shipped as `:contextvm`, a KMP module (jvm + android host tests) with `:quartz` as an `api`
+dependency, implemented from the specification documents rather than the LGPL SDK. 172 tests,
+green on jvm. What is in:
+
+| Build item | Where |
+| ---------- | ----- |
+| 1 constants, tags, JSON-RPC codec | `core/CvmKinds`, `core/CvmTags`, `jsonrpc/` |
+| 2 minimal MCP client | `mcp/CvmMcpClient`, `mcp/McpMethods` |
+| 3 CEP-4/19 gift wrap | `crypto/CvmGiftWrap` (pins `REQUIRED`) |
+| 4 correlation + subscription lifecycle | `transport/CvmTransport` |
+| 5 CEP-35 discovery learning | `discovery/SessionDiscovery` |
+| 6 CEP-6/17/23 discovery | `discovery/ServerDiscovery` |
+| 7 **fixture server (Tier C)** | `fixture/CvmFixtureServer`, `fixture/InMemoryRelayPool` |
+| 8 CEP-22 receiver | `transfer/oversized/OversizedTransferReceiver` |
+| 9 CEP-41 receiver | `transfer/stream/OpenStreamReceiver` |
+| 10 CEP-22 sender | `transfer/oversized/OversizedTransferSender` |
+| 11 RFC 8785 JCS | `quartz/…/utils/jcs/JsonCanonicalization` |
+| 12 CEP-15 schemas | `schema/CommonToolSchema` |
+| 13 CEP-8 + CEP-21 | `payment/` |
+| 14 CEP-16 injection | in the fixture's server role |
+| 15 CEP-24 reviews | `discovery/ServerDiscovery.ServerReview` |
+| 16 dual-signer | `transport/DualSigner` |
+
+Four findings worth carrying forward, all caught by tests rather than review:
+
+1. **CEP-22/41 ordering.** The first receiver rejected frames whose `progress` did not increase on
+   arrival, conflating "the sender emits monotonic progress" with "frames arrive in order". Both
+   CEPs say the opposite: `progress` is the assembly index and explicitly not an arrival-order
+   guarantee, and receivers may buffer out-of-order chunks. Validation is positional now.
+2. **JCS and `Double.MIN_VALUE`.** JVM prints `4.9E-324` where ECMAScript requires `5e-324`, so
+   "trust the platform to already be shortest" would have hashed differently from every other
+   implementation. Digits are shortened explicitly until the shortest round-tripping form is
+   found, which removes the platform assumption entirely.
+3. **Event subclassing.** `CvmMessageEvent` began as an `Event` subclass whose `create()` claimed
+   to return that subclass, but quartz mints subclasses through its own kind-to-class factory,
+   which knows nothing about 25910. It is a wrapper over `Event` now.
+4. **Subscribe-before-publish is an API-shape problem, not a discipline problem.** `CvmTransport`
+   exposes `request()` with no public publish/subscribe pair, and `InMemoryRelayPool` drops an
+   event nobody is subscribed to so the property is actually tested rather than assumed.
+
+Remaining gaps in this stage: Tier B (live integration against
+`ghcr.io/cordn-msg/cordn:latest`), Tier D (cross-implementation vectors) and Tier E (a real
+wallet for CEP-8) are all unstarted — see §6.4. `testAndroidHostTest` has not been run in a
+container yet; Maven Central rate-limits the Android secp256k1 artifact.
+
+Original scope notes follow.
+
 
 New Gradle module, peer of `:quic`. Depends on `:quartz` only; no Android framework deps. **Scope,
 CEP inventory, the fourteen subtle rules and the ordered build list are §6** — this stage is that
