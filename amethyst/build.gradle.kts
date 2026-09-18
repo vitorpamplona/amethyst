@@ -74,6 +74,29 @@ android {
             .get()
             .toInt()
 
+    // Packaging toolchain: AGP runs the NDK's llvm-strip over everything that
+    // lands in jniLibs — our committed libarti_android.so included — so the
+    // NDK revision is a build input for the APK, not just for whoever compiles
+    // Arti. Left unset it silently follows AGP's own default (28.2.13676358 on
+    // AGP 9.4.0), which moves with every AGP bump and is a different toolchain
+    // from the one that produced the .so, while a machine with no NDK at all
+    // packages the library unstripped ("Unable to strip the following
+    // libraries") — three different APKs from the same source, which is
+    // exactly what F-Droid's rebuild verification cannot have.
+    //
+    // Read straight from the Arti pin rather than copied into the version
+    // catalog: the two can then never drift, and bumping ANDROID_NDK_VERSION
+    // (which also means rebuilding the .so) moves the packaging toolchain with
+    // it. See tools/arti-build/README.md → "Reproducible builds".
+    ndkVersion =
+        providers
+            .fileContents(layout.settingsDirectory.file("tools/arti-build/ANDROID_NDK_VERSION"))
+            .asText
+            .orNull
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: error("tools/arti-build/ANDROID_NDK_VERSION is missing or empty — it pins the NDK that strips src/main/jniLibs")
+
     defaultConfig {
         applicationId = "com.vitorpamplona.amethyst"
         minSdk =

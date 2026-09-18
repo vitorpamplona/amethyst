@@ -49,6 +49,14 @@ committed binary wasn't tampered with. **Five** things have to be fixed:
 > pinned output was verified with. `cargo-ndk` only wraps the NDK, so a mismatch
 > is a warning rather than an error — but it is the next thing to check if your
 > rebuild does not match.
+>
+> **The app build reads this pin too.** `amethyst/build.gradle.kts` sets
+> `ndkVersion` from `ANDROID_NDK_VERSION`, because AGP runs the NDK's
+> `llvm-strip` over `src/main/jniLibs/` while packaging — the toolchain that
+> strips the library is as much an APK input as the one that compiled it. Unset,
+> `ndkVersion` follows AGP's own default (r28 on AGP 9.4.0) and moves with every
+> AGP bump. So bumping this file changes what packagers need installed, not only
+> what rebuilders need: bump it, rebuild the `.so`, and commit both.
 
 `repro-env.sh` (sourced by both build scripts) also sets `CARGO_INCREMENTAL=0`
 and a fixed `SOURCE_DATE_EPOCH` derived from the Arti tag. The size-optimized
