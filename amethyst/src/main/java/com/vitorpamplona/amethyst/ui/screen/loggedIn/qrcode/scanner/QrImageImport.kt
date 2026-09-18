@@ -28,6 +28,7 @@ import android.net.Uri
 import androidx.core.graphics.scale
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 
@@ -70,12 +71,19 @@ object QrImageImport {
                     if (sampleSizeFor(longestEdge, FIRST_PASS_MAX_EDGE) != 1) add(1)
                 }
 
+            // Checked between passes because a pass itself is one long blocking call into JNI
+            // and cannot be interrupted. The expensive pass is the full-resolution retry: a
+            // modern phone photo is 50-108 MP, so closing the scanner while one is running
+            // otherwise leaves several hundred megabytes and a thorough decode grinding away on
+            // an IO thread for a result nobody is waiting for any more.
             for (sampleSize in sampleSizes) {
+                ensureActive()
                 val found = decodeAt(context, uri, sampleSize, upscale = false, decoder)
                 if (found.isNotEmpty()) return@withContext found
             }
 
             if (longestEdge <= SMALL_IMAGE_EDGE) {
+                ensureActive()
                 val found = decodeAt(context, uri, sampleSize = 1, upscale = true, decoder)
                 if (found.isNotEmpty()) return@withContext found
             }

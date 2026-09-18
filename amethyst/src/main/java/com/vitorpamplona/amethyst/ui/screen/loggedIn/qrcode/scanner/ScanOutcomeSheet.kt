@@ -143,7 +143,7 @@ private fun explain(payload: ScannedPayload): String =
         // sends them somewhere that cannot accept it.
         is ScannedPayload.Bunker -> stringRes(Res.string.qr_scanner_kind_bunker)
         is ScannedPayload.NostrConnect -> stringRes(Res.string.qr_scanner_kind_signer)
-        is ScannedPayload.EncryptedKey -> stringRes(Res.string.qr_scanner_kind_nsec)
+        is ScannedPayload.PrivateKey -> stringRes(Res.string.qr_scanner_kind_nsec)
         is ScannedPayload.Lightning -> stringRes(Res.string.qr_scanner_kind_lightning)
         is ScannedPayload.Cashu -> stringRes(Res.string.qr_scanner_kind_cashu)
         is ScannedPayload.Web -> stringRes(Res.string.qr_scanner_kind_web)

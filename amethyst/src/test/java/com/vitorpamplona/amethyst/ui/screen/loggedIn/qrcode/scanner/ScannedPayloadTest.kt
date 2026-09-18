@@ -145,6 +145,27 @@ class ScannedPayloadTest {
     }
 
     @Test
+    fun `an nsec is secret in every shape a QR code can carry it`() {
+        // Bech32 is case-insensitive, and a QR encoder that wants alphanumeric mode -- half the
+        // bytes of byte mode, so a noticeably smaller and easier-to-scan code -- must uppercase
+        // its payload. An uppercased nsec is therefore not a corner case; it is what a
+        // size-conscious generator produces.
+        assertTrue("an uppercase nsec must never be echoed", classifyScannedPayload(NSEC_FIXTURE.uppercase()).containsSecret)
+        assertTrue(classifyScannedPayload("nostr:$NSEC_FIXTURE").containsSecret)
+        assertTrue(classifyScannedPayload("NOSTR:${NSEC_FIXTURE.uppercase()}").containsSecret)
+    }
+
+    @Test
+    fun `an nsec too damaged to parse is still secret`() {
+        // Same principle the ncryptsec branch already follows: whether a payload is dangerous to
+        // put on screen cannot depend on whether we happen to be able to read it. A half-copied
+        // key pasted from the clipboard, or one transcribed with a typo into a QR generator,
+        // still shows most of its characters.
+        assertTrue(classifyScannedPayload(NSEC_FIXTURE.dropLast(4)).containsSecret)
+        assertTrue(classifyScannedPayload(NSEC_FIXTURE.dropLast(1) + "q").containsSecret)
+    }
+
+    @Test
     fun `raw is always the trimmed input`() {
         assertEquals(npub, classifyScannedPayload("\n $npub \t").raw)
     }
