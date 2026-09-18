@@ -76,10 +76,8 @@ What does **not** need a keep, and where the temptation usually comes from:
 ### Attributes
 
 ```proguard
-# Retraceable stack traces from the uploaded mapping.txt, without leaking the
-# class name back through the file name.
+# What makes a crash report retraceable.
 -keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
 
 # jackson-module-kotlin reads @kotlin.Metadata; R8 requires InnerClasses and
 # EnclosingMethod alongside Signature.
@@ -90,6 +88,36 @@ What does **not** need a keep, and where the temptation usually comes from:
 `-keepparameternames` are debug metadata that nothing in the app reads —
 jackson-module-kotlin takes parameter names from `@kotlin.Metadata`, not from
 `MethodParameters`. They were removed; don't add them back.
+
+`-renamesourcefileattribute` is deliberately **not** set, and the reason is not
+the usual one.
+
+Once R8 is minifying it rewrites every class's `SourceFile` to the marker
+`r8-map-id-<hash>` on its own — there is no rule that restores the original
+per-class `.kt` name. Verified by building it both ways: with
+`-renamesourcefileattribute SourceFile`, all 24,440 classes report the literal
+`"SourceFile"`; without it, they report the marker. So the rule cannot buy
+readability, it can only *destroy* the marker — and that marker is the
+`pg_map_id` header of the mapping that produced the build, which is what lets a
+pasted stack trace name the exact mapping file it needs.
+
+Two related facts worth knowing before someone tries to "fix" stack traces with
+keep rules:
+
+- **Raw line numbers are no longer source line numbers.** R8 renumbers them so
+  that one obfuscated line can encode a whole inlined frame stack. This is a
+  cost of *optimization*, not of renaming — it is new only because the old
+  blanket `-keepnames` had optimization switched off across the program, which
+  is the thing Play was flagging.
+- **Retrace therefore returns more than the old raw traces did**: it expands
+  the frames R8 inlined instead of collapsing them into one misleading line. A
+  one-frame crash can retrace to three.
+
+The workflow is `scripts/retrace.sh <mapping> [trace]`, documented in
+[`RELEASE_OPS.md` § 7](../../../../RELEASE_OPS.md). Every GitHub Release carries
+`amethyst-{googleplay,fdroid}-mapping-<version>.txt.gz`; Play Console needs
+nothing because AGP embeds the mapping in the `.aab` under
+`BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`.
 
 ### Verifying a change to these rules
 

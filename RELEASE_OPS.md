@@ -130,6 +130,11 @@ Nothing to do beyond pushing the tag. Verify the asset count (BUILDING.md
 § Verify). macOS is **arm64-only** — there is no Intel DMG, so a single
 `amethyst-desktop-<version>-macos-arm64.dmg` is the expected, correct result.
 
+Two of those assets are the R8 mapping files
+(`amethyst-{googleplay,fdroid}-mapping-<version>.txt.gz`). Do not prune them
+from old releases — they are the only way to read a crash report from a build
+that old (§ 7).
+
 ### Google Play — manual upload
 1. Download `amethyst-googleplay-<version>.aab` from the GH Release.
 2. Play Console → app `com.vitorpamplona.amethyst` → **Production** (or the
@@ -304,7 +309,7 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 
 ## 6. Post-release verification
 
-- [ ] GH Release: 47 assets, sizes sane, and the asset-name set matches the
+- [ ] GH Release: 49 assets, sizes sane, and the asset-name set matches the
       previous release (see the `diff` one-liner in BUILDING.md § Release
       runbook). macOS is arm64-only — do **not** look for an Intel DMG.
 - [ ] Maven Central: `quartz:<version>` resolves (allow tens of minutes of
@@ -325,3 +330,67 @@ Owner assignments and rotation reminders live with the team (issue tracker).
       see § 4); UnifiedPush still works on an `fdroid` build.
 
 If anything ships broken, see [`BUILDING.md` § Incident response](BUILDING.md#incident-response).
+
+---
+
+## 7. Crash reports & retrace
+
+Release builds are minified **and obfuscated** (they have to be: Play Console
+drops apps whose DEX is under 25% optimized or obfuscated out of store surfaces
+— see `amethyst/proguard-rules.pro` for the whole story). So a raw stack trace
+from a release build looks like this:
+
+```
+java.lang.IllegalStateException: something blew up
+	at onh.B(r8-map-id-12c710927a584543dbe1e2e867db95460bc44482efe53283f86798648c1cfc00:7)
+```
+
+That is not lost information, it is encoded information. Run it back through the
+mapping:
+
+```bash
+scripts/retrace.sh amethyst-googleplay-mapping-v1.13.1.txt.gz crash.txt
+# or:  pbpaste | scripts/retrace.sh amethyst-googleplay-mapping-v1.13.1.txt.gz
+```
+
+```
+java.lang.IllegalStateException: something blew up
+	at androidx.compose.foundation.text.input.TextFieldCharSequence.getText(TextFieldCharSequence.kt:58)
+	at androidx.compose.foundation.text.input.TextFieldState.getText(TextFieldState.kt:146)
+	at com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel.onMessageChanged(ShortNotePostViewModel.kt:1727)
+```
+
+Note that retrace gave back **three** frames where the crash reported one: R8
+had inlined two of them. That is worth internalising — it is the reason a raw
+trace's line number cannot be trusted even in the pre-obfuscation builds, where
+optimization was already inlining. Retracing is not a tax obfuscation imposed;
+it is how you read an optimized build at all.
+
+**Which mapping?** Never guess. The `r8-map-id-<hash>` in the trace *is* the
+`pg_map_id` header of the mapping that produced it, so:
+
+```bash
+gh release download <tag> -p 'amethyst-*-mapping-*.txt.gz'
+zcat amethyst-googleplay-mapping-<tag>.txt.gz | grep -m1 pg_map_id
+```
+
+If the hashes match, that is the right file, full stop. (`googleplay` vs
+`fdroid` matters — the two flavors are separate R8 runs with different
+mappings.)
+
+**Per channel:**
+
+| Where the report came from | What to do |
+|---|---|
+| Play Console / Android vitals | Nothing. AGP embeds the mapping in the `.aab` (`BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`), so Play deobfuscates automatically. |
+| A GitHub issue, Nostr DM, F-Droid, Zapstore, Accrescent | `scripts/retrace.sh` against that release's mapping asset. |
+| A build you made locally | `scripts/retrace.sh amethyst/build/outputs/mapping/<variant>/mapping.txt` |
+
+`scripts/retrace.sh` downloads the R8 version named in the mapping's own header
+from Google's Maven and caches it, so it needs no pinned tooling and keeps
+working across AGP bumps.
+
+**Do not delete mapping assets from old releases.** They are the only copy —
+CI's are gone when the job ends, and a mapping cannot be regenerated after the
+fact (it would need a bit-identical rebuild, and R8's renaming is not stable
+across runs).

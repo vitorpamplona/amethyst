@@ -27,12 +27,41 @@
 # -----------------------------------------------------------------------------
 # Attributes
 # -----------------------------------------------------------------------------
-# SourceFile + LineNumberTable are what let Play (and `retrace`) turn an
-# obfuscated stack trace back into real line numbers via mapping.txt.
-# -renamesourcefileattribute replaces the real file name with a constant so the
-# class name cannot simply be read back off it.
+# These two are what make a crash report readable again. Keep them.
+#
+# There is no setting that gives readable stack traces *in the raw trace* once
+# R8 is minifying, and that is worth being precise about, because it is the
+# thing -dontobfuscate used to buy us:
+#
+#   * R8 overwrites every class's SourceFile with the marker
+#     `r8-map-id-<hash>` whatever we do here. Verified by building it both
+#     ways: with `-renamesourcefileattribute SourceFile` all 24,440 classes
+#     report the literal "SourceFile"; without it they report the marker.
+#     There is no rule that restores the original per-class .kt name.
+#   * R8 renumbers lines even with LineNumberTable kept, because one
+#     obfuscated line now has to encode a whole INLINED frame stack. In this
+#     build, line 7 of one method carries three source frames:
+#     TextFieldCharSequence.getText():58 inlined into TextFieldState.getText()
+#     :146 inlined into ShortNotePostViewModel.onMessageChanged():1727. A raw
+#     line number is no longer a source line.
+#
+# That second point is a cost of OPTIMIZATION, not of renaming, and it is new
+# here only because the old `-keepnames class ** { *; }` had optimization off
+# program-wide — which is exactly what Play was complaining about.
+#
+# So the answer is retrace, not a keep rule. And retrace hands back more than
+# the old raw traces did: it expands those inlined frames instead of collapsing
+# them into one misleading line. See `scripts/retrace.sh` and RELEASE_OPS.md
+# § 7. Two things make that painless, and both depend on this file:
+#
+#   * `-renamesourcefileattribute` is deliberately NOT set, so the map-id
+#     marker survives. A pasted trace then names the exact mapping file it
+#     needs (the marker is the `pg_map_id` header of that mapping), so there is
+#     never any doubt about which release a report came from.
+#   * mapping.txt.gz ships as a GitHub Release asset for every build, so traces
+#     from F-Droid / Zapstore / Accrescent users are retraceable too — Play
+#     Console only auto-deobfuscates the AAB it was given.
 -keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
 
 # Annotations (jackson-module-kotlin reads @kotlin.Metadata; Jackson mixins and
 # kotlinx.serialization read their own), generic signatures, and the

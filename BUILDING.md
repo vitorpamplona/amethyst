@@ -352,7 +352,7 @@ Quartz library in one pipeline.
 
 3. **Wait** for the `Create Release Assets` workflow to finish (~25–30 min).
 
-4. **Verify** — the GH Release should hold **47 assets**:
+4. **Verify** — the GH Release should hold **49 assets**:
    - **14 desktop**, one per matrix leg × format:
      - macOS arm64: `dmg` (1)
      - Windows x64: `msi` + portable `zip` (2)
@@ -367,8 +367,12 @@ Quartz library in one pipeline.
      ships no WiX (`windows-latest` has WiX 3.14 preinstalled, which is why
      the x64 leg gets an MSI). Revisit if that image gains WiX, or if
      jpackage learns the WiX 4+ `wix build` CLI.
-   - **13 Android** — 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the
-     F-Droid `.apks` set built for Accrescent.
+   - **15 Android** — 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the
+     F-Droid `.apks` set built for Accrescent + **2 R8 mapping files**
+     (`amethyst-{googleplay,fdroid}-mapping-<version>.txt.gz`). The mappings
+     are not optional extras: the release build is minified, so without them
+     no crash report from an APK/`.apks` user can be read. See
+     [`RELEASE_OPS.md` § Crash reports](RELEASE_OPS.md#7-crash-reports--retrace).
    - **10 amy** — `tar.gz` (macOS arm64, Linux x64, Linux arm64),
      `deb` + `rpm` per Linux arch, portable `zip` per Windows arch, and the
      one arch-independent no-JRE `amy-<ver>-jvm.tar.gz` for Homebrew-core.
