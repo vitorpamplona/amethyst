@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.M
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.mls.group.MarmotMessageStore
+import com.vitorpamplona.quartz.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CompletableDeferred

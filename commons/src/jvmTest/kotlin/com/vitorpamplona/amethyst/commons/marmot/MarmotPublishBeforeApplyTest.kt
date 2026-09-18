@@ -439,7 +439,7 @@ class MarmotPublishBeforeApplyTest {
             assertEquals(listOf(relay), fx.manager.groupRelays(fx.groupId))
         }
 
-    private class InMemoryStateStore : com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore {
+    private class InMemoryStateStore : com.vitorpamplona.quartz.mls.group.MlsGroupStateStore {
         private val states = mutableMapOf<String, ByteArray>()
         private val retained = mutableMapOf<String, List<ByteArray>>()
 

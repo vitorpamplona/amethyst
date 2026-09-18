@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
-import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.components.AppDataDictionary
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test

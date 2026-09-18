@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.marmot
 
 import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

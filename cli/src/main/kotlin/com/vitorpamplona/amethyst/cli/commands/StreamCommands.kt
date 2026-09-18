@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextSt
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.InMemoryAgentTextStreamSequenceStore
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.PreviewStatus
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.RecordOutcome
-import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

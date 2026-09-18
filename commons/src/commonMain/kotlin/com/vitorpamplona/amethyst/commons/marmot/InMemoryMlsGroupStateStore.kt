@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 
 /**

@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
+import com.vitorpamplona.quartz.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -160,15 +160,15 @@ class MarmotOutboundProcessor(
      * The commit bytes are already MLS-formatted (PublicMessage envelope).
      *
      * @param nostrGroupId the Nostr group ID
-     * @param commitBytes the framed MLS commit bytes from [com.vitorpamplona.quartz.marmot.mls.group.StagedCommit.framedCommitBytes]
+     * @param commitBytes the framed MLS commit bytes from [com.vitorpamplona.quartz.mls.group.StagedCommit.framedCommitBytes]
      * @param exporterKey optional explicit outer-encryption key. Callers
      *     publishing a Commit MUST pass the **pre-commit** exporter secret
-     *     (from [com.vitorpamplona.quartz.marmot.mls.group.StagedCommit.preCommitExporterSecret])
+     *     (from [com.vitorpamplona.quartz.mls.group.StagedCommit.preCommitExporterSecret])
      *     so that other existing members at epoch N can decrypt and process
      *     the commit. If null, falls back to the current epoch's exporter
      *     secret — which is only correct when the commit has *not* been
      *     applied locally yet (i.e. this call is made before
-     *     [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup.mergeStagedCommit]).
+     *     [com.vitorpamplona.quartz.mls.group.MlsGroup.mergeStagedCommit]).
      * @return the signed GroupEvent ready for relay publishing
      */
     suspend fun buildCommitEvent(

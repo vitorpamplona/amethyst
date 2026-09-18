@@ -208,7 +208,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -377,7 +377,7 @@ class Account(
     val client: INostrClient,
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
-    val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
+    val marmotMessageStore: com.vitorpamplona.quartz.mls.group.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
     /**
      * Durable publish obligations. Null means publish-before-apply does not

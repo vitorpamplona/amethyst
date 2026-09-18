@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.mip01Groups
 
-import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
 
 /**
  * MIP-01 image & Blossom upload key derivations.

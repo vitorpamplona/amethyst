@@ -56,7 +56,7 @@ class SharedKeyCache {
      * hex string). The precomputed [hash] is only a bucket selector — [equals] does
      * the authoritative full-content comparison, so hash collisions can never return
      * the wrong peer's secret. Callers must treat the passed arrays as immutable
-     * (the same value-type contract [com.vitorpamplona.quartz.marmot.mls.crypto.X25519KeyPair]
+     * (the same value-type contract [com.vitorpamplona.quartz.mls.crypto.X25519KeyPair]
      * relies on when used as a map key).
      */
     private class CacheKey(

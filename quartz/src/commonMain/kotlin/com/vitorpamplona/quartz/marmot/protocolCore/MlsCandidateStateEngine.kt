@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
-import com.vitorpamplona.quartz.marmot.mls.framing.ContentType
-import com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
-import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
-import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.framing.ContentType
+import com.vitorpamplona.quartz.mls.framing.MlsMessage
+import com.vitorpamplona.quartz.mls.framing.PublicMessage
+import com.vitorpamplona.quartz.mls.framing.WireFormat
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 

@@ -23,10 +23,10 @@ package com.vitorpamplona.quartz.marmot
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
-import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.group.MlsGroupManager
+import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -405,10 +405,10 @@ class MarmotMipBehaviorTest {
             // must reject because Remove is admin-only.
             val proposals =
                 listOf(
-                    com.vitorpamplona.quartz.marmot.mls.group
+                    com.vitorpamplona.quartz.mls.group
                         .PendingProposal(
                             proposal =
-                                com.vitorpamplona.quartz.marmot.mls.messages
+                                com.vitorpamplona.quartz.mls.messages
                                     .Proposal
                                     .Remove(removedLeafIndex = 0),
                             senderLeafIndex = 1,
@@ -444,10 +444,10 @@ class MarmotMipBehaviorTest {
             // proposal list passes.
             val proposals =
                 listOf(
-                    com.vitorpamplona.quartz.marmot.mls.group
+                    com.vitorpamplona.quartz.mls.group
                         .PendingProposal(
                             proposal =
-                                com.vitorpamplona.quartz.marmot.mls.messages
+                                com.vitorpamplona.quartz.mls.messages
                                     .Proposal
                                     .SelfRemove(),
                             senderLeafIndex = 99,
@@ -470,10 +470,10 @@ class MarmotMipBehaviorTest {
             val alice = manager.getGroup(groupId)!!
             val proposals =
                 listOf(
-                    com.vitorpamplona.quartz.marmot.mls.group
+                    com.vitorpamplona.quartz.mls.group
                         .PendingProposal(
                             proposal =
-                                com.vitorpamplona.quartz.marmot.mls.messages
+                                com.vitorpamplona.quartz.mls.messages
                                     .Proposal
                                     .GroupContextExtensions(
                                         extensions =
@@ -517,7 +517,7 @@ class MarmotMipBehaviorTest {
             val staged = alice.pendingProposalsSnapshot()
             assertEquals(1, staged.size, "buildSelfRemoveProposalMessage must also stage to pending pool")
             val entry = staged.single()
-            assertIs<com.vitorpamplona.quartz.marmot.mls.messages.Proposal.SelfRemove>(entry.proposal)
+            assertIs<com.vitorpamplona.quartz.mls.messages.Proposal.SelfRemove>(entry.proposal)
             assertEquals(alice.leafIndex, entry.senderLeafIndex)
             // The captured AC bytes are what RFC 9420 §5.2's MakeProposalRef
             // hashes — must be present so a peer's commit referencing this
@@ -574,7 +574,7 @@ class MarmotMipBehaviorTest {
             val (alice, bob) = build2MemberGroupWithBobJoined()
 
             val proposal =
-                com.vitorpamplona.quartz.marmot.mls.messages
+                com.vitorpamplona.quartz.mls.messages
                     .Proposal
                     .SelfRemove()
             val before = alice.pendingProposalsSnapshot().size
@@ -582,14 +582,14 @@ class MarmotMipBehaviorTest {
             val result = alice.decrypt(wireBytes)
 
             assertEquals(
-                com.vitorpamplona.quartz.marmot.mls.framing.ContentType.PROPOSAL,
+                com.vitorpamplona.quartz.mls.framing.ContentType.PROPOSAL,
                 result.contentType,
             )
             assertEquals(bob.leafIndex, result.senderLeafIndex)
             val after = alice.pendingProposalsSnapshot()
             assertEquals(before + 1, after.size, "decrypt must stage the proposal in pending pool")
             val staged = after.last()
-            assertIs<com.vitorpamplona.quartz.marmot.mls.messages.Proposal.SelfRemove>(staged.proposal)
+            assertIs<com.vitorpamplona.quartz.mls.messages.Proposal.SelfRemove>(staged.proposal)
             assertEquals(bob.leafIndex, staged.senderLeafIndex)
             assertNotNull(
                 staged.authenticatedContentBytes,
@@ -610,7 +610,7 @@ class MarmotMipBehaviorTest {
             val (alice, bob) = build2MemberGroupWithBobJoined()
 
             val proposal =
-                com.vitorpamplona.quartz.marmot.mls.messages
+                com.vitorpamplona.quartz.mls.messages
                     .Proposal
                     .Psk(pskType = 1, pskId = ByteArray(16) { 0xAB.toByte() }, pskNonce = ByteArray(16))
             val wireBytes = bob.encryptProposalAsPrivateMessage(proposal)
@@ -658,7 +658,7 @@ class MarmotMipBehaviorTest {
     @Test
     fun secretTree_rejectsRatchetJumpsBeyondCap() {
         val st =
-            com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree(
+            com.vitorpamplona.quartz.mls.schedule.SecretTree(
                 encryptionSecret = ByteArray(32),
                 leafCount = 1,
             )
@@ -682,7 +682,7 @@ class MarmotMipBehaviorTest {
     @Test
     fun privateMessage_rejectsOversizedAuthenticatedData() {
         val w =
-            com.vitorpamplona.quartz.marmot.mls.codec
+            com.vitorpamplona.quartz.mls.codec
                 .TlsWriter()
         w.putOpaqueVarInt(ByteArray(32)) // group_id
         w.putUint64(0L) // epoch
@@ -692,9 +692,9 @@ class MarmotMipBehaviorTest {
         w.putOpaqueVarInt(ByteArray(64)) // ciphertext (small)
         val ex =
             assertFailsWith<IllegalArgumentException> {
-                com.vitorpamplona.quartz.marmot.mls.framing.PrivateMessage
+                com.vitorpamplona.quartz.mls.framing.PrivateMessage
                     .decodeTls(
-                        com.vitorpamplona.quartz.marmot.mls.codec
+                        com.vitorpamplona.quartz.mls.codec
                             .TlsReader(w.toByteArray()),
                     )
             }
@@ -717,9 +717,9 @@ class MarmotMipBehaviorTest {
     fun verifyTreeParentHashesForJoin_acceptsSingleMemberTree() {
         val alice = MlsGroup.create(aliceId.hexToByteArray())
         val tree =
-            com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
+            com.vitorpamplona.quartz.mls.tree.RatchetTree
                 .decodeTls(
-                    com.vitorpamplona.quartz.marmot.mls.codec
+                    com.vitorpamplona.quartz.mls.codec
                         .TlsReader(alice.exportTreeBytes()),
                 )
         assertNull(MlsGroup.verifyTreeParentHashesForJoin(tree))
@@ -749,9 +749,9 @@ class MarmotMipBehaviorTest {
 
             val alice = manager.getGroup(groupId)!!
             val originalTree =
-                com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
+                com.vitorpamplona.quartz.mls.tree.RatchetTree
                     .decodeTls(
-                        com.vitorpamplona.quartz.marmot.mls.codec
+                        com.vitorpamplona.quartz.mls.codec
                             .TlsReader(alice.exportTreeBytes()),
                     )
 
@@ -763,7 +763,7 @@ class MarmotMipBehaviorTest {
             for (i in 0 until originalTree.leafCount) {
                 val leaf = originalTree.getLeaf(i) ?: continue
                 if (leaf.leafNodeSource ==
-                    com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource.COMMIT
+                    com.vitorpamplona.quartz.mls.tree.LeafNodeSource.COMMIT
                 ) {
                     val tampered = leaf.copy(parentHash = ByteArray(32) { 0x99.toByte() })
                     originalTree.setLeaf(i, tampered)
@@ -823,7 +823,7 @@ class MarmotMipBehaviorTest {
             )
         // Missing 0xF2EE.
         val caps =
-            com.vitorpamplona.quartz.marmot.mls.tree.Capabilities(
+            com.vitorpamplona.quartz.mls.tree.Capabilities(
                 extensions = emptyList(),
                 proposals = listOf(0x000A),
                 credentials = listOf(0x0001),
@@ -847,7 +847,7 @@ class MarmotMipBehaviorTest {
                 credentials = emptyList(),
             )
         val caps =
-            com.vitorpamplona.quartz.marmot.mls.tree.Capabilities(
+            com.vitorpamplona.quartz.mls.tree.Capabilities(
                 extensions = emptyList(),
                 proposals = emptyList(),
                 credentials = listOf(0x0001),
@@ -866,7 +866,7 @@ class MarmotMipBehaviorTest {
                 credentials = listOf(0x0001),
             )
         val caps =
-            com.vitorpamplona.quartz.marmot.mls.tree.Capabilities(
+            com.vitorpamplona.quartz.mls.tree.Capabilities(
                 extensions = listOf(0xF2EE, 0x1234),
                 proposals = listOf(0x000A, 0x000B),
                 credentials = listOf(0x0001, 0x0002),
@@ -905,7 +905,7 @@ class MarmotMipBehaviorTest {
      * (SelfRemove), then re-sign so the KP's outer signature still
      * validates. Useful for testing the §7.2 gate in isolation.
      */
-    private fun createKeyPackageWithoutSelfRemove(identity: String): com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage {
+    private fun createKeyPackageWithoutSelfRemove(identity: String): com.vitorpamplona.quartz.mls.messages.MlsKeyPackage {
         val tempGroup = MlsGroup.create(identity.hexToByteArray())
         val bundle = tempGroup.createKeyPackage(identity.hexToByteArray(), ByteArray(0))
         val original = bundle.keyPackage
@@ -923,7 +923,7 @@ class MarmotMipBehaviorTest {
             originalLeaf.copy(capabilities = tamperedCaps).let { lf ->
                 val tbs = lf.encodeTbs()
                 val sig =
-                    com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+                    com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
                         .signWithLabel(bundle.signaturePrivateKey, "LeafNodeTBS", tbs)
                 lf.copy(signature = sig)
             }
@@ -931,7 +931,7 @@ class MarmotMipBehaviorTest {
         val unsigned = original.copy(leafNode = tamperedLeaf, signature = ByteArray(0))
         return unsigned.copy(
             signature =
-                com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+                com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
                     .signWithLabel(bundle.signaturePrivateKey, "KeyPackageTBS", unsigned.encodeTbs()),
         )
     }
@@ -977,7 +977,7 @@ class MarmotMipBehaviorTest {
         alice.registerPsk(pskId, pskValue)
 
         val proposal =
-            com.vitorpamplona.quartz.marmot.mls.messages
+            com.vitorpamplona.quartz.mls.messages
                 .Proposal
                 .Psk(pskType = 1, pskId = pskId, pskNonce = pskNonce)
 
@@ -985,11 +985,11 @@ class MarmotMipBehaviorTest {
 
         // Reference computation per §5.3 (PSKType=1, no usage/group/epoch).
         val zero = ByteArray(32)
-        val crypto = com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+        val crypto = com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
         val pskExtracted = crypto.hkdfExtract(salt = zero, ikm = pskValue)
 
         val labelWriter =
-            com.vitorpamplona.quartz.marmot.mls.codec
+            com.vitorpamplona.quartz.mls.codec
                 .TlsWriter()
         labelWriter.putUint8(1) // PSKType external
         labelWriter.putOpaqueVarInt(pskId)
@@ -1022,7 +1022,7 @@ class MarmotMipBehaviorTest {
         alice.registerPsk(pskId, ByteArray(32))
 
         val proposal =
-            com.vitorpamplona.quartz.marmot.mls.messages
+            com.vitorpamplona.quartz.mls.messages
                 .Proposal
                 .Psk(pskType = 2, pskId = pskId, pskNonce = ByteArray(16))
 
@@ -1045,11 +1045,11 @@ class MarmotMipBehaviorTest {
         alice.registerPsk(idB, ByteArray(32) { 0x44 })
 
         val pskA =
-            com.vitorpamplona.quartz.marmot.mls.messages
+            com.vitorpamplona.quartz.mls.messages
                 .Proposal
                 .Psk(pskType = 1, pskId = idA, pskNonce = ByteArray(8))
         val pskB =
-            com.vitorpamplona.quartz.marmot.mls.messages
+            com.vitorpamplona.quartz.mls.messages
                 .Proposal
                 .Psk(pskType = 1, pskId = idB, pskNonce = ByteArray(8))
 

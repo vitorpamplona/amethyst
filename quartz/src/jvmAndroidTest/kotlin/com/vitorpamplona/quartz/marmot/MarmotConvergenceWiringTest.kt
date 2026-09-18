@@ -24,11 +24,11 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManage
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.protocolCore.ConvergencePolicy
 import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceStatus
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotConvergenceEngine
+import com.vitorpamplona.quartz.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.runBlocking

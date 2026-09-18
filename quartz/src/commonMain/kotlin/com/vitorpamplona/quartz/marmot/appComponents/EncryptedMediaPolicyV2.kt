@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.codec.TlsWriter
 
 /** One blob-store endpoint and the locator kind it serves. */
 data class BlobStoreEndpointV2(

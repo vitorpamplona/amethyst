@@ -23,14 +23,14 @@ package com.vitorpamplona.quartz.marmot.appComponents
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
-import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.marmot.mls.components.ComponentData
-import com.vitorpamplona.quartz.marmot.mls.components.ComponentsList
-import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
-import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519KeyPair
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
-import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
-import com.vitorpamplona.quartz.marmot.mls.tree.Extension
+import com.vitorpamplona.quartz.mls.components.AppDataDictionary
+import com.vitorpamplona.quartz.mls.components.ComponentData
+import com.vitorpamplona.quartz.mls.components.ComponentsList
+import com.vitorpamplona.quartz.mls.crypto.Ed25519
+import com.vitorpamplona.quartz.mls.crypto.Ed25519KeyPair
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
+import com.vitorpamplona.quartz.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 
