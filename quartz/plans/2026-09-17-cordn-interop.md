@@ -852,10 +852,64 @@ messages, each kill their guarding tests at both the unit and end-to-end level. 
 those needed a new end-to-end test — a single catch-up pass looks correct either way, and only a
 second pass reveals the stall.
 
+**Cross-implementation verification — added after reading
+[Staircase](https://code.relay.tools/opensauce/staircase) (`d9dd1a0`, MIT), an
+independent Kotlin cordn client that vendors this project's own MLS engine.**
+
+`cordn/interop/CordnLifecycleInteropTest` walks the whole lifecycle against
+fixtures **ts-mls** generated (Staircase's `conformance/fixtures/gen`, vendored
+under `cordn/src/jvmTest/resources/tsmls/`): read their KeyPackage and agree on
+its `kp_ref`, unseal their commit under the published epoch exporter, join from
+their Welcome, derive the same epoch exporter byte for byte, apply their
+`0xC04D` metadata commit, and read their application message end to end. 15
+tests, all green.
+
+Reading Staircase found three things no amount of self-consistent testing would
+have:
+
+1. **`authenticated_data` is a wire requirement the cordn spec never mentions.**
+   The reference client puts the sender's account pubkey in MLS
+   `authenticated_data` and **rejects** any application message that arrives
+   with it empty (`packages/cli/src/groupSync.ts:247`). Our engine AEAD-bound
+   the field correctly on receive but hardcoded `ByteArray(0)` on send and never
+   exposed it — so we would have shipped a client every cordn peer silently
+   discarded. `MlsGroup.encrypt` now takes it and `DecryptedMessage` carries it;
+   `spec02Envelopes/CordnApplicationMessage` owns the binding. Worth raising
+   upstream: it belongs in `spec/02.md` §5.
+2. **Our GroupContextExtensions check implemented a rule RFC 9420 does not
+   have, and omitted the one it does.** §12.1.7 says nothing about recognising
+   extension types; its only validity rule is that the resulting group must not
+   require capabilities some member lacks. We rejected any type outside a
+   hardcoded list — which would have refused cordn's `0xC04D` metadata commit
+   outright — while never checking the real rule, so a commit could install a
+   `required_capabilities` a sitting member could not meet and split the group.
+   Both fixed; `MlsGroupPolicy.knownExtensionTypes` is gone, because it encoded
+   the invented rule.
+3. **`Ed25519` could not rebuild a key pair from a known seed.** `keyPairFromSeed`
+   is now in the expect/actual set — any interop fixture needs it, and ts-mls
+   stores only the seed (inside a PKCS#8 blob).
+
+Staircase also independently confirms Stage 1's design. Their `VENDORED.md`
+lists the same decoupling we did — remove `currentMarmotData`/`currentGroupState`/
+`currentNostrGroupId`/`agentTextStreamSecret`, drop the `AdminPolicyV1` branch,
+inject the admin resolver, do not vendor `MlsGroupManager` or
+`MarmotMessageStore` — arrived at independently, as patches against a fork.
+**Now that the seam is upstream they could stop forking**, and their remaining
+patches are a ready-made list of what a cordn binding still wants from the
+engine: caller-chosen `group_id`, explicit leaf lifetimes (cordn uses ~100
+years), retained per-epoch receiver data, and skipped-generation keys.
+
+One trap worth recording: `MlsGroup.memberIdentityHex` hex-encodes the
+credential bytes, which is right only for a binding that stores a raw key.
+cordn's identity is already hex, so it returns 128 characters of hex-of-hex;
+`CordnCredential.memberIdentities` is the cordn-side accessor.
+
 Still open in Stage 3:
 
-- **A full group lifecycle test** — create, add a member via Welcome, exchange a sealed
-  envelope. Every piece is tested; the end-to-end path wants the Stage 0 vectors.
+- **The reverse direction under their client.** We add a real ts-mls KeyPackage
+  to a group we created and produce a Welcome, but nothing here runs ts-mls to
+  confirm it joins. Staircase's conformance suite writes Kotlin-side fixtures
+  for that exchange; wiring both halves is the remaining step.
 - **Tier B**, live against `ghcr.io/cordn-msg/cordn:latest`.
 
 ### Stage 4 — App integration

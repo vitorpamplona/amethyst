@@ -226,7 +226,20 @@ class MlsGroup private constructor(
     /** Raw BasicCredential identity bytes of the member at the given leaf, or null. */
     fun memberIdentity(leafIndex: Int): ByteArray? = (tree.getLeaf(leafIndex)?.credential as? Credential.Basic)?.identity
 
-    /** Lowercase hex of the member's BasicCredential identity, or null. */
+    /**
+     * Lowercase hex OF THE CREDENTIAL BYTES at [leafIndex], or null.
+     *
+     * This hex-encodes whatever the credential holds, which is the account key
+     * only for a binding that stores it as raw bytes — Marmot does. A binding
+     * that stores an already-encoded identity gets the hex of that encoding:
+     * cordn writes 64 ASCII characters of hex, so this returns 128 characters
+     * of nothing useful. Such a binding should read the credential itself
+     * (`CordnCredential.identityOrNull`) rather than call this.
+     *
+     * Kept as-is because it is what Marmot means everywhere it is used, and
+     * because a function that guessed which encoding a credential used would
+     * be worse than one that says plainly what it does.
+     */
     fun memberIdentityHex(leafIndex: Int): String? = memberIdentity(leafIndex)?.toHexKey()
 
     /** Lowercase hex of the local member's BasicCredential identity, or null. */
@@ -646,6 +659,7 @@ class MlsGroup private constructor(
             val leafIndex = applyProposalAdd(p)
             addedMembers.add(leafIndex to p.keyPackage)
         }
+        enforceRequiredCapabilities()
 
         // Generate new path secrets on the updated tree
         val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
@@ -978,7 +992,25 @@ class MlsGroup private constructor(
      * The signature is computed with `SignWithLabel(., "FramedContentTBS",
      * FramedContentTBS)` using the member's signature private key.
      */
-    fun encrypt(plaintext: ByteArray): ByteArray {
+    fun encrypt(
+        plaintext: ByteArray,
+        /**
+         * MLS `authenticated_data`: authenticated but NOT encrypted.
+         *
+         * The AEAD covers it, so a recipient knows the sender wrote it and the
+         * delivery service cannot alter it — but the delivery service can read
+         * it, which is the whole trade. RFC 9420 §6 leaves the contents to the
+         * application.
+         *
+         * cordn puts the sender's account pubkey here and rejects any
+         * application message that arrives with this field empty, because that
+         * is what binds an unsigned envelope to an MLS sender. Marmot leaves it
+         * empty and carries the same binding elsewhere. Empty is the default
+         * because a binding that does not use the field should not be paying a
+         * metadata cost for it.
+         */
+        authenticatedData: ByteArray = ByteArray(0),
+    ): ByteArray {
         // Trim sentKeys if it grows too large
         if (sentKeys.size > MAX_SENT_KEYS) {
             val sortedKeys = sentKeys.keys.sorted()
@@ -1007,7 +1039,7 @@ class MlsGroup private constructor(
                     groupId = groupId,
                     epoch = epoch,
                     senderLeafIndex = myLeafIndex,
-                    authenticatedData = ByteArray(0),
+                    authenticatedData = authenticatedData,
                     applicationData = plaintext,
                     groupContext = groupContext,
                 ),
@@ -1023,7 +1055,7 @@ class MlsGroup private constructor(
         val pmcPlaintext = pmcWriter.toByteArray()
 
         // Build PrivateContentAAD (RFC 9420 §6.3.2)
-        val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, ByteArray(0))
+        val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, authenticatedData)
         val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, pmcPlaintext)
 
         // Build sender data plaintext: leaf_index || generation || reuse_guard
@@ -1061,7 +1093,7 @@ class MlsGroup private constructor(
                 groupId = groupId,
                 epoch = epoch,
                 contentType = ContentType.APPLICATION,
-                authenticatedData = ByteArray(0),
+                authenticatedData = authenticatedData,
                 encryptedSenderData = encryptedSenderData,
                 ciphertext = ciphertext,
             )
@@ -1303,6 +1335,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = applicationData,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
 
@@ -1718,6 +1751,7 @@ class MlsGroup private constructor(
         for ((add, _) in referenceAddSenders) {
             newLeavesInCommit.add(applyProposalAdd(add))
         }
+        enforceRequiredCapabilities()
 
         // If the proposals just removed *us*, there is no path-decrypt to do
         // and no confirmation_tag to verify against our (now bogus) commit
@@ -2586,6 +2620,29 @@ class MlsGroup private constructor(
         return tree.addLeaf(leafNode)
     }
 
+    /**
+     * RFC 9420 §12.1.7: a commit is invalid if it leaves the group with a
+     * `required_capabilities` extension some member does not satisfy.
+     *
+     * Run AFTER every proposal in the commit has been applied, which is what
+     * makes the spec's parenthetical fall out for free: the tree already
+     * includes members added in this commit and excludes members removed by
+     * it, so iterating the current leaves is exactly the right set.
+     *
+     * The failure this prevents is a split group. A GroupContextExtensions
+     * proposal that raises the bar above what a sitting member advertises is
+     * rejected by every peer that checks and accepted by every peer that does
+     * not, and the two halves diverge at the next epoch with nothing pointing
+     * at the cause.
+     */
+    private fun enforceRequiredCapabilities() {
+        val required = findRequiredCapabilities(groupContext.extensions) ?: return
+        for (i in 0 until tree.leafCount) {
+            val leaf = tree.getLeaf(i) ?: continue
+            requireCapabilitiesMeetRequirements(leaf.capabilities, required, "Member leaf $i")
+        }
+    }
+
     private fun applyProposal(
         proposal: Proposal,
         senderLeafIndex: Int,
@@ -2624,12 +2681,18 @@ class MlsGroup private constructor(
             }
 
             is Proposal.GroupContextExtensions -> {
-                // Validate extension types are supported (RFC 9420 Section 12.1.7)
-                for (ext in proposal.extensions) {
-                    require(ext.extensionType in KNOWN_EXTENSION_TYPES || ext.extensionType in policy.knownExtensionTypes) {
-                        "Unsupported extension type: ${ext.extensionType}"
-                    }
-                }
+                // RFC 9420 §12.1.7: a wholesale replacement, not a merge. The
+                // proposal's only validity rule concerns `required_capabilities`
+                // and is checked in [enforceRequiredCapabilities] once every
+                // proposal in the commit has been applied -- the membership it
+                // must hold over is the post-commit one.
+                //
+                // Note there is deliberately no check that we recognise these
+                // extension types. This used to reject anything outside a
+                // hardcoded list, which is a rule RFC 9420 does not have: it
+                // made the engine refuse valid groups built on any extension we
+                // had not enumerated, and `required_capabilities` is how a group
+                // that genuinely needs an extension understood enforces it.
                 groupContext = groupContext.copy(extensions = proposal.extensions)
             }
 
@@ -3033,24 +3096,6 @@ class MlsGroup private constructor(
          * exactly on the limit.
          */
         private const val LIFETIME_SPAN_SECONDS = 84L * 24 * 60 * 60
-
-        /**
-         * Extension types RFC 9420 and the drafts we implement define.
-         *
-         * A binding's own types come from [MlsGroupPolicy.knownExtensionTypes]
-         * and are unioned with this at the point of use.
-         */
-        private val KNOWN_EXTENSION_TYPES =
-            setOf(
-                RATCHET_TREE_EXTENSION_TYPE,
-                REQUIRED_CAPABILITIES_EXTENSION_TYPE,
-                EXTERNAL_PUB_EXTENSION_TYPE,
-                EXTERNAL_SENDERS_EXTENSION_TYPE,
-                // The current profile's carrier for all app-owned group state.
-                // A group can arrive at one either by being created with it or
-                // by a GroupContextExtensions proposal that installs it.
-                AppDataDictionary.EXTENSION_TYPE,
-            )
 
         /**
          * Parsed view of the RFC 9420 §7.2 `required_capabilities` extension.
@@ -4183,19 +4228,30 @@ data class DecryptedMessage(
     val contentType: ContentType,
     val content: ByteArray,
     val epoch: Long,
+    /**
+     * MLS `authenticated_data` as the sender wrote it — authenticated by the
+     * AEAD, but readable by anyone who carried the message.
+     *
+     * Empty when the sender set none. A binding that puts meaning here (cordn
+     * binds the sender's account pubkey) must treat empty as a rejection rather
+     * than a default, or an attacker simply omits the field.
+     */
+    val authenticatedData: ByteArray = ByteArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DecryptedMessage) return false
         return senderLeafIndex == other.senderLeafIndex &&
             content.contentEquals(other.content) &&
-            epoch == other.epoch
+            epoch == other.epoch &&
+            authenticatedData.contentEquals(other.authenticatedData)
     }
 
     override fun hashCode(): Int {
         var result = senderLeafIndex
         result = 31 * result + content.contentHashCode()
         result = 31 * result + epoch.hashCode()
+        result = 31 * result + authenticatedData.contentHashCode()
         return result
     }
 }

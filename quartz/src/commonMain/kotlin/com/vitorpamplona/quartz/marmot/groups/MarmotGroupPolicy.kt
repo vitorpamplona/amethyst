@@ -56,12 +56,6 @@ object MarmotGroupPolicy : MlsGroupPolicy {
     override val defaultRequiredCapabilities: Extension get() = MarmotCapabilities.mipRequired()
 
     /**
-     * `0xF2EE`. The current profile's `app_data_dictionary` carrier is already
-     * in the engine's own set — it is a draft MLS extension, not a Marmot one.
-     */
-    override val knownExtensionTypes: Set<Int> get() = setOf(MarmotCapabilities.MARMOT_GROUP_DATA_EXTENSION_TYPE)
-
-    /**
      * `MLS-Exporter("marmot", "group-event", 32)` — the outer
      * ChaCha20-Poly1305 key for a kind:445 GroupEvent. A commit must be sealed
      * under the PRE-commit epoch so members still at epoch N can open it.

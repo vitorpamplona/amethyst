@@ -91,8 +91,6 @@ object CordnGroupPolicy : MlsGroupPolicy {
      */
     override val defaultRequiredCapabilities: Extension? get() = null
 
-    override val knownExtensionTypes: Set<Int> get() = setOf(CordnGroupMetadata.EXTENSION_TYPE)
-
     /**
      * `MLS-Exporter("cordn", "group-payload", 32)` — `spec/03.md` §4.
      *

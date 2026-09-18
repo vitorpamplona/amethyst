@@ -103,15 +103,6 @@ interface MlsGroupPolicy {
     val defaultRequiredCapabilities: Extension? get() = null
 
     /**
-     * Extension types this application understands, beyond the RFC 9420 set.
-     *
-     * A GroupContextExtensions proposal naming a type outside the union of
-     * this and the engine's own set is rejected: accepting an extension we
-     * cannot evaluate would mean committing to a requirement we cannot check.
-     */
-    val knownExtensionTypes: Set<Int> get() = emptySet()
-
-    /**
      * How this binding derives the pre-commit exporter secret a [CommitResult]
      * carries, or null if it seals nothing outside MLS.
      *

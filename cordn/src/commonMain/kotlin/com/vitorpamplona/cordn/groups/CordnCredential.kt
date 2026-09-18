@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.cordn.groups
 
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.mls.tree.LeafNode
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -78,6 +79,19 @@ object CordnCredential {
 
     /** The account hex claimed by [leaf], or null. */
     fun identityOrNull(leaf: LeafNode?): HexKey? = identityOrNull(leaf?.credential)
+
+    /**
+     * Every member's account hex, by leaf index.
+     *
+     * Use this rather than `MlsGroup.memberIdentityHex`, which hex-encodes the
+     * credential bytes — correct for a binding that stores a raw key, and for
+     * cordn it returns 128 characters of hex-of-hex. Leaves whose credential is
+     * not a cordn identity are skipped rather than reported as garbage.
+     */
+    fun membersOf(group: MlsGroup): Map<Int, HexKey> = group.members().mapNotNull { (index, leaf) -> identityOrNull(leaf)?.let { index to it } }.toMap()
+
+    /** The set of accounts holding at least one leaf. One account may hold several. */
+    fun memberIdentities(group: MlsGroup): Set<HexKey> = membersOf(group).values.toSet()
 
     private fun isCanonical(hex: String) = hex.length == HEX_LENGTH && hex.all { it in HEX_ALPHABET }
 
