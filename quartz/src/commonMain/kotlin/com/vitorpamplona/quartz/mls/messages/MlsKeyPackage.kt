@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.mls.messages
 
-import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsSerializable
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.components.AppDataDictionary
+import com.vitorpamplona.quartz.mls.components.ComponentsList
 import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.mls.tree.Extension
 import com.vitorpamplona.quartz.mls.tree.LeafNode
@@ -93,7 +93,7 @@ data class MlsKeyPackage(
      */
     fun isLastResort(): Boolean =
         extensions.any { it.extensionType == LAST_RESORT_EXTENSION_TYPE } ||
-            AppDataDictionary.fromExtensionsOrEmpty(extensions).contains(AppComponentIds.LAST_RESORT_KEY_PACKAGE)
+            AppDataDictionary.fromExtensionsOrEmpty(extensions).contains(ComponentsList.LAST_RESORT_KEY_PACKAGE_ID)
 
     /**
      * Encode the TBS (to-be-signed) portion for signature verification.

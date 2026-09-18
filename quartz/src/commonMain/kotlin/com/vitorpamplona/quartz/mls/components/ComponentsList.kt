@@ -113,6 +113,14 @@ object ComponentsList {
     /** Component id of the upstream `safe_aad` list. */
     const val SAFE_AAD_ID = 0x0002
 
+    /**
+     * `last_resort_key_package`: empty-data marker in a KeyPackage's own
+     * dictionary. Note this is a component, NOT an MLS extension type — the
+     * MIP-era profile marked last resort with extension `0x000a`, which is now
+     * the `self_remove` PROPOSAL type.
+     */
+    const val LAST_RESORT_KEY_PACKAGE_ID = 0x0004
+
     /** The supported/required id list carried by [dictionary], or empty when absent. */
     fun supportedOrRequired(dictionary: AppDataDictionary): List<Int> = dictionary[APP_COMPONENTS_ID]?.let { decode(it) } ?: emptyList()
 }

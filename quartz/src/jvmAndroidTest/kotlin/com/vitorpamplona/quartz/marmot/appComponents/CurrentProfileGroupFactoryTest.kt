@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.marmot.appComponents
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
+import com.vitorpamplona.quartz.marmot.groups.currentAdminIdentities
+import com.vitorpamplona.quartz.marmot.groups.currentGroupState
+import com.vitorpamplona.quartz.marmot.groups.isLocalAdmin
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.mls.codec.TlsReader

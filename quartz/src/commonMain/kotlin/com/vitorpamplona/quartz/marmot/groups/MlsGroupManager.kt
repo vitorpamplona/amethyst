@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.marmot.groups
 import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupLifecycleV1
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager.Companion.EPOCH_RETENTION_WINDOW
+import com.vitorpamplona.quartz.marmot.groups.currentAdminIdentities
+import com.vitorpamplona.quartz.marmot.groups.currentNostrGroupId
+import com.vitorpamplona.quartz.marmot.groups.isLocalAdmin
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.components.ComponentsList
@@ -141,7 +144,7 @@ class MlsGroupManager(
                         continue
                     }
                     val state = MlsGroupState.decodeTls(stateBytes)
-                    groups[nostrGroupId] = MlsGroup.restore(state)
+                    groups[nostrGroupId] = MlsGroup.restore(state, MarmotGroupPolicy)
                     Log.d(TAG) { "restoreAll(): restored group $nostrGroupId (${stateBytes.size} bytes)" }
 
                     // Restore retained epochs
@@ -214,7 +217,7 @@ class MlsGroupManager(
         if (!changed) return@withLock
 
         val outgoing = current?.retainedSecrets()
-        groups[nostrGroupId] = MlsGroup.restore(state)
+        groups[nostrGroupId] = MlsGroup.restore(state, MarmotGroupPolicy)
         // Retain by outgoing epoch even when the epoch NUMBER is unchanged: a
         // same-epoch rewind swaps one epoch-N state for a different one, and
         // the abandoned N still has traffic addressed to it.
@@ -278,7 +281,7 @@ class MlsGroupManager(
     ): MlsGroup =
         mutex.withLock {
             Log.d(TAG) { "createGroup($nostrGroupId): creating new MLS group" }
-            val group = MlsGroup.create(identity, signingKey, initialExtensions)
+            val group = MlsGroup.create(identity, signingKey, initialExtensions, policy = MarmotGroupPolicy)
             groups[nostrGroupId] = group
             persistGroup(nostrGroupId)
             Log.d(TAG) { "createGroup($nostrGroupId): done, in-memory group count=${groups.size}" }
@@ -309,7 +312,7 @@ class MlsGroupManager(
         hintNostrGroupId: HexKey? = null,
     ): Pair<MlsGroup, HexKey> =
         mutex.withLock {
-            val group = MlsGroup.processWelcome(welcomeBytes, bundle)
+            val group = MlsGroup.processWelcome(welcomeBytes, bundle, MarmotGroupPolicy)
 
             val derivedId =
                 group.currentNostrGroupId()
@@ -349,7 +352,7 @@ class MlsGroupManager(
         signingKey: ByteArray? = null,
     ): ExternalJoinResult =
         mutex.withLock {
-            val result = MlsGroup.externalJoin(groupInfoBytes, identity, signingKey)
+            val result = MlsGroup.externalJoin(groupInfoBytes, identity, signingKey, policy = MarmotGroupPolicy)
             groups[nostrGroupId] = result.group
             persistGroup(nostrGroupId)
             result
@@ -413,7 +416,7 @@ class MlsGroupManager(
         mutex.withLock {
             val live = requireGroup(nostrGroupId)
             val priorState = live.saveState()
-            val clone = MlsGroup.restore(priorState)
+            val clone = MlsGroup.restore(priorState, MarmotGroupPolicy)
             val result = prepare(clone)
             StagedCommit(result, priorState, clone.saveState())
         }

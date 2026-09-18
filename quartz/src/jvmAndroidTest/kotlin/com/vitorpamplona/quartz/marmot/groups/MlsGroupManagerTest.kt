@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.groups
 
+import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
@@ -147,7 +148,7 @@ class MlsGroupManagerTest {
             // group is enough to observe the ratchet behavior.)
             val bobBundle = aliceGroup.createKeyPackage("bob".encodeToByteArray(), ByteArray(0))
             val addResult = alice.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
-            val bob = MlsGroup.processWelcome(addResult.welcomeBytes!!, bobBundle)
+            val bob = MlsGroup.processWelcome(addResult.welcomeBytes!!, bobBundle, policy = MarmotGroupPolicy)
 
             // Alice sends generation 0 (no commit); Bob consumes it.
             val ct0 = alice.encrypt(groupId, "msg0".encodeToByteArray())
@@ -314,7 +315,7 @@ class MlsGroupManagerTest {
             // production before a Welcome has ever been seen).
             val bobBundle1 =
                 MlsGroup
-                    .create("bob".encodeToByteArray())
+                    .create("bob".encodeToByteArray(), policy = MarmotGroupPolicy)
                     .createKeyPackage("bob".encodeToByteArray(), ByteArray(0))
             val firstAdd = alice.addMember(groupId, bobBundle1.keyPackage.toTlsBytes())
             val firstWelcome = firstAdd.welcomeBytes ?: fail("Alice's first add must produce a Welcome")
@@ -371,7 +372,7 @@ class MlsGroupManagerTest {
             // --- Rejoin: fresh KeyPackage + fresh Welcome, SAME groupId. -
             val bobBundle2 =
                 MlsGroup
-                    .create("bob".encodeToByteArray())
+                    .create("bob".encodeToByteArray(), policy = MarmotGroupPolicy)
                     .createKeyPackage("bob".encodeToByteArray(), ByteArray(0))
             val secondAdd = alice.addMember(groupId, bobBundle2.keyPackage.toTlsBytes())
             val secondWelcome =

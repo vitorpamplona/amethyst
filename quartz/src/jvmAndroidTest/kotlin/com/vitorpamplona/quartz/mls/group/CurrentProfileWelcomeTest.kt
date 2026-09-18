@@ -24,6 +24,12 @@ import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
+import com.vitorpamplona.quartz.marmot.groups.MarmotCapabilities
+import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
+import com.vitorpamplona.quartz.marmot.groups.agentTextStreamSecret
+import com.vitorpamplona.quartz.marmot.groups.currentGroupState
+import com.vitorpamplona.quartz.marmot.groups.currentMarmotData
+import com.vitorpamplona.quartz.marmot.groups.currentNostrGroupId
 import com.vitorpamplona.quartz.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.mls.crypto.Ed25519KeyPair
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
@@ -87,7 +93,7 @@ class CurrentProfileWelcomeTest {
             val commit = group.commit()
             val welcome = assertNotNull(commit.welcomeBytes, "adding a member must produce a Welcome")
 
-            val joined = MlsGroup.processWelcome(welcome, invitee)
+            val joined = MlsGroup.processWelcome(welcome, invitee, policy = MarmotGroupPolicy)
             assertEquals(nostrGroupId.toHexKey(), joined.currentNostrGroupId())
             assertEquals(group.currentGroupState().profile?.name, joined.currentGroupState().profile?.name)
         }
@@ -122,7 +128,7 @@ class CurrentProfileWelcomeTest {
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
             val welcome = assertNotNull(group.commit().welcomeBytes)
 
-            val failure = assertFailsWith<IllegalArgumentException> { MlsGroup.processWelcome(welcome, invitee) }
+            val failure = assertFailsWith<IllegalArgumentException> { MlsGroup.processWelcome(welcome, invitee, policy = MarmotGroupPolicy) }
             assertTrue(
                 failure.message.orEmpty().contains("agent text stream roles"),
                 "expected a role-capability refusal, got: ${failure.message}",
@@ -151,7 +157,7 @@ class CurrentProfileWelcomeTest {
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
             val welcome = assertNotNull(group.commit().welcomeBytes)
 
-            val joined = MlsGroup.processWelcome(welcome, invitee)
+            val joined = MlsGroup.processWelcome(welcome, invitee, policy = MarmotGroupPolicy)
             assertEquals(nostrGroupId.toHexKey(), joined.currentNostrGroupId())
         }
 
@@ -180,7 +186,7 @@ class CurrentProfileWelcomeTest {
 
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
             val welcome = assertNotNull(group.commit().welcomeBytes)
-            val joined = MlsGroup.processWelcome(welcome, invitee)
+            val joined = MlsGroup.processWelcome(welcome, invitee, policy = MarmotGroupPolicy)
             assertEquals(nostrGroupId.toHexKey(), joined.currentNostrGroupId())
         }
 
@@ -215,7 +221,7 @@ class CurrentProfileWelcomeTest {
 
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
             val welcome = assertNotNull(group.commit().welcomeBytes)
-            val failure = assertFailsWith<IllegalArgumentException> { MlsGroup.processWelcome(welcome, invitee) }
+            val failure = assertFailsWith<IllegalArgumentException> { MlsGroup.processWelcome(welcome, invitee, policy = MarmotGroupPolicy) }
             assertTrue(
                 failure.message.orEmpty().contains("agent text stream roles"),
                 "expected a role-capability refusal, got: ${failure.message}",
@@ -253,7 +259,7 @@ class CurrentProfileWelcomeTest {
     ): KeyPackageBundle {
         val full = CurrentProfileGroupFactory.createKeyPackage(signer)
         val reduced =
-            MlsGroup.currentProfileLeafCapabilities().let {
+            MarmotCapabilities.currentProfileLeaf().let {
                 Capabilities(
                     extensions = it.extensions + roles,
                     proposals = it.proposals,
@@ -289,7 +295,7 @@ class CurrentProfileWelcomeTest {
             group.proposeAdd(invitee.keyPackage.toTlsBytes())
             val welcome = assertNotNull(group.commit().welcomeBytes)
 
-            val joined = MlsGroup.processWelcome(welcome, invitee)
+            val joined = MlsGroup.processWelcome(welcome, invitee, policy = MarmotGroupPolicy)
             assertEquals(
                 AgentTextStreamQuicPolicyV1.userToAgentDefault(),
                 joined.currentGroupState().agentTextStream,

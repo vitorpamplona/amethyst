@@ -20,13 +20,6 @@
  */
 package com.vitorpamplona.quartz.mls.group
 
-import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
-import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
-import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
-import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.components.AppDataDictionary
@@ -70,7 +63,6 @@ import com.vitorpamplona.quartz.mls.tree.Lifetime
 import com.vitorpamplona.quartz.mls.tree.PathSecretAndKey
 import com.vitorpamplona.quartz.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.mls.tree.UpdatePathNode
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mac.MacInstance
@@ -104,8 +96,8 @@ import com.vitorpamplona.quartz.utils.mac.MacInstance
  * // Decrypt application message
  * val decrypted = group.decrypt(encrypted)
  *
- * // Export key for Marmot outer encryption
- * val key = group.exporterSecret("marmot", "group-event", 32)
+ * // Export key for a binding's own outer encryption
+ * val key = group.exporterSecret("myapp", "group-event".encodeToByteArray(), 32)
  * ```
  */
 private fun constantTimeEquals(
@@ -150,6 +142,12 @@ class MlsGroup private constructor(
      * for us".
      */
     private val pathPrivateKeys: MutableMap<Int, ByteArray> = mutableMapOf(),
+    /**
+     * The application's authorization rules. See [MlsGroupPolicy]: RFC 9420
+     * itself places no limit on who may commit what, so the default allows
+     * everything the protocol allows and a binding supplies its own.
+     */
+    private val policy: MlsGroupPolicy = MlsGroupPolicy.Permissive,
 ) {
     val groupId: ByteArray get() = groupContext.groupId
     val epoch: Long get() = groupContext.epoch
@@ -167,6 +165,22 @@ class MlsGroup private constructor(
      * get a clean answer instead of poking at private tree internals.
      */
     fun isLocalMember(): Boolean = myLeafIndex < tree.leafCount && tree.getLeaf(myLeafIndex) != null
+
+    /**
+     * The read-only projection this group hands to its [MlsGroupPolicy].
+     *
+     * Public because a binding's own checks want the same view the engine
+     * gives the policy — Marmot's "only admins may change group extensions"
+     * gate runs in `MlsGroupManager`, before any commit is staged.
+     */
+    fun view(): GroupView =
+        GroupView(
+            extensions = groupContext.extensions,
+            leafCount = tree.leafCount,
+            myLeafIndex = myLeafIndex,
+            identityAt = { memberIdentityHex(it) },
+            capabilitiesAt = { tree.getLeaf(it)?.capabilities },
+        )
 
     /**
      * Read-only snapshot of the staged-proposal pool. Exposed at module
@@ -207,7 +221,7 @@ class MlsGroup private constructor(
         return w.toByteArray()
     }
 
-    // --- Marmot admin helpers (MIP-01 / MIP-03) ---
+    // --- Member identity ---
 
     /** Raw BasicCredential identity bytes of the member at the given leaf, or null. */
     fun memberIdentity(leafIndex: Int): ByteArray? = (tree.getLeaf(leafIndex)?.credential as? Credential.Basic)?.identity
@@ -218,80 +232,13 @@ class MlsGroup private constructor(
     /** Lowercase hex of the local member's BasicCredential identity, or null. */
     fun myIdentityHex(): String? = memberIdentityHex(myLeafIndex)
 
-    /** Parsed Marmot Group Data Extension from the current GroupContext, or null. */
-    fun currentMarmotData(): MarmotGroupData? = MarmotGroupData.fromExtensions(groupContext.extensions)
-
-    /** The current profile's component view of this GroupContext. */
-    fun currentGroupState(): MarmotGroupState = MarmotGroupState.fromExtensions(groupContext.extensions)
-
-    /**
-     * The `nostr_group_id` this group routes kind-445 traffic under, from
-     * whichever profile the group is actually using.
-     *
-     * A current-profile group carries it in the `marmot.transport.nostr.routing.v1`
-     * component (`0x8004`); a legacy group carries it inside the monolithic
-     * `0xF2EE` extension. Reading only the legacy one leaves us unable to join
-     * any group a current-profile client created — the routing id is required
-     * to subscribe at all, so the failure is total rather than partial.
-     */
-    fun currentNostrGroupId(): HexKey? =
-        currentGroupState().routing?.nostrGroupIdHex
-            ?: currentMarmotData()?.nostrGroupId
-
-    /**
-     * The group's configured admin account identities, as lowercase hex.
-     *
-     * Reads whichever profile this group is on: the current profile's
-     * `marmot.group.admin-policy.v1` component (`0x8003`) when present,
-     * otherwise MIP-01's `admin_pubkeys` field inside `marmot_group_data`
-     * (`0xF2EE`). Empty means the group names no admins at all, which happens
-     * during bootstrap and in groups that carry neither.
-     *
-     * The current profile is checked first because a group can only be one of
-     * the two — MDK rejects a group that requires both proof profiles — and a
-     * current-profile group is the one whose authorization we must not skip.
-     */
-    fun currentAdminIdentities(): Set<String> = adminIdentitiesIn(groupContext.extensions)
-
-    /**
-     * The admin set named by [extensions], preferring the current profile.
-     *
-     * Decodes ONLY the admin policy, never the whole component set. Authorization
-     * must not depend on the validity of components it does not read: a
-     * malformed group profile is a defect worth surfacing where the profile is
-     * used, but it must not make the group un-committable by taking the admin
-     * check down with it.
-     */
-    private fun adminIdentitiesIn(extensions: List<Extension>): Set<String> {
-        val policyBytes = AppDataDictionary.fromExtensionsOrEmpty(extensions)[AdminPolicyV1.COMPONENT_ID]
-        if (policyBytes != null) return AdminPolicyV1.decode(policyBytes).adminHexKeys.toSet()
-        return MarmotGroupData
-            .fromExtensions(extensions)
-            ?.adminPubkeys
-            ?.toSet()
-            .orEmpty()
-    }
-
     /**
      * Account identities holding at least one current member leaf, as hex.
      *
-     * Admin authority is per ACCOUNT, not per leaf: a multi-device account
-     * shares one admin entry across all of its leaves.
+     * A set of ACCOUNTS, not leaves: one account may hold several leaves (one
+     * per device), and every binding that asks this question means the account.
      */
     fun currentMemberIdentities(): Set<String> = (0 until tree.leafCount).mapNotNullTo(mutableSetOf()) { memberIdentityHex(it) }
-
-    /** True if the local member is an active admin. */
-    fun isLocalAdmin(): Boolean = isLeafAdmin(myLeafIndex)
-
-    /**
-     * True if the member at [leafIndex] is an ACTIVE admin: listed in the
-     * group's admin set and still holding a leaf. The leaf lookup satisfies
-     * the second half by construction.
-     */
-    fun isLeafAdmin(leafIndex: Int): Boolean {
-        val id = memberIdentityHex(leafIndex) ?: return false
-        return id in currentAdminIdentities()
-    }
 
     // --- State Persistence ---
 
@@ -431,7 +378,7 @@ class MlsGroup private constructor(
          */
         leafSignatureKeyPair: Ed25519KeyPair? = null,
         leafExtensions: List<Extension> = emptyList(),
-        capabilities: Capabilities = marmotLeafCapabilities(),
+        capabilities: Capabilities = policy.defaultLeafCapabilities,
         keyPackageExtensions: List<Extension> = emptyList(),
     ): KeyPackageBundle {
         val initKp = X25519.generateKeyPair()
@@ -490,15 +437,14 @@ class MlsGroup private constructor(
     /**
      * Create a SelfRemove proposal.
      *
-     * Per MIP-01/MIP-03, members listed in `admin_pubkeys` MUST NOT issue a
-     * SelfRemove — they have to first publish a GroupContextExtensions proposal
-     * removing themselves from the admin list (self-demotion). This guard
-     * enforces that rule at the local sender.
+     * Gated by [MlsGroupPolicy.authorizeSelfRemove], because a binding may
+     * restrict who can leave unilaterally — Marmot makes an admin self-demote
+     * through a GroupContextExtensions proposal first. Catching it here rather
+     * than on arrival turns a commit every peer would refuse into a local
+     * error.
      */
     fun proposeSelfRemove(): Proposal.SelfRemove {
-        check(!isLocalAdmin()) {
-            "Admin must self-demote via GroupContextExtensions before SelfRemove (MIP-01)"
-        }
+        policy.authorizeSelfRemove(view())
         val proposal = Proposal.SelfRemove()
         pendingProposals.add(PendingProposal(proposal, myLeafIndex))
         return proposal
@@ -537,7 +483,7 @@ class MlsGroup private constructor(
                 signingKey = newSigKp.privateKey,
                 groupId = groupId,
                 leafIndex = myLeafIndex,
-                capabilities = currentLeaf?.capabilities ?: marmotLeafCapabilities(),
+                capabilities = currentLeaf?.capabilities ?: policy.defaultLeafCapabilities,
                 leafExtensions = currentLeaf?.extensions ?: emptyList(),
             )
 
@@ -629,25 +575,16 @@ class MlsGroup private constructor(
     fun commit(): CommitResult {
         val proposals = pendingProposals.toList()
 
-        // --- MIP-03 authorization gate -----------------------------------------
-        //
-        // Non-admin senders may only issue one of two restricted commit shapes:
-        //   (a) a single self-Update targeting their own leaf, or
-        //   (b) one or more SelfRemove proposals, all by themselves (no mixing).
-        //
-        // Admins may commit any proposal type.
-        enforceAuthorizedProposalSet(proposals)
-
-        // Reject commits that would leave the group without a usable admin
-        // (i.e. no remaining member appears in the post-commit admin list).
-        enforceNoAdminDepletion(proposals)
+        // The application's gate on who may commit what. RFC 9420 has none of
+        // its own, so a group with the default policy accepts any valid set.
+        policy.authorizeCommit(view(), proposals, myLeafIndex)
 
         // Capture the pre-commit exporter secret BEFORE any mutation.
         // Publishers of the outbound kind:445 MUST outer-encrypt with this
         // key (epoch N) so that other existing members at epoch N can decrypt
         // and process the commit. See CommitResult.preCommitExporterSecret.
         val preCommitExporterSecret =
-            exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+            policy.commitExporter?.let { exporterSecret(it.label, it.context, it.length) } ?: ByteArray(0)
 
         // Snapshot the pre-proposal extensions. GroupContextExtensions proposals
         // mutate `groupContext.extensions` the moment they're applied, but
@@ -842,7 +779,7 @@ class MlsGroup private constructor(
                         groupId = groupId,
                         leafIndex = myLeafIndex,
                         parentHash = leafParentHash,
-                        capabilities = previousLeaf?.capabilities ?: marmotLeafCapabilities(),
+                        capabilities = previousLeaf?.capabilities ?: policy.defaultLeafCapabilities,
                         leafExtensions = previousLeaf?.extensions ?: emptyList(),
                     )
                 encryptionPrivateKey = newEncKp.privateKey
@@ -1694,10 +1631,9 @@ class MlsGroup private constructor(
         }
 
         // Resolve proposal references against our pending pool BEFORE
-        // applying anything, so MIP-03 authorization can run on a static
-        // snapshot of (proposal, original-sender-leaf) pairs and so the
-        // depletion guard can simulate the post-commit tree shape from the
-        // pre-commit state.
+        // applying anything, so the policy sees a static snapshot of
+        // (proposal, original-sender-leaf) pairs and can simulate the
+        // post-commit shape from pre-commit state.
         val resolvedPending = mutableListOf<PendingProposal>()
         for (proposalOrRef in commit.proposals) {
             when (proposalOrRef) {
@@ -1731,17 +1667,16 @@ class MlsGroup private constructor(
             }
         }
 
-        // MIP-03 authorization & admin-depletion gates on inbound commits
-        // (mirror what `commit()` enforces locally — without these a peer
-        // could send us a non-admin GCE rename, a non-admin Remove, or a
-        // commit that empties `admin_pubkeys` and we'd silently apply it).
+        // The policy's gate on inbound commits, mirroring what `commit()`
+        // enforces locally. Without it a peer could send us anything its own
+        // copy of the rules would have refused and we would silently apply
+        // it — authorization has to run on both ends or it runs on neither.
         // External commits get a pass: the sender doesn't have a leaf yet,
         // so the admin lookup is moot, and an external joiner can't include
         // arbitrary proposals — only Add/Remove/PSK/ExternalInit per
         // RFC 9420 §12.4.3.2.
         if (!isExternalCommit) {
-            enforceAuthorizedProposalSet(resolvedPending, committerLeafIndex = senderLeafIndex)
-            enforceNoAdminDepletion(resolvedPending)
+            policy.authorizeCommit(view(), resolvedPending, senderLeafIndex)
         }
 
         // Apply the resolved proposals. Matches the committer's order: apply
@@ -2065,28 +2000,16 @@ class MlsGroup private constructor(
     /**
      * MLS-Exporter function for deriving application-specific keys.
      *
-     * Marmot uses:
-     *   exporterSecret("marmot", "group-event".toByteArray(), 32)
-     * to derive the outer ChaCha20-Poly1305 key for GroupEvents.
+     * Marmot, for instance, derives the outer ChaCha20-Poly1305 key for its
+     * GroupEvents with label "marmot" and context "group-event" — see
+     * [MlsGroupPolicy.commitExporter], which is how the engine reaches it
+     * without naming any one binding.
      */
     fun exporterSecret(
         label: String,
         context: ByteArray,
         length: Int,
     ): ByteArray = KeySchedule.mlsExporter(epochSecrets.exporterSecret, label, context, length)
-
-    /**
-     * `MLS-Exporter("marmot", "agent-text-stream-quic", 32)` — the secret every
-     * member of this epoch derives per-stream record keys from. Per-stream and
-     * per-record separation is entirely in the HKDF key context, so this one
-     * secret covers every stream in the epoch.
-     */
-    fun agentTextStreamSecret(): ByteArray =
-        exporterSecret(
-            AgentTextStreamCrypto.EXPORTER_LABEL,
-            AgentTextStreamCrypto.EXPORTER_CONTEXT,
-            AgentTextStreamCrypto.SECRET_LENGTH,
-        )
 
     // --- External Join Support (RFC 9420 Section 8.3, 12.4.3.2) ---
 
@@ -2524,8 +2447,7 @@ class MlsGroup private constructor(
     fun isCommitAuthorized(pubMsg: PublicMessage): Boolean {
         val proposals = resolveCommitProposals(pubMsg) ?: return false
         return try {
-            enforceAuthorizedProposalSet(proposals, committerLeafIndex = pubMsg.sender.leafIndex)
-            enforceNoAdminDepletion(proposals)
+            policy.authorizeCommit(view(), proposals, pubMsg.sender.leafIndex)
             true
         } catch (_: Exception) {
             false
@@ -2664,126 +2586,6 @@ class MlsGroup private constructor(
         return tree.addLeaf(leafNode)
     }
 
-    /**
-     * MIP-03 authorization gate.
-     *
-     * Once the group has at least one admin configured in `admin_pubkeys`,
-     * non-admin senders may only issue:
-     *   - a single self-Update proposal, or
-     *   - one-or-more SelfRemove proposals authored by the committer.
-     *
-     * Admins may commit any proposal type. Before any admin is configured
-     * (group bootstrap) the check is relaxed, mirroring the bootstrap policy
-     * in [MlsGroupManager.updateGroupExtensions].
-     *
-     * [committerLeafIndex] is the leaf that signed the commit — `myLeafIndex`
-     * for our own outbound commits, `pubMsg.sender.leafIndex` for inbound
-     * commits. The "self-only" rule is checked against the committer; when
-     * the committer is an admin the rule is skipped entirely so admin-folded
-     * inbound proposals (e.g. another member's `SelfRemove` referenced by
-     * an admin's GCE commit) are accepted.
-     */
-    internal fun enforceAuthorizedProposalSet(
-        proposals: List<PendingProposal>,
-        committerLeafIndex: Int = myLeafIndex,
-    ) {
-        if (proposals.isEmpty()) return
-        // Reads whichever profile the group is on: the admin-policy component
-        // (0x8003) for current-profile groups, `marmot_group_data` (0xF2EE)
-        // for legacy ones. An empty set means bootstrap — no admins named yet —
-        // and the gate stays open, mirroring MlsGroupManager.updateGroupExtensions.
-        val admins = currentAdminIdentities()
-        if (admins.isEmpty() || isLeafAdmin(committerLeafIndex)) return
-
-        val allSelfRemove =
-            proposals.all { it.proposal is Proposal.SelfRemove && it.senderLeafIndex == committerLeafIndex }
-        if (allSelfRemove) return
-
-        val singleSelfUpdate =
-            proposals.size == 1 &&
-                proposals[0].proposal is Proposal.Update &&
-                proposals[0].senderLeafIndex == committerLeafIndex
-        if (singleSelfUpdate) return
-
-        throw IllegalStateException(
-            "MIP-03: non-admin members may only commit a single self-Update or SelfRemove-only " +
-                "proposals; got ${proposals.map { it.proposal::class.simpleName }} from leaf $committerLeafIndex",
-        )
-    }
-
-    /**
-     * Reject any commit that would leave the group without at least one member
-     * still listed in `admin_pubkeys` (MIP-03 admin depletion guard).
-     *
-     * We simulate the post-commit member set and the post-commit `admin_pubkeys`
-     * list, then require a non-empty intersection. The guard is only active
-     * once the group has a configured admin set — it does not kick in during
-     * bootstrap before any admin is named.
-     */
-    internal fun enforceNoAdminDepletion(proposals: List<PendingProposal>) {
-        val currentAdmins = currentAdminIdentities()
-        if (currentAdmins.isEmpty()) return // Bootstrap: no admins yet, nothing to deplete.
-
-        // Resolve the effective admin list after this commit. Three carriers can
-        // change it, and they are checked in the order the commit applies them:
-        // an AppDataUpdate on 0x8003 (current profile), then a
-        // GroupContextExtensions proposal replacing the whole extension list
-        // (either profile). AppDataUpdate is resolved last because
-        // `applyAppDataUpdateProposals` runs after the rest of the list.
-        val gce =
-            proposals
-                .asSequence()
-                .map { it.proposal }
-                .filterIsInstance<Proposal.GroupContextExtensions>()
-                .lastOrNull()
-        val extensionsAfterGce = gce?.extensions ?: groupContext.extensions
-
-        val adminUpdate =
-            proposals
-                .asSequence()
-                .map { it.proposal }
-                .filterIsInstance<Proposal.AppDataUpdate>()
-                .lastOrNull { it.componentId == AdminPolicyV1.COMPONENT_ID }
-
-        val adminSet =
-            when (val operation = adminUpdate?.operation) {
-                is Proposal.AppDataUpdate.Operation.Update ->
-                    AdminPolicyV1.decode(operation.data).adminHexKeys.toSet()
-
-                // Removing the admin policy is never valid — it is the sole
-                // admin authority for the group's lifetime — so an empty set
-                // here trips the depletion check below, which is the outcome
-                // we want.
-                Proposal.AppDataUpdate.Operation.Remove -> emptySet()
-
-                null -> adminIdentitiesIn(extensionsAfterGce)
-            }
-        check(adminSet.isNotEmpty()) {
-            "commit would leave the group with no admins (admin depletion)"
-        }
-
-        // Compute which leaves remain after applying Removes/SelfRemoves.
-        val removedLeaves = mutableSetOf<Int>()
-        for (pending in proposals) {
-            when (val p = pending.proposal) {
-                is Proposal.Remove -> removedLeaves.add(p.removedLeafIndex)
-                is Proposal.SelfRemove -> removedLeaves.add(pending.senderLeafIndex)
-                else -> Unit
-            }
-        }
-
-        val remainingAdminIdentities = mutableSetOf<String>()
-        for (i in 0 until tree.leafCount) {
-            if (i in removedLeaves) continue
-            val id = memberIdentityHex(i) ?: continue
-            if (id in adminSet) remainingAdminIdentities.add(id)
-        }
-
-        check(remainingAdminIdentities.isNotEmpty()) {
-            "MIP-03: commit would leave the group without any admin members"
-        }
-    }
-
     private fun applyProposal(
         proposal: Proposal,
         senderLeafIndex: Int,
@@ -2824,7 +2626,7 @@ class MlsGroup private constructor(
             is Proposal.GroupContextExtensions -> {
                 // Validate extension types are supported (RFC 9420 Section 12.1.7)
                 for (ext in proposal.extensions) {
-                    require(ext.extensionType in KNOWN_EXTENSION_TYPES) {
+                    require(ext.extensionType in KNOWN_EXTENSION_TYPES || ext.extensionType in policy.knownExtensionTypes) {
                         "Unsupported extension type: ${ext.extensionType}"
                     }
                 }
@@ -3208,7 +3010,7 @@ class MlsGroup private constructor(
         // (0x0002 is ratchet_tree — putting it here makes GroupContext
         // unreadable to OpenMLS/MDK, which type-validates extensions by
         // context.)
-        private const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0003
+        const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0003
 
         // RFC 9420 §13.3 IANA registry: 0x0004 is external_pub.
         // (0x0003 is required_capabilities — using it here makes
@@ -3217,10 +3019,10 @@ class MlsGroup private constructor(
         private const val EXTERNAL_SENDERS_EXTENSION_TYPE = 0x0004
 
         /** MLS self_remove proposal type (MIP-00 / MIP-03). */
-        private const val SELF_REMOVE_PROPOSAL_TYPE = 0x000A
+        const val SELF_REMOVE_PROPOSAL_TYPE = 0x000A
 
         /** MLS extensions draft `app_data_update` proposal type. */
-        private const val APP_DATA_UPDATE_PROPOSAL_TYPE = 0x0008
+        const val APP_DATA_UPDATE_PROPOSAL_TYPE = 0x0008
 
         /** How far back a fresh KeyPackage LeafNode's `not_before` is set. */
         private const val LIFETIME_SKEW_SECONDS = 3_600L
@@ -3232,49 +3034,23 @@ class MlsGroup private constructor(
          */
         private const val LIFETIME_SPAN_SECONDS = 84L * 24 * 60 * 60
 
-        /** Marmot Group Data Extension type (MIP-01). */
-        private const val MARMOT_GROUP_DATA_EXTENSION_TYPE = 0xF2EE
-
-        /** Known extension types that this implementation accepts. */
+        /**
+         * Extension types RFC 9420 and the drafts we implement define.
+         *
+         * A binding's own types come from [MlsGroupPolicy.knownExtensionTypes]
+         * and are unioned with this at the point of use.
+         */
         private val KNOWN_EXTENSION_TYPES =
             setOf(
                 RATCHET_TREE_EXTENSION_TYPE,
                 REQUIRED_CAPABILITIES_EXTENSION_TYPE,
                 EXTERNAL_PUB_EXTENSION_TYPE,
                 EXTERNAL_SENDERS_EXTENSION_TYPE,
-                MARMOT_GROUP_DATA_EXTENSION_TYPE,
                 // The current profile's carrier for all app-owned group state.
                 // A group can arrive at one either by being created with it or
                 // by a GroupContextExtensions proposal that installs it.
                 AppDataDictionary.EXTENSION_TYPE,
             )
-
-        /**
-         * Build an MLS `required_capabilities` extension that marks Marmot's
-         * mandatory interop set as required for all members (RFC 9420 §7.2):
-         *   extensions  = [marmot_group_data (0xF2EE)]
-         *   proposals   = [self_remove (0x000A)]
-         *   credentials = [Basic (0x0001)]
-         */
-        private fun buildMarmotRequiredCapabilitiesExtension(): Extension {
-            val writer = TlsWriter()
-            // extensions<V>: uint16 each
-            val exts = TlsWriter()
-            exts.putUint16(MARMOT_GROUP_DATA_EXTENSION_TYPE)
-            writer.putOpaqueVarInt(exts.toByteArray())
-            // proposals<V>: uint16 each
-            val props = TlsWriter()
-            props.putUint16(SELF_REMOVE_PROPOSAL_TYPE)
-            writer.putOpaqueVarInt(props.toByteArray())
-            // credentials<V>: uint16 each
-            val creds = TlsWriter()
-            creds.putUint16(Credential.CREDENTIAL_TYPE_BASIC)
-            writer.putOpaqueVarInt(creds.toByteArray())
-            return Extension(
-                extensionType = REQUIRED_CAPABILITIES_EXTENSION_TYPE,
-                extensionData = writer.toByteArray(),
-            )
-        }
 
         /**
          * Parsed view of the RFC 9420 §7.2 `required_capabilities` extension.
@@ -3428,107 +3204,6 @@ class MlsGroup private constructor(
         }
 
         /**
-         * Default MLS leaf Capabilities that advertise support for Marmot's
-         * required extensions and proposals so new members can join a group
-         * whose `required_capabilities` lists them.
-         */
-        private fun marmotLeafCapabilities(): Capabilities =
-            Capabilities(
-                extensions = listOf(MARMOT_GROUP_DATA_EXTENSION_TYPE),
-                proposals = listOf(SELF_REMOVE_PROPOSAL_TYPE),
-            )
-
-        /**
-         * Enforce the `0x8006` component's `required_member_roles` mask over
-         * the joining tree.
-         *
-         * A group carrying the agent-text-stream component requires each named
-         * role as an MLS leaf capability (`0xF2D1` receive, `0xF2D2` send,
-         * `0xF2D4` fanout). Advertising the component id alone is not enough —
-         * that only says "understands the component"; the role capability says
-         * "can actually do this".
-         */
-        private fun requireAgentTextStreamRoles(
-            extensions: List<Extension>,
-            tree: RatchetTree,
-            myLeafIndex: Int,
-        ) {
-            val policy =
-                AppDataDictionary
-                    .fromExtensionsOrEmpty(extensions)[AgentTextStreamQuicPolicyV1.COMPONENT_ID]
-                    ?.let { AgentTextStreamQuicPolicyV1.decode(it) } ?: return
-            val required = policy.requiredRoleCapabilities()
-            if (required.isEmpty()) return
-
-            val myLeaf = tree.getLeaf(myLeafIndex)
-            requireNotNull(myLeaf) { "Joiner's leaf is blank after tree reconstruction" }
-            val missing = required.filterNot { myLeaf.capabilities.extensions.contains(it) }
-            require(missing.isEmpty()) {
-                "Joiner does not advertise agent text stream roles this group requires: " +
-                    missing.joinToString { AppComponentIds.toHex(it) }
-            }
-        }
-
-        /**
-         * Leaf capabilities for the current profile.
-         *
-         * RFC 9420 §7.2 forbids advertising DEFAULT extension types, so only
-         * the draft `app_data_dictionary` extension and the `app_data_update`
-         * proposal appear — `required_capabilities` support is implicit.
-         *
-         * The legacy `0xF2EE` group-data extension is advertised alongside
-         * them, and that is not a hedge. A capability says "this client can
-         * handle it", not "this group uses it", and a group that REQUIRES
-         * `0xF2EE` refuses to add a leaf that does not advertise it. Without
-         * this line a current-profile KeyPackage would be un-addable to every
-         * legacy group that already exists — the exact mirror of the interop
-         * failure the current profile was adopted to fix.
-         *
-         * `0xF2D1` is the agent-text-stream RECEIVE role, for the same reason:
-         * a group carrying component `0x8006` with `required_member_roles`
-         * naming `receive` refuses a leaf that does not advertise it. The
-         * reference client puts exactly that policy into EVERY group it
-         * creates, so without this line an Amethyst KeyPackage cannot be
-         * invited into one at all.
-         *
-         * We stop at receive. `send` and `fanout` are not here because we do
-         * not originate previews from the app, and a capability is a standing
-         * promise rather than a hedge.
-         */
-        fun currentProfileLeafCapabilities(): Capabilities =
-            Capabilities(
-                extensions =
-                    listOf(
-                        AppDataDictionary.EXTENSION_TYPE,
-                        MarmotGroupData.EXTENSION_ID_INT,
-                        AgentTextStreamRoles.RECEIVE_CAPABILITY,
-                    ),
-                proposals = listOf(APP_DATA_UPDATE_PROPOSAL_TYPE, SELF_REMOVE_PROPOSAL_TYPE),
-            )
-
-        /**
-         * `required_capabilities` for a new current-profile group: extension
-         * `0x0006` and proposal `0x0008`.
-         *
-         * The Marmot components a group requires are negotiated in the
-         * upstream `app_components` component INSIDE the dictionary, not here —
-         * MLS `RequiredCapabilities` carries only MLS-level primitives.
-         */
-        fun buildCurrentProfileRequiredCapabilitiesExtension(): Extension {
-            val writer = TlsWriter()
-            val exts = TlsWriter()
-            exts.putUint16(AppDataDictionary.EXTENSION_TYPE)
-            writer.putOpaqueVarInt(exts.toByteArray())
-            val props = TlsWriter()
-            props.putUint16(APP_DATA_UPDATE_PROPOSAL_TYPE)
-            writer.putOpaqueVarInt(props.toByteArray())
-            val creds = TlsWriter()
-            creds.putUint16(Credential.CREDENTIAL_TYPE_BASIC)
-            writer.putOpaqueVarInt(creds.toByteArray())
-            return Extension(REQUIRED_CAPABILITIES_EXTENSION_TYPE, writer.toByteArray())
-        }
-
-        /**
          * Create a new MLS group with a single member (the creator).
          */
         fun create(
@@ -3542,13 +3217,19 @@ class MlsGroup private constructor(
              * added later by a proposal.
              */
             leafExtensions: List<Extension> = emptyList(),
-            capabilities: Capabilities = marmotLeafCapabilities(),
             /**
-             * The `required_capabilities` extension for epoch 0. Defaults to
-             * the MIP-era set; a current-profile group passes
-             * [buildCurrentProfileRequiredCapabilitiesExtension].
+             * The application's rules for this group. Also supplies the
+             * defaults below, so one argument selects a whole profile.
              */
-            requiredCapabilities: Extension = buildMarmotRequiredCapabilitiesExtension(),
+            policy: MlsGroupPolicy = MlsGroupPolicy.Permissive,
+            capabilities: Capabilities = policy.defaultLeafCapabilities,
+            /**
+             * The `required_capabilities` extension for epoch 0. Null means
+             * the group carries none, which is the RFC 9420 default; a Marmot
+             * current-profile group passes
+             * [com.vitorpamplona.quartz.marmot.groups.MarmotCapabilities.currentProfileRequired].
+             */
+            requiredCapabilities: Extension? = policy.defaultRequiredCapabilities,
         ): MlsGroup {
             val sigKp =
                 signingKey?.let { key ->
@@ -3574,11 +3255,11 @@ class MlsGroup private constructor(
             tree.setLeaf(0, leafNode)
 
             val treeHash = tree.treeHash()
-            // Start with required_capabilities + whatever the caller wants to
-            // bake into epoch 0 (e.g. the MIP-01 MarmotGroupData extension so
-            // new peers who join later can see the group name without first
-            // decrypting a pre-membership bootstrap commit — see MIP-03).
-            val baseExtensions = listOf(requiredCapabilities)
+            // Start with required_capabilities, when the profile has any, plus
+            // whatever the caller wants baked into epoch 0 — typically the
+            // binding's own group-metadata extension, so a later joiner can read
+            // it without first decrypting a pre-membership bootstrap commit.
+            val baseExtensions = listOfNotNull(requiredCapabilities)
             val groupContext =
                 GroupContext(
                     groupId = groupId,
@@ -3607,6 +3288,7 @@ class MlsGroup private constructor(
                 signingPrivateKey = sigKp.privateKey,
                 encryptionPrivateKey = encKp.privateKey,
                 interimTranscriptHash = ByteArray(0),
+                policy = policy,
             )
         }
 
@@ -3619,6 +3301,7 @@ class MlsGroup private constructor(
         fun processWelcome(
             welcomeBytes: ByteArray,
             bundle: KeyPackageBundle,
+            policy: MlsGroupPolicy = MlsGroupPolicy.Permissive,
         ): MlsGroup {
             val mlsMsg = MlsMessage.decodeTls(TlsReader(welcomeBytes))
             require(mlsMsg.wireFormat == WireFormat.WELCOME) { "Expected Welcome message" }
@@ -3759,7 +3442,15 @@ class MlsGroup private constructor(
             // must advertise. MLS cannot enforce it, so a joiner that skipped
             // this check would join a group it can never satisfy and have
             // every one of its commits refused by peers that do check.
-            requireAgentTextStreamRoles(groupContext.extensions, tree, myLeafIndex)
+            policy.validateJoin(
+                GroupView(
+                    extensions = groupContext.extensions,
+                    leafCount = tree.leafCount,
+                    myLeafIndex = myLeafIndex,
+                    identityAt = { (tree.getLeaf(it)?.credential as? Credential.Basic)?.identity?.toHexKey() },
+                    capabilitiesAt = { tree.getLeaf(it)?.capabilities },
+                ),
+            )
 
             // Derive epoch secrets directly from memberSecret (RFC 9420 Section 8.3)
             // For Welcome, epoch_secret = ExpandWithLabel(member_secret, "epoch", GroupContext, Nh)
@@ -3835,6 +3526,7 @@ class MlsGroup private constructor(
                     signingPrivateKey = bundle.signaturePrivateKey,
                     encryptionPrivateKey = bundle.encryptionPrivateKey,
                     interimTranscriptHash = interimTranscriptHash,
+                    policy = policy,
                 )
             groupSecrets.pathSecret?.let { pathSecret ->
                 val ancestorIdx = joined.directPathIndexOfAncestorWith(groupInfo.signer)
@@ -3868,7 +3560,8 @@ class MlsGroup private constructor(
             groupInfoBytes: ByteArray,
             identity: ByteArray,
             signingKey: ByteArray? = null,
-            capabilities: Capabilities = marmotLeafCapabilities(),
+            policy: MlsGroupPolicy = MlsGroupPolicy.Permissive,
+            capabilities: Capabilities = policy.defaultLeafCapabilities,
             leafExtensions: List<Extension> = emptyList(),
         ): ExternalJoinResult {
             val groupInfo = GroupInfo.decodeTls(TlsReader(groupInfoBytes))
@@ -4098,6 +3791,7 @@ class MlsGroup private constructor(
                     signingPrivateKey = sigKp.privateKey,
                     encryptionPrivateKey = encKp.privateKey,
                     interimTranscriptHash = interimTranscriptHash,
+                    policy = policy,
                 )
 
             // Wrap the commit in a PublicMessage envelope so existing members
@@ -4144,7 +3838,10 @@ class MlsGroup private constructor(
          * or senders we never decrypted) simply re-derive from generation 0 on
          * first use — safe, because those messages were already processed.
          */
-        fun restore(state: MlsGroupState): MlsGroup {
+        fun restore(
+            state: MlsGroupState,
+            policy: MlsGroupPolicy = MlsGroupPolicy.Permissive,
+        ): MlsGroup {
             val tree = RatchetTree.decodeTls(TlsReader(state.treeBytes))
             val secretTree = SecretTree(state.encryptionSecret, tree.leafCount)
             secretTree.importSenderStates(state.senderRatchetStates)
@@ -4161,6 +3858,7 @@ class MlsGroup private constructor(
                 interimTranscriptHash = state.interimTranscriptHash,
                 pathPrivateKeys = state.pathPrivateKeys.toMutableMap(),
                 pendingProposals = state.pendingProposals.toMutableList(),
+                policy = policy,
             )
         }
 
@@ -4176,7 +3874,7 @@ class MlsGroup private constructor(
             groupId: ByteArray? = null,
             leafIndex: Int? = null,
             parentHash: ByteArray? = null,
-            capabilities: Capabilities = marmotLeafCapabilities(),
+            capabilities: Capabilities,
             leafExtensions: List<Extension> = emptyList(),
         ): LeafNode {
             val unsigned =
@@ -4268,12 +3966,10 @@ class MlsGroup private constructor(
      * return value is the epoch this message must be outer-encrypted under.
      */
     fun buildSelfRemoveProposalMessage(): Pair<ByteArray, ByteArray> {
-        check(!isLocalAdmin()) {
-            "Admin must self-demote via GroupContextExtensions before SelfRemove (MIP-01)"
-        }
+        policy.authorizeSelfRemove(view())
 
         val preCommitExporterSecret =
-            exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+            policy.commitExporter?.let { exporterSecret(it.label, it.context, it.length) } ?: ByteArray(0)
 
         val proposal = Proposal.SelfRemove()
         val proposalBytes = proposal.toTlsBytes()

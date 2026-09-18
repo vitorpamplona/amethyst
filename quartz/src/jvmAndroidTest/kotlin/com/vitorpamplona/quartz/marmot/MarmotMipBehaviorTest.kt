@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.groups.isLocalAdmin
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
@@ -57,7 +59,7 @@ class MarmotMipBehaviorTest {
     private fun createGroupManager(): MlsGroupManager = MlsGroupManager(TestGroupStateStore())
 
     private fun createStandaloneKeyPackage(identity: String): KeyPackageBundle {
-        val tempGroup = MlsGroup.create(identity.hexToByteArray())
+        val tempGroup = MlsGroup.create(identity.hexToByteArray(), policy = MarmotGroupPolicy)
         return tempGroup.createKeyPackage(identity.hexToByteArray(), ByteArray(0))
     }
 
@@ -67,7 +69,7 @@ class MarmotMipBehaviorTest {
 
     @Test
     fun create_installsRequiredCapabilitiesExtension() {
-        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val alice = MlsGroup.create(aliceId.hexToByteArray(), policy = MarmotGroupPolicy)
 
         // RFC 9420 §13.3: required_capabilities is extension type 0x0003.
         val reqCaps = alice.extensions.find { it.extensionType == 0x0003 }
@@ -416,7 +418,7 @@ class MarmotMipBehaviorTest {
                 )
             val ex =
                 assertFailsWith<IllegalStateException> {
-                    alice.enforceAuthorizedProposalSet(proposals, committerLeafIndex = 1)
+                    MarmotGroupPolicy.enforceAuthorizedProposalSet(alice.view(), proposals, committerLeafIndex = 1)
                 }
             assertTrue(
                 ex.message!!.contains("non-admin members may only commit"),
@@ -454,7 +456,7 @@ class MarmotMipBehaviorTest {
                         ),
                 )
             // Should not throw.
-            alice.enforceAuthorizedProposalSet(proposals, committerLeafIndex = 0)
+            MarmotGroupPolicy.enforceAuthorizedProposalSet(alice.view(), proposals, committerLeafIndex = 0)
         }
 
     @Test
@@ -488,7 +490,7 @@ class MarmotMipBehaviorTest {
                         ),
                 )
             assertFailsWith<IllegalStateException> {
-                alice.enforceNoAdminDepletion(proposals)
+                MarmotGroupPolicy.enforceNoAdminDepletion(alice.view(), proposals)
             }
         }
 
@@ -639,7 +641,7 @@ class MarmotMipBehaviorTest {
         val alice = manager.getGroup(groupId)!!
         val welcomeBytes =
             requireNotNull(commitResult.welcomeBytes) { "addMember must produce a Welcome" }
-        val bob = MlsGroup.processWelcome(welcomeBytes, bobBundle)
+        val bob = MlsGroup.processWelcome(welcomeBytes, bobBundle, policy = MarmotGroupPolicy)
         return alice to bob
     }
 
@@ -715,7 +717,7 @@ class MarmotMipBehaviorTest {
      */
     @Test
     fun verifyTreeParentHashesForJoin_acceptsSingleMemberTree() {
-        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val alice = MlsGroup.create(aliceId.hexToByteArray(), policy = MarmotGroupPolicy)
         val tree =
             com.vitorpamplona.quartz.mls.tree.RatchetTree
                 .decodeTls(
@@ -798,7 +800,7 @@ class MarmotMipBehaviorTest {
      */
     @Test
     fun findRequiredCapabilities_decodesMarmotExtensionInstalledByCreate() {
-        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val alice = MlsGroup.create(aliceId.hexToByteArray(), policy = MarmotGroupPolicy)
         val req =
             MlsGroup.findRequiredCapabilities(alice.extensions)
                 ?: error("required_capabilities must be present after create()")
@@ -906,7 +908,7 @@ class MarmotMipBehaviorTest {
      * validates. Useful for testing the §7.2 gate in isolation.
      */
     private fun createKeyPackageWithoutSelfRemove(identity: String): com.vitorpamplona.quartz.mls.messages.MlsKeyPackage {
-        val tempGroup = MlsGroup.create(identity.hexToByteArray())
+        val tempGroup = MlsGroup.create(identity.hexToByteArray(), policy = MarmotGroupPolicy)
         val bundle = tempGroup.createKeyPackage(identity.hexToByteArray(), ByteArray(0))
         val original = bundle.keyPackage
         val originalLeaf = original.leafNode
@@ -947,7 +949,7 @@ class MarmotMipBehaviorTest {
      */
     @Test
     fun computePskSecret_emptyListReturnsAllZeros() {
-        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val alice = MlsGroup.create(aliceId.hexToByteArray(), policy = MarmotGroupPolicy)
         val out = alice.computePskSecret(emptyList())
         assertEquals(32, out.size, "psk_secret length must be Nh = 32 for SHA-256")
         assertTrue(out.all { it == 0.toByte() }, "default_psk_secret is all zeros")
@@ -970,7 +972,7 @@ class MarmotMipBehaviorTest {
      */
     @Test
     fun computePskSecret_singleExternalPsk_matchesSpecDerivation() {
-        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val alice = MlsGroup.create(aliceId.hexToByteArray(), policy = MarmotGroupPolicy)
         val pskId = ByteArray(16) { (it + 1).toByte() }
         val pskNonce = ByteArray(16) { (0x80 or it).toByte() }
         val pskValue = ByteArray(32) { (0xA0 or (it and 0x0F)).toByte() }
@@ -1017,7 +1019,7 @@ class MarmotMipBehaviorTest {
      */
     @Test
     fun computePskSecret_resumptionPskRejectsUntilProposalWidened() {
-        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val alice = MlsGroup.create(aliceId.hexToByteArray(), policy = MarmotGroupPolicy)
         val pskId = ByteArray(16) { it.toByte() }
         alice.registerPsk(pskId, ByteArray(32))
 
@@ -1038,7 +1040,7 @@ class MarmotMipBehaviorTest {
      */
     @Test
     fun computePskSecret_orderingChangesOutput() {
-        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val alice = MlsGroup.create(aliceId.hexToByteArray(), policy = MarmotGroupPolicy)
         val idA = ByteArray(16) { 0x11 }
         val idB = ByteArray(16) { 0x22 }
         alice.registerPsk(idA, ByteArray(32) { 0x33 })

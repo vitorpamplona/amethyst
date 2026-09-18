@@ -51,6 +51,12 @@ import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotGroupSnapshot
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemRowDiff
+import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.groups.agentTextStreamSecret
+import com.vitorpamplona.quartz.marmot.groups.currentGroupState
+import com.vitorpamplona.quartz.marmot.groups.currentMarmotData
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
@@ -59,18 +65,15 @@ import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
-import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
-import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
-import com.vitorpamplona.quartz.mls.messages.CommitResult
-import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishGate
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligation
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.marmot.protocolCore.PublishOutcome
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.messages.CommitResult
+import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -87,14 +90,14 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Central coordinator for Marmot MLS group messaging.

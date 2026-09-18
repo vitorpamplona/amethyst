@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
+import com.vitorpamplona.quartz.marmot.groups.currentAdminIdentities
+import com.vitorpamplona.quartz.marmot.groups.currentGroupState
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.framing.ContentType
 import com.vitorpamplona.quartz.mls.framing.MlsMessage
