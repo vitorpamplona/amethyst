@@ -904,12 +904,35 @@ credential bytes, which is right only for a binding that stores a raw key.
 cordn's identity is already hex, so it returns 128 characters of hex-of-hex;
 `CordnCredential.memberIdentities` is the cordn-side accessor.
 
+**Both directions now verified.** Reading their output was half of it; a client
+can parse everything correctly and still emit something nobody accepts, and that
+failure keeps our own tests green while every peer silently drops us. So
+`KotlinArtifactProducerTest` builds a group under `CordnGroupPolicy`, adds a real
+ts-mls KeyPackage, sends an application message and commits a metadata change,
+and `cordn/interop/verify-with-ts-mls.sh` hands the result to Staircase's
+`verify.ts`. ts-mls joins from our Welcome, reads our metadata, derives the same
+epoch-1 and epoch-2 exporters, decrypts our message, checks the AAD sender and
+envelope id, and applies our commit — **ten checks, all passing on the first
+run**. Confirmed non-vacuous: flipping one nibble of `k-exporter-e1.hex` fails
+exactly that check and exits 1.
+
+That gate lives in a script rather than the test suite because it needs a cordn
+checkout with `pnpm install` and a staircase checkout. The producer half runs
+unconditionally in `:cordn:jvmTest`.
+
+**Run it under Node, not bun.** Staircase's own `run.sh` uses bun, and bun's
+WebCrypto has no X25519 DHKEM, so ts-mls there cannot open a Welcome at all —
+not even one it generated itself. It surfaces as `DecapError: The algorithm is
+not supported` inside HPKE and reads exactly like a wire-format mismatch. Worth
+telling them; a one-line change to their runner.
+
 Still open in Stage 3:
 
-- **The reverse direction under their client.** We add a real ts-mls KeyPackage
-  to a group we created and produce a Welcome, but nothing here runs ts-mls to
-  confirm it joins. Staircase's conformance suite writes Kotlin-side fixtures
-  for that exchange; wiring both halves is the remaining step.
+- **A ts-mls `ClientState` export.** `verify.ts` carries an optional gate that
+  decodes a Kotlin-exported ts-mls state and sends from it. We write no such
+  file, so it is skipped. Producing one means re-encoding `MlsGroupState` into
+  ts-mls's layout — real work, and only needed for multi-device, an explicit
+  non-goal (§4.6).
 - **Tier B**, live against `ghcr.io/cordn-msg/cordn:latest`.
 
 ### Stage 4 — App integration

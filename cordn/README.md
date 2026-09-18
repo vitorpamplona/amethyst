@@ -62,6 +62,33 @@ Agreeing on the epoch exporter is the assertion that carries the most: it sits
 at the end of the entire key schedule, so a one-bit divergence in the tree, the
 transcript hash or any epoch secret produces 32 completely different bytes.
 
+### The other direction
+
+Reading their output correctly is only half of it. A client can parse
+everything and still emit something nobody accepts — and that failure keeps our
+own tests green while every peer silently drops us. So ts-mls also checks
+**our** output:
+
+```bash
+cordn/interop/verify-with-ts-mls.sh     # needs ../cordn and ../staircase checkouts
+```
+
+`KotlinArtifactProducerTest` builds a group under `CordnGroupPolicy`, adds a
+real ts-mls KeyPackage, sends an application message and commits a metadata
+change. Staircase's `verify.ts` then has ts-mls join from our Welcome, read our
+metadata, derive the same epoch-1 and epoch-2 exporters, decrypt our message,
+check the AAD sender and the envelope id, and apply our commit. Ten checks,
+all passing.
+
+The producer test runs in the ordinary suite; only the ts-mls half needs the
+extra checkouts, which is why it is a script rather than a test.
+
+**Use Node, not bun.** Staircase's own `run.sh` uses bun, and bun's WebCrypto
+has no X25519 DHKEM, so ts-mls there cannot open a Welcome at all — not even
+one it produced itself. It surfaces as `DecapError: The algorithm is not
+supported` deep inside HPKE and looks exactly like a wire-format mismatch. The
+script pins `node --experimental-strip-types`.
+
 ## Six things that are easy to get wrong
 
 1. **A cordn group has no admins in the enforcement sense.** `spec/01.md` §5.3
@@ -168,10 +195,11 @@ vector — the plan's Tier D — rather than a record of our own output.
 Still open:
 
 - **Live integration** against `ghcr.io/cordn-msg/cordn:latest` (Tier B).
-- **The reverse direction under their client.** We add a real ts-mls KeyPackage
-  to a group we created and produce a Welcome, but nothing here runs ts-mls to
-  confirm it can join. Staircase's conformance suite writes Kotlin-side
-  fixtures for exactly that exchange; wiring both halves is the remaining step.
+- **A ts-mls `ClientState` export.** `verify.ts` has an optional gate that
+  decodes a Kotlin-exported ts-mls state and sends from it; we write no such
+  file, so it is skipped. It would need our `MlsGroupState` to re-encode into
+  ts-mls's layout, which is a real piece of work and only matters for
+  multi-device — an explicit non-goal.
 - **Multi-device** is an explicit non-goal — `spec/applications/multi-device.md`
   ships a ts-mls-internal serialization, not an MLS wire format. There is
   nothing to implement against.
