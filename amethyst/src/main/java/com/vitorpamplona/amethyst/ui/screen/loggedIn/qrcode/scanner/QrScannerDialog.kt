@@ -91,6 +91,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.point_to_the_qr_code
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_camera_blocked
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_camera_rationale
@@ -98,7 +99,6 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_clipboard_empty
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_grant_camera
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_no_code_in_image
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_open_settings
-import com.vitorpamplona.amethyst.commons.resources.qr_scanner_try_again
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
 import com.vitorpamplona.amethyst.ui.call.openAppSettings
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
@@ -214,8 +214,9 @@ private fun CameraPermissionGate(
             }
         }
 
+        // Closes the scanner, so it says so: with the camera refused there is nothing to scan again.
         TextButton(onClick = onDismiss) {
-            Text(stringRes(Res.string.qr_scanner_try_again), color = Color.White)
+            Text(stringRes(Res.string.close), color = Color.White)
         }
     }
 }

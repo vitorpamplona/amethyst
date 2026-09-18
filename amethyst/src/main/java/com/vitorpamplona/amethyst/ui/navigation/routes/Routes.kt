@@ -1179,6 +1179,11 @@ fun isSameRoute(
 ): Boolean {
     if (currentRoute == null) return false
 
+    // Opening the scanner is an action, not a place. After the user closes the scanner they are
+    // still on this exact entry, so treating a repeat as a duplicate made the launcher shortcut
+    // silently do nothing the second time. A fresh entry reopens the camera.
+    if (newRoute is Route.QRDisplay && newRoute.startScanning) return false
+
     if (currentRoute == newRoute) {
         return true
     }

@@ -214,7 +214,7 @@
     <string name="qr_scanner_pick_one">Tap the code you want</string>
     <string name="qr_scanner_sequence_progress">Captured %1$s of %2$s parts — keep going</string>
     <string name="qr_scanner_zoom_reset">Reset zoom</string>
-    <string name="qr_scanner_unsupported_title">Amethyst can\'t open this code</string>
+    <string name="qr_scanner_unsupported_title">Amethyst can't open this code</string>
     <string name="qr_scanner_unsupported_secret">This code carries a private key or a pairing secret, so its contents are not shown here. Use the screen that expects it.</string>
     <string name="qr_scanner_kind_nsec">This is a private key. Paste it on the login screen instead.</string>
     <string name="qr_scanner_kind_wallet">This is a wallet connection. Add it from Wallet settings.</string>
