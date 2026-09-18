@@ -2392,4 +2392,5 @@
     <string name="health_connect_rationale_activity_label">Health Connect és Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="my_fitness">Fitnesz</string>
 </resources>
