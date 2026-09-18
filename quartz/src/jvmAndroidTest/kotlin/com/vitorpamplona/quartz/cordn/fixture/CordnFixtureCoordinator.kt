@@ -70,10 +70,22 @@ class CordnFixtureCoordinator(
         val method: String,
         /** The caller pubkey the coordinator learned, via CEP-16 `_meta`. */
         val callerPubKey: HexKey?,
+        /** Exactly the arguments object that arrived, for wire-shape assertions. */
+        val arguments: JsonObject = JsonObject(emptyMap()),
     )
 
     /** Every call seen, with who made it. The privacy surface, made observable. */
     val calls = mutableListOf<Call>()
+
+    /**
+     * Answers keyed by tool name that replace this fixture's own bookkeeping,
+     * served verbatim as `structuredContent`.
+     *
+     * For replaying a result recorded from another implementation: the fixture
+     * models the coordinator well enough to drive a client, but a result it
+     * composed itself only proves we agree with ourselves.
+     */
+    val scriptedResults = mutableMapOf<String, JsonObject>()
 
     private val welcomes = mutableListOf<JsonObject>()
     private val joinRequests = mutableListOf<JsonObject>()
@@ -139,7 +151,9 @@ class CordnFixtureCoordinator(
                 ?.get("clientPubkey")
                 ?.jsonPrimitive
                 ?.content
-        calls += Call(name, caller)
+        calls += Call(name, caller, args)
+
+        scriptedResults[name]?.let { return success(id, it) }
 
         val structured =
             when (name) {
@@ -264,14 +278,19 @@ class CordnFixtureCoordinator(
                 else -> buildJsonObject {}
             }
 
-        return JsonRpcSuccess(
-            id,
-            buildJsonObject {
-                put("content", buildJsonArray {})
-                put(CoordinatorFields.STRUCTURED_CONTENT, structured)
-            },
-        )
+        return success(id, structured)
     }
+
+    private fun success(
+        id: JsonRpcId,
+        structured: JsonObject,
+    ) = JsonRpcSuccess(
+        id,
+        buildJsonObject {
+            put("content", buildJsonArray {})
+            put(CoordinatorFields.STRUCTURED_CONTENT, structured)
+        },
+    )
 
     /** The messages each requested group has after its cursor. */
     fun after(args: JsonObject): List<JsonObject> =

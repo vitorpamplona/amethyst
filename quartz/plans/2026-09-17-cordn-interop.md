@@ -1,12 +1,14 @@
 # Cordn interop: extract the MLS core, then add a second binding
 
-Status: Stages 1, 2 and the core of 3 landed. The RFC 9420 engine is `quartz/…/mls/` and imports
+Status: Stages 1, 2, the core of 3 and the wire half of Stage 0 landed. The RFC 9420 engine is `quartz/…/mls/` and imports
 nothing from `marmot/` — a binding supplies its rules through `MlsGroupPolicy`. `quartz/…/contextvm/`
 implements the core spec plus all 12 CEPs on the client side, with the Tier C fixture server;
 `quartz/…/cordn/` implements the MLS profile, the eleven coordinator tools, the seal, envelopes,
-group refs and the sync rules, verified against ts-mls in both directions. Stage 0 (cordn-side vectors) and Stage 4 (app integration)
-are open. §4.1 turned out not to gate the binding — see Stage 3 — but remains a real
-incompatibility between the two ecosystems.
+group refs and the sync rules, verified against ts-mls in both directions **and against cordn's
+own wire contracts** (`quartz/tools/cordn-vector-gen` → `resources/cordn/`). Stage 4 (app
+integration) is open, as is Tier B — which turns out to be blocked on licensing, not on
+tooling (§7). §4.1 turned out not to gate the binding — see Stage 3 — and is now settled on our
+side by implementing both encodings rather than waiting for an agreement (§4.1).
 
 Correction to an earlier gate in this plan: §4.1 does **not** block Stage 2. ContextVM is
 credential-agnostic and has no MLS dependency at all, so the transport was safe to build first;
@@ -25,11 +27,14 @@ Sources checked on 2026-09-17:
 - `ContextVM/sdk` @ `b5d1e4e` (2026-09-17), version `0.13.17` — **LGPL-3.0**, see §7. Read only to
   confirm deployed defaults, never as an implementation source
 
-Verification status: `:quartz:jvmTest` passes in a container at 5330 tests, covering the MLS
-engine, ContextVM and cordn, so the interop claims in §3 are execution-verified rather than
-read-verified. `:quartz:testAndroidHostTest` passes too, apart from four pre-existing failures in
-`NostrServerTest` and `LiveNegentropyIndexStoreTest` that predate this work (confirmed by running
-them at the parent commit).
+Verification status: `:quartz:jvmTest` passes in a container, covering the MLS engine, ContextVM
+and cordn, so the interop claims in §3 are execution-verified rather than read-verified.
+`:quartz:testAndroidHostTest` passes as well — the four failures this plan previously recorded as
+pre-existing (`NostrServerTest`, `LiveNegentropyIndexStoreTest`) were fixed on 2026-09-18: the
+event store classified insert failures by parsing the SQLite driver's exception message, and
+Android's carries none. Note the source-set shape when reading test counts: `jvmTest` dependsOn
+`jvmAndroidTest`, but `androidHostTest` does **not**, so the cordn and ContextVM suites under
+`jvmAndroidTest/` run on the JVM target only.
 
 ## 1. Executive summary
 
@@ -139,8 +144,22 @@ One KeyPackage cannot satisfy both. This is exactly what `spec/00.md` §13 requi
 implementations to agree on, and the two ecosystems picked differently. It is a one-line change
 on either side today and unfixable once either has deployed users at scale.
 
-**Action:** raise with gzuuus before Stage 2. Either side moving is fine; what matters is that
-one does.
+**Decision (2026-09-18): support both encodings; do not wait for an agreement.** Neither
+ecosystem is expected to move, and neither needs to. The credential encoding is a *binding*
+choice, and since Stage 1 the engine no longer has an opinion about it — `MlsGroupPolicy` picks
+the profile, `MarmotCapabilities`/`CordnCredential` supply the encoding. Marmot KeyPackages carry
+the raw 32 bytes; cordn KeyPackages carry the 64 ASCII hex bytes; both are produced and read by
+the same engine, and neither can be mistaken for the other (32 raw bytes is not valid 64-char
+ASCII hex, so `CordnCredential.identityOrNull` and `KeyPackageUtils`'s 32-byte check are
+mutually exclusive by construction).
+
+What this costs is §4.4: a member advertising only one profile's capabilities cannot be added to
+the other's groups, so "one MLS group, both clients" stays out of reach. That was already a
+deliberate profile decision rather than a consequence of this one. What it buys is that Amethyst
+speaks both today rather than blocking on a conversation neither side has an incentive to finish.
+
+Still worth raising with gzuuus as a fact rather than a request — an implementation that reads
+both is useful evidence for whichever encoding a future joint profile picks.
 
 ### 4.2 No key-package event kind
 
@@ -545,8 +564,38 @@ dependency rule in `.claude/CLAUDE.md` this means:
 - If a Kotlin/JVM ContextVM library ever appears under LGPL, linking it is a WARN-and-call-out
   (call it out in the PR description), not an automatic stop.
 
-Everything under `Cordn-msg` is MIT, so the specs and the reference coordinator are safe to read
-and to implement against.
+🔴 **Correction (2026-09-18, verified): "everything under `Cordn-msg` is MIT" was wrong.** Only
+two of the five packages are licensed at all. Checked against the actual files at `b465df0` and
+against the published npm tarballs:
+
+| Package | `LICENSE` file | `license` field | Published to npm |
+| ------- | -------------- | --------------- | ---------------- |
+| `packages/core` | yes | MIT | `@cordn/core` |
+| `packages/cli` | yes | MIT | `@cordn/cli` |
+| `packages/coordinator` | **no** | **none** | no |
+| `packages/server` | **no** | **none** | no |
+| `packages/test-utils` | **no** | **none** | no |
+
+The repository root has no LICENSE either. So the **reference coordinator is unlicensed** —
+default copyright, all rights reserved — and so is the `ghcr.io/cordn-msg/cordn` image built from
+it. Almost certainly an oversight rather than intent, given the two licensed siblings, but the
+rule in `.claude/CLAUDE.md` does not have an "obviously meant to be MIT" branch.
+
+Consequences, and they are the reason Stage 0 landed the way it did:
+
+- **Tier B is blocked, not merely awkward.** The plan's Tier B (run their coordinator locally with
+  `CORDN_STORAGE_BACKEND=memory`) rests entirely on unlicensed code. Not a shipping dependency,
+  but it would become a documented, committed part of our test process, which is exactly what the
+  dependency rule exists to stop happening quietly. Docker being unavailable in the build
+  container is the lesser problem.
+- **`@cordn/core` is fine and is enough for the valuable half.** It is MIT, it ships a LICENSE,
+  and it holds the authoritative zod contracts for all eleven tools plus the group-ref bech32
+  codec — i.e. the wire surface. That is what `quartz/tools/cordn-vector-gen` uses.
+- **Ask upstream for a LICENSE on the remaining packages.** Cheap for them, and it is what
+  unblocks Tier B. Worth raising alongside §4.2.
+
+The specs themselves (`spec/`, `design/`) are also unlicensed, so the existing rule stands: we
+implement from them, we do not paste their prose into KDoc.
 
 ## 8. What the coordinator can see
 
@@ -623,9 +672,38 @@ looking like a group chat.
 
 ## 9. Plan
 
-### Stage 0 — Ground truth and the upstream conversation
+### Stage 0 — Ground truth and the upstream conversation — PARTLY LANDED
 
-No production code. Two deliverables.
+The wire half landed on 2026-09-18; the live-coordinator half is blocked on §7.
+
+**Landed: contract vectors from cordn's own code.** `quartz/tools/cordn-vector-gen` generates
+`resources/cordn/coordinator-contracts.json` from **`@cordn/core`** (MIT) — the package their
+reference coordinator and client both import. It hands each payload *we* send to *their* zod
+schema, so a field we named wrong fails at generation time, and carries a `rejects` set per
+method so a passing positive means something. `CoordinatorContractVectorTest` (15 tests) drives
+`CoordinatorClient` through the real ContextVM transport and asserts the arguments the
+coordinator sees equal those vectors, then replays their result shapes back through our parser;
+`CordnGroupRefVectorTest` (5 tests) checks `cordn1…` refs in both directions against their bech32
+codec.
+
+Two findings from doing it:
+
+1. **Mutation-checked, because 20 tests passing on the first run means nothing on its own.**
+   Making a first-ever fetch send `after = 0` instead of omitting it, and flipping the group-ref
+   TLV emission to ascending order, each killed exactly one test. The TLV mutation was caught
+   *only* by the encode-direction test — decoders accept any order by spec, so a decode-only
+   suite would have shipped that divergence.
+2. **The `kp_publish` legacy field is read-only.** Their current schema rejects
+   `{kp_ref, keyPackageBase64}`, so our `?? keyPackageBase64` fallback is correct for parsing old
+   publication events and must never be used when sending.
+
+**Blocked: Tier B (live coordinator).** Not for want of tooling — the reference coordinator is
+unlicensed. See §7.
+
+**Not done: the upstream conversation**, which is the maintainer's to have. §4.1 no longer waits
+on it (we implement both encodings); §4.2 and the missing LICENSE files are the asks worth making.
+
+The original plan for this stage, for reference:
 
 1. **Restore executable verification.** Get `:quartz:jvmTest` green in a clean container
    (the 429 in the header) and confirm `TsMlsWelcomeInteropTest`, `MdkWelcomeInteropTest` and
@@ -966,9 +1044,19 @@ Still open in Stage 3:
 
 ## 10. Open questions
 
-1. **§4.1 credential encoding** — who moves? Blocks Stage 2.
+1. ~~**§4.1 credential encoding** — who moves?~~ **Answered 2026-09-18: nobody has to.** We
+   implement both. The engine has had no opinion on credential encoding since Stage 1, and the
+   two encodings are 32 raw bytes vs 64 ASCII bytes — mutually exclusive by length, so no leaf
+   can be misread as the other profile's. `BothCredentialProfilesTest` pins that, including the
+   `memberIdentityHex` hex-of-hex trap. The cost is §4.4 (no single group holding both clients),
+   which was already a deliberate profile decision.
 2. **§4.2 publication payload** — will upstream give KeyPackage publication its own signed payload
-   or kind? Changes whether cordn KeyPackages can exist outside a coordinator.
+   or kind? Changes whether cordn KeyPackages can exist outside a coordinator. Still open, and now
+   the highest-value ask, since §4.1 no longer needs one.
+2b. **Will upstream license the coordinator?** `packages/coordinator`, `packages/server` and
+   `packages/test-utils` carry no LICENSE (§7). Until they do, Tier B cannot be built on them.
+   Cheap for upstream to fix and it unblocks the only remaining verification tier that needs
+   their code.
 3. **Is the goal interop or a second transport?** "Amethyst can talk to cordn users" and "Amethyst
    supports coordinator-backed groups" are different products. The second is strictly less work
    (no §4.1 dependency for group creation among Amethyst users) and strictly less valuable.
