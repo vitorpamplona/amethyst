@@ -1,0 +1,286 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.cordn.fixture
+
+import com.vitorpamplona.contextvm.jsonrpc.JsonRpcError
+import com.vitorpamplona.contextvm.jsonrpc.JsonRpcFailure
+import com.vitorpamplona.contextvm.jsonrpc.JsonRpcId
+import com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage
+import com.vitorpamplona.contextvm.jsonrpc.JsonRpcSuccess
+import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorFields
+import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorMethod
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
+import kotlinx.serialization.json.put
+
+/**
+ * An in-memory cordn coordinator for tests.
+ *
+ * It implements the eleven tools against maps, and — more usefully — it
+ * RECORDS which identity made each call. The privacy claim in `spec/00.md` §8
+ * is not about what the coordinator stores, it is about what it learns, so the
+ * only way to test it is to be the coordinator and look.
+ *
+ * Deliberately not hardened; `cordn-rs` exists for real deployments. Like
+ * `:contextvm`'s fixture, this one can also be told to misbehave — see
+ * [rejectPublication].
+ */
+class CordnFixtureCoordinator(
+    /** Serve `kp_publish` back as if it had been stored, keyed by ref. */
+    private val publications: MutableMap<String, StoredKeyPackage> = mutableMapOf(),
+    /** Reject every publication, as a coordinator enforcing §8 would. */
+    var rejectPublication: Boolean = false,
+) {
+    data class StoredKeyPackage(
+        val pubKey: HexKey,
+        val keyPackageRef: String,
+        val lastResort: Boolean,
+        val at: Long,
+        val publicationEvent: Event?,
+    )
+
+    data class Call(
+        val method: String,
+        /** The caller pubkey the coordinator learned, via CEP-16 `_meta`. */
+        val callerPubKey: HexKey?,
+    )
+
+    /** Every call seen, with who made it. The privacy surface, made observable. */
+    val calls = mutableListOf<Call>()
+
+    private val welcomes = mutableListOf<JsonObject>()
+    private val joinRequests = mutableListOf<JsonObject>()
+    private val messages = mutableMapOf<String, MutableList<JsonObject>>()
+    private var nextCursor = 1L
+    private var clock = 1_700_000_000L
+
+    /** Messages posted to [gid], oldest first. */
+    fun posted(gid: String): List<String> = messages[gid].orEmpty().map { it[CoordinatorFields.MSG_64]!!.jsonPrimitive.content }
+
+    /** Pre-seeds a group's stream, as history a client will catch up on. */
+    fun seed(
+        gid: String,
+        sealedBase64: String,
+    ): Long {
+        val cursor = nextCursor++
+        messages.getOrPut(gid) { mutableListOf() } +=
+            buildJsonObject {
+                put(CoordinatorFields.GID, gid)
+                put(CoordinatorFields.CURSOR, cursor)
+                put(CoordinatorFields.MSG_64, sealedBase64)
+                put(CoordinatorFields.AT, clock++)
+            }
+        return cursor
+    }
+
+    /** Pre-seeds a Welcome in an account's inbox. */
+    fun seedWelcome(
+        keyPackageRef: String,
+        welcomeBase64: String,
+        after: Long? = null,
+    ) {
+        welcomes +=
+            buildJsonObject {
+                put(CoordinatorFields.KP_REF, keyPackageRef)
+                put(CoordinatorFields.WELCOME_64, welcomeBase64)
+                put(CoordinatorFields.AT, clock++)
+                after?.let { put(CoordinatorFields.AFTER, it) }
+            }
+    }
+
+    /** Stores a publication event so `kp_take` can serve it back verbatim (§7). */
+    fun seedPublication(
+        keyPackageRef: String,
+        event: Event,
+    ) {
+        publications[keyPackageRef] =
+            StoredKeyPackage(event.pubKey, keyPackageRef, false, clock++, event)
+    }
+
+    /** The handler to hand to `CvmFixtureServer`. */
+    suspend fun handle(
+        method: String,
+        params: JsonObject?,
+        id: JsonRpcId,
+    ): JsonRpcMessage {
+        val name = params?.get("name")?.jsonPrimitive?.content ?: method
+        val args = params?.get("arguments")?.jsonObject ?: buildJsonObject {}
+        val caller =
+            params
+                ?.get("_meta")
+                ?.jsonObject
+                ?.get("clientPubkey")
+                ?.jsonPrimitive
+                ?.content
+        calls += Call(name, caller)
+
+        val structured =
+            when (name) {
+                CoordinatorMethod.KP_PUBLISH.wire -> {
+                    if (rejectPublication) {
+                        return JsonRpcFailure(id, JsonRpcError(-32000, "publication rejected"))
+                    }
+                    val ref = args.str(CoordinatorFields.KP_REF)
+                    publications[ref] = StoredKeyPackage(caller.orEmpty(), ref, false, clock++, null)
+                    buildJsonObject {
+                        put(CoordinatorFields.KP_REF, ref)
+                        put(CoordinatorFields.LAST_RESORT, false)
+                        put(CoordinatorFields.AT, clock)
+                    }
+                }
+
+                CoordinatorMethod.KP_LIST.wire ->
+                    buildJsonObject {
+                        put(
+                            CoordinatorFields.KEY_PACKAGES,
+                            buildJsonArray {
+                                publications.values.forEach {
+                                    add(
+                                        buildJsonObject {
+                                            put(CoordinatorFields.PK, it.pubKey)
+                                            put(CoordinatorFields.KP_REF, it.keyPackageRef)
+                                            put(CoordinatorFields.LAST_RESORT, it.lastResort)
+                                            put(CoordinatorFields.AT, it.at)
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                    }
+
+                CoordinatorMethod.KP_TAKE.wire -> {
+                    val id = args.str(CoordinatorFields.ID)
+                    val stored = publications[id] ?: publications.values.firstOrNull { it.pubKey == id }
+                    buildJsonObject {
+                        if (stored?.publicationEvent == null) {
+                            put(CoordinatorFields.KEY_PACKAGE, kotlinx.serialization.json.JsonNull)
+                        } else {
+                            put(
+                                CoordinatorFields.KEY_PACKAGE,
+                                buildJsonObject {
+                                    put(CoordinatorFields.PK, stored.pubKey)
+                                    put(CoordinatorFields.KP_REF, stored.keyPackageRef)
+                                    put(CoordinatorFields.LAST_RESORT, stored.lastResort)
+                                    put(CoordinatorFields.AT, stored.at)
+                                    put(
+                                        CoordinatorFields.EVENT,
+                                        Json.parseToJsonElement(OptimizedJsonMapper.toJson(stored.publicationEvent)),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+
+                CoordinatorMethod.KP_REMOVE.wire -> {
+                    val refs = args[CoordinatorFields.KP_REFS]!!.jsonArray.map { it.jsonPrimitive.content }
+                    refs.forEach { publications.remove(it) }
+                    buildJsonObject {
+                        put(CoordinatorFields.KP_REFS, buildJsonArray { refs.forEach { add(Json.parseToJsonElement("\"$it\"")) } })
+                    }
+                }
+
+                CoordinatorMethod.WELCOME_TAKE.wire -> {
+                    val consumed =
+                        args[CoordinatorFields.CONSUMED]
+                            ?.jsonArray
+                            ?.map {
+                                it.jsonObject.str(CoordinatorFields.KP_REF) to it.jsonObject[CoordinatorFields.AT]!!.jsonPrimitive.long
+                            }.orEmpty()
+                    welcomes.removeAll { w ->
+                        consumed.any { it.first == w.str(CoordinatorFields.KP_REF) && it.second == w[CoordinatorFields.AT]!!.jsonPrimitive.long }
+                    }
+                    buildJsonObject { put(CoordinatorFields.WELCOMES, buildJsonArray { welcomes.forEach { add(it) } }) }
+                }
+
+                CoordinatorMethod.WELCOME_STORE.wire -> {
+                    welcomes += args
+                    buildJsonObject { put(CoordinatorFields.AT, clock++) }
+                }
+
+                CoordinatorMethod.JOIN_REQUEST_STORE.wire -> {
+                    joinRequests +=
+                        buildJsonObject {
+                            put(CoordinatorFields.GID, args.str(CoordinatorFields.GID))
+                            put(CoordinatorFields.PK, caller.orEmpty())
+                            put(CoordinatorFields.KP_REF, args.str(CoordinatorFields.KP_REF))
+                            put(CoordinatorFields.AT, clock++)
+                        }
+                    buildJsonObject { put(CoordinatorFields.AT, clock) }
+                }
+
+                CoordinatorMethod.JOIN_REQUEST_TAKE_MANY.wire -> {
+                    val gids = args[CoordinatorFields.GROUPS]!!.jsonArray.map { it.jsonObject.str(CoordinatorFields.GID) }
+                    buildJsonObject {
+                        put(
+                            CoordinatorFields.REQUESTS,
+                            buildJsonArray { joinRequests.filter { it.str(CoordinatorFields.GID) in gids }.forEach { add(it) } },
+                        )
+                    }
+                }
+
+                CoordinatorMethod.MSG_POST.wire -> {
+                    val gid = args.str(CoordinatorFields.GID)
+                    val cursor = seed(gid, args.str(CoordinatorFields.MSG_64))
+                    buildJsonObject {
+                        put(CoordinatorFields.GID, gid)
+                        put(CoordinatorFields.CURSOR, cursor)
+                        put(CoordinatorFields.AT, clock)
+                    }
+                }
+
+                CoordinatorMethod.MSG_FETCH_MANY.wire ->
+                    buildJsonObject {
+                        put(CoordinatorFields.MESSAGES, buildJsonArray { after(args).forEach { add(it) } })
+                    }
+
+                else -> buildJsonObject {}
+            }
+
+        return JsonRpcSuccess(
+            id,
+            buildJsonObject {
+                put("content", buildJsonArray {})
+                put(CoordinatorFields.STRUCTURED_CONTENT, structured)
+            },
+        )
+    }
+
+    /** The messages each requested group has after its cursor. */
+    fun after(args: JsonObject): List<JsonObject> =
+        args[CoordinatorFields.GROUPS]!!.jsonArray.flatMap { entry ->
+            val group = entry.jsonObject
+            val gid = group.str(CoordinatorFields.GID)
+            val cursor = group[CoordinatorFields.AFTER]?.jsonPrimitive?.long ?: 0L
+            messages[gid].orEmpty().filter { it[CoordinatorFields.CURSOR]!!.jsonPrimitive.long > cursor }
+        }
+
+    private fun JsonObject.str(key: String) = this[key]!!.jsonPrimitive.content
+}

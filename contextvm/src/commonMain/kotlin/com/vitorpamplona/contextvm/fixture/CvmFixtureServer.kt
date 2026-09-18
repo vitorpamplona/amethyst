@@ -23,6 +23,7 @@ package com.vitorpamplona.contextvm.fixture
 import com.vitorpamplona.contextvm.cep04Encryption.CvmGiftWrap
 import com.vitorpamplona.contextvm.core.CvmKinds
 import com.vitorpamplona.contextvm.core.CvmMessageEvent
+import com.vitorpamplona.contextvm.jsonrpc.JsonRpcId
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcNotification
 import com.vitorpamplona.contextvm.jsonrpc.JsonRpcRequest
@@ -127,8 +128,16 @@ class CvmFixtureServer(
     private val injectClientPubkey: Boolean = false,
     /** Discovery tags sent on the first direct message back, per CEP-35. */
     private val discoveryTags: List<Tag> = emptyList(),
-    /** Answers a request, given its params (with `_meta.clientPubkey` if injected). */
-    private val handler: suspend (method: String, params: JsonObject?) -> JsonRpcMessage,
+    /**
+     * Answers a request, given its method, params (with `_meta.clientPubkey`
+     * if injected) and JSON-RPC id.
+     *
+     * The id is passed because a handler MUST echo it: the client correlates on
+     * it, so a fixture that answered every call with a constant would work for
+     * the first call of a session and silently hang on the second. That is a
+     * bug the fixture should surface in the code under test, not create.
+     */
+    private val handler: suspend (method: String, params: JsonObject?, id: JsonRpcId) -> JsonRpcMessage,
 ) {
     private var subscription: CvmSubscription? = null
     private var sentFirstMessage = false
@@ -192,7 +201,7 @@ class CvmFixtureServer(
             )
         }
 
-        val response = handler(request.method, params)
+        val response = handler(request.method, params, request.id)
         reply(response, clientPubKey, plain.id)
     }
 

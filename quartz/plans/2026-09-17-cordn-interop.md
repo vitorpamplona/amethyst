@@ -1,10 +1,12 @@
 # Cordn interop: extract the MLS core, then add a second binding
 
-Status: Stages 1 and 2 landed. The RFC 9420 engine is `quartz/…/mls/` and imports nothing from
-`marmot/` — a binding supplies its rules through `MlsGroupPolicy`. `:contextvm` implements the
-core spec plus all 12 CEPs on the client side, with the Tier C fixture server, at 172 tests.
-Stages 0 (cordn-side vectors) and 3-4 (the cordn binding and app integration) are open; Stage 3
-is the one gated on the §4.1 upstream decision.
+Status: Stages 1, 2 and the core of 3 landed. The RFC 9420 engine is `quartz/…/mls/` and imports
+nothing from `marmot/` — a binding supplies its rules through `MlsGroupPolicy`. `:contextvm`
+implements the core spec plus all 12 CEPs on the client side, with the Tier C fixture server, at
+174 tests. `:cordn` implements the MLS profile, the eleven coordinator tools, the seal, envelopes, group
+refs and the sync rules, at 49 tests. Stage 0 (cordn-side vectors) and Stage 4 (app integration)
+are open. §4.1 turned out not to gate the binding — see Stage 3 — but remains a real
+incompatibility between the two ecosystems.
 
 Correction to an earlier gate in this plan: §4.1 does **not** block Stage 2. ContextVM is
 credential-agnostic and has no MLS dependency at all, so the transport was safe to build first;
@@ -795,24 +797,66 @@ Conformance approach — rule-derived unit tests plus live integration against
 `ghcr.io/cordn-msg/cordn:latest` — is §6.5. Write the negative tests; the MUST-fail cases in
 CEP-22/41 are where an implementation that "works" quietly diverges.
 
-### Stage 3 — `quartz/…/cordn/` binding
+### Stage 3 — the cordn binding — LANDED (core), app work outstanding
 
-- The 11-tool coordinator client over `:contextvm`, with the stable/ephemeral split of §8 encoded
-  in the API so a caller cannot accidentally leak the stable identity onto the message path.
-- `cordn1…` group ref codec on the existing NIP-19 bech32/TLV primitives.
-- `CordnGroupMetadata` (`0xC04D`) TLS codec on `mls/codec/`.
-- cordn's `app_data_dictionary` last-resort variant (§4.3).
-- A cordn-profile KeyPackage builder: hex-ASCII credential identity, cordn capabilities, no
-  `0xF2EE`, no Marmot required-capabilities.
-- The seal: ChaCha20-Poly1305 over `MLS-Exporter("cordn","group-payload",32)`, pre-commit epoch
-  for Commits. Same algorithm as `GroupEventEncryption`, separate call site — do not import the
-  Marmot one.
-- The application envelope: same shape as `MarmotAppEvent`, separate type in `cordn/`.
-- Per-group cursor tracking, fetch-then-subscribe (bounded `msg_fetch_many` catch-up, then
-  `msg_sub_many` from the freshest cursor), self-echo reconciliation by envelope `id`, and
-  pending-epoch-operation finalization only on observing the matching inbound Commit. The
-  reference client's `packages/cli/README.md` documents these rules and they are not optional —
-  getting them wrong desynchronizes MLS state.
+Shipped as **`:cordn`**, not `quartz/…/cordn/`: the coordinator client needs `:contextvm`, and
+`:contextvm` already depends on `:quartz`, so the binding cannot live inside quartz without a
+cycle. Both are `api` dependencies. Packages follow the spec documents (`spec00Coordinator`,
+`spec01GroupMetadata`, `spec02Envelopes`, `spec03Payloads`, `appGroupRef`) plus `groups/` and
+`sync/`. 49 tests on jvm, 33 on the Android target.
+
+| Item | Where |
+| ---- | ----- |
+| 11-tool coordinator client, identity split in the API | `spec00Coordinator/CoordinatorClient`, `CoordinatorMethod` |
+| `cordn1…` group ref | `appGroupRef/CordnGroupRef` |
+| `CordnGroupMetadata` (`0xC04D`) | `spec01GroupMetadata/` |
+| last-resort `app_data_dictionary` variant | `groups/CordnGroupPolicy.lastResortExtension` |
+| cordn-profile KeyPackage | `groups/CordnCredential` + `CordnGroupPolicy` |
+| the seal | `spec03Payloads/SealedPayload` |
+| the application envelope | `spec02Envelopes/CordnEnvelope` |
+| cursors, self-echo, fetch-then-subscribe | `sync/GroupCursor`, `sync/CordnGroupSync` |
+| KeyPackage publication + §9 verification | `spec00Coordinator/KeyPackagePublication` |
+
+`CordnGroupPolicy` is what Stage 1 was for: one argument gives an `MlsGroup` cordn's
+capabilities, extension registry and payload exporter. It deliberately leaves `authorizeCommit`
+at the default — **cordn has no MIP-03**. `spec/01.md` §5.3 makes `admin_pubkeys` presentation
+metadata and nothing restricts who may commit, so any member can commit anything MLS permits.
+Empty means egalitarian *permanently*, where Marmot reads the same empty set as a bootstrap
+window. Same bytes, opposite meaning; no authorization code is shared.
+
+Five findings, all caught by tests or by reading the reference rather than the prose:
+
+1. **§4.1 does not block the binding.** The 32-byte credential check is in Marmot's own
+   `KeyPackageUtils`, not the engine, so our binding just implements cordn's encoding
+   (`groups/CordnCredential`). The incompatibility between the two ecosystems is unchanged and
+   still worth raising.
+2. **`spec/01.md` §3 contradicts itself** — "MLS variable-length vector encoding conventions"
+   and then `opaque Name<0..2^16-1>`. The reference emits a plain uint16, so that is what
+   interoperates. Our test derives the bytes by hand from the spec, because a round trip agrees
+   with itself whichever encoding we had picked.
+3. **Group refs match the reference byte for byte** on the first run. The three golden strings
+   in `packages/core/src/groupRef.test.ts` are cross-checked there against an independent
+   TLV+bech32 assembly, so pinning them is a real Tier D vector.
+4. **quartz's NIP-19 `Tlv.parse` is too lenient for a group ref.** It stops silently at a
+   malformed tuple — right for an `nprofile`, wrong here, where dropping the tail turns a ref
+   naming a coordinator into one that reaches for a default. `appGroupRef` parses strictly and
+   still ignores unknown types.
+5. **`:contextvm`'s fixture could not answer a second call.** It echoed a constant JSON-RPC id,
+   which passed every contextvm test because each made exactly one call, and hung the first
+   cordn test that made two. The handler now takes the request id, and two contextvm tests pin
+   the behaviour: a second call correlates, and a stale id is ignored rather than resolving the
+   wrong call.
+
+Verified by mutation: ignoring a pending self-echo, and advancing the cursor only for processed
+messages, each kill their guarding tests at both the unit and end-to-end level. The second of
+those needed a new end-to-end test — a single catch-up pass looks correct either way, and only a
+second pass reveals the stall.
+
+Still open in Stage 3:
+
+- **A full group lifecycle test** — create, add a member via Welcome, exchange a sealed
+  envelope. Every piece is tested; the end-to-end path wants the Stage 0 vectors.
+- **Tier B**, live against `ghcr.io/cordn-msg/cordn:latest`.
 
 ### Stage 4 — App integration
 

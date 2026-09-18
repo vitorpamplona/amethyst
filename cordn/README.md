@@ -1,0 +1,148 @@
+# :cordn
+
+A Kotlin Multiplatform client for **cordn** — MLS group messaging whose
+delivery service is an MCP server reached over Nostr, rather than relays.
+
+Built from `Cordn-msg/cordn` at commit **`b465df0`**, read on 2026-09-18.
+Where the prose and the reference implementation disagree, the implementation
+wins, because that is what is on the wire — each such case is noted below and
+in the KDoc of the code that implements it.
+
+## Why this is a separate module
+
+It needs both `:quartz` (the RFC 9420 engine, `quartz/…/mls/`) and
+`:contextvm` (MCP over Nostr). `:contextvm` already depends on `:quartz`, so
+the binding cannot live inside quartz without a cycle. Both are `api`
+dependencies: a caller building a group holds `MlsGroup`, and a caller
+configuring a coordinator holds `CvmTransport`.
+
+The plan (`quartz/plans/2026-09-17-cordn-interop.md`) said `quartz/…/cordn/`.
+That was written before the dependency direction was settled.
+
+## Layout
+
+Packages follow the spec documents, the way quartz follows NIPs.
+
+| Package | Spec | What |
+| ------- | ---- | ---- |
+| `spec00Coordinator/` | `spec/00.md` | The eleven coordinator tools, the identity model, KeyPackage publication and its verification |
+| `spec01GroupMetadata/` | `spec/01.md` | `cordn_group_metadata` (`0xC04D`) |
+| `spec02Envelopes/` | `spec/02.md` | The unsigned Nostr-shaped application envelope |
+| `spec03Payloads/` | `spec/03.md` | The ChaCha20-Poly1305 outer seal |
+| `appGroupRef/` | `applications/group-ref.md` | `cordn1…` bech32 TLV references |
+| `groups/` | — | The MLS binding: credential encoding, capabilities, `CordnGroupPolicy` |
+| `sync/` | `spec/00.md` §4-5 | Cursors, self-echo reconciliation, fetch-then-subscribe |
+
+## Making a cordn group
+
+One argument turns an `MlsGroup` into a cordn group — capabilities, extension
+registry and payload exporter all come from the policy:
+
+```kotlin
+val group = MlsGroup.create(
+    identity = CordnCredential.of(myPubKeyHex).identity,
+    policy = CordnGroupPolicy,
+    initialExtensions = listOf(CordnGroupMetadata(name = "Design").toExtension()),
+)
+```
+
+## Five things that are easy to get wrong
+
+1. **A cordn group has no admins in the enforcement sense.** `spec/01.md` §5.3
+   makes `admin_pubkeys` *presentation* metadata, and neither the spec nor the
+   reference coordinator restricts who may commit. Any member can commit
+   anything MLS permits, including removing others. An empty list means
+   **egalitarian**, permanently — Marmot reads the same empty set as "bootstrap,
+   gate still open", which is why no authorization code is shared between them.
+   A UI presenting a cordn admin list as an access-control boundary would be
+   lying.
+
+2. **The credential is 64 ASCII bytes of hex, not 32 raw bytes.** `spec/00.md`
+   §6 requires "the canonical encoded Nostr public key" and explicitly declines
+   to say which encoding. The reference fixed it as hex-ASCII; Marmot picked
+   raw. One KeyPackage cannot satisfy both, and it is a one-line change on
+   either side today. Still open upstream — plan §4.1.
+
+3. **A self-echo is confirmation, not work.** A Commit we posted comes back
+   through the same stream as everyone else's traffic. Feeding it through MLS
+   again advances the epoch twice, and nothing complains until messages stop
+   decrypting several epochs later. Matching is on the sealed ciphertext, which
+   is unique per posting because the nonce is fresh (`spec/03.md` §4).
+
+4. **The cursor advances past messages you skip.** Including undecryptable
+   ones. A message sealed under an epoch we never had is unreadable forever, so
+   a cursor that refused to move past it would stall that group permanently
+   with no error anywhere. Only a *second* catch-up reveals the bug.
+
+5. **Encryption must be pinned.** The ContextVM SDK defaults `encryptionMode`
+   to `OPTIONAL`, which resolves from negotiated session state, so a coordinator
+   that simply does not announce `support_encryption` gets plaintext JSON-RPC on
+   public relays — `gid`s, target pubkeys, KeyPackages and cursors, readable by
+   any relay operator. `:contextvm`'s `CvmGiftWrap` defaults to `REQUIRED` and
+   fails closed. Do not undo that.
+
+## What the coordinator learns
+
+Content: nothing. Double-sealed, and it cannot tell a Commit from a chat line.
+
+Metadata is the cost, and the stable/ephemeral split in `CoordinatorMethod` is
+how it is managed — the identity is fixed per method, not a parameter, so
+`msg_post` cannot accidentally ride your real npub. The split is real but
+partial:
+
+- **Admission is in the clear on both ends.** `join_request_store` names your
+  real key and the `gid`; `welcome_store` names the target's and `welcome_take`
+  is called by it. For any group joined through a share link the coordinator
+  observes real-identity membership directly. Structural, not a bug.
+- **The ephemeral key is per session, not per message.** One pseudonym touches
+  every group you hold on that coordinator, so that `gid` set is a stable
+  fingerprint linking them. `CoordinatorClient` takes its signers from the
+  caller precisely so the caller decides how often to rotate.
+
+Plan §8 has the full analysis.
+
+## Two spec/implementation divergences found
+
+1. **`spec/01.md` §3 contradicts itself**: "MLS variable-length vector encoding
+   conventions" and then `opaque Name<0..2^16-1>`, which are different
+   encodings. The reference emits a plain uint16 length. We match the
+   reference, and the test derives the expected bytes by hand from the spec
+   rather than round-tripping — a round trip agrees with itself whichever one
+   you picked.
+2. **KeyPackage publication rides JSON-RPC envelope shape**, not a stable
+   schema: `spec/00.md` §7's "signed publication payload" is the `kp_publish`
+   request event, and the KeyPackage is recovered by parsing JSON-RPC out of its
+   `content`. The reference client already carries a fallback from one rename
+   (`kp_64 ?? keyPackageBase64`); so do we. Worth proposing upstream that
+   publication gets its own payload or kind — it would also let a cordn
+   KeyPackage be published to relays and consumed with no coordinator at all.
+
+## Testing
+
+```bash
+./gradlew :cordn:jvmTest              # 49
+./gradlew :cordn:testAndroidHostTest  # 33
+```
+
+The Android run is smaller because the tests needing real secp256k1 — anything
+driving a coordinator over a live transport — live in `src/jvmTest`.
+
+`fixture/CordnFixtureCoordinator` implements the eleven tools in memory and
+**records which identity made each call**, which is the only way to test the
+privacy claim: it is about what the coordinator learns, so you have to stand on
+its side of the wire and look.
+
+The group-ref tests pin the three golden strings from the reference's own suite
+(`packages/core/src/groupRef.test.ts`), where they are cross-checked against an
+independent TLV+bech32 assembly. That makes them a genuine cross-implementation
+vector — the plan's Tier D — rather than a record of our own output.
+
+Still open:
+
+- **Live integration** against `ghcr.io/cordn-msg/cordn:latest` (Tier B).
+- **Group creation and messaging end to end.** The pieces are each tested; a
+  test that creates a group, adds a member through a Welcome and exchanges a
+  sealed envelope needs the Stage 0 interop vectors.
+- **Multi-device** is an explicit non-goal — `spec/applications/multi-device.md`
+  ships a ts-mls-internal serialization, not an MLS wire format. There is
+  nothing to implement against.

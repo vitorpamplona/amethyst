@@ -65,7 +65,7 @@ class CvmTransportTest {
         faults: FixtureFaults = FixtureFaults(),
         injectClientPubkey: Boolean = false,
         discoveryTags: List<Array<String>> = emptyList(),
-        handler: suspend (String, JsonObject?) -> com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage = { _, _ ->
+        handler: suspend (String, JsonObject?, JsonRpcId) -> com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage = { _, _, _ ->
             JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("ok", JsonPrimitive(true)) })
         },
     ) = CvmFixtureServer(
@@ -233,7 +233,7 @@ class CvmTransportTest {
                     relays = relays,
                     signer = serverSigner,
                     crypto = CvmGiftWrap(encryptionMode = EncryptionMode.DISABLED),
-                    handler = { _, _ -> JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject {}) },
+                    handler = { _, _, id -> JsonRpcSuccess(id, buildJsonObject {}) },
                 )
             fixture.start()
 

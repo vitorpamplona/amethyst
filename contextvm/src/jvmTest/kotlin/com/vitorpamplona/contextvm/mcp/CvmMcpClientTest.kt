@@ -68,7 +68,7 @@ class CvmMcpClientTest {
             ),
         )
 
-    private fun fixture(handler: suspend (String, JsonObject?) -> com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage) =
+    private fun fixture(handler: suspend (String, JsonObject?, JsonRpcId) -> com.vitorpamplona.contextvm.jsonrpc.JsonRpcMessage) =
         CvmFixtureServer(
             relays = relays,
             signer = serverSigner,
@@ -80,10 +80,74 @@ class CvmMcpClientTest {
     private val firstCallToken = ProgressToken.Text("call-0")
 
     @Test
+    fun `a second call on one client still correlates`() =
+        runTest {
+            // Every test here made exactly one call, so a server that answered
+            // with a constant JSON-RPC id passed all of them -- and our own
+            // fixture did precisely that until a two-call cordn test hung on it.
+            // Ids advance per call and the client refuses a stale one, which is
+            // correct and invisible until something makes the second call.
+            val client = client()
+            val fixture = fixture { _, _, id -> JsonRpcSuccess(id, buildJsonObject { put("ok", JsonPrimitive(true)) }) }
+            fixture.start()
+
+            val results =
+                coroutineScope {
+                    val pending =
+                        async {
+                            listOf(
+                                client.callTool("first", timeoutMs = 5_000),
+                                client.callTool("second", timeoutMs = 5_000),
+                            )
+                        }
+                    while (!pending.isCompleted) {
+                        yield()
+                        fixture.pump()
+                        yield()
+                    }
+                    pending.await()
+                }
+
+            assertEquals(2, results.size)
+            results.forEach { assertFalse(it.isError) }
+        }
+
+    @Test
+    fun `a stale response id is ignored rather than answering the wrong call`() =
+        runTest {
+            // The guard the test above depends on. A server pinned to id 0
+            // answers the first call and nothing after it -- the request must
+            // time out rather than accept an answer to a question we already
+            // asked.
+            val client = client()
+            val fixture = fixture { _, _, _ -> JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject {}) }
+            fixture.start()
+
+            coroutineScope {
+                val first = async { client.callTool("first", timeoutMs = 5_000) }
+                yield()
+                fixture.pump()
+                first.await()
+            }
+
+            val second =
+                coroutineScope {
+                    val pending = async { runCatching { client.callTool("second", timeoutMs = 200) } }
+                    repeat(20) {
+                        yield()
+                        fixture.pump()
+                        yield()
+                    }
+                    pending
+                }
+            assertTrue(second.await().isFailure, "a response carrying a stale id must not resolve the new call")
+        }
+
+    @Test
     fun `a tool call returns the server result`() =
         runTest {
             val fixture =
-                fixture { _, _ ->
+                fixture { _, _, _ ->
                     JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("cursor", JsonPrimitive(7)) })
                 }
             fixture.start()
@@ -111,7 +175,7 @@ class CvmMcpClientTest {
         runTest {
             // Without one a server MUST NOT start either transfer profile, so
             // omitting it would silently cap every response at one relay event.
-            val fixture = fixture { _, _ -> JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject {}) }
+            val fixture = fixture { _, _, _ -> JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject {}) }
             fixture.start()
 
             coroutineScope {
@@ -129,7 +193,7 @@ class CvmMcpClientTest {
     fun `an error response surfaces as an error rather than a throw`() =
         runTest {
             val fixture =
-                fixture { _, _ ->
+                fixture { _, _, _ ->
                     JsonRpcFailure(
                         JsonRpcId.Num(0),
                         JsonRpcError(JsonRpcError.PAYMENT_REQUIRED, "Payment Required"),
@@ -157,7 +221,7 @@ class CvmMcpClientTest {
             val serialized = JsonRpcCodec.encode(JsonRpcSuccess(JsonRpcId.Num(0), big))
 
             val fixture =
-                fixture { _, _ ->
+                fixture { _, _, _ ->
                     // A placeholder direct response: the real payload arrives
                     // through the frames, which is the point of the profile.
                     JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("placeholder", JsonPrimitive(true)) })
@@ -192,7 +256,7 @@ class CvmMcpClientTest {
             // The rule worth pinning end to end: close says no more frames, and
             // the request is still only finished by its own JSON-RPC response.
             val fixture =
-                fixture { _, _ ->
+                fixture { _, _, _ ->
                     JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("done", JsonPrimitive(true)) })
                 }
             fixture.start()
@@ -237,7 +301,7 @@ class CvmMcpClientTest {
     fun `initialize completes the handshake and sends initialized`() =
         runTest {
             val fixture =
-                fixture { _, _ ->
+                fixture { _, _, _ ->
                     JsonRpcSuccess(
                         JsonRpcId.Num(0),
                         buildJsonObject { put("protocolVersion", JsonPrimitive(CvmMcpClient.PROTOCOL_VERSION)) },
