@@ -318,6 +318,22 @@ android {
         resources {
             excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "**/libscrypt.dylib")
         }
+
+        jniLibs {
+            // Reproducible builds, part two: ship the Arti library exactly as
+            // tools/arti-build produced it. Its Cargo release profile already
+            // strips it (no .symtab, no .debug_*), so AGP's
+            // `llvm-strip --strip-unneeded` pass has nothing left to remove — but it
+            // still rewrites the file: llvm-strip rebuilds .comment, the section that
+            // records the rustc / clang / lld version stamps, which measurably changes
+            // 273 bytes on arm64-v8a. That made the packaged bytes a function of
+            // whichever NDK did the stripping, so the .so in an APK could never be
+            // compared against the committed, independently reproducible one.
+            // Excluding it from the strip step costs nothing in size (there are no
+            // symbols to drop) and makes that comparison exact. Dependency .so files
+            // are still stripped, with the NDK pinned by ndkVersion above.
+            keepDebugSymbols += "**/libarti_android.so"
+        }
     }
 
     lint {
