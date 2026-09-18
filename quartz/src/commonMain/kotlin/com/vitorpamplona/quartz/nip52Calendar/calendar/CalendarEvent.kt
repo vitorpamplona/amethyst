@@ -24,7 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -43,6 +45,7 @@ class CalendarEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
@@ -56,6 +59,13 @@ class CalendarEvent(
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun calendarEventAddresses() = taggedAddresses()
+
+    // A calendar is a list of `a` tags pointing at the appointments it collects. Surfacing them
+    // lets the broadcaster route a published calendar to the relays those appointments live on,
+    // and lets the hint index learn the calendar -> appointment links.
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     companion object {
         const val KIND = 31924

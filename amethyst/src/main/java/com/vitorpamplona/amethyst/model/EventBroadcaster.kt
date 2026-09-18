@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -51,6 +52,19 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+
+/**
+ * The pubkeys an `a`-tagging event addresses, read straight from the coordinates
+ * (`kind:pubkey:dTag`) rather than from whatever the local cache happens to hold.
+ *
+ * This is what lets [EventBroadcaster] route to an addressed author's inbox relays when the
+ * addressable itself was never cached on this device - a NIP-52 RSVP being the motivating case,
+ * since its `a` tag is the only thing tying it to the appointment's host.
+ *
+ * Unparseable coordinates are dropped; the result is deduplicated because an event may address
+ * several addressables by the same author (a calendar listing its own appointments).
+ */
+fun addressedAuthors(event: AddressHintProvider): Set<HexKey> = event.linkedAddressIds().mapNotNullTo(mutableSetOf()) { Address.parse(it)?.pubKeyHex }
 
 /**
  * The sign-and-publish choke point for an [Account]: computes the relay set an
@@ -232,6 +246,16 @@ class EventBroadcaster(
             event.addressHints().forEach {
                 relayList.add(it.relay)
             }
+
+            // An `a` coordinate names its own author, so the addressed user's inbox is reachable
+            // straight from the tag. Everything in the loop below is nested inside a cache
+            // lookup, so without this an event aimed at an addressable this device never cached
+            // - an RSVP to a calendar appointment that arrived as a bare reference, say - went
+            // only to the sender's own outbox and never to the author it was answering.
+            addressedAuthors(event).forEach { authorPubKey ->
+                relayList.addAll(computeRelayListForLinkedUser(authorPubKey))
+            }
+
             event.linkedAddressIds().forEach { addressId ->
                 account.cache.getAddressableNoteIfExists(addressId)?.let { linkedNote ->
                     val linkedNoteAuthor = linkedNote.author

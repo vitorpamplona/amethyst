@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
@@ -50,6 +51,7 @@ class CalendarDateSlotEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
@@ -80,6 +82,13 @@ class CalendarDateSlotEvent(
     fun hashtags() = tags.hashtags()
 
     fun participants() = tags.mapNotNull(PTag.Companion::parse)
+
+    // NIP-52 `p` tags are the invitees/hosts of this appointment. Exposing them as pubkey
+    // hints lets the broadcaster route the appointment - and anything that a-tags it, like an
+    // RSVP - into every participant's inbox relays instead of just the author's outbox.
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
 
     fun references() = tags.references()
 

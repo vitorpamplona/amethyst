@@ -21,16 +21,18 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 
 /**
- * Entry for a NIP-52 calendar RSVP: decodes the [Note] and renders the shared commons
- * [CalendarRsvpCard]. Draws only from the event's own tags, so the entry keeps the
- * dispatcher signature without touching the account or nav.
+ * Entry for a NIP-52 calendar RSVP: decodes the [Note], makes sure the appointment it answers is
+ * in the cache, and renders the shared commons [CalendarRsvpCard].
  */
 @Composable
 fun RenderCalendarRSVPEvent(
@@ -40,5 +42,40 @@ fun RenderCalendarRSVPEvent(
 ) {
     val event = note.event as? CalendarRSVPEvent ?: return
 
+    LoadAppointmentBehind(event, accountViewModel)
+
     CalendarRsvpCard(event)
+}
+
+/**
+ * Resolves the appointment this RSVP answers, from the `a` tag that is the only thing tying the
+ * two together.
+ *
+ * [LoadAddressableNote] creates the [com.vitorpamplona.amethyst.commons.model.AddressableNote] in
+ * `LocalCache` — a shell with a null event if we have never seen the appointment — and
+ * [EventFinderFilterAssemblerSubscription] then asks relays for it: `filterMissingAddressables`
+ * picks up exactly those addressables whose `event == null` and queries the address author's
+ * outbox relays plus any stored hints.
+ *
+ * Both halves matter beyond drawing this card. `EventBroadcaster` routes an RSVP by following its
+ * `a` tag into the appointment and reading the participants off it, and every step of that walk
+ * is a `LocalCache` lookup. An RSVP seen in a feed for an appointment that was never cached would
+ * otherwise leave the cache with no entry to walk, so answering it from here would reach the host
+ * (whose pubkey the coordinate carries) but none of the other invitees.
+ *
+ * Composition-scoped like every other per-note subscription: the row unsubscribes ~30s after it
+ * scrolls away or the app backgrounds.
+ */
+@Composable
+private fun LoadAppointmentBehind(
+    event: CalendarRSVPEvent,
+    accountViewModel: AccountViewModel,
+) {
+    val address = remember(event) { event.calendarEventAddress() } ?: return
+
+    LoadAddressableNote(address, accountViewModel) { appointment ->
+        if (appointment != null) {
+            EventFinderFilterAssemblerSubscription(appointment, accountViewModel)
+        }
+    }
 }

@@ -96,6 +96,36 @@ allprojects {
 
 subprojects {
     afterEvaluate {
+        // The Kotlin Multiplatform plugin never registers a plain `test` task: it creates one
+        // task per target (jvmTest, androidUnitTest, linuxX64Test, ...) plus the `allTests`
+        // aggregate. A root `./gradlew test` therefore runs `test` only in the Java/Android
+        // modules that own one and *silently* skips every KMP module - Gradle only errors when
+        // no project at all has the task, and four of them do, so it exits 0 looking healthy.
+        // That hid ~8k tests (quartz, commons, commonsUI, quic, nestsClient, marmotQuic), which
+        // is most of this repo's suite. Register the alias so the documented command means what
+        // it says.
+        //
+        // It maps to jvmTest, not allTests, on purpose: allTests also drags in androidUnitTest
+        // and the native targets, half of which cannot run on a given host (macosArm64Test on
+        // Linux) and all of which change what `test` costs. jvmTest is exactly what the
+        // pre-push hook and CI already run for these modules, so the alias matches the coverage
+        // they expect rather than inventing a third definition of "the tests".
+        //
+        // The flip side: a KMP module's non-JVM targets stay outside `test`. :quartz's
+        // androidHostTest source set (~3.9k tests) is the big one - nothing runs it today and it
+        // is red on main, so aliasing onto allTests would have turned `test` red for everyone
+        // rather than fixing anything. Tracked in CLAUDE.md's Build Commands section.
+        if (plugins.hasPlugin("org.jetbrains.kotlin.multiplatform") &&
+            tasks.findByName("test") == null &&
+            tasks.findByName("jvmTest") != null
+        ) {
+            tasks.register("test") {
+                group = "verification"
+                description = "Runs the JVM unit tests for this Kotlin Multiplatform module."
+                dependsOn("jvmTest")
+            }
+        }
+
         try {
             tasks.named("preBuild") {
                 dependsOn("spotlessApply")

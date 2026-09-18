@@ -224,8 +224,20 @@ version. `quartz/` is protocol-only — no composables.
 # Build Quartz for all targets
 ./gradlew :quartz:build
 
-# Run tests
+# Run the JVM tests of every module, KMP ones included. KMP modules register no
+# `test` task of their own; the root build aliases it onto their jvmTest.
 ./gradlew test
+
+# A single module. For a KMP module name jvmTest directly:
+./gradlew :quartz:jvmTest --tests "com.vitorpamplona.quartz.nip52Calendar.*"
+
+# NOT covered by `test`: each KMP module's OTHER targets, notably
+# :quartz:testAndroidHostTest (~3.9k tests, its own androidHostTest source set).
+# Nothing runs it today - not `test`, not pre-push, not CI - and it has 4 known
+# failures on main (NostrServerTest x3, LiveNegentropyIndexStoreTest x1), which
+# is why the alias maps to jvmTest rather than allTests. Run it explicitly when
+# touching relay-server or store code:
+./gradlew :quartz:testAndroidHostTest
 
 # Format code
 ./gradlew spotlessApply
