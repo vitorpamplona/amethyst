@@ -29,7 +29,12 @@
 #
 # The R8 that does the work is fetched at the version recorded in the mapping's
 # own header, so there is no tooling to pin and this keeps working across AGP
-# bumps. Everything is cached under ~/.cache/amethyst-retrace/.
+# bumps.
+#
+# Everything is cached under ~/.cache/amethyst-retrace/, and that cache is not
+# small: a mapping is ~29 MB compressed and ~500 MB expanded, per release you
+# retrace. `rm -rf ~/.cache/amethyst-retrace` whenever you want it back; the
+# next run re-downloads.
 set -euo pipefail
 
 REPO="${AMETHYST_REPO:-vitorpamplona/amethyst}"
@@ -48,15 +53,32 @@ usage() {
     exit "${1:-2}"
 }
 
+# The first 4 KiB of a mapping, which is where R8 puts its whole header. Read
+# once, into a variable: `sed ... "$MAPPING" | head -1` would stream all ~500 MB
+# looking for a line that is always in the first hundred bytes, and would also
+# leave the pipeline's status at head's SIGPIPE.
+mapping_header() {
+    case "$1" in
+        *.gz) gunzip -c "$1" 2>/dev/null | head -c 4096 || true ;;
+        *)    head -c 4096 "$1" 2>/dev/null || true ;;
+    esac
+}
+
 # A mapping file, or the report? Decide by content, not by extension, so both
 # documented argument orders keep working.
+#
+# Deliberately NOT `... | grep -q`: `grep -q` exits at the first match, the
+# producer takes SIGPIPE, and `set -o pipefail` then reports the whole pipeline
+# as failed — so a real mapping.txt.gz was classified as a report and the actual
+# report came back as "unexpected argument".
 looks_like_mapping() {
-    local f="$1"
-    [ -f "$f" ] || return 1
-    case "$f" in
+    [ -f "$1" ] || return 1
+    case "$1" in
         *.prt) return 0 ;;
-        *.gz)  gunzip -c "$f" 2>/dev/null | head -c 200 | grep -q '^# compiler' && return 0 || return 1 ;;
-        *)     head -c 200 "$f" 2>/dev/null | grep -q '^# compiler' && return 0 || return 1 ;;
+    esac
+    case "$(mapping_header "$1")" in
+        "# compiler"*) return 0 ;;
+        *) return 1 ;;
     esac
 }
 
@@ -164,13 +186,21 @@ if [ -z "$MAPPING" ]; then
 fi
 
 [ -f "$MAPPING" ] || die "no such mapping: $MAPPING"
+# Keep the name the user actually gave us for error messages — once a .gz is
+# expanded, $MAPPING points at a cache path they never typed.
+MAPPING_LABEL="$(basename "$MAPPING")"
 
 # ---- decompress if needed --------------------------------------------------
 PARTITION=0
 case "$MAPPING" in
     *.prt) PARTITION=1 ;;
     *.gz)
-        plain="$CACHE/$(basename "${MAPPING%.gz}")"
+        # Keyed on the full source path, not just the basename: two different
+        # mappings are both called mapping.txt.gz if you gzip a playRelease and
+        # an fdroidRelease by hand. (The map-id check below would catch the mixup
+        # anyway, but "wrong release" is a much clearer error than a stale cache.)
+        key="$(printf '%s' "$(cd "$(dirname "$MAPPING")" && pwd)/$(basename "$MAPPING")" | cksum | cut -d' ' -f1)"
+        plain="$CACHE/$(basename "${MAPPING%.gz}").$key"
         if [ ! -s "$plain" ] || [ "$MAPPING" -nt "$plain" ]; then
             echo "decompressing $(basename "$MAPPING") ..." >&2
             gunzip -c "$MAPPING" > "$plain"
@@ -181,15 +211,16 @@ esac
 
 # ---- make sure this mapping really built this report ------------------------
 if [ "$PARTITION" -eq 0 ]; then
+    HEADER="$(mapping_header "$MAPPING")"
     trace_id="$(grep -om1 'r8-map-id-[0-9a-f]\{16,\}' "$REPORT_FILE" | sed 's/^r8-map-id-//' || true)"
-    map_id="$(grep -m1 '^# pg_map_id:' "$MAPPING" | sed 's/.*: *//' || true)"
+    map_id="$(printf '%s\n' "$HEADER" | sed -n 's/^# pg_map_id: *//p' | head -1 || true)"
     if [ -z "$trace_id" ]; then
         echo "note: no r8-map-id in the report (an un-obfuscated build, or a trimmed" >&2
         echo "      trace) — cannot confirm the mapping matches." >&2
     elif [ "$trace_id" != "$map_id" ]; then
         msg="this mapping did not build this report.
        report:  $trace_id
-       mapping: $map_id ($(basename "$MAPPING"))
+       mapping: $map_id ($MAPPING_LABEL)
        Retracing anyway yields wrong names that look right. Check the release
        tag and the flavor (play vs fdroid are separate R8 runs)."
         [ "$FORCE" -eq 1 ] && echo "warning: $msg" >&2 || die "$msg"
@@ -203,7 +234,7 @@ if [ "$PARTITION" -eq 1 ]; then
        Set R8_VERSION=<x.y.z> (the 'compiler_version' of the matching
        mapping.txt), or retrace against the .txt.gz instead."
 else
-    R8_VERSION="$(sed -n 's/^# compiler_version: //p' "$MAPPING" | head -1)"
+    R8_VERSION="$(printf '%s\n' "${HEADER:-$(mapping_header "$MAPPING")}" | sed -n 's/^# compiler_version: *//p' | head -1 || true)"
     [ -n "$R8_VERSION" ] || die "no '# compiler_version:' header in $MAPPING — not an R8 mapping?"
 fi
 
@@ -217,10 +248,12 @@ if [ ! -s "$R8_JAR" ]; then
 fi
 
 # ---- retrace ---------------------------------------------------------------
+# Not `exec`: exec replaces this shell, so the EXIT trap never runs and $TMP is
+# left behind on every single invocation.
 if [ "$PARTITION" -eq 1 ]; then
-    exec java -cp "$R8_JAR" com.android.tools.r8.retrace.Retrace \
+    java -cp "$R8_JAR" com.android.tools.r8.retrace.Retrace \
         --partition-map "$MAPPING" "$REPORT_FILE"
 else
-    exec java -cp "$R8_JAR" com.android.tools.r8.retrace.Retrace \
+    java -cp "$R8_JAR" com.android.tools.r8.retrace.Retrace \
         "$MAPPING" "$REPORT_FILE"
 fi
