@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.service.workouts.health.publishedWorkoutsOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,6 +43,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 
@@ -84,16 +86,41 @@ class MyFitnessViewModel : ViewModel() {
         data class Ready(
             val report: WorkoutStats.Report,
             val healthConnect: HealthConnectStatus,
+            /**
+             * True while Health Connect's per-session metrics are still arriving. The report is
+             * real and complete in every other respect — counts, time, streak, active days, the
+             * per-activity split — but distance, calories, heart rate, steps and elevation are
+             * still filling in, so the screen says so rather than letting cells appear unexplained.
+             */
+            val metricsPending: Boolean = false,
         ) : State
     }
 
     private val pubkeyHex = MutableStateFlow<String?>(null)
 
     /**
+     * Health Connect's contribution, and how far along reading it is.
+     *
+     * [sessionsPending] and [metricsPending] are the two stages of
+     * [HealthConnectManager.readWorkoutsProgressively]: the session list costs one IPC, the
+     * metrics cost one per session. They are tracked separately because they mean different
+     * things to the screen — an empty dashboard must not say "nothing logged yet" while the
+     * sessions are still coming, but it can show real counts and times while the metrics are.
+     */
+    private data class Contribution(
+        val workouts: List<DetectedWorkout> = emptyList(),
+        val sessionsPending: Boolean = false,
+        val metricsPending: Boolean = false,
+    )
+
+    /**
      * Health Connect's contribution. A push source: the platform has no change feed we can
      * observe, so [refresh] re-reads it when the screen resumes or a permission is granted.
      */
-    private val fromHealthConnect = MutableStateFlow<List<DetectedWorkout>>(emptyList())
+    private val fromHealthConnect = MutableStateFlow(Contribution())
+
+    /** The in-flight [refresh], cancelled by the next one so two reads never interleave. */
+    private var refreshJob: Job? = null
 
     /** Null until the first [refresh] resolves, which is what keeps the screen on [State.Loading]. */
     private val healthConnectStatus = MutableStateFlow<HealthConnectStatus?>(null)
@@ -112,21 +139,29 @@ class MyFitnessViewModel : ViewModel() {
 
     val state: StateFlow<State> =
         combine(fromHealthConnect, fromRelays, healthConnectStatus) { healthConnect, published, status ->
-            if (status == null) {
-                State.Loading
-            } else {
-                val now = Instant.now()
-                val since = now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)).epochSecond
+            // The status check is cheap; reading the workouts is not. Waiting only on the former
+            // is what lets a user's published log render while their watch data is still coming.
+            if (status == null) return@combine State.Loading
 
-                State.Ready(
-                    report =
-                        WorkoutStats.report(
-                            TrainingLog.merge(healthConnect, published.filter { it.startTimeEpochSeconds >= since }),
-                            now,
-                        ),
-                    healthConnect = status,
+            val now = Instant.now()
+            val since = now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)).epochSecond
+
+            val report =
+                WorkoutStats.report(
+                    TrainingLog.merge(healthConnect.workouts, published.filter { it.startTimeEpochSeconds >= since }),
+                    now,
                 )
-            }
+
+            // Nothing to show *yet* is not the same as nothing logged. Going Ready here would
+            // flash the empty state — or the connect prompt — at a user whose sessions are one
+            // IPC away, so an empty report keeps waiting while the session list is in flight.
+            if (report.isEmpty && healthConnect.sessionsPending) return@combine State.Loading
+
+            State.Ready(
+                report = report,
+                healthConnect = status,
+                metricsPending = healthConnect.metricsPending,
+            )
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State.Loading)
 
@@ -141,25 +176,54 @@ class MyFitnessViewModel : ViewModel() {
      * numbers on display. The published side needs no refresh — it is observed.
      */
     fun refresh(context: Context) {
-        viewModelScope.launch {
-            val status = healthConnectStatus(context)
+        // A resume while the previous read is still running would leave two collectors writing
+        // fromHealthConnect, and the slower one could land a stale list last.
+        refreshJob?.cancel()
+        refreshJob =
+            viewModelScope.launch {
+                val status = healthConnectStatus(context)
+                val hc = manager
 
-            fromHealthConnect.value =
-                if (status == HealthConnectStatus.CONNECTED) {
-                    val now = Instant.now()
-                    manager?.readWorkouts(now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)), now).orEmpty()
-                } else {
-                    emptyList()
+                // Read through the local rather than the field: nothing may set sessionsPending
+                // without a reader that will clear it again, or an empty dashboard waits forever.
+                if (status != HealthConnectStatus.CONNECTED || hc == null) {
+                    fromHealthConnect.value = Contribution()
+                    healthConnectStatus.value = status
+                    return@launch
                 }
 
-            healthConnectStatus.value = status
+                // Published before the read, not after: the status is what the screen is gated on,
+                // and it is now known. The workouts arrive into an already-rendered dashboard.
+                // The previous read's workouts stay up meanwhile, so a resume re-reads in place
+                // rather than blanking a dashboard that is already correct.
+                fromHealthConnect.value = fromHealthConnect.value.copy(sessionsPending = true)
+                healthConnectStatus.value = status
+
+                val now = Instant.now()
+                hc
+                    .readWorkoutsProgressively(now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)), now)
+                    .collect { read ->
+                        fromHealthConnect.value =
+                            Contribution(
+                                workouts = read.workouts,
+                                sessionsPending = false,
+                                metricsPending = read.metricsPending,
+                            )
+                    }
+            }
+    }
+
+    /**
+     * Both calls here are binder round trips — a PackageManager query, and a bind to the Health
+     * Connect service that [HealthConnectManager] makes lazily on first use — so they run off the
+     * main thread. [viewModelScope] is `Dispatchers.Main.immediate`, which would otherwise stall
+     * the frame that opens the screen.
+     */
+    private suspend fun healthConnectStatus(context: Context): HealthConnectStatus =
+        withContext(Dispatchers.IO) {
+            if (!HealthConnectManager.isAvailable(context)) return@withContext HealthConnectStatus.UNAVAILABLE
+
+            val hc = manager ?: HealthConnectManager(context.applicationContext).also { manager = it }
+            if (hc.hasAllPermissions()) HealthConnectStatus.CONNECTED else HealthConnectStatus.AVAILABLE
         }
-    }
-
-    private suspend fun healthConnectStatus(context: Context): HealthConnectStatus {
-        if (!HealthConnectManager.isAvailable(context)) return HealthConnectStatus.UNAVAILABLE
-
-        val hc = manager ?: HealthConnectManager(context.applicationContext).also { manager = it }
-        return if (hc.hasAllPermissions()) HealthConnectStatus.CONNECTED else HealthConnectStatus.AVAILABLE
-    }
 }

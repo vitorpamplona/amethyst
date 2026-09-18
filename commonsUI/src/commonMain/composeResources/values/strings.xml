@@ -716,6 +716,7 @@
     <string name="health_connect_rationale_privacy_policy">Read the full privacy policy</string>
     <string name="my_fitness_title">My Fitness</string>
     <string name="my_fitness_window">Last 4 weeks</string>
+    <string name="my_fitness_loading_metrics">Loading distance, calories and heart rate…</string>
     <string name="my_fitness_window_note">The last four whole weeks of your training: the workouts you have published, plus anything Health Connect records on this phone. Amethyst works the summary out on the device and publishes none of it.</string>
     <string name="my_fitness_this_week">This week</string>
     <string name="my_fitness_vs_last_week">vs last week</string>

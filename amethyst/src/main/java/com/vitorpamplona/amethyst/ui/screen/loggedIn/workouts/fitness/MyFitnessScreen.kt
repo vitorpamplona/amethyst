@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_connect_title
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_distance
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_elevation
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_empty
+import com.vitorpamplona.amethyst.commons.resources.my_fitness_loading_metrics
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_max_heart_rate
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_recent
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_share
@@ -181,6 +182,7 @@ fun MyFitnessScreen(
                             // Only offered when it would actually add something: a device with no
                             // provider gets no banner to act on.
                             showConnectBanner = current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE,
+                            metricsPending = current.metricsPending,
                             onDetails = openRationale,
                             onConnect = requestPermissions,
                         ) { workout, label ->
@@ -226,6 +228,32 @@ private fun ConnectBanner(
     }
 }
 
+/**
+ * Shown while the per-session metrics are still being read from Health Connect. The dashboard
+ * below it is already real — counts, time, streak, the activity split — but its distance,
+ * calories and heart rate cells appear as each session's metrics land, and a row of numbers
+ * growing on its own needs saying out loud.
+ */
+@Composable
+private fun MetricsPendingNote() {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(14.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringRes(Res.string.my_fitness_loading_metrics),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 private fun ConnectPrompt(
     onDetails: () -> Unit,
@@ -263,6 +291,7 @@ private fun ConnectPrompt(
 private fun Dashboard(
     report: WorkoutStats.Report,
     showConnectBanner: Boolean,
+    metricsPending: Boolean,
     onDetails: () -> Unit,
     onConnect: () -> Unit,
     onShare: (DetectedWorkout, String) -> Unit,
@@ -274,6 +303,7 @@ private fun Dashboard(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         if (showConnectBanner) ConnectBanner(onDetails = onDetails, onConnect = onConnect)
+        if (metricsPending) MetricsPendingNote()
         ThisWeekCard(report, miles)
         ConsistencyRow(report)
         WindowTotalsCard(report, miles)
