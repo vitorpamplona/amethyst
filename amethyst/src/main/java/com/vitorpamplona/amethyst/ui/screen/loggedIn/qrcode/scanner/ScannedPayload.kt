@@ -1,0 +1,179 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
+
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+
+/**
+ * What a decoded QR string *is*, independent of whether any particular screen can act on it.
+ *
+ * The scanner needs this separately from routing: `uriToRoute` answers "where does this
+ * navigate", and collapses everything it doesn't recognise into `null` — which is how a
+ * perfectly good scan of an unsupported payload became indistinguishable from the camera never
+ * reading anything (issue #417). Classifying first lets the UI say *which* of those happened.
+ *
+ * Pure Kotlin on purpose: no Android, no `LocalCache`, no navigation. It is the one piece of the
+ * scanner that can be exhaustively unit-tested on the JVM.
+ */
+sealed interface ScannedPayload {
+    /** Exactly what the decoder read, trimmed. */
+    val raw: String
+
+    /**
+     * True when [raw] carries key material or a pairing secret — an `nsec`, an `ncryptsec`, a
+     * wallet-connect URI (its `secret=` is spendable), or a NIP-46 URI (its `secret=` authorises
+     * a signer). Any UI that echoes a payload back to the screen, copies it, or logs it MUST
+     * check this first. A QR code is scanned in public, over someone's shoulder, by definition.
+     */
+    val containsSecret: Boolean
+        get() = false
+
+    /** A NIP-19 entity, with or without the `nostr:` prefix. */
+    data class Nostr(
+        override val raw: String,
+        val entity: Entity,
+    ) : ScannedPayload {
+        override val containsSecret get() = entity is NSec
+    }
+
+    /** `nostrconnect://` — an app asking our signer to connect. Carries a `secret`. */
+    data class NostrConnect(
+        override val raw: String,
+    ) : ScannedPayload {
+        override val containsSecret get() = true
+    }
+
+    /** `bunker://` — a remote signer offering itself. Carries a `secret`. */
+    data class Bunker(
+        override val raw: String,
+    ) : ScannedPayload {
+        override val containsSecret get() = true
+    }
+
+    /** `nostr+walletconnect://` and friends. Carries a spendable `secret`. */
+    data class WalletConnect(
+        override val raw: String,
+    ) : ScannedPayload {
+        override val containsSecret get() = true
+    }
+
+    /** A BOLT-11 invoice, an LNURL, or a `lightning:` URI. */
+    data class Lightning(
+        override val raw: String,
+    ) : ScannedPayload
+
+    /** A Cashu token or payment request. Bearer money — never echo it. */
+    data class Cashu(
+        override val raw: String,
+    ) : ScannedPayload {
+        override val containsSecret get() = true
+    }
+
+    /** An `http(s)://` link. [url] is [raw] with any `web+nostr:` style wrapper removed. */
+    data class Web(
+        override val raw: String,
+        val url: String,
+    ) : ScannedPayload
+
+    /**
+     * A bare 64-character hex pubkey with no bech32 wrapper — what issue #417 hit in 2023 and
+     * what every "copy the pubkey" web tool still produces. [npub] is the same key encoded, so
+     * callers can hand it to the normal NIP-19 routing path.
+     */
+    data class HexPubKey(
+        override val raw: String,
+        val npub: String,
+    ) : ScannedPayload
+
+    /**
+     * Key material we can recognise but not decode — chiefly an `ncryptsec`, which
+     * `Nip19Parser` lists in its regex but has no branch to parse, so it would otherwise land in
+     * [Unknown] and be echoed to the screen.
+     *
+     * Deliberately classified by *prefix*, not by parse success: whether a payload is dangerous
+     * to display cannot depend on whether we happen to be able to read it.
+     */
+    data class EncryptedKey(
+        override val raw: String,
+    ) : ScannedPayload {
+        override val containsSecret get() = true
+    }
+
+    /** Decoded fine, but it is not anything Amethyst knows how to act on. */
+    data class Unknown(
+        override val raw: String,
+    ) : ScannedPayload
+}
+
+private val HEX_64 = Regex("^[0-9a-fA-F]{64}$")
+
+private val LIGHTNING_PREFIXES = listOf("lightning:", "lnbc", "lntb", "lnbcrt", "lnurl")
+
+private val WALLET_CONNECT_PREFIXES =
+    listOf(
+        "nostr+walletconnect:",
+        "nostrwalletconnect:",
+        "nostr+walletconnect://",
+        "amethyst+walletconnect:",
+    )
+
+/**
+ * Classify a decoded QR string.
+ *
+ * Scheme checks run before the NIP-19 scan on purpose: a `bunker://` or `nostrconnect://` URI
+ * embeds a hex pubkey and relay URLs, and letting the (deliberately permissive) NIP-19 regex
+ * look at those first risks matching a bech32-shaped fragment out of a relay path and routing
+ * somewhere absurd.
+ */
+fun classifyScannedPayload(text: String): ScannedPayload {
+    val raw = text.trim()
+    if (raw.isEmpty()) return ScannedPayload.Unknown(raw)
+
+    val lower = raw.lowercase()
+
+    if (lower.startsWith("bunker:")) return ScannedPayload.Bunker(raw)
+    if (lower.startsWith("nostrconnect:")) return ScannedPayload.NostrConnect(raw)
+    if (WALLET_CONNECT_PREFIXES.any { lower.startsWith(it) }) return ScannedPayload.WalletConnect(raw)
+    if (lower.startsWith("cashu") || lower.startsWith("creq")) return ScannedPayload.Cashu(raw)
+
+    // Before the NIP-19 scan, and by prefix rather than by parse: an ncryptsec cannot be decoded
+    // here, so waiting to find out what it is would mean deciding it is harmless.
+    if (lower.startsWith("ncryptsec1") || lower.startsWith("nostr:ncryptsec1")) {
+        return ScannedPayload.EncryptedKey(raw)
+    }
+    if (LIGHTNING_PREFIXES.any { lower.startsWith(it) }) return ScannedPayload.Lightning(raw)
+
+    Nip19Parser.uriToRoute(raw)?.let { return ScannedPayload.Nostr(raw, it.entity) }
+
+    if (HEX_64.matches(raw)) {
+        val npub = runCatching { NPub.create(raw.lowercase()) }.getOrNull()
+        if (npub != null) return ScannedPayload.HexPubKey(raw, npub)
+    }
+
+    if (lower.startsWith("http://") || lower.startsWith("https://")) {
+        return ScannedPayload.Web(raw, raw)
+    }
+
+    return ScannedPayload.Unknown(raw)
+}

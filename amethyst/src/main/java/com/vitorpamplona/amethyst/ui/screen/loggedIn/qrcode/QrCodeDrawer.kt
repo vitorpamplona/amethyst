@@ -48,6 +48,7 @@ import com.google.zxing.qrcode.encoder.ByteMatrix
 import com.google.zxing.qrcode.encoder.Encoder
 import com.google.zxing.qrcode.encoder.QRCode
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import kotlin.math.min
 
 /**
  * The quiet zone around the code, in **modules** — the QR spec's minimum of 4.
@@ -58,6 +59,12 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
  * box it is given at every size while remaining scannable.
  */
 const val QR_QUIET_ZONE_MODULES = 4f
+
+/**
+ * Corner rounding on the finder patterns, as a fraction of one module. Small enough to stay well
+ * inside what a decoder tolerates, large enough to keep the code from looking like a 1998 barcode.
+ */
+const val FINDER_CORNER_RADIUS_MODULES = 0.22f
 
 @Preview
 @Composable
@@ -90,7 +97,12 @@ fun QrCodeDrawer(
             // (zone included) is exactly as wide as the canvas.
             val rowHeight = size.height / (qrCode.matrix.height + QR_QUIET_ZONE_MODULES * 2f)
             val columnWidth = size.width / (qrCode.matrix.width + QR_QUIET_ZONE_MODULES * 2f)
-            val radius = CornerRadius(20f)
+            // Scale the rounding with the module size. A fixed 20px radius is a gentle touch on
+            // a large code and a serious deformation on a small one: the finder patterns are what
+            // a decoder locates first, and rounding away a third of a module's worth of their
+            // corners is exactly the kind of damage that makes a code readable on screen and
+            // unreadable in a photo of that screen.
+            val radius = CornerRadius(min(columnWidth, rowHeight) * FINDER_CORNER_RADIUS_MODULES)
 
             // Draw all of the finder patterns required by the QR spec. Calculate the ratio
             // of the number of rows/columns to the width and height

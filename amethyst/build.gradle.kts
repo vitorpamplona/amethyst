@@ -365,6 +365,12 @@ android {
             project
                 .findProperty("amethyst.arti.integration")
                 ?.let { test.systemProperty("amethyst.arti.integration", it.toString()) }
+            // Opts QrCorpusBaselineTest into rewriting the QR decode corpus under
+            // src/androidTest/assets/qr. Off by default so an ordinary run never dirties
+            // the working tree; Gradle forks the test JVM, so -D alone would not reach it.
+            project
+                .findProperty("amethyst.qr.corpus.export")
+                ?.let { test.systemProperty("amethyst.qr.corpus.export", it.toString()) }
         }
     }
 }
@@ -634,8 +640,11 @@ dependencies {
     implementation(libs.accompanist.permissions)
 
     // For QR generation
+    // ZXing core encodes the QR codes we display. Decoding is zxing-cpp, which we build
+    // from source ourselves -- see tools/zxing-cpp-build -- rather than pulling a prebuilt
+    // AAR nobody in this tree could verify; the .so lives in src/main/jniLibs and its
+    // Kotlin wrapper is vendored at src/main/java/zxingcpp.
     implementation(libs.zxing)
-    implementation(libs.zxing.embedded)
 
     // OpenStreetMap tiles for road event location maps (kind 1315/1316)
     implementation(libs.osmdroid.android)

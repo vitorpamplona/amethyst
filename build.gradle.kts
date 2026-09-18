@@ -74,6 +74,11 @@ allprojects {
         spotless {
             kotlin {
                 target("src/**/*.kt")
+                // Third-party sources vendored verbatim keep their own license header and
+                // formatting. Stamping our MIT header onto someone else's Apache-2.0 file
+                // would misstate its provenance, and reformatting it would make the next
+                // re-vendor a merge conflict instead of a copy.
+                targetExclude("src/main/java/zxingcpp/**/*.kt")
 
                 ktlint("1.7.1")
                 licenseHeaderFile(
