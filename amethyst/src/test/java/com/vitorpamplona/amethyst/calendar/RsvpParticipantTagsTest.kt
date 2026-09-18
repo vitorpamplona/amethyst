@@ -21,8 +21,16 @@
 package com.vitorpamplona.amethyst.calendar
 
 import com.vitorpamplona.amethyst.ui.note.types.rsvpParticipantTags
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -115,5 +123,34 @@ class RsvpParticipantTagsTest {
     @Test
     fun emptyWhenTheAppointmentIsNotCachedYet() {
         assertTrue(rsvpParticipantTags(null, host, me).isEmpty())
+    }
+
+    @Test
+    fun buildWritesBothTheCoordinateAndThePinnedRevision() {
+        // Mirrors what sendRsvp assembles: the `a` tag follows the host's edits, the `e` tag
+        // pins the revision that was on screen, and the first `p` tag stays the host so
+        // calendarEventAuthor() still resolves.
+        val target = Address(31923, host, "party")
+        val hint = RelayUrlNormalizer.normalizeOrNull("wss://relay.damus.io/")
+        val apptId = "43575072239da152afe3d7b5c70ed2beb48db2b10e60c60da45229c09c877d2a"
+
+        val template =
+            CalendarRSVPEvent.build(
+                calendarEventAddress = ATag(target, hint),
+                status = RSVPStatusTag.STATUS.ACCEPTED,
+                calendarEventId = ETag(apptId, hint, host),
+                calendarEventAuthor = PTag(host),
+                dTag = "rsvp-d",
+            ) {
+                pTags(listOf(PTag(invitee)))
+            }
+
+        val aTags = template.tags.filter { it[0] == "a" }
+        val eTags = template.tags.filter { it[0] == "e" }
+        val pTags = template.tags.filter { it[0] == "p" }
+
+        assertEquals("31923:$host:party", aTags.single()[1])
+        assertEquals(apptId, eTags.single()[1])
+        assertEquals(listOf(host, invitee), pTags.map { it[1] })
     }
 }

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -53,6 +54,7 @@ class CalendarRSVPEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     AddressHintProvider,
+    EventHintProvider,
     SearchableEvent {
     override fun indexableContent() = content
 
@@ -69,6 +71,12 @@ class CalendarRSVPEvent(
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+
+    // NIP-52's optional `e` tag pins the exact appointment revision this RSVP answered, next to
+    // the `a` tag's coordinate. Routing on it as well reaches whoever served that revision.
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
 
     fun status() = tags.firstNotNullOfOrNull(RSVPStatusTag.Companion::parse)
 

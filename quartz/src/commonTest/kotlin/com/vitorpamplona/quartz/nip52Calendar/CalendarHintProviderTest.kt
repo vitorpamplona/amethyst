@@ -21,10 +21,12 @@
 package com.vitorpamplona.quartz.nip52Calendar
 
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,6 +42,7 @@ class CalendarHintProviderTest {
     private val invitee = "99bb5591c9116600f845107d31f9b59e2f7c7e09a1ff802e84f1d43da557ca64"
     private val rsvper = "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"
     private val apptAddress = "31923:$host:my-party"
+    private val apptId = "43575072239da152afe3d7b5c70ed2beb48db2b10e60c60da45229c09c877d2a"
     private val relay = "wss://relay.damus.io/"
 
     private fun rsvp(vararg tags: Array<String>) =
@@ -55,6 +58,16 @@ class CalendarHintProviderTest {
     private fun timeSlot(vararg tags: Array<String>) =
         CalendarTimeSlotEvent(
             id = "11".repeat(32),
+            pubKey = host,
+            createdAt = 1700000000,
+            tags = arrayOf(*tags),
+            content = "",
+            sig = "00".repeat(64),
+        )
+
+    private fun calendar(vararg tags: Array<String>) =
+        CalendarEvent(
+            id = "33".repeat(32),
             pubKey = host,
             createdAt = 1700000000,
             tags = arrayOf(*tags),
@@ -126,5 +139,42 @@ class CalendarHintProviderTest {
         val provider: PubKeyHintProvider = event
         assertEquals(listOf(invitee), provider.linkedPubKeys())
         assertEquals(invitee, provider.pubKeyHints().single().pubkey)
+    }
+
+    @Test
+    fun rsvpExposesTheOptionalETagAsALinkedEvent() {
+        // NIP-52's `e` tag pins the exact appointment revision the RSVP answered; the `a` tag
+        // alone follows the host's later edits.
+        val event =
+            rsvp(
+                arrayOf("a", apptAddress, relay),
+                arrayOf("e", apptId, relay, host),
+                arrayOf("status", "accepted"),
+            )
+
+        val provider: EventHintProvider = event
+        assertEquals(listOf(apptId), provider.linkedEventIds())
+
+        val hint = provider.eventHints().single()
+        assertEquals(apptId, hint.eventId)
+        assertEquals(RelayUrlNormalizer.normalizeOrNull(relay), hint.relay)
+    }
+
+    @Test
+    fun rsvpWithoutAnETagLinksNoEvents() {
+        val event = rsvp(arrayOf("a", apptAddress, relay), arrayOf("status", "accepted"))
+
+        assertTrue(event.linkedEventIds().isEmpty())
+        assertTrue(event.eventHints().isEmpty())
+    }
+
+    @Test
+    fun calendarExposesItsAppointmentsAsLinkedAddresses() {
+        val other = "31922:$invitee:standup"
+        val event = calendar(arrayOf("d", "my-calendar"), arrayOf("a", apptAddress, relay), arrayOf("a", other))
+
+        val provider: AddressHintProvider = event
+        assertEquals(listOf(apptAddress, other), provider.linkedAddressIds())
+        assertEquals(apptAddress, provider.addressHints().single().addressId)
     }
 }

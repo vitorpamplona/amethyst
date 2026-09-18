@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -195,6 +196,10 @@ private fun sendRsvp(
 ) {
     val relayHint = LocalCache.getNoteIfExists(eventId)?.relays?.firstOrNull()
     val aTag = ATag(targetAddress, relayHint)
+    // NIP-52's optional `e` tag: the `a` tag names the appointment's coordinate, which follows
+    // the host's edits, while this pins the exact revision the user answered. A reader can then
+    // tell an "accepted" cast against last week's time from one cast against the current one.
+    val eTag = ETag(eventId, relayHint, targetAddress.pubKeyHex)
     val pTag = PTag(targetAddress.pubKeyHex)
     val dTag = rsvpDTagFor(targetAddress)
     val appointment = LocalCache.getAddressableNoteIfExists(targetAddress)?.event
@@ -205,6 +210,7 @@ private fun sendRsvp(
             CalendarRSVPEvent.build(
                 calendarEventAddress = aTag,
                 status = status,
+                calendarEventId = eTag,
                 calendarEventAuthor = pTag,
                 dTag = dTag,
             ) {
