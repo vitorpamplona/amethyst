@@ -196,7 +196,7 @@
     <string name="geocache_needs_verification">Verified finds</string>
     <string name="geocache_claimed">Claimed</string>
     <string name="geocache_archived">Archived</string>
-    <string name="geocache_hint_tap_to_reveal">Hint hidden — tap to reveal</string>
+    <string name="geocache_hint_tap_to_reveal">Stuck? Tap to reveal the hint</string>
     <string name="geocache_found_it">Found it!</string>
     <string name="geocache_verified_find">Verified find</string>
     <string name="geocache_invalid_proof">Proof does not check out</string>

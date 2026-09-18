@@ -232,6 +232,38 @@ safe (a reader assuming plaintext sees noise, not the answer).
 Note the trap if anyone revisits the heuristic: counting vowels is backwards. ROT13 maps `n→a`,
 `r→e`, `h→u`, `b→o`, so English ciphertext usually has *more* vowels than its plaintext.
 
+### Rendering, compared kind by kind
+
+Read against Lightning Piggy's screens (`CacheDetailSheet`, `HuntRailCard`,
+`HuntPiggyDetailScreen`, `HuntRecentFindsSection`). What their UI does that ours did not:
+
+- **The hint shows no text until tapped** — "Stuck? Tap to reveal the hint", never the encoded
+  form. Adopted: a wall of ROT13 reads as corruption, and with nothing rendered before the tap
+  the hint heuristic can no longer spoil anything, only mislabel after an explicit ask.
+- **The cache photo leads the card.** 87 `image` tags across 60 sampled listings; both their rail
+  card and detail screen render it. We parsed `image` and rendered nothing. Adopted (first image
+  only; the rest belong on a detail screen).
+- **A found-log row names the cache it is about.** Ours said "Found it!" and nothing else — the
+  one thing a reader already assumed. Adopted, plus the log's own photo (8 of 60 carry one). The
+  listing was already being loaded to validate the proof, so the name is free.
+
+Where we deliberately differ, or lead:
+
+- Our feed card carries the D/T/S and modifier badges; their rail card is name + kind + distance
+  and puts the chips on a detail sheet. Amethyst's feed cards are richer by house style
+  (cf. `RoadEventCard`), so this stays.
+- They read `t` as one value, so an archived cache renders "archived" *as its cache type*. Our
+  split parser keeps the type and adds an Archived badge.
+- They parse no `n` modifiers, no `F`, no `mission` and no `verification`; there is no reference
+  rendering for first-to-find, art, Key Quest or verified finds, and nobody validates a 7517.
+  Ours is the first — worth saying out loud, because it means those four have been checked
+  against the spec and against real events, but not against another client's behaviour.
+- Neither client renders the kind 1111 `dnf`/`maintenance` log type. They have a builder and no
+  reader, exactly as we do. A shared ecosystem gap rather than a divergence.
+- NIP-40: they stamp `expiration` on every listing (a year by default) and drop expired caches.
+  Amethyst honours NIP-40 globally in `CachePruner.pruneExpiredEvents`, so no per-kind work —
+  though pruning is periodic rather than render-time, which is true of every kind in the app.
+
 ## 4. Security review items
 
 These are the parts worth a careful reviewer, not the event codecs:

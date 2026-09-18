@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -42,11 +43,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_archived
 import com.vitorpamplona.amethyst.commons.resources.geocache_claimed
@@ -165,6 +169,14 @@ fun GeocacheCard(
     val isArchived = remember(noteEvent) { noteEvent.isArchived() }
     val isFirstToFind = remember(noteEvent) { noteEvent.isFirstToFind() }
     val isArt = remember(noteEvent) { noteEvent.hasTypeModifier(TypeModifier.ART) }
+    val photo =
+        remember(noteEvent) {
+            noteEvent
+                .images()
+                .firstOrNull()
+                ?.trim()
+                ?.ifBlank { null }
+        }
     val needsVerification = remember(noteEvent) { noteEvent.requiresVerification() }
 
     // An archived cache, or one whose single claim is taken, is history rather than an
@@ -206,6 +218,19 @@ fun GeocacheCard(
                 needsVerification = needsVerification,
             )
 
+            if (photo != null) {
+                // 87 `image` tags across 60 sampled listings — a cache's photo is usually the
+                // hint that actually gets someone to the right tree, and both other clients lead
+                // with it. Only the first: the rest belong on a detail screen.
+                Spacer(Modifier.height(8.dp))
+                AsyncImage(
+                    model = photo,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)),
+                )
+            }
+
             if (description.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -242,13 +267,26 @@ fun GeocacheCard(
  * The log's own message with a "Found it!" pill, and a proof badge only where [proof] has
  * actually been checked. A log is a claim until something verifies it, so nothing here upgrades
  * an attached verification into a verified one.
+ *
+ * [cacheName] is what the log is *about*, and without it the card says only "Found it!" — the
+ * one thing a reader scrolling a feed already assumed. The cache is named by an `a` tag, so the
+ * name costs a lookup the caller has to do anyway; pass null while it is still loading.
  */
 @Composable
 fun GeocacheFoundLogCard(
     noteEvent: GeocacheFoundLogEvent,
     proof: FoundLogProof = FoundLogProof.NONE,
+    cacheName: String? = null,
 ) {
     val message = remember(noteEvent) { noteEvent.content.trim() }
+    val photo =
+        remember(noteEvent) {
+            noteEvent
+                .images()
+                .firstOrNull()
+                ?.trim()
+                ?.ifBlank { null }
+        }
     val accent = MaterialTheme.colorScheme.primary
 
     Column(MaterialTheme.colorScheme.replyModifier) {
@@ -269,15 +307,38 @@ fun GeocacheFoundLogCard(
             }
         }
 
-        if (message.isNotEmpty()) {
-            Text(
-                text = message,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-            )
+        if (cacheName != null || message.isNotEmpty() || photo != null) {
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                if (cacheName != null) {
+                    Text(
+                        text = cacheName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (message.isNotEmpty()) {
+                    if (cacheName != null) Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (photo != null) {
+                    Spacer(Modifier.height(8.dp))
+                    AsyncImage(
+                        model = photo,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)),
+                    )
+                }
+            }
         } else {
             Spacer(Modifier.height(12.dp))
         }
@@ -317,31 +378,37 @@ private fun CacheBadges(
 }
 
 /**
- * The hint, obfuscated until tapped — and a *toggle*, not a one-way reveal.
+ * The hint: an invitation until tapped, then the text.
  *
- * Publishers disagree about whether `hint` goes on the wire as plaintext or ROT13 (see
- * [HintObfuscation]), so which of the two forms is the readable one is a guess. Toggling makes
- * a wrong guess cost a second tap instead of the hint: whichever way round this cache was
- * written, both forms are one tap apart.
+ * Shows *no* hint text while hidden — not even the encoded form. Geocaching clients have always
+ * done it this way (Lightning Piggy's detail screen offers "Stuck? Tap to reveal the hint"), and
+ * it is the stronger design for two reasons: a wall of ROT13 reads as corruption rather than as
+ * a hint, and nothing on screen can spoil a find no matter which way round the publisher
+ * encoded it.
+ *
+ * That last point matters here more than it does for them. Publishers disagree about whether
+ * `hint` goes on the wire plain or rotated (see [HintObfuscation]), so picking the readable form
+ * is a guess — and with nothing rendered until the tap, a wrong guess can only ever show the
+ * wrong text *after* the reader asked for it, never before.
  */
 @Composable
 private fun SpoilerHint(hint: String) {
-    val hidden = remember(hint) { HintObfuscation.hidden(hint) }
     val revealedText = remember(hint) { HintObfuscation.revealed(hint) }
     var revealed by remember(hint) { mutableStateOf(false) }
 
     Column(Modifier.clickable { revealed = !revealed }) {
-        Text(
-            text = if (revealed) revealedText else hidden,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (revealed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.placeholderText,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (!revealed) {
+        if (revealed) {
+            Text(
+                text = revealedText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
             Text(
                 text = stringResource(Res.string.geocache_hint_tap_to_reveal),
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         }

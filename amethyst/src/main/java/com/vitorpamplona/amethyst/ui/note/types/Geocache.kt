@@ -93,14 +93,16 @@ fun RenderGeocacheFoundLog(
     val address = remember(noteEvent) { noteEvent.geocache() }
     val hasProof = remember(noteEvent) { noteEvent.hasVerificationAttached() }
 
-    if (!hasProof || address == null) {
+    if (address == null) {
         GeocacheFoundLogCard(noteEvent, FoundLogProof.NONE)
         return
     }
 
+    // Loaded even for an unverified log: the cache's name is what tells a reader in a feed what
+    // was actually found, and "Found it!" on its own says nothing.
     LoadAddressableNote(address, accountViewModel) { cacheNote ->
         if (cacheNote == null) {
-            GeocacheFoundLogCard(noteEvent, FoundLogProof.UNKNOWN)
+            GeocacheFoundLogCard(noteEvent, if (hasProof) FoundLogProof.UNKNOWN else FoundLogProof.NONE)
         } else {
             // Read through the note rather than observeNoteEvent<GeocacheListingEvent>: that
             // helper's cast is erased, so it hands back whatever the address resolved to and the
@@ -110,23 +112,24 @@ fun RenderGeocacheFoundLog(
             val listing = noteState.note.event as? GeocacheListingEvent
 
             val proof by
-                produceState(FoundLogProof.UNKNOWN, noteEvent, listing) {
+                produceState(if (hasProof) FoundLogProof.UNKNOWN else FoundLogProof.NONE, noteEvent, listing, hasProof) {
                     val cache = listing
                     value =
-                        if (cache == null) {
-                            FoundLogProof.UNKNOWN
-                        } else {
-                            withContext(Dispatchers.Default) {
-                                if (GeocacheVerificationValidator.isValid(noteEvent, cache)) {
-                                    FoundLogProof.VALID
-                                } else {
-                                    FoundLogProof.INVALID
+                        when {
+                            !hasProof -> FoundLogProof.NONE
+                            cache == null -> FoundLogProof.UNKNOWN
+                            else ->
+                                withContext(Dispatchers.Default) {
+                                    if (GeocacheVerificationValidator.isValid(noteEvent, cache)) {
+                                        FoundLogProof.VALID
+                                    } else {
+                                        FoundLogProof.INVALID
+                                    }
                                 }
-                            }
                         }
                 }
 
-            GeocacheFoundLogCard(noteEvent, proof)
+            GeocacheFoundLogCard(noteEvent, proof, listing?.cacheName())
         }
     }
 }
