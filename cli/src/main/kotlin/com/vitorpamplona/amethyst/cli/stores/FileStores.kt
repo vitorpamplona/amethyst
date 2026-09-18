@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.cli.stores
 import com.vitorpamplona.amethyst.cli.SecureFileIO
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.mls.group
+package com.vitorpamplona.quartz.marmot.appComponents
 
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.marmot.groups.currentMarmotData
 import com.vitorpamplona.quartz.marmot.groups.currentNostrGroupId
 import com.vitorpamplona.quartz.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.mls.crypto.Ed25519KeyPair
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.tree.Capabilities
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray

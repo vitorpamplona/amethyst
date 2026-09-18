@@ -1,9 +1,10 @@
 # Cordn interop: extract the MLS core, then add a second binding
 
-Status: Stage 2 landed. `:contextvm` implements the core spec plus all 12 CEPs on the client
-side, with the Tier C fixture server, at 172 tests. Stages 0 (cordn-side vectors), 1 (extract the
-MLS engine) and 3-4 (the cordn binding and app integration) are open. Stage 3 is the one gated on
-the §4.1 upstream decision.
+Status: Stages 1 and 2 landed. The RFC 9420 engine is `quartz/…/mls/` and imports nothing from
+`marmot/` — a binding supplies its rules through `MlsGroupPolicy`. `:contextvm` implements the
+core spec plus all 12 CEPs on the client side, with the Tier C fixture server, at 172 tests.
+Stages 0 (cordn-side vectors) and 3-4 (the cordn binding and app integration) are open; Stage 3
+is the one gated on the §4.1 upstream decision.
 
 Correction to an earlier gate in this plan: §4.1 does **not** block Stage 2. ContextVM is
 credential-agnostic and has no MLS dependency at all, so the transport was safe to build first;
@@ -201,7 +202,11 @@ wire format. There is nothing to implement against. Do not attempt it.
 
 ### 5.1 The engine, and how Marmot-clean it is
 
-`quartz/…/marmot/mls/` is **11,964 LOC**. Measured coupling to the Marmot layer:
+**Superseded by Stage 1, which landed.** The measurements below are what the engine looked like
+before the extraction; they are kept because they are what the stage was scoped against. The
+engine is now `quartz/…/mls/` with zero `marmot/` imports.
+
+`quartz/…/marmot/mls/` was **11,964 LOC**. Measured coupling to the Marmot layer:
 
 - **3 files**, **10 imports** total:
   - `group/MlsGroup.kt` (7): `MarmotGroupData`, `MarmotGroupState`, `AdminPolicyV1`,
@@ -637,29 +642,57 @@ No production code. Two deliverables.
 
 **Gate:** do not start Stage 2 until §4.1 has an answer. Stage 1 is safe to do regardless.
 
-### Stage 1 — Extract a binding-agnostic RFC 9420 engine
+### Stage 1 — Extract a binding-agnostic RFC 9420 engine — LANDED
 
-Worth doing whether or not cordn ever ships. Today the engine is one protocol's private detail;
-this makes it a library.
+Done in four commits. The engine is `quartz/…/mls/` and imports nothing from `quartz/…/marmot/`.
 
-- Move `quartz/…/marmot/mls/` → `quartz/…/mls/`. Packages change; `marmot/` keeps everything
-  else.
-- Parameterize what §5.1 lists as hardcoded: group id, credential identity bytes,
-  `required_capabilities`, leaf `capabilities`, and the exporter label/context all become
-  constructor or call-site inputs. `exporterSecret(label, context, length)` already exists —
-  stop calling it with a literal `"marmot"` from inside the engine.
-- Push the Marmot-specific reads out to `marmot/`: `currentMarmotData()`, `currentGroupState()`,
-  `currentNostrGroupId()`, the `AdminPolicyV1`/`GroupLifecycleV1` hooks and the agent-text-stream
-  helpers. Where the engine needs a policy decision, it takes an interface; `marmot/` supplies the
-  Marmot implementation.
-- Move `group/MarmotMessageStore.kt` out (it is named for Marmot and keyed on
-  `nostrGroupId` — it is a binding concern).
-- Behaviour must not change. The existing MLS + Marmot test suites are the contract; they pass
-  unmodified except for import lines.
+| What | Where it went |
+| ---- | ------------- |
+| The engine (28 files, 11,964 LOC) | `quartz/…/marmot/mls/` → `quartz/…/mls/` |
+| `MlsGroupManager`, `MlsGroupStateStore`, `MarmotMessageStore` | → `marmot/groups/` (all keyed on `nostrGroupId`) |
+| MIP-03 authorization, depletion guard, join role check, self-remove gate | → `marmot/groups/MarmotGroupPolicy` |
+| Leaf + `required_capabilities` profiles | → `marmot/groups/MarmotCapabilities` |
+| `currentMarmotData/GroupState/NostrGroupId`, `agentTextStreamSecret` | → `marmot/groups/MarmotGroupViews` (extension functions) |
+| `last_resort_key_package` (0x0004) | → `mls/components/ComponentsList` — it is the extensions draft's, not Marmot's |
 
-Risk: `MlsGroup.kt` is 4,505 lines and carries the convergence/lifecycle logic. Keep this stage
-strictly mechanical — extraction and parameterization, no logic edits — so the diff stays
-reviewable and the test suite is a real check.
+**The seam is `MlsGroupPolicy`**: three hooks the engine calls where RFC 9420 defers to the
+application (`authorizeCommit`, `authorizeSelfRemove`, `validateJoin`) and four values it reads
+(leaf capabilities, `required_capabilities`, extra known extension types, the commit exporter
+label). One argument selects a whole profile — `MlsGroup.create(id, policy = MarmotGroupPolicy)`
+brings the rules, the capabilities and `MLS-Exporter("marmot", "group-event", 32)` together — so
+adopting it cost one added argument per call site rather than five.
+
+Policies receive a read-only `GroupView`, not the `MlsGroup`: a policy holding the group could
+commit or rotate keys from inside the check meant to gate those things.
+
+**The default is permissive**, which is a trade worth naming. Closed would make the engine
+unusable without a policy and would push callers into writing an allow-everything one anyway.
+The cost is that a group restored without its policy silently drops the binding's rules — a
+policy is behaviour, not state, so it is deliberately not in `MlsGroupState`. All ten production
+construction sites are in `marmot/` and all ten name it.
+
+Two findings from doing it:
+
+1. **`:quic` was already a second consumer, reaching through the wrong package.**
+   `quic/tls/TlsClient.kt` imported `quartz.marmot.mls.crypto.X25519` for its TLS 1.3 handshake —
+   neither Marmot nor MLS. That is the argument for this stage independent of cordn.
+2. **The test suite found every site that had been relying on Marmot defaults.** The first run
+   after `MlsGroup.create` stopped defaulting to Marmot's profile failed 13 tests, each one a
+   Marmot test that had been getting a Marmot-shaped group for free. The other ~180 construction
+   sites kept passing on the permissive default — they are engine tests, and they now prove the
+   engine runs without Marmot at all.
+
+8 tests were added for the seam itself (`MlsGroupPolicySeamTest`, `MarmotPolicySeamTest`),
+including the half no existing test covered: the same group at the same state accepts the same
+commit once the policy is gone. Verified by mutation — ignoring the policy in `commit()` and
+re-hardcoding the exporter label each kill exactly their guarding tests.
+
+Suite: `:quartz:jvmTest` 5074 → 5082, `:commons:jvmTest` 2202, both green.
+
+What Stage 3 still owes: `MlsGroupManager` is keyed on `nostrGroupId` 147 times, so cordn cannot
+reuse it and needs its own manager over the same `MlsGroup`. Class names were left alone in the
+move — `MlsGroupManager` under `marmot/groups/` reads correctly and renaming four classes would
+have churned 22 files across five modules for clarity the package path already gives.
 
 ### Stage 2 — `:contextvm` module (clean-room) — LANDED
 

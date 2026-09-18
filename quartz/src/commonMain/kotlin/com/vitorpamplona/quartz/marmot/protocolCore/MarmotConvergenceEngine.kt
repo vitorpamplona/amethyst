@@ -423,7 +423,9 @@ class MarmotConvergenceEngine(
         mutex.withLock {
             contexts[groupId]?.candidateStates?.values?.mapNotNull { state ->
                 try {
-                    MlsGroup.restore(state, MarmotGroupPolicy).exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+                    MarmotGroupPolicy.commitExporter.let {
+                        MlsGroup.restore(state, MarmotGroupPolicy).exporterSecret(it.label, it.context, it.length)
+                    }
                 } catch (_: Exception) {
                     null
                 }

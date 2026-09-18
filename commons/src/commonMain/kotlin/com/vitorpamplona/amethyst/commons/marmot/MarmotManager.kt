@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotGroupSnapshot
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemRowDiff
+import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
@@ -90,14 +91,14 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.sha256.sha256
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Central coordinator for Marmot MLS group messaging.
@@ -327,9 +328,11 @@ class MarmotManager(
     ): ByteArray? =
         try {
             val preCommitKey =
-                MlsGroup
-                    .restore(obligation.priorState)
-                    .exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+                MarmotGroupPolicy.commitExporter.let { exporter ->
+                    MlsGroup
+                        .restore(obligation.priorState, MarmotGroupPolicy)
+                        .exporterSecret(exporter.label, exporter.context, exporter.length)
+                }
             GroupEventEncryption.decrypt(event.content, preCommitKey)
         } catch (e: Exception) {
             Log.w(

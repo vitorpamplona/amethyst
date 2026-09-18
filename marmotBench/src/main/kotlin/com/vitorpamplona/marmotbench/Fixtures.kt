@@ -21,9 +21,9 @@
 package com.vitorpamplona.marmotbench
 
 import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 // In-memory stores, matching the commons test doubles byte for byte.

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.mls.tree.Capabilities
 import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.mls.tree.Extension
@@ -56,6 +57,24 @@ object MarmotCapabilities {
     fun mipLeaf(): Capabilities =
         Capabilities(
             extensions = listOf(MARMOT_GROUP_DATA_EXTENSION_TYPE),
+            proposals = listOf(MlsGroup.SELF_REMOVE_PROPOSAL_TYPE),
+        )
+
+    /**
+     * The MIP-era leaf set as a published KeyPackage advertises it.
+     *
+     * Same as [mipLeaf] plus `0x000A` as an EXTENSION, which OpenMLS validation
+     * requires on a last-resort KeyPackage. Note `0x000A` appears in both lists
+     * meaning different things: as an extension it is `last_resort`, as a
+     * proposal it is `self_remove`.
+     *
+     * The order is load-bearing and must not be tidied: these bytes go into
+     * published KeyPackages, and `KeyPackageBundleStore`'s v4 snapshot format
+     * is defined by them.
+     */
+    fun mipKeyPackageLeaf(): Capabilities =
+        Capabilities(
+            extensions = listOf(MlsKeyPackage.LAST_RESORT_EXTENSION_TYPE, MARMOT_GROUP_DATA_EXTENSION_TYPE),
             proposals = listOf(MlsGroup.SELF_REMOVE_PROPOSAL_TYPE),
         )
 
