@@ -4,14 +4,20 @@
 #
 # Prerequisites:
 #   - Rust toolchain: rustup, cargo
-#   - Android targets: rustup target add aarch64-linux-android x86_64-linux-android
+#   - Android targets: rustup target add aarch64-linux-android x86_64-linux-android \
+#       armv7-linux-androideabi i686-linux-android
 #   - cargo-ndk: cargo install cargo-ndk
 #   - Android NDK: the exact revision pinned in ANDROID_NDK_VERSION
 #     (sdkmanager "ndk;<revision>") — see README.md -> "Reproducible builds"
 #
 # Usage:
-#   ./build-arti.sh              # Build for all targets (arm64 + x86_64)
-#   ./build-arti.sh --release    # Build arm64 only (for release)
+#   ./build-arti.sh              # Build every shipped ABI (all four)
+#   ./build-arti.sh --release    # arm64-v8a only (faster; NOT enough to cut a
+#                                #   release — the APK splits ship four ABIs)
+#   ./build-arti.sh --target=<triple>
+#                                # build just this target, repeatable. Use it to
+#                                # add one ABI without rewriting the other .so
+#                                # files already committed under jniLibs/.
 #   ./build-arti.sh --clean      # Clean and rebuild
 #
 set -euo pipefail
@@ -56,25 +62,39 @@ OUTPUT_DIR="$PROJECT_ROOT/amethyst/src/main/jniLibs"
 LIB_NAME="libarti_android.so"
 MIN_SDK_VERSION=26
 
-# Default targets
-TARGETS=("aarch64-linux-android" "x86_64-linux-android")
-RELEASE_ONLY=false
+# Default targets: one per ABI the APK is split for (amethyst/build.gradle.kts ->
+# splits.abi). They must stay in sync — an ABI that gets an APK split but no
+# libarti_android.so produces an install where every other native library is
+# present, so the app looks healthy right up to the moment it tries to reach Tor,
+# and then fails silently for the lifetime of that install.
+TARGETS=("aarch64-linux-android" "x86_64-linux-android" "armv7-linux-androideabi" "i686-linux-android")
 CLEAN=false
 REGEN_LOCK=false
+# Collects --target= selections; replaces TARGETS wholesale once any is given.
+# A space-separated string, not an array: macOS still ships bash 3.2, where
+# `${#empty_array[@]}` under `set -u` is an unbound-variable error. Target
+# triples never contain spaces, so word splitting is exact here.
+SELECTED_TARGETS=""
 
 # Parse arguments
 for arg in "$@"; do
     case $arg in
-        --release) RELEASE_ONLY=true; TARGETS=("aarch64-linux-android") ;;
+        --release) TARGETS=("aarch64-linux-android") ;;
+        --target=*) SELECTED_TARGETS="$SELECTED_TARGETS ${arg#--target=}" ;;
         --clean) CLEAN=true ;;
         # Refresh the committed Cargo.lock from the pinned Arti tag, then exit
         # (no compile — needs only git + cargo, not the NDK). Use after bumping
         # ARTI_VERSION / Cargo.toml; the normal build is --locked and will fail
         # until the lock is regenerated and committed.
         --regen-lock) REGEN_LOCK=true; CLEAN=true ;;
-        --help) echo "Usage: $0 [--release] [--clean] [--regen-lock] [--help]"; exit 0 ;;
+        --help) echo "Usage: $0 [--release] [--target=<triple>]... [--clean] [--regen-lock] [--help]"; exit 0 ;;
     esac
 done
+
+if [ -n "$SELECTED_TARGETS" ]; then
+    # shellcheck disable=SC2206 # deliberate word splitting; see SELECTED_TARGETS
+    TARGETS=($SELECTED_TARGETS)
+fi
 
 print_header()  { echo -e "\n${BLUE}=== $1 ===${NC}"; }
 print_success() { echo -e "${GREEN}✓ $1${NC}"; }
@@ -254,12 +274,16 @@ PATCH
 # ============================================================================
 
 # Android ABI directory (as laid out under jniLibs/) for a Rust target triple.
+# Unknown triples are fatal rather than empty: an empty answer would make the
+# caller write "$OUTPUT_DIR/" — i.e. drop the .so loose in jniLibs/, where no ABI
+# picks it up — and both verification loops would skip it without a word.
 abi_dir_for() {
     case "$1" in
         aarch64-linux-android) echo "arm64-v8a" ;;
         x86_64-linux-android) echo "x86_64" ;;
         armv7-linux-androideabi) echo "armeabi-v7a" ;;
         i686-linux-android) echo "x86" ;;
+        *) print_error "Unknown Rust target '$1' — no jniLibs ABI maps to it" >&2; exit 1 ;;
     esac
 }
 

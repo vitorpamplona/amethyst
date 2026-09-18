@@ -67,6 +67,14 @@ afterEvaluate {
     }
 }
 
+// Every ABI we split the APK for, and therefore every ABI that needs its own
+// libarti_android.so under src/main/jniLibs/ (see tools/arti-build/). The two
+// lists drifted once: the splits shipped four ABIs while Arti was built for two,
+// so the armeabi-v7a and x86 APKs installed and ran with the dependencies' native
+// libraries all present (secp256k1's JNI ships every ABI) and Tor alone dead for
+// the life of the install. `verifyArtiAbis` below keeps them in step.
+val shippedAbis = listOf("x86", "x86_64", "arm64-v8a", "armeabi-v7a")
+
 android {
     namespace = "com.vitorpamplona.amethyst"
     compileSdk =
@@ -258,7 +266,7 @@ android {
         abi {
             isEnable = !disableAbiSplits
             reset()
-            include("x86", "x86_64", "arm64-v8a", "armeabi-v7a")
+            include(*shippedAbis.toTypedArray())
             isUniversalApk = !disableUniversalApk
         }
     }
@@ -305,8 +313,9 @@ android {
         unitTests.isReturnDefaultValues = true
         // Lets TorArtiNativeIntegrationTest's System.loadLibrary("arti_android")
         // find the desktop-host build of our Arti JNI shim. The Android .so
-        // variants live in src/main/jniLibs/{arm64-v8a,x86_64}/ and are loaded
-        // on-device — this Linux x86_64 .so is just for JVM unit-test runs.
+        // variants live in src/main/jniLibs/<abi>/ — one per ABI in [shippedAbis]
+        // — and are loaded on-device; this Linux x86_64 .so is just for JVM
+        // unit-test runs.
         // -Pamethyst.arti.integration=true opts the (slow, network-dependent)
         // tests in; see TorArtiNativeIntegrationTest.kdoc.
         unitTests.all { test ->
@@ -320,6 +329,49 @@ android {
         }
     }
 }
+
+// Every ABI split must carry Arti, or it ships an APK that is whole except for
+// Tor. Nothing else catches that: AGP happily assembles a split out of whatever
+// .so files the dependencies provide, the APK installs and runs, and the gap
+// only surfaces at System.loadLibrary time on a user's device — where
+// TorManager's flow swallows the UnsatisfiedLinkError and leaves the status Off
+// forever. Checked at build time instead, against the same list the splits use.
+val verifyArtiAbis =
+    tasks.register("verifyArtiAbis") {
+        group = "verification"
+        description = "Checks that every ABI in the APK splits has a libarti_android.so."
+
+        val jniLibs = file("src/main/jniLibs")
+        val abis = shippedAbis
+        // Rust target triple per ABI, so the failure says exactly what to build.
+        val triples =
+            mapOf(
+                "arm64-v8a" to "aarch64-linux-android",
+                "x86_64" to "x86_64-linux-android",
+                "armeabi-v7a" to "armv7-linux-androideabi",
+                "x86" to "i686-linux-android",
+            )
+
+        doLast {
+            val missing = abis.filter { !File(jniLibs, "$it/libarti_android.so").exists() }
+            if (missing.isNotEmpty()) {
+                throw GradleException(
+                    buildString {
+                        appendLine("No libarti_android.so for ABI(s): ${missing.joinToString()}.")
+                        appendLine("Those APK splits would install with Tor permanently unavailable.")
+                        appendLine("Build them (tools/arti-build/README.md):")
+                        missing.forEach { abi ->
+                            val triple = triples[abi] ?: "<add the Rust target for $abi>"
+                            appendLine("    ./tools/arti-build/build-arti.sh --target=$triple")
+                        }
+                        append("…or drop the ABI from `shippedAbis` in amethyst/build.gradle.kts.")
+                    },
+                )
+            }
+        }
+    }
+
+tasks.named("preBuild") { dependsOn(verifyArtiAbis) }
 
 // androidx.appfunctions-compiler runs in a per-module mode by default,
 // emitting only the dispatcher Kotlin code. The aggregator that builds

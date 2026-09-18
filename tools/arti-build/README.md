@@ -8,8 +8,8 @@ JNI wrapper built directly from Arti source.
 
 | | Guardian Project AAR | Custom build |
 |---|---|---|
-| **Size** | ~140MB | ~11MB |
-| **16KB pages** | No | Yes (rustc aligns Android targets to 16 KiB) |
+| **Size** | ~140MB | ~22MB for all four ABIs — 4-6MB in the APK a device installs |
+| **16KB pages** | No | Yes on the 64-bit ABIs (rustc aligns them to 16 KiB) |
 | **Stop/restart** | Broken (state file lock) | Works (TorClient persists, only SOCKS proxy stops) |
 | **Version** | Behind | Pinned to latest (see [`ARTI_VERSION`](ARTI_VERSION)) |
 
@@ -71,8 +71,9 @@ release profile in `Cargo.toml` (`lto`, `codegen-units = 1`, `strip`,
 From `tools/arti-build/`, the helper builds twice from clean and diffs the output:
 
 ```bash
-./verify-reproducible.sh            # both ABIs (arm64-v8a + x86_64)
+./verify-reproducible.sh            # all four shipped ABIs
 ./verify-reproducible.sh --release  # arm64-v8a only (faster)
+./verify-reproducible.sh --target=armv7-linux-androideabi   # one ABI
 ```
 
 It prints `✅ REPRODUCIBLE` when two clean builds produce identical bytes, then
@@ -90,8 +91,12 @@ repo is checked out.
 
 2. **Android targets**
    ```bash
-   rustup target add aarch64-linux-android x86_64-linux-android
+   rustup target add aarch64-linux-android x86_64-linux-android \
+     armv7-linux-androideabi i686-linux-android
    ```
+   One per ABI the APK is split for. They are also listed in
+   `rust-toolchain.toml`, so a first invocation of the build scripts installs
+   whatever is missing.
 
 3. **cargo-ndk** — the release the pinned output was verified with:
    ```bash
@@ -120,11 +125,15 @@ repo is checked out.
 ```bash
 cd tools/arti-build
 
-# Build for all targets (arm64 + x86_64)
+# Build every shipped ABI (arm64-v8a, x86_64, armeabi-v7a, x86)
 ./build-arti.sh
 
-# Build arm64 only (for release APKs)
+# Build arm64-v8a only — a fast local loop, NOT enough to cut a release:
+# the APK splits ship four ABIs and each one needs its own libarti_android.so
 ./build-arti.sh --release
+
+# Build a single ABI without touching the other committed .so files
+./build-arti.sh --target=armv7-linux-androideabi
 
 # Clean rebuild from scratch
 ./build-arti.sh --clean
@@ -135,7 +144,7 @@ The script will:
 2. Check out the version pinned in `ARTI_VERSION`
 3. Copy the JNI wrapper into the source tree
 4. Compile with `cargo-ndk` for each target architecture
-5. Output `.so` files to `amethyst/src/main/jniLibs/{arm64-v8a,x86_64}/`
+5. Output `.so` files to `amethyst/src/main/jniLibs/{arm64-v8a,x86_64,armeabi-v7a,x86}/`
 6. Verify JNI symbols are exported correctly
 
 ## Output
@@ -144,9 +153,29 @@ The script will:
 amethyst/src/main/jniLibs/
 ├── arm64-v8a/
 │   └── libarti_android.so    (~5-6 MB)
-└── x86_64/
-    └── libarti_android.so    (~6-7 MB, emulator support)
+├── x86_64/
+│   └── libarti_android.so    (~6-7 MB, emulator support)
+├── armeabi-v7a/
+│   └── libarti_android.so    (~3-4 MB, 32-bit ARM devices)
+└── x86/
+    └── libarti_android.so    (~6 MB, 32-bit x86 images)
 ```
+
+**One per ABI split, always.** `amethyst/build.gradle.kts` splits the APK four
+ways and `create-release.yml` publishes all four, so an ABI missing from this
+tree ships an APK that is complete except for Arti: the dependencies' native
+libraries are all there (secp256k1's JNI, for one, ships every ABI), the app
+installs and runs, and Tor alone is dead for that install. `System.loadLibrary`
+throws, `TorManager`'s status flow swallows the error, and Tor reports Off
+forever. With the defaults (`TorType.INTERNAL`, DM relays and unknown relays
+routed over Tor) those relays then dial a SOCKS port nothing listens on and
+never connect — so the ABI loses its DMs too, not just Tor.
+
+The ABI list therefore lives in three places that must agree: `splits.abi` in
+`amethyst/build.gradle.kts`, `targets` in `rust-toolchain.toml`, and `TARGETS`
+in `build-arti.sh`. The `verifyArtiAbis` Gradle task (wired into `preBuild`)
+fails the build when an ABI split has no `libarti_android.so`, so the drift is
+caught here rather than on a user's phone.
 
 ## Verifying 16KB page alignment
 
@@ -159,6 +188,11 @@ readelf -l amethyst/src/main/jniLibs/arm64-v8a/libarti_android.so | grep LOAD
 The first LOAD segment alignment should be `0x4000` (16384 bytes). This comes
 from rustc's Android target spec (`max-page-size=16384`), not from the NDK, so
 it holds for every NDK revision we could build with.
+
+The requirement is a 64-bit one — 16 KB pages exist only on 64-bit Android
+devices — so it applies to `arm64-v8a` and `x86_64`. The 32-bit libraries
+(`armeabi-v7a`, `x86`) link at the 4 KB alignment their targets specify
+(`0x1000`), which is correct for them and not a regression to fix.
 
 ## Checking which toolchain built a `.so`
 
@@ -308,7 +342,8 @@ fatal.
 
 ### Rust targets not installed
 ```bash
-rustup target add aarch64-linux-android x86_64-linux-android
+rustup target add aarch64-linux-android x86_64-linux-android \
+  armv7-linux-androideabi i686-linux-android
 ```
 
 ### Build fails with dependency errors
