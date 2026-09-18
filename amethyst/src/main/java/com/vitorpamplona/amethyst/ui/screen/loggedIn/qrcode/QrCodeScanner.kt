@@ -74,7 +74,14 @@ private fun routeFor(
         uriToRoute(uri, accountViewModel.account)
     } catch (e: Throwable) {
         if (e is CancellationException) throw e
-        Log.e("NIP19 Scanner", "Error parsing $contents", e)
+        // The payload itself never reaches the log. A QR code is as likely to hold an nsec, a
+        // wallet-connect secret or a Cashu token as a profile link, and logcat is readable over
+        // adb and swept up by device bug reports — the same material ScannedPayload.containsSecret
+        // exists to keep off the screen two files away. The classification and the length say
+        // enough to debug a routing failure; classifying again here is wrapped because this is
+        // the branch for a payload that already made something throw.
+        val kind = runCatching { classifyScannedPayload(contents)::class.simpleName }.getOrNull() ?: "unclassifiable"
+        Log.e("NIP19 Scanner", "Could not route a scanned $kind payload of ${contents.length} chars", e)
         // A QR code can hold anything at all. Never let one throw.
         null
     }
