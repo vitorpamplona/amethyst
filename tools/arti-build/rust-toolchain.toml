@@ -10,10 +10,14 @@
 channel = "1.98.1"
 profile = "minimal"
 components = ["rustc", "cargo", "rust-std"]
-# Only the two ABIs we actually ship libarti_android.so for (see jniLibs/). If
-# build-arti.sh is extended to armv7/i686, add them here too — check_prerequisites
-# also adds any missing target on the fly.
+# One per ABI the APK is split for (see amethyst/build.gradle.kts -> splits.abi):
+# every split that ships native code ships libarti_android.so too, or Tor is dead
+# on that ABI for the life of the install. The `verifyArtiAbis` Gradle task holds
+# the two lists together. check_prerequisites also adds any missing target on the
+# fly.
 targets = [
     "aarch64-linux-android",
     "x86_64-linux-android",
+    "armv7-linux-androideabi",
+    "i686-linux-android",
 ]

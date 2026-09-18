@@ -67,6 +67,14 @@ afterEvaluate {
     }
 }
 
+// Every ABI we split the APK for, and therefore every ABI that needs its own
+// libarti_android.so under src/main/jniLibs/ (see tools/arti-build/). The two
+// lists drifted once: the splits shipped four ABIs while Arti was built for two,
+// so the armeabi-v7a and x86 APKs installed and ran with the dependencies' native
+// libraries all present (secp256k1's JNI ships every ABI) and Tor alone dead for
+// the life of the install. `verifyArtiAbis` below keeps them in step.
+val shippedAbis = listOf("x86", "x86_64", "arm64-v8a", "armeabi-v7a")
+
 android {
     namespace = "com.vitorpamplona.amethyst"
     compileSdk =
@@ -281,7 +289,7 @@ android {
         abi {
             isEnable = !disableAbiSplits
             reset()
-            include("x86", "x86_64", "arm64-v8a", "armeabi-v7a")
+            include(*shippedAbis.toTypedArray())
             isUniversalApk = !disableUniversalApk
         }
     }
@@ -344,8 +352,9 @@ android {
         unitTests.isReturnDefaultValues = true
         // Lets TorArtiNativeIntegrationTest's System.loadLibrary("arti_android")
         // find the desktop-host build of our Arti JNI shim. The Android .so
-        // variants live in src/main/jniLibs/{arm64-v8a,x86_64}/ and are loaded
-        // on-device — this Linux x86_64 .so is just for JVM unit-test runs.
+        // variants live in src/main/jniLibs/<abi>/ — one per ABI in [shippedAbis]
+        // — and are loaded on-device; this Linux x86_64 .so is just for JVM
+        // unit-test runs.
         // -Pamethyst.arti.integration=true opts the (slow, network-dependent)
         // tests in; see TorArtiNativeIntegrationTest.kdoc.
         unitTests.all { test ->
@@ -359,6 +368,88 @@ android {
         }
     }
 }
+
+// Every ABI split must carry Arti, or it ships an APK that is whole except for
+// Tor. Nothing else catches that: AGP happily assembles a split out of whatever
+// .so files the dependencies provide, the APK installs and runs, and the gap
+// only surfaces at System.loadLibrary time on a user's device — where
+// TorManager's flow swallows the UnsatisfiedLinkError and leaves the status Off
+// forever. Checked at build time instead, against the same list the splits use.
+val verifyArtiAbis =
+    tasks.register("verifyArtiAbis") {
+        group = "verification"
+        description = "Checks that every ABI in the APK splits has a libarti_android.so for that architecture."
+
+        val jniLibs = file("src/main/jniLibs")
+        val abis = shippedAbis
+        // Per ABI: the Rust target triple (so a failure names the exact build
+        // command) and the ELF identity the library must have — 32/64-bit class
+        // (header byte 4) and e_machine (bytes 18-19, little-endian on every
+        // Android ABI we ship). Existence alone is not enough: a truncated file,
+        // an empty placeholder, or arm64's .so copied into x86/ all load as
+        // nothing on device, which is the same silent dead Tor this task exists
+        // to prevent — and unlike a missing file, those look fine in git.
+        val expected =
+            mapOf(
+                "arm64-v8a" to Triple("aarch64-linux-android", 2, 0xB7),
+                "x86_64" to Triple("x86_64-linux-android", 2, 0x3E),
+                "armeabi-v7a" to Triple("armv7-linux-androideabi", 1, 0x28),
+                "x86" to Triple("i686-linux-android", 1, 0x03),
+            )
+
+        doLast {
+            val bitness = mapOf(1 to "32-bit", 2 to "64-bit")
+            val problems = mutableListOf<Pair<String, String>>()
+
+            abis.forEach { abi ->
+                val lib = File(jniLibs, "$abi/libarti_android.so")
+                val want = expected[abi]
+                val header = ByteArray(20)
+                val read = if (lib.isFile) lib.inputStream().use { it.read(header) } else -1
+
+                val problem =
+                    when {
+                        !lib.isFile -> "no libarti_android.so"
+                        want == null -> "no expected ELF identity recorded for this ABI"
+                        read < header.size ||
+                            header[0] != 0x7F.toByte() ||
+                            header[1] != 'E'.code.toByte() ||
+                            header[2] != 'L'.code.toByte() ||
+                            header[3] != 'F'.code.toByte() -> "not an ELF file (truncated or corrupt)"
+                        header[4].toInt() != want.second ->
+                            "${bitness[header[4].toInt()] ?: "unknown-class"} ELF, expected ${bitness[want.second]}"
+                        else -> {
+                            val machine = (header[18].toInt() and 0xFF) or ((header[19].toInt() and 0xFF) shl 8)
+                            if (machine != want.third) {
+                                "built for ELF machine 0x%02x, expected 0x%02x".format(machine, want.third)
+                            } else {
+                                null
+                            }
+                        }
+                    }
+
+                if (problem != null) problems += abi to problem
+            }
+
+            if (problems.isNotEmpty()) {
+                throw GradleException(
+                    buildString {
+                        appendLine("libarti_android.so is missing or wrong for ${problems.size} ABI split(s):")
+                        problems.forEach { (abi, problem) -> appendLine("    $abi: $problem") }
+                        appendLine("Those APK splits would install with Tor permanently unavailable.")
+                        appendLine("Rebuild them (tools/arti-build/README.md):")
+                        problems.forEach { (abi, _) ->
+                            val triple = expected[abi]?.first ?: "<add the Rust target for $abi>"
+                            appendLine("    ./tools/arti-build/build-arti.sh --target=$triple")
+                        }
+                        append("…or drop the ABI from `shippedAbis` in amethyst/build.gradle.kts.")
+                    },
+                )
+            }
+        }
+    }
+
+tasks.named("preBuild") { dependsOn(verifyArtiAbis) }
 
 // androidx.appfunctions-compiler runs in a per-module mode by default,
 // emitting only the dispatcher Kotlin code. The aggregator that builds

@@ -121,6 +121,12 @@ reproducible one. The Rust toolchain stays irrelevant either way; Studio/AGP
 fetches the pinned NDK on demand, or pre-install it with
 `sdkmanager "ndk;$(cat tools/arti-build/ANDROID_NDK_VERSION)"`.
 
+> **One Arti library per ABI split.** The APK is split four ways (`arm64-v8a`,
+> `x86_64`, `armeabi-v7a`, `x86`) and every split needs its own
+> `libarti_android.so`; a split without one installs and runs with Tor silently
+> unavailable. The `verifyArtiAbis` Gradle task fails the build if the two lists
+> drift, and names the `build-arti.sh --target=…` to run.
+
 ---
 
 ## Per-format build commands
