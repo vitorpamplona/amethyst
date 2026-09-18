@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-import com.vitorpamplona.quartz.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.nip01Core.core.Event

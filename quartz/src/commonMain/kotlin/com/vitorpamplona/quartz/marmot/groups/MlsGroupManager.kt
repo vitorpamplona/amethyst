@@ -18,16 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.mls.group
+package com.vitorpamplona.quartz.marmot.groups
 
 import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupLifecycleV1
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager.Companion.EPOCH_RETENTION_WINDOW
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.components.ComponentsList
 import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.mls.framing.PublicMessage
-import com.vitorpamplona.quartz.mls.group.MlsGroupManager.Companion.EPOCH_RETENTION_WINDOW
+import com.vitorpamplona.quartz.mls.group.DecryptedMessage
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.mls.group.RetainedEpochSecrets
 import com.vitorpamplona.quartz.mls.messages.CommitResult
 import com.vitorpamplona.quartz.mls.messages.ExternalJoinResult
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle

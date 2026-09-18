@@ -59,10 +59,10 @@ import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
-import com.vitorpamplona.quartz.mls.group.MarmotMessageStore
+import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.group.MlsGroupManager
-import com.vitorpamplona.quartz.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.mls.messages.CommitResult
 import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState

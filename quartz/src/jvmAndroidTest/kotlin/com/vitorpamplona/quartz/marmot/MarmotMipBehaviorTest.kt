@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

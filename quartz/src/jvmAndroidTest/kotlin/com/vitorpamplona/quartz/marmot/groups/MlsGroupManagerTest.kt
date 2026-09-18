@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.mls
+package com.vitorpamplona.quartz.marmot.groups
 
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.group.MlsGroupManager
-import com.vitorpamplona.quartz.mls.group.MlsGroupStateStore
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals

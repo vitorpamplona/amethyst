@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceStatus
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
-import com.vitorpamplona.quartz.mls.group.MlsGroupManager
-import com.vitorpamplona.quartz.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal

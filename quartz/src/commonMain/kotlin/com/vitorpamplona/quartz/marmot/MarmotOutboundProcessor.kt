@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
-import com.vitorpamplona.quartz.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

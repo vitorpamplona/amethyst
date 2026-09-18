@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
@@ -36,7 +37,6 @@ import com.vitorpamplona.quartz.mls.framing.MlsMessage
 import com.vitorpamplona.quartz.mls.framing.PrivateMessage
 import com.vitorpamplona.quartz.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.mls.framing.WireFormat
-import com.vitorpamplona.quartz.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.messages.Welcome

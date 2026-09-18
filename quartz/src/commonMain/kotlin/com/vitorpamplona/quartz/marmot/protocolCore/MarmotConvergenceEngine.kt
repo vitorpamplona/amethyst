@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
 import com.vitorpamplona.quartz.mls.framing.ContentType
 import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

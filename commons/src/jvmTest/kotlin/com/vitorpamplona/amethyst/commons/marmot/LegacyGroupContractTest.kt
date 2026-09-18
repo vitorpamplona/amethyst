@@ -92,7 +92,7 @@ class LegacyGroupContractTest {
             )
         }
 
-    private class ProbeStateStore : com.vitorpamplona.quartz.mls.group.MlsGroupStateStore {
+    private class ProbeStateStore : com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore {
         private val states = mutableMapOf<String, ByteArray>()
         private val retained = mutableMapOf<String, List<ByteArray>>()
 
