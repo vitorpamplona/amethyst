@@ -2610,4 +2610,5 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="health_connect_rationale_activity_label">Health Connect i Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="my_fitness">Moja kondycja</string>
 </resources>
