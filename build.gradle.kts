@@ -105,6 +105,11 @@ subprojects {
         // Linux) and all of which change what `test` costs. jvmTest is exactly what the
         // pre-push hook and CI already run for these modules, so the alias matches the coverage
         // they expect rather than inventing a third definition of "the tests".
+        //
+        // The flip side: a KMP module's non-JVM targets stay outside `test`. :quartz's
+        // androidHostTest source set (~3.9k tests) is the big one - nothing runs it today and it
+        // is red on main, so aliasing onto allTests would have turned `test` red for everyone
+        // rather than fixing anything. Tracked in CLAUDE.md's Build Commands section.
         if (plugins.hasPlugin("org.jetbrains.kotlin.multiplatform") &&
             tasks.findByName("test") == null &&
             tasks.findByName("jvmTest") != null

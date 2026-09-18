@@ -45,14 +45,10 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_not_going
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
-import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
-import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import org.jetbrains.compose.resources.stringResource
 
@@ -202,9 +198,19 @@ private fun sendRsvp(
     val eTag = ETag(eventId, relayHint, targetAddress.pubKeyHex)
     val pTag = PTag(targetAddress.pubKeyHex)
     val dTag = rsvpDTagFor(targetAddress)
-    val appointment = LocalCache.getAddressableNoteIfExists(targetAddress)?.event
-    val others = rsvpParticipantTags(appointment, targetAddress.pubKeyHex, myPubKey)
 
+    // Only the host is p-tagged, per NIP-52 ("pubkey of the author of the calendar event being
+    // responded to"). The other invitees still receive this RSVP: EventBroadcaster follows the
+    // a-tag into the appointment and reads its participants' inbox relays from the appointment's
+    // own p tags (CalendarTimeSlotEvent/CalendarDateSlotEvent are PubKeyHintProviders).
+    //
+    // Copying those participants onto the RSVP as extra p tags would add no routing - the
+    // broadcaster's recursion and any local participant lookup read the same
+    // LocalCache.getAddressableNoteIfExists(targetAddress), so they are reachable in exactly the
+    // same cases - while giving every invitee a notification row for every other invitee's RSVP
+    // (kind 31925 is in NOTIFICATION_KINDS and tagsAnEventByUser returns true for it), bloating
+    // the signed event by a host-controlled number of tags, and muddying the spec's meaning of
+    // this kind's p tag.
     accountViewModel.launchSigner {
         accountViewModel.account.signAndComputeBroadcast(
             CalendarRSVPEvent.build(
@@ -213,33 +219,7 @@ private fun sendRsvp(
                 calendarEventId = eTag,
                 calendarEventAuthor = pTag,
                 dTag = dTag,
-            ) {
-                pTags(others)
-            },
+            ),
         )
     }
-}
-
-/**
- * The [appointment]'s own NIP-52 `p` tags, minus [hostPubKey] (already tagged as the event author)
- * and minus [myPubKey]. Tagging them on the RSVP is what puts it in every invitee's inbox: the
- * broadcaster resolves `p` tags to inbox relays, so without these the RSVP only reaches the host.
- *
- * Empty when the appointment isn't cached yet; the a-tag still routes the RSVP through the host.
- */
-fun rsvpParticipantTags(
-    appointment: Event?,
-    hostPubKey: String,
-    myPubKey: String,
-): List<PTag> {
-    val participants =
-        when (appointment) {
-            is CalendarTimeSlotEvent -> appointment.participants()
-            is CalendarDateSlotEvent -> appointment.participants()
-            else -> return emptyList()
-        }
-
-    return participants
-        .distinctBy { it.pubKey }
-        .filter { it.pubKey != hostPubKey && it.pubKey != myPubKey }
 }
