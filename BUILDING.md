@@ -109,6 +109,18 @@ Rust toolchain + the exact Android NDK revision pinned in
 `tools/arti-build/ANDROID_NDK_VERSION` for Arti) documented in their READMEs —
 they are **not** required to build Amethyst from the committed sources.
 
+The NDK half of that Arti pin does reach the ordinary Android build, though.
+AGP strips every native library it packages with the NDK's `llvm-strip`, so
+`:amethyst` sets `ndkVersion` from `ANDROID_NDK_VERSION` — one revision for the
+libraries we build and the ones we merge from dependencies. `libarti_android.so`
+is then excluded from that strip step (`packaging.jniLibs.keepDebugSymbols`):
+the Cargo release profile already stripped it, and llvm-strip would only rewrite
+its `.comment` stamps, so skipping the pass costs no size and lets the `.so`
+inside an APK be compared byte-for-byte against the committed, independently
+reproducible one. The Rust toolchain stays irrelevant either way; Studio/AGP
+fetches the pinned NDK on demand, or pre-install it with
+`sdkmanager "ndk;$(cat tools/arti-build/ANDROID_NDK_VERSION)"`.
+
 > **One Arti library per ABI split.** The APK is split four ways (`arm64-v8a`,
 > `x86_64`, `armeabi-v7a`, `x86`) and every split needs its own
 > `libarti_android.so`; a split without one installs and runs with Tor silently
