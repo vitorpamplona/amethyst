@@ -19,6 +19,11 @@
 #                                # add one ABI without rewriting the other .so
 #                                # files already committed under jniLibs/.
 #   ./build-arti.sh --clean      # Clean and rebuild
+#   ./build-arti.sh --print-abis # print the jniLibs ABI dirs this invocation
+#                                #   would write (honours --release/--target=),
+#                                #   then exit. This is how verify-reproducible.sh
+#                                #   learns the ABI list instead of keeping its
+#                                #   own copy of it.
 #
 set -euo pipefail
 
@@ -75,19 +80,21 @@ REGEN_LOCK=false
 # `${#empty_array[@]}` under `set -u` is an unbound-variable error. Target
 # triples never contain spaces, so word splitting is exact here.
 SELECTED_TARGETS=""
+PRINT_ABIS=false
 
 # Parse arguments
 for arg in "$@"; do
     case $arg in
         --release) TARGETS=("aarch64-linux-android") ;;
         --target=*) SELECTED_TARGETS="$SELECTED_TARGETS ${arg#--target=}" ;;
+        --print-abis) PRINT_ABIS=true ;;
         --clean) CLEAN=true ;;
         # Refresh the committed Cargo.lock from the pinned Arti tag, then exit
         # (no compile — needs only git + cargo, not the NDK). Use after bumping
         # ARTI_VERSION / Cargo.toml; the normal build is --locked and will fail
         # until the lock is regenerated and committed.
         --regen-lock) REGEN_LOCK=true; CLEAN=true ;;
-        --help) echo "Usage: $0 [--release] [--target=<triple>]... [--clean] [--regen-lock] [--help]"; exit 0 ;;
+        --help) echo "Usage: $0 [--release] [--target=<triple>]... [--clean] [--regen-lock] [--print-abis] [--help]"; exit 0 ;;
     esac
 done
 
@@ -419,6 +426,16 @@ verify_ndk_stamp() {
 # ============================================================================
 
 main() {
+    # Answer --print-abis before any other output, so the caller gets exactly the
+    # ABI directory names on stdout and nothing else. Runs here rather than in the
+    # argument loop because abi_dir_for is not defined yet at that point.
+    if [ "$PRINT_ABIS" = true ]; then
+        for target in "${TARGETS[@]}"; do
+            abi_dir_for "$target"
+        done
+        exit 0
+    fi
+
     echo -e "${BLUE}Arti Android Build — version $ARTI_VERSION${NC}"
 
     # --regen-lock only needs git + cargo, not the NDK/cargo-ndk toolchain.

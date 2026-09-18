@@ -30,33 +30,19 @@ sha256() {
     if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi
 }
 
-# Mirrors abi_dir_for() in build-arti.sh — kept in step with it, since a triple
-# that maps to the wrong directory here would hash a library this run never
-# rebuilt and call it reproducible.
-abi_dir_for() {
-    case "$1" in
-        aarch64-linux-android) echo "arm64-v8a" ;;
-        x86_64-linux-android) echo "x86_64" ;;
-        armv7-linux-androideabi) echo "armeabi-v7a" ;;
-        i686-linux-android) echo "x86" ;;
-        *) echo "Unknown Rust target '$1'" >&2; exit 1 ;;
-    esac
-}
-
 # Only the ABIs this run actually rebuilds. Hashing everything under jniLibs/
 # (what `find` used to do) made `--release` look like it had verified the
 # x86_64 library: that build never touches it, so the untouched file hashed
 # identically in both runs and the script reported the whole tree reproducible
 # and matching the commit.
-ABIS="arm64-v8a x86_64 armeabi-v7a x86"
-SELECTED=""
-for arg in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
-    case "$arg" in
-        --release) ABIS="arm64-v8a" ;;
-        --target=*) SELECTED="$SELECTED $(abi_dir_for "${arg#--target=}")" ;;
-    esac
-done
-[ -n "$SELECTED" ] && ABIS="${SELECTED# }"
+#
+# Asked of build-arti.sh with the very flags it is about to receive, rather than
+# kept as a second copy of the ABI list here. A local copy would drift the moment
+# an ABI is added: this script would rebuild it twice, hash neither, and still
+# print ✅ REPRODUCIBLE — the same false pass the paragraph above describes.
+# Under `set -e` a failing --print-abis (e.g. an unknown triple) aborts here.
+ABIS="$("$SCRIPT_DIR/build-arti.sh" --print-abis ${PASSTHRU[@]+"${PASSTHRU[@]}"} | tr '\n' ' ')"
+ABIS="${ABIS% }"
 
 # sha256 of each built .so, keyed by ABI dir (relative paths → stable keys).
 hashes() {

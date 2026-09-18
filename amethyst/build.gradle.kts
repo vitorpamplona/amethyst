@@ -339,29 +339,68 @@ android {
 val verifyArtiAbis =
     tasks.register("verifyArtiAbis") {
         group = "verification"
-        description = "Checks that every ABI in the APK splits has a libarti_android.so."
+        description = "Checks that every ABI in the APK splits has a libarti_android.so for that architecture."
 
         val jniLibs = file("src/main/jniLibs")
         val abis = shippedAbis
-        // Rust target triple per ABI, so the failure says exactly what to build.
-        val triples =
+        // Per ABI: the Rust target triple (so a failure names the exact build
+        // command) and the ELF identity the library must have — 32/64-bit class
+        // (header byte 4) and e_machine (bytes 18-19, little-endian on every
+        // Android ABI we ship). Existence alone is not enough: a truncated file,
+        // an empty placeholder, or arm64's .so copied into x86/ all load as
+        // nothing on device, which is the same silent dead Tor this task exists
+        // to prevent — and unlike a missing file, those look fine in git.
+        val expected =
             mapOf(
-                "arm64-v8a" to "aarch64-linux-android",
-                "x86_64" to "x86_64-linux-android",
-                "armeabi-v7a" to "armv7-linux-androideabi",
-                "x86" to "i686-linux-android",
+                "arm64-v8a" to Triple("aarch64-linux-android", 2, 0xB7),
+                "x86_64" to Triple("x86_64-linux-android", 2, 0x3E),
+                "armeabi-v7a" to Triple("armv7-linux-androideabi", 1, 0x28),
+                "x86" to Triple("i686-linux-android", 1, 0x03),
             )
 
         doLast {
-            val missing = abis.filter { !File(jniLibs, "$it/libarti_android.so").exists() }
-            if (missing.isNotEmpty()) {
+            val bitness = mapOf(1 to "32-bit", 2 to "64-bit")
+            val problems = mutableListOf<Pair<String, String>>()
+
+            abis.forEach { abi ->
+                val lib = File(jniLibs, "$abi/libarti_android.so")
+                val want = expected[abi]
+                val header = ByteArray(20)
+                val read = if (lib.isFile) lib.inputStream().use { it.read(header) } else -1
+
+                val problem =
+                    when {
+                        !lib.isFile -> "no libarti_android.so"
+                        want == null -> "no expected ELF identity recorded for this ABI"
+                        read < header.size ||
+                            header[0] != 0x7F.toByte() ||
+                            header[1] != 'E'.code.toByte() ||
+                            header[2] != 'L'.code.toByte() ||
+                            header[3] != 'F'.code.toByte() -> "not an ELF file (truncated or corrupt)"
+                        header[4].toInt() != want.second ->
+                            "${bitness[header[4].toInt()] ?: "unknown-class"} ELF, expected ${bitness[want.second]}"
+                        else -> {
+                            val machine = (header[18].toInt() and 0xFF) or ((header[19].toInt() and 0xFF) shl 8)
+                            if (machine != want.third) {
+                                "built for ELF machine 0x%02x, expected 0x%02x".format(machine, want.third)
+                            } else {
+                                null
+                            }
+                        }
+                    }
+
+                if (problem != null) problems += abi to problem
+            }
+
+            if (problems.isNotEmpty()) {
                 throw GradleException(
                     buildString {
-                        appendLine("No libarti_android.so for ABI(s): ${missing.joinToString()}.")
+                        appendLine("libarti_android.so is missing or wrong for ${problems.size} ABI split(s):")
+                        problems.forEach { (abi, problem) -> appendLine("    $abi: $problem") }
                         appendLine("Those APK splits would install with Tor permanently unavailable.")
-                        appendLine("Build them (tools/arti-build/README.md):")
-                        missing.forEach { abi ->
-                            val triple = triples[abi] ?: "<add the Rust target for $abi>"
+                        appendLine("Rebuild them (tools/arti-build/README.md):")
+                        problems.forEach { (abi, _) ->
+                            val triple = expected[abi]?.first ?: "<add the Rust target for $abi>"
                             appendLine("    ./tools/arti-build/build-arti.sh --target=$triple")
                         }
                         append("…or drop the ABI from `shippedAbis` in amethyst/build.gradle.kts.")

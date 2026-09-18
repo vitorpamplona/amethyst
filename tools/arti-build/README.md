@@ -135,6 +135,9 @@ cd tools/arti-build
 # Build a single ABI without touching the other committed .so files
 ./build-arti.sh --target=armv7-linux-androideabi
 
+# Print the jniLibs ABI dirs a given invocation would write, then exit
+./build-arti.sh --print-abis --release      # -> arm64-v8a
+
 # Clean rebuild from scratch
 ./build-arti.sh --clean
 ```
@@ -173,9 +176,13 @@ never connect — so the ABI loses its DMs too, not just Tor.
 
 The ABI list therefore lives in three places that must agree: `splits.abi` in
 `amethyst/build.gradle.kts`, `targets` in `rust-toolchain.toml`, and `TARGETS`
-in `build-arti.sh`. The `verifyArtiAbis` Gradle task (wired into `preBuild`)
-fails the build when an ABI split has no `libarti_android.so`, so the drift is
-caught here rather than on a user's phone.
+in `build-arti.sh`. (`verify-reproducible.sh` has no copy of its own — it asks
+`build-arti.sh --print-abis`, so it can never hash a different set than the one
+it just rebuilt.) The `verifyArtiAbis` Gradle task, wired into `preBuild`, fails
+the build when an ABI split has no `libarti_android.so` **or** has one that is
+not an ELF of that architecture — a truncated file or arm64's library copied
+into `x86/` loads as nothing on device, exactly like a missing one, and unlike a
+missing one it looks fine in `git status`.
 
 ## Verifying 16KB page alignment
 
