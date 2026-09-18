@@ -264,6 +264,38 @@ Where we deliberately differ, or lead:
   Amethyst honours NIP-40 globally in `CachePruner.pruneExpiredEvents`, so no per-kind work —
   though pruning is periodic rather than render-time, which is true of every kind in the app.
 
+### The card's visual hierarchy
+
+The first card was a faithful dump of the tag list: a full-width **square** map (the map slot
+never overrode `LocationPreviewMap`'s `aspectRatio = 1f`) immediately followed by a 16:9 photo,
+then up to **nine** chips at identical weight, and no distance. A real cache off the relays —
+*Treasure Troll's Trunk*, which carries every modifier the spec defines — lit up all nine.
+
+Rebuilt around the three questions a reader actually has:
+
+- **One hero.** Photo when there is one, with the map demoted to a 76dp corner inset that still
+  answers "where"; the map alone at 16:9 when there is no photo. `GeocacheMap` gained an
+  `aspectRatio` parameter so the card, not the host, decides the shape — the same slot now serves
+  both the wide hero and the square inset.
+- **Ratings are a line.** `Traditional · Regular · D1 · T1` in one quiet row instead of four
+  chips, which is what Lightning Piggy's sheet does.
+- **Colour only where it is rare.** Gold for an unclaimed first-to-find, green for verified
+  finds, muted for claimed and archived. The gold chip is suppressed once a cache is claimed — a
+  prize nobody can win should not glitter. Nine chips became four. Tints are backgrounds, not
+  text colours: the theme's amber is unreadable as text on a light ground, `onSurface` over a
+  wash reads in both.
+- **The name is a title** that wraps to two lines, not a one-line pill clipped over a map.
+- **Distance, top right.**
+
+On distance: it reads `geolocationFlow().value` rather than collecting it. That flow is
+`SharingStarted.WhileSubscribed`, so collecting from a feed card would switch the GPS on for
+anyone who merely scrolled past a geocache — a real battery and privacy cost, paid silently, for
+one line of text. Its initial value is the last cached fix, so this costs nothing and yields a
+distance whenever something else (Around Me, the location picker) has already asked. The trade
+is that it does not update as the reader walks; a card in a feed is not a compass, and the detail
+screen is where a live fix belongs. Rounding is deliberately coarse (metres up close, one decimal
+to 10km, whole km beyond) because Amethyst holds only `ACCESS_COARSE_LOCATION`.
+
 ## 4. Security review items
 
 These are the parts worth a careful reviewer, not the event codecs:

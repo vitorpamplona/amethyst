@@ -1452,7 +1452,7 @@ private fun RenderNoteRow(
         }
 
         is GeocacheListingEvent -> {
-            RenderGeocache(baseNote)
+            RenderGeocache(baseNote, accountViewModel)
         }
 
         is GeocacheFoundLogEvent -> {

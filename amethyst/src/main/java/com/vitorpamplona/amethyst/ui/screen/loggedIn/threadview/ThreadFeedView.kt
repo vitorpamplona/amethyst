@@ -1067,7 +1067,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is Ps1SaveEvent) {
                     RenderPs1Save(baseNote)
                 } else if (noteEvent is GeocacheListingEvent) {
-                    RenderGeocache(baseNote)
+                    RenderGeocache(baseNote, accountViewModel)
                 } else if (noteEvent is GeocacheFoundLogEvent) {
                     RenderGeocacheFoundLog(baseNote, accountViewModel)
                 } else if (noteEvent is RoadEventReportEvent) {

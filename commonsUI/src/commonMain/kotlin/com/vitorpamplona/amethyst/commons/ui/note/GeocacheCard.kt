@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,9 +33,9 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,7 +54,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_archived
 import com.vitorpamplona.amethyst.commons.resources.geocache_claimed
-import com.vitorpamplona.amethyst.commons.resources.geocache_difficulty
+import com.vitorpamplona.amethyst.commons.resources.geocache_difficulty_short
 import com.vitorpamplona.amethyst.commons.resources.geocache_first_to_find
 import com.vitorpamplona.amethyst.commons.resources.geocache_found_it
 import com.vitorpamplona.amethyst.commons.resources.geocache_hint_tap_to_reveal
@@ -67,15 +67,16 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_size_micro
 import com.vitorpamplona.amethyst.commons.resources.geocache_size_other
 import com.vitorpamplona.amethyst.commons.resources.geocache_size_regular
 import com.vitorpamplona.amethyst.commons.resources.geocache_size_small
-import com.vitorpamplona.amethyst.commons.resources.geocache_terrain
+import com.vitorpamplona.amethyst.commons.resources.geocache_terrain_short
 import com.vitorpamplona.amethyst.commons.resources.geocache_type_multi
 import com.vitorpamplona.amethyst.commons.resources.geocache_type_mystery
 import com.vitorpamplona.amethyst.commons.resources.geocache_type_traditional
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.geocache_verified_find
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
@@ -87,11 +88,21 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Renders the map hero at a geocache's location. The map is platform-specific (an Android tile
- * view today), so the host supplies it as this typed slot — the same arrangement
- * [RoadEventMap] uses.
+ * Renders a map at the cache's location. The map is platform-specific (an Android tile view
+ * today), so the host supplies it as this typed slot.
+ *
+ * [aspectRatio] is the card's call, not the host's: the card uses the same slot for a wide hero
+ * and for a small square inset tucked into a photo, and a map that always picked its own shape
+ * could only serve one of them.
  */
-typealias GeocacheMap = @Composable (latitude: Double, longitude: Double, pinColor: Color, pinEmoji: String, pinAlpha: Float) -> Unit
+typealias GeocacheMap = @Composable (
+    latitude: Double,
+    longitude: Double,
+    pinColor: Color,
+    pinEmoji: String,
+    pinAlpha: Float,
+    aspectRatio: Float,
+) -> Unit
 
 /**
  * Whether a found log's embedded proof holds up.
@@ -114,6 +125,10 @@ enum class FoundLogProof {
     /** Checked and rejected — wrong signer, wrong finder, wrong cache, or a bad signature. */
     INVALID,
 }
+
+private val HeroShape = RoundedCornerShape(14.dp)
+private val InsetShape = RoundedCornerShape(10.dp)
+private const val HERO_RATIO = 16f / 9f
 
 private fun CacheType?.emoji(): String =
     when (this) {
@@ -143,18 +158,27 @@ private fun CacheSize.labelRes(): StringResource =
 /**
  * Self-contained card for a geocache listing (NIP-CC kind 37516).
  *
- * A [map] hero centred on the cache's finest published geohash, a floating pill carrying the
- * cache name, then the difficulty/terrain/size ratings and whatever badges the listing earns.
- * The description follows; the hint comes last, rotated, because a hint read by accident is a
- * hint wasted.
+ * The layout spends its weight on the three questions a reader actually has — what is it, how far
+ * away, and is it still up for grabs:
  *
- * [claimed] is passed in rather than derived here: deciding a first-to-find claim needs the
- * cache's found logs, which a card does not have.
+ * - **One hero.** The cache's photo when it has one, with the map demoted to a corner inset that
+ *   still answers "where"; the map alone when it does not. Both are 16:9. Stacking a square map
+ *   *and* a wide photo, as this card first did, spent most of a phone screen before a word.
+ * - **Ratings are a line, not chips.** `Traditional · Regular · D1 · T1` — the same four facts,
+ *   one quiet row. As chips they outnumbered and outshouted the modifiers, which are the part
+ *   worth seeing.
+ * - **Colour only where it is rare.** First-to-find and verified-finds get a tint; art stays
+ *   neutral; claimed and archived go muted, because they say "this one is over". A cache with
+ *   every modifier set lights up four chips here rather than nine identical grey ones.
+ *
+ * [distance] and [claimed] are passed in rather than derived: distance needs the reader's
+ * location, and a first-to-find claim needs the cache's logs. A card has neither.
  */
 @Composable
 fun GeocacheCard(
     noteEvent: GeocacheListingEvent,
     claimed: Boolean = false,
+    distance: String? = null,
     map: GeocacheMap,
 ) {
     val name = remember(noteEvent) { noteEvent.cacheName()?.trim().orEmpty() }
@@ -169,6 +193,7 @@ fun GeocacheCard(
     val isArchived = remember(noteEvent) { noteEvent.isArchived() }
     val isFirstToFind = remember(noteEvent) { noteEvent.isFirstToFind() }
     val isArt = remember(noteEvent) { noteEvent.hasTypeModifier(TypeModifier.ART) }
+    val needsVerification = remember(noteEvent) { noteEvent.requiresVerification() }
     val photo =
         remember(noteEvent) {
             noteEvent
@@ -177,59 +202,49 @@ fun GeocacheCard(
                 ?.trim()
                 ?.ifBlank { null }
         }
-    val needsVerification = remember(noteEvent) { noteEvent.requiresVerification() }
 
     // An archived cache, or one whose single claim is taken, is history rather than an
     // invitation — the map pin is dimmed to say so without hiding the cache.
-    val pinAlpha = if (isArchived || claimed) 0.45f else 1f
+    val over = isArchived || claimed
+    val pinAlpha = if (over) 0.45f else 1f
     val accent = MaterialTheme.colorScheme.primary
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        if (point != null) {
-            Box(Modifier.fillMaxWidth()) {
-                map(point.first, point.second, accent, type.emoji(), pinAlpha)
-                CachePill(
-                    color = accent,
-                    emoji = type.emoji(),
-                    label = name.ifEmpty { stringResource(Res.string.geocache_unnamed) },
-                    modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
-                )
-            }
-        } else {
-            CachePill(
-                color = accent,
-                emoji = type.emoji(),
-                label = name.ifEmpty { stringResource(Res.string.geocache_unnamed) },
-                modifier = Modifier.padding(12.dp),
-            )
-        }
+        CacheHero(photo, point, accent, type.emoji(), pinAlpha, map)
 
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            CacheBadges(
-                type = type,
-                size = size,
-                difficulty = difficulty,
-                terrain = terrain,
-                isArchived = isArchived,
+            Row(verticalAlignment = Alignment.Top) {
+                Text(
+                    text = "${type.emoji()}  ${name.ifEmpty { stringResource(Res.string.geocache_unnamed) }}",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (distance != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = distance,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accent,
+                        maxLines = 1,
+                    )
+                }
+            }
+
+            SpecLine(type, size, difficulty, terrain)
+
+            CacheChips(
                 claimed = claimed,
+                isArchived = isArchived,
                 isFirstToFind = isFirstToFind,
                 isArt = isArt,
                 hasMission = mission != null,
                 needsVerification = needsVerification,
             )
-
-            if (photo != null) {
-                // 87 `image` tags across 60 sampled listings — a cache's photo is usually the
-                // hint that actually gets someone to the right tree, and both other clients lead
-                // with it. Only the first: the rest belong on a detail screen.
-                Spacer(Modifier.height(8.dp))
-                AsyncImage(
-                    model = photo,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)),
-                )
-            }
 
             if (description.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
@@ -262,118 +277,115 @@ fun GeocacheCard(
 }
 
 /**
- * Self-contained card for a found log (NIP-CC kind 7516).
+ * The photo if there is one, the map otherwise — never both stacked.
  *
- * The log's own message with a "Found it!" pill, and a proof badge only where [proof] has
- * actually been checked. A log is a claim until something verifies it, so nothing here upgrades
- * an attached verification into a verified one.
- *
- * [cacheName] is what the log is *about*, and without it the card says only "Found it!" — the
- * one thing a reader scrolling a feed already assumed. The cache is named by an `a` tag, so the
- * name costs a lookup the caller has to do anyway; pass null while it is still loading.
+ * With a photo, the map rides along as a small inset so "where" is still answered without
+ * spending a second full-width block on it. With neither, the card opens straight on its title.
  */
 @Composable
-fun GeocacheFoundLogCard(
-    noteEvent: GeocacheFoundLogEvent,
-    proof: FoundLogProof = FoundLogProof.NONE,
-    cacheName: String? = null,
+private fun CacheHero(
+    photo: String?,
+    point: Pair<Double, Double>?,
+    accent: Color,
+    emoji: String,
+    pinAlpha: Float,
+    map: GeocacheMap,
 ) {
-    val message = remember(noteEvent) { noteEvent.content.trim() }
-    val photo =
-        remember(noteEvent) {
-            noteEvent
-                .images()
-                .firstOrNull()
-                ?.trim()
-                ?.ifBlank { null }
-        }
-    val accent = MaterialTheme.colorScheme.primary
-
-    Column(MaterialTheme.colorScheme.replyModifier) {
-        Row(
-            modifier = Modifier.padding(start = 12.dp, top = 12.dp, end = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            CachePill(
-                color = accent,
-                emoji = "🎯",
-                label = stringResource(Res.string.geocache_found_it),
-            )
-            when (proof) {
-                FoundLogProof.VALID -> OutlineBadge("✅  " + stringResource(Res.string.geocache_verified_find))
-                FoundLogProof.INVALID -> OutlineBadge("⚠️  " + stringResource(Res.string.geocache_invalid_proof))
-                FoundLogProof.NONE, FoundLogProof.UNKNOWN -> Unit
-            }
-        }
-
-        if (cacheName != null || message.isNotEmpty() || photo != null) {
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-                if (cacheName != null) {
-                    Text(
-                        text = cacheName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (message.isNotEmpty()) {
-                    if (cacheName != null) Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (photo != null) {
-                    Spacer(Modifier.height(8.dp))
-                    AsyncImage(
-                        model = photo,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)),
-                    )
+    when {
+        photo != null ->
+            Box(Modifier.padding(start = 12.dp, top = 12.dp, end = 12.dp)) {
+                AsyncImage(
+                    model = photo,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(HERO_RATIO).clip(HeroShape),
+                )
+                if (point != null) {
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                            .width(76.dp)
+                            .clip(InsetShape)
+                            .background(MaterialTheme.colorScheme.surface),
+                    ) {
+                        map(point.first, point.second, accent, emoji, pinAlpha, 1f)
+                    }
                 }
             }
-        } else {
-            Spacer(Modifier.height(12.dp))
-        }
+
+        point != null ->
+            Box(Modifier.padding(start = 12.dp, top = 12.dp, end = 12.dp).clip(HeroShape)) {
+                map(point.first, point.second, accent, emoji, pinAlpha, HERO_RATIO)
+            }
+
+        else -> Spacer(Modifier.height(2.dp))
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** `Traditional · Regular · D1 · T1` — the ratings, in one line they can be skimmed past. */
 @Composable
-private fun CacheBadges(
+private fun SpecLine(
     type: CacheType?,
     size: CacheSize?,
     difficulty: Int?,
     terrain: Int?,
-    isArchived: Boolean,
+) {
+    val parts =
+        listOfNotNull(
+            type.labelRes()?.let { stringResource(it) },
+            size?.let { stringResource(it.labelRes()) },
+            difficulty?.let { stringResource(Res.string.geocache_difficulty_short, it) },
+            terrain?.let { stringResource(Res.string.geocache_terrain_short, it) },
+        )
+    if (parts.isEmpty()) return
+
+    Text(
+        text = parts.joinToString("  ·  "),
+        modifier = Modifier.padding(top = 3.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/**
+ * Only the facts that make one cache different from the next.
+ *
+ * The ratings moved to [SpecLine], so what is left is what a reader would change plans for: a
+ * prize nobody has taken, a find that can be proved, a cache that is actually a piece of art —
+ * and, muted, the two states that mean there is nothing left to go and get.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CacheChips(
     claimed: Boolean,
+    isArchived: Boolean,
     isFirstToFind: Boolean,
     isArt: Boolean,
     hasMission: Boolean,
     needsVerification: Boolean,
 ) {
+    if (!claimed && !isArchived && !isFirstToFind && !isArt && !hasMission && !needsVerification) return
+
+    // The tints are backgrounds rather than text colors on purpose: the theme's amber is
+    // unreadable as text on a light ground, and onSurface over a wash reads in both themes.
+    val gold = MaterialTheme.colorScheme.warningColor.copy(alpha = 0.22f)
+    val green = MaterialTheme.colorScheme.allGoodColor.copy(alpha = 0.18f)
+    val muted = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+
     FlowRow(
+        modifier = Modifier.padding(top = 9.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        type.labelRes()?.let { OutlineBadge(stringResource(it)) }
-        size?.let { OutlineBadge(stringResource(it.labelRes())) }
-        difficulty?.let { OutlineBadge(stringResource(Res.string.geocache_difficulty, it)) }
-        terrain?.let { OutlineBadge(stringResource(Res.string.geocache_terrain, it)) }
-
-        if (isFirstToFind) OutlineBadge("🥇  " + stringResource(Res.string.geocache_first_to_find))
-        if (isArt) OutlineBadge("🎨  " + stringResource(Res.string.geocache_is_art))
-        if (hasMission) OutlineBadge("🗝  " + stringResource(Res.string.geocache_mission))
-        if (needsVerification) OutlineBadge("🔐  " + stringResource(Res.string.geocache_needs_verification))
-        if (claimed) OutlineBadge("🏁  " + stringResource(Res.string.geocache_claimed))
-        if (isArchived) OutlineBadge("🗃️  " + stringResource(Res.string.geocache_archived))
+        if (isFirstToFind && !claimed) Chip("🥇  " + stringResource(Res.string.geocache_first_to_find), gold, strong = true)
+        if (needsVerification) Chip("🔐  " + stringResource(Res.string.geocache_needs_verification), green, strong = true)
+        if (isArt) Chip("🎨  " + stringResource(Res.string.geocache_is_art), muted)
+        if (hasMission) Chip("🗝  " + stringResource(Res.string.geocache_mission), muted)
+        if (claimed) Chip("🏁  " + stringResource(Res.string.geocache_claimed), muted, dim = true)
+        if (isArchived) Chip("🗃️  " + stringResource(Res.string.geocache_archived), muted, dim = true)
     }
 }
 
@@ -415,47 +427,118 @@ private fun SpoilerHint(hint: String) {
     }
 }
 
-/** A floating rounded pill: [emoji] + [label] on a [color] background, text auto-contrasted. */
+/**
+ * Self-contained card for a found log (NIP-CC kind 7516).
+ *
+ * The log's own message with a "Found it!" pill, and a proof badge only where [proof] has
+ * actually been checked. A log is a claim until something verifies it, so nothing here upgrades
+ * an attached verification into a verified one.
+ *
+ * [cacheName] is what the log is *about*, and without it the card says only "Found it!" — the
+ * one thing a reader scrolling a feed already assumed. The cache is named by an `a` tag, so the
+ * name costs a lookup the caller has to do anyway; pass null while it is still loading.
+ */
 @Composable
-private fun CachePill(
-    color: Color,
-    emoji: String,
-    label: String,
-    modifier: Modifier = Modifier,
+fun GeocacheFoundLogCard(
+    noteEvent: GeocacheFoundLogEvent,
+    proof: FoundLogProof = FoundLogProof.NONE,
+    cacheName: String? = null,
 ) {
-    Surface(
-        modifier = modifier,
-        color = color,
-        contentColor = if (color.luminance() > 0.55f) Color.Black else Color.White,
-        shape = RoundedCornerShape(50),
-        shadowElevation = 3.dp,
-    ) {
-        Text(
-            text = "$emoji  $label",
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+    val message = remember(noteEvent) { noteEvent.content.trim() }
+    val photo =
+        remember(noteEvent) {
+            noteEvent
+                .images()
+                .firstOrNull()
+                ?.trim()
+                ?.ifBlank { null }
+        }
+
+    Column(MaterialTheme.colorScheme.replyModifier) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Text(
+                    text = "🎯  " + (cacheName ?: stringResource(Res.string.geocache_found_it)),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            if (cacheName != null || proof == FoundLogProof.VALID || proof == FoundLogProof.INVALID) {
+                Row(
+                    modifier = Modifier.padding(top = 3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (cacheName != null) {
+                        Text(
+                            text = stringResource(Res.string.geocache_found_it),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
+                    when (proof) {
+                        FoundLogProof.VALID ->
+                            Chip(
+                                "✅  " + stringResource(Res.string.geocache_verified_find),
+                                MaterialTheme.colorScheme.allGoodColor.copy(alpha = 0.18f),
+                                strong = true,
+                            )
+                        FoundLogProof.INVALID ->
+                            Chip(
+                                "⚠️  " + stringResource(Res.string.geocache_invalid_proof),
+                                MaterialTheme.colorScheme.warningColor.copy(alpha = 0.22f),
+                                strong = true,
+                            )
+                        FoundLogProof.NONE, FoundLogProof.UNKNOWN -> Unit
+                    }
+                }
+            }
+
+            if (message.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            if (photo != null) {
+                Spacer(Modifier.height(8.dp))
+                AsyncImage(
+                    model = photo,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(HERO_RATIO).clip(HeroShape),
+                )
+            }
+        }
     }
 }
 
-/** A quiet outlined chip for one rating or state fact. */
+/** One fact, on a [tint] wash. [strong] bolds it; [dim] fades it to "this is over". */
 @Composable
-private fun OutlineBadge(label: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.subtleBorder,
-        shape = RoundedCornerShape(50),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-        )
-    }
+private fun Chip(
+    label: String,
+    tint: Color,
+    strong: Boolean = false,
+    dim: Boolean = false,
+) {
+    Text(
+        text = label,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(tint).padding(horizontal = 9.dp, vertical = 3.dp),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = if (strong) FontWeight.SemiBold else FontWeight.Normal,
+        color = if (dim) MaterialTheme.colorScheme.placeholderText else MaterialTheme.colorScheme.onSurface,
+        maxLines = 1,
+    )
 }
 
 /**

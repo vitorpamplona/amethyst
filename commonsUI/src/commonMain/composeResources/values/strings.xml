@@ -188,8 +188,8 @@
     <string name="geocache_size_regular">Regular</string>
     <string name="geocache_size_large">Large</string>
     <string name="geocache_size_other">Other size</string>
-    <string name="geocache_difficulty">Difficulty %1$d/5</string>
-    <string name="geocache_terrain">Terrain %1$d/5</string>
+    <string name="geocache_difficulty_short">D%1$d</string>
+    <string name="geocache_terrain_short">T%1$d</string>
     <string name="geocache_first_to_find">First to find</string>
     <string name="geocache_is_art">Artwork</string>
     <string name="geocache_mission">Key Quest</string>

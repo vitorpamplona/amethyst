@@ -25,18 +25,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
 import com.vitorpamplona.amethyst.commons.ui.note.FoundLogProof
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheCard
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheFoundLogCard
+import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationValidator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /**
  * Entry for a NIP-CC geocache listing (kind 37516): decodes the [Note] and renders the shared
@@ -50,21 +54,75 @@ import kotlinx.coroutines.withContext
  * deriving it from whatever replies happen to be in memory would render a claim that flickers.
  */
 @Composable
-fun RenderGeocache(baseNote: Note) {
+fun RenderGeocache(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+) {
     val noteEvent = baseNote.event as? GeocacheListingEvent ?: return
 
     val claimed = remember(noteEvent) { noteEvent.firstToFindWinner() != null }
+    val distance = distanceToCache(noteEvent, accountViewModel)
 
-    GeocacheCard(noteEvent, claimed) { latitude, longitude, pinColor, pinEmoji, pinAlpha ->
+    GeocacheCard(noteEvent, claimed, distance) { latitude, longitude, pinColor, pinEmoji, pinAlpha, aspectRatio ->
         LocationPreviewMap(
             latitude = latitude,
             longitude = longitude,
+            aspectRatio = aspectRatio,
             pinColor = pinColor,
             pinEmoji = pinEmoji,
             pinAlpha = pinAlpha,
         )
     }
 }
+
+/**
+ * How far the reader is from the cache, or null when the app does not already know where they
+ * are.
+ *
+ * Deliberately reads `.value` instead of collecting. The location flow is
+ * `SharingStarted.WhileSubscribed`, so collecting it from a feed card would switch the GPS on
+ * for anyone who merely scrolled past a geocache — a real battery and privacy cost, paid
+ * silently, for a line of text. Its initial value is the last fix the app cached, so reading it
+ * costs nothing and yields a distance whenever something else (the Around Me feed, the location
+ * picker) has already asked. Where nothing has, the card simply shows no distance.
+ *
+ * The trade is that this does not re-render as the reader walks. A card in a scrolling feed is
+ * not a compass; the detail screen is the place to track a fix.
+ */
+@Composable
+private fun distanceToCache(
+    noteEvent: GeocacheListingEvent,
+    accountViewModel: AccountViewModel,
+): String? {
+    val here = accountViewModel.account.geolocationFlow().value as? LocationState.LocationResult.Success ?: return null
+
+    return remember(noteEvent, here) {
+        val cache = noteEvent.location()?.let { runCatching { it.toGeoHash() }.getOrNull() } ?: return@remember null
+        formatDistance(
+            GeoRelayDirectory.haversineKm(
+                here.geoHash.centerLat,
+                here.geoHash.centerLon,
+                cache.centerLat,
+                cache.centerLon,
+            ),
+        )
+    }
+}
+
+/**
+ * A distance a walker can act on: metres up close, one decimal to ten kilometres, whole
+ * kilometres beyond.
+ *
+ * Rounded coarsely on purpose. Amethyst holds only `ACCESS_COARSE_LOCATION` and a cache's
+ * geohash is at best a ~5m box, so "1.2 km" is the honest precision — "1,237 m" would dress a
+ * fuzzed fix up as a survey.
+ */
+private fun formatDistance(km: Double): String =
+    when {
+        km < 1.0 -> "${(km * 1000).roundToInt()} m"
+        km < 10.0 -> "${(km * 10).roundToInt() / 10.0} km"
+        else -> "${km.roundToInt()} km"
+    }
 
 /**
  * Entry for a NIP-CC found log (kind 7516).
