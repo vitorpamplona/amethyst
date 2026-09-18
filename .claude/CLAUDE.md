@@ -224,8 +224,13 @@ version. `quartz/` is protocol-only — no composables.
 # Build Quartz for all targets
 ./gradlew :quartz:build
 
-# Run tests
+# Run tests (every module, including the KMP ones)
 ./gradlew test
+
+# One module. KMP modules (quartz, commons, commonsUI, quic, nestsClient,
+# marmotQuic) have no `test` task of their own - the root build registers an
+# alias onto jvmTest, which is the task to name directly:
+./gradlew :quartz:jvmTest --tests "com.vitorpamplona.quartz.nip52Calendar.*"
 
 # Format code
 ./gradlew spotlessApply
