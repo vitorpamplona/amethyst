@@ -18,38 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip88Polls.poll.tags
+package com.vitorpamplona.quartz.nip71Video.textTrack
 
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
-enum class PollType(
-    val code: String,
-) {
-    SINGLE_CHOICE("singlechoice"),
-    MULTI_CHOICE("multiplechoice"),
-}
-
-class PollTypeTag {
+/**
+ * The bare `["l", "<code>"]` language tag a [TextTrackEvent] carries.
+ *
+ * NIP-32 spells a label as `["l", "<value>", "<namespace>"]`; publishers of subtitle events drop
+ * the namespace and use the slot for a plain ISO-639-1 code, so this reads position 1 and ignores
+ * whatever follows.
+ */
+class LanguageTag {
     companion object {
-        const val TAG_NAME = "polltype"
+        const val TAG_NAME = "l"
 
-        // has(1), matching parse: NIP-88's tag is `["polltype", "<type>"]` with nothing after it,
-        // so requiring a third element made this answer false for every conformant tag.
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): PollType? {
+        fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-
-            return when (tag[1]) {
-                PollType.SINGLE_CHOICE.code -> PollType.SINGLE_CHOICE
-                PollType.MULTI_CHOICE.code -> PollType.MULTI_CHOICE
-                else -> null
-            }
+            return tag[1]
         }
 
-        fun assemble(type: PollType) = arrayOf(TAG_NAME, type.code)
+        fun assemble(languageCode: String) = arrayOf(TAG_NAME, languageCode)
     }
 }

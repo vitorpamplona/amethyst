@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 // URL-based media content models (KMP). The locally-cached variants
 // (MediaPreloadedContent, MediaLocalImage, MediaLocalVideo) live in
@@ -115,6 +118,8 @@ open class MediaUrlVideo(
     thumbhash: String? = null,
     val isLiveStream: Boolean = false,
     authorPubKey: String? = null,
+    // NIP-71 `text-track` captions resolved for this video, for the player to side-load.
+    val captions: ImmutableList<CaptionTrack> = persistentListOf(),
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
 
 @Immutable
