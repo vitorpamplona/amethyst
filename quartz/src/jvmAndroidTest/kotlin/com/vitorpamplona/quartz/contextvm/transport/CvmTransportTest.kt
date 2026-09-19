@@ -25,9 +25,11 @@ import com.vitorpamplona.quartz.contextvm.cep04Encryption.EncryptionMode
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.contextvm.core.CvmTags
 import com.vitorpamplona.quartz.contextvm.fixture.CvmFixtureServer
+import com.vitorpamplona.quartz.contextvm.fixture.CvmRequest
 import com.vitorpamplona.quartz.contextvm.fixture.FixtureFaults
 import com.vitorpamplona.quartz.contextvm.fixture.InMemoryRelayPool
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcId
+import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcMessage
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcRequest
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcSuccess
 import com.vitorpamplona.quartz.contextvm.mcp.McpParams
@@ -65,7 +67,7 @@ class CvmTransportTest {
         faults: FixtureFaults = FixtureFaults(),
         injectClientPubkey: Boolean = false,
         discoveryTags: List<Array<String>> = emptyList(),
-        handler: suspend (String, JsonObject?, JsonRpcId) -> com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcMessage = { _, _, _ ->
+        handler: suspend (CvmRequest) -> JsonRpcMessage = {
             JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("ok", JsonPrimitive(true)) })
         },
     ) = CvmFixtureServer(
@@ -233,7 +235,7 @@ class CvmTransportTest {
                     relays = relays,
                     signer = serverSigner,
                     crypto = CvmGiftWrap(encryptionMode = EncryptionMode.DISABLED),
-                    handler = { _, _, id -> JsonRpcSuccess(id, buildJsonObject {}) },
+                    handler = { request -> JsonRpcSuccess(request.id, buildJsonObject {}) },
                 )
             fixture.start()
 

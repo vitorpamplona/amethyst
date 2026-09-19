@@ -213,7 +213,7 @@ class CoordinatorClientTest {
             // Without it a joiner replays a group's whole history, all of it
             // sealed under epochs it has no key for.
             val coordinator = CordnFixtureCoordinator()
-            coordinator.seedWelcome("ref-1", "d2VsY29tZQ==", after = 42)
+            coordinator.seedWelcome("ref-1", "d2VsY29tZQ==", after = 42, targetPubKey = stableSigner.pubKey)
             val server = serve(coordinator)
             val client = client()
 

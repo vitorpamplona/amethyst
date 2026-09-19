@@ -114,6 +114,27 @@ data class FixtureFaults(
 )
 
 /**
+ * One call as a [CvmFixtureServer] handler sees it.
+ *
+ * [id] is here because a handler MUST echo it: the client correlates on it, so
+ * a fixture that answered every call with a constant works for the first call
+ * of a session and silently hangs on the second. That is a bug the fixture
+ * should surface in the code under test, not create — it created one once.
+ *
+ * [event] is the signed kind-25910 event that carried the call, after any gift
+ * wrap was removed. A real coordinator has this too, and cordn's depends on it:
+ * `spec/00.md` §7 has no KeyPackage event kind, so the "signed publication
+ * payload" a `kp_take` must serve back **is this event**, retained verbatim.
+ * A fixture that could not see it could not model `kp_publish` at all.
+ */
+data class CvmRequest(
+    val method: String,
+    val params: JsonObject?,
+    val id: JsonRpcId,
+    val event: Event,
+)
+
+/**
  * A ContextVM server that plays the peer role in tests (Tier C).
  *
  * Not hardened for deployment and deliberately so: for a real coordinator,
@@ -128,16 +149,8 @@ class CvmFixtureServer(
     private val injectClientPubkey: Boolean = false,
     /** Discovery tags sent on the first direct message back, per CEP-35. */
     private val discoveryTags: List<Tag> = emptyList(),
-    /**
-     * Answers a request, given its method, params (with `_meta.clientPubkey`
-     * if injected) and JSON-RPC id.
-     *
-     * The id is passed because a handler MUST echo it: the client correlates on
-     * it, so a fixture that answered every call with a constant would work for
-     * the first call of a session and silently hang on the second. That is a
-     * bug the fixture should surface in the code under test, not create.
-     */
-    private val handler: suspend (method: String, params: JsonObject?, id: JsonRpcId) -> JsonRpcMessage,
+    /** Answers a request. See [CvmRequest] for what a handler is given. */
+    private val handler: suspend (CvmRequest) -> JsonRpcMessage,
 ) {
     private var subscription: CvmSubscription? = null
     private var sentFirstMessage = false
@@ -201,7 +214,7 @@ class CvmFixtureServer(
             )
         }
 
-        val response = handler(request.method, params, request.id)
+        val response = handler(CvmRequest(request.method, params, request.id, plain))
         reply(response, clientPubKey, plain.id)
     }
 

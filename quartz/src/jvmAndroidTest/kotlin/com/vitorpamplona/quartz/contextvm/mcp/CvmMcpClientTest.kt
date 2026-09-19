@@ -25,11 +25,13 @@ import com.vitorpamplona.quartz.contextvm.cep04Encryption.EncryptionMode
 import com.vitorpamplona.quartz.contextvm.cep22OversizedTransfer.OversizedTransferSender
 import com.vitorpamplona.quartz.contextvm.cep41OpenStreams.OpenStreamFrame
 import com.vitorpamplona.quartz.contextvm.fixture.CvmFixtureServer
+import com.vitorpamplona.quartz.contextvm.fixture.CvmRequest
 import com.vitorpamplona.quartz.contextvm.fixture.InMemoryRelayPool
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcCodec
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcError
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcFailure
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcId
+import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcMessage
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcSuccess
 import com.vitorpamplona.quartz.contextvm.transfer.ProgressToken
 import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
@@ -40,7 +42,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -68,7 +69,7 @@ class CvmMcpClientTest {
             ),
         )
 
-    private fun fixture(handler: suspend (String, JsonObject?, JsonRpcId) -> com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcMessage) =
+    private fun fixture(handler: suspend (CvmRequest) -> JsonRpcMessage) =
         CvmFixtureServer(
             relays = relays,
             signer = serverSigner,
@@ -88,7 +89,7 @@ class CvmMcpClientTest {
             // Ids advance per call and the client refuses a stale one, which is
             // correct and invisible until something makes the second call.
             val client = client()
-            val fixture = fixture { _, _, id -> JsonRpcSuccess(id, buildJsonObject { put("ok", JsonPrimitive(true)) }) }
+            val fixture = fixture { request -> JsonRpcSuccess(request.id, buildJsonObject { put("ok", JsonPrimitive(true)) }) }
             fixture.start()
 
             val results =
@@ -120,7 +121,7 @@ class CvmMcpClientTest {
             // time out rather than accept an answer to a question we already
             // asked.
             val client = client()
-            val fixture = fixture { _, _, _ -> JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject {}) }
+            val fixture = fixture { JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject {}) }
             fixture.start()
 
             coroutineScope {
@@ -147,7 +148,7 @@ class CvmMcpClientTest {
     fun `a tool call returns the server result`() =
         runTest {
             val fixture =
-                fixture { _, _, _ ->
+                fixture {
                     JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("cursor", JsonPrimitive(7)) })
                 }
             fixture.start()
@@ -175,7 +176,7 @@ class CvmMcpClientTest {
         runTest {
             // Without one a server MUST NOT start either transfer profile, so
             // omitting it would silently cap every response at one relay event.
-            val fixture = fixture { _, _, _ -> JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject {}) }
+            val fixture = fixture { JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject {}) }
             fixture.start()
 
             coroutineScope {
@@ -193,7 +194,7 @@ class CvmMcpClientTest {
     fun `an error response surfaces as an error rather than a throw`() =
         runTest {
             val fixture =
-                fixture { _, _, _ ->
+                fixture {
                     JsonRpcFailure(
                         JsonRpcId.Num(0),
                         JsonRpcError(JsonRpcError.PAYMENT_REQUIRED, "Payment Required"),
@@ -221,7 +222,7 @@ class CvmMcpClientTest {
             val serialized = JsonRpcCodec.encode(JsonRpcSuccess(JsonRpcId.Num(0), big))
 
             val fixture =
-                fixture { _, _, _ ->
+                fixture {
                     // A placeholder direct response: the real payload arrives
                     // through the frames, which is the point of the profile.
                     JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("placeholder", JsonPrimitive(true)) })
@@ -256,7 +257,7 @@ class CvmMcpClientTest {
             // The rule worth pinning end to end: close says no more frames, and
             // the request is still only finished by its own JSON-RPC response.
             val fixture =
-                fixture { _, _, _ ->
+                fixture {
                     JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("done", JsonPrimitive(true)) })
                 }
             fixture.start()
@@ -301,7 +302,7 @@ class CvmMcpClientTest {
     fun `initialize completes the handshake and sends initialized`() =
         runTest {
             val fixture =
-                fixture { _, _, _ ->
+                fixture {
                     JsonRpcSuccess(
                         JsonRpcId.Num(0),
                         buildJsonObject { put("protocolVersion", JsonPrimitive(CvmMcpClient.PROTOCOL_VERSION)) },

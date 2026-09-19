@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.cordn.fixture
 
+import com.vitorpamplona.quartz.contextvm.fixture.CvmRequest
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcError
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcFailure
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcId
@@ -31,7 +32,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -117,9 +120,12 @@ class CordnFixtureCoordinator(
         keyPackageRef: String,
         welcomeBase64: String,
         after: Long? = null,
+        /** Who this Welcome is addressed to. A fetch by anyone else will not see it. */
+        targetPubKey: HexKey,
     ) {
         welcomes +=
             buildJsonObject {
+                put(CoordinatorFields.TARGET_PK, targetPubKey)
                 put(CoordinatorFields.KP_REF, keyPackageRef)
                 put(CoordinatorFields.WELCOME_64, welcomeBase64)
                 put(CoordinatorFields.AT, clock++)
@@ -137,12 +143,10 @@ class CordnFixtureCoordinator(
     }
 
     /** The handler to hand to `CvmFixtureServer`. */
-    suspend fun handle(
-        method: String,
-        params: JsonObject?,
-        id: JsonRpcId,
-    ): JsonRpcMessage {
-        val name = params?.get("name")?.jsonPrimitive?.content ?: method
+    suspend fun handle(request: CvmRequest): JsonRpcMessage {
+        val params = request.params
+        val id = request.id
+        val name = params?.get("name")?.jsonPrimitive?.content ?: request.method
         val args = params?.get("arguments")?.jsonObject ?: buildJsonObject {}
         val caller =
             params
@@ -162,7 +166,12 @@ class CordnFixtureCoordinator(
                         return JsonRpcFailure(id, JsonRpcError(-32000, "publication rejected"))
                     }
                     val ref = args.str(CoordinatorFields.KP_REF)
-                    publications[ref] = StoredKeyPackage(caller.orEmpty(), ref, false, clock++, null)
+                    // `spec/00.md` §7: cordn has no KeyPackage event kind, so the
+                    // signed publication payload IS this request event. A real
+                    // coordinator reaches back into its transport for it and
+                    // stores it verbatim; storing anything else here would make
+                    // `kp_take` unverifiable and hide the §9 checks from tests.
+                    publications[ref] = StoredKeyPackage(caller.orEmpty(), ref, false, clock++, request.event)
                     buildJsonObject {
                         put(CoordinatorFields.KP_REF, ref)
                         put(CoordinatorFields.LAST_RESORT, false)
@@ -194,7 +203,7 @@ class CordnFixtureCoordinator(
                     val stored = publications[id] ?: publications.values.firstOrNull { it.pubKey == id }
                     buildJsonObject {
                         if (stored?.publicationEvent == null) {
-                            put(CoordinatorFields.KEY_PACKAGE, kotlinx.serialization.json.JsonNull)
+                            put(CoordinatorFields.KEY_PACKAGE, JsonNull)
                         } else {
                             put(
                                 CoordinatorFields.KEY_PACKAGE,
@@ -231,12 +240,26 @@ class CordnFixtureCoordinator(
                     welcomes.removeAll { w ->
                         consumed.any { it.first == w.str(CoordinatorFields.KP_REF) && it.second == w[CoordinatorFields.AT]!!.jsonPrimitive.long }
                     }
-                    buildJsonObject { put(CoordinatorFields.WELCOMES, buildJsonArray { welcomes.forEach { add(it) } }) }
+                    // Addressed, not broadcast: `welcome-delivery.md` has the
+                    // coordinator store a Welcome "addressed to a specific
+                    // invited member" and serve it on that member's fetch.
+                    // Returning everyone's would let one account join a group it
+                    // was never invited to -- and would make a two-party test
+                    // pass for the wrong reason.
+                    val mine = welcomes.filter { it.str(CoordinatorFields.TARGET_PK) == caller }
+                    buildJsonObject { put(CoordinatorFields.WELCOMES, buildJsonArray { mine.forEach { add(it) } }) }
                 }
 
                 CoordinatorMethod.WELCOME_STORE.wire -> {
-                    welcomes += args
-                    buildJsonObject { put(CoordinatorFields.AT, clock++) }
+                    // The stored record is the arguments PLUS the `at` the
+                    // coordinator assigns: `welcome_take` reports it, and
+                    // `consumed` identifies a record by (kp_ref, at) because one
+                    // last-resort KeyPackage can back several Welcomes. Storing
+                    // the bare arguments loses it -- which only a real
+                    // store-then-fetch round trip notices.
+                    val at = clock++
+                    welcomes += JsonObject(args + mapOf(CoordinatorFields.AT to JsonPrimitive(at)))
+                    buildJsonObject { put(CoordinatorFields.AT, at) }
                 }
 
                 CoordinatorMethod.JOIN_REQUEST_STORE.wire -> {
