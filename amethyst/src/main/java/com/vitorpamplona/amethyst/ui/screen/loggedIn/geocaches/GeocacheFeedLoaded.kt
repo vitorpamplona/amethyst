@@ -25,6 +25,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,8 +35,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -49,7 +55,13 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_empty_finds
 import com.vitorpamplona.amethyst.commons.resources.geocache_empty_hunts
 import com.vitorpamplona.amethyst.commons.resources.geocache_empty_mine
 import com.vitorpamplona.amethyst.commons.resources.geocache_empty_nearby
+import com.vitorpamplona.amethyst.commons.resources.geocache_sorted_by_distance
+import com.vitorpamplona.amethyst.commons.resources.geocache_sorted_by_recent
+import com.vitorpamplona.amethyst.commons.resources.geocache_use_my_location
+import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.note.geocachePoint
+import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
@@ -116,11 +128,49 @@ private fun GeocacheFeedColumn(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
+    // Only Nearby offers to sort by distance, and only when the reader asks. Collecting the
+    // location flow is what switches the GPS on — it is SharingStarted.WhileSubscribed — so a
+    // list that did it unprompted would spend a stranger's battery to reorder some rows.
+    var useLocation by rememberSaveable(kind) { mutableStateOf(false) }
+
+    val here =
+        if (kind == GeocacheListKind.NEARBY && useLocation) {
+            val fix by accountViewModel.account.geolocationFlow().collectAsStateWithLifecycle(null)
+            (fix as? LocationState.LocationResult.Success)?.geoHash
+        } else {
+            null
+        }
+
+    val ordered =
+        remember(items.list, here) {
+            if (here == null) {
+                items.list
+            } else {
+                items.list.sortedBy { note ->
+                    val cache = (note.event as? GeocacheListingEvent)?.geocachePoint()
+                    // Caches with no usable geohash sink to the bottom rather than claiming
+                    // distance zero and sitting at the top of a list about distance.
+                    cache?.let { GeoRelayDirectory.haversineKm(here.centerLat, here.centerLon, it.first, it.second) }
+                        ?: Double.MAX_VALUE
+                }
+            }
+        }
+
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
-        items(items.list, key = { it.idHex }) { item ->
+        if (kind == GeocacheListKind.NEARBY) {
+            item(key = "geocache-sort-header") {
+                DistanceSortHeader(
+                    sorting = here != null,
+                    requested = useLocation,
+                    onRequest = { useLocation = true },
+                )
+            }
+        }
+
+        items(ordered, key = { it.idHex }) { item ->
             Column(Modifier.fillMaxWidth().animateItem()) {
                 GeocacheFeedRow(item, kind, accountViewModel, nav)
                 HorizontalDivider(thickness = DividerThickness)
@@ -157,6 +207,43 @@ private fun GeocacheFeedRow(
             GeocacheHuntRow(note, event, accountViewModel, nav)
 
         else -> Unit
+    }
+}
+
+/**
+ * The Nearby tab's ordering control.
+ *
+ * Reads as a statement of what the list is currently doing, with the opt-in as the action. Once
+ * the reader has asked, the button is gone and the line simply says the order — a toggle they
+ * have to keep re-reading would be worse than a fact.
+ */
+@Composable
+private fun DistanceSortHeader(
+    sorting: Boolean,
+    requested: Boolean,
+    onRequest: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text =
+                if (sorting) {
+                    stringResource(Res.string.geocache_sorted_by_distance)
+                } else {
+                    stringResource(Res.string.geocache_sorted_by_recent)
+                },
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+
+        if (!requested) {
+            TextButton(onClick = onRequest) {
+                Text(stringResource(Res.string.geocache_use_my_location))
+            }
+        }
     }
 }
 
