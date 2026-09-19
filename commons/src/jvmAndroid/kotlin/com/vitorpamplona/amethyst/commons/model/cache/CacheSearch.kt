@@ -18,17 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -57,11 +56,11 @@ class CacheSearch(
 ) {
     fun findUsersStartingWith(
         username: String,
-        forAccount: Account?,
+        forAccount: IAccount?,
     ): List<User> {
         if (username.isBlank()) return emptyList()
 
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         val key = decodePublicKeyAsHexOrNull(username)
 
@@ -89,11 +88,12 @@ class CacheSearch(
                             user.pubkeyHex.startsWith(username, true) ||
                             user.pubkeyNpub().startsWith(username, true)
                     ) &&
-                        (forAccount == null || (!forAccount.isHidden(user) && !metadata.anyPropertyContains(forAccount.hiddenUsers.flow.value.hiddenWordsCase)))
+                        (forAccount == null || (!forAccount.isHidden(user) && !metadata.anyPropertyContains(forAccount.hiddenWordsCase)))
                 }
             }
 
-        val findsFollowing = finds.associateWith { forAccount?.isFollowing(it) == true }
+        val following = forAccount?.followingKeySet() ?: emptySet()
+        val findsFollowing = finds.associateWith { it.pubkeyHex in following }
         val anyNameStartsWith = finds.associateWith { it.metadataOrNull()?.anyNameStartsWith(dualCase) == true }
         val anyAddressStartsWith = finds.associateWith { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == true }
         val displayNames = finds.associateWith { it.toBestDisplayName().lowercase() }
@@ -152,7 +152,7 @@ class CacheSearch(
         filters: List<Filter>,
         hidden: LiveHiddenUsers,
     ): List<Note> {
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         if (filters.isEmpty()) return emptyList()
 
@@ -189,7 +189,7 @@ class CacheSearch(
         text: String,
         hidden: LiveHiddenUsers,
     ): List<Note> {
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         if (text.isBlank()) return emptyList()
 

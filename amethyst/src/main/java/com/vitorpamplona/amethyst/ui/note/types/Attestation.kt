@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.attestation_invalid
@@ -65,7 +66,6 @@ import com.vitorpamplona.amethyst.commons.resources.attestation_valid
 import com.vitorpamplona.amethyst.commons.resources.attestation_valid_from
 import com.vitorpamplona.amethyst.commons.resources.attestation_valid_to
 import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation_for_kinds
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav

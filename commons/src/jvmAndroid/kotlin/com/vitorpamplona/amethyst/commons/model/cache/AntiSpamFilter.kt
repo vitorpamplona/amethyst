@@ -18,11 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model.cache
 
-import android.util.LruCache
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.ui.note.njumpLink
+import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -42,7 +41,13 @@ data class Spammer(
     fun shouldHide() = duplicatedEventIds.size >= 5 || duplicatedEventAddresses.size >= 5
 }
 
-class AntiSpamFilter {
+class AntiSpamFilter(
+    /**
+     * Where duplicate reports go. Read on each hit rather than captured, because the cache that
+     * owns this filter is built long before the app shell installs its [LocalCacheHost].
+     */
+    private val host: () -> LocalCacheHost = { LocalCacheHost },
+) {
     val recentEventIds = LruCache<Int, String>(2000)
     val recentAddressables = LruCache<Int, Address>(2000)
     val spamMessages = LruCache<Int, Spammer>(1000)
@@ -78,14 +83,14 @@ class AntiSpamFilter {
             val address = event.address()
 
             // normal event
+            // existingAddress may be null if the first duplicate was evicted from the LRU cache
+            // while the spammer record still matches this hash.
+            val existingAddress = recentAddressables[hash]
+            val knownSpammer = spamMessages[hash]
             if (
-                (recentAddressables[hash] != null && recentAddressables[hash] != address) ||
-                (spamMessages[hash] != null && !spamMessages[hash].duplicatedEventAddresses.contains(address))
+                (existingAddress != null && existingAddress != address) ||
+                (knownSpammer != null && !knownSpammer.duplicatedEventAddresses.contains(address))
             ) {
-                // may be null if the first duplicate was evicted from the LRU cache
-                // while the spammer record still matches this hash.
-                val existingAddress = recentAddressables[hash]
-
                 val link2 = njumpLink(NAddress.create(event.kind, event.pubKey, event.dTag(), relay))
                 val link1 = existingAddress?.let { njumpLink(NAddress.create(it.kind, it.pubKeyHex, it.dTag, relay)) } ?: link2
 
@@ -101,9 +106,10 @@ class AntiSpamFilter {
                 val spammer = logOffender(hash, event)
 
                 if (spammer.shouldHide() && relay != null) {
-                    Amethyst.instance.relayStats
-                        .get(relay)
-                        .newSpam(link1, link2)
+                    host()
+                        .relayStats
+                        ?.get(relay)
+                        ?.newSpam(link1, link2)
                 }
 
                 flowSpam.tryEmit(AntiSpamState(this))
@@ -115,9 +121,10 @@ class AntiSpamFilter {
         } else {
             // normal event
             val existingEvent = recentEventIds[hash]
+            val knownSpammer = spamMessages[hash]
             if (
                 (existingEvent != null && existingEvent != event.id) ||
-                (spamMessages[hash] != null && !spamMessages[hash].duplicatedEventIds.contains(event.id))
+                (knownSpammer != null && !knownSpammer.duplicatedEventIds.contains(event.id))
             ) {
                 val link2 = njumpLink(NEvent.create(event.id, null, null, relay))
                 // existingEvent may be null if the first duplicate was evicted from the
@@ -136,9 +143,10 @@ class AntiSpamFilter {
                 val spammer = logOffender(hash, event)
 
                 if (spammer.shouldHide() && relay != null) {
-                    Amethyst.instance.relayStats
-                        .get(relay)
-                        .newSpam(link1, link2)
+                    host()
+                        .relayStats
+                        ?.get(relay)
+                        ?.newSpam(link1, link2)
                 }
 
                 flowSpam.tryEmit(AntiSpamState(this))

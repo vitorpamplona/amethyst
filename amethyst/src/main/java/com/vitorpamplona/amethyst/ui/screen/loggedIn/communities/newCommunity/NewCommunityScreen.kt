@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.new_community_add_moderator
 import com.vitorpamplona.amethyst.commons.resources.new_community_add_moderator_placeholder
@@ -87,7 +88,6 @@ import com.vitorpamplona.amethyst.commons.resources.new_community_relay_marker_r
 import com.vitorpamplona.amethyst.commons.resources.new_community_relays_hint
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery

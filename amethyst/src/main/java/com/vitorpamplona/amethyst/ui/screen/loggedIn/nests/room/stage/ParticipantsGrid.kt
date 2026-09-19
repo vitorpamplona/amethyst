@@ -457,7 +457,7 @@ private fun MemberCell(
             .let { if (member.absent) it.alpha(0.5f) else it }
     val user =
         remember(member.pubkey) {
-            com.vitorpamplona.amethyst.model.LocalCache
+            com.vitorpamplona.amethyst.commons.model.cache.LocalCache
                 .getOrCreateUser(member.pubkey)
         }
     // Cache the long-click adapter per (pubkey, callback) tuple so a

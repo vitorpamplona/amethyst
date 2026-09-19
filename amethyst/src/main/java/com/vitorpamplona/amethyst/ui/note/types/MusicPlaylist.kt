@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_collaborative
@@ -68,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.resources.music_playlist_edit_action
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_loading_track
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_private
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_unknown_track
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage

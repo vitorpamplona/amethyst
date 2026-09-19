@@ -20,10 +20,9 @@
  */
 @file:Suppress("DEPRECATION")
 
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model.cache
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
@@ -40,9 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
-import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.observeEvents
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -51,6 +48,8 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
+import com.vitorpamplona.amethyst.commons.model.nip90DVMs.DvmHeartbeatRegistry
+import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilter
@@ -60,11 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
-import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
-import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.note.dateFormatter
+import com.vitorpamplona.amethyst.commons.util.dateFormatter
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
@@ -433,17 +428,17 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.util.SortedSet
 
-interface ILocalCache {
-    fun markAsSeen(
-        eventId: String,
-        relay: NormalizedRelayUrl,
-    ) {
-        // Default no-op; implementations may override to track seen events per relay
-    }
-}
-
 object LocalCache : ILocalCache, ICacheProvider, Dao {
-    val antiSpam = AntiSpamFilter()
+    /**
+     * What this cache needs from the application shell around it: a scope to verify on, the
+     * NIP-95 blob directory, the relay identity and stats sinks, and the main-thread assertion.
+     * Defaults to [LocalCacheHost.Default], which supplies none of them; Android installs its
+     * own during app startup.
+     */
+    @Volatile
+    var appHost: LocalCacheHost = LocalCacheHost
+
+    val antiSpam = AntiSpamFilter { appHost }
 
     val users = LargeSoftCache<HexKey, User>()
     val notes = LargeSoftCache<HexKey, Note>()
@@ -2135,10 +2130,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         event: Event,
         relay: NormalizedRelayUrl,
     ): Boolean {
-        val self =
-            Amethyst.instance.nip11Cache
-                .getFromCache(relay)
-                .self ?: return true
+        val self = appHost.relaySelfPubKey(relay) ?: return true
         return event.pubKey == self
     }
 
@@ -2716,7 +2708,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         attachZapToLiveActivityChannel(event, note, relay)
         refreshNewNoteObservers(note)
 
-        Amethyst.instance.applicationIOScope.launch {
+        appHost.scope.launch {
             try {
                 val info = resolver.resolve(recipientLnurlpUrl)
                 if (info == null) {
@@ -3078,37 +3070,48 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             note.addRelay(relay)
         }
 
+        // A host with no blob directory keeps the bytes in memory below instead of spilling them.
+        val cachePath = appHost.nip95BlobDir
+
         val isVerified =
-            try {
-                val cachePath = Amethyst.instance.nip95cache
-                cachePath.mkdirs()
-                val file = File(cachePath, event.id)
-                if (!file.exists() && (wasVerified || justVerify(event))) {
-                    FileOutputStream(file).use { stream ->
-                        stream.write(event.decode())
+            if (cachePath == null) {
+                wasVerified
+            } else {
+                try {
+                    cachePath.mkdirs()
+                    val file = File(cachePath, event.id)
+                    if (!file.exists() && (wasVerified || justVerify(event))) {
+                        FileOutputStream(file).use { stream ->
+                            stream.write(event.decode())
+                        }
+                        Log.i(
+                            "FileStorageEvent",
+                            "NIP95 File received from $relay and saved to disk as $file",
+                        )
+                        true
+                    } else {
+                        wasVerified
                     }
-                    Log.i(
-                        "FileStorageEvent",
-                        "NIP95 File received from $relay and saved to disk as $file",
-                    )
-                    true
-                } else {
+                } catch (e: IOException) {
+                    Log.e("FileStorageEvent", "FileStorageEvent save to disk error: " + event.id, e)
                     wasVerified
                 }
-            } catch (e: IOException) {
-                Log.e("FileStorageEvent", "FileStorageEvent save to disk error: " + event.id, e)
-                wasVerified
             }
 
         // Already processed this event.
         if (note.event != null) return false
 
         if (isVerified || justVerify(event)) {
-            // this is an invalid event. But we don't need to keep the data in memory.
-            val eventNoData =
-                FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
+            // The blob is on disk now, so the copy in the note drops its content. Without a
+            // directory to spill to there is nowhere else for it to live, so keep it whole.
+            val stored =
+                if (cachePath != null) {
+                    FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
+                } else {
+                    event
+                }
 
-            note.loadEvent(eventNoData, author, emptyList())
+            note.loadEvent(stored, author, emptyList())
 
             refreshNewNoteObservers(note)
 
@@ -3228,7 +3231,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
             requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-            Amethyst.instance.applicationIOScope.launch {
+            appHost.scope.launch {
                 responseCallback(event)
             }
 
@@ -3309,7 +3312,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     var verifyMeter: ((elapsedNanos: Long, valid: Boolean) -> Unit)? = null
 
     fun justVerify(event: Event): Boolean {
-        checkNotInMainThread()
+        appHost.assertNotMainThread()
 
         val meter = verifyMeter
         if (meter == null) return justVerifyInner(event)
@@ -3356,7 +3359,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 deletionIndex.hasBeenDeletedBy(event)?.let { deletionEvent ->
                     getNoteIfExists(deletionEvent.id)?.let { note ->
                         if (!note.hasRelay(relay.url)) {
-                            if (isDebug) {
+                            if (appHost.isDebug) {
                                 Log.d("LocalCache") { "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
                             relay.sendIfConnected(EventCmd(deletionEvent))
@@ -3373,7 +3376,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             getAddressableNoteIfExists(event.address())?.let { note ->
                 note.event?.let { existingEvent ->
                     if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
-                        if (isDebug) {
+                        if (appHost.isDebug) {
                             Log.d("LocalCache") { "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
                         }
 

@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model.cache
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -85,7 +85,7 @@ class CachePruner(
 
     private fun pruneHiddenMessagesChannel(
         channel: Channel,
-        account: Account,
+        account: IAccount,
     ) {
         val toBeRemoved = channel.pruneHiddenMessages(account)
 
@@ -106,7 +106,7 @@ class CachePruner(
         }
     }
 
-    fun pruneHiddenMessages(account: Account) {
+    fun pruneHiddenMessages(account: IAccount) {
         cache.ephemeralChannels.forEach { _, channel ->
             pruneHiddenMessagesChannel(channel, account)
         }
@@ -162,7 +162,7 @@ class CachePruner(
     }
 
     fun pruneOldMessages() {
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         cache.ephemeralChannels.forEach { _, channel ->
             pruneOldMessagesChannel(channel)
@@ -310,7 +310,7 @@ class CachePruner(
     }
 
     fun pruneRepliesAndReactions(accounts: Set<HexKey>) {
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         val toBeRemoved =
             cache.notes.filter { _, note ->
@@ -448,7 +448,7 @@ class CachePruner(
     }
 
     fun pruneExpiredEvents() {
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         val now = TimeUtils.now()
         val versionsToBeRemoved = cache.notes.filter { _, it -> it.event?.isExpirationBefore(now) == true }
@@ -473,13 +473,20 @@ class CachePruner(
         }
     }
 
-    fun pruneHiddenEvents(account: Account) {
-        checkNotInMainThread()
+    /**
+     * Drops every event authored by a muted or blocked user.
+     *
+     * Takes the mute list by value rather than the account that holds it: the pubkeys are all
+     * this needs, and [IAccount] exposes hidden users only as hash codes, which would match
+     * authors the reader never muted.
+     */
+    fun pruneHiddenEvents(hidden: LiveHiddenUsers) {
+        cache.appHost.assertNotMainThread()
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
         val toBeRemoved =
-            account.hiddenUsers.flow.value.hiddenUsers.flatMap { userHex ->
+            hidden.hiddenUsers.flatMap { userHex ->
                 (cache.notes.filter { _, it -> it.event?.pubKey == userHex } + cache.addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
             }
 

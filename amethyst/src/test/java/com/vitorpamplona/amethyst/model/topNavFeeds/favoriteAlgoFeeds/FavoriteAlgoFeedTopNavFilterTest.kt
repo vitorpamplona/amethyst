@@ -108,7 +108,7 @@ class FavoriteAlgoFeedTopNavFilterTest {
 
         // passing a LocalCache is only needed because the method demands it;
         // FavoriteAlgoFeedTopNavFilter.startValue doesn't actually consult it.
-        val set = filter.startValue(com.vitorpamplona.amethyst.model.LocalCache)
+        val set = filter.startValue(com.vitorpamplona.amethyst.commons.model.cache.LocalCache)
         assertTrue(set.requestIds.isEmpty())
     }
 
@@ -124,7 +124,7 @@ class FavoriteAlgoFeedTopNavFilterTest {
                 requestId = "9".repeat(64),
             )
 
-        val set = filter.startValue(com.vitorpamplona.amethyst.model.LocalCache)
+        val set = filter.startValue(com.vitorpamplona.amethyst.commons.model.cache.LocalCache)
         assertTrue(set.requestIds == setOf("9".repeat(64)))
     }
 }

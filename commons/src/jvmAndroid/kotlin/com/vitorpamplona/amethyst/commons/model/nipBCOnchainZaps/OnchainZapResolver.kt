@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nipBCOnchainZaps
+package com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps
 
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.OnchainZapVerifier
 import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.VerifiedOnchainZap
@@ -33,10 +32,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -94,16 +91,11 @@ class OnchainZapResolver(
      * entries whenever the tip advances. Lazy + `WhileSubscribed` so the HTTP call
      * only fires when at least one UI surface needs it.
      *
-     * Lazy initialization is required because [Amethyst.instance] may not exist
-     * when [OnchainZapResolver] is first constructed. Falls back to a constant
-     * null-emitting [StateFlow] if the application scope isn't available yet
-     * (e.g. unit tests, ContentProvider invocations), so the lazy field doesn't
-     * permanently fail with `UninitializedPropertyAccessException`.
+     * Lazy so the scope is read from the cache's host after the app shell has installed
+     * it, rather than at construction time — the cache is a singleton and is built first.
      */
     val onchainTipHeightFlow: StateFlow<Long?> by lazy {
-        val scope =
-            runCatching { Amethyst.instance.applicationIOScope }.getOrNull()
-                ?: return@lazy MutableStateFlow<Long?>(null).asStateFlow()
+        val scope = cache.appHost.scope
 
         flow {
             while (true) {
@@ -150,7 +142,7 @@ class OnchainZapResolver(
 
         val verifier = OnchainZapVerifier(backend)
 
-        Amethyst.instance.applicationIOScope.launch {
+        cache.appHost.scope.launch {
             try {
                 verifyAndUpgradeOnchainZap(event, source, repliesTo, verifier)
             } finally {

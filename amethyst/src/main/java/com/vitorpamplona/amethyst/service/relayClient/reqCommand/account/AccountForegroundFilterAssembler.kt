@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.AccountFollowsLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromRandomRelaysManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
-import com.vitorpamplona.amethyst.model.LocalCache
 
 /**
  * Android-specific FeedViewModel base class that provides LocalCache as the cache provider.

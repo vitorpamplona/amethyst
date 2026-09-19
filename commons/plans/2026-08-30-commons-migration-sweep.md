@@ -776,10 +776,9 @@ Options, for the maintainer to pick:
   `NappletIdentityWatch`); `ScheduledPostStore` Jackson+`java.io.File` →
   kotlinx-serialization+okio (frees `ScheduledPostWorkGate`).
   `LargeSoftCache` stays parked (needs a WeakReference expect/actual).
-- **Wave 2: LocalCache move-group** (~200 files behind it) — **blocked on a
-  design decision**: `CachePruner`/`CacheSearch` call
-  `Account.isFollowing(...)`; either `IAccount` grows it (DesktopIAccount
-  must implement) or they take a narrower interface (recommended).
+- **Wave 2: LocalCache move-group** — **part A landed (2026-09-19)**, see the
+  section below. Part B (repoint `desktopApp`, delete `DesktopLocalCache.kt`)
+  is the remaining half.
 - **Wave 3: strings bridge** — **BUILT (2026-09-01)**. The pieces:
   - `commons/ui/StringRes.kt` (commonMain): `stringRes(StringResource)`,
     formatted + plural variants, `loadStringRes`/`loadPluralStringRes` for
@@ -826,3 +825,98 @@ Options, for the maintainer to pick:
   gradle re-extract.
 - stdlib atomics have no `incrementAndFetch()` here — use `addAndFetch(1)`;
   `withLock {}` can't assign outer `val`s — restructure to lambda-return.
+
+
+### Wave 2 part A landed — `LocalCache` is in `commons` (2026-09-19)
+
+`LocalCache` (4,021 lines) and its move-group now live in
+`commons/src/jvmAndroid/…/commons/model/`. `desktopApp` is untouched and still
+runs `DesktopLocalCache`; repointing it and deleting that 1,177-line fork is
+part B.
+
+**Where things went**
+
+| From `amethyst/…/model/` | To `commons/…/commons/model/` |
+|---|---|
+| `LocalCache.kt` | `cache/LocalCache.kt` |
+| `AntiSpamFilter.kt` | `cache/AntiSpamFilter.kt` |
+| `CachePruner.kt` | `cache/CachePruner.kt` |
+| `CacheSearch.kt` | `cache/CacheSearch.kt` |
+| `DvmHeartbeatRegistry.kt` | `nip90DVMs/DvmHeartbeatRegistry.kt` |
+| `nipBCOnchainZaps/OnchainZapResolver.kt` | `nipBCOnchainZaps/OnchainZapResolver.kt` |
+
+All in `jvmAndroid`: `LocalCache` spills NIP-95 blobs through `java.io.File`,
+and the other five either name `LocalCache` or use `java.util.concurrent`.
+
+**The seam: `LocalCacheHost`**
+
+A new port in `commons/…/model/cache/LocalCacheHost.kt` collects everything the
+cache needed from `Amethyst.instance` and friends — `scope`, `isDebug`,
+`nip95BlobDir`, `relayStats`, `relaySelfPubKey(relay)`, `assertNotMainThread()`.
+Every member has a default that is the honest answer for a host that supplies
+none of them, so the cache runs shell-less (Desktop, tests). `LocalCache.appHost`
+is the install point; Android installs `AmethystLocalCacheHost` from `AppModules`
+next to `val cache`, before any event is consumed. Named `appHost`, not `host`,
+because `host` is already a domain word in that file (NIP-29 host relay,
+gift-wrap host).
+
+The whole seam cut is 101 changed lines in a 4,021-line file:
+
+| Was | Now |
+|---|---|
+| `Amethyst.instance.nip11Cache.getFromCache(relay).self` | `appHost.relaySelfPubKey(relay)` |
+| `Amethyst.instance.applicationIOScope.launch` (×2) | `appHost.scope.launch` |
+| `Amethyst.instance.nip95cache` | `appHost.nip95BlobDir` |
+| `isDebug` (×2) | `appHost.isDebug` |
+| `checkNotInMainThread()` | `appHost.assertNotMainThread()` |
+| `ui.note.dateFormatter` | `commons.util.dateFormatter` (the twin already existed) |
+
+`nip95BlobDir` is nullable, so the `FileStorageEvent` path had to grow one
+branch: with nowhere to spill to, the note keeps the event whole instead of
+loading a content-stripped copy whose bytes are on no disk. Android always
+supplies the directory, so its behaviour is unchanged.
+
+**The design question the plan flagged, resolved**
+
+`CachePruner`/`CacheSearch` took `Account`. It turned out `IAccount` did not
+need to grow anything and Desktop needed no change:
+
+- `CacheSearch.findUsersStartingWith(…, forAccount: IAccount?)` — `isHidden`
+  and `hiddenWordsCase` are already on `IAccount`, and `isFollowing(user)` is
+  by definition `user.pubkeyHex in followingKeySet()`, which is too. Hoisting
+  the set out of the per-candidate lambda also stops rebuilding it per result.
+- `CachePruner.pruneHiddenMessages(account: IAccount)` — `Channel.pruneHiddenMessages`
+  already took `IAccount`.
+- `CachePruner.pruneHiddenEvents(hidden: LiveHiddenUsers)` — takes the mute list
+  by value, the idiom `ICacheProvider.findNotesMatching` already documents.
+  `IAccount` exposes hidden users only as hash codes, which would prune authors
+  the reader never muted.
+
+**Other pieces**
+
+- `ILocalCache` was declared inline in `LocalCache.kt` and used nowhere else;
+  hoisted to `commons/…/model/cache/ILocalCache.kt` (commonMain) as the
+  write-side port next to the read-side `ICacheProvider`.
+- `AntiSpamFilter`: `android.util.LruCache` → `androidx.collection.LruCache`,
+  already the commons idiom. Its `get` is Kotlin-nullable where the platform
+  class returned a platform type, so the two duplicate checks now read each
+  entry once into a local and smart-cast. It takes its host as `() -> LocalCacheHost`
+  rather than a value, because the cache that owns it is built before the shell
+  installs one.
+- `njumpLink` moved from `ui/note/NoteQuickActionMenu.kt` to
+  `commons/…/util/ExternalLinks.kt` (AntiSpamFilter logs one); the app's four
+  call sites import it from there.
+- `OnchainZapResolver.onchainTipHeightFlow` dropped its
+  `runCatching { Amethyst.instance }` fallback — `cache.appHost.scope` always
+  answers.
+
+**Left in `amethyst` on purpose:** `MiniFhir.kt`, which the original move-group
+listed. It is clean and movable, but `LocalCache` never referenced it (the hit
+was the phrase "Resource-usage ledger" in a comment), so it unlocks nothing here
+and would only widen the diff. `OnchainWalletState` likewise stays — `Account`
+and `RailCapability` use it, `OnchainZapResolver` does not.
+
+**Verified:** `:commons:compileKotlinJvm`, `:amethyst:compileFdroidDebugKotlin`,
+`:desktopApp:compileKotlin`, `:cli:compileKotlin`, `:commons:verifyKmpPurity`,
+`:commons:jvmTest`, `:cli:test`, `:amethyst:testPlayDebugUnitTest`,
+`spotlessApply`.

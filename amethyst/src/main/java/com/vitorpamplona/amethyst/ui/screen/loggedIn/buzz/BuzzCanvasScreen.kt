@@ -55,13 +55,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_body_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_edit
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_empty
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
