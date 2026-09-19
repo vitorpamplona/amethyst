@@ -166,13 +166,12 @@
 # those types at the hand-written kotlinx serializers, which name every field as a
 # string literal. Nothing to keep, nothing to verify.
 
-# On-disk JSON written and re-read by the app itself. The field names are the
-# file format, so renaming them makes every existing file unreadable.
--keep class com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost { *; }
--keep class com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostFile { *; }
--keep class com.vitorpamplona.amethyst.service.pow.PowJobsFile { *; }
--keep class com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob { *; }
--keep class com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore$UsageFile { *; }
+# The on-disk stores (scheduled posts, pending PoW jobs, resource usage) used to
+# need a keep each, because Jackson derived their JSON keys from the Kotlin
+# constructor parameter names. They are @Serializable now: kotlinx bakes every key
+# in as a string literal, so the field names can be renamed freely. The formats are
+# pinned by ScheduledPostFileFormatTest and PowAndUsageFileFormatTest instead,
+# which assert the bytes against what the Jackson build wrote.
 
 # -----------------------------------------------------------------------------
 # Names referenced from outside the DEX

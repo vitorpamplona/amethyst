@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorSerializer
 import java.io.InputStream
+import kotlin.reflect.KClass
 
 class JacksonMapper {
     companion object {
@@ -125,9 +126,56 @@ class JacksonMapper {
 
         fun fromJsonToEventList(json: String): List<Event> = mapper.readValue(json, eventListTypeInstance)
 
-        inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T = mapper.readValue<T>(json)
+        /**
+         * The types this mapper has a registered deserializer for.
+         *
+         * [fromJsonTo] is generic, so nothing in the type system stops a new
+         * [OptimizedSerializable] being passed to it. Jackson would answer by binding
+         * that type REFLECTIVELY off its Kotlin constructor parameter names — which
+         * works in debug, and in a release build writes obfuscated one-letter JSON keys
+         * onto the wire. That is how NIP-47 and CLINK ended up needing a package keep
+         * rule each, and the symptom only ever shows up in production.
+         *
+         * So the fallback is closed: an unregistered type fails here, loudly, on the
+         * first call. Register a StdSerializer/StdDeserializer pair below, or route the
+         * type at kotlinx in OptimizedJsonMapper the way NIP-47 and CLINK are.
+         */
+        @PublishedApi
+        internal val registered: Set<KClass<*>> =
+            setOf(
+                Event::class,
+                Filter::class,
+                Message::class,
+                Command::class,
+                TagArray::class,
+                EventTemplate::class,
+                Rumor::class,
+                BunkerMessage::class,
+                BunkerRequest::class,
+                BunkerResponse::class,
+            )
 
-        inline fun <reified T : OptimizedSerializable> fromJsonTo(json: InputStream): T = mapper.readValue<T>(json)
+        @PublishedApi
+        internal fun checkRegistered(type: KClass<*>) {
+            if (type !in registered) {
+                throw IllegalArgumentException(
+                    "No Jackson deserializer is registered for $type, so Jackson would bind it " +
+                        "reflectively and emit obfuscated field names in a release build. Register " +
+                        "one in JacksonMapper, or route the type at KotlinSerializationMapper in " +
+                        "OptimizedJsonMapper.",
+                )
+            }
+        }
+
+        inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T {
+            checkRegistered(T::class)
+            return mapper.readValue<T>(json)
+        }
+
+        inline fun <reified T : OptimizedSerializable> fromJsonTo(json: InputStream): T {
+            checkRegistered(T::class)
+            return mapper.readValue<T>(json)
+        }
 
         fun toJson(event: Event): String = EventManualSerializer.toJson(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content, event.sig)
 

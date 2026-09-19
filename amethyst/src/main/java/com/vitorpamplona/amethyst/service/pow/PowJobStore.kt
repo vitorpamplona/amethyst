@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.pow
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobPersistence
 import com.vitorpamplona.quartz.utils.Log
@@ -32,6 +29,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.io.File
 
 /**
@@ -46,9 +45,18 @@ class PowJobStore(
     private val storageFile: File,
     scope: CoroutineScope,
 ) : PoWJobPersistence {
-    private val mapper =
-        jacksonObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    /**
+     * `encodeDefaults = true` so this writes the same bytes Jackson did — kotlinx
+     * omits a value equal to its default, which would silently drop `"version":1`
+     * from every file this build rewrites. `ignoreUnknownKeys` matches the
+     * FAIL_ON_UNKNOWN_PROPERTIES=false it replaces, so a file written by a newer
+     * build still loads here.
+     */
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     // one lane: launch order == execution order, so a save followed by its
     // remove can never be applied backwards.
@@ -103,7 +111,7 @@ class PowJobStore(
         jobs =
             try {
                 if (storageFile.exists() && storageFile.length() > 0) {
-                    mapper.readValue<PowJobsFile>(storageFile).jobs.toMutableList()
+                    json.decodeFromString<PowJobsFile>(storageFile.readText()).jobs.toMutableList()
                 } else {
                     mutableListOf()
                 }
@@ -120,7 +128,7 @@ class PowJobStore(
         storageFile.parentFile?.mkdirs()
         val tmp = File(storageFile.parentFile, storageFile.name + ".tmp")
         try {
-            mapper.writeValue(tmp, PowJobsFile(version = 1, jobs = jobs.toList()))
+            tmp.writeText(json.encodeToString(PowJobsFile(version = 1, jobs = jobs.toList())))
             if (!tmp.renameTo(storageFile)) {
                 if (!storageFile.delete() || !tmp.renameTo(storageFile)) {
                     Log.e(TAG) { "Failed to rename $tmp to $storageFile" }
@@ -147,6 +155,7 @@ class PowJobStore(
     }
 }
 
+@Serializable
 data class PowJobsFile(
     val version: Int = 1,
     val jobs: List<PersistedPoWJob> = emptyList(),

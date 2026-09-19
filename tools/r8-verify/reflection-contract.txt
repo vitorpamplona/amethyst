@@ -78,13 +78,6 @@ class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 # any more — OptimizedJsonMapper routes them at kotlinx serializers that write
 # every field name as a string literal — so there is no rule to verify.
 
-# --- JSON the app writes to disk and reads back after an update --------------
-# Field names are the file format; renaming them orphans every existing file.
-fields com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
-fields com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostFile
-fields com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
-fields com.vitorpamplona.amethyst.service.pow.PowJobsFile
-fields com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore$UsageFile
 
 # --- Enum constants persisted as strings -------------------------------------
 # The preference stores write `enum.name` into DataStore and read it back with
@@ -103,4 +96,10 @@ enum com.vitorpamplona.amethyst.model.ProfileGalleryType CLASSIC
 enum com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
 enum com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 enum com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ChannelExpand
+# Still listed after ScheduledPost moved to kotlinx: this one is also the on-disk
+# format of the scheduled-post file, and a plain @Serializable enum is not obviously
+# immune — kotlinx builds its descriptor from the entries, and it has not been proven
+# here that those names are literals rather than Enum.name read at runtime. Keeping
+# the constants costs nothing (the blanket enum rule already provides them) and the
+# failure mode — every queued post's status unreadable — is not worth guessing at.
 enum com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus PENDING PUBLISHING SENT FAILED CANCELLED
