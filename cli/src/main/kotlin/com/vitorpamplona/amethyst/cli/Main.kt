@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.commands.Bolt12Commands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
 import com.vitorpamplona.amethyst.cli.commands.BuzzCommands
 import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
+import com.vitorpamplona.amethyst.cli.commands.CordnCommands
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
 import com.vitorpamplona.amethyst.cli.commands.CreateCommand
 import com.vitorpamplona.amethyst.cli.commands.DebitCommands
@@ -333,6 +334,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
             FofCommand.dispatch(dataDir, tail)
         }
         "concord" -> ConcordCommands.dispatch(dataDir, tail)
+        "cordn" -> CordnCommands.dispatch(tail)
         else -> {
             Output.error("bad_args", "unknown subcommand: $head")
             printVerbList()
@@ -355,7 +357,7 @@ private fun printVerbList() {
         |  primitives:  decode encode verify key filter nip kind pow namecoin
         |  events:      event publish fetch subscribe count sync encrypt decrypt gift
         |  social:      notes profile follow unfollow search zap dm outbox
-        |  groups:      marmot relaygroup concord geochat
+        |  groups:      marmot relaygroup concord cordn geochat
         |  relays:      relay admin serve store
         |  trust:       graperank fof
         |  media/sites: blossom nsite napplet podcast podcast20 git
@@ -877,6 +879,12 @@ private fun printUsage() {
         |  concord invite COMMUNITY [--base URL]      mint + publish a shareable invite link
         |  concord revoke COMMUNITY TOKEN|URL         retire a link you minted (vsk=9 tombstone)
         |  concord join URL                           redeem an invite link and save the community
+        |
+        |  cordn ref encode --gid GID [--coordinator PK] [--relay URL[,URL]]
+        |                                             build a cordn1… group reference
+        |  cordn ref decode REF                       read one back
+        |  cordn exposure --coordinator PK [--groups N] [--published]
+        |                                             what that coordinator would learn (spec/00.md §8)
         |
         |Local event store (shared, under `<data-dir>/shared/`):
         |  Backend selected by AMY_STORE: sqlite (default; `shared/events.db`)

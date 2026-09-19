@@ -1022,7 +1022,62 @@ Still open in Stage 3:
   non-goal (§4.6).
 - **Tier B**, live against `ghcr.io/cordn-msg/cordn:latest`.
 
-### Stage 4 — App integration
+### Stage 4 — App integration — HEADLESS LAYER LANDED, UI OPEN
+
+Landed in `commons/…/cordn/` (2026-09-19):
+
+| What | Where |
+| ---- | ----- |
+| Coordinator identity, relays, provenance | `CoordinatorConfig` (+ `from(CordnGroupRef)`) |
+| Per-coordinator health, recorded not polled | `CoordinatorHealth` |
+| §8 as a model a UI renders | `CordnExposure` (`GroupExposure`, `ExposureNote`) |
+| Group lifecycle keyed on `gid` | `CordnGroupManager` |
+| Encrypted-at-rest state + cursors | `CordnGroupStore` (+ an in-memory one for tests) |
+| The 11 tools as a contract | `ICoordinator` in `quartz`, implemented by `CoordinatorClient` |
+| `amy cordn ref encode/decode`, `amy cordn exposure` | `cli/…/CordnCommands` |
+
+`CordnGroupManager` is the cordn counterpart of `MarmotManager` and shares no code with it, as
+Stage 1 predicted: Marmot's is keyed on the Nostr group id 147 times and its delivery model —
+kinds 443/444/445, `h`-tag subscriptions, publish obligations — has no cordn analogue. What the
+two share is the engine underneath. Its store is separate from `MlsGroupStateStore` for the same
+reason: the keys look alike (`nostrGroupId` vs `gid`) and mean different things, so one interface
+serving both would invite handing the wrong id to the wrong store.
+
+Four findings, each of which was a bug until the test that found it:
+
+1. **`CommitResult.commitBytes` is the bare RFC 9420 `Commit` struct**, not an `MLSMessage`.
+   Posting it produces a payload no receiver can parse. `framedCommitBytes` is the wire form.
+2. **The pre-commit epoch rule (`spec/03.md` §5) is invisible to a two-party test.** Sealing a
+   Commit under the epoch it *creates* still passes create→invite→join→read, because the
+   joiner's Welcome cursor skips the only Commit in the stream. It takes a third member — one
+   already in the group when a later Commit lands — to catch it. `CommitResult` already hands
+   back `preCommitExporterSecret` precisely because the key is unobtainable afterwards.
+3. **A Welcome does not carry the `gid`.** `spec/03.md` §2 decouples the delivery id from the MLS
+   `group_id`, so in principle a joiner cannot know where to fetch from. The reference client
+   closes the gap by convention — `group_id = utf8(gid)` — which staircase's fixtures confirm
+   (their `group_id` decodes to exactly their published `gid`). We follow the convention and
+   treat it as an observation, not a guarantee: a non-UTF-8 group id yields a named skip rather
+   than a mojibake key that fetches nothing forever. `MlsGroup.create` gained an optional
+   `groupId` so our groups carry it too.
+4. **Public-framed handshake messages interoperate.** Our engine frames Commits as
+   `MLSMessage(PublicMessage)`; cordn's client emits private framing. Checked rather than
+   assumed: `packages/cli/src/utils/mlsMessages.ts:68` accepts wireformat 1 *and* 2 and hands
+   both to ts-mls's `processMessage`. Nothing is weakened — the coordinator sees only the outer
+   seal either way — so the manager emits public framing and reads both.
+
+Still open:
+
+- **The UI.** `GroupExposure` exists so that the §8 requirement ("surfaced, not buried") has
+  something to render, but nothing renders it yet. That is the remaining Stage 4 work, along
+  with cordn chatroom/feed models beside `model/marmotGroups/` and a ViewModel.
+- **Coordinator-driving `amy` verbs** (`publish`, `invite`, `send`, `sync`). Deliberately not
+  shipped: with Tier B blocked (§7) there is nothing to exercise them against, and unexercised
+  coordinator verbs are a guess with a command-line interface. The logic they would call is in
+  `CordnGroupManager` and is covered against an in-memory coordinator.
+- Key-package rotation and a published-KeyPackage lifecycle, which cordn has no event kind for
+  (§4.2) and which therefore lives entirely in coordinator calls.
+
+The original scope, for reference:
 
 - `commons/` state holders and ViewModels for cordn groups, alongside the Marmot ones.
 - Coordinator configuration and health surface (their client tracks per-coordinator health).

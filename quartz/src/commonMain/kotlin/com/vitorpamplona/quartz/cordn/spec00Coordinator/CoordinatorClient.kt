@@ -64,7 +64,7 @@ class CoordinatorClient(
     private val mcp: CvmMcpClient,
     /** Applied to every call. Coordinator work is storage, not computation. */
     private val timeoutMs: Long = CvmTransport.DEFAULT_TIMEOUT_MS,
-) {
+) : ICoordinator {
     /** Performs the MCP handshake. Optional, but it is where CEP-35 tags ride. */
     suspend fun initialize() = mcp.initialize()
 
@@ -78,7 +78,7 @@ class CoordinatorClient(
      * Nothing extra is signed here, and nothing else can be: the transport owns
      * the event.
      */
-    suspend fun publishKeyPackage(
+    override suspend fun publishKeyPackage(
         keyPackageRef: String,
         keyPackageBase64: String,
     ): PublishedKeyPackage =
@@ -91,7 +91,7 @@ class CoordinatorClient(
         }
 
     /** Withdraws published KeyPackages. Authorized by us being their owner (§12). */
-    suspend fun removeKeyPackages(keyPackageRefs: List<String>): List<String> {
+    override suspend fun removeKeyPackages(keyPackageRefs: List<String>): List<String> {
         require(keyPackageRefs.isNotEmpty()) { "kp_remove needs at least one ref" }
         val args =
             buildJsonObject {
@@ -110,7 +110,7 @@ class CoordinatorClient(
      * A last-resort KeyPackage can back several Welcomes, which is why a record
      * is identified by `(kp_ref, at)` rather than by `kp_ref` alone.
      */
-    suspend fun takeWelcomes(consumed: List<ConsumedWelcomeRef> = emptyList()): List<PendingWelcome> {
+    override suspend fun takeWelcomes(consumed: List<ConsumedWelcomeRef>): List<PendingWelcome> {
         val args =
             buildJsonObject {
                 if (consumed.isNotEmpty()) {
@@ -145,7 +145,7 @@ class CoordinatorClient(
      * Rides the stable identity because the request is "npub X wants into group
      * G" — there is no version of this call that does not name the asker.
      */
-    suspend fun storeJoinRequest(
+    override suspend fun storeJoinRequest(
         gid: String,
         keyPackageRef: String,
     ): Long =
@@ -160,7 +160,7 @@ class CoordinatorClient(
     // ---- ephemeral identity ----------------------------------------------
 
     /** Every KeyPackage this coordinator holds. */
-    suspend fun listKeyPackages(): List<AvailableKeyPackage> =
+    override suspend fun listKeyPackages(): List<AvailableKeyPackage> =
         call(CoordinatorMethod.KP_LIST, buildJsonObject {}).list(CoordinatorFields.KEY_PACKAGES) {
             AvailableKeyPackage(
                 pubKey = it.str(CoordinatorFields.PK),
@@ -177,7 +177,7 @@ class CoordinatorClient(
      * on its publication event. Null means the coordinator holds nothing
      * matching.
      */
-    suspend fun takeKeyPackage(id: String): TakenKeyPackage? {
+    override suspend fun takeKeyPackage(id: String): TakenKeyPackage? {
         val result = call(CoordinatorMethod.KP_TAKE, buildJsonObject { put(CoordinatorFields.ID, id) })
         val entry = result[CoordinatorFields.KEY_PACKAGE]?.takeIf { it is JsonObject }?.jsonObject ?: return null
         val eventJson =
@@ -198,11 +198,11 @@ class CoordinatorClient(
      * [after] tells the joiner which cursor to start their history from, so
      * they do not replay epochs they cannot decrypt.
      */
-    suspend fun storeWelcome(
+    override suspend fun storeWelcome(
         targetPubKey: HexKey,
         keyPackageRef: String,
         welcomeBase64: String,
-        after: Long? = null,
+        after: Long?,
     ): Long =
         call(
             CoordinatorMethod.WELCOME_STORE,
@@ -215,9 +215,9 @@ class CoordinatorClient(
         ).num(CoordinatorFields.AT)
 
     /** Drains join requests for the groups we administer, acknowledging handled ones. */
-    suspend fun takeJoinRequests(
+    override suspend fun takeJoinRequests(
         gids: List<String>,
-        consumed: List<ConsumedJoinRequestRef> = emptyList(),
+        consumed: List<ConsumedJoinRequestRef>,
     ): List<JoinRequest> {
         require(gids.isNotEmpty()) { "join_request_take_many needs at least one group" }
         val args =
@@ -254,7 +254,7 @@ class CoordinatorClient(
     }
 
     /** Posts one sealed payload to a group's stream. */
-    suspend fun postMessage(
+    override suspend fun postMessage(
         gid: String,
         sealedBase64: String,
     ): PostedMessage =
@@ -279,7 +279,7 @@ class CoordinatorClient(
      * catching up loops until a page comes back empty — see
      * [com.vitorpamplona.quartz.cordn.sync.GroupSync].
      */
-    suspend fun fetchMessages(cursors: Map<String, Long?>): List<GroupMessage> {
+    override suspend fun fetchMessages(cursors: Map<String, Long?>): List<GroupMessage> {
         require(cursors.isNotEmpty()) { "msg_fetch_many needs at least one group" }
         val args = buildJsonObject { put(CoordinatorFields.GROUPS, groupsArray(cursors)) }
         return call(CoordinatorMethod.MSG_FETCH_MANY, args).list(CoordinatorFields.MESSAGES, ::groupMessage)
@@ -294,7 +294,7 @@ class CoordinatorClient(
      * does not complete the request, so the returned list is the whole run's
      * traffic, not a partial view.
      */
-    suspend fun subscribeMessages(
+    override suspend fun subscribeMessages(
         cursors: Map<String, Long?>,
         timeoutMs: Long,
         onMessage: (GroupMessage) -> Unit,

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.cordn.sync
 
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorClient
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.GroupMessage
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.PostedMessage
 
 /**
@@ -43,7 +43,7 @@ import com.vitorpamplona.quartz.cordn.spec00Coordinator.PostedMessage
  * either time.
  */
 class CordnGroupSync(
-    private val client: CoordinatorClient,
+    private val client: ICoordinator,
     /** Inbox per `gid`. The caller owns them, because they outlive a sync run. */
     private val inboxes: MutableMap<String, GroupInbox> = mutableMapOf(),
 ) {

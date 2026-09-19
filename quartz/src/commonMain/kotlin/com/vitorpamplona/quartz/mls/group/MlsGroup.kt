@@ -3275,6 +3275,20 @@ class MlsGroup private constructor(
              * [com.vitorpamplona.quartz.marmot.groups.MarmotCapabilities.currentProfileRequired].
              */
             requiredCapabilities: Extension? = policy.defaultRequiredCapabilities,
+            /**
+             * The RFC 9420 `group_id` for the new group. Null generates a
+             * random 32-byte one, which is the right default: §8.1 only
+             * requires it to be unique, and a random id tells a receiver
+             * nothing.
+             *
+             * A binding may need to choose it. cordn's reference client sets
+             * `group_id = utf8(gid)` so that a joiner can recover the delivery
+             * id from a Welcome, which otherwise carries no way to learn it —
+             * see `CordnGroupManager`. Anything a binding puts here is visible
+             * to whoever handles the ciphertext, so it must carry nothing the
+             * group would not publish.
+             */
+            groupId: ByteArray? = null,
         ): MlsGroup {
             val sigKp =
                 signingKey?.let { key ->
@@ -3283,7 +3297,7 @@ class MlsGroup private constructor(
                 } ?: Ed25519.generateKeyPair()
 
             val encKp = X25519.generateKeyPair()
-            val groupId = MlsCryptoProvider.randomBytes(32)
+            val newGroupId = groupId ?: MlsCryptoProvider.randomBytes(32)
 
             val leafNode =
                 buildLeafNode(
@@ -3307,7 +3321,7 @@ class MlsGroup private constructor(
             val baseExtensions = listOfNotNull(requiredCapabilities)
             val groupContext =
                 GroupContext(
-                    groupId = groupId,
+                    groupId = newGroupId,
                     epoch = 0,
                     treeHash = treeHash,
                     confirmedTranscriptHash = ByteArray(0),
