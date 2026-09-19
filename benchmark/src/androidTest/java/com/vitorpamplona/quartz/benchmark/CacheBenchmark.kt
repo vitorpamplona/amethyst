@@ -23,10 +23,10 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.jacksonTypeRefOf
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -43,8 +43,9 @@ open class BaseCacheBenchmark {
         // This file includes duplicates
         val fullDBInputStream = javaClass.classLoader?.getResourceAsStream("nostr_vitor_startup_data.json.gz")
 
-        return JacksonMapper.mapper.readValue<ArrayList<Event>>(
+        return JacksonMapper.mapper.readValue(
             GZIPInputStream(fullDBInputStream),
+            jacksonTypeRefOf<ArrayList<Event>>(),
         )
     }
 

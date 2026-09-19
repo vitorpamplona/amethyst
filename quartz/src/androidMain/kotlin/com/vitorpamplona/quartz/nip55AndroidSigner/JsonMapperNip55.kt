@@ -26,9 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.jackson.InliningTagArrayPrettyPrinter
+import com.vitorpamplona.quartz.nip01Core.jackson.jacksonTypeRefOf
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResultJsonDeserializer
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResultJsonSerializer
@@ -39,7 +38,7 @@ import java.io.InputStream
 
 object JsonMapperNip55 {
     val defaultMapper: ObjectMapper =
-        jacksonObjectMapper()
+        ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())
             .setDefaultPrettyPrinter(InliningTagArrayPrettyPrinter())
@@ -51,9 +50,9 @@ object JsonMapperNip55 {
                     .addSerializer(Permission::class.java, PermissionSerializer()),
             )
 
-    inline fun <reified T> fromJsonTo(json: String): T = defaultMapper.readValue<T>(json)
+    inline fun <reified T> fromJsonTo(json: String): T = defaultMapper.readValue(json, jacksonTypeRefOf<T>())
 
-    inline fun <reified T> fromJsonTo(json: InputStream): T = defaultMapper.readValue<T>(json)
+    inline fun <reified T> fromJsonTo(json: InputStream): T = defaultMapper.readValue(json, jacksonTypeRefOf<T>())
 
     fun toJson(event: ArrayNode): String = defaultMapper.writeValueAsString(event)
 

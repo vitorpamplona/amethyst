@@ -38,6 +38,7 @@ firebaseBom = "34.19.0"
 fragmentKtx = "1.9.0"
 gms = "4.5.0"
 healthConnect = "1.1.0"
+jackson = "2.22.2"
 jacksonModuleKotlin = "2.22.2"
 javaKeyring = "1.0.4"
 kmpTorRuntime = "2.6.0"
@@ -203,6 +204,7 @@ google-mlkit-genai-rewriting = { group = "com.google.mlkit", name = "genai-rewri
 google-mlkit-genai-image-description = { group = "com.google.mlkit", name = "genai-image-description", version.ref = "genaiImageDescription" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
 kmp-tor-runtime = { group = "io.matthewnelson.kmp-tor", name = "runtime", version.ref = "kmpTorRuntime" }

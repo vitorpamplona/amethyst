@@ -23,12 +23,10 @@ package com.vitorpamplona.quartz.nip01Core.jackson
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.nip01Core.core.RawJson
@@ -64,7 +62,7 @@ class JacksonMapper {
         val defaultPrettyPrinter = InliningTagArrayPrettyPrinter()
 
         val mapper =
-            jacksonObjectMapper()
+            ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false)
                 .configure(DeserializationFeature.UNWRAP_ROOT_VALUE, false)
@@ -104,13 +102,13 @@ class JacksonMapper {
         /**
          * Shortcuts
          */
-        val eventTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Event>())
-        val tagArrayTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<TagArray>())
-        val rumorTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Rumor>())
-        val eventTemplateTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<EventTemplate<Event>>())
-        val eventListTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<List<Event>>())
-        val messageTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Message>())
-        val commandTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Command>())
+        val eventTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<Event>())
+        val tagArrayTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<TagArray>())
+        val rumorTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<Rumor>())
+        val eventTemplateTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<EventTemplate<Event>>())
+        val eventListTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<List<Event>>())
+        val messageTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<Message>())
+        val commandTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<Command>())
 
         fun fromJson(json: String): Event = mapper.readValue(json, eventTypeInstance)
 
@@ -169,12 +167,12 @@ class JacksonMapper {
 
         inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T {
             checkRegistered(T::class)
-            return mapper.readValue<T>(json)
+            return mapper.readValue(json, jacksonTypeRefOf<T>())
         }
 
         inline fun <reified T : OptimizedSerializable> fromJsonTo(json: InputStream): T {
             checkRegistered(T::class)
-            return mapper.readValue<T>(json)
+            return mapper.readValue(json, jacksonTypeRefOf<T>())
         }
 
         fun toJson(event: Event): String = EventManualSerializer.toJson(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content, event.sig)
