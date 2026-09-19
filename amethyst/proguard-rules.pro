@@ -187,10 +187,14 @@
 # this one out of the manifest and Class.forName()s it.
 -keep class com.vitorpamplona.amethyst.service.cast.chromecast.AmethystCastOptionsProvider { *; }
 
-# WorkManager stores the worker's class name in its own database at enqueue
-# time and instantiates it by name on a later process start — including after
-# an app update, when R8 has produced a different mapping.
--keep class * extends androidx.work.ListenableWorker { <init>(...); }
+# NOT a rule for WorkManager. It stores the worker's class name in its own
+# database at enqueue time and instantiates it by name on a later process start
+# — including after an app update that reshuffled the mapping — so the name does
+# have to survive. But androidx.work already ships exactly that in its own
+# consumer rules (`-keepnames class * extends androidx.work.ListenableWorker`
+# plus a keepclassmembers for the public constructors), so a rule here was pure
+# duplication. The three workers stay listed in the reflection contract, which
+# now verifies the LIBRARY's rule keeps doing the job.
 
 # androidx.appfunctions: the KSP-generated invokers and the app_functions.xml
 # the system reads are keyed off these declarations. One class plus its

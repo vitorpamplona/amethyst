@@ -13,6 +13,46 @@
 # Adding reflection? Add the keep rule in amethyst/proguard-rules.pro AND a line
 # here. A rule with no line here is unverified; a line here with no rule fails.
 #
+# CAN THE REFLECTION ITSELF BE REMOVED?
+# Reviewed entry by entry. A keep rule you do not need is better than one you
+# verify, so the standing answer per mechanism:
+#
+#   JNI class+method names        IRREDUCIBLE. `Java_<class>_<method>` is
+#                                 compiled into libarti_android.so. Costs us
+#                                 nothing anyway — AGP's default
+#                                 `native <methods>` rule covers it.
+#   Rust -> Kotlin callback       Removable only by inverting the flow (Kotlin
+#                                 polls a native queue instead of Rust pushing
+#                                 by GetMethodID). One interface, one method —
+#                                 not obviously worth the threading change.
+#   Cast OptionsProvider          IRREDUCIBLE. Play Services reads the class
+#                                 name out of a manifest <meta-data> value and
+#                                 Class.forName()s it. Google's API, not ours.
+#   WorkManager workers           ALREADY GONE. androidx.work ships the keep
+#                                 itself; our duplicate rule was deleted and
+#                                 these entries now verify the library's.
+#   Jackson NWC + CLINK           REMOVABLE, and the replacement already
+#                                 exists: hand-written KSerializers in
+#                                 commonMain cover exactly these types, are the
+#                                 production path on iOS, and are cross-checked
+#                                 against Jackson by ClinkKotlinSerializationTest
+#                                 and KotlinSerializationMapperTest. Routing
+#                                 jvmAndroid's fromJsonTo at
+#                                 KotlinSerializationMapper would delete both
+#                                 package keeps (~1,600 seeded members).
+#   Jackson on-disk stores        REMOVABLE. Plain data classes; @Serializable
+#                                 + kotlinx gives compile-time literal names.
+#                                 App-private files, so no interop risk.
+#   Enum constants                REMOVABLE WITH NO MIGRATION. Give each
+#                                 persisted enum an explicit `val code: String`
+#                                 and store that instead of `.name`. Set the
+#                                 codes equal to today's constant names and
+#                                 every existing DataStore value keeps working,
+#                                 while the literal is untouchable by R8. That
+#                                 deletes the one blanket rule left
+#                                 (`-keepclassmembers enum *`), which today
+#                                 blocks enum unboxing across all 707 enums.
+#
 # Format — one per line, `#` comments to end of line:
 #   class  <fqn>                 class must keep its exact name
 #   method <fqn> <name>...       those methods must keep their names
@@ -25,6 +65,9 @@ class  com.vitorpamplona.amethyst.ui.tor.ArtiNative
 method com.vitorpamplona.amethyst.ui.tor.ArtiLogCallback onLogLine
 
 # --- Named from outside the DEX ----------------------------------------------
+# No keep rule of ours backs the three workers below: androidx.work's own
+# consumer rules do. They stay listed so that if the library ever drops them,
+# the release fails here instead of on a user's phone.
 # <meta-data android:value> in the play manifest; the Cast framework
 # Class.forName()s it. AGP generates keeps for component android:name, not for
 # meta-data values, so nothing but an explicit rule protects this one.
