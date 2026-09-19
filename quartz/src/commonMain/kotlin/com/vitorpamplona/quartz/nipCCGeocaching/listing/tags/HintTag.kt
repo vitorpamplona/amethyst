@@ -24,23 +24,20 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * The `hint` tag of a geocache listing (kind 37516): help for finding the cache, **ROT13'd on
- * the wire**.
+ * The `hint` tag of a geocache listing (kind 37516): help for finding the cache.
  *
- * NIP-CC's tag table calls this "plaintext" and its example carries `["hint", "In the
- * branches"]`, but every publisher on the network encodes it. Of 34 hints sampled from
- * relay.damus.io / nos.lol / relay.primal.net / nostr.wine, 33 were ROT13 ciphertext that
- * decodes to clean English, across several independent authors; the reference client
- * (treasures.to, mirrored in Lightning Piggy's `nostrPlacesService.ts`) rot13s on write and
- * rot13s back on read, and says so in a comment.
+ * **Which form is on the wire is not knowable from the tag.** NIP-CC contradicts itself — its
+ * tag table calls this "plaintext" and its example is plaintext, while its Clients section asks
+ * for "hint encoding, such as ROT13, to prevent spoilers" — and publishers went both ways. Of 34
+ * hints sampled from relay.damus.io / nos.lol / relay.primal.net / nostr.wine, 17 were plaintext
+ * and 17 were ROT13, split cleanly by author.
  *
- * Reading this as plaintext is not a cosmetic mistake — it inverts the spoiler mechanism it
- * exists for. The rotated form is what a reader should see *before* asking, so
- * [com.vitorpamplona.quartz.nipCCGeocaching.listing.rot13] of this value is the revealed text,
- * not the hidden one. See [com.vitorpamplona.quartz.nipCCGeocaching.listing.hintPlaintext].
+ * So this parser hands back exactly what was published and takes no view.
+ * [com.vitorpamplona.quartz.nipCCGeocaching.listing.HintObfuscation] is where the guess lives,
+ * and it is the only thing that should be deciding which of a hint's two rotations to show.
  *
- * ROT13 is obfuscation, never encryption: the hint is public on the relay and anyone can
- * reverse it. The point is only that a finder has to opt in.
+ * Whatever the encoding, it is obfuscation and never secrecy: the hint is public on the relay
+ * and anyone can rotate it. The only goal is that a reader has to opt in.
  */
 class HintTag {
     companion object {

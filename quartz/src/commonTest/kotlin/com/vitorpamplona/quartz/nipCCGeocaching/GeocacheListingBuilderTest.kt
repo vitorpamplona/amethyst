@@ -248,6 +248,35 @@ class GeocacheListingBuilderTest {
     }
 
     @Test
+    fun theHeuristicOnlySpeaksEnglishAndBothReadingsStayReachable() {
+        // The guess is English-only, so a plaintext hint in another language scores as
+        // ciphertext and "reveals" to noise. That is not fixable with a bigger table — it is why
+        // hidden() and revealed() are always the same two strings in some order, so a UI that
+        // offers both can still get a reader to their own hint.
+        listOf("Bajo el banco", "Sob o banco de madeira", "Unter der Bank").forEach { plain ->
+            assertEquals(
+                setOf(plain, rot13(plain)),
+                setOf(HintObfuscation.hidden(plain), HintObfuscation.revealed(plain)),
+                "<$plain>: both readings must stay reachable even when the guess is wrong",
+            )
+        }
+    }
+
+    @Test
+    fun theRarestLettersStillScoreApart() {
+        // A frequency floor would flatten the bottom of the table together, and the comparison
+        // between a form and its rotation stops meaning anything for hints built from rare
+        // letters. `q`, `z` and `x` are the three the table puts lowest.
+        val q = HintObfuscation.englishScore("q")
+        val z = HintObfuscation.englishScore("z")
+        val x = HintObfuscation.englishScore("x")
+
+        assertTrue(q != z, "q and z score identically — a floor is swallowing them")
+        assertTrue(z != x, "z and x score identically — a floor is swallowing them")
+        assertTrue(z < HintObfuscation.englishScore("e"), "the rarest letter should score below the commonest")
+    }
+
+    @Test
     fun theTwoHintFormsAreAlwaysEachOthersRotation() {
         // Whatever the heuristic decides, it only ever chooses between these two — it never
         // invents or drops text.

@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_claimed
 import com.vitorpamplona.amethyst.commons.resources.geocache_difficulty_short
 import com.vitorpamplona.amethyst.commons.resources.geocache_first_to_find
 import com.vitorpamplona.amethyst.commons.resources.geocache_found_it
+import com.vitorpamplona.amethyst.commons.resources.geocache_hint_other_reading
 import com.vitorpamplona.amethyst.commons.resources.geocache_hint_tap_to_reveal
 import com.vitorpamplona.amethyst.commons.resources.geocache_invalid_proof
 import com.vitorpamplona.amethyst.commons.resources.geocache_is_art
@@ -173,10 +174,16 @@ private fun CacheSize.labelRes(): StringResource =
  *
  * [distance] and [claimed] are passed in rather than derived: distance needs the reader's
  * location, and a first-to-find claim needs the cache's logs. A card has neither.
+ *
+ * [showImages] is the reader's "automatically show images" setting, and it has no default on
+ * purpose. The photo URL is supplied by whoever published the cache, so fetching it announces
+ * the reader's IP to a stranger's server and spends their data — exactly what that setting
+ * exists to let them refuse. A caller that cannot answer the question should pass `false`.
  */
 @Composable
 fun GeocacheCard(
     noteEvent: GeocacheListingEvent,
+    showImages: Boolean,
     claimed: Boolean = false,
     distance: String? = null,
     map: GeocacheMap,
@@ -210,7 +217,7 @@ fun GeocacheCard(
     val accent = MaterialTheme.colorScheme.primary
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        CacheHero(photo, point, accent, type.emoji(), pinAlpha, map)
+        CacheHero(if (showImages) photo else null, point, accent, type.emoji(), pinAlpha, map)
 
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -390,7 +397,7 @@ private fun CacheChips(
 }
 
 /**
- * The hint: an invitation until tapped, then the text.
+ * The hint: an invitation, then the text, then the other reading of the text.
  *
  * Shows *no* hint text while hidden — not even the encoded form. Geocaching clients have always
  * done it this way (Lightning Piggy's detail screen offers "Stuck? Tap to reveal the hint"), and
@@ -398,31 +405,40 @@ private fun CacheChips(
  * a hint, and nothing on screen can spoil a find no matter which way round the publisher
  * encoded it.
  *
- * That last point matters here more than it does for them. Publishers disagree about whether
- * `hint` goes on the wire plain or rotated (see [HintObfuscation]), so picking the readable form
- * is a guess — and with nothing rendered until the tap, a wrong guess can only ever show the
- * wrong text *after* the reader asked for it, never before.
+ * The third state is the one that matters. Publishers disagree about whether `hint` goes on the
+ * wire plain or rotated (see [HintObfuscation]), so which form is the readable one is a guess,
+ * and the guess assumes English — a plaintext Spanish hint scores as ciphertext and "reveals"
+ * to noise. Tapping again shows the other rotation, so a misfire costs a tap rather than the
+ * hint. Without that, a reader whose language the heuristic does not speak has no way to reach
+ * their own hint at all.
  */
 @Composable
 private fun SpoilerHint(hint: String) {
-    val revealedText = remember(hint) { HintObfuscation.revealed(hint) }
-    var revealed by remember(hint) { mutableStateOf(false) }
+    val readings = remember(hint) { listOf(HintObfuscation.revealed(hint), HintObfuscation.hidden(hint)) }
+    var shown by remember(hint) { mutableStateOf(0) }
 
-    Column(Modifier.clickable { revealed = !revealed }) {
-        if (revealed) {
-            Text(
-                text = revealedText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
+    Column(Modifier.clickable { shown = (shown + 1) % 3 }) {
+        if (shown == 0) {
             Text(
                 text = stringResource(Res.string.geocache_hint_tap_to_reveal),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
             )
+        } else {
+            Text(
+                text = readings[shown - 1],
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (shown == 1) {
+                Text(
+                    text = stringResource(Res.string.geocache_hint_other_reading),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
         }
     }
 }
@@ -437,21 +453,28 @@ private fun SpoilerHint(hint: String) {
  * [cacheName] is what the log is *about*, and without it the card says only "Found it!" — the
  * one thing a reader scrolling a feed already assumed. The cache is named by an `a` tag, so the
  * name costs a lookup the caller has to do anyway; pass null while it is still loading.
+ *
+ * [showImages] gates the log's photo for the same reason it gates the cache's — see [GeocacheCard].
  */
 @Composable
 fun GeocacheFoundLogCard(
     noteEvent: GeocacheFoundLogEvent,
+    showImages: Boolean,
     proof: FoundLogProof = FoundLogProof.NONE,
     cacheName: String? = null,
 ) {
     val message = remember(noteEvent) { noteEvent.content.trim() }
     val photo =
-        remember(noteEvent) {
-            noteEvent
-                .images()
-                .firstOrNull()
-                ?.trim()
-                ?.ifBlank { null }
+        remember(noteEvent, showImages) {
+            if (!showImages) {
+                null
+            } else {
+                noteEvent
+                    .images()
+                    .firstOrNull()
+                    ?.trim()
+                    ?.ifBlank { null }
+            }
         }
 
     Column(MaterialTheme.colorScheme.replyModifier) {

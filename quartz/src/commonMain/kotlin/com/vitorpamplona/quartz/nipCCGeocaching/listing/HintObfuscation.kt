@@ -49,10 +49,11 @@ import kotlin.math.ln
  * instead gets every hint in the sample right, including short ones like "Small" and
  * "Look up".
  *
- * It is still a guess. It assumes English and ASCII, and says nothing useful about a hint in
- * another language or script — a Portuguese hint may well score better rotated. That is why the
- * UI toggles between the two forms rather than revealing once: a misfire costs a second tap,
- * not the hint.
+ * It is still a guess, and a narrow one: it assumes English and ASCII. A plaintext Spanish hint
+ * ("Bajo el banco") scores worse than its own rotation and would be "revealed" as noise. That is
+ * why the UI cycles prompt → best guess → other rotation rather than revealing once — a misfire
+ * costs a tap, not the hint — and why nothing here should ever be the last word on which form a
+ * reader gets to see.
  *
  * None of this is secrecy. The hint is public on the relay in whatever form its author chose;
  * the only goal is that a reader has to opt in.
@@ -89,9 +90,6 @@ object HintObfuscation {
             0.07,
         )
 
-    /** Frequency floor for a letter English barely uses, so one `q` cannot dominate a short hint. */
-    private const val RARE = 0.01
-
     /**
      * How much [text] looks like English: the mean log frequency of its ASCII letters, 0 when it
      * has none. Higher is more English-like. Only ever compared against the same measure of the
@@ -104,7 +102,7 @@ object HintObfuscation {
             val lower = char.lowercaseChar()
             if (lower in 'a'..'z') {
                 letters++
-                total += ln(ENGLISH_FREQUENCY[lower - 'a'].coerceAtLeast(RARE))
+                total += ln(ENGLISH_FREQUENCY[lower - 'a'])
             }
         }
         return if (letters == 0) 0.0 else total / letters

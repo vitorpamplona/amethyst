@@ -25,6 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geocache_nearby
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
 import com.vitorpamplona.amethyst.commons.ui.note.FoundLogProof
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheCard
@@ -40,6 +42,7 @@ import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationValidator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 /**
@@ -63,7 +66,7 @@ fun RenderGeocache(
     val claimed = remember(noteEvent) { noteEvent.firstToFindWinner() != null }
     val distance = distanceToCache(noteEvent, accountViewModel)
 
-    GeocacheCard(noteEvent, claimed, distance) { latitude, longitude, pinColor, pinEmoji, pinAlpha, aspectRatio ->
+    GeocacheCard(noteEvent, accountViewModel.settings.showImages(), claimed, distance) { latitude, longitude, pinColor, pinEmoji, pinAlpha, aspectRatio ->
         LocationPreviewMap(
             latitude = latitude,
             longitude = longitude,
@@ -96,33 +99,40 @@ private fun distanceToCache(
 ): String? {
     val here = accountViewModel.account.geolocationFlow().value as? LocationState.LocationResult.Success ?: return null
 
-    return remember(noteEvent, here) {
-        val cache = noteEvent.location()?.let { runCatching { it.toGeoHash() }.getOrNull() } ?: return@remember null
-        formatDistance(
-            GeoRelayDirectory.haversineKm(
+    val nearby = stringResource(Res.string.geocache_nearby)
+
+    return remember(noteEvent, here, nearby) {
+        val cache = noteEvent.location()?.toGeoHash() ?: return@remember null
+        GeoRelayDirectory
+            .haversineKm(
                 here.geoHash.centerLat,
                 here.geoHash.centerLon,
                 cache.centerLat,
                 cache.centerLon,
-            ),
-        )
+            ).let { formatDistance(it, nearby) }
     }
 }
 
 /**
- * A distance a walker can act on: metres up close, one decimal to ten kilometres, whole
- * kilometres beyond.
+ * A distance formatted no finer than its source can support.
  *
- * Rounded coarsely on purpose. Amethyst holds only `ACCESS_COARSE_LOCATION` and a cache's
- * geohash is at best a ~5m box, so "1.2 km" is the honest precision — "1,237 m" would dress a
- * fuzzed fix up as a survey.
+ * The reader's position comes from [LocationState.geohashStateFlow], which is a **5-character
+ * geohash** — a 4.89km × 4.89km cell — so the centroid this measures from can be ~3.5km from
+ * where the reader is standing. Printing metres off that would be fiction: someone standing at
+ * the cache would read "3 km", and a cache 2km away could read "120 m". Anything inside one
+ * cell is therefore [NEARBY] rather than a number, and everything else is a rounded kilometre
+ * with a `~`.
+ *
+ * Coarse twice over, in fact: Amethyst declares only `ACCESS_COARSE_LOCATION`, so Android fuzzes
+ * each fix before the geohash is even computed.
  */
-private fun formatDistance(km: Double): String =
-    when {
-        km < 1.0 -> "${(km * 1000).roundToInt()} m"
-        km < 10.0 -> "${(km * 10).roundToInt() / 10.0} km"
-        else -> "${km.roundToInt()} km"
-    }
+private fun formatDistance(
+    km: Double,
+    nearby: String,
+): String = if (km < CELL_KM) nearby else "~${km.roundToInt()} km"
+
+/** Width of the geohash cell the reader's position is quantised to, in kilometres. */
+private const val CELL_KM = 4.89
 
 /**
  * Entry for a NIP-CC found log (kind 7516).
@@ -150,9 +160,10 @@ fun RenderGeocacheFoundLog(
     val noteEvent = baseNote.event as? GeocacheFoundLogEvent ?: return
     val address = remember(noteEvent) { noteEvent.geocache() }
     val hasProof = remember(noteEvent) { noteEvent.hasVerificationAttached() }
+    val showImages = accountViewModel.settings.showImages()
 
     if (address == null) {
-        GeocacheFoundLogCard(noteEvent, FoundLogProof.NONE)
+        GeocacheFoundLogCard(noteEvent, showImages, FoundLogProof.NONE)
         return
     }
 
@@ -160,7 +171,7 @@ fun RenderGeocacheFoundLog(
     // was actually found, and "Found it!" on its own says nothing.
     LoadAddressableNote(address, accountViewModel) { cacheNote ->
         if (cacheNote == null) {
-            GeocacheFoundLogCard(noteEvent, if (hasProof) FoundLogProof.UNKNOWN else FoundLogProof.NONE)
+            GeocacheFoundLogCard(noteEvent, showImages, if (hasProof) FoundLogProof.UNKNOWN else FoundLogProof.NONE)
         } else {
             // Read through the note rather than observeNoteEvent<GeocacheListingEvent>: that
             // helper's cast is erased, so it hands back whatever the address resolved to and the
@@ -187,7 +198,7 @@ fun RenderGeocacheFoundLog(
                         }
                 }
 
-            GeocacheFoundLogCard(noteEvent, proof, listing?.cacheName())
+            GeocacheFoundLogCard(noteEvent, showImages, proof, listing?.cacheName())
         }
     }
 }
