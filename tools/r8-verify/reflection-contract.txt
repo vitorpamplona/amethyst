@@ -1,0 +1,77 @@
+# What must survive R8 with its ORIGINAL name, and why.
+#
+# R8 cannot see reflection. Every line here is a place where something outside
+# the DEX — a .so, a manifest attribute, a JSON file on disk, WorkManager's
+# database, a DataStore value written by an older install — looks a name up at
+# runtime. Rename or remove it and the app compiles, ships, and fails only on a
+# user's device.
+#
+# `verify_reflection_contract.py` checks each line against a release build's
+# mapping.txt, so a keep rule that silently stops matching (a moved class, a
+# renamed package, a deleted rule) fails the release instead of the user.
+#
+# Adding reflection? Add the keep rule in amethyst/proguard-rules.pro AND a line
+# here. A rule with no line here is unverified; a line here with no rule fails.
+#
+# Format — one per line, `#` comments to end of line:
+#   class  <fqn>                 class must keep its exact name
+#   method <fqn> <name>...       those methods must keep their names
+#   fields <fqn>                 class name AND every field name preserved
+#   enum   <fqn> <CONST>...      those constants keep their names (class may be renamed)
+
+# --- JNI: the symbol name Java_<class>_<method> lives in libarti_android.so ---
+class  com.vitorpamplona.amethyst.ui.tor.ArtiNative
+# Rust calls back by name: GetMethodID("onLogLine") in tools/arti-build/src/lib.rs
+method com.vitorpamplona.amethyst.ui.tor.ArtiLogCallback onLogLine
+
+# --- Named from outside the DEX ----------------------------------------------
+# <meta-data android:value> in the play manifest; the Cast framework
+# Class.forName()s it. AGP generates keeps for component android:name, not for
+# meta-data values, so nothing but an explicit rule protects this one.
+class  com.vitorpamplona.amethyst.service.cast.chromecast.AmethystCastOptionsProvider
+# WorkManager stores the class name in its own DB and instantiates it by name on
+# a later process start — including after an update that reshuffled the mapping.
+class  com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
+class  com.vitorpamplona.amethyst.service.notifications.NotificationCatchUpWorker
+class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+
+# --- Jackson reflective data binding: field names ARE the wire format ---------
+# NIP-47 Wallet Connect, reached by treeToValue() from the Request/Response/
+# Notification deserializers. Spot-checked rather than exhaustive: these four
+# cover a params, a response, a nested type and an enum in the same package, so
+# a rule that stops matching the package fails here.
+fields com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceParams
+fields com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsSuccessResponse
+fields com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+fields com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcError
+# CLINK, parsed with OptimizedJsonMapper.fromJsonTo<T>()
+fields com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
+fields com.vitorpamplona.quartz.experimental.clink.debits.DebitRequest
+fields com.vitorpamplona.quartz.experimental.clink.manage.ManageRequest
+
+# --- JSON the app writes to disk and reads back after an update --------------
+# Field names are the file format; renaming them orphans every existing file.
+fields com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+fields com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostFile
+fields com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
+fields com.vitorpamplona.amethyst.service.pow.PowJobsFile
+fields com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore$UsageFile
+
+# --- Enum constants persisted as strings -------------------------------------
+# The preference stores write `enum.name` into DataStore and read it back with
+# valueOf(). A renamed constant resets that setting for every existing user on
+# the first launch after the update — silently, and only in a release build.
+# The enum CLASS is still renamed; only the constant names are pinned.
+enum com.vitorpamplona.amethyst.commons.tor.TorType INTERNAL
+enum com.vitorpamplona.amethyst.model.ThemeType SYSTEM LIGHT DARK
+enum com.vitorpamplona.amethyst.model.BooleanType ALWAYS NEVER
+enum com.vitorpamplona.amethyst.model.ConnectivityType ALWAYS NEVER
+enum com.vitorpamplona.amethyst.model.FeatureSetType SIMPLIFIED
+enum com.vitorpamplona.amethyst.model.FontFamilyType SYSTEM
+enum com.vitorpamplona.amethyst.model.FontSizeType NORMAL
+enum com.vitorpamplona.amethyst.model.AccentColorType PURPLE
+enum com.vitorpamplona.amethyst.model.ProfileGalleryType CLASSIC
+enum com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
+enum com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
+enum com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ChannelExpand
+enum com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus PENDING PUBLISHING SENT FAILED CANCELLED

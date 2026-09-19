@@ -412,3 +412,30 @@ but new reports should not need repairing.
 CI's are gone when the job ends, and a mapping cannot be regenerated after the
 fact (it would need a bit-identical rebuild, and R8's renaming is not stable
 across runs).
+
+### Did obfuscation break anything?
+
+R8 cannot see reflection, so nothing in the build tells you that a keep rule
+stopped matching. `tools/r8-verify/reflection-contract.txt` lists every place
+something outside the DEX resolves a name at runtime — JNI symbols, Jackson DTO
+field names, enum constants persisted in DataStore, WorkManager's stored worker
+class names, the Cast `OptionsProvider` named in a manifest `<meta-data>` value
+— and the release workflow asserts each one against what R8 actually emitted,
+for both flavors, before any asset is collected:
+
+```bash
+python3 tools/r8-verify/verify_reflection_contract.py \
+    amethyst/build/outputs/mapping/playRelease/
+```
+
+Run it on any local minified build too. It takes under a second and needs no
+device.
+
+**Adding reflection means adding two things**: the keep rule, and a line in the
+contract. A rule with no contract line is unverified and will rot silently.
+
+What this does *not* cover is reflection nobody wrote down. For that the honest
+controls are a staged Play rollout (the crash reporter retraces itself now, so
+a break is legible within hours) and exercising NIP-47 wallet connect, NIP-46
+bunker login, Tor, scheduled posts and a settings round-trip on a minified
+build before shipping.

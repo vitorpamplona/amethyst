@@ -137,9 +137,38 @@ then read `amethyst/build/outputs/mapping/playRelease/`:
   are classes a keep rule pinned; scan them for anything you did not intend.
 - `seeds.txt` / `usage.txt` — what the keeps matched, and what was removed.
 
-Exercise NIP-47 wallet connect, NIP-46 bunker login, Tor, scheduled posts and a
-settings round-trip (change theme/font, kill, relaunch) on the minified build —
-those are the paths the keeps above exist for.
+### The contract check
+
+R8 cannot see reflection, so a keep rule that quietly stops matching — a class
+moved to another package, a rule deleted in a merge, a DTO renamed — gives you a
+green build and an APK that breaks on a user's device.
+`tools/r8-verify/reflection-contract.txt` lists every name resolved from outside
+the DEX, and the verifier asserts each against what R8 actually emitted:
+
+```bash
+python3 tools/r8-verify/verify_reflection_contract.py \
+    amethyst/build/outputs/mapping/playRelease/
+```
+
+Under a second, no device. The release workflow runs it for both flavors before
+collecting assets, so a break fails the release instead of shipping.
+
+**Adding reflection means adding two things**: the keep rule, and a line in the
+contract. A rule with no contract line is unverified and will rot.
+
+It reads both `mapping.txt` and `usage.txt`, because neither is enough alone —
+mapping.txt records only what *changed* (an intact `-keep ... { *; }` class has
+an empty body, and an unrenamed member has no line at all, so absence there
+means "preserved"), while a member R8 *deleted* appears only in usage.txt. It
+also cross-checks that the two files come from the same R8 run: mapping.txt is
+written during packaging, not at minify time, so a minify-only rebuild leaves a
+stale one behind next to a fresh usage.txt.
+
+What it cannot cover is reflection nobody wrote down. For that: a staged Play
+rollout (the crash reporter retraces itself, so breaks are legible within
+hours), and exercising NIP-47 wallet connect, NIP-46 bunker login, Tor,
+scheduled posts and a settings round-trip (change theme/font, kill, relaunch) on
+a minified build — those are the paths the keeps above exist for.
 
 ## Build Configuration
 
