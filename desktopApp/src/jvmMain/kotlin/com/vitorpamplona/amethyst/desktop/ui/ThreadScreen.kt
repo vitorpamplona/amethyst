@@ -385,9 +385,12 @@ fun ThreadScreen(
                                                 event?.pubKey?.let { localCache.getUserIfExists(it) }
                                             }
 
-                                        // Read so this row recomposes when the reply author's
-                                        // kind-0 arrives — usually well after the reply does.
-                                        rememberAuthorMetadataKey(author)
+                                        // The reply almost always renders before its author's
+                                        // kind-0 does, so the name and avatar have to come from
+                                        // an observation rather than the lookup above.
+                                        val authorMeta = rememberAuthorMetadataKey(author)
+                                        val authorName = remember(author, authorMeta) { author?.toBestDisplayName() }
+                                        val authorAvatar = remember(author, authorMeta) { author?.profilePicture() }
 
                                         val reactionCount =
                                             remember(reactionsState) { note.countReactions() }
@@ -395,13 +398,13 @@ fun ThreadScreen(
 
                                         CommentItem(
                                             authorName =
-                                                author?.toBestDisplayName()
+                                                authorName
                                                     ?: event?.pubKey?.take(8)
                                                     ?: "",
                                             authorHandle =
                                                 author?.pubkeyNpub()?.take(16)?.let { "@$it..." }
                                                     ?: "",
-                                            authorAvatarUrl = author?.profilePicture(),
+                                            authorAvatarUrl = authorAvatar,
                                             authorPubKeyHex = event?.pubKey ?: "",
                                             content = event?.content ?: "",
                                             timeAgo = (event?.createdAt ?: 0L).toTimeAgo(),
