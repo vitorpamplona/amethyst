@@ -133,6 +133,8 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.MUSIC_PLAYLISTS,
         NavBarItem.POLLS,
         NavBarItem.PRODUCTS,
+        NavBarItem.GEOCACHES,
+        NavBarItem.GEOCACHE_HUNTS,
         NavBarItem.WORKOUTS,
         NavBarItem.GIT_REPOSITORIES,
         NavBarItem.HIGHLIGHTS,

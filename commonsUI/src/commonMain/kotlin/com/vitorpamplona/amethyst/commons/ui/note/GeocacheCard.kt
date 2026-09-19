@@ -131,7 +131,8 @@ private val HeroShape = RoundedCornerShape(14.dp)
 private val InsetShape = RoundedCornerShape(10.dp)
 private const val HERO_RATIO = 16f / 9f
 
-private fun CacheType?.emoji(): String =
+/** The pin glyph for a cache type — shared so the map, the cards and the composer agree. */
+fun CacheType?.geocacheEmoji(): String =
     when (this) {
         CacheType.TRADITIONAL -> "📦"
         CacheType.MULTI -> "🧭"
@@ -139,7 +140,7 @@ private fun CacheType?.emoji(): String =
         null -> "📍"
     }
 
-private fun CacheType?.labelRes(): StringResource? =
+fun CacheType?.geocacheLabelRes(): StringResource? =
     when (this) {
         CacheType.TRADITIONAL -> Res.string.geocache_type_traditional
         CacheType.MULTI -> Res.string.geocache_type_multi
@@ -147,7 +148,7 @@ private fun CacheType?.labelRes(): StringResource? =
         null -> null
     }
 
-private fun CacheSize.labelRes(): StringResource =
+fun CacheSize.geocacheLabelRes(): StringResource =
     when (this) {
         CacheSize.MICRO -> Res.string.geocache_size_micro
         CacheSize.SMALL -> Res.string.geocache_size_small
@@ -190,7 +191,7 @@ fun GeocacheCard(
 ) {
     val name = remember(noteEvent) { noteEvent.cacheName()?.trim().orEmpty() }
     val description = remember(noteEvent) { noteEvent.content.trim() }
-    val point = remember(noteEvent) { noteEvent.cachePoint() }
+    val point = remember(noteEvent) { noteEvent.geocachePoint() }
     val type = remember(noteEvent) { noteEvent.cacheType() }
     val size = remember(noteEvent) { noteEvent.cacheSize() }
     val difficulty = remember(noteEvent) { noteEvent.difficulty() }
@@ -217,12 +218,12 @@ fun GeocacheCard(
     val accent = MaterialTheme.colorScheme.primary
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        CacheHero(if (showImages) photo else null, point, accent, type.emoji(), pinAlpha, map)
+        GeocacheHero(if (showImages) photo else null, point, accent, type.geocacheEmoji(), pinAlpha, map)
 
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Text(
-                    text = "${type.emoji()}  ${name.ifEmpty { stringResource(Res.string.geocache_unnamed) }}",
+                    text = "${type.geocacheEmoji()}  ${name.ifEmpty { stringResource(Res.string.geocache_unnamed) }}",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -242,9 +243,9 @@ fun GeocacheCard(
                 }
             }
 
-            SpecLine(type, size, difficulty, terrain)
+            GeocacheSpecLine(type, size, difficulty, terrain)
 
-            CacheChips(
+            GeocacheChips(
                 claimed = claimed,
                 isArchived = isArchived,
                 isFirstToFind = isFirstToFind,
@@ -277,7 +278,7 @@ fun GeocacheCard(
 
             if (hint != null) {
                 Spacer(Modifier.height(8.dp))
-                SpoilerHint(hint)
+                GeocacheSpoilerHint(hint)
             }
         }
     }
@@ -290,7 +291,7 @@ fun GeocacheCard(
  * spending a second full-width block on it. With neither, the card opens straight on its title.
  */
 @Composable
-private fun CacheHero(
+fun GeocacheHero(
     photo: String?,
     point: Pair<Double, Double>?,
     accent: Color,
@@ -332,7 +333,7 @@ private fun CacheHero(
 
 /** `Traditional · Regular · D1 · T1` — the ratings, in one line they can be skimmed past. */
 @Composable
-private fun SpecLine(
+fun GeocacheSpecLine(
     type: CacheType?,
     size: CacheSize?,
     difficulty: Int?,
@@ -340,8 +341,8 @@ private fun SpecLine(
 ) {
     val parts =
         listOfNotNull(
-            type.labelRes()?.let { stringResource(it) },
-            size?.let { stringResource(it.labelRes()) },
+            type.geocacheLabelRes()?.let { stringResource(it) },
+            size?.let { stringResource(it.geocacheLabelRes()) },
             difficulty?.let { stringResource(Res.string.geocache_difficulty_short, it) },
             terrain?.let { stringResource(Res.string.geocache_terrain_short, it) },
         )
@@ -366,7 +367,7 @@ private fun SpecLine(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CacheChips(
+fun GeocacheChips(
     claimed: Boolean,
     isArchived: Boolean,
     isFirstToFind: Boolean,
@@ -387,12 +388,12 @@ private fun CacheChips(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (isFirstToFind && !claimed) Chip("🥇  " + stringResource(Res.string.geocache_first_to_find), gold, strong = true)
-        if (needsVerification) Chip("🔐  " + stringResource(Res.string.geocache_needs_verification), green, strong = true)
-        if (isArt) Chip("🎨  " + stringResource(Res.string.geocache_is_art), muted)
-        if (hasMission) Chip("🗝  " + stringResource(Res.string.geocache_mission), muted)
-        if (claimed) Chip("🏁  " + stringResource(Res.string.geocache_claimed), muted, dim = true)
-        if (isArchived) Chip("🗃️  " + stringResource(Res.string.geocache_archived), muted, dim = true)
+        if (isFirstToFind && !claimed) GeocacheChip("🥇  " + stringResource(Res.string.geocache_first_to_find), gold, strong = true)
+        if (needsVerification) GeocacheChip("🔐  " + stringResource(Res.string.geocache_needs_verification), green, strong = true)
+        if (isArt) GeocacheChip("🎨  " + stringResource(Res.string.geocache_is_art), muted)
+        if (hasMission) GeocacheChip("🗝  " + stringResource(Res.string.geocache_mission), muted)
+        if (claimed) GeocacheChip("🏁  " + stringResource(Res.string.geocache_claimed), muted, dim = true)
+        if (isArchived) GeocacheChip("🗃️  " + stringResource(Res.string.geocache_archived), muted, dim = true)
     }
 }
 
@@ -413,7 +414,7 @@ private fun CacheChips(
  * their own hint at all.
  */
 @Composable
-private fun SpoilerHint(hint: String) {
+fun GeocacheSpoilerHint(hint: String) {
     val readings = remember(hint) { listOf(HintObfuscation.revealed(hint), HintObfuscation.hidden(hint)) }
     var shown by remember(hint) { mutableStateOf(0) }
 
@@ -506,13 +507,13 @@ fun GeocacheFoundLogCard(
                     }
                     when (proof) {
                         FoundLogProof.VALID ->
-                            Chip(
+                            GeocacheChip(
                                 "✅  " + stringResource(Res.string.geocache_verified_find),
                                 MaterialTheme.colorScheme.allGoodColor.copy(alpha = 0.18f),
                                 strong = true,
                             )
                         FoundLogProof.INVALID ->
-                            Chip(
+                            GeocacheChip(
                                 "⚠️  " + stringResource(Res.string.geocache_invalid_proof),
                                 MaterialTheme.colorScheme.warningColor.copy(alpha = 0.22f),
                                 strong = true,
@@ -548,7 +549,7 @@ fun GeocacheFoundLogCard(
 
 /** One fact, on a [tint] wash. [strong] bolds it; [dim] fades it to "this is over". */
 @Composable
-private fun Chip(
+fun GeocacheChip(
     label: String,
     tint: Color,
     strong: Boolean = false,
@@ -570,7 +571,7 @@ private fun Chip(
  * A listing has no `lat`/`lon` tags — unlike a road event — so the geohash is the only location
  * there is, and the finest one is the only one precise enough to walk to.
  */
-private fun GeocacheListingEvent.cachePoint(): Pair<Double, Double>? {
+fun GeocacheListingEvent.geocachePoint(): Pair<Double, Double>? {
     val finest = location() ?: return null
     val decoded = runCatching { finest.toGeoHash() }.getOrNull() ?: return null
     return decoded.centerLat to decoded.centerLon

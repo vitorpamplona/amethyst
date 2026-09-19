@@ -441,7 +441,39 @@ both `removeAll { it is Marker }` first). That is the one piece with no preceden
   handed to a signer that outlives the call.
 - **The find composer must not attach the finder's location**, and must say so on screen.
 
-### 6.6 Build order
+### 6.6 Build order — **built**
+
+All six screens, eight routes and the sheets below now exist and compile. What landed:
+
+| Piece | Where |
+|---|---|
+| 8 routes + `GeocacheTab` | `ui/navigation/routes/Routes.kt` |
+| Drawer + catalog + bottom-bar category | `NavBarItem.kt`, `DrawerSections.kt` |
+| Relay filter family (8 files) | `commons/.../relayClient/geocaches/` |
+| Follow list, prefs, data source, 4 feed states | `AccountSettings`, `Account`, `LocalPreferences`, `RelaySubscriptionsCoordinator`, `AccountFeedContentStates` |
+| 4 feed filters | `ui/.../geocaches/dal/` |
+| Hub, 5 tabs, top bar, FAB, feed renderer | `ui/.../geocaches/` |
+| Cache detail, log thread, owner actions, DNF sheet | `ui/.../geocaches/detail/` |
+| Find composer + verification | `ui/.../geocaches/log/` |
+| Cache composer | `ui/.../geocaches/create/` |
+| Map tab with clustering | `ui/.../geocaches/map/` |
+| Hunt detail + composer | `ui/.../geocaches/hunt/` |
+| Owner revisions (archive, `F` lock-in) + 6 tests | `quartz/.../listing/GeocacheListingRevision.kt` |
+
+Two things behave differently from the sketch, both deliberately:
+
+- **Photos on a found log go through the standard upload pipeline**, not a geocaching-specific
+  one, so a find inherits Blossom/NIP-96 server choice and compression from the user's settings.
+- **The Key Quest answer is appended to the log body** rather than given a tag. NIP-CC defines
+  `mission` on the listing and nothing for the response, so the only interoperable place for it
+  is the text every client already renders.
+
+Still open, and honestly so: none of it has been seen rendering, the cluster threshold (50) is a
+guess that wants measuring on a device, and the hub's Nearby tab currently orders by recency —
+the distance sort and its explicit location opt-in are wired through the card but not yet the
+list ordering.
+
+### 6.6b Original build order
 
 1. Cache detail + log thread — gives every entry point somewhere to land.
 2. Log a find, with verification — the first thing a player does, and it makes Amethyst the only
