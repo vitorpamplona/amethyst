@@ -46,8 +46,7 @@ name.** In this app those are, exhaustively:
 |---|---|---|
 | JNI symbol `Java_<class>_<method>` | `ArtiNative`, secp256k1 | covered by the default `native <methods>` rule |
 | Native code calling *back* by name | `ArtiLogCallback.onLogLine`, looked up with `GetMethodID` in `tools/arti-build/src/lib.rs` | `-keep class …ArtiLogCallback { *; }` |
-| JNA struct/callback mapping | lazysodium | `-keep class com.goterl.lazysodium.** { *; }` |
-| Jackson **reflective** data binding | `nip47WalletConnect.rpc.**`, `experimental.clink.**` | `-keep class <pkg>.** { *; }` |
+| Generated code reflected over by a library | the AppFunctions bridge (`appfunctions.**`, play flavor only) | `-keep class <pkg>.** { *; }` |
 | Enum constant persisted as a string | `UISharedPreferences` writes `enum.name`, reads `Type.valueOf(s)` | `-keepclassmembers enum * { <fields>; … }` |
 | Class name in a manifest `<meta-data android:value>` | `AmethystCastOptionsProvider` | explicit `-keep` — AGP generates keeps from component `android:name`, **not** from meta-data |
 | Class name in WorkManager's database | the three `CoroutineWorker`s | `-keep class * extends androidx.work.ListenableWorker { <init>(...); }` |
@@ -155,6 +154,20 @@ collecting assets, so a break fails the release instead of shipping.
 
 **Adding reflection means adding two things**: the keep rule, and a line in the
 contract. A rule with no contract line is unverified and will rot.
+
+Scope a line to one flavor with a leading `@play` / `@fdroid` when the class is
+only compiled into that variant — play-only code is absent from the F-Droid APK,
+and "absent" is indistinguishable from "R8 deleted it", so an unscoped line for
+it fails that release.
+
+Reflection that names a class R8 *cannot* rename needs no rule and no line: the
+platform trust manager `quic` probes for a 3-arg `checkServerTrusted` ships in
+Android, not in our DEX. The opposite case is the one to watch — a name of
+*ours* used as a value. `AmethystAppFunctions` compared
+`signer::class.qualifiedName` against `"…NostrSignerExternal"`; R8 renames that
+class, so the branch silently stopped running the day obfuscation was turned on.
+Prefer `is` over a name comparison; there is no keep rule that makes the latter
+safe to write.
 
 It reads both `mapping.txt` and `usage.txt`, because neither is enough alone —
 mapping.txt records only what *changed* (an intact `-keep ... { *; }` class has

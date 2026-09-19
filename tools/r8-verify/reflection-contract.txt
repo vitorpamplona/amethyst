@@ -35,6 +35,20 @@
 #                                 route at the hand-written kotlinx serializers
 #                                 on every target now, and the Jackson
 #                                 (de)serializers for them are gone.
+#   Class name as a value         REMOVED. requireInProcessSigner() compared
+#                                 `signer::class.qualifiedName` against the FQN
+#                                 of NostrSignerExternal. R8 renames that class,
+#                                 so the branch never ran in a release build. It
+#                                 is a plain `is` check now — nothing to keep.
+#   Platform-class reflection     IRREDUCIBLE AND FREE. quic's
+#                                 JdkCertificateValidator probes the JDK/Android
+#                                 trust manager for the 3-arg
+#                                 checkServerTrusted(chain, authType, host).
+#                                 That class ships in the platform, not in our
+#                                 DEX, so R8 never renames it — no rule needed.
+#   libscrypt / NetCipher /       GONE. Their keep rules matched zero classes:
+#   LazySodium / JNA              libsodium is a pure-Kotlin implementation now
+#                                 and Tor runs through arti. Rules deleted.
 #   Jackson on-disk stores        REMOVABLE. Plain data classes; @Serializable
 #                                 + kotlinx gives compile-time literal names.
 #                                 App-private files, so no interop risk.
@@ -49,6 +63,10 @@
 #                                 blocks enum unboxing across all 707 enums.
 #
 # Format — one per line, `#` comments to end of line:
+#   [@play|@fdroid]              optional leading scope: check this line only on
+#                                that flavor. Play-only code is absent from the
+#                                F-Droid APK, and "absent" reads as "R8 deleted
+#                                it" — an unscoped line would fail that release.
 #   class  <fqn>                 class must keep its exact name
 #   method <fqn> <name>...       those methods must keep their names
 #   fields <fqn>                 class name AND every field name preserved
@@ -66,12 +84,17 @@ method com.vitorpamplona.amethyst.ui.tor.ArtiLogCallback onLogLine
 # <meta-data android:value> in the play manifest; the Cast framework
 # Class.forName()s it. AGP generates keeps for component android:name, not for
 # meta-data values, so nothing but an explicit rule protects this one.
-class  com.vitorpamplona.amethyst.service.cast.chromecast.AmethystCastOptionsProvider
+@play class com.vitorpamplona.amethyst.service.cast.chromecast.AmethystCastOptionsProvider
 # WorkManager stores the class name in its own DB and instantiates it by name on
 # a later process start — including after an update that reshuffled the mapping.
 class  com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 class  com.vitorpamplona.amethyst.service.notifications.NotificationCatchUpWorker
 class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+
+# The AppFunctions bridge is kept whole by a package rule, so this asserts the
+# rule still matches something. androidx.appfunctions reflects over the generated
+# inventories and @AppFunctionSerializable types; play-only source set.
+@play class com.vitorpamplona.amethyst.appfunctions.AmethystAppFunctions
 
 # --- Jackson reflective data binding: field names ARE the wire format ---------
 # NIP-47 and CLINK used to be listed here. They are not data-bound reflectively
@@ -85,6 +108,14 @@ class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 # the first launch after the update — silently, and only in a release build.
 # The enum CLASS is still renamed; only the constant names are pinned.
 enum com.vitorpamplona.amethyst.commons.tor.TorType INTERNAL
+
+# Not a preference: these constant names ARE the NIP-47 wire strings. The
+# response parser does NwcErrorCode.valueOf(json["code"]) on a string another
+# wallet wrote, so a rename turns every typed error into a null code and the
+# UI loses the reason a payment failed. Falls back quietly (try/catch), which
+# is exactly why it would never be noticed.
+enum com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode RATE_LIMITED NOT_IMPLEMENTED INSUFFICIENT_BALANCE PAYMENT_FAILED QUOTA_EXCEEDED RESTRICTED UNAUTHORIZED INTERNAL UNSUPPORTED_ENCRYPTION BAD_REQUEST NOT_FOUND EXPIRED UNSUPPORTED_PAYMENT_INSTRUCTION UNSUPPORTED_NETWORK OTHER
+
 enum com.vitorpamplona.amethyst.model.ThemeType SYSTEM LIGHT DARK
 enum com.vitorpamplona.amethyst.model.BooleanType ALWAYS NEVER
 enum com.vitorpamplona.amethyst.model.ConnectivityType ALWAYS NEVER

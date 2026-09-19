@@ -94,35 +94,13 @@
 # secp256k1's JNI layer resolves these from native code.
 -keep class fr.acinq.secp256k1.** { *; }
 
-# libscrypt
--keep class com.lambdaworks.codec.** { *; }
--keep class com.lambdaworks.crypto.** { *; }
--keep class com.lambdaworks.jni.** { *; }
-
--keep class info.guardianproject.** { *; }
-
-# JNA for Libsodium: JNA maps these types onto the C ABI by reflecting over
-# their fields and method signatures at runtime.
--keep class com.goterl.lazysodium.** { *; }
-
-# JNA also requires AWT, which Android does not have. So the classes are broken down to filter AWT out
--keep class com.sun.jna.ToNativeConverter { *; }
--keep class com.sun.jna.NativeMapped { *; }
--keep class com.sun.jna.CallbackReference { *; }
--keep class com.sun.jna.ptr.IntByReference { *; }
--keep class com.sun.jna.NativeLong { *; }
--keep class com.sun.jna.Structure { *; }
--keep class com.sun.jna.Structure$* { *; }
--keep class com.sun.jna.Native$ffi_callback { *; }
--keep class * implements com.sun.jna.Structure$* { *; }
--keep class * implements com.sun.jna.Native$* { *; }
--keep class com.sun.jna.Native {
-    private static com.sun.jna.NativeMapped fromNative(java.lang.Class, java.lang.Object);
-    private static com.sun.jna.NativeMapped fromNative(java.lang.reflect.Method, java.lang.Object);
-    private static java.lang.Class nativeType(java.lang.Class);
-    private static java.lang.Object toNative(com.sun.jna.ToNativeConverter, java.lang.Object);
-    private static java.lang.Object fromNative(com.sun.jna.FromNativeConverter, java.lang.Object, java.lang.reflect.Method);
-}
+# Nothing keeps libscrypt, NetCipher/tor-android, LazySodium or JNA any more:
+# quartz replaced libsodium with a pure-Kotlin implementation (LibSodiumInstance)
+# and Tor now runs through arti's own JNI layer. Their rules used to live here and
+# matched zero classes in the release build — none of those artifacts appear in
+# mapping.txt, usage.txt or seeds.txt, i.e. they are not on the classpath at all.
+# If one ever comes back, so must its rule: JNA in particular maps types onto the
+# C ABI by reflecting over their fields and method signatures at runtime.
 
 # -----------------------------------------------------------------------------
 # Enum constant names

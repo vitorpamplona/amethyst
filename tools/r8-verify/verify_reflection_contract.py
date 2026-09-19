@@ -35,7 +35,17 @@ MEMBER_LINE = re.compile(
 )
 
 
+FLAVORS = ("play", "fdroid")
+
+
 def parse_contract(path):
+    """Read the contract. A line may open with @<flavor> to scope it.
+
+    Play-only code (the Cast provider, the AppFunctions bridge) is not compiled
+    into the F-Droid APK at all, so an unscoped entry for it would read as
+    "R8 deleted this" on that variant and fail a release the moment CI checked
+    both. `@play class ...` limits the check to the variant that has the class.
+    """
     entries = []
     with open(path, encoding="utf-8") as fh:
         for lineno, raw in enumerate(fh, 1):
@@ -43,11 +53,33 @@ def parse_contract(path):
             if not line:
                 continue
             parts = line.split()
+            scope = None
+            if parts[0].startswith("@"):
+                scope = parts[0][1:]
+                if scope not in FLAVORS:
+                    sys.exit(f"{path}:{lineno}: unknown flavor {scope!r}; "
+                             f"expected one of {', '.join(FLAVORS)}")
+                parts = parts[1:]
+            if len(parts) < 2:
+                sys.exit(f"{path}:{lineno}: expected '<kind> <fqn> [names...]'")
             kind, fqn, rest = parts[0], parts[1], parts[2:]
             if kind not in ("class", "method", "fields", "enum"):
                 sys.exit(f"{path}:{lineno}: unknown check kind {kind!r}")
-            entries.append((kind, fqn, rest, lineno))
+            entries.append((kind, fqn, rest, lineno, scope))
     return entries
+
+
+def flavor_of(mapping_dir):
+    """playRelease -> play, fdroidRelease -> fdroid, anything else -> None.
+
+    None means "check everything": an unrecognised directory must not silently
+    skip entries.
+    """
+    variant = mapping_dir.rsplit("/", 1)[-1]
+    for flavor in FLAVORS:
+        if variant.startswith(flavor):
+            return flavor
+    return None
 
 
 def consistency_check(mapping_path, usage_path):
@@ -169,7 +201,11 @@ def main():
         return 1
 
     entries = parse_contract(contract_path)
-    wanted = {fqn for _, fqn, _, _ in entries}
+    flavor = flavor_of(mapping_dir)
+    in_scope = [e for e in entries if e[4] is None or e[4] == flavor]
+    skipped = len(entries) - len(in_scope)
+    entries = in_scope
+    wanted = {fqn for _, fqn, _, _, _ in entries}
     blocks = collect(mapping_path, wanted)
     gone_classes, gone_members = collect_removed(usage_path, wanted)
 
@@ -186,7 +222,7 @@ def main():
     def fail(lineno, fqn, msg):
         failures.append(f"  {contract_path}:{lineno}  {fqn}\n      {msg}")
 
-    for kind, fqn, rest, lineno in entries:
+    for kind, fqn, rest, lineno, _scope in entries:
         if fqn in gone_classes:
             fail(lineno, fqn, "deleted by R8 (listed in usage.txt) — nothing keeps it.")
             continue
@@ -236,7 +272,8 @@ def main():
         print("\nFix the keep rule in amethyst/proguard-rules.pro (or quartz/consumer-rules.pro),"
               "\nor update the contract if the code genuinely moved.", file=sys.stderr)
         return 1
-    print(f"R8 reflection contract: all {checked} checks passed against {mapping_path}")
+    note = f" ({skipped} skipped: not in the {flavor} flavor)" if skipped else ""
+    print(f"R8 reflection contract: all {checked} checks passed against {mapping_path}{note}")
     return 0
 
 
