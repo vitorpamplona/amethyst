@@ -63,7 +63,7 @@ import com.vitorpamplona.quartz.mls.tree.Lifetime
 import com.vitorpamplona.quartz.mls.tree.PathSecretAndKey
 import com.vitorpamplona.quartz.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.mls.tree.UpdatePathNode
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mac.MacInstance
 
@@ -240,7 +240,7 @@ class MlsGroup private constructor(
      * because a function that guessed which encoding a credential used would
      * be worse than one that says plainly what it does.
      */
-    fun memberIdentityHex(leafIndex: Int): String? = memberIdentity(leafIndex)?.toHexKey()
+    fun memberIdentityHex(leafIndex: Int): String? = memberIdentity(leafIndex)?.let { Hex.encode(it) }
 
     /** Lowercase hex of the local member's BasicCredential identity, or null. */
     fun myIdentityHex(): String? = memberIdentityHex(myLeafIndex)
@@ -353,7 +353,7 @@ class MlsGroup private constructor(
         pskId: ByteArray,
         psk: ByteArray,
     ) {
-        pskStore[pskId.toHexKey()] = psk
+        pskStore[Hex.encode(pskId)] = psk
     }
 
     /**
@@ -2155,8 +2155,8 @@ class MlsGroup private constructor(
         var pskSecret = zero
         for ((index, p) in pskProposals.withIndex()) {
             val pskValue =
-                pskStore[p.pskId.toHexKey()]
-                    ?: throw IllegalStateException("PSK not found in store: ${p.pskId.toHexKey()}")
+                pskStore[Hex.encode(p.pskId)]
+                    ?: throw IllegalStateException("PSK not found in store: ${Hex.encode(p.pskId)}")
             val pskExtracted = MlsCryptoProvider.hkdfExtract(zero, pskValue)
             val pskLabel = buildPskLabel(p, index, count)
             val pskInput =
@@ -3506,7 +3506,7 @@ class MlsGroup private constructor(
                     extensions = groupContext.extensions,
                     leafCount = tree.leafCount,
                     myLeafIndex = myLeafIndex,
-                    identityAt = { (tree.getLeaf(it)?.credential as? Credential.Basic)?.identity?.toHexKey() },
+                    identityAt = { leaf -> (tree.getLeaf(leaf)?.credential as? Credential.Basic)?.identity?.let { Hex.encode(it) } },
                     capabilitiesAt = { tree.getLeaf(it)?.capabilities },
                 ),
             )
