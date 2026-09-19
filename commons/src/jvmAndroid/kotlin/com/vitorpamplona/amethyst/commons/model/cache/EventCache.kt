@@ -868,8 +868,8 @@ open class EventCache :
         return null
     }
 
-    override fun getEventStream(): com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream =
-        object : com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream {
+    override fun getEventStream(): ICacheEventStream =
+        object : ICacheEventStream {
             override val newEventBundles = live.newEventBundles
             override val deletedEventBundles = live.deletedEventBundles
         }
