@@ -920,3 +920,83 @@ and `RailCapability` use it, `OnchainZapResolver` does not.
 `:desktopApp:compileKotlin`, `:cli:compileKotlin`, `:commons:verifyKmpPurity`,
 `:commons:jvmTest`, `:cli:test`, `:amethyst:testPlayDebugUnitTest`,
 `spotlessApply`.
+
+
+### Wave 2 part B — compatibility analysis and the road to deleting `DesktopLocalCache` (2026-09-19)
+
+Part A moved the cache. Part B is retiring the Desktop fork. The naive framing
+("repoint ~70 consumers and delete 1,177 lines") is wrong; what follows is the
+measured picture.
+
+#### What is already compatible
+
+- **`consume()` coverage is a strict superset.** All 22 kinds Desktop routes
+  are handled; the 9 without a dedicated `EventCache` overload
+  (`TextNoteEvent`, `ContactListEvent`, `CommentEvent`,
+  `AdvertisedRelayListEvent`, `BlossomServersEvent`, `BookmarkListEvent`,
+  `OldBookmarkListEvent`, `ChatMessageRelayListEvent`, `FollowListEvent`) fall
+  into the generic replaceable/addressable group.
+- **13 of 13 core read methods match** by name and signature.
+- **Feed retention is already aligned** — both platforms hold feed content
+  strongly in the shared `FeedContentState`.
+- **The event stream is separable.** Desktop's `newEventBundles` is driven by
+  `DesktopRelaySubscriptionsCoordinator`, not by the cache, so Desktop can keep
+  owning `DesktopCacheEventStream` and does not inherit `LocalCacheFlow`'s
+  1 s `BundledInsert` window.
+
+#### Resolved during part B
+
+- **`notesByAuthor`** — a strong `ConcurrentHashMap<HexKey, MutableSet<Note>>`
+  of every note ever consumed, which defeated the `LargeSoftCache`
+  (`WeakReference`, despite the name) and made Desktop retain every note for
+  the life of the process. It also drove kind-0 metadata invalidation, which
+  Android has no counterpart for. Removed: every display-data site now observes
+  the author's `User` metadata flow through `Event.rememberDisplayData` (which
+  already existed, documented for this, with zero call sites).
+- **`object` vs `class`** — `EventCache` is now the class, `LocalCache` the
+  process-wide `object` over it. Android's ~350 static call sites were untouched.
+- **`findUsersStartingWith(prefix, limit)`** — `EventCache` now overrides the
+  port method instead of inheriting its `emptyList()` default.
+
+#### Still to do, and the shape it should take
+
+`DesktopLocalCache` should become a **facade over an owned `EventCache`**, not
+a deletion: ~500 lines of genuinely Desktop-specific state survive, and the
+~700 lines of `consumeXxx` routing go.
+
+1. **Storage unification first** (safe, mechanical): drop Desktop's `users` /
+   `notes` / `addressableNotes` / `liveChatChannels` and delegate to the owned
+   `EventCache`. Desktop's own `consumeXxx` methods keep working because they
+   go through `getOrCreateNote` / `getOrCreateAddressableNote`. Note the key
+   type widens (`addressableNotes<String, _>` → `addressables<Address, _>`);
+   the one external reader (`DesktopRelaySubscriptionsCoordinator:599`) ignores
+   the key.
+2. **Then swap routing kind by kind**, each step green against the 62 tests in
+   the 8 `desktop/cache` test classes, ending at
+   `cache.checkDeletionAndConsume(event, relay, true)`.
+3. **Desktop-only state stays**, moved behind the facade: `localRelayStore`
+   write-through, `followedUsers`, `accountPubkey`, `contactListEvents`,
+   `metadataVersion`, `followPackVersion` / `liveActivityVersion`, the
+   snapshots, `cachedAdvertisedRelayList`, follower/following counts,
+   `onProfileMetadataConsumed`, `appScope`, `eventStream`. The mutations are
+   concentrated in five places (metadata, contact list, follow pack, live
+   activity, `clear`) and re-derive cleanly from the event after consume.
+4. **Two Desktop-shaped `consume` overloads do not generalize** — the NIP-47
+   `LnZapPaymentRequestEvent` one takes a `zappedNote` and an `onResponse`
+   callback, and the response one drives `paymentTracker` + `appScope`. Android
+   reaches the same tracker through account state. Keep them Desktop-side.
+5. **`clear()`** has only 2 production call sites (`Main.kt`, logout/account
+   switch) plus 2 in tests. `EventCache` deliberately has no `clear()`:
+   `DeletionIndex`, `FilterIndex`, `HintIndexer` and `NwcPaymentTracker` have
+   no way to reset, so one would be a half-truth. Construct a fresh
+   `EventCache` instead — which is what making it a class bought.
+
+**Known behaviour changes to watch for when this lands:** kind-0 currently
+returns `false` from Desktop's `route()` and is therefore never written through
+to `LocalRelayStore`; `EventCache` returns `true` when the metadata updated, so
+profiles would start persisting. And notes outside a loaded feed become
+GC-eligible on Desktop, as they already are on Android.
+
+**The test suite is not sufficient for this step.** 62 tests cover the consume
+path well, but nothing covers a stale render. Run the desktop app against a
+real relay before calling part B done.
