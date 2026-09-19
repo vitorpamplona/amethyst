@@ -21,11 +21,23 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import com.fasterxml.jackson.databind.RuntimeJsonMappingException
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitRequest
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageRequest
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageResponse
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import kotlinx.serialization.SerializationException
 
 actual object OptimizedJsonMapper {
     actual fun fromJson(json: String): Event =
@@ -81,16 +93,56 @@ actual object OptimizedJsonMapper {
 
     actual fun toJson(tags: Array<Array<String>>): String = JacksonMapper.toJson(tags)
 
+    /**
+     * NIP-47 and CLINK read and write through kotlinx on every target, including this
+     * one. Two reasons, in order of importance:
+     *
+     * 1. These are the only types Jackson bound REFLECTIVELY here — the hand-written
+     *    deserializers dispatched to the concrete classes with `treeToValue`. That made
+     *    ~106 classes' field names load-bearing under R8 and cost two blanket keep rules.
+     *    The kotlinx serializers name every field as a string literal, so nothing has to
+     *    be kept.
+     * 2. Wallets and CLINK peers are other people's software. The kotlinx path reads a
+     *    field of the wrong shape as absent instead of failing the message (see
+     *    nip01Core.kotlinSerialization.LenientJson); Jackson raised
+     *    MismatchedInputException and lost the whole response over one bad field.
+     *
+     * Everything else stays on Jackson, which is faster on the event hot path and is
+     * already non-reflective there.
+     */
     actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =
-        try {
-            JacksonMapper.fromJsonTo<T>(json)
-        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
-            throw IllegalArgumentException(e.message, e)
-        } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
-            throw IllegalArgumentException(e.message, e)
-        } catch (e: RuntimeJsonMappingException) {
-            throw IllegalArgumentException(e.message, e)
+        when (T::class) {
+            Request::class, Response::class, Notification::class,
+            OfferRequest::class, OfferResponse::class, OfferReceipt::class,
+            DebitRequest::class, DebitResponse::class,
+            ManageRequest::class, ManageResponse::class,
+            ->
+                try {
+                    KotlinSerializationMapper.fromJsonTo<T>(json)
+                } catch (e: SerializationException) {
+                    throw IllegalArgumentException(e.message, e)
+                }
+
+            else ->
+                try {
+                    JacksonMapper.fromJsonTo<T>(json)
+                } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+                    throw IllegalArgumentException(e.message, e)
+                } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
+                    throw IllegalArgumentException(e.message, e)
+                } catch (e: RuntimeJsonMappingException) {
+                    throw IllegalArgumentException(e.message, e)
+                }
         }
 
-    actual fun toJson(value: OptimizedSerializable): String = JacksonMapper.toJson(value)
+    actual fun toJson(value: OptimizedSerializable): String =
+        when (value) {
+            is Request, is Response, is Notification,
+            is OfferRequest, is OfferResponse, is OfferReceipt,
+            is DebitRequest, is DebitResponse,
+            is ManageRequest, is ManageResponse,
+            -> KotlinSerializationMapper.toJson(value)
+
+            else -> JacksonMapper.toJson(value)
+        }
 }

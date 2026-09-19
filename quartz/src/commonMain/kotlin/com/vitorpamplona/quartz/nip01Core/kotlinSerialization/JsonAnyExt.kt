@@ -21,8 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.kotlinSerialization
 
 import com.vitorpamplona.quartz.nip01Core.core.RawJson
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonUnquotedLiteral
 import kotlinx.serialization.json.add
@@ -56,3 +58,32 @@ fun anyToJsonElement(value: Any?): JsonElement =
         is Array<*> -> buildJsonArray { value.forEach { add(anyToJsonElement(it)) } }
         else -> JsonPrimitive(value.toString())
     }
+
+/**
+ * The inverse of [anyToJsonElement]: decodes a [JsonElement] back into the untyped
+ * `Any?` tree those free-form fields are modelled as.
+ *
+ * An unquoted primitive is narrowed to the most specific type it parses as, so a
+ * round trip through JSON does not turn `true` into `"true"`. Integers are tried
+ * BEFORE doubles: `toDoubleOrNull` happily accepts "42" and answers 42.0, which
+ * then re-encodes as `42.0` and changes the bytes of a metadata field we were only
+ * meant to carry. A quoted primitive stays a String, because the quotes are the
+ * peer telling us it is one.
+ *
+ * Lives here, not under a NIP, for the same reason [anyToJsonElement] does — CLINK
+ * and NIP-47 both need it, and a per-NIP copy is how the two backends drift.
+ */
+fun JsonElement.toAnyValue(): Any =
+    when (this) {
+        is JsonPrimitive ->
+            if (isString) {
+                content
+            } else {
+                content.toBooleanStrictOrNull() ?: content.toLongOrNull() ?: content.toDoubleOrNull() ?: content
+            }
+
+        is JsonObject -> toAnyMap()
+        is JsonArray -> map { it.toAnyValue() }
+    }
+
+fun JsonObject.toAnyMap(): Map<String, Any?> = entries.associate { it.key to it.value.toAnyValue() }

@@ -20,20 +20,13 @@
 -keep class com.lambdaworks.crypto.** { *; }
 -keep class com.lambdaworks.jni.** { *; }
 
-# Jackson data binding, reflective paths only.
-#
-# Nearly all of Quartz's wire format is handled by the hand-written
-# StdSerializer/StdDeserializer pairs registered on JacksonMapper (Event,
-# Filter, Message, Command, Rumor, EventTemplate, TagArray, the NIP-46 Bunker
-# messages) and JsonMapperNip55 (IntentResult, Permission). Those read and
-# write property names as string literals, so their fields are free to be
-# renamed.
-#
-# These two trees are not: they are data-bound reflectively, via
-# `treeToValue(...)` and `OptimizedJsonMapper.fromJsonTo<T>()`, which derive the
-# JSON property names from the Kotlin constructor parameter names.
--keep class com.vitorpamplona.quartz.nip47WalletConnect.rpc.** { *; }
--keep class com.vitorpamplona.quartz.experimental.clink.** { *; }
+# No Jackson keeps. Every wire format Quartz speaks is now handled by a
+# hand-written serializer that names its fields as string literals: the
+# StdSerializer/StdDeserializer pairs registered on JacksonMapper (Event, Filter,
+# Message, Command, Rumor, EventTemplate, TagArray, the NIP-46 Bunker messages),
+# JsonMapperNip55 (IntentResult, Permission), and the kotlinx serializers that
+# NIP-47 and CLINK route through on every target. None of it reads a Kotlin
+# constructor parameter name at runtime, so none of it has to survive R8.
 
 # Quartz serialises enums by name (Jackson writes/reads Enum.name, and
 # Enum.valueOf resolves that string against the static field name), so the

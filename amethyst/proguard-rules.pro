@@ -161,15 +161,10 @@
 # names come from the Kotlin constructor parameter names, so a renamed field is
 # a changed wire format.
 
-# NIP-47 Wallet Connect RPC: every *Method / *Params / *SuccessResponse plus
-# NwcError, NwcTransaction and the NwcMethod/NwcErrorCode enums are reached via
-# treeToValue() from RequestDeserializer / ResponseDeserializer /
-# NotificationDeserializer.
--keep class com.vitorpamplona.quartz.nip47WalletConnect.rpc.** { *; }
-
-# CLINK (experimental NIP-XX offers/debits/manage): parsed with
-# OptimizedJsonMapper.fromJsonTo<OfferRequest>() and friends — reflective.
--keep class com.vitorpamplona.quartz.experimental.clink.** { *; }
+# NIP-47 and CLINK used to need a package keep each, because Jackson bound their
+# ~106 concrete classes reflectively. Both are gone: OptimizedJsonMapper routes
+# those types at the hand-written kotlinx serializers, which name every field as a
+# string literal. Nothing to keep, nothing to verify.
 
 # On-disk JSON written and re-read by the app itself. The field names are the
 # file format, so renaming them makes every existing file unreadable.

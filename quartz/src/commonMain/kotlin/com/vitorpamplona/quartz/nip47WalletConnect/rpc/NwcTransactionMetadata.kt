@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.RawJson
 import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.toAnyValue
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
 class NwcTransactionMetadata(

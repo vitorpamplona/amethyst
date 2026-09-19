@@ -31,15 +31,10 @@
 #   WorkManager workers           ALREADY GONE. androidx.work ships the keep
 #                                 itself; our duplicate rule was deleted and
 #                                 these entries now verify the library's.
-#   Jackson NWC + CLINK           REMOVABLE, and the replacement already
-#                                 exists: hand-written KSerializers in
-#                                 commonMain cover exactly these types, are the
-#                                 production path on iOS, and are cross-checked
-#                                 against Jackson by ClinkKotlinSerializationTest
-#                                 and KotlinSerializationMapperTest. Routing
-#                                 jvmAndroid's fromJsonTo at
-#                                 KotlinSerializationMapper would delete both
-#                                 package keeps (~1,600 seeded members).
+#   Jackson NWC + CLINK           DONE — both package keeps deleted. The types
+#                                 route at the hand-written kotlinx serializers
+#                                 on every target now, and the Jackson
+#                                 (de)serializers for them are gone.
 #   Jackson on-disk stores        REMOVABLE. Plain data classes; @Serializable
 #                                 + kotlinx gives compile-time literal names.
 #                                 App-private files, so no interop risk.
@@ -79,18 +74,9 @@ class  com.vitorpamplona.amethyst.service.notifications.NotificationCatchUpWorke
 class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 
 # --- Jackson reflective data binding: field names ARE the wire format ---------
-# NIP-47 Wallet Connect, reached by treeToValue() from the Request/Response/
-# Notification deserializers. Spot-checked rather than exhaustive: these four
-# cover a params, a response, a nested type and an enum in the same package, so
-# a rule that stops matching the package fails here.
-fields com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceParams
-fields com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsSuccessResponse
-fields com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
-fields com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcError
-# CLINK, parsed with OptimizedJsonMapper.fromJsonTo<T>()
-fields com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
-fields com.vitorpamplona.quartz.experimental.clink.debits.DebitRequest
-fields com.vitorpamplona.quartz.experimental.clink.manage.ManageRequest
+# NIP-47 and CLINK used to be listed here. They are not data-bound reflectively
+# any more — OptimizedJsonMapper routes them at kotlinx serializers that write
+# every field name as a string literal — so there is no rule to verify.
 
 # --- JSON the app writes to disk and reads back after an update --------------
 # Field names are the file format; renaming them orphans every existing file.
