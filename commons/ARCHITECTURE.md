@@ -75,7 +75,7 @@ in `commonsUI`, under the same package.
 ### Domain models & data
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event-store interfaces + `UserMetadataCache`. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
+| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store: the `ICacheProvider` / `ILocalCache` ports and `UserMetadataCache` in commonMain, and the concrete `LocalCache` (plus `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port) in jvmAndroid. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
 | `defaults`     | no  | Static bootstrap data (default relays, channels). |
 
 ¹ `model` uses only the `@Stable`/`@Immutable` runtime annotations — CLI-safe.
@@ -253,6 +253,10 @@ These are intentionally *documented*, not silently tolerated. Fix opportunistica
   namespaces expected to grow; do not fold them into `util` just for size.
 - **`onchain`** (on-chain zap splitting) is `quartz`-adjacent but un-numbered;
   leave readable unless a clear NIP number lands.
+- **`model/cache/LocalCache` is `jvmAndroid`, not `commonMain`**, because it
+  spills NIP-95 blobs through `java.io.File`. Promoting it needs an okio (or
+  `expect`) sink behind `LocalCacheHost.nip95BlobDir`; nothing else in the
+  move-group blocks iOS.
 
 ---
 
