@@ -1,0 +1,259 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.cordn.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.cordn.ExposureLevel
+import com.vitorpamplona.amethyst.commons.cordn.ExposureNote
+import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_coordinator
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_details
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_differs
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_dimension_content
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_dimension_membership
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_dimension_messaging
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_level_identified
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_level_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_level_pseudonymous
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_note_encryption_bug
+import com.vitorpamplona.amethyst.commons.resources.cordn_note_history
+import com.vitorpamplona.amethyst.commons.resources.cordn_note_linked
+import com.vitorpamplona.amethyst.commons.resources.cordn_note_membership
+import com.vitorpamplona.amethyst.commons.resources.cordn_note_publication
+import com.vitorpamplona.amethyst.commons.resources.cordn_note_sizes
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * What the coordinator behind a cordn group learns, as a panel.
+ *
+ * §8 of `quartz/plans/2026-09-17-cordn-interop.md` ends with a requirement:
+ * the exposure analysis "should be surfaced in the UI if we ship this, not
+ * buried. A Marmot group and a cordn group have materially different metadata
+ * exposure and users cannot infer that from either one looking like a group
+ * chat." This is that surface.
+ *
+ * Two deliberate choices about how it reads:
+ *
+ * - **It does not rank the two.** cordn is weaker against the operator and
+ *   stronger against the network — the coordinator never sees an IP (§8.5).
+ *   Which trade is right depends on who runs the coordinator, which is the
+ *   user's call. So the card states facts and stops.
+ * - **The notes come from [GroupExposure.notes], not from this file.** They are
+ *   computed from the group's real state, so a group linked to five others says
+ *   so and a lone group does not. A hand-written paragraph would drift from the
+ *   truth the moment either changed.
+ */
+@Composable
+fun CordnExposureCard(
+    exposure: GroupExposure,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.PrivacyTip,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(Res.string.cordn_exposure_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+
+            Text(
+                text = stringResource(Res.string.cordn_exposure_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            ExposureRow(stringResource(Res.string.cordn_exposure_dimension_content), exposure.content)
+            ExposureRow(stringResource(Res.string.cordn_exposure_dimension_membership), exposure.membership)
+            ExposureRow(stringResource(Res.string.cordn_exposure_dimension_messaging), exposure.messaging)
+
+            HorizontalDivider()
+
+            Text(
+                text = stringResource(Res.string.cordn_exposure_details),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            exposure.notes().forEach { NoteRow(it) }
+
+            if (exposure.differsFromMarmot()) {
+                Text(
+                    text = stringResource(Res.string.cordn_exposure_differs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Text(
+                // Shortened rather than elided in the middle: the head of a
+                // pubkey is what people compare against an npub they were sent.
+                text = stringResource(Res.string.cordn_exposure_coordinator, exposure.coordinator.take(16)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExposureRow(
+    dimension: String,
+    level: ExposureLevel,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            symbol = level.symbol(),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = level.tint(),
+        )
+        Text(
+            text = dimension,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = level.label(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = level.weight(),
+            color = level.tint(),
+        )
+    }
+}
+
+@Composable
+private fun NoteRow(note: ExposureNote) {
+    val isBug = note == ExposureNote.ENCRYPTION_NOT_PINNED
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            symbol = if (isBug) MaterialSymbols.Warning else MaterialSymbols.Info,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = if (isBug) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = note.label(),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isBug) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * The colour of a level, chosen so the scale reads without the words.
+ *
+ * It has to be **monotonic**, and getting that wrong is easy: an earlier
+ * version used `tertiary` for the middle level, which rendered pink against a
+ * dark `onSurface` for the worst one — so the row a user should worry about
+ * least of the two looked like the alarming one. Severity now runs
+ * affirmative → muted → emphatic, and emphasis for the worst case comes from
+ * [weight] rather than another hue.
+ *
+ * Nothing uses `error`. Everything on this card is how cordn works, not a
+ * fault, and painting normal operation red teaches people to ignore red.
+ */
+@Composable
+private fun ExposureLevel.tint(): Color =
+    when (this) {
+        ExposureLevel.NONE -> MaterialTheme.colorScheme.primary
+        ExposureLevel.PSEUDONYMOUS -> MaterialTheme.colorScheme.onSurfaceVariant
+        ExposureLevel.IDENTIFIED -> MaterialTheme.colorScheme.onSurface
+    }
+
+/** The other half of the scale: only the worst level is emphasised. */
+private fun ExposureLevel.weight(): FontWeight =
+    when (this) {
+        ExposureLevel.IDENTIFIED -> FontWeight.SemiBold
+        else -> FontWeight.Normal
+    }
+
+private fun ExposureLevel.symbol(): MaterialSymbol =
+    when (this) {
+        ExposureLevel.NONE -> MaterialSymbols.Lock
+        ExposureLevel.PSEUDONYMOUS -> MaterialSymbols.NoAccounts
+        ExposureLevel.IDENTIFIED -> MaterialSymbols.Person
+    }
+
+@Composable
+private fun ExposureLevel.label(): String =
+    stringResource(
+        when (this) {
+            ExposureLevel.NONE -> Res.string.cordn_exposure_level_none
+            ExposureLevel.PSEUDONYMOUS -> Res.string.cordn_exposure_level_pseudonymous
+            ExposureLevel.IDENTIFIED -> Res.string.cordn_exposure_level_identified
+        },
+    )
+
+@Composable
+private fun ExposureNote.label(): String =
+    stringResource(
+        when (this) {
+            ExposureNote.MEMBERSHIP_IS_IDENTIFIED -> Res.string.cordn_note_membership
+            ExposureNote.GROUPS_LINKED_BY_SESSION -> Res.string.cordn_note_linked
+            ExposureNote.SINGLE_OPERATOR_HOLDS_HISTORY -> Res.string.cordn_note_history
+            ExposureNote.PUBLICATION_IS_A_SIGNED_RECORD -> Res.string.cordn_note_publication
+            ExposureNote.MESSAGE_SIZES_UNPADDED -> Res.string.cordn_note_sizes
+            ExposureNote.ENCRYPTION_NOT_PINNED -> Res.string.cordn_note_encryption_bug
+        },
+    )

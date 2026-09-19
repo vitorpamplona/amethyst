@@ -543,6 +543,8 @@ sealed class Route {
 
     @Serializable object EditNestsServers : Route()
 
+    @Serializable object CordnLink : Route()
+
     @Serializable
     data class AgentConsole(
         val relayUrl: String,

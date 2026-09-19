@@ -2894,4 +2894,46 @@
     <string name="buzz_persona_publish">Publish persona</string>
     <string name="profile_card_follows_you">Follows you</string>
     <string name="profile_card_bot">Bot</string>
+
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <string name="cordn_badge_coordinator">Coordinator group</string>
+    <string name="cordn_badge_coordinator_desc">Delivered by a coordinator, not by relays</string>
+
+    <string name="cordn_exposure_title">What this coordinator can see</string>
+    <string name="cordn_exposure_subtitle">A coordinator is one server that carries every message in this group, in order. That is a different trade from relays — worth knowing before you treat this like any other chat.</string>
+    <string name="cordn_exposure_dimension_content">Message contents</string>
+    <string name="cordn_exposure_dimension_membership">Who is in the group</string>
+    <string name="cordn_exposure_dimension_messaging">Who sends what</string>
+    <string name="cordn_exposure_level_none">Unreadable</string>
+    <string name="cordn_exposure_level_pseudonymous">Under a throwaway key</string>
+    <string name="cordn_exposure_level_identified">Tied to your real account</string>
+    <string name="cordn_exposure_details">Details</string>
+    <string name="cordn_exposure_coordinator">Coordinator %1$s</string>
+    <string name="cordn_exposure_differs">This is not the same exposure as a Marmot group, where no single operator holds the whole conversation.</string>
+
+    <string name="cordn_note_membership">Joining names real accounts at both ends, so the coordinator knows who is in this group.</string>
+    <string name="cordn_note_linked">One throwaway key sends and fetches for every group you have here, so the coordinator can tell they are all you.</string>
+    <string name="cordn_note_history">One operator holds the complete, ordered history of every group it carries.</string>
+    <string name="cordn_note_publication">The key package you published is a signed record that this account uses cordn, and the coordinator can hand it to anyone.</string>
+    <string name="cordn_note_sizes">Messages are not padded, so the coordinator sees how long each one is.</string>
+    <string name="cordn_note_encryption_bug">This client is not encrypting to the coordinator. That is a bug — please report it.</string>
+
+    <string name="cordn_health_unknown">Not contacted yet</string>
+    <string name="cordn_health_ok">Responding</string>
+    <string name="cordn_health_down">Not responding</string>
+    <string name="cordn_health_failures">%1$d failed attempts in a row</string>
+
+    <string name="cordn_link_explainer">Paste a cordn1… link someone shared with you to see which coordinator carries that group, and what that operator would learn about you if you joined.</string>
+    <string name="cordn_link_field">cordn1…</string>
+    <string name="cordn_link_inspect">Inspect</string>
+    <string name="cordn_link_paste">Paste</string>
+    <string name="cordn_link_clear">Clear</string>
+    <string name="cordn_link_invalid">That is not a cordn group link: %1$s</string>
+    <string name="cordn_link_group_id">Group id</string>
+    <string name="cordn_link_coordinator">Coordinator</string>
+    <string name="cordn_link_relays">Reachable through</string>
+    <string name="cordn_link_no_coordinator">This link names no coordinator, so it cannot be followed on its own. Ask whoever sent it which coordinator carries the group.</string>
+    <string name="cordn_link_not_joinable">Inspecting a link does not join anything, and holding one does not make you a member.</string>
 </resources>

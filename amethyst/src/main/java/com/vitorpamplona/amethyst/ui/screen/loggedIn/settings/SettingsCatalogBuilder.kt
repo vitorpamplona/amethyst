@@ -84,6 +84,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.napplet_permissions_title, MaterialSymbols.Apps, R.string.napplet_connected_apps_search_keywords, Route.ConnectedApps),
                     symEntry(R.string.relay_auth_settings_title, MaterialSymbols.Lock, R.string.relay_auth_search_keywords, Route.RelayAuthSettings),
                     symEntry(R.string.call_settings, MaterialSymbols.Phone, R.string.call_settings_search_keywords, Route.CallSettings),
+                    symEntry(R.string.cordn_link_title, MaterialSymbols.Dns, R.string.cordn_link_search_keywords, Route.CordnLink),
                 ),
         )
 

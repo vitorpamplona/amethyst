@@ -1022,7 +1022,7 @@ Still open in Stage 3:
   non-goal (§4.6).
 - **Tier B**, live against `ghcr.io/cordn-msg/cordn:latest`.
 
-### Stage 4 — App integration — HEADLESS LAYER LANDED, UI OPEN
+### Stage 4 — App integration — LANDED (disclosure UI + headless layer); group UI open
 
 Landed in `commons/…/cordn/` (2026-09-19):
 
@@ -1035,6 +1035,9 @@ Landed in `commons/…/cordn/` (2026-09-19):
 | Encrypted-at-rest state + cursors | `CordnGroupStore` (+ an in-memory one for tests) |
 | The 11 tools as a contract | `ICoordinator` in `quartz`, implemented by `CoordinatorClient` |
 | `amy cordn ref encode/decode`, `amy cordn exposure` | `cli/…/CordnCommands` |
+| §8 rendered: the disclosure card, health row, group badge | `commonsUI/…/cordn/ui/` |
+| Parse a pasted `cordn1…` and compute its disclosure | `commons/…/cordn/CordnLinkInspection` |
+| The screen that shows it, Settings → Cordn group link | `amethyst/…/settings/cordn/CordnLinkScreen` |
 
 `CordnGroupManager` is the cordn counterpart of `MarmotManager` and shares no code with it, as
 Stage 1 predicted: Marmot's is keyed on the Nostr group id 147 times and its delivery model —
@@ -1065,11 +1068,39 @@ Four findings, each of which was a bug until the test that found it:
    both to ts-mls's `processMessage`. Nothing is weakened — the coordinator sees only the outer
    seal either way — so the manager emits public framing and reads both.
 
+**The §8 disclosure now has a screen** (2026-09-19). The requirement was that exposure be
+"surfaced in the UI if we ship this, not buried" — so it sits where it can still change a
+decision: on a pasted `cordn1…` link, before joining. The screen reads the link, names the
+coordinator and its relays, and renders `GroupExposure`; it deliberately does not join, because
+joining needs a live coordinator and Tier B is blocked (§7).
+
+The card states facts and does not rank the two bindings — cordn is weaker against the operator
+and stronger against the network (§8.5), and which trade is right depends on who runs the
+coordinator. Its notes come from `GroupExposure.notes()` rather than from prose, so a group
+linked to four others says so and a lone group does not.
+
+Rendering it found two things compiling could not:
+
+1. **The severity colours were not monotonic.** `tertiary` for the middle level rendered pink
+   against a dark `onSurface` for the worst one, so "under a throwaway key" looked more alarming
+   than "tied to your real account". Emphasis for the worst case is now weight, not another hue;
+   nothing uses `error`, because everything on the card is how cordn works, not a fault.
+2. **Note order is part of the disclosure.** Cross-group linkage (§8.2) — the item nobody
+   predicts — was below message padding, the least consequential one. `notes()` now returns
+   most-surprising-first.
+
+`CordnExposureRenderTest` keeps both honest by rasterising the surface headlessly
+(`ImageComposeScene`, software Skia, no display) and looking at the pixels. It catches the two
+things a compile cannot: a missing string resource, which throws at render because the generated
+`Res.string.*` accessors compile regardless, and a composable that draws nothing. Mutation-checked
+— hardcoding the card's background and disabling the §8.2 conditional each kill exactly one test.
+The first attempt at the theme test sampled only the page background and let the hardcoded card
+through, which is why it now samples inside the card too.
+
 Still open:
 
-- **The UI.** `GroupExposure` exists so that the §8 requirement ("surfaced, not buried") has
-  something to render, but nothing renders it yet. That is the remaining Stage 4 work, along
-  with cordn chatroom/feed models beside `model/marmotGroups/` and a ViewModel.
+- **Group UI.** Chatroom/feed models beside `model/marmotGroups/`, a ViewModel, and the badge
+  wired into a real group list — all of which need groups to exist on a device first.
 - **Coordinator-driving `amy` verbs** (`publish`, `invite`, `send`, `sync`). Deliberately not
   shipped: with Tier B blocked (§7) there is nothing to exercise them against, and unexercised
   coordinator verbs are a guess with a command-line interface. The logic they would call is in

@@ -2494,6 +2494,8 @@
     <string name="kind_wiki">Wiki</string>
     <string name="uptime">%1$d%% uptime</string>
     <string name="namecoin_settings">Namecoin Settings</string>
+    <string name="cordn_link_title">Cordn group link</string>
+    <string name="cordn_link_search_keywords">cordn coordinator group link invite mls chat metadata privacy exposure</string>
     <string name="namecoin_response_time">%dms</string>
     <string name="event_sync_title">Relay Sync</string>
     <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>

@@ -123,15 +123,24 @@ data class GroupExposure(
     /** §8.2. The ephemeral identity covers the message path — and only that. */
     val messaging: ExposureLevel = ExposureLevel.PSEUDONYMOUS
 
+    /**
+     * The notes worth showing, **most surprising first**.
+     *
+     * Order is part of the disclosure, not presentation trivia: a reader gives
+     * the first two lines real attention and skims the rest. So cross-group
+     * linkage (§8.2) — the one nobody predicts — comes before message sizes,
+     * which is the least consequential item here. A bug, if one ever appears,
+     * outranks everything.
+     */
     fun notes(): List<ExposureNote> =
         buildList {
+            if (!encryptionPinned) add(ExposureNote.ENCRYPTION_NOT_PINNED)
             add(ExposureNote.MEMBERSHIP_IS_IDENTIFIED)
-            add(ExposureNote.SINGLE_OPERATOR_HOLDS_HISTORY)
-            add(ExposureNote.MESSAGE_SIZES_UNPADDED)
             // Only worth saying once there is actually something to link to.
             if (linkedGroupCount > 1) add(ExposureNote.GROUPS_LINKED_BY_SESSION)
+            add(ExposureNote.SINGLE_OPERATOR_HOLDS_HISTORY)
             if (publishedKeyPackage) add(ExposureNote.PUBLICATION_IS_A_SIGNED_RECORD)
-            if (!encryptionPinned) add(ExposureNote.ENCRYPTION_NOT_PINNED)
+            add(ExposureNote.MESSAGE_SIZES_UNPADDED)
         }
 
     /**

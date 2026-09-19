@@ -286,6 +286,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SpammingUsersScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnLinkScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ConnectedAppsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46SignerScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
@@ -631,6 +632,7 @@ fun BuildNavigation(
             com.vitorpamplona.amethyst.ui.actions.nestsServers
                 .NestsServersScreen(accountViewModel, nav)
         }
+        composableFromEnd<Route.CordnLink> { CordnLinkScreen(nav) }
         composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditBolt12Offers> { Bolt12OffersScreen(accountViewModel, nav) }
