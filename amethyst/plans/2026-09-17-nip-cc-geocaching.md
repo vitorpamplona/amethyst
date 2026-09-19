@@ -356,3 +356,102 @@ These are the parts worth a careful reviewer, not the event codecs:
 
 Steps 1–2 are the "make Amethyst not blind to geocaches" milestone and are worth
 shipping before anything in 3+ is designed.
+
+## 6. Full integration design — screens, routes and entry points
+
+Steps 3–7 above say *what* is missing. This section says what it looks like. Every Quartz
+builder needed for the write path already exists and is tested (`GeocacheListingEvent.build`,
+`GeocacheFoundLogEvent.build(message, cache, verification, images)`,
+`GeocacheVerificationEvent.build(finderPubKey, cache)`, `GeocacheCurationListEvent.build`,
+`GeocacheLogComment`), so **none of this needs protocol work** — it is navigation, composers and
+one map. Tag coverage was re-checked against the spec's tables and is complete: 14/14 on 37516,
+3/3 on 7516, 1/1 on 7517, 8/8 on 37517.
+
+Wireframes: https://claude.ai/artifact/736F8KCTiaUkXCEpEii54C
+
+### 6.1 Six screens, eight routes
+
+| # | Screen | Route(s) | Template to copy |
+|---|--------|----------|------------------|
+| 1 | Geocaches hub (5 tabs) | `Route.Geocaches(initialTab: GeocacheTab? = null)` | `DiscoverScreen` (tab row + pager) |
+| 2 | Cache detail | `Route.GeocacheDetail(kind, pubKeyHex, dTag)` | `calendars/detail/CalendarEventDetailScreen` |
+| 3 | Log a find | `Route.LogGeocacheFind(kind, pubKeyHex, dTag)` | `composableFromBottomArgs`, NewPost chrome |
+| 4 | Hide a cache | `Route.NewGeocache(draft)` / `Route.EditGeocache(address)` | `calendars/create/NewCalendarEventScreen` |
+| 5 | Hunt detail | `Route.GeocacheHunt(kind, pubKeyHex, dTag)` | `SoftwareAppDetail` shape |
+| 6 | Hunt composer | `Route.NewGeocacheHunt(draft)` / `Route.EditGeocacheHunt(address)` | follow-set picker |
+
+The address-carrying routes use the same three-field `(kind, pubKeyHex, dTag)` + `Address`
+secondary-constructor shape as `Route.EditCommunity` and `Route.AwardBadge`.
+
+Hub tabs — one shared feed state, five views, so the map costs no extra subscription:
+**Nearby** (distance-sorted) · **Map** · **Hunts** (37517) · **Finds** (my 7516s) · **Mine**
+(caches I own). Needs a `GeocacheTab` enum next to `DiscoverTab` and a `dal/` filter per tab.
+
+### 6.2 Deliberately sheets, not screens
+
+- **Didn't find it** — one note + photo, publishing a kind 1111 with the `dnf` type. The same
+  sheet serves "add a note" and "needs maintenance"; only `GeocacheLogTypeTag` changes. This is
+  why no `logType` param gets bolted onto `Route.GenericCommentPost`.
+- **Pin peek** on the map — raising a sheet instead of navigating keeps panning fluid.
+- **Verification QR** (owner) — `QrCodeDrawer`, with the "only copy" warning.
+
+### 6.3 Entry points
+
+`NavBarItem.GEOCACHES` → `Route.Geocaches()` is the only new navigation surface, and it is
+user-configurable via `NavPickerUi`, so the cost of being wrong is near zero. Everything else is
+a destination change on something already tappable: a `GeocacheCard` in any feed, a "N caches
+here" chip on the geohash screen, an `naddr` through `uriToRoute` (the treasures.to link path —
+the interop entry that matters most), the notification feed (7516s already file under the cache
+via `computeReplyTo`), the `kind:geocache` search alias, and a find count on a profile.
+
+**The verification secret must never reach the global QR scanner.** `NIP19QrCodeScanner` maps
+scans to routes; a cache's *published* `naddr` belongs there, its verification *private key* does
+not. That scan happens only inside screen 3, via `SimpleQrCodeScanner`, which returns a raw
+string.
+
+### 6.4 What's genuinely new vs. reused
+
+Reused wholesale: `GeocacheCard`/`GeocacheFoundLogCard`, `LocationPreviewMap`,
+`LocationPickerMap`, `GeohashLocationPickerDialog`, `SimpleQrCodeScanner`, `QrCodeDrawer`,
+`FeedTopNavFilterState`, `SaveableFeedContentState`, the NIP-22 thread UI, the upload pipeline,
+`GeocacheVerificationValidator`.
+
+Genuinely new Android UI: **a multi-marker map overlay with clustering**. Every map composable in
+the repo places exactly one `Marker` (`LocationPreviewMap.kt:219`, `LocationPickerMap.kt:240`
+both `removeAll { it is Marker }` first). That is the one piece with no precedent here.
+
+### 6.5 Rules the screens must honour
+
+- **Archived, or FTF locked in for someone else** → the find actions are replaced by a status
+  strip. NIP-CC asks for this explicitly.
+- **`theme` / `map` on a 37517 are defaults, not mandates** — apply, then let the reader override.
+- **`a` tag order on a hunt is meaningful** and `curatedGeocaches()` already preserves it.
+- **Found logs publish to the cache's own `r` relays** (`logRelays()`) plus the user's write
+  relays.
+- **A scanned verification key is attacker-controlled**: validate it is a 32-byte secp256k1
+  scalar, sign one 7517 on `Dispatchers.Default`, drop it. Never persisted, never logged, never
+  handed to a signer that outlives the call.
+- **The find composer must not attach the finder's location**, and must say so on screen.
+
+### 6.6 Build order
+
+1. Cache detail + log thread — gives every entry point somewhere to land.
+2. Log a find, with verification — the first thing a player does, and it makes Amethyst the only
+   client that can *produce* a 7517 rather than only check one.
+3. The hub minus the map — four feed filters and the drawer entry.
+4. Hide a cache — the form plus the key ceremony; the largest single piece.
+5. The map tab.
+6. FTF lock-in and the archived rules.
+7. Hunts — fully independent of 1–6.
+
+### 6.7 Open decisions (assumptions this design makes)
+
+- **May Nearby turn on GPS?** Feed cards read the cached fix and never subscribe; a
+  distance-sorted list is worthless without one. *Assumed yes, behind an explicit
+  "Use my location".*
+- **Does geocaching earn a drawer slot?** *Assumed yes, off by default.*
+- **ROT13 or plaintext hints on the wire?** The network is split 17/17 and the spec contradicts
+  itself; reading handles both, writing must pick. *Assumed ROT13* — the reference client's
+  choice and the one that fails safe.
+- **Cluster threshold on the map.** *Assumed ~50 visible markers*, to be measured on a device
+  rather than guessed.
