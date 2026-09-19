@@ -44,7 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,7 +71,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.media.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
-import com.vitorpamplona.amethyst.desktop.ui.toNoteDisplayData
+import com.vitorpamplona.amethyst.desktop.ui.rememberDisplayData
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
@@ -529,28 +528,11 @@ fun QuotedNoteEmbed(
         onDispose { note.clearFlow() }
     }
 
-    // Observe the author's user metadata (kind 0) so the embed's name + avatar
-    // update once metadata arrives via relay subscription. produceState avoids
-    // the conditional-composable trap when note.author is null until the parent
-    // event lands.
-    val author = note.author
-    val authorMetaValue by produceState<Any?>(initialValue = null, key1 = author) {
-        val a = author
-        if (a == null) {
-            value = null
-        } else {
-            a.metadata().flow.collect { value = it }
-        }
-    }
-
     val event = note.event
     if (event != null) {
-        // Recompute on every recomposition — picks up note + user metadata changes.
-        // authorMetaValue is read to mark this recomposition path as author-meta
-        // dependent so toNoteDisplayData() sees the latest avatar/displayName.
-        @Suppress("UNUSED_EXPRESSION")
-        authorMetaValue
-        val displayData = event.toNoteDisplayData(localCache)
+        // Re-derives when the author's kind-0 lands, so the embed's name and avatar fill in
+        // after the note itself.
+        val displayData = event.rememberDisplayData(localCache)
 
         SpamCheckedNoteRender(
             note = note,

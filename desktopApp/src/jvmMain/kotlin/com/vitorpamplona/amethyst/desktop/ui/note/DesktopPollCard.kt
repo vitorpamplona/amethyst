@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
-import com.vitorpamplona.amethyst.desktop.ui.toNoteDisplayData
+import com.vitorpamplona.amethyst.desktop.ui.rememberDisplayData
 import com.vitorpamplona.amethyst.desktop.ui.voteOnPoll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -206,7 +206,7 @@ fun DesktopPollCard(
             endsAtSec?.let { (if (hasEnded) "Ended " else "Ends ") + formatPollTimestamp(it) }
         }
 
-    val displayData = remember(event) { event.toNoteDisplayData(localCache) }
+    val displayData = event.rememberDisplayData(localCache)
 
     NoteCard(
         note = displayData,

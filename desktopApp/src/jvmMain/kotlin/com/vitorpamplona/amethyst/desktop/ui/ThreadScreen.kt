@@ -385,6 +385,10 @@ fun ThreadScreen(
                                                 event?.pubKey?.let { localCache.getUserIfExists(it) }
                                             }
 
+                                        // Read so this row recomposes when the reply author's
+                                        // kind-0 arrives — usually well after the reply does.
+                                        rememberAuthorMetadataKey(author)
+
                                         val reactionCount =
                                             remember(reactionsState) { note.countReactions() }
                                         val zapAmount = remember(zapsState) { note.zapsAmount }
