@@ -62,7 +62,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * `MemoryTrimmingService`.
  */
 class CachePruner(
-    private val cache: LocalCache,
+    private val cache: EventCache,
 ) {
     fun cleanMemory() {
         Log.d("LargeCache") { "Notes cleanup started. Current size: ${cache.notes.size()}" }

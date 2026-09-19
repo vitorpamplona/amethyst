@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.OnchainZapVerifier
 import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.VerifiedOnchainZap
@@ -59,7 +59,7 @@ import java.util.concurrent.ConcurrentHashMap
  * across cache eviction and doesn't accumulate here.
  */
 class OnchainZapResolver(
-    private val cache: LocalCache,
+    private val cache: EventCache,
 ) {
     /**
      * Caps the parallelism of [reverifyOnchainZapsForNote] so a thread with many

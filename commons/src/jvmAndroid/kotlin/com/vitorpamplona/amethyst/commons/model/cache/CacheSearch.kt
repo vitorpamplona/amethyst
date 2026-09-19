@@ -52,11 +52,20 @@ import kotlinx.coroutines.CancellationException
  * tested against a populated cache.
  */
 class CacheSearch(
-    private val cache: LocalCache,
+    private val cache: EventCache,
 ) {
+    /**
+     * Users whose name, display name, NIP-05 or lightning address matches [username], best first.
+     *
+     * [forAccount] is the reader: when given, their muted users and muted words are filtered out
+     * and the people they follow sort first. `null` searches everything and ranks on the name
+     * match alone — what a caller with no account in hand (a mention autocomplete, a spotlight)
+     * wants. [limit] caps the result *after* ranking, so the cap never costs the best matches.
+     */
     fun findUsersStartingWith(
         username: String,
         forAccount: IAccount?,
+        limit: Int? = null,
     ): List<User> {
         if (username.isBlank()) return emptyList()
 
@@ -98,15 +107,18 @@ class CacheSearch(
         val anyAddressStartsWith = finds.associateWith { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == true }
         val displayNames = finds.associateWith { it.toBestDisplayName().lowercase() }
 
-        return finds.sortedWith(
-            compareBy(
-                { findsFollowing[it] == false },
-                { anyNameStartsWith[it] == false },
-                { anyAddressStartsWith[it] == false },
-                { displayNames[it] },
-                { it.pubkeyHex },
-            ),
-        )
+        val ranked =
+            finds.sortedWith(
+                compareBy(
+                    { findsFollowing[it] == false },
+                    { anyNameStartsWith[it] == false },
+                    { anyAddressStartsWith[it] == false },
+                    { displayNames[it] },
+                    { it.pubkeyHex },
+                ),
+            )
+
+        return if (limit != null) ranked.take(limit) else ranked
     }
 
     /**
