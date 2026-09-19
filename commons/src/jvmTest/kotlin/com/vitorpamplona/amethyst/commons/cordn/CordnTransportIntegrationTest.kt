@@ -20,28 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
-import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmGiftWrap
-import com.vitorpamplona.quartz.contextvm.fixture.CvmFixtureServer
-import com.vitorpamplona.quartz.contextvm.fixture.InMemoryRelayPool
-import com.vitorpamplona.quartz.contextvm.mcp.CvmMcpClient
-import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
-import com.vitorpamplona.quartz.contextvm.transport.DualSigner
-import com.vitorpamplona.quartz.cordn.fixture.CordnFixtureCoordinator
-import com.vitorpamplona.quartz.cordn.groups.CordnCredential
-import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorClient
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.yield
-import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -68,83 +49,14 @@ import kotlin.test.assertTrue
  * passed `DISABLED` for convenience would be testing a transport we do not ship.
  */
 @OptIn(ExperimentalEncodingApi::class)
-class CordnTransportIntegrationTest {
+class CordnTransportIntegrationTest : CordnTransportHarness() {
     private val gid = "6d1f0f6a-2a3e-4f2c-9a1d-7c6b5e4d3a21"
-
-    private val relays = InMemoryRelayPool()
-    private val serverSigner = NostrSignerInternal(KeyPair())
-    private val coordinator = CordnFixtureCoordinator()
-
-    private val config =
-        CoordinatorConfig(
-            pubKey = serverSigner.pubKey,
-            relays = listOf(RelayUrlNormalizer.normalizeOrNull("wss://relay.example.com")!!),
-        )
-
-    /** One account: a stable identity, a per-session ephemeral one, and a manager. */
-    private inner class Account {
-        val stable = NostrSignerInternal(KeyPair())
-        val ephemeral = NostrSignerInternal(KeyPair())
-        val pubKey: HexKey get() = stable.pubKey
-
-        val manager =
-            CordnGroupManager(
-                accountPubKey = stable.pubKey,
-                config = config,
-                coordinator =
-                    CoordinatorClient(
-                        CvmMcpClient(
-                            CvmTransport(
-                                relays = relays,
-                                signers = DualSigner(stable, ephemeral),
-                                serverPubKey = serverSigner.pubKey,
-                                // Default mode: REQUIRED. Not overridden.
-                                crypto = CvmGiftWrap(),
-                            ),
-                        ),
-                    ),
-                store = InMemoryCordnGroupStore(),
-                clock = { 1_757_000_000L },
-            )
-    }
-
-    private fun serve() =
-        CvmFixtureServer(
-            relays = relays,
-            signer = serverSigner,
-            crypto = CvmGiftWrap(),
-            // CEP-16: the coordinator learns the caller from here, and the
-            // identity-split assertions below depend on it being real.
-            injectClientPubkey = true,
-            handler = coordinator::handle,
-        ).also { it.start() }
-
-    /** Runs [block] while pumping the server, since a relay callback cannot suspend. */
-    private suspend fun <T> driving(block: suspend () -> T): T =
-        coroutineScope {
-            val server = serve()
-            val work = async { block() }
-            var spins = 0
-            while (!work.isCompleted) {
-                yield()
-                server.pump()
-                yield()
-                // A hung call would otherwise spin forever and look like a slow
-                // test rather than a deadlock.
-                check(++spins < 100_000) { "the fixture never answered — something is not replying" }
-            }
-            work.await()
-        }
 
     /** A KeyPackage bundle for [account], published through the real transport. */
     private suspend fun publishKeyPackage(account: Account): Pair<KeyPackageBundle, String> {
-        val scratch = MlsGroup.create(CordnCredential.of(account.pubKey).identity, policy = CordnGroupPolicy)
-        val bundle = scratch.createKeyPackage(CordnCredential.of(account.pubKey).identity, ByteArray(0))
-        val bytes = bundle.keyPackage.toTlsBytes()
-        val ref = bytes.take(16).joinToString("") { b -> ((b.toInt() and 0xFF) + 0x100).toString(16).substring(1) }
-
-        driving { account.manager.publishKeyPackage(ref, Base64.encode(bytes)) }
-        return bundle to ref
+        val published = driving { account.keyPackages.publishNew() }
+        val bundle = account.keyPackages.bundleFor(published.keyPackageRef)!!
+        return bundle to published.keyPackageRef
     }
 
     @Test

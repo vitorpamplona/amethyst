@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcMessage
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcSuccess
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorFields
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorMethod
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -42,6 +44,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * An in-memory cordn coordinator for tests.
@@ -53,13 +57,16 @@ import kotlinx.serialization.json.put
  *
  * Deliberately not hardened; `cordn-rs` exists for real deployments. Like
  * `:contextvm`'s fixture, this one can also be told to misbehave — see
- * [rejectPublication].
+ * [rejectPublication] and [rejectRemoval].
  */
+@OptIn(ExperimentalEncodingApi::class)
 class CordnFixtureCoordinator(
     /** Serve `kp_publish` back as if it had been stored, keyed by ref. */
     private val publications: MutableMap<String, StoredKeyPackage> = mutableMapOf(),
     /** Reject every publication, as a coordinator enforcing §8 would. */
     var rejectPublication: Boolean = false,
+    /** Reject every withdrawal, as a coordinator that is simply down would. */
+    var rejectRemoval: Boolean = false,
 ) {
     data class StoredKeyPackage(
         val pubKey: HexKey,
@@ -133,6 +140,23 @@ class CordnFixtureCoordinator(
             }
     }
 
+    /** How many single-use KeyPackages this coordinator still holds for [pubKey]. */
+    fun availableCount(pubKey: HexKey): Int = keyPackagesOf(pubKey).count { !it.lastResort }
+
+    /** Every KeyPackage this coordinator holds for [pubKey], reusable ones included. */
+    fun keyPackagesOf(pubKey: HexKey): List<StoredKeyPackage> = publications.values.filter { it.pubKey == pubKey }
+
+    /** Reads the last-resort marker out of a base64 KeyPackage, as a real one would. */
+    private fun isLastResort(keyPackageBase64: String): Boolean =
+        try {
+            MlsKeyPackage.decodeTls(TlsReader(Base64.decode(keyPackageBase64))).isLastResort()
+        } catch (e: Exception) {
+            // Unparseable bytes are not our problem here: the client verifies
+            // the publication payload (§9), and a fixture that threw would hide
+            // that check behind a transport error.
+            false
+        }
+
     /** Stores a publication event so `kp_take` can serve it back verbatim (§7). */
     fun seedPublication(
         keyPackageRef: String,
@@ -171,10 +195,15 @@ class CordnFixtureCoordinator(
                     // coordinator reaches back into its transport for it and
                     // stores it verbatim; storing anything else here would make
                     // `kp_take` unverifiable and hide the §9 checks from tests.
-                    publications[ref] = StoredKeyPackage(caller.orEmpty(), ref, false, clock++, request.event)
+                    // Whether it is reusable is a property of the KeyPackage
+                    // itself, so a real coordinator reads it out of the bytes
+                    // rather than trusting a flag. Ours does the same, which is
+                    // why `kp_list` can report it and a take can respect it.
+                    val lastResort = isLastResort(args.str(CoordinatorFields.KP_64))
+                    publications[ref] = StoredKeyPackage(caller.orEmpty(), ref, lastResort, clock++, request.event)
                     buildJsonObject {
                         put(CoordinatorFields.KP_REF, ref)
-                        put(CoordinatorFields.LAST_RESORT, false)
+                        put(CoordinatorFields.LAST_RESORT, lastResort)
                         put(CoordinatorFields.AT, clock)
                     }
                 }
@@ -201,6 +230,12 @@ class CordnFixtureCoordinator(
                 CoordinatorMethod.KP_TAKE.wire -> {
                     val id = args.str(CoordinatorFields.ID)
                     val stored = publications[id] ?: publications.values.firstOrNull { it.pubKey == id }
+                    // A take is a take: the method is `consumeKeyPackage` and a
+                    // single-use KeyPackage is gone once somebody has it, which
+                    // is what makes a client's pool drain and need topping up.
+                    // A last-resort package survives, by definition -- it can
+                    // back several Welcomes.
+                    if (stored != null && !stored.lastResort) publications.remove(stored.keyPackageRef)
                     buildJsonObject {
                         if (stored?.publicationEvent == null) {
                             put(CoordinatorFields.KEY_PACKAGE, JsonNull)
@@ -223,6 +258,9 @@ class CordnFixtureCoordinator(
                 }
 
                 CoordinatorMethod.KP_REMOVE.wire -> {
+                    if (rejectRemoval) {
+                        return JsonRpcFailure(id, JsonRpcError(-32000, "removal rejected"))
+                    }
                     val refs = args[CoordinatorFields.KP_REFS]!!.jsonArray.map { it.jsonPrimitive.content }
                     refs.forEach { publications.remove(it) }
                     buildJsonObject {
