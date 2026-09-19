@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_caches
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_progress
+import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -73,6 +74,7 @@ fun GeocacheHuntRow(
             .fillMaxWidth()
             .clickable { nav.nav(Route.GeocacheHunt(event.address())) }
             .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (banner != null && accountViewModel.settings.showImages()) {
             MyAsyncImage(
@@ -85,7 +87,6 @@ fun GeocacheHuntRow(
                 onLoadingBackground = null,
                 onError = null,
             )
-            Spacer(Modifier.height(8.dp))
         }
 
         Text(
@@ -106,14 +107,14 @@ fun GeocacheHuntRow(
             )
         }
 
-        Spacer(Modifier.height(8.dp))
-
         LinearProgressIndicator(
             progress = { if (caches.isEmpty()) 0f else doneCount.toFloat() / caches.size },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+            color = rememberGeocachePalette().proven,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            gapSize = 0.dp,
+            drawStopIndicator = {},
         )
-
-        Spacer(Modifier.height(4.dp))
 
         Text(
             text =

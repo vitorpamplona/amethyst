@@ -93,7 +93,7 @@ fun RenderGeocache(
  * not a compass; the detail screen is the place to track a fix.
  */
 @Composable
-private fun distanceToCache(
+fun distanceToCache(
     noteEvent: GeocacheListingEvent,
     accountViewModel: AccountViewModel,
 ): String? {

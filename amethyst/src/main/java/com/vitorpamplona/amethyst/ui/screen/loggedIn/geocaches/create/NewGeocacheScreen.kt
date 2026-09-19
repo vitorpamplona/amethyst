@@ -23,25 +23,27 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.create
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -185,8 +187,9 @@ fun NewGeocacheScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ComposerSection(stringResource(Res.string.geocache_new_section_where))
+            ComposerSection(stringResource(Res.string.geocache_new_section_where), 1)
 
             val point =
                 remember(model.geohash.value) {
@@ -206,26 +209,21 @@ fun NewGeocacheScreen(
                     pinColor = MaterialTheme.colorScheme.primary,
                     pinEmoji = model.type.value.geocacheEmoji(),
                 )
-                Spacer(Modifier.height(8.dp))
             }
 
             OutlinedButton(onClick = { pickingLocation = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(Res.string.geocache_new_pick_location))
             }
 
-            Spacer(Modifier.height(8.dp))
-
             WarningBox(stringResource(Res.string.geocache_new_location_warning))
 
             if (model.hasLocation()) {
-                Spacer(Modifier.height(6.dp))
                 Text(
                     text = stringResource(Res.string.geocache_new_ladder, model.geohash.value),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (!model.isPreciseEnough()) {
-                    Spacer(Modifier.height(4.dp))
                     Text(
                         // NIP-CC asks for 8 characters, 9 for a micro. Below that a finder is
                         // searching a block rather than a hiding place.
@@ -236,7 +234,7 @@ fun NewGeocacheScreen(
                 }
             }
 
-            ComposerSection(stringResource(Res.string.geocache_new_section_what))
+            ComposerSection(stringResource(Res.string.geocache_new_section_what), 2)
 
             OutlinedTextField(
                 value = model.name.value,
@@ -246,8 +244,6 @@ fun NewGeocacheScreen(
                 singleLine = true,
             )
 
-            Spacer(Modifier.height(10.dp))
-
             OutlinedTextField(
                 value = model.description.value,
                 onValueChange = { model.description.value = it },
@@ -255,8 +251,6 @@ fun NewGeocacheScreen(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
-
-            Spacer(Modifier.height(12.dp))
 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CacheType.entries.forEach { entry ->
@@ -268,8 +262,6 @@ fun NewGeocacheScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
-
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CacheSize.entries.forEach { entry ->
                     FilterChip(
@@ -280,12 +272,8 @@ fun NewGeocacheScreen(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
             StarRow(stringResource(Res.string.geocache_new_difficulty), model.difficulty.value) { model.difficulty.value = it }
             StarRow(stringResource(Res.string.geocache_new_terrain), model.terrain.value) { model.terrain.value = it }
-
-            Spacer(Modifier.height(12.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
@@ -307,7 +295,7 @@ fun NewGeocacheScreen(
                 }
             }
 
-            ComposerSection(stringResource(Res.string.geocache_new_section_extras))
+            ComposerSection(stringResource(Res.string.geocache_new_section_extras), 3)
 
             OutlinedTextField(
                 value = model.hint.value,
@@ -318,7 +306,6 @@ fun NewGeocacheScreen(
             )
 
             if (model.hint.value.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = stringResource(Res.string.geocache_new_hint_scramble),
@@ -339,8 +326,6 @@ fun NewGeocacheScreen(
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
-
             OutlinedTextField(
                 value = model.mission.value,
                 onValueChange = { model.mission.value = it },
@@ -348,8 +333,6 @@ fun NewGeocacheScreen(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
             )
-
-            Spacer(Modifier.height(12.dp))
 
             Text(
                 text = stringResource(Res.string.geocache_new_modifiers),
@@ -367,7 +350,7 @@ fun NewGeocacheScreen(
                 }
             }
 
-            ComposerSection(stringResource(Res.string.geocache_new_section_proof))
+            ComposerSection(stringResource(Res.string.geocache_new_section_proof), 4)
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -379,22 +362,21 @@ fun NewGeocacheScreen(
             }
 
             model.generatedPrivateKey.value?.let { secret ->
-                Spacer(Modifier.height(12.dp))
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
                     QrCodeDrawer(secret)
-                    Spacer(Modifier.height(10.dp))
                     Text(
                         text = stringResource(Res.string.geocache_new_proof_ready),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(6.dp))
                     WarningBox(stringResource(Res.string.geocache_owner_qr_warning))
                 }
             }
-
-            Spacer(Modifier.height(40.dp))
         }
     }
 
@@ -410,16 +392,43 @@ fun NewGeocacheScreen(
     }
 }
 
+/**
+ * A numbered step header.
+ *
+ * The numbers are not decoration: hiding a cache genuinely is a sequence — you cannot judge
+ * whether a geohash is precise enough until you know the size, and the verification QR only
+ * makes sense once there is a cache to put it in. Numbering says "there are five of these and
+ * you are on the second", which a bare bold heading does not.
+ */
 @Composable
-private fun ComposerSection(title: String) {
-    Spacer(Modifier.height(22.dp))
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-    )
-    Spacer(Modifier.height(8.dp))
+private fun ComposerSection(
+    title: String,
+    step: Int,
+) {
+    Row(
+        modifier = Modifier.padding(top = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = "$step",
+            modifier =
+                Modifier
+                    .size(24.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                    .wrapContentSize(Alignment.Center),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimary,
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+    }
 }
 
 @Composable

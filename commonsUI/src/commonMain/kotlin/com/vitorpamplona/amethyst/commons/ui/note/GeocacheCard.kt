@@ -331,6 +331,29 @@ fun GeocacheHero(
     }
 }
 
+/**
+ * `Traditional · Regular · D3 · T2` as a string, for callers that need the facts without the
+ * [GeocacheSpecLine] styling — the hero renders it white on a scrim, which no amount of
+ * parameters on a Text would express as clearly as handing over the words.
+ */
+@Composable
+fun geocacheSpecSummary(
+    type: CacheType?,
+    size: CacheSize?,
+    difficulty: Int?,
+    terrain: Int?,
+): String =
+    listOfNotNull(
+        type.geocacheLabelRes()?.let { stringResource(it) },
+        size?.let { stringResource(it.geocacheLabelRes()) },
+        difficulty?.let { stringResource(Res.string.geocache_difficulty_short, it) },
+        terrain?.let { stringResource(Res.string.geocache_terrain_short, it) },
+    ).joinToString("  ·  ")
+
+/** The same facts for a whole listing. */
+@Composable
+fun GeocacheListingEvent.specSummary(): String = geocacheSpecSummary(cacheType(), cacheSize(), difficulty(), terrain())
+
 /** `Traditional · Regular · D1 · T1` — the ratings, in one line they can be skimmed past. */
 @Composable
 fun GeocacheSpecLine(

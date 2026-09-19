@@ -58,9 +58,11 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_map_long_press
 import com.vitorpamplona.amethyst.commons.resources.geocache_map_open
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
+import com.vitorpamplona.amethyst.commons.ui.note.GeocachePalette
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpecLine
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocachePoint
+import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.roadEventPinBitmap
@@ -119,10 +121,13 @@ fun GeocacheMapTab(
 
     var peek by remember { mutableStateOf<GeocacheListingEvent?>(null) }
 
-    val amber = MaterialTheme.colorScheme.tertiary
-    val gold = MaterialTheme.colorScheme.secondary
-    val green = MaterialTheme.colorScheme.primary
-    val grey = MaterialTheme.colorScheme.onSurfaceVariant
+    // The map used to pick its own tints, which meant a cache could be one colour here and a
+    // different one on its own card. The palette is the single source of that meaning now.
+    val palette = rememberGeocachePalette()
+    val amber = palette.live
+    val gold = palette.prize
+    val green = palette.proven
+    val grey = palette.over
 
     val mapView =
         remember(context) {
@@ -356,7 +361,7 @@ private fun markerFor(
                 tint.toArgb(),
                 context.resources.displayMetrics.density,
             ).toDrawable(context.resources)
-        alpha = if (over) 0.45f else 1f
+        alpha = if (over) GeocachePalette.OVER_ALPHA else 1f
         setOnMarkerClickListener { _, _ ->
             onTap(listing)
             true

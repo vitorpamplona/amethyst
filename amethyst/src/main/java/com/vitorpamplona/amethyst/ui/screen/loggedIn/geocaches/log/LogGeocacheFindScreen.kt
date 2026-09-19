@@ -23,6 +23,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,7 +35,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -48,13 +52,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -79,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_scan_again
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_scan_code
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_your_log
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
+import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -167,10 +176,9 @@ fun LogGeocacheFindScreen(
                     .imePaddingSafe()
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Spacer(Modifier.height(8.dp))
-
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(10.dp),
@@ -190,8 +198,6 @@ fun LogGeocacheFindScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-
             OutlinedTextField(
                 value = model.message.value,
                 onValueChange = { model.message.value = it },
@@ -202,7 +208,6 @@ fun LogGeocacheFindScreen(
             )
 
             if (listing?.hasMission() == true) {
-                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = model.missionAnswer.value,
                     onValueChange = { model.missionAnswer.value = it },
@@ -211,8 +216,6 @@ fun LogGeocacheFindScreen(
                     minLines = 2,
                 )
             }
-
-            Spacer(Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
@@ -237,16 +240,12 @@ fun LogGeocacheFindScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
-
             Text(
                 text = stringResource(Res.string.geocache_log_proof_section),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-
-            Spacer(Modifier.height(6.dp))
 
             if (listing?.requiresVerification() != true) {
                 Text(
@@ -257,15 +256,28 @@ fun LogGeocacheFindScreen(
             } else {
                 when (model.scanOutcome.value) {
                     ScanOutcome.VERIFIED ->
-                        ProofNotice(stringResource(Res.string.geocache_log_proof_verified), MaterialTheme.colorScheme.primary)
+                        ProofStamp(
+                            text = stringResource(Res.string.geocache_log_proof_verified),
+                            color = rememberGeocachePalette().proven,
+                            glyph = "🔐",
+                            celebrate = true,
+                        )
                     ScanOutcome.NOT_A_KEY ->
-                        ProofNotice(stringResource(Res.string.geocache_log_proof_bad_code), MaterialTheme.colorScheme.error)
+                        ProofStamp(
+                            text = stringResource(Res.string.geocache_log_proof_bad_code),
+                            color = MaterialTheme.colorScheme.error,
+                            glyph = "⚠️",
+                            celebrate = false,
+                        )
                     ScanOutcome.WRONG_CACHE ->
-                        ProofNotice(stringResource(Res.string.geocache_log_proof_wrong_cache), MaterialTheme.colorScheme.error)
+                        ProofStamp(
+                            text = stringResource(Res.string.geocache_log_proof_wrong_cache),
+                            color = MaterialTheme.colorScheme.error,
+                            glyph = "⚠️",
+                            celebrate = false,
+                        )
                     ScanOutcome.NONE -> Unit
                 }
-
-                Spacer(Modifier.height(8.dp))
 
                 OutlinedButton(onClick = { scanning = true }) {
                     Icon(
@@ -284,8 +296,6 @@ fun LogGeocacheFindScreen(
                     )
                 }
 
-                Spacer(Modifier.height(6.dp))
-
                 Text(
                     text = stringResource(Res.string.geocache_log_proof_explain),
                     style = MaterialTheme.typography.bodySmall,
@@ -300,31 +310,63 @@ fun LogGeocacheFindScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
-
             Text(
                 text = stringResource(Res.string.geocache_log_no_location_attached),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-
-            Spacer(Modifier.height(32.dp))
         }
     }
 }
 
+/**
+ * The seal a verified find gets, and the one moment in this feature worth a flourish.
+ *
+ * Proving you physically stood at a cache is the thing no other NIP-CC client can do, and it
+ * had been rendering as a tinted box with a sentence in it. It now reads as a stamp: the padlock
+ * at display size, a border rather than only a wash so it sits *on* the page instead of behind
+ * it, and a scale-in when it lands, because the scan is the one interaction here that should
+ * feel like something happened.
+ *
+ * Failures use the same shape deliberately — same frame, error colour, no animation. A shape
+ * that only ever appears on success trains people to stop reading it.
+ */
 @Composable
-private fun ProofNotice(
+private fun ProofStamp(
     text: String,
     color: Color,
+    glyph: String,
+    celebrate: Boolean,
 ) {
-    Surface(color = color.copy(alpha = 0.12f), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+    val scale = remember { Animatable(if (celebrate) 0.88f else 1f) }
+
+    LaunchedEffect(celebrate, text) {
+        if (celebrate) {
+            scale.snapTo(0.88f)
+            scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+        }
+    }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                }.clip(RoundedCornerShape(10.dp))
+                .border(1.5.dp, color.copy(alpha = 0.55f), RoundedCornerShape(10.dp))
+                .background(color.copy(alpha = 0.10f))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(text = glyph, style = MaterialTheme.typography.headlineMedium)
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = color,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(10.dp),
         )
     }
 }

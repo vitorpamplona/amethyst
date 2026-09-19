@@ -21,18 +21,23 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.detail
 
 import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -56,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -78,12 +84,14 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_navigate
 import com.vitorpamplona.amethyst.commons.resources.geocache_needs_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_no_logs
 import com.vitorpamplona.amethyst.commons.resources.geocache_photos_section
-import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChips
-import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpecLine
+import com.vitorpamplona.amethyst.commons.ui.note.GeocacheDetailHero
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpoilerHint
+import com.vitorpamplona.amethyst.commons.ui.note.forListing
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocachePoint
+import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
+import com.vitorpamplona.amethyst.commons.ui.note.specSummary
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -91,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
+import com.vitorpamplona.amethyst.ui.note.types.distanceToCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -221,6 +230,7 @@ private fun GeocacheDetailBody(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val palette = rememberGeocachePalette()
     val showImages = accountViewModel.settings.showImages()
     val name = remember(listing) { listing.cacheName()?.trim().orEmpty() }
     val point = remember(listing) { listing.geocachePoint() }
@@ -228,29 +238,56 @@ private fun GeocacheDetailBody(
     val hint = remember(listing) { listing.hintOnWire()?.trim()?.ifBlank { null } }
     val mission = remember(listing) { listing.mission()?.trim()?.ifBlank { null } }
     val images = remember(listing) { listing.images().mapNotNull { it.trim().ifBlank { null } } }
+    val claimed = logs.winner != null
+    val isOver = listing.isArchived() || claimed
+    val accent = palette.forListing(listing, claimed)
 
-    Column(Modifier.padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(4.dp))
-
-        Text(
-            text = "${type.geocacheEmoji()}  ${name.ifEmpty { stringResource(Res.string.geocache_unnamed) }}",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+    GeocacheDetailHero(
+        name = name,
+        photo = if (showImages) images.firstOrNull() else null,
+        point = point,
+        accent = accent,
+        emoji = type.geocacheEmoji(),
+        distance = distanceToCache(listing, accountViewModel),
+        isOver = isOver,
+        subtitle = {
+            Text(
+                text = listing.specSummary(),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.88f),
+            )
+        },
+        image = { url, modifier ->
+            MyAsyncImage(
+                imageUrl = url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                mainImageModifier = Modifier,
+                loadedImageModifier = modifier,
+                accountViewModel = accountViewModel,
+                onLoadingBackground = null,
+                onError = null,
+            )
+        },
+    ) { latitude, longitude, pinColor, pinEmoji, pinAlpha, aspectRatio ->
+        LocationPreviewMap(
+            latitude = latitude,
+            longitude = longitude,
+            aspectRatio = aspectRatio,
+            pinColor = pinColor,
+            pinEmoji = pinEmoji,
+            pinAlpha = pinAlpha,
         )
+    }
 
-        Spacer(Modifier.height(6.dp))
-
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
         GeocacheOwnerRow(listing, accountViewModel, nav)
 
-        Spacer(Modifier.height(8.dp))
-
-        GeocacheSpecLine(type, listing.cacheSize(), listing.difficulty(), listing.terrain())
-
-        Spacer(Modifier.height(8.dp))
-
         GeocacheChips(
-            claimed = logs.winner != null,
+            claimed = claimed,
             isArchived = listing.isArchived(),
             isFirstToFind = listing.isFirstToFind(),
             isArt = listing.hasTypeModifier(TypeModifier.ART),
@@ -259,7 +296,6 @@ private fun GeocacheDetailBody(
         )
 
         if (listing.content.isNotBlank()) {
-            Spacer(Modifier.height(14.dp))
             Text(
                 text = listing.content.trim(),
                 style = MaterialTheme.typography.bodyMedium,
@@ -267,74 +303,93 @@ private fun GeocacheDetailBody(
             )
         }
 
-        hint?.let {
-            Spacer(Modifier.height(14.dp))
-            GeocacheSpoilerHint(it)
-        }
+        hint?.let { GeocacheSpoilerHint(it) }
 
         mission?.let {
-            Spacer(Modifier.height(14.dp))
-            SectionLabel(stringResource(Res.string.geocache_mission_section))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            GeocacheAccentPanel(palette.proven) {
+                SectionLabel(stringResource(Res.string.geocache_mission_section))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
 
         point?.let { (latitude, longitude) ->
-            Spacer(Modifier.height(16.dp))
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))) {
-                LocationPreviewMap(
-                    latitude = latitude,
-                    longitude = longitude,
-                    aspectRatio = 16f / 9f,
-                    pinColor = MaterialTheme.colorScheme.primary,
-                    pinEmoji = type.geocacheEmoji(),
-                )
-            }
-            Spacer(Modifier.height(8.dp))
             GeocacheNavigateRow(latitude, longitude, name)
         }
 
-        if (showImages && images.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            SectionLabel(stringResource(Res.string.geocache_photos_section))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(images) { url ->
-                    MyAsyncImage(
-                        imageUrl = url,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        mainImageModifier = Modifier,
-                        loadedImageModifier = Modifier.size(150.dp).clip(RoundedCornerShape(10.dp)),
-                        accountViewModel = accountViewModel,
-                        onLoadingBackground = null,
-                        onError = null,
-                    )
+        // The hero already spends one photo; the rest belong in a strip rather than stacked, so
+        // a cache with six pictures does not push its own logs off the screen.
+        if (showImages && images.size > 1) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionLabel(stringResource(Res.string.geocache_photos_section))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(images.drop(1)) { url ->
+                        MyAsyncImage(
+                            imageUrl = url,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            mainImageModifier = Modifier,
+                            loadedImageModifier = Modifier.size(150.dp).clip(RoundedCornerShape(10.dp)),
+                            accountViewModel = accountViewModel,
+                            onLoadingBackground = null,
+                            onError = null,
+                        )
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.height(20.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Spacer(Modifier.height(12.dp))
 
-        SectionLabel(stringResource(Res.string.geocache_logs_section) + " · " + logs.all.size)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            SectionLabel(stringResource(Res.string.geocache_logs_section) + " · " + logs.all.size)
 
-        if (logs.all.isEmpty()) {
-            Text(
-                text = stringResource(Res.string.geocache_no_logs),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            logs.all.forEach { log ->
-                GeocacheLogRow(log, listing, accountViewModel, nav)
+            if (logs.all.isEmpty()) {
+                Text(
+                    text = stringResource(Res.string.geocache_no_logs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                logs.all.forEach { log ->
+                    GeocacheLogRow(log, listing, accountViewModel, nav)
+                }
             }
         }
+    }
+}
 
-        Spacer(Modifier.height(24.dp))
+/**
+ * A panel that carries one of the palette's colours as a left rule.
+ *
+ * Used where a block is a different *kind* of thing rather than merely the next paragraph — a
+ * Key Quest mission, a proof notice. The rule costs 3dp and says "this one is special" without
+ * spending a card, a border and a shadow to do it.
+ */
+@Composable
+internal fun GeocacheAccentPanel(
+    accent: Color,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            // IntrinsicSize.Min so the rule's fillMaxHeight has a height to match. In a
+            // wrap-content Row it would otherwise measure against an unbounded constraint and
+            // collapse.
+            .height(IntrinsicSize.Min)
+            .clip(RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp))
+            .background(accent.copy(alpha = 0.08f)),
+    ) {
+        Box(Modifier.width(3.dp).fillMaxHeight().background(accent))
+        Column(
+            Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            content = content,
+        )
     }
 }
 
@@ -396,21 +451,34 @@ private fun GeocacheActionBar(
     val winner = logs.winner
     val outOfPlay = listing.isArchived() || (winner != null && winner != me)
 
+    val palette = rememberGeocachePalette()
+
     Surface(tonalElevation = 3.dp) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // The status line replaces the find buttons rather than sitting above them, so the
+            // bar says one thing at a time: either this cache is yours to go and get, or here is
+            // why it is not.
             when {
                 listing.isArchived() ->
-                    StatusStrip(stringResource(Res.string.geocache_archived_notice))
+                    GeocacheAccentPanel(palette.over) {
+                        StatusStrip(stringResource(Res.string.geocache_archived_notice))
+                    }
 
                 winner != null && winner != me ->
-                    GeocacheWinnerStrip(winner, accountViewModel)
+                    GeocacheAccentPanel(palette.over) {
+                        GeocacheWinnerStrip(winner, accountViewModel)
+                    }
 
                 listing.isFirstToFind() ->
-                    StatusStrip(stringResource(Res.string.geocache_ftf_available))
+                    GeocacheAccentPanel(palette.prize) {
+                        StatusStrip("🥇  " + stringResource(Res.string.geocache_ftf_available))
+                    }
             }
 
             if (!outOfPlay && listing.pubKey != me) {
-                Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { nav.nav(Route.LogGeocacheFind(address)) },
@@ -424,7 +492,6 @@ private fun GeocacheActionBar(
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 SmallAction(stringResource(Res.string.geocache_add_note)) { onOpenSheet(GeocacheLogSheetType.NOTE) }
                 SmallAction(stringResource(Res.string.geocache_needs_maintenance)) { onOpenSheet(GeocacheLogSheetType.MAINTENANCE) }

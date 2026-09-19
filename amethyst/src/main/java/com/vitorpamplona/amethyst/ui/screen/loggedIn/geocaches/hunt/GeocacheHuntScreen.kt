@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_loading
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpecLine
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
+import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -134,7 +134,8 @@ fun GeocacheHuntScreen(
                 .imePaddingSafe()
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (hunt == null) {
                 Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -148,7 +149,6 @@ fun GeocacheHuntScreen(
             }
 
             hunt.image()?.trim()?.ifBlank { null }?.takeIf { accountViewModel.settings.showImages() }?.let {
-                Spacer(Modifier.height(8.dp))
                 MyAsyncImage(
                     imageUrl = it,
                     contentDescription = null,
@@ -161,8 +161,6 @@ fun GeocacheHuntScreen(
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
-
             Text(
                 text = hunt.title()?.trim().orEmpty(),
                 style = MaterialTheme.typography.headlineSmall,
@@ -170,7 +168,6 @@ fun GeocacheHuntScreen(
             )
 
             hunt.description()?.trim()?.ifBlank { null }?.let {
-                Spacer(Modifier.height(4.dp))
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
@@ -178,14 +175,14 @@ fun GeocacheHuntScreen(
                 )
             }
 
-            Spacer(Modifier.height(14.dp))
-
             LinearProgressIndicator(
                 progress = { if (caches.isEmpty()) 0f else doneCount.toFloat() / caches.size },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color = rememberGeocachePalette().proven,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
             )
-
-            Spacer(Modifier.height(4.dp))
 
             Text(
                 text = stringResource(Res.string.geocache_hunt_progress, doneCount, caches.size),
@@ -193,14 +190,10 @@ fun GeocacheHuntScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(Modifier.height(16.dp))
-
             Button(
                 onClick = { nav.nav(Route.Geocaches(GeocacheTab.MAP)) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(Res.string.geocache_hunt_start)) }
-
-            Spacer(Modifier.height(16.dp))
 
             caches.forEachIndexed { index, cacheAddress ->
                 GeocacheHuntStop(
@@ -211,8 +204,6 @@ fun GeocacheHuntScreen(
                     nav = nav,
                 )
             }
-
-            Spacer(Modifier.height(32.dp))
         }
     }
 }

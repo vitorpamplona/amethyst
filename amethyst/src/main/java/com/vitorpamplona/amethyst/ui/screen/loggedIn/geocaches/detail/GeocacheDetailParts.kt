@@ -38,6 +38,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -54,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_maintenanc
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_note
 import com.vitorpamplona.amethyst.commons.resources.geocache_verified_find
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChip
+import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -187,12 +190,33 @@ fun GeocacheLogRow(
 ) {
     val event = log.event ?: return
     val author = log.author?.pubkeyHex ?: event.pubKey
+    val palette = rememberGeocachePalette()
+
+    // A proven find gets a rule down its left edge. In a thread of a dozen logs this is what
+    // separates "someone says they found it" from "someone demonstrably stood there", without
+    // making the reader parse a badge on every row.
+    val proven =
+        event is GeocacheFoundLogEvent &&
+            event.hasVerificationAttached() &&
+            GeocacheVerificationValidator.isValid(event, listing)
 
     Column(
         Modifier
             .fillMaxWidth()
             .clickable { nav.nav(Route.Note(log.idHex)) }
-            .padding(vertical = 8.dp),
+            .then(
+                if (proven) {
+                    Modifier
+                        .drawBehind {
+                            drawRect(
+                                color = palette.proven,
+                                size = Size(RULE_WIDTH_PX, size.height),
+                            )
+                        }.padding(start = 10.dp)
+                } else {
+                    Modifier
+                },
+            ).padding(vertical = 8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LoadUser(author, accountViewModel) { user ->
@@ -226,13 +250,13 @@ private fun GeocacheFindBadge(
     log: GeocacheFoundLogEvent,
     listing: GeocacheListingEvent,
 ) {
-    val green = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    val palette = rememberGeocachePalette()
     val muted = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
 
     when {
         !log.hasVerificationAttached() -> GeocacheChip(stringResource(Res.string.geocache_found_it), muted)
         GeocacheVerificationValidator.isValid(log, listing) ->
-            GeocacheChip("🔐  " + stringResource(Res.string.geocache_verified_find), green, strong = true)
+            GeocacheChip("🔐  " + stringResource(Res.string.geocache_verified_find), palette.wash(palette.proven), strong = true)
         else -> GeocacheChip("⚠️  " + stringResource(Res.string.geocache_invalid_proof), muted, dim = true)
     }
 }
@@ -255,3 +279,6 @@ private fun GeocacheCommentBadge(comment: CommentEvent) {
 
     GeocacheChip(label, muted, dim = true)
 }
+
+/** Width of the "verified" rule, in pixels at the density the thread draws at. */
+private const val RULE_WIDTH_PX = 7f

@@ -23,11 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.hunt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -138,10 +136,9 @@ fun NewGeocacheHuntScreen(
                 .imePaddingSafe()
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Spacer(Modifier.height(10.dp))
-
             OutlinedTextField(
                 value = model.title.value,
                 onValueChange = { model.title.value = it },
@@ -149,8 +146,6 @@ fun NewGeocacheHuntScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
-
-            Spacer(Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = model.description.value,
@@ -160,8 +155,6 @@ fun NewGeocacheHuntScreen(
                 minLines = 3,
             )
 
-            Spacer(Modifier.height(10.dp))
-
             OutlinedTextField(
                 value = model.bannerUrl.value,
                 onValueChange = { model.bannerUrl.value = it },
@@ -169,8 +162,6 @@ fun NewGeocacheHuntScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
-
-            Spacer(Modifier.height(18.dp))
 
             Text(
                 text = stringResource(Res.string.geocache_hunt_pick_caches),
@@ -180,7 +171,6 @@ fun NewGeocacheHuntScreen(
             )
 
             if (model.caches.isEmpty()) {
-                Spacer(Modifier.height(6.dp))
                 Text(
                     text = stringResource(Res.string.geocache_hunt_needs_caches),
                     style = MaterialTheme.typography.bodySmall,
@@ -243,8 +233,6 @@ fun NewGeocacheHuntScreen(
                     }
                 }
             }
-
-            Spacer(Modifier.height(40.dp))
         }
     }
 }
