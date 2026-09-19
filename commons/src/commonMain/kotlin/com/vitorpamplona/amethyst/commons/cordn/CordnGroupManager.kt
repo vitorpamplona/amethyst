@@ -80,14 +80,14 @@ class CordnGroupManager(
     val health: CoordinatorHealth = CoordinatorHealth(),
     /** Seconds. Injected so tests are not at the mercy of the wall clock. */
     private val clock: () -> Long = { TimeUtils.now() },
-) {
+) : CordnSyncSource {
     private val groups = mutableMapOf<String, MlsGroup>()
     private val sync = CordnGroupSync(coordinator)
 
     private val _gids = MutableStateFlow<Set<String>>(emptySet())
 
     /** The groups this manager holds, for a UI to observe. */
-    val gids: StateFlow<Set<String>> = _gids.asStateFlow()
+    override val gids: StateFlow<Set<String>> = _gids.asStateFlow()
 
     private var publishedKeyPackage = false
 
@@ -312,7 +312,7 @@ class CordnGroupManager(
     }
 
     /** Drains history for every group this manager holds. */
-    suspend fun catchUp(onDelivery: (Delivery) -> Unit): Int {
+    override suspend fun catchUp(onDelivery: (Delivery) -> Unit): Int {
         if (groups.isEmpty()) return 0
         return call { sync.catchUp(groups.keys.toList()) { gid, ingestion -> onDelivery(ingest(gid, ingestion)) } }
             .also { persistAll() }
@@ -322,7 +322,7 @@ class CordnGroupManager(
      * Subscribes to live delivery for every group. Suspends until the
      * coordinator closes the stream, so give it its own coroutine.
      */
-    suspend fun subscribe(
+    override suspend fun subscribe(
         timeoutMs: Long,
         onDelivery: (Delivery) -> Unit,
     ) {
