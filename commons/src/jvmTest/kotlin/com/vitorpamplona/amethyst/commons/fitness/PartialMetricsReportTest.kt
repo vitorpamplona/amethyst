@@ -183,4 +183,99 @@ class PartialMetricsReportTest {
         assertEquals(partial.size, merged.size)
         assertEquals(1, merged.count { it.alreadyPublished })
     }
+
+    @Test
+    fun `a metric-less health connect copy yields to the published one that still has its numbers`() {
+        val published =
+            fullyLoaded.take(1).map {
+                it.copy(id = "published", origin = WorkoutOrigin.PUBLISHED, alreadyPublished = true)
+            }
+
+        // Health Connect normally wins the tie because it carries more. During stage 1 it carries
+        // less, and evicting the published copy then would take 10 km off a dashboard that was
+        // already showing it — down to zero, and back up a second later.
+        val merged = TrainingLog.merge(partial, published)
+        val survivor = merged.first { it.startTimeEpochSeconds == published.single().startTimeEpochSeconds }
+
+        assertEquals(10_000.0, survivor.distanceMeters!!, 0.001)
+        assertEquals(700, survivor.calories)
+        assertTrue(survivor.alreadyPublished)
+    }
+
+    @Test
+    fun `the whole window keeps its published totals through the partial pass`() {
+        val published =
+            fullyLoaded.map {
+                it.copy(id = "published-${'$'}{it.id}", origin = WorkoutOrigin.PUBLISHED, alreadyPublished = true)
+            }
+
+        // The user has published every one of these. Stage 1 must not make their distance and
+        // calorie totals dip to zero on the way to showing the same numbers again.
+        val beforeAnyHealthConnect = WorkoutStats.report(TrainingLog.merge(emptyList(), published), now, zone)
+        val duringStageOne = WorkoutStats.report(TrainingLog.merge(partial, published), now, zone)
+
+        assertEquals(beforeAnyHealthConnect.windowTotals.distanceMeters, duringStageOne.windowTotals.distanceMeters, 0.001)
+        assertEquals(beforeAnyHealthConnect.windowTotals.calories, duringStageOne.windowTotals.calories)
+        assertEquals(beforeAnyHealthConnect.windowTotals.steps, duringStageOne.windowTotals.steps)
+        assertEquals(beforeAnyHealthConnect.windowTotals.maxHeartRate, duringStageOne.windowTotals.maxHeartRate)
+        assertEquals(beforeAnyHealthConnect.bests.map { it.kind }.toSet(), duringStageOne.bests.map { it.kind }.toSet())
+    }
+
+    @Test
+    fun `a loaded health connect copy still wins over the published one, as before`() {
+        // The yielding rule is narrow: it must not invert the normal preference, or a shared
+        // workout would lose the device detail the published event dropped.
+        val published =
+            fullyLoaded.take(1).map {
+                it.copy(
+                    id = "published",
+                    origin = WorkoutOrigin.PUBLISHED,
+                    alreadyPublished = true,
+                    steps = null,
+                    elevationGainMeters = null,
+                )
+            }
+
+        val merged = TrainingLog.merge(fullyLoaded, published)
+        val survivor = merged.first { it.startTimeEpochSeconds == published.single().startTimeEpochSeconds }
+
+        assertEquals(WorkoutOrigin.HEALTH_CONNECT, survivor.origin)
+        assertEquals(9_000, survivor.steps)
+        assertTrue(survivor.alreadyPublished)
+    }
+
+    @Test
+    fun `one health connect session still absorbs every published copy it matches`() {
+        // Pre-existing dedupe behaviour, kept: the yielding rule changes which copy survives a
+        // tie, never how many survive. Two published events inside the 15-minute tolerance and
+        // one recorded session is still one workout, not two.
+        val recorded = listOf(workout(daysAgo = 1, durationSeconds = 1800, distanceMeters = 5_000.0))
+        val start = recorded.single().startTimeEpochSeconds
+        val published =
+            listOf(
+                recorded.single().copy(id = "p1", startTimeEpochSeconds = start, origin = WorkoutOrigin.PUBLISHED, alreadyPublished = true),
+                recorded.single().copy(id = "p2", startTimeEpochSeconds = start + 300, origin = WorkoutOrigin.PUBLISHED, alreadyPublished = true),
+            )
+
+        assertEquals(1, TrainingLog.merge(recorded, published).size)
+        // And the same when the recorded copy is the metric-less one that yields.
+        assertEquals(1, TrainingLog.merge(recorded.map { it.withoutMetrics() }, published).size)
+    }
+
+    @Test
+    fun `two copies that both lack metrics keep the health connect one`() {
+        // A gym session genuinely has no distance or steps on either side. Nothing to prefer, so
+        // the normal rule stands and the pair still collapses to one entry.
+        val strengthOnly = listOf(workout(daysAgo = 3, exercise = ExerciseType.STRENGTH, durationSeconds = 2700))
+        val published =
+            strengthOnly.map {
+                it.copy(id = "published", origin = WorkoutOrigin.PUBLISHED, alreadyPublished = true)
+            }
+
+        val merged = TrainingLog.merge(strengthOnly, published)
+
+        assertEquals(1, merged.size)
+        assertEquals(WorkoutOrigin.HEALTH_CONNECT, merged.single().origin)
+        assertTrue(merged.single().alreadyPublished)
+    }
 }

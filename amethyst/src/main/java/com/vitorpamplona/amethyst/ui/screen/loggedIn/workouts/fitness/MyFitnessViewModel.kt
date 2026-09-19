@@ -99,25 +99,10 @@ class MyFitnessViewModel : ViewModel() {
     private val pubkeyHex = MutableStateFlow<String?>(null)
 
     /**
-     * Health Connect's contribution, and how far along reading it is.
-     *
-     * [sessionsPending] and [metricsPending] are the two stages of
-     * [HealthConnectManager.readWorkoutsProgressively]: the session list costs one IPC, the
-     * metrics cost one per session. They are tracked separately because they mean different
-     * things to the screen — an empty dashboard must not say "nothing logged yet" while the
-     * sessions are still coming, but it can show real counts and times while the metrics are.
-     */
-    private data class Contribution(
-        val workouts: List<DetectedWorkout> = emptyList(),
-        val sessionsPending: Boolean = false,
-        val metricsPending: Boolean = false,
-    )
-
-    /**
      * Health Connect's contribution. A push source: the platform has no change feed we can
      * observe, so [refresh] re-reads it when the screen resumes or a permission is granted.
      */
-    private val fromHealthConnect = MutableStateFlow(Contribution())
+    private val fromHealthConnect = MutableStateFlow(HealthConnectContribution())
 
     /** The in-flight [refresh], cancelled by the next one so two reads never interleave. */
     private var refreshJob: Job? = null
@@ -187,7 +172,7 @@ class MyFitnessViewModel : ViewModel() {
                 // Read through the local rather than the field: nothing may set sessionsPending
                 // without a reader that will clear it again, or an empty dashboard waits forever.
                 if (status != HealthConnectStatus.CONNECTED || hc == null) {
-                    fromHealthConnect.value = Contribution()
+                    fromHealthConnect.value = HealthConnectContribution()
                     healthConnectStatus.value = status
                     return@launch
                 }
@@ -202,14 +187,7 @@ class MyFitnessViewModel : ViewModel() {
                 val now = Instant.now()
                 hc
                     .readWorkoutsProgressively(now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)), now)
-                    .collect { read ->
-                        fromHealthConnect.value =
-                            Contribution(
-                                workouts = read.workouts,
-                                sessionsPending = false,
-                                metricsPending = read.metricsPending,
-                            )
-                    }
+                    .collect { read -> fromHealthConnect.value = fromHealthConnect.value.after(read) }
             }
     }
 
@@ -225,5 +203,43 @@ class MyFitnessViewModel : ViewModel() {
 
             val hc = manager ?: HealthConnectManager(context.applicationContext).also { manager = it }
             if (hc.hasAllPermissions()) HealthConnectStatus.CONNECTED else HealthConnectStatus.AVAILABLE
+        }
+}
+
+/**
+ * Health Connect's contribution to the dashboard, and how far along reading it is.
+ *
+ * [sessionsPending] and [metricsPending] are the two stages of
+ * [HealthConnectManager.readWorkoutsProgressively]: the session list costs one IPC, the metrics
+ * cost one per session. They are tracked separately because they mean different things to the
+ * screen — an empty dashboard must not say "nothing logged yet" while the sessions are still
+ * coming, but it can show real counts and times while the metrics are.
+ */
+data class HealthConnectContribution(
+    val workouts: List<DetectedWorkout> = emptyList(),
+    val sessionsPending: Boolean = false,
+    val metricsPending: Boolean = false,
+) {
+    /**
+     * Folds one stage of a read in — and declines the ones that would take information off a
+     * screen that already has it.
+     *
+     * A stage-1 result carries no metrics. On a first load that is exactly what makes the
+     * dashboard appear in one IPC instead of dozens. On a re-read of an already-populated
+     * dashboard — [MyFitnessViewModel.refresh] runs on every resume — publishing it would strip
+     * the distance, calories, heart-rate, steps and elevation cells and most of Best Efforts for
+     * as long as stage 2 takes, then put them back. So a partial stage only reaches the screen
+     * when there is nothing better on it already; otherwise the previous read's numbers stay up,
+     * correct and unannotated, and stage 2 swaps them atomically.
+     */
+    fun after(read: HealthConnectManager.WorkoutRead): HealthConnectContribution =
+        if (read.metricsPending && workouts.isNotEmpty()) {
+            copy(sessionsPending = false)
+        } else {
+            HealthConnectContribution(
+                workouts = read.workouts,
+                sessionsPending = false,
+                metricsPending = read.metricsPending,
+            )
         }
 }

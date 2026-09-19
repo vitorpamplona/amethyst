@@ -309,7 +309,7 @@ private fun Dashboard(
         WindowTotalsCard(report, miles)
         ActivityBreakdown(report, miles)
         BestEfforts(report, miles)
-        RecentWorkouts(report, miles, onShare)
+        RecentWorkouts(report, miles, metricsPending, onShare)
 
         Text(
             text = stringRes(Res.string.my_fitness_window_note),
@@ -528,6 +528,7 @@ private fun bestValue(
 private fun RecentWorkouts(
     report: WorkoutStats.Report,
     miles: Boolean,
+    metricsPending: Boolean,
     onShare: (DetectedWorkout, String) -> Unit,
 ) {
     SectionCard(stringRes(Res.string.my_fitness_recent)) {
@@ -555,7 +556,16 @@ private fun RecentWorkouts(
                         // workout that is already posted would publish a second kind 1301 for
                         // the same effort — whether it came back from a relay, or is the
                         // Health Connect copy of one the user shared earlier.
-                        if (!workout.alreadyPublished) {
+                        //
+                        // Nor while the metrics are still loading. The composer route carries
+                        // them as primitives where 0 means absent, so sharing a workout whose
+                        // aggregations have not come back yet posts a kind 1301 with its
+                        // duration and nothing else — and then the workout counts as shared, so
+                        // the full numbers never get their turn. Everything still offering a
+                        // Share button in that window is a Health Connect workout, since a
+                        // published one is by definition already published, so the wait is
+                        // blanket rather than per-workout.
+                        if (!workout.alreadyPublished && !metricsPending) {
                             TextButton(onClick = { onShare(workout, label) }) {
                                 Text(stringRes(Res.string.my_fitness_share), style = MaterialTheme.typography.labelMedium)
                             }
