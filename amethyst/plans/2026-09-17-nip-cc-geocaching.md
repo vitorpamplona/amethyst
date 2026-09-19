@@ -397,9 +397,17 @@ Hub tabs — one shared feed state, five views, so the map costs no extra subscr
 
 ### 6.3 Entry points
 
-`NavBarItem.GEOCACHES` → `Route.Geocaches()` is the only new navigation surface, and it is
-user-configurable via `NavPickerUi`, so the cost of being wrong is near zero. Everything else is
-a destination change on something already tappable: a `GeocacheCard` in any feed, a "N caches
+`NavBarItem.GEOCACHES` → `Route.Geocaches()` is the only new navigation surface, and it ships
+**visible by default**. Adding the id to `NavBarCatalog` forces a drawer placement — it goes in
+`DrawerFeedsItems` beside Polls, Products, Workouts and Calendars, and `DrawerSectionsTest` fails
+if a catalog id appears in no section, so the repo already prevents a new destination from
+silently vanishing. Hiding it is opt-out, via `DrawerSettingsScreen`.
+
+The bottom bar is a separate list (`DefaultBottomBarItems` is five entries: Home, Messages,
+Wallet, Browser, Notifications) and is left alone — geocaching earns a drawer row, not one of
+those five slots.
+
+Everything else is a destination change on something already tappable: a `GeocacheCard` in any feed, a "N caches
 here" chip on the geohash screen, an `naddr` through `uriToRoute` (the treasures.to link path —
 the interop entry that matters most), the notification feed (7516s already file under the cache
 via `computeReplyTo`), the `kind:geocache` search alias, and a find count on a profile.
@@ -444,14 +452,15 @@ both `removeAll { it is Marker }` first). That is the one piece with no preceden
 6. FTF lock-in and the archived rules.
 7. Hunts — fully independent of 1–6.
 
-### 6.7 Open decisions (assumptions this design makes)
+### 6.7 Decisions (settled)
 
-- **May Nearby turn on GPS?** Feed cards read the cached fix and never subscribe; a
-  distance-sorted list is worthless without one. *Assumed yes, behind an explicit
-  "Use my location".*
-- **Does geocaching earn a drawer slot?** *Assumed yes, off by default.*
-- **ROT13 or plaintext hints on the wire?** The network is split 17/17 and the spec contradicts
-  itself; reading handles both, writing must pick. *Assumed ROT13* — the reference client's
-  choice and the one that fails safe.
-- **Cluster threshold on the map.** *Assumed ~50 visible markers*, to be measured on a device
-  rather than guessed.
+- **Nearby may turn on GPS**, behind an explicit "Use my location" the user taps. Feed cards keep
+  reading the cached fix and never subscribe; a distance-sorted list is worthless without a fix,
+  but scrolling a feed must still never start the GPS.
+- **Geocaching gets a drawer row, on by default** — `DrawerFeedsItems`, hideable in
+  `DrawerSettingsScreen`. Not a default bottom-bar slot.
+- **We write ROT13 hints.** The network is split 17/17 and the spec contradicts itself; reading
+  handles both, writing must pick. ROT13 is the reference client's choice and the one that fails
+  safe (a reader assuming plaintext sees noise, not the answer).
+- **Cluster the map above roughly 50 visible markers** — a starting figure to measure on a real
+  device, not a guess to ship.
