@@ -64,7 +64,6 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_add_note
 import com.vitorpamplona.amethyst.commons.resources.geocache_add_to_hunt
@@ -136,6 +135,7 @@ fun GeocacheDetailScreen(
     // not cached yet.
     val noteState by observeNote(targetNote, accountViewModel)
     val listing = noteState.note.event as? GeocacheListingEvent
+    val logs = rememberGeocacheLogs(noteState)
 
     var sheet by remember { mutableStateOf<GeocacheLogSheetType?>(null) }
 
@@ -156,7 +156,7 @@ fun GeocacheDetailScreen(
                 actions = {
                     if (listing != null) {
                         GeocacheShareAction(targetAddress)
-                        GeocacheOwnerActions(listing, targetAddress, targetNote, accountViewModel, nav)
+                        GeocacheOwnerActions(listing, targetAddress, logs, accountViewModel, nav)
                     }
                 },
             )
@@ -166,7 +166,7 @@ fun GeocacheDetailScreen(
                 GeocacheActionBar(
                     listing = listing,
                     address = targetAddress,
-                    cacheNote = targetNote,
+                    logs = logs,
                     accountViewModel = accountViewModel,
                     nav = nav,
                     onOpenSheet = { sheet = it },
@@ -186,7 +186,7 @@ fun GeocacheDetailScreen(
             if (listing == null) {
                 LoadingPlaceholder()
             } else {
-                GeocacheDetailBody(listing, targetNote, accountViewModel, nav)
+                GeocacheDetailBody(listing, logs, accountViewModel, nav)
             }
         }
     }
@@ -196,7 +196,6 @@ fun GeocacheDetailScreen(
             GeocacheLogSheet(
                 type = type,
                 listing = listing,
-                cacheNote = targetNote,
                 accountViewModel = accountViewModel,
                 onDismiss = { sheet = null },
             )
@@ -218,7 +217,7 @@ private fun LoadingPlaceholder() {
 @Composable
 private fun GeocacheDetailBody(
     listing: GeocacheListingEvent,
-    cacheNote: Note,
+    logs: GeocacheLogs,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -229,7 +228,6 @@ private fun GeocacheDetailBody(
     val hint = remember(listing) { listing.hintOnWire()?.trim()?.ifBlank { null } }
     val mission = remember(listing) { listing.mission()?.trim()?.ifBlank { null } }
     val images = remember(listing) { listing.images().mapNotNull { it.trim().ifBlank { null } } }
-    val logs = rememberGeocacheLogs(cacheNote, accountViewModel)
 
     Column(Modifier.padding(horizontal = 16.dp)) {
         Spacer(Modifier.height(4.dp))
@@ -389,13 +387,12 @@ private fun GeocacheNavigateRow(
 private fun GeocacheActionBar(
     listing: GeocacheListingEvent,
     address: Address,
-    cacheNote: Note,
+    logs: GeocacheLogs,
     accountViewModel: AccountViewModel,
     nav: INav,
     onOpenSheet: (GeocacheLogSheetType) -> Unit,
 ) {
     val me = accountViewModel.userProfile().pubkeyHex
-    val logs = rememberGeocacheLogs(cacheNote, accountViewModel)
     val winner = logs.winner
     val outOfPlay = listing.isArchived() || (winner != null && winner != me)
 

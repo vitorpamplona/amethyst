@@ -48,7 +48,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_archive
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_archive_confirm
@@ -86,7 +85,7 @@ import org.jetbrains.compose.resources.stringResource
 fun GeocacheOwnerActions(
     listing: GeocacheListingEvent,
     address: Address,
-    cacheNote: Note,
+    logs: GeocacheLogs,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -98,7 +97,6 @@ fun GeocacheOwnerActions(
     var showQr by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
-    val logs = rememberGeocacheLogs(cacheNote, accountViewModel)
     val provisionalWinner = remember(listing, logs.finds) { FirstToFindResolver.provisionalWinningLog(listing, logs.finds)?.pubKey }
 
     IconButton(onClick = { menuOpen = true }) {

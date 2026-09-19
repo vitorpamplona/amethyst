@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.map
 
+import android.content.Context
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -76,6 +78,8 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import kotlin.math.pow
+import kotlin.math.roundToLong
 
 /**
  * The caches on a map, which is how people actually browse for something to go and find.
@@ -193,7 +197,7 @@ fun GeocacheMapTab(
                 if (visible.size > CLUSTER_THRESHOLD) {
                     val cell = clusterCellSize(map.zoomLevelDouble)
                     visible
-                        .groupBy { (_, p) -> Math.round(p.first / cell) to Math.round(p.second / cell) }
+                        .groupBy { (_, p) -> (p.first / cell).roundToLong() to (p.second / cell).roundToLong() }
                         .forEach { (_, group) ->
                             val centre = group.first().second
                             val geo = GeoPoint(centre.first, centre.second)
@@ -318,18 +322,18 @@ private const val CLUSTER_THRESHOLD = 50
  * halves the ground covered by a pixel, so the cell halves with it and clusters break apart at
  * the same apparent density all the way in.
  */
-private fun clusterCellSize(zoom: Double): Double = 40.0 / (256.0 * Math.pow(2.0, zoom)) * 360.0
+private fun clusterCellSize(zoom: Double): Double = 40.0 / (256.0 * 2.0.pow(zoom)) * 360.0
 
 private fun markerFor(
     map: MapView,
     listing: GeocacheListingEvent,
     geo: GeoPoint,
-    context: android.content.Context,
+    context: Context,
     found: Set<String>,
-    amber: androidx.compose.ui.graphics.Color,
-    gold: androidx.compose.ui.graphics.Color,
-    green: androidx.compose.ui.graphics.Color,
-    grey: androidx.compose.ui.graphics.Color,
+    amber: Color,
+    gold: Color,
+    green: Color,
+    grey: Color,
     onTap: (GeocacheListingEvent) -> Unit,
 ): Marker {
     val mine = found.contains(listing.address().toValue())

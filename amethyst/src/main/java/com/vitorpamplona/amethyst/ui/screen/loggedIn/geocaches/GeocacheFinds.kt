@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 
@@ -40,7 +41,7 @@ fun rememberMyFoundCacheIds(accountViewModel: AccountViewModel): Set<String> {
 
     val notes =
         when (val state = finds) {
-            is com.vitorpamplona.amethyst.commons.feeds.FeedState.Loaded -> state.feed.value.list
+            is FeedState.Loaded -> state.feed.value.list
             else -> emptyList()
         }
 

@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_archived
 import com.vitorpamplona.amethyst.commons.resources.geocache_found_it
@@ -53,7 +54,6 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_maintenanc
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_note
 import com.vitorpamplona.amethyst.commons.resources.geocache_verified_find
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChip
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -89,16 +89,17 @@ data class GeocacheLogs(
 /**
  * The cache's logs, recomputed whenever the note's reply list changes.
  *
+ * Takes the already-observed [noteState] rather than observing again. The detail screen needs
+ * this in three places — the body, the action bar and the owner menu — and each `observeNote`
+ * opens its own relay subscription, so observing per caller would open three REQs for one note
+ * and recompute the first-to-find resolution three times on every arriving log.
+ *
  * `Note.replies` is a plain `var` with no snapshot behind it, so it cannot drive a recomposition
- * on its own. Observing the cache note does: a log arriving is filed under this note by
- * `LocalCache.computeReplyTo` and bumps the note's own state, which is what this reads through.
+ * on its own. The observation the caller already holds does: a log arriving is filed under this
+ * note by `LocalCache.computeReplyTo` and bumps the note's own state.
  */
 @Composable
-fun rememberGeocacheLogs(
-    cacheNote: Note,
-    accountViewModel: AccountViewModel,
-): GeocacheLogs {
-    val noteState by observeNote(cacheNote, accountViewModel)
+fun rememberGeocacheLogs(noteState: NoteState): GeocacheLogs {
     val listing = noteState.note.event as? GeocacheListingEvent
 
     return remember(noteState, listing) {

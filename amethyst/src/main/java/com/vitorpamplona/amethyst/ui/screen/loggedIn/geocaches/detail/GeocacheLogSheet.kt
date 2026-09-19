@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_comment_title
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_placeholder
@@ -82,7 +81,6 @@ enum class GeocacheLogSheetType {
 fun GeocacheLogSheet(
     type: GeocacheLogSheetType,
     listing: GeocacheListingEvent,
-    cacheNote: Note,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
