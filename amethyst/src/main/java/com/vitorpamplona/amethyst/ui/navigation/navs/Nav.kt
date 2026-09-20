@@ -111,23 +111,11 @@ class Nav(
             // on screen the whole time and is routinely tapped from three screens deep.
             popPushesAboveTabRoot()
 
-            // Home always sits at the bottom of the stack (it is the graph's start destination and
-            // the anchor of the popUpTo below), and so does the tab the user is already inside:
-            // popping back to it beats navigating to it. The tab root keeps the ViewModelStore and
-            // scroll position it already has, and the branch above it is saved under its own tab,
-            // exactly as the navigate path would have saved it.
-            //
-            // Home in particular MUST come back this way. `popUpTo(Home) { inclusive = false;
-            // saveState = true }` files the popped entries under the popUpTo target's own
-            // destination id as well as the popped tab's — the `if (!inclusive)` branch of
-            // NavControllerImpl.executePopOperations — so `navigate(Home) { restoreState = true }`
-            // hands Home back whatever was popped on the way out of some *other* tab. That is how
-            // tapping Home on the rail came back to the thread the user had left open three screens
-            // deep in another tab instead of to the home feed.
-            val existing = runCatching { controller.getBackStackEntry(route) }.getOrNull()
-            if (existing != null) {
-                controller.popBackStack(route, inclusive = false, saveState = true)
-                existing.savedStateHandle.set(BOTTOM_NAV_ROOT_KEY, true)
+            // Dropping those pushes is often the whole job — re-tapping the tab the user is inside,
+            // and every tap of Home from somewhere inside Home, end here. Same already-there guard
+            // nav() uses, so a parameterized tab compares by its filled route.
+            if (getRouteWithArguments(route::class, controller) == route) {
+                controller.currentBackStackEntry?.savedStateHandle?.set(BOTTOM_NAV_ROOT_KEY, true)
                 return@launch
             }
 
@@ -146,7 +134,15 @@ class Nav(
                     saveState = true
                 }
                 launchSingleTop = true
-                restoreState = true
+                // ...but never onto Home. A non-inclusive popUpTo files the popped entries under the
+                // popUpTo TARGET's own destination id as well as the popped tab's — the
+                // `if (!inclusive)` branch of NavControllerImpl.executePopOperations — so restoring
+                // here would hand Home the stack that was saved on the way out of some *other* tab.
+                // That is how tapping Home on the rail came back to a thread instead of the feed.
+                // Home is the anchor, so it is never popped and has no saved stack of its own to
+                // miss: launchSingleTop reuses the entry already sitting there, ViewModelStore and
+                // all.
+                restoreState = route != Route.Home
             }
             // Mark this entry as a tab root: hides the back arrow in canPop
             // and skips the horizontal slide in composableFromEnd.

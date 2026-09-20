@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import com.vitorpamplona.amethyst.ui.navigation.navs.ImeSettler
@@ -51,14 +50,6 @@ import org.junit.Test
 class NavImeSettleTest {
     private fun controllerRecording(order: MutableList<String>): NavHostController =
         mockk<NavHostController>(relaxed = true) {
-            // An empty back stack: nothing is pushed over a tab root and no tab is already on it,
-            // so navBottomBar takes its navigate path rather than the pop-back-to-the-tab shortcut.
-            // The tab lands on the stack once that navigate runs, which is what stops navBottomBar
-            // from falling through to its second, sibling-destination navigate.
-            every { popBackStack() } returns false
-            every { getBackStackEntry(any<Route>()) } throws
-                IllegalArgumentException("No destination is on the NavController's back stack") andThen
-                mockk<NavBackStackEntry>(relaxed = true)
             every { navigate(any<Route>(), any<NavOptionsBuilder.() -> Unit>()) } answers
                 { order.add("navigate") }
             every { navigate(any<Route>()) } answers { order.add("navigate") }
