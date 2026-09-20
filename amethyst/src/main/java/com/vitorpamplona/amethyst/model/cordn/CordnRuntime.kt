@@ -27,8 +27,10 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorRegistry
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
 import com.vitorpamplona.amethyst.commons.cordn.CordnSession
+import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.CordnSyncLoop
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
+import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
 import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmGiftWrap
@@ -112,6 +114,12 @@ class CordnRuntime(
             scopes = FileBackedCordnScopeFactory(filesDir, cipher, links),
         )
 
+    private val coordinatorStore =
+        FileCordnCoordinatorStore(
+            CordnStorageLayout.accountDirectoryFor(filesDir, accountSigner.pubKey),
+            cipher,
+        )
+
     /** Every cordn room this account is in, for the inbox and the screens. */
     val groups = CordnGroupList()
 
@@ -138,6 +146,7 @@ class CordnRuntime(
         // before the first message of the session arrives.
         session.manager.gids.value
             .forEach { refresh(session, it) }
+        remember()
         return session
     }
 
@@ -169,7 +178,17 @@ class CordnRuntime(
 
     fun sessionOrNull(coordinatorPubKey: HexKey): CordnSession? = registry.sessionOrNull(coordinatorPubKey)
 
-    /** Opens every configured coordinator and starts syncing. Call at login. */
+    /**
+     * Reopens the coordinators this account used last time, and starts syncing.
+     *
+     * Call at login. Without it a cordn group is unreachable after a relaunch:
+     * its MLS state is still on disk, but a `gid` with no coordinator is not a
+     * group anyone can open, and nothing else on the device knows which
+     * coordinator serves it.
+     */
+    suspend fun restore() = start(coordinatorStore.load())
+
+    /** Opens every configured coordinator and starts syncing. */
     suspend fun start(configs: List<CoordinatorConfig>) {
         configs.forEach {
             try {
@@ -199,6 +218,22 @@ class CordnRuntime(
             loops.remove(coordinatorPubKey)?.stop()
         }
         registry.forget(coordinatorPubKey)
+        remember()
+    }
+
+    /**
+     * Writes down which coordinators are open, so the next launch finds them.
+     *
+     * Failing to persist must not fail the session it follows: the coordinator
+     * is already open and working, and losing the record costs a re-entry next
+     * launch rather than the group.
+     */
+    private suspend fun remember() {
+        try {
+            coordinatorStore.save(registry.coordinators.value)
+        } catch (e: Exception) {
+            Log.w(TAG, "could not persist the coordinator list: ${e.message}", e)
+        }
     }
 
     private fun file(

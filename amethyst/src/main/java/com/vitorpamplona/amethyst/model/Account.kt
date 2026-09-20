@@ -3815,6 +3815,19 @@ class Account(
         // the race where a publish would land on a half-built Account.
         cashuWalletState.start { event -> sendLiterallyEverywhere(event) }
 
+        // Reopen the cordn coordinators this account used last time.
+        //
+        // Deliberately its own launch rather than a branch of Marmot's block
+        // below: the two protocols are independent by design (§3.1 of
+        // amethyst/plans/2026-09-19-cordn-ui.md), and a cordn coordinator that
+        // is down must not delay Marmot's restore, or the reverse. Failures
+        // are already contained per coordinator inside start().
+        cordnRuntime?.let { runtime ->
+            scope.launch(Dispatchers.IO) {
+                runtime.restore()
+            }
+        }
+
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {
             // Derived kind:1210 rows go straight into the conversation. Only

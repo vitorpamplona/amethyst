@@ -59,6 +59,22 @@ object CordnStorageLayout {
     }
 
     /**
+     * `<root>/cordn/<account>` — the account's own directory, above any
+     * coordinator's.
+     *
+     * The coordinator list lives here rather than inside a coordinator's
+     * directory, because it is the list OF them: storing it under one would
+     * make that coordinator's removal delete the record of the others.
+     */
+    fun accountDirectoryFor(
+        root: File,
+        accountPubKey: HexKey,
+    ): File {
+        require(accountPubKey.matches(HEX)) { "account pubkey must be hex" }
+        return File(root, "cordn/$accountPubKey")
+    }
+
+    /**
      * A filename for an arbitrary caller-chosen key.
      *
      * Base64url rather than the key itself, and deliberately NOT the hex
@@ -238,5 +254,41 @@ class FileCordnKeyPackageStore(
                 // [CordnStorageLayout.decodeKey] drops it. A second filter
                 // saying the same thing would be a branch no test can reach.
                 .mapNotNull { CordnStorageLayout.decodeKey(it.name) }
+        }
+}
+
+/**
+ * A [CordnCoordinatorStore] on the filesystem, encrypted through [cipher].
+ *
+ * ```
+ * <dir>/coordinators  — encrypted CoordinatorListCodec blob
+ * ```
+ *
+ * Scope [dir] with [CordnStorageLayout.accountDirectoryFor]: one file per
+ * account, sitting above the per-coordinator directories it names.
+ */
+class FileCordnCoordinatorStore(
+    private val dir: File,
+    private val cipher: CordnBlobCipher,
+) : CordnCoordinatorStore {
+    private val file get() = File(dir, "coordinators")
+
+    override suspend fun save(configs: List<CoordinatorConfig>) =
+        withContext(Dispatchers.IO) {
+            atomicWrite(file, cipher.encrypt(CoordinatorListCodec.encode(configs)))
+        }
+
+    override suspend fun load(): List<CoordinatorConfig> =
+        withContext(Dispatchers.IO) {
+            val stored = file
+            if (!stored.exists()) return@withContext emptyList()
+            try {
+                CoordinatorListCodec.decode(cipher.decrypt(stored.readBytes()))
+            } catch (e: Exception) {
+                // A list written by a future build, or one the keystore can no
+                // longer decrypt. Returning nothing loses the coordinators but
+                // keeps the account usable; throwing here would fail login.
+                emptyList()
+            }
         }
 }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -32,6 +33,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -76,6 +78,10 @@ class FileCordnStoresTest {
     private fun dir() = CordnStorageLayout.directoryFor(root, account, coordinator)
 
     private fun groups() = FileCordnGroupStore(dir(), cipher)
+
+    private fun coordinators() = FileCordnCoordinatorStore(CordnStorageLayout.accountDirectoryFor(root, account), cipher)
+
+    private fun relay(url: String) = RelayUrlNormalizer.normalizeOrNull(url)!!
 
     private fun keyPackages() = FileCordnKeyPackageStore(dir(), cipher)
 
@@ -295,5 +301,56 @@ class FileCordnStoresTest {
                 dir().walkTopDown().none { it.name.endsWith(".tmp") },
                 "a temp file survived the rename",
             )
+        }
+
+    @Test
+    fun `the coordinator list survives a relaunch, encrypted`() =
+        runTest {
+            val configs =
+                listOf(
+                    CoordinatorConfig(coordinator, listOf(relay("wss://one.example.com")), CoordinatorConfig.Origin.MANUAL, "Work"),
+                    CoordinatorConfig("c".repeat(64), listOf(relay("wss://two.example.com"), relay("wss://three.example.com")), CoordinatorConfig.Origin.GROUP_REF),
+                )
+            coordinators().save(configs)
+
+            assertEquals(configs, coordinators().load())
+            val onDisk = File(CordnStorageLayout.accountDirectoryFor(root, account), "coordinators").readBytes()
+            assertFalse(onDisk.decodeToString().contains(coordinator), "the pubkey went to disk in the clear")
+        }
+
+    @Test
+    fun `a label with a separator in it round-trips`() =
+        runTest {
+            // The reason the format is length-prefixed rather than delimited:
+            // a label is free text a user typed, so any separator a line-based
+            // format picked is one they can put in it.
+            val messy = "tab\there\nnewline\u0000nul"
+            coordinators().save(listOf(CoordinatorConfig(coordinator, listOf(relay("wss://one.example.com")), label = messy)))
+
+            assertEquals(messy, coordinators().load().single().label)
+        }
+
+    @Test
+    fun `an account with no stored list gets an empty one, not a failure`() =
+        runTest {
+            assertEquals(emptyList(), coordinators().load())
+        }
+
+    @Test
+    fun `an unreadable list loses the coordinators rather than the login`() =
+        runTest {
+            coordinators().save(listOf(CoordinatorConfig(coordinator, listOf(relay("wss://one.example.com")))))
+            File(CordnStorageLayout.accountDirectoryFor(root, account), "coordinators").writeBytes(byteArrayOf(9, 9, 9))
+
+            assertEquals(emptyList(), coordinators().load())
+        }
+
+    @Test
+    fun `the coordinator list sits above the per-coordinator directories, so forgetting one keeps the rest`() =
+        runTest {
+            // If it lived inside a coordinator's own directory, removing that
+            // coordinator would delete the record of every other one with it.
+            val listFile = File(CordnStorageLayout.accountDirectoryFor(root, account), "coordinators")
+            assertEquals(dir().parentFile, listFile.parentFile)
         }
 }
