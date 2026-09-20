@@ -135,6 +135,16 @@
 # secp256k1's JNI layer resolves these from native code.
 -keep class fr.acinq.secp256k1.** { *; }
 
+# zxing-cpp's JNI boundary. The native library exports name-mangled symbols
+# (Java_zxingcpp_BarcodeReader_readYBuffer), so R8 renaming the class or its
+# external methods breaks the lookup at runtime with no build error and no
+# warning -- the QR scanner simply fails to start in release builds.
+#
+# This arrived automatically as the io.github.zxing-cpp:android AAR's consumer
+# rule. We build that library ourselves now (tools/zxing-cpp-build) and vendor
+# its Kotlin half, so the rule is ours to carry.
+-keep class zxingcpp.** { *; }
+
 # Nothing keeps libscrypt, NetCipher/tor-android, LazySodium or JNA any more:
 # quartz replaced libsodium with a pure-Kotlin implementation (LibSodiumInstance)
 # and Tor now runs through arti's own JNI layer. Their rules used to live here and

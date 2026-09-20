@@ -102,15 +102,16 @@ jobs:
 
       - name: Test + Build Desktop (gradle)
         run: |
-          CMD="./gradlew :quartz:jvmTest :commons:jvmTest :commonsUI:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
+          CMD="./gradlew :quartz:jvmTest :commons:jvmTest :commonsUI:jvmTest :quic:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
           if [ "${{ runner.os }}" = "Linux" ]; then
             xvfb-run --auto-servernum $CMD
           else
             $CMD
           fi
 
-      # This job runs five test suites (:quartz, :commons, :nestsClient, :cli,
-      # :desktopApp) but, unlike test-geode / test-quartz-ios /
+      # This job runs the JVM test suites (:quartz, :commons, :commonsUI, :quic,
+      # :nestsClient, :marmotQuic, :cli, :desktopApp) but, unlike test-geode /
+      # test-quartz-ios /
       # test-and-build-android, published nothing when one of them failed. The
       # console line names the failing test and the exception class and stops
       # there, so the message is lost with the runner. That is how the

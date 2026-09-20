@@ -188,6 +188,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Long-press the launcher icon to scan a QR code. The shortcut fires a VIEW intent
+                 at nostr:scanqr, which the nostr-scheme filter below already catches, so it needs
+                 no hardcoded targetPackage - debug and benchmark builds carry an applicationId
+                 suffix that would break one. uriToRoute turns it into the scanner. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+
             <intent-filter android:label="Amethyst">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -377,6 +385,25 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- "Scan QR code" share target: an image shared here is decoded rather than posted, which
+             is how most QR codes actually arrive - a screenshot or a photo someone sent you. SEND
+             only: a QR scan reads one code, so there is nothing sensible to do with a multi-select.
+             The android:name simple class ("ScanQrCodeAlias") is matched at runtime by
+             ShareIntentRouting.SCAN_QR_ALIAS_SIMPLE_NAME; keep the two in sync. -->
+        <activity-alias
+            android:name=".ui.ScanQrCodeAlias"
+            android:exported="true"
+            android:label="@string/share_target_scan_qr"
+            android:icon="@drawable/ic_qrcode"
+            android:targetActivity=".ui.MainActivity">
+
+            <intent-filter android:label="@string/share_target_scan_qr">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- "New Short" share target: a video shared here always becomes a NIP-71 kind-22 short so
              it lands in the Shorts feed, whatever its orientation. Video-only — a short is a video.
              The android:name simple class ("ShareAsShortVideoAlias") is matched at runtime by
@@ -469,12 +496,6 @@
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity-alias>
-
-        <activity
-            android:name="com.journeyapps.barcodescanner.CaptureActivity"
-            android:screenOrientation="fullSensor"
-            tools:replace="screenOrientation"
-            tools:ignore="DiscouragedApi" />
 
         <activity
             android:name=".ui.screen.loggedIn.nests.room.activity.NestActivity"

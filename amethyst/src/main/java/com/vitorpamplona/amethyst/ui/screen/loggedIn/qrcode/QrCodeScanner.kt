@@ -20,64 +20,85 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import com.google.zxing.client.android.Intents
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.point_to_the_qr_code
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScanOutcome
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScannedPayload
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.classifyScannedPayload
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 
+/**
+ * Scans a QR code and navigates wherever it points.
+ *
+ * A payload we decode but cannot route no longer closes the scanner: it stays open and explains
+ * itself (see `ScanOutcomeSheet`), because "that is a Lightning invoice, not a profile" and "the
+ * camera never read anything" used to look identical from the outside.
+ */
 @Composable
 fun NIP19QrCodeScanner(
     accountViewModel: AccountViewModel,
     onScan: (Route?) -> Unit,
 ) {
-    SimpleQrCodeScanner {
-        try {
-            if (it != null) {
-                onScan(uriToRoute(it, accountViewModel.account))
+    QrCodeScannerDialog(
+        onDismiss = { onScan(null) },
+        onScan = { contents ->
+            val route = routeFor(contents, accountViewModel)
+            if (route != null) {
+                onScan(route)
+                ScanOutcome.Handled
             } else {
-                onScan(null)
+                ScanOutcome.NotSupported
             }
-        } catch (e: Throwable) {
-            if (e is CancellationException) throw e
-            Log.e("NIP19 Scanner", "Error parsing $it", e)
-            // QR can be anything, do not throw errors.
-            onScan(null)
-        }
-    }
+        },
+    )
 }
 
+/**
+ * The route a scanned string leads to, or null when nothing here can open it.
+ *
+ * A bare hex pubkey gets re-encoded as an npub first. Plenty of web tools hand out a raw
+ * 64-character key with no bech32 wrapper, and treating that as unreadable has been a reported
+ * papercut since 2023 (issue #417).
+ */
+private fun routeFor(
+    contents: String,
+    accountViewModel: AccountViewModel,
+): Route? =
+    try {
+        val payload = classifyScannedPayload(contents)
+        val uri = if (payload is ScannedPayload.HexPubKey) payload.npub else contents
+        uriToRoute(uri, accountViewModel.account)
+    } catch (e: Throwable) {
+        if (e is CancellationException) throw e
+        // The payload itself never reaches the log. A QR code is as likely to hold an nsec, a
+        // wallet-connect secret or a Cashu token as a profile link, and logcat is readable over
+        // adb and swept up by device bug reports — the same material ScannedPayload.containsSecret
+        // exists to keep off the screen two files away. The classification and the length say
+        // enough to debug a routing failure; classifying again here is wrapped because this is
+        // the branch for a payload that already made something throw.
+        val kind = runCatching { classifyScannedPayload(contents)::class.simpleName }.getOrNull() ?: "unclassifiable"
+        Log.e("NIP19 Scanner", "Could not route a scanned $kind payload of ${contents.length} chars", e)
+        // A QR code can hold anything at all. Never let one throw.
+        null
+    }
+
+/**
+ * Scans a QR code and hands back whatever it says.
+ *
+ * For callers that do their own validation — a wallet-connect URI, a `bunker://` offer, a key on
+ * the login screen. `null` means the user backed out.
+ */
 @Composable
 fun SimpleQrCodeScanner(onScan: (String?) -> Unit) {
-    val qrLauncher =
-        rememberLauncherForActivityResult(ScanContract()) {
-            if (it.contents != null) {
-                onScan(it.contents)
-            } else {
-                onScan(null)
-            }
-        }
-
-    val scanOptions =
-        ScanOptions().apply {
-            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-            setPrompt(stringRes(id = Res.string.point_to_the_qr_code))
-            setBeepEnabled(false)
-            setOrientationLocked(false)
-            addExtra(Intents.Scan.SCAN_TYPE, Intents.Scan.MIXED_SCAN)
-        }
-
-    DisposableEffect(Unit) {
-        qrLauncher.launch(scanOptions)
-        onDispose {}
-    }
+    QrCodeScannerDialog(
+        onDismiss = { onScan(null) },
+        onScan = { contents ->
+            onScan(contents)
+            ScanOutcome.Handled
+        },
+    )
 }

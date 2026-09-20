@@ -1670,6 +1670,9 @@
     <string name="share_target_as_picture">New Picture</string>
     <string name="share_target_as_short_video">New Short</string>
     <string name="share_target_as_video">New Video</string>
+    <string name="share_target_scan_qr">Scan QR code</string>
+    <string name="shortcut_scan_qr_short">Scan QR</string>
+    <string name="shortcut_scan_qr_long">Scan a QR code</string>
     <string name="new_highlight_title">New Highlight</string>
     <string name="new_highlight_passage_label">Highlighted text</string>
     <string name="new_highlight_note_placeholder">Add your thoughts…</string>

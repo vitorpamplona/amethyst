@@ -16,11 +16,21 @@ echo "Running test... "
 # variants of :amethyst (play/fdroid × debug/release/benchmark) plus full
 # native-libs merging per variant — ~6× the work of one variant. CI runs the
 # multi-flavor matrix on push to main; pre-push only needs one happy path.
+#
+# Every KMP module's tests live under <module>:jvmTest - the Kotlin Multiplatform
+# plugin registers no plain `test` task - so a module missing from this list is a
+# module nobody runs before pushing. Add new KMP modules here when they gain tests.
+#
+# `./gradlew test` now reaches the KMP modules too (see the `test` alias in the root
+# build), but this hook stays explicit: a bare `test` would also pull in :desktopApp:test,
+# which needs a display server and is deliberately skipped on CLAUDE_CODE_REMOTE below.
 TASKS=(
     :quartz:jvmTest
     :commons:jvmTest
+    :commonsUI:jvmTest
     :nestsClient:jvmTest
     :quic:jvmTest
+    :marmotQuic:jvmTest
     :amethyst:testPlayDebugUnitTest
     :cli:test
 )
