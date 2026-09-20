@@ -374,4 +374,159 @@ class CordnGroupManagerTest {
             assertEquals(CoordinatorConfig.from(ref)?.pubKey, coordinatorKey)
             assertNull(aliceManager.group("nope"))
         }
+
+    @Test
+    fun `a second drain does not roll a live group back to its welcome epoch`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (bobBundle, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Rollback"))
+            aliceManager.invite(gid, bob)
+
+            val bobCoordinator = FakeCoordinator(callerPubKey = bob)
+            bobCoordinator.welcomes.putAll(coordinator.welcomes)
+            bobCoordinator.streams.putAll(coordinator.streams)
+            val bobManager = manager(bob, bobCoordinator)
+            bobManager.joinPendingWelcomes({ bobBundle })
+            bobManager.catchUp { }
+            val epochAfterJoin = bobManager.group(gid)!!.epoch
+
+            // Carol arrives; Bob applies the Commit and advances.
+            val (_, carolStored) = carolsPublication()
+            coordinator.seedKeyPackage(carolStored)
+            aliceManager.invite(gid, carolStored.pubKey)
+            bobCoordinator.streams.putAll(coordinator.streams)
+            bobManager.catchUp { }
+            val epochAfterCommit = bobManager.group(gid)!!.epoch
+            assertTrue(epochAfterCommit > epochAfterJoin, "precondition: Bob advanced")
+
+            // A second drain, which is what a relaunch or a retry does.
+            bobManager.joinPendingWelcomes({ bobBundle })
+
+            // Before the accept/decline split this replaced Bob's live group
+            // with the one the Welcome was issued at, and every message after
+            // that epoch stopped decrypting -- silently, and for good.
+            assertEquals(epochAfterCommit, bobManager.group(gid)!!.epoch, "a second drain rolled Bob's group back")
+        }
+
+    @Test
+    fun `a welcome can be read before it is answered`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (bobBundle, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Book club", description = "Thursdays"))
+            aliceManager.invite(gid, bob)
+
+            val bobManager = manager(bob, bobsCoordinatorOver(coordinator))
+            val inbox = bobManager.pendingWelcomes({ bobBundle })
+
+            val welcome = inbox.pending.single()
+            assertEquals(gid, welcome.gid)
+            assertEquals("Book club", welcome.metadata?.name)
+            // Who is already in it -- deliberately not "who invited you",
+            // which a Welcome does not carry.
+            assertEquals(setOf(alice, bob), welcome.members)
+            assertTrue(bobManager.gids.value.isEmpty(), "reading an invitation must not join it")
+        }
+
+    @Test
+    fun `accepting joins the group and stops the coordinator serving the welcome`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (bobBundle, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Accepted"))
+            aliceManager.invite(gid, bob)
+
+            val bobCoordinator = bobsCoordinatorOver(coordinator)
+            val bobManager = manager(bob, bobCoordinator)
+            val welcome = bobManager.pendingWelcomes({ bobBundle }).pending.single()
+            assertEquals(gid, bobManager.accept(welcome))
+
+            assertEquals(setOf(gid), bobManager.gids.value)
+            // Retired at the coordinator, not merely filtered out on the way
+            // back: an un-retired welcome is served to every future session of
+            // this account forever, and each one has to re-open it to find out
+            // it is stale.
+            assertTrue(bobCoordinator.welcomes[bob].isNullOrEmpty(), "the welcome was not retired")
+        }
+
+    @Test
+    fun `declining retires the welcome without joining anything`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (bobBundle, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Declined"))
+            aliceManager.invite(gid, bob)
+
+            val bobManager = manager(bob, bobsCoordinatorOver(coordinator))
+            bobManager.decline(bobManager.pendingWelcomes({ bobBundle }).pending.single())
+
+            assertTrue(bobManager.gids.value.isEmpty())
+            assertTrue(
+                bobManager.pendingWelcomes({ bobBundle }).pending.isEmpty(),
+                "a declined welcome must not be offered again",
+            )
+        }
+
+    @Test
+    fun `a welcome this device has no key package for is left for the device that does`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (_, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Other device"))
+            aliceManager.invite(gid, bob)
+
+            val bobManager = manager(bob, bobsCoordinatorOver(coordinator))
+            val first = bobManager.pendingWelcomes({ null })
+            assertEquals(CordnGroupManager.NO_PRIVATE_HALF, first.skipped.single().reason)
+
+            // Still there: retiring it would destroy the other device's only
+            // copy of an invitation it can actually open.
+            assertEquals(1, bobManager.pendingWelcomes({ null }).skipped.size)
+        }
+
+    @Test
+    fun `a welcome for a group we are already in is retired rather than offered as a choice`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (bobBundle, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Stale"))
+            aliceManager.invite(gid, bob)
+
+            val bobCoordinator = bobsCoordinatorOver(coordinator)
+            val bobManager = manager(bob, bobCoordinator)
+            // Joined, but the acknowledgement never landed -- a dropped
+            // connection between accepting and retiring leaves exactly this
+            // record still being served.
+            val served = bobCoordinator.welcomes[bob]!!.toList()
+            bobManager.accept(bobManager.pendingWelcomes({ bobBundle }).pending.single())
+            bobCoordinator.welcomes[bob] = served.toMutableList()
+
+            val inbox = bobManager.pendingWelcomes({ bobBundle })
+
+            assertTrue(inbox.pending.isEmpty(), "nobody should be asked about a group they are in")
+            assertEquals(CordnGroupManager.ALREADY_A_MEMBER, inbox.skipped.single().reason)
+        }
+
+    /** Bob's own view of the coordinator, carrying whatever Alice's has stored. */
+    private fun bobsCoordinatorOver(alices: FakeCoordinator): FakeCoordinator {
+        val bobCoordinator = FakeCoordinator(callerPubKey = bob)
+        bobCoordinator.welcomes.putAll(alices.welcomes)
+        bobCoordinator.streams.putAll(alices.streams)
+        return bobCoordinator
+    }
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.cordn
 import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.ConsumedWelcomeRef
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.KeyPackagePublication
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
@@ -90,6 +91,9 @@ class CordnGroupManager(
     override val gids: StateFlow<Set<String>> = _gids.asStateFlow()
 
     private var publishedKeyPackage = false
+
+    /** Acknowledgements a failed [retire] left to ride the next `welcome_take`. */
+    private val pendingRetirements = mutableListOf<ConsumedWelcomeRef>()
 
     /** What happened to one delivered payload. */
     sealed interface Delivery {
@@ -247,27 +251,40 @@ class CordnGroupManager(
     }
 
     /**
-     * Joins every group we have been invited to and can open.
+     * Opens every pending Welcome without joining anything.
+     *
+     * Splitting "open" from "join" is what makes an accept/decline surface
+     * possible at all. A Welcome is opaque until it is processed — the `gid`,
+     * the group's name and who is already in it all live inside it — so a user
+     * cannot be asked about an invitation that has not been opened, and
+     * opening must therefore not be the same act as accepting.
      *
      * [bundleFor] resolves a `kp_ref` to the KeyPackageBundle we published
-     * under it. A Welcome we have no private half for is left alone rather
-     * than acknowledged, because acknowledging it retires it forever.
+     * under it. A Welcome we have no private half for is skipped and left on
+     * the coordinator: it belongs to another device of this account, and
+     * retiring it here would destroy it.
+     *
+     * A Welcome for a group this manager already holds is skipped **and**
+     * retired. That is the stale record [accept] leaves behind when its
+     * acknowledgement does not reach the coordinator, and letting it pile up
+     * is what made a second drain destructive.
      *
      * [gidFor] overrides where the delivery id comes from — see [gidFrom] for
      * why it can be missing and what to pass when it is.
      */
-    suspend fun joinPendingWelcomes(
+    suspend fun pendingWelcomes(
         bundleFor: (String) -> KeyPackageBundle?,
         gidFor: (MlsGroup) -> String? = ::gidFrom,
-    ): JoinResults {
-        val pending = call { coordinator.takeWelcomes() }
-        val joined = mutableListOf<String>()
+    ): WelcomeInbox {
+        val pending = call { coordinator.takeWelcomes(drainRetirements()) }
+        val opened = mutableListOf<OpenedWelcome>()
         val skipped = mutableListOf<SkippedWelcome>()
+        val stale = mutableListOf<ConsumedWelcomeRef>()
 
         pending.forEach { welcome ->
             val bundle = bundleFor(welcome.keyPackageRef)
             if (bundle == null) {
-                skipped += SkippedWelcome(welcome.keyPackageRef, "no KeyPackage private half for this ref")
+                skipped += SkippedWelcome(welcome.keyPackageRef, NO_PRIVATE_HALF)
                 return@forEach
             }
             val group =
@@ -282,18 +299,109 @@ class CordnGroupManager(
                 skipped += SkippedWelcome(welcome.keyPackageRef, UNKNOWN_GID)
                 return@forEach
             }
+            if (gid in groups) {
+                skipped += SkippedWelcome(welcome.keyPackageRef, ALREADY_A_MEMBER)
+                stale += ConsumedWelcomeRef(welcome.keyPackageRef, welcome.at)
+                return@forEach
+            }
 
-            groups[gid] = group
-            // `after` is the inviter saying where this member's history starts.
-            // Without it a joiner replays epochs from before it existed and
-            // every one lands as Undecryptable.
-            welcome.after?.let { sync.restore(gid, sync.inbox(gid).cursor.advancedTo(it)) }
-            persist(gid)
-            joined += gid
+            opened +=
+                OpenedWelcome(
+                    gid = gid,
+                    keyPackageRef = welcome.keyPackageRef,
+                    at = welcome.at,
+                    metadata = CordnGroupMetadata.fromExtensions(group.extensions),
+                    // Who is in the group, which is NOT the same as who
+                    // invited us: a Welcome carries the ratchet tree, not the
+                    // identity of whoever signed the Commit that created it.
+                    // Naming an inviter here would be a guess dressed as a
+                    // fact, and in a group of three it would usually be wrong.
+                    members = CordnCredential.memberIdentities(group),
+                    epoch = group.epoch,
+                    group = group,
+                    after = welcome.after,
+                )
         }
 
+        retire(stale)
+        return WelcomeInbox(opened, skipped)
+    }
+
+    /**
+     * Joins the group [welcome] opens, and retires it.
+     *
+     * Refuses a `gid` this manager already holds rather than replacing it.
+     * Installing a Welcome over a live group rolls its epoch back to the one
+     * it was issued at, and MLS does not recover from that: every message
+     * after the rolled-back epoch stops decrypting, silently and permanently.
+     */
+    suspend fun accept(welcome: OpenedWelcome): String {
+        require(welcome.gid !in groups) { "already in a group with gid ${welcome.gid}" }
+
+        groups[welcome.gid] = welcome.group
+        // `after` is the inviter saying where this member's history starts.
+        // Without it a joiner replays epochs from before it existed and
+        // every one lands as Undecryptable.
+        welcome.after?.let { sync.restore(welcome.gid, sync.inbox(welcome.gid).cursor.advancedTo(it)) }
+        persist(welcome.gid)
         _gids.value = groups.keys.toSet()
-        return JoinResults(joined, skipped)
+
+        retire(listOf(ConsumedWelcomeRef(welcome.keyPackageRef, welcome.at)))
+        return welcome.gid
+    }
+
+    /**
+     * Retires [welcome] without joining it.
+     *
+     * Declining is permanent and there is no undo, because there is no undo to
+     * build: a retired Welcome is gone from the coordinator, and the KeyPackage
+     * it was addressed to has been spent. Re-joining means being invited again.
+     */
+    suspend fun decline(welcome: OpenedWelcome) {
+        retire(listOf(ConsumedWelcomeRef(welcome.keyPackageRef, welcome.at)))
+    }
+
+    /**
+     * Opens every pending Welcome and accepts all of them.
+     *
+     * The unattended path — `amy`, tests, anything with no one to ask. A UI
+     * uses [pendingWelcomes] and [accept]/[decline] instead, because accepting
+     * an invitation on someone's behalf is a decision, not a sync step.
+     */
+    suspend fun joinPendingWelcomes(
+        bundleFor: (String) -> KeyPackageBundle?,
+        gidFor: (MlsGroup) -> String? = ::gidFrom,
+    ): JoinResults {
+        val inbox = pendingWelcomes(bundleFor, gidFor)
+        val joined = inbox.pending.map { accept(it) }
+        return JoinResults(joined, inbox.skipped)
+    }
+
+    /**
+     * Acknowledges [refs] so the coordinator stops serving them.
+     *
+     * `welcome_take` carries acknowledgements for the *previous* round rather
+     * than taking them as their own call, so a retirement can only ride the
+     * next take. Sending one immediately keeps the common case prompt; a
+     * failure parks it in [pendingRetirements] instead of being lost, and
+     * [pendingWelcomes] flushes it on its next call. Failing to retire must
+     * never fail the join it follows — the group is already installed and
+     * persisted, and a Welcome served twice is now merely redundant rather
+     * than destructive.
+     */
+    private suspend fun retire(refs: List<ConsumedWelcomeRef>) {
+        if (refs.isEmpty()) return
+        try {
+            call { coordinator.takeWelcomes(refs) }
+        } catch (e: Exception) {
+            pendingRetirements += refs
+        }
+    }
+
+    private fun drainRetirements(): List<ConsumedWelcomeRef> {
+        val queued = pendingRetirements.toList()
+        pendingRetirements.clear()
+        return queued
     }
 
     // ---- messages --------------------------------------------------------
@@ -459,8 +567,18 @@ class CordnGroupManager(
         /** `spec/02.md` §6: a cordn chat message is a NIP-C7 kind 9. */
         const val CHAT_KIND = 9
 
-        /** Why a Welcome was left in the inbox. Actionable, so it is a constant. */
+        // Why a Welcome was left in the inbox. Each is actionable and each
+        // reaches a user, so they are constants rather than strings written at
+        // the throw site: a reason nobody can act on is just an error message.
+
+        /** The Welcome is for another device of this account. Leave it alone. */
+        const val NO_PRIVATE_HALF = "no KeyPackage private half for this ref"
+
+        /** Opened, but it does not say where to fetch this group's stream from. */
         const val UNKNOWN_GID = "cannot tell which delivery group this Welcome is for"
+
+        /** A stale invitation to a group we are already in. Nothing to decide. */
+        const val ALREADY_A_MEMBER = "already a member of this group"
 
         /**
          * The delivery `gid` a Welcome implies, or null when it implies none.
@@ -498,6 +616,32 @@ class CordnGroupManager(
 class CordnGroupException(
     message: String,
 ) : IllegalStateException(message)
+
+/**
+ * A Welcome that has been opened but not joined.
+ *
+ * Everything on it was read out of the Welcome itself, so it is what can be
+ * shown before a decision is made. [group] is the MLS group the Welcome
+ * produces; holding it is why [CordnGroupManager.accept] does not have to
+ * re-open the Welcome and spend the KeyPackage twice.
+ */
+class OpenedWelcome internal constructor(
+    val gid: String,
+    val keyPackageRef: String,
+    val at: Long,
+    val metadata: CordnGroupMetadata?,
+    /** Who is already in the group. Not the inviter — see [CordnGroupManager.pendingWelcomes]. */
+    val members: Set<HexKey>,
+    val epoch: Long,
+    internal val group: MlsGroup,
+    internal val after: Long?,
+)
+
+/** Every pending Welcome, split into the ones that opened and the ones that did not. */
+data class WelcomeInbox(
+    val pending: List<OpenedWelcome>,
+    val skipped: List<SkippedWelcome>,
+)
 
 /** What [CordnGroupManager.joinPendingWelcomes] did with each pending Welcome. */
 data class JoinResults(
