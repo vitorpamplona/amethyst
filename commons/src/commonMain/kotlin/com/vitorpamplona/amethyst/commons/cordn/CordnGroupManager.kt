@@ -93,23 +93,32 @@ class CordnGroupManager(
 
     /** What happened to one delivered payload. */
     sealed interface Delivery {
+        /**
+         * The group it belongs to.
+         *
+         * On the interface because every outcome has one and callers route on
+         * it — a delivery that cannot be filed under a group is not something
+         * this type can represent.
+         */
+        val gid: String
+
         /** An application message that passed every §5 check. */
         data class Message(
-            val gid: String,
+            override val gid: String,
             val cursor: Long,
             val received: ReceivedMessage,
         ) : Delivery
 
         /** A handshake message; the group has advanced to [epoch]. */
         data class EpochAdvanced(
-            val gid: String,
+            override val gid: String,
             val cursor: Long,
             val epoch: Long,
         ) : Delivery
 
         /** Our own message coming back, already accounted for. */
         data class Echo(
-            val gid: String,
+            override val gid: String,
             val cursor: Long,
         ) : Delivery
 
@@ -121,7 +130,7 @@ class CordnGroupManager(
          * hiding a gap in a conversation.
          */
         data class Undecryptable(
-            val gid: String,
+            override val gid: String,
             val cursor: Long,
             val reason: String,
         ) : Delivery
