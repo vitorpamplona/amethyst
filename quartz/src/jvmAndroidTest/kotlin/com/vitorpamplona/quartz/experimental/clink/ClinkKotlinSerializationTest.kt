@@ -33,16 +33,20 @@ import com.vitorpamplona.quartz.experimental.clink.manage.OfferFields
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Exercises the kotlinx-serialization path for the CLINK DTOs — the code path that
- * native targets (iOS) use via `OptimizedJsonMapper` — and cross-checks it against
- * Jackson (the JVM/Android path) so both backends agree on the wire shapes.
+ * Exercises the kotlinx-serialization path for the CLINK DTOs.
+ *
+ * It used to cross-check kotlinx against Jackson, because JVM/Android bound these
+ * reflectively while native used kotlinx. There is one backend now — [OptimizedJsonMapper]
+ * routes CLINK at kotlinx on every target — so the cross-check is instead that the
+ * serializers agree with the PLATFORM ENTRY POINT the app actually calls, which is what
+ * catches a routing mistake in OptimizedJsonMapper.jvmAndroid.
  */
 class ClinkKotlinSerializationTest {
     @Test
@@ -70,10 +74,10 @@ class ClinkKotlinSerializationTest {
         assertEquals("A coffee", parsed.description)
 
         // Jackson-serialized payload parses with kotlinx and vice versa.
-        val fromJackson = KotlinSerializationMapper.fromJsonTo<OfferRequest>(JacksonMapper.toJson(request))
-        assertEquals("coffee", fromJackson.offer)
-        val jacksonParsed = JacksonMapper.fromJsonTo<OfferRequest>(kotlinJson)
-        assertEquals(21000L, jacksonParsed.amount_sats)
+        val fromPlatform = KotlinSerializationMapper.fromJsonTo<OfferRequest>(OptimizedJsonMapper.toJson(request))
+        assertEquals("coffee", fromPlatform.offer)
+        val platformParsed = OptimizedJsonMapper.fromJsonTo<OfferRequest>(kotlinJson)
+        assertEquals(21000L, platformParsed.amount_sats)
     }
 
     @Test
@@ -160,8 +164,8 @@ class ClinkKotlinSerializationTest {
         assertEquals(listOf("email", "name"), parsed.offer?.fields?.payer_data)
 
         // Jackson reads the kotlinx output identically.
-        val jacksonParsed = JacksonMapper.fromJsonTo<ManageRequest>(json)
-        assertEquals("Coffee", jacksonParsed.offer?.fields?.label)
+        val platformParsed = OptimizedJsonMapper.fromJsonTo<ManageRequest>(json)
+        assertEquals("Coffee", platformParsed.offer?.fields?.label)
     }
 
     @Test
@@ -194,7 +198,7 @@ class ClinkKotlinSerializationTest {
         assertEquals("o1", parsed.details?.first()?.id)
         assertEquals(1500L, parsed.details?.first()?.price_sats)
 
-        val jacksonParsed = JacksonMapper.fromJsonTo<ManageResponse>(json)
-        assertEquals("noffer1...", jacksonParsed.details?.first()?.noffer)
+        val platformParsed = OptimizedJsonMapper.fromJsonTo<ManageResponse>(json)
+        assertEquals("noffer1...", platformParsed.details?.first()?.noffer)
     }
 }

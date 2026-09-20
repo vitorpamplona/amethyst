@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.tor
 
 import android.content.Context
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -206,7 +206,7 @@ class TorService(
         val file = guardsFile()
         if (!file.exists()) return null
         return try {
-            jacksonObjectMapper().readTree(file)
+            ObjectMapper().readTree(file)
         } catch (e: Exception) {
             Log.w("TorService") { "Could not inspect guards.json: ${e.message}" }
             null

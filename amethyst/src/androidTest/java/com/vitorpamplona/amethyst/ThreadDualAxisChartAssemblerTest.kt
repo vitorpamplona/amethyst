@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
@@ -163,7 +162,7 @@ class ThreadDualAxisChartAssemblerTest {
     fun threadOrderTest() =
         runBlocking {
             val eventArray =
-                JacksonMapper.mapper.readValue<List<Event>>(db) + Event.fromJson(header)
+                JacksonMapper.mapper.readValue<List<Event>>(db, JacksonMapper.eventListTypeInstance) + Event.fromJson(header)
 
             var counter = 0
             eventArray.forEach {

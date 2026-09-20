@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.pow
 
+import kotlinx.serialization.Serializable
+
 /**
  * Durable record of a template mining job so a post survives process death:
  * everything needed to re-mine and re-send with no lambda captured — the
@@ -31,6 +33,7 @@ package com.vitorpamplona.amethyst.commons.service.pow
  * outbox relays, [REPLAY_RELAYS] publishes to [relayUrls], [REPLAY_SCHEDULE]
  * signs and parks the event in the scheduled-post store for [publishAtSec].
  */
+@Serializable
 data class PersistedPoWJob(
     val id: String,
     val accountPubkey: String,
