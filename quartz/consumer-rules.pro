@@ -15,10 +15,10 @@
 # secp256k1's JNI layer resolves these from native code.
 -keep class fr.acinq.secp256k1.** { *; }
 
-# libscrypt
--keep class com.lambdaworks.codec.** { *; }
--keep class com.lambdaworks.crypto.** { *; }
--keep class com.lambdaworks.jni.** { *; }
+# Nothing keeps libscrypt any more: quartz replaced it with a pure-Kotlin
+# implementation and `:quartz:dependencies` shows no com.lambdaworks on any
+# configuration. These rules are merged into the R8 config of EVERY app that
+# depends on quartz, so a rule we do not need is noise in somebody else's build.
 
 # No Jackson keeps. Every wire format Quartz speaks is now handled by a
 # hand-written serializer that names its fields as string literals: the

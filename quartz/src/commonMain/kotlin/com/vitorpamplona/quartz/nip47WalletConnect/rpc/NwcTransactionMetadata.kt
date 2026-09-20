@@ -187,7 +187,7 @@ class NwcTransactionMetadata(
          * of key order, escaping and number formatting matching by coincidence, and
          * it fails as a silently unlabelled row rather than as an error. Passing the
          * bytes through also sidesteps the number-widening hazard in
-         * [com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.toAnyValue],
+         * [com.vitorpamplona.quartz.nip01Core.kotlinSerialization.toAnyValue],
          * which resolves untyped numbers with `toDoubleOrNull()` BEFORE
          * `toLongOrNull()`: nothing here decomposes the event at all.
          *
