@@ -468,10 +468,33 @@ Two things behave differently from the sketch, both deliberately:
   `mission` on the listing and nothing for the response, so the only interoperable place for it
   is the text every client already renders.
 
-Still open, and honestly so: none of it has been seen rendering, the cluster threshold (50) is a
-guess that wants measuring on a device, and the hub's Nearby tab currently orders by recency —
-the distance sort and its explicit location opt-in are wired through the card but not yet the
-list ordering.
+### 6.6a What the first pass got wrong
+
+Two corrections worth keeping, because both were "done" in an earlier draft of this section and
+neither was:
+
+- **Five of the eight entry points did not exist.** `Route.GeocacheDetail` appeared in exactly
+  two places in the repo: its nav registration and the hub's own feed row. Everything else —
+  feed taps, notification taps, `nostr:naddr` deep links, QR scans, search hits — fell through
+  to the bare note view. All five run through one function, `routeForInner` in `RouteMaker.kt`,
+  where the calendar branch three lines above says so in as many words. Two branches fixed the
+  lot. The `naddr` case is the one that mattered: a treasures.to link is how most people will
+  first meet a cache in Amethyst.
+- **Curation was write-once.** "Add to a hunt" only ever created a *new* hunt, so the moment a
+  player wanted a second cache on a route they had already built, the app had no answer. Now a
+  picker sheet lists the hunts the user owns and republishes the chosen one with the cache
+  appended (`GeocacheCurationRevision`, built on `update {}` so foreign tags survive).
+
+Also added since: the "N caches here" chip on the geohash screen, and photo removal in the cache
+composer, which could previously only add.
+
+**Deliberately not built:** a find count on someone else's profile. It would read from
+`LocalCache`, which for a stranger holds ~0 of their 7516s, so it would render "0 finds" for
+almost everybody. Doing it honestly needs a per-profile subscription — a profile tab like Gallery
+or Zaps — which is more work than the three items above combined, for a vanity number.
+
+Still open, and honestly so: **none of it has been seen rendering**, and the cluster threshold
+(50) is a guess that wants measuring on a mid-range device with a busy city on screen.
 
 ### 6.6b Original build order
 

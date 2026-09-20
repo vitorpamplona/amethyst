@@ -147,6 +147,7 @@ fun GeocacheDetailScreen(
     val logs = rememberGeocacheLogs(noteState)
 
     var sheet by remember { mutableStateOf<GeocacheLogSheetType?>(null) }
+    var addingToHunt by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -179,6 +180,7 @@ fun GeocacheDetailScreen(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     onOpenSheet = { sheet = it },
+                    onAddToHunt = { addingToHunt = true },
                 )
             }
         },
@@ -198,6 +200,15 @@ fun GeocacheDetailScreen(
                 GeocacheDetailBody(listing, logs, accountViewModel, nav)
             }
         }
+    }
+
+    if (addingToHunt) {
+        GeocacheAddToHuntSheet(
+            cache = targetAddress,
+            accountViewModel = accountViewModel,
+            onNewHunt = { nav.nav(Route.NewGeocacheHunt(seedCache = targetAddress.toValue())) },
+            onDismiss = { addingToHunt = false },
+        )
     }
 
     sheet?.let { type ->
@@ -446,6 +457,7 @@ private fun GeocacheActionBar(
     accountViewModel: AccountViewModel,
     nav: INav,
     onOpenSheet: (GeocacheLogSheetType) -> Unit,
+    onAddToHunt: () -> Unit,
 ) {
     val me = accountViewModel.userProfile().pubkeyHex
     val winner = logs.winner
@@ -495,7 +507,7 @@ private fun GeocacheActionBar(
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 SmallAction(stringResource(Res.string.geocache_add_note)) { onOpenSheet(GeocacheLogSheetType.NOTE) }
                 SmallAction(stringResource(Res.string.geocache_needs_maintenance)) { onOpenSheet(GeocacheLogSheetType.MAINTENANCE) }
-                SmallAction(stringResource(Res.string.geocache_add_to_hunt)) { nav.nav(Route.NewGeocacheHunt(seedCache = address.toValue())) }
+                SmallAction(stringResource(Res.string.geocache_add_to_hunt)) { onAddToHunt() }
             }
         }
     }

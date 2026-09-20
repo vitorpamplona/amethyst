@@ -26,6 +26,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -36,6 +37,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,6 +66,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -72,6 +76,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geocache_log_add_photo
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_description
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_difficulty
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_hint
@@ -92,8 +97,10 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_new_section_what
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_section_where
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_terrain
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_qr_warning
+import com.vitorpamplona.amethyst.commons.resources.geocache_photo_remove
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheLabelRes
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
@@ -283,15 +290,46 @@ fun NewGeocacheScreen(
                     if (model.isUploading.value) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
-                        Text("📷")
+                        Text("📷  " + stringResource(Res.string.geocache_log_add_photo))
                     }
                 }
-                if (model.images.isNotEmpty()) {
-                    Text(
-                        text = "${model.images.size}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            }
+
+            // Thumbnails with a delete affordance. Without one the composer could only ever add,
+            // so an owner editing a cache was stuck with a photo they no longer wanted -- and on
+            // a listing the photos are the first thing a finder sees.
+            if (model.images.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(model.images.toList(), key = { it }) { url ->
+                        Box {
+                            MyAsyncImage(
+                                imageUrl = url,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                mainImageModifier = Modifier,
+                                loadedImageModifier = Modifier.size(88.dp).clip(RoundedCornerShape(10.dp)),
+                                accountViewModel = accountViewModel,
+                                onLoadingBackground = null,
+                                onError = null,
+                            )
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(4.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                                    .clickable { model.removeImage(url) }
+                                    .padding(3.dp),
+                            ) {
+                                Icon(
+                                    symbol = MaterialSymbols.Close,
+                                    contentDescription = stringResource(Res.string.geocache_photo_remove),
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

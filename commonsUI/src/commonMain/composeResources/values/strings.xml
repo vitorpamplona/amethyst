@@ -216,6 +216,11 @@
     <string name="geocache_add_note">Add a note</string>
     <string name="geocache_needs_maintenance">Report needs maintenance</string>
     <string name="geocache_add_to_hunt">Add to a hunt</string>
+    <string name="geocache_hunt_new">New hunt…</string>
+    <string name="geocache_hunt_none_yet">You have not made a hunt yet.</string>
+    <string name="geocache_hunt_already_on">Already on this hunt</string>
+    <string name="geocache_caches_here">%1$d caches here</string>
+    <string name="geocache_photo_remove">Remove this photo</string>
     <string name="geocache_archived_notice">This cache has been archived. It is no longer in play.</string>
     <string name="geocache_ftf_won_by">First to find claimed by %1$s</string>
     <string name="geocache_ftf_available">First to find is still up for grabs</string>

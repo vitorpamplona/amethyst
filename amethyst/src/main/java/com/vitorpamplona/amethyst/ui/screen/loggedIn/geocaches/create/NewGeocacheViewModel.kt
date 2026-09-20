@@ -136,6 +136,10 @@ class NewGeocacheViewModel : ViewModel() {
         requireProof.value = generatedPublicKey != null
     }
 
+    fun removeImage(url: String) {
+        images.remove(url)
+    }
+
     fun toggleModifier(modifier: TypeModifier) {
         if (modifiers.contains(modifier)) modifiers.remove(modifier) else modifiers.add(modifier)
     }
