@@ -89,9 +89,25 @@ fun JsonObject.longOrNull(key: String): Long? {
     return raw.toLongOrNull() ?: raw.toDoubleOrNull()?.takeIf { it.isFinite() }?.toLong()
 }
 
-fun JsonObject.intOrNull(key: String): Int? = longOrNull(key)?.toInt()
+/**
+ * Out of Int range reads as null, not as the low 32 bits. `Long.toInt()` truncates:
+ * a `limit` of 2^32 would come back 0 and an `offset` of 3_000_000_000 negative.
+ * Every other reader here answers a value it cannot represent with null, and a
+ * plausible-looking wrong number is the one outcome worse than no number.
+ */
+fun JsonObject.intOrNull(key: String): Int? = longOrNull(key)?.takeIf { it >= Int.MIN_VALUE.toLong() && it <= Int.MAX_VALUE.toLong() }?.toInt()
 
-fun JsonObject.doubleOrNull(key: String): Double? = this[key].asPrimitiveOrNull()?.content?.toDoubleOrNull()
+/**
+ * Finite values only. `"NaN"` and `"Infinity"` parse as Doubles in Kotlin, and a
+ * NaN read out of a peer's JSON propagates silently through every comparison it
+ * touches — it is not a number the caller can do anything with.
+ */
+fun JsonObject.doubleOrNull(key: String): Double? =
+    this[key]
+        .asPrimitiveOrNull()
+        ?.content
+        ?.toDoubleOrNull()
+        ?.takeIf { it.isFinite() }
 
 /** Accepts `true`/`false`, `"true"`/`"false"`, and the `1`/`0` some wallets send. */
 fun JsonObject.booleanOrNull(key: String): Boolean? {

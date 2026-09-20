@@ -199,6 +199,12 @@ class JacksonMapper {
          * [BunkerRequest] and [BunkerResponse] are named instead of their [BunkerMessage]
          * parent on purpose: the parent has no serializer of its own, so a third subclass
          * should fail here rather than quietly bean-serialize.
+         *
+         * Two OptimizedSerializables are deliberately absent, and both would throw if
+         * they ever arrived here: CLINK's SatRange, which is only ever written as a
+         * field of an Offer/Debit/Manage message by that message's kotlinx serializer,
+         * and NIP-55's IntentResult, which goes through JsonMapperNip55 and its own
+         * registered serializer. Neither reaches this mapper today.
          */
         private fun checkSerializable(value: OptimizedSerializable) {
             val hasSerializer =
