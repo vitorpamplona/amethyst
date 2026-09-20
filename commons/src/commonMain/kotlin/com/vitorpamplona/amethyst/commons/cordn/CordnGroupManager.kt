@@ -273,7 +273,7 @@ class CordnGroupManager(
      * why it can be missing and what to pass when it is.
      */
     suspend fun pendingWelcomes(
-        bundleFor: (String) -> KeyPackageBundle?,
+        bundleFor: suspend (String) -> KeyPackageBundle?,
         gidFor: (MlsGroup) -> String? = ::gidFrom,
     ): WelcomeInbox {
         val pending = call { coordinator.takeWelcomes(drainRetirements()) }
@@ -369,7 +369,7 @@ class CordnGroupManager(
      * an invitation on someone's behalf is a decision, not a sync step.
      */
     suspend fun joinPendingWelcomes(
-        bundleFor: (String) -> KeyPackageBundle?,
+        bundleFor: suspend (String) -> KeyPackageBundle?,
         gidFor: (MlsGroup) -> String? = ::gidFrom,
     ): JoinResults {
         val inbox = pendingWelcomes(bundleFor, gidFor)

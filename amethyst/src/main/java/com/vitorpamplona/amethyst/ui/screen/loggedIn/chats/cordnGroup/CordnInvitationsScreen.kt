@@ -1,0 +1,301 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.cordn.CordnInvitation
+import com.vitorpamplona.amethyst.model.cordn.CordnInvitations
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
+
+/**
+ * Invitations to cordn groups, waiting to be answered.
+ *
+ * ## Why this is a screen you open, not a badge that appears
+ *
+ * Finding out whether anyone has invited you means asking each coordinator,
+ * and every call to a coordinator is metadata (`spec/00.md` §8). A live badge
+ * would tell each of them how often this account opens the app, forever, to
+ * save a tap. So the fetch happens when someone comes here, and the screen
+ * says what it is showing and when it looked.
+ *
+ * ## What an invitation can honestly say
+ *
+ * The group's name, who is already in it, and which coordinator it came
+ * through — all read out of the Welcome. Not "X invited you": a Welcome
+ * carries the ratchet tree, not the identity of whoever signed the Commit
+ * that produced it, so naming an inviter would be a guess presented as a
+ * fact.
+ *
+ * Declining is permanent, and the screen says so rather than discovering it
+ * afterwards. A retired Welcome is gone from the coordinator and the
+ * KeyPackage it was addressed to has been spent; getting back in means being
+ * invited again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CordnInvitationsScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val runtime = accountViewModel.account.cordnRuntime
+    val scope = rememberCoroutineScope()
+
+    var invitations by remember { mutableStateOf<CordnInvitations?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val loadFailed = stringRes(R.string.cordn_invitations_load_failed)
+
+    suspend fun reload() {
+        busy = true
+        error = null
+        try {
+            invitations = runtime?.invitations()
+        } catch (e: Exception) {
+            error = e.message ?: loadFailed
+        } finally {
+            busy = false
+        }
+    }
+
+    LaunchedEffect(runtime) { reload() }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = { nav.popBack() }) {
+                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                    }
+                },
+                title = { Text(stringRes(R.string.cordn_invitations_title)) },
+                actions = {
+                    IconButton(onClick = { scope.launch { reload() } }, enabled = !busy) {
+                        Icon(MaterialSymbols.Refresh, contentDescription = stringRes(R.string.cordn_invitations_refresh))
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (runtime == null) {
+                Text(stringRes(R.string.cordn_group_unavailable))
+                return@Column
+            }
+
+            Text(
+                text = stringRes(R.string.cordn_invitations_explainer),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (busy) CircularProgressIndicator()
+
+            error?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            }
+
+            val loaded = invitations
+            if (loaded != null && !busy) {
+                loaded.pending.forEach { invitation ->
+                    InvitationCard(
+                        invitation = invitation,
+                        onAccept = {
+                            scope.launch {
+                                try {
+                                    val gid = runtime.accept(invitation)
+                                    nav.nav(Route.CordnGroupChat(invitation.coordinator.pubKey, gid))
+                                } catch (e: Exception) {
+                                    error = e.message ?: loadFailed
+                                    reload()
+                                }
+                            }
+                        },
+                        onDecline = {
+                            scope.launch {
+                                try {
+                                    runtime.decline(invitation)
+                                } catch (e: Exception) {
+                                    error = e.message ?: loadFailed
+                                }
+                                reload()
+                            }
+                        },
+                    )
+                }
+
+                // A coordinator that did not answer is its own row. Folding it
+                // into "nothing waiting" would tell someone they have no
+                // invitations when the truth is that nobody asked.
+                loaded.unreachable.forEach {
+                    NoticeCard(
+                        title = stringRes(R.string.cordn_invitations_unreachable, it.coordinator.label ?: it.coordinator.pubKey.take(8)),
+                        detail = it.reason,
+                        isError = true,
+                    )
+                }
+
+                // Left on the coordinator for another device of this account.
+                // Shown rather than hidden, because otherwise the invitation a
+                // friend swears they sent simply does not exist here.
+                loaded.skipped.forEach {
+                    NoticeCard(
+                        title = stringRes(R.string.cordn_invitations_skipped),
+                        detail = it.reason,
+                        isError = false,
+                    )
+                }
+
+                if (loaded.isEmpty) {
+                    Text(
+                        text =
+                            if (runtime.coordinators.value.isEmpty()) {
+                                stringRes(R.string.cordn_invitations_no_coordinators)
+                            } else {
+                                stringRes(R.string.cordn_invitations_none)
+                            },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InvitationCard(
+    invitation: CordnInvitation,
+    onAccept: () -> Unit,
+    onDecline: () -> Unit,
+) {
+    val welcome = invitation.welcome
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = welcome.metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.cordn_group_untitled, welcome.gid.take(8)),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            welcome.metadata?.description?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            // "Already in it", never "invited you" — see the screen KDoc.
+            Text(
+                text = pluralStringResource(R.plurals.cordn_invitations_members, welcome.members.size, welcome.members.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text =
+                    stringRes(
+                        R.string.cordn_invitations_via,
+                        invitation.coordinator.label ?: invitation.coordinator.pubKey.take(16),
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Button(onClick = onAccept) { Text(stringRes(R.string.cordn_invitations_accept)) }
+                TextButton(onClick = onDecline) { Text(stringRes(R.string.cordn_invitations_decline)) }
+            }
+            Text(
+                text = stringRes(R.string.cordn_invitations_decline_warning),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NoticeCard(
+    title: String,
+    detail: String,
+    isError: Boolean,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (isError) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+            ),
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(detail, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}

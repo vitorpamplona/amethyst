@@ -564,6 +564,8 @@ sealed class Route {
 
     @Serializable object CordnCreateGroup : Route()
 
+    @Serializable object CordnInvitations : Route()
+
     @Serializable
     data class AgentConsole(
         val relayUrl: String,

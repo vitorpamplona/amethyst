@@ -1608,6 +1608,20 @@
     <string name="cordn_create_egalitarian_note">Everyone in this group will have the same administrative rights. That is permanent — cordn has no way to promote an admin later.</string>
     <string name="cordn_create_action">Create group</string>
     <string name="cordn_create_failed">The group could not be created.</string>
+    <string name="cordn_invitations_title">cordn invitations</string>
+    <string name="cordn_invitations_explainer">Checked when you open this screen, and at no other time — asking a coordinator whether anyone invited you tells it you are here, so Amethyst does not do it in the background.</string>
+    <string name="cordn_invitations_refresh">Check again</string>
+    <string name="cordn_invitations_accept">Join</string>
+    <string name="cordn_invitations_decline">Decline</string>
+    <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
+    <string name="cordn_invitations_via">Through %1$s</string>
+    <string name="cordn_invitations_none">No invitations waiting.</string>
+    <string name="cordn_invitations_no_coordinators">You have no coordinator open. cordn invitations arrive through a coordinator, so there is nowhere to look yet.</string>
+    <string name="cordn_invitations_unreachable">%1$s did not answer</string>
+    <string name="cordn_invitations_skipped">An invitation was left for another device</string>
+    <string name="cordn_invitations_load_failed">Could not read invitations.</string>
+    <string name="cordn_invitations_entry">Invited to a cordn group?</string>
+    <string name="cordn_invitations_entry_action">Review invitations</string>
     <string name="chat_type_cordn_title">cordn groups</string>
     <string name="chat_type_cordn_desc">End-to-end encrypted groups ordered by a coordinator you choose, instead of by relays.</string>
     <string name="chat_type_geohash_title">Location chats</string>
@@ -2814,4 +2828,8 @@
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <string name="my_fitness">My Fitness</string>
+    <plurals name="cordn_invitations_members">
+        <item quantity="one">%1$d person is already in this group</item>
+        <item quantity="other">%1$d people are already in this group</item>
+    </plurals>
 </resources>

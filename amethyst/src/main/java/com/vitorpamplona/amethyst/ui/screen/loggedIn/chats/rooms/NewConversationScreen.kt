@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -283,6 +284,46 @@ fun NewConversationScreen(nav: INav) {
                     }
                 }
             }
+
+            // Being invited is the other half of "start a conversation", so it
+            // belongs on the screen people reach for when they want one --
+            // not buried in settings. The count is deliberately absent: it
+            // would take a call to every coordinator, and every call to a
+            // coordinator is metadata (spec/00.md §8).
+            item(key = "cordn-invitations") {
+                CordnInvitationsEntry(onClick = { nav.nav(Route.CordnInvitations) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun CordnInvitationsEntry(onClick: () -> Unit) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 6.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Dns,
+            contentDescription = null,
+            tint = ColorCordn,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringRes(R.string.cordn_invitations_entry),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = stringRes(R.string.cordn_invitations_entry_action),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.grayText,
+            )
         }
     }
 }

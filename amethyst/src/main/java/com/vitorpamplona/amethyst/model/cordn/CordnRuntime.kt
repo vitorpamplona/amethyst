@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnSyncLoop
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
+import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
 import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmGiftWrap
 import com.vitorpamplona.quartz.contextvm.mcp.CvmMcpClient
@@ -179,6 +180,53 @@ class CordnRuntime(
     fun sessionOrNull(coordinatorPubKey: HexKey): CordnSession? = registry.sessionOrNull(coordinatorPubKey)
 
     /**
+     * Every invitation waiting for this account, opened but not answered.
+     *
+     * One round trip per open coordinator, made when someone asks to see their
+     * invitations and at no other time. There is no background poll on purpose:
+     * every call to a coordinator is metadata (§8), so a badge that stayed
+     * up to date would mean telling each coordinator how often this account
+     * opens the app.
+     *
+     * A coordinator that fails to answer is reported rather than logged and
+     * dropped. "We could not ask" and "there is nothing for you" look the same
+     * on screen and mean opposite things.
+     */
+    suspend fun invitations(): CordnInvitations {
+        val pending = mutableListOf<CordnInvitation>()
+        val skipped = mutableListOf<CordnSkippedInvitation>()
+        val unreachable = mutableListOf<CordnCoordinatorFailure>()
+
+        registry.coordinators.value.forEach { config ->
+            val session = registry.sessionOrNull(config.pubKey) ?: return@forEach
+            try {
+                val inbox = session.manager.pendingWelcomes(session.keyPackages::bundleFor)
+                pending += inbox.pending.map { CordnInvitation(config, it) }
+                skipped += inbox.skipped.map { CordnSkippedInvitation(config, it.keyPackageRef, it.reason) }
+            } catch (e: Exception) {
+                Log.w(TAG, "could not read invitations from ${config.pubKey.take(8)}\u2026: ${e.message}", e)
+                unreachable += CordnCoordinatorFailure(config, e.message ?: "the coordinator did not answer")
+            }
+        }
+        return CordnInvitations(pending, skipped, unreachable)
+    }
+
+    /** Joins the group [invitation] opens, and shows it in the inbox. */
+    suspend fun accept(invitation: CordnInvitation): String {
+        val session =
+            registry.sessionOrNull(invitation.coordinator.pubKey)
+                ?: throw IllegalStateException("no session for ${invitation.coordinator.pubKey}")
+        val gid = session.manager.accept(invitation.welcome)
+        refresh(session, gid)
+        return gid
+    }
+
+    /** Retires [invitation] without joining. There is no undo; see `decline`. */
+    suspend fun decline(invitation: CordnInvitation) {
+        registry.sessionOrNull(invitation.coordinator.pubKey)?.manager?.decline(invitation.welcome)
+    }
+
+    /**
      * Reopens the coordinators this account used last time, and starts syncing.
      *
      * Call at login. Without it a cordn group is unreachable after a relaunch:
@@ -277,4 +325,32 @@ class CordnRuntime(
     companion object {
         private const val TAG = "CordnRuntime"
     }
+}
+
+/** One invitation, and which coordinator it came through. */
+data class CordnInvitation(
+    val coordinator: CoordinatorConfig,
+    val welcome: OpenedWelcome,
+)
+
+/** An invitation that could not be opened, and why — the reason is for a person to read. */
+data class CordnSkippedInvitation(
+    val coordinator: CoordinatorConfig,
+    val keyPackageRef: String,
+    val reason: String,
+)
+
+/** A coordinator that did not answer. Not the same as one with nothing to say. */
+data class CordnCoordinatorFailure(
+    val coordinator: CoordinatorConfig,
+    val reason: String,
+)
+
+/** What every open coordinator had waiting. */
+data class CordnInvitations(
+    val pending: List<CordnInvitation>,
+    val skipped: List<CordnSkippedInvitation>,
+    val unreachable: List<CordnCoordinatorFailure>,
+) {
+    val isEmpty: Boolean get() = pending.isEmpty() && skipped.isEmpty() && unreachable.isEmpty()
 }
