@@ -75,9 +75,41 @@ class CordnIndependenceTest {
             }
         }
 
+    /**
+     * Plain substring, NOT `\bmarmot\b`.
+     *
+     * The word-boundary form cannot match the imports that matter: in
+     * `…model.marmotGroups.MarmotGroupChatroom` the character after `marmot`
+     * is a word character both times, so `\b` fails and the guard waves
+     * through exactly the dependency it exists to stop. This guard shipped
+     * with that bug and was only caught by trying to break it on purpose —
+     * which is why [the matcher itself is tested] below.
+     *
+     * A substring is safe here because only `import` lines are scanned: the
+     * word "marmot" inside an import IS a Marmot dependency.
+     */
+    private val marmotImport = Regex("marmot", RegexOption.IGNORE_CASE)
+
+    private val cordnImport = Regex("cordn", RegexOption.IGNORE_CASE)
+
+    @Test
+    fun `the matcher catches the import it exists to catch`() {
+        // The meta-test. Without it, a guard that can never fire looks exactly
+        // like a codebase that never violates the rule.
+        val realImport = "import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom"
+        assertTrue(
+            marmotImport.containsMatchIn(realImport),
+            "the Marmot matcher would not flag $realImport — the guard cannot fire",
+        )
+        assertTrue(
+            cordnImport.containsMatchIn("import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager"),
+            "the cordn matcher cannot fire either",
+        )
+    }
+
     @Test
     fun `cordn does not reach into Marmot`() {
-        val offences = importsMatching("cordn", Regex("""\bmarmot\b""", RegexOption.IGNORE_CASE))
+        val offences = importsMatching("cordn", marmotImport)
         assertTrue(
             offences.isEmpty(),
             "cordn must not import Marmot — the two are independent and Marmot is frozen\n  " +
@@ -89,7 +121,7 @@ class CordnIndependenceTest {
     fun `Marmot does not reach into cordn`() {
         // The direction that protects the shipped feature: Marmot must not gain
         // a dependency on the newer, less settled binding.
-        val offences = importsMatching("marmot", Regex("""\bcordn\b""", RegexOption.IGNORE_CASE))
+        val offences = importsMatching("marmot", cordnImport)
         assertTrue(
             offences.isEmpty(),
             "Marmot must not import cordn — Marmot is frozen and cordn moves\n  " + offences.joinToString("\n  "),
@@ -102,7 +134,7 @@ class CordnIndependenceTest {
             assertTrue(kotlinFilesIn(it).size > 3, "found ${kotlinFilesIn(it).size} files under $it — the scan is broken, not the code")
         }
         assertTrue(
-            importsMatching("cordn", Regex("""\bquartz\b""")).isNotEmpty(),
+            importsMatching("cordn", Regex("quartz", RegexOption.IGNORE_CASE)).isNotEmpty(),
             "the scanner found no quartz imports in cordn, so it would not find a marmot one either",
         )
     }

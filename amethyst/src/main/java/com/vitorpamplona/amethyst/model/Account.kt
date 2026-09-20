@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.model.EventBroadcaster
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.bolt12Offers.Bolt12OfferListState
 import com.vitorpamplona.amethyst.model.buzz.ChannelInvitesState
+import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
@@ -376,6 +377,15 @@ class Account(
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
+    /**
+     * Where cordn keeps its encrypted group state, or null to run without it.
+     *
+     * A directory rather than a built runtime, because `CordnRuntime` needs
+     * this account's [scope] and that only exists once the account does.
+     * Nothing about it is shared with Marmot's stores above — cordn has its
+     * own, by the §3.1 rule in `amethyst/plans/2026-09-19-cordn-ui.md`.
+     */
+    val cordnFilesDir: java.io.File? = null,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
@@ -943,6 +953,24 @@ class Account(
     val broadcaster = EventBroadcaster(this)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
+
+    /**
+     * cordn, for this account, or null when no directory was supplied.
+     *
+     * Built here for the same reason [marmotManager] is: it needs [scope].
+     * Opening coordinators and starting their sync loops is a separate,
+     * suspending step ([CordnRuntime.start]) — constructing this touches no
+     * network and no coordinator learns anything from it.
+     */
+    val cordnRuntime: CordnRuntime? =
+        cordnFilesDir?.let {
+            CordnRuntime(
+                accountSigner = signer,
+                client = client,
+                filesDir = it,
+                scope = scope,
+            )
+        }
 
     val marmotManager: MarmotManager? =
         mlsGroupStateStore?.let {

@@ -142,6 +142,26 @@ class ChatroomListKnownFeedFilter(
                 }
             }
 
+        // cordn groups. Every one this account holds is a room it is IN — a
+        // cordn group is joined by accepting a Welcome, so there is no
+        // "known vs new" split to make here the way there is for a DM from a
+        // stranger. (The pending side is the Welcome inbox, Stage C.)
+        //
+        // One row per room, carried by the room's own Note: cordn messages are
+        // MLS envelopes and never enter LocalCache, so the row reads its name
+        // and preview from the room through Note.inGatherers.
+        val cordnGroups =
+            if (!isEnabled(ChatFeedType.CORDN)) {
+                emptyList()
+            } else {
+                account.cordnRuntime
+                    ?.groups
+                    ?.all
+                    ?.value
+                    ?.map { it.inboxRow() }
+                    .orEmpty()
+            }
+
         // NIP-29 relay groups the user joined (kind 10009). In INLINE view mode each group is its
         // own row tagged with its host relay; in GROUPED mode all the groups on one relay collapse
         // to a single relay row positioned by that relay's newest message. Both interleave with the
@@ -210,7 +230,12 @@ class ChatroomListKnownFeedFilter(
                 }
             }
 
-        return sort((privateMessages + publicChannels + ephemeralChats + geohashChannels + marmotGroups + relayGroups + concordChannels).toSet())
+        return sort(
+            (
+                privateMessages + publicChannels + ephemeralChats + geohashChannels +
+                    marmotGroups + cordnGroups + relayGroups + concordChannels
+            ).toSet(),
+        )
     }
 
     override fun updateListWith(

@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 private val ColorPrivate = Color(0xFF7C3AED)
 private val ColorMarmot = Color(0xFF4F46E5)
 private val ColorConcord = Color(0xFF0F766E)
+private val ColorCordn = Color(0xFF14B8A6)
 private val ColorPublic = Color(0xFFB45309)
 private val ColorRelay = Color(0xFF2563EB)
 private val ColorEphemeral = Color(0xFFC2410C)
@@ -163,6 +164,24 @@ private val conversationSections =
                         pros = listOf(R.string.new_conversation_concord_pro_1, R.string.new_conversation_concord_pro_2),
                         cons = listOf(R.string.new_conversation_concord_con_1),
                         route = Route.ConcordCreate,
+                    ),
+                    ConversationType(
+                        icon = MaterialSymbols.Dns,
+                        color = ColorCordn,
+                        title = R.string.new_conversation_cordn_title,
+                        tagline = R.string.new_conversation_cordn_tagline,
+                        chip = R.string.new_conversation_cordn_chip,
+                        bestFor = R.string.new_conversation_cordn_best,
+                        cta = R.string.new_conversation_cordn_cta,
+                        pros = listOf(R.string.new_conversation_cordn_pro_1, R.string.new_conversation_cordn_pro_2),
+                        // The §8 exposure, stated where the choice is made
+                        // rather than discovered later: a coordinator learns
+                        // who is in which group and when they talk, even though
+                        // it can never read a word. The whole point of the
+                        // exposure work was to say this before someone commits
+                        // to it, and this is the first place it can be said.
+                        cons = listOf(R.string.new_conversation_cordn_con_1),
+                        route = Route.CordnCreateGroup,
                     ),
                 ),
         ),

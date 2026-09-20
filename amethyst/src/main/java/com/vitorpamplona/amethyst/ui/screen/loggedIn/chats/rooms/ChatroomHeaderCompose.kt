@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
@@ -209,6 +210,12 @@ private fun ChatroomEntry(
     val marmotGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
     if (marmotGroup != null) {
         MarmotGroupRoomCompose(lastMessage, marmotGroup, accountViewModel, nav)
+        return
+    }
+
+    val cordnGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? CordnGroupChatroom }
+    if (cordnGroup != null) {
+        CordnGroupRoomCompose(cordnGroup, accountViewModel, nav)
         return
     }
 
@@ -508,6 +515,55 @@ private fun MarmotGroupRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
+    )
+}
+
+/**
+ * One cordn room in the Messages list.
+ *
+ * Takes the room rather than the Note, unlike every other row here. The Note is
+ * only a carrier: cordn messages are MLS envelopes that never reach LocalCache,
+ * so there is no `lastMessage.event` to read a preview from and the live data
+ * is on the room. Reading the Note would render an empty row forever.
+ */
+@Composable
+private fun CordnGroupRoomCompose(
+    chatroom: CordnGroupChatroom,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val name by chatroom.name.collectAsStateWithLifecycle()
+    val newest by chatroom.newest.collectAsStateWithLifecycle()
+    val annotations by chatroom.annotations.collectAsStateWithLifecycle()
+
+    val groupName = name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.cordn_group_untitled, chatroom.gid.take(8))
+
+    val lastContent =
+        newest?.let { message ->
+            val authorName by observeUserName(LocalCache.getOrCreateUser(message.envelope.pubKey), accountViewModel)
+            // The edited text when there is one: showing the original in the
+            // inbox while the room shows the edit is the kind of mismatch that
+            // reads as a sync bug.
+            val text = annotations.contentOf(message.envelope.id) ?: message.envelope.content
+            "$authorName: ${text.take(200)}"
+        } ?: stringRes(R.string.cordn_group_no_messages_yet)
+
+    ChannelName(
+        channelIdHex = chatroom.gid,
+        channelPicture = null,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Dns, R.string.cordn_group, modifier) },
+        channelLastTime = newest?.envelope?.createdAt,
+        channelLastContent = lastContent,
+        // No unread state yet: a cordn read marker is its own piece of work and
+        // claiming "new" on every row would be worse than claiming none.
+        hasNewMessages = false,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.CordnGroupChat(chatroom.coordinatorPubKey, chatroom.gid)) },
     )
 }
 

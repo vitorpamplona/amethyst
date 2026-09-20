@@ -107,6 +107,7 @@ private val CHAT_FEED_TYPES =
         ChatFeedTypeUi(ChatFeedType.NIP29, R.string.chat_type_nip29_title, R.string.chat_type_nip29_desc, Color(0xFF9E77ED)),
         ChatFeedTypeUi(ChatFeedType.MARMOT, R.string.chat_type_marmot_title, R.string.chat_type_marmot_desc, Color(0xFF5B6AD0)),
         ChatFeedTypeUi(ChatFeedType.CONCORD, R.string.chat_type_concord_title, R.string.chat_type_concord_desc, Color(0xFFEC4899)),
+        ChatFeedTypeUi(ChatFeedType.CORDN, R.string.chat_type_cordn_title, R.string.chat_type_cordn_desc, Color(0xFF14B8A6)),
         ChatFeedTypeUi(ChatFeedType.GEOHASH, R.string.chat_type_geohash_title, R.string.chat_type_geohash_desc, Color(0xFFEF4444)),
         ChatFeedTypeUi(ChatFeedType.EPHEMERAL, R.string.chat_type_ephemeral_title, R.string.chat_type_ephemeral_desc, Color(0xFF06B6D4)),
     )
