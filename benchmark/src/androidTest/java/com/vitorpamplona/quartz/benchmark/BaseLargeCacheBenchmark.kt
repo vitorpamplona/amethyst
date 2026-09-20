@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.benchmark
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
-import com.vitorpamplona.quartz.nip01Core.jackson.jacksonTypeRefOf
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import org.junit.Assert.assertTrue
 import java.util.function.Consumer
@@ -37,7 +36,7 @@ open class BaseLargeCacheBenchmark {
 
             return JacksonMapper.mapper.readValue(
                 GZIPInputStream(fullDBInputStream),
-                jacksonTypeRefOf<ArrayList<Event>>(),
+                JacksonMapper.eventListTypeInstance,
             )
         }
     }

@@ -77,6 +77,16 @@ class  com.vitorpamplona.amethyst.ui.tor.ArtiNative
 # Rust calls back by name: GetMethodID("onLogLine") in tools/arti-build/src/lib.rs
 method com.vitorpamplona.amethyst.ui.tor.ArtiLogCallback onLogLine
 
+# zxing-cpp's JNI half, vendored into amethyst/src/main/java/zxingcpp. The .so
+# exports Java_zxingcpp_BarcodeReader_readYBuffer, so the class name and both
+# native method names are the lookup. AGP's default
+# `-keepclasseswithmembernames class * { native <methods>; }` should cover this on
+# its own and the explicit `-keep class zxingcpp.**` is belt-and-braces; these
+# lines are what proves at least one of them still matches. A rename fails
+# silently — no build error, no warning, the QR scanner just never starts.
+class  zxingcpp.BarcodeReader
+method zxingcpp.BarcodeReader readYBuffer readBitmap
+
 # --- Named from outside the DEX ----------------------------------------------
 # No keep rule of ours backs the three workers below: androidx.work's own
 # consumer rules do. They stay listed so that if the library ever drops them,

@@ -26,7 +26,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
-import com.vitorpamplona.quartz.nip01Core.jackson.jacksonTypeRefOf
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -45,7 +44,7 @@ open class BaseCacheBenchmark {
 
         return JacksonMapper.mapper.readValue(
             GZIPInputStream(fullDBInputStream),
-            jacksonTypeRefOf<ArrayList<Event>>(),
+            JacksonMapper.eventListTypeInstance,
         )
     }
 

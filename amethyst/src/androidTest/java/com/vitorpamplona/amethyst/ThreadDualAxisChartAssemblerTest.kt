@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
-import com.vitorpamplona.quartz.nip01Core.jackson.jacksonTypeRefOf
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -163,7 +162,7 @@ class ThreadDualAxisChartAssemblerTest {
     fun threadOrderTest() =
         runBlocking {
             val eventArray =
-                JacksonMapper.mapper.readValue(db, jacksonTypeRefOf<List<Event>>()) + Event.fromJson(header)
+                JacksonMapper.mapper.readValue<List<Event>>(db, JacksonMapper.eventListTypeInstance) + Event.fromJson(header)
 
             var counter = 0
             eventArray.forEach {

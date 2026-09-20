@@ -102,7 +102,7 @@ class JacksonMapper {
         /**
          * Shortcuts
          *
-         * Built from Class objects, NOT from jacksonTypeRefOf(). A TypeReference
+         * Built from Class objects, NOT from a TypeReference. A TypeReference
          * reads its type argument back off the anonymous subclass's generic
          * superclass, and R8 in full mode does not keep that -- not with
          * `-keepattributes Signature`, and not with a `-keep` on the subclasses
@@ -221,14 +221,28 @@ class JacksonMapper {
             }
         }
 
+        /**
+         * `T::class.java`, not a TypeReference — the same reason the JavaTypes above
+         * are built from Class objects. A TypeReference reads its type argument back
+         * off the anonymous subclass's generic superclass, which R8 in full mode does
+         * not keep, and it throws "TypeReference constructed without actual type
+         * information" on device. This path reaches it through the NIP-46 bunker
+         * (NostrConnectEvent, RemoteSignerManager, NostrConnectLoginUseCase), which
+         * needs a remote signer to exercise and so survived the first device run.
+         *
+         * Erasure costs nothing here: [checkRegistered] has already limited T to the
+         * ten registered classes, and each one is answered by a StdDeserializer
+         * registered against that exact Class. Jackson never has to infer a type
+         * argument, so there is none to lose.
+         */
         inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T {
             checkRegistered(T::class)
-            return mapper.readValue(json, jacksonTypeRefOf<T>())
+            return mapper.readValue(json, T::class.java)
         }
 
         inline fun <reified T : OptimizedSerializable> fromJsonTo(json: InputStream): T {
             checkRegistered(T::class)
-            return mapper.readValue(json, jacksonTypeRefOf<T>())
+            return mapper.readValue(json, T::class.java)
         }
 
         fun toJson(event: Event): String = EventManualSerializer.toJson(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content, event.sig)

@@ -24,7 +24,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
-import com.vitorpamplona.quartz.nip01Core.jackson.jacksonTypeRefOf
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
@@ -43,7 +42,7 @@ class LargeDBSignatureCheck {
             val eventArray =
                 JacksonMapper.mapper.readValue(
                     InputStreamReader(fullDBInputStream),
-                    jacksonTypeRefOf<ArrayList<Event>>(),
+                    JacksonMapper.eventListTypeInstance,
                 ) as List<Event>
 
             var counter = 0
@@ -64,7 +63,7 @@ class LargeDBSignatureCheck {
             val eventArray =
                 JacksonMapper.mapper.readValue(
                     GZIPInputStream(fullDBInputStream),
-                    jacksonTypeRefOf<ArrayList<Event>>(),
+                    JacksonMapper.eventListTypeInstance,
                 ) as List<Event>
 
             var counter = 0
