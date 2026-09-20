@@ -20,10 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cordnGroups
 
+import com.vitorpamplona.quartz.cordn.groups.CordnCredential
+import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
+import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -193,4 +197,70 @@ class CordnGroupChatroomTest {
         assertEquals(1, added)
         assertEquals(2, room.messages.value.size)
     }
+
+    @Test
+    fun `a new room knows nothing until it is pointed at an MLS group`() {
+        val room = room()
+
+        assertNull(room.name.value)
+        assertNull(room.description.value)
+        assertEquals(emptyList(), room.members.value)
+        assertEquals(0L, room.epoch.value)
+    }
+
+    @Test
+    fun `refreshFrom reads the name, description and admins out of the metadata extension`() {
+        val room = room()
+        val metadata = CordnGroupMetadata(name = "Stage B", description = "the visible half", adminPubkeys = listOf(alice))
+
+        room.refreshFrom(groupOf(alice, metadata))
+
+        assertEquals("Stage B", room.name.value)
+        assertEquals("the visible half", room.description.value)
+        assertEquals(listOf(alice), room.adminPubkeys.value)
+    }
+
+    @Test
+    fun `refreshFrom reports the creator as a member by account pubkey, not by hex-of-hex`() {
+        val room = room()
+
+        room.refreshFrom(groupOf(alice, CordnGroupMetadata(name = "Stage B")))
+
+        // The trap MlsGroup.memberIdentityHex falls into: a cordn credential is
+        // already 64 chars of hex, so hex-encoding it again gives 128.
+        assertEquals(listOf(alice), room.members.value)
+    }
+
+    @Test
+    fun `a group carrying no metadata extension leaves the room unnamed rather than mis-named`() {
+        val room = room()
+        room.refreshFrom(groupOf(alice, CordnGroupMetadata(name = "Stage B")))
+
+        room.refreshFrom(MlsGroup.create(CordnCredential.of(bob).identity, policy = CordnGroupPolicy))
+
+        // Not "Stage B" left over: the fields are derived from whatever group
+        // they were last pointed at, never accumulated across groups.
+        assertNull(room.name.value)
+        assertEquals(emptyList(), room.adminPubkeys.value)
+    }
+
+    @Test
+    fun `an empty admin list stays empty, because egalitarian is a choice and not a gap`() {
+        val room = room()
+
+        room.refreshFrom(groupOf(alice, CordnGroupMetadata(name = "Flat", adminPubkeys = emptyList())))
+
+        assertTrue(room.adminPubkeys.value.isEmpty())
+    }
+
+    /** A real cordn group, created the way [CordnGroupManager.createGroup] does. */
+    private fun groupOf(
+        creator: HexKey,
+        metadata: CordnGroupMetadata,
+    ) = MlsGroup.create(
+        identity = CordnCredential.of(creator).identity,
+        policy = CordnGroupPolicy,
+        initialExtensions = listOf(metadata.toExtension()),
+        groupId = "gid-1".encodeToByteArray(),
+    )
 }

@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.contextvm.mcp.CvmMcpClient
 import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
 import com.vitorpamplona.quartz.contextvm.transport.DualSigner
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorClient
+import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -47,6 +48,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * One account's cordn feature, assembled.
@@ -134,8 +137,34 @@ class CordnRuntime(
         // Whatever the store already held, so a relaunch shows its rooms
         // before the first message of the session arrives.
         session.manager.gids.value
-            .forEach { groups.getOrCreate(config.pubKey, it) }
+            .forEach { refresh(session, it) }
         return session
+    }
+
+    /**
+     * Creates a group on [config] and returns the `gid` it was given.
+     *
+     * The `gid` is a random UUID, which is what cordn's own client uses. It is
+     * the caller's to choose (`spec/00.md` §4) and the coordinator never
+     * interprets it — the one hard rule is that it must not be derived from the
+     * MLS `group_id`, which is secret.
+     *
+     * Nothing is sent anywhere. Creating a group is a local MLS operation; the
+     * coordinator learns the group exists when the first Commit or message is
+     * posted to it. That is why this succeeds against a coordinator that is
+     * down, and why a group with no other members has told the coordinator
+     * nothing at all.
+     */
+    @OptIn(ExperimentalUuidApi::class)
+    suspend fun createGroup(
+        config: CoordinatorConfig,
+        metadata: CordnGroupMetadata,
+        gid: String = Uuid.random().toString(),
+    ): String {
+        val session = session(config)
+        session.manager.createGroup(gid, metadata)
+        refresh(session, gid)
+        return gid
     }
 
     fun sessionOrNull(coordinatorPubKey: HexKey): CordnSession? = registry.sessionOrNull(coordinatorPubKey)
@@ -193,6 +222,21 @@ class CordnRuntime(
             is CordnGroupManager.Delivery.Echo,
             -> groups.getOrCreate(coordinatorPubKey, delivery.gid)
         }
+
+        // After every delivery, not only after an EpochAdvanced: a Commit that
+        // renames the group or changes its membership arrives as an ordinary
+        // ingestion, and the room's name and member list are read off MLS
+        // state rather than stored, so they are only correct if re-read.
+        sessionOrNull(coordinatorPubKey)?.let { refresh(it, delivery.gid) }
+    }
+
+    /** Makes sure [gid] has a room, and points it at the current MLS state. */
+    private fun refresh(
+        session: CordnSession,
+        gid: String,
+    ) {
+        val room = groups.getOrCreate(session.coordinatorPubKey, gid)
+        session.manager.group(gid)?.let { room.refreshFrom(it) }
     }
 
     companion object {

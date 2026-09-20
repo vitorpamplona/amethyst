@@ -23,9 +23,12 @@ package com.vitorpamplona.amethyst.commons.model.cordnGroups
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
+import com.vitorpamplona.quartz.cordn.groups.CordnCredential
+import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageKinds
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,13 +90,47 @@ class CordnGroupChatroom(
     /** Reactions, edits, deletions and pins folded onto their targets. */
     val annotations: StateFlow<CordnAnnotationIndex> = _annotations.asStateFlow()
 
-    val name = MutableStateFlow<String?>(null)
-    val description = MutableStateFlow<String?>(null)
-    val adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
+    private val _name = MutableStateFlow<String?>(null)
+    private val _description = MutableStateFlow<String?>(null)
+    private val _adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
+    private val _members = MutableStateFlow<List<HexKey>>(emptyList())
+    private val _epoch = MutableStateFlow(0L)
+
+    val name: StateFlow<String?> = _name.asStateFlow()
+    val description: StateFlow<String?> = _description.asStateFlow()
+
+    /** Admins, or empty for egalitarian — `spec/01.md` §5.3 makes that permanent. */
+    val adminPubkeys: StateFlow<List<HexKey>> = _adminPubkeys.asStateFlow()
 
     /** Member account pubkeys, from each leaf's cordn credential (`spec/01.md`). */
-    val members = MutableStateFlow<List<HexKey>>(emptyList())
-    val epoch = MutableStateFlow(0L)
+    val members: StateFlow<List<HexKey>> = _members.asStateFlow()
+    val epoch: StateFlow<Long> = _epoch.asStateFlow()
+
+    /**
+     * Re-reads the room's group state off [group].
+     *
+     * Everything above is derived, never stored: the group's name, its admins
+     * and its membership live in MLS state — the metadata extension
+     * (`spec/01.md`) and the ratchet tree — and the only honest way to show
+     * them is to read them back out after every change. A Commit can rename a
+     * group or remove a member, so a cached copy is a copy that goes stale in
+     * exactly the cases that matter.
+     *
+     * Deliberately not `MlsGroup.memberIdentityHex`: that hex-encodes the
+     * credential bytes, and a cordn credential already IS hex, so it would
+     * report 128 characters of hex-of-hex. [CordnCredential.memberIdentities]
+     * is the cordn-aware reader.
+     */
+    fun refreshFrom(group: MlsGroup) {
+        val metadata = CordnGroupMetadata.fromExtensions(group.extensions)
+        _name.value = metadata?.name
+        _description.value = metadata?.description
+        _adminPubkeys.value = metadata?.adminPubkeys.orEmpty()
+        // Leaf order, which is stable across reads, so a member list does not
+        // reshuffle itself under the user on an unrelated delivery.
+        _members.value = CordnCredential.memberIdentities(group).toList()
+        _epoch.value = group.epoch
+    }
 
     /**
      * The newest message, for an inbox row.

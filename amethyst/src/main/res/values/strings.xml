@@ -1597,6 +1597,17 @@
     <string name="cordn_info_members">Members</string>
     <string name="cordn_info_admins">Admins</string>
     <string name="cordn_info_admins_egalitarian">None — everyone is equal, permanently</string>
+    <string name="cordn_create_title">New cordn group</string>
+    <string name="cordn_create_explainer">A cordn group is ordered by one coordinator you choose. Creating the group happens on this device — the coordinator only learns the group exists once you invite someone or send a message.</string>
+    <string name="cordn_create_coordinator">Coordinator</string>
+    <string name="cordn_create_coordinator_new">Another coordinator</string>
+    <string name="cordn_create_coordinator_pubkey">Coordinator public key (hex or npub)</string>
+    <string name="cordn_create_coordinator_relays">Relays it answers on, one per line</string>
+    <string name="cordn_create_name">Group name</string>
+    <string name="cordn_create_description">Description (optional)</string>
+    <string name="cordn_create_egalitarian_note">Everyone in this group will have the same administrative rights. That is permanent — cordn has no way to promote an admin later.</string>
+    <string name="cordn_create_action">Create group</string>
+    <string name="cordn_create_failed">The group could not be created.</string>
     <string name="chat_type_cordn_title">cordn groups</string>
     <string name="chat_type_cordn_desc">End-to-end encrypted groups ordered by a coordinator you choose, instead of by relays.</string>
     <string name="chat_type_geohash_title">Location chats</string>
