@@ -101,14 +101,28 @@ class JacksonMapper {
 
         /**
          * Shortcuts
+         *
+         * Built from Class objects, NOT from jacksonTypeRefOf(). A TypeReference
+         * reads its type argument back off the anonymous subclass's generic
+         * superclass, and R8 in full mode does not keep that -- not with
+         * `-keepattributes Signature`, and not with a `-keep` on the subclasses
+         * either (both were tried on device). It failed here, in <clinit>, with
+         *
+         *   IllegalArgumentException: Internal error: TypeReference constructed
+         *   without actual type information
+         *
+         * and a failed <clinit> is permanent: every later touch of this class
+         * throws NoClassDefFoundError, so the release build could not hash or sign
+         * a single event. TypeFactory takes the Class objects directly, so there is
+         * nothing for R8 to erase.
          */
-        val eventTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<Event>())
-        val tagArrayTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<TagArray>())
-        val rumorTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<Rumor>())
-        val eventTemplateTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<EventTemplate<Event>>())
-        val eventListTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<List<Event>>())
-        val messageTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<Message>())
-        val commandTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRefOf<Command>())
+        val eventTypeInstance: JavaType = mapper.typeFactory.constructType(Event::class.java)
+        val tagArrayTypeInstance: JavaType = mapper.typeFactory.constructType(Array<Array<String>>::class.java)
+        val rumorTypeInstance: JavaType = mapper.typeFactory.constructType(Rumor::class.java)
+        val eventTemplateTypeInstance: JavaType = mapper.typeFactory.constructParametricType(EventTemplate::class.java, Event::class.java)
+        val eventListTypeInstance: JavaType = mapper.typeFactory.constructCollectionType(List::class.java, Event::class.java)
+        val messageTypeInstance: JavaType = mapper.typeFactory.constructType(Message::class.java)
+        val commandTypeInstance: JavaType = mapper.typeFactory.constructType(Command::class.java)
 
         fun fromJson(json: String): Event = mapper.readValue(json, eventTypeInstance)
 

@@ -102,6 +102,19 @@ class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 # every field name as a string literal — so there is no rule to verify.
 
 
+# --- Enums used as navigation-route arguments: the CLASS name is the lookup ---
+# androidx.navigation resolves an enum route argument by fully-qualified class
+# name (NavTypeConverter calls Class.forName on the serial name). Renaming the
+# class throws while the nav graph is being built, so the app cannot get past
+# login at all -- release-only, and total.
+#
+# These need the CLASS pinned, which the `-keepclassmembers enum *` rule below
+# deliberately does not do: it keeps constant names and lets the class be
+# renamed. Add a line here whenever an enum becomes a route argument.
+class com.vitorpamplona.amethyst.ui.navigation.routes.DiscoverTab
+class com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
+
+
 # --- Enum constants persisted as strings -------------------------------------
 # The preference stores write `enum.name` into DataStore and read it back with
 # valueOf(). A renamed constant resets that setting for every existing user on

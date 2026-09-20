@@ -65,9 +65,25 @@
 
 # Generic signatures, plus the inner/enclosing-class links that travel with them.
 #
-# Signature is the load-bearing one: jacksonTypeRefOf() resolves generic types
-# through it at 18 call sites, and without it List<Event> erases to List and every
-# element comes back a LinkedHashMap.
+# Signature carries the generic type arguments R8 would otherwise erase.
+#
+# It is NOT enough to make `object : TypeReference<T>() {}` work under full mode
+# (android.enableR8.fullMode=true). Measured on device: JacksonMapper's <clinit>
+# built its JavaTypes through jacksonTypeRefOf() and threw
+#
+#   IllegalArgumentException: Internal error: TypeReference constructed without
+#   actual type information
+#
+# which poisons the class -- every later use is NoClassDefFoundError, so nothing
+# could be signed or sent. Keeping the anonymous subclasses did not help either
+# (tried -keep,allowobfuscation and a full -keep ... { *; }). The fix was to stop
+# asking Jackson to read the type back off the class: JacksonMapper now builds
+# those JavaTypes with TypeFactory.constructType/constructCollectionType/
+# constructParametricType, which take the Class objects directly.
+#
+# Anything else that still resolves a generic type reflectively is exposed the
+# same way -- notably JacksonMapper.fromJsonTo<T>, JsonMapperNip55 (NIP-55) and
+# the NIP-46 bunker path, which were not reachable in this test run.
 #
 # All three are ALSO in AGP's proguard-android-optimize.txt, which keeps
 # AnnotationDefault, EnclosingMethod, InnerClasses, Signature and the three
@@ -198,3 +214,21 @@
 # generated neighbours — cheap enough not to be worth proving unnecessary
 # against a pre-stable (alpha) library.
 -keep class com.vitorpamplona.amethyst.appfunctions.** { *; }
+
+# -----------------------------------------------------------------------------
+# Enums used as navigation-route ARGUMENTS
+# -----------------------------------------------------------------------------
+# androidx.navigation's type-safe routes resolve an enum argument by its
+# fully-qualified class name (NavTypeConverter.parseEnum/parseNullableEnum call
+# Class.forName on the serial name). R8 renames the class, so building the nav
+# graph throws and the app cannot get past login:
+#
+#   IllegalArgumentException: Cannot find class with name
+#   "...routes.DiscoverTab?". Ensure that the serialName for this argument is
+#   the default fully qualified name.
+#
+# The enum FIELDS are already pinned by the blanket `-keepclassmembers enum *`
+# above; that rule deliberately lets the CLASS be renamed, which is exactly what
+# breaks here. Every enum used as a route argument needs its name too.
+-keep class com.vitorpamplona.amethyst.ui.navigation.routes.DiscoverTab { *; }
+-keep class com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType { *; }
