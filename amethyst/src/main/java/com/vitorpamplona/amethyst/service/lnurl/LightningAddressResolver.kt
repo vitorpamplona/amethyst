@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.lnurl
 
 import android.content.Context
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -167,7 +167,7 @@ class LightningAddressResolver {
 
         val errorMessage =
             runCatching {
-                jacksonObjectMapper().readTree(body)
+                ObjectMapper().readTree(body)
             }.getOrNull()?.let { tree ->
                 val errorNode = tree.get("error")
                 val messageNode = tree.get("message")
@@ -218,7 +218,7 @@ class LightningAddressResolver {
         context: Context,
         onZapRequestSent: (LnZapRequestEvent?) -> Unit = {},
     ): String {
-        val mapper = jacksonObjectMapper()
+        val mapper = ObjectMapper()
 
         val lnurlpUrl = assembleUrl(lnAddress)
 

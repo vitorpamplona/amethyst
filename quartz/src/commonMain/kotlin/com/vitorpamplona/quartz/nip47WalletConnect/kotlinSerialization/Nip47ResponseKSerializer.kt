@@ -20,7 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyMapOrNull
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyToJsonElement
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.decodeRootJsonObject
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.longOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objectListOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringListOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.toAnyMap
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
@@ -35,6 +43,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcUnknownResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendSuccessResponse
@@ -55,10 +64,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
@@ -75,6 +81,10 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
             buildJsonObject {
                 put("result_type", value.resultType)
                 when (value) {
+                    is NwcUnknownResponse -> {
+                        value.result?.let { put("result", anyToJsonElement(it)) }
+                    }
+
                     is NwcErrorResponse -> {
                         value.error?.let { put("error", serializeNwcError(it)) }
                     }
@@ -250,8 +260,8 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
 
     override fun deserialize(decoder: Decoder): Response {
         val jsonDecoder = decoder as JsonDecoder
-        val jsonObject = jsonDecoder.decodeJsonElement().jsonObject
-        val resultType = jsonObject["result_type"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
+        val jsonObject = decoder.decodeRootJsonObject("An NWC response")
+        val resultType = jsonObject.stringOrNull("result_type")
         val hasError = jsonObject["error"]?.let { it !is JsonNull } ?: false
         val hasResult = jsonObject["result"]?.let { it !is JsonNull } ?: false
 
@@ -262,7 +272,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
                 }
 
                 else -> {
-                    val error = jsonObject["error"]?.jsonObject?.let { parseNwcError(it) }
+                    val error = jsonObject.objOrNull("error")?.let { parseNwcError(it) }
                     NwcErrorResponse(resultType ?: "", error)
                 }
             }
@@ -287,11 +297,11 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
                 }
 
                 NwcMethod.MAKE_INVOICE -> {
-                    MakeInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
+                    MakeInvoiceSuccessResponse(parseTransaction(jsonObject.objOrNull("result")))
                 }
 
                 NwcMethod.LOOKUP_INVOICE -> {
-                    LookupInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
+                    LookupInvoiceSuccessResponse(parseTransaction(jsonObject.objOrNull("result")))
                 }
 
                 NwcMethod.LIST_TRANSACTIONS -> {
@@ -319,7 +329,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
                 }
 
                 NwcMethod.MAKE_HOLD_INVOICE -> {
-                    MakeHoldInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
+                    MakeHoldInvoiceSuccessResponse(parseTransaction(jsonObject.objOrNull("result")))
                 }
 
                 NwcMethod.CANCEL_HOLD_INVOICE -> {
@@ -332,28 +342,33 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
 
                 else -> {
                     // backward compatibility: guess by result content
-                    val resultObj = jsonObject["result"]?.jsonObject
+                    val resultObj = jsonObject.objOrNull("result")
                     if (resultObj?.containsKey("preimage") == true) {
                         return parsePayInvoiceSuccess(jsonObject)
                     }
-                    throw IllegalArgumentException("Unknown NWC response type: $resultType")
+                    // A result_type from a newer NIP-47, or an extension we do not
+                    // implement. The response is well-formed; hand it back with the
+                    // result intact rather than failing the parse.
+                    NwcUnknownResponse(resultType ?: "", resultObj?.toAnyMap())
                 }
             }
         }
 
-        throw IllegalArgumentException("NWC response has neither result nor error")
+        // Neither result nor error nor result_type: nothing to dispatch on, but the
+        // payload was still a valid JSON object, so surface it rather than throw.
+        return NwcUnknownResponse(resultType ?: "", jsonObject.objOrNull("result")?.toAnyMap())
     }
 
     private fun parseNwcError(obj: JsonObject): NwcError {
         val code =
-            obj["code"]?.jsonPrimitive?.content?.let { codeName ->
+            obj.stringOrNull("code")?.let { codeName ->
                 try {
                     NwcErrorCode.valueOf(codeName)
                 } catch (_: Exception) {
                     null
                 }
             }
-        return NwcError(code, obj["message"]?.jsonPrimitive?.content)
+        return NwcError(code, obj.stringOrNull("message"))
     }
 
     fun serializeTransaction(transaction: NwcTransaction?): JsonObject? {
@@ -379,177 +394,177 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
     fun parseTransaction(obj: JsonObject?): NwcTransaction? {
         if (obj == null) return null
         return NwcTransaction(
-            type = obj["type"]?.jsonPrimitive?.content,
-            state = obj["state"]?.jsonPrimitive?.content,
-            invoice = obj["invoice"]?.jsonPrimitive?.content,
-            description = obj["description"]?.jsonPrimitive?.content,
-            description_hash = obj["description_hash"]?.jsonPrimitive?.content,
-            preimage = obj["preimage"]?.jsonPrimitive?.content,
-            payment_hash = obj["payment_hash"]?.jsonPrimitive?.content,
-            amount = obj["amount"]?.jsonPrimitive?.longOrNull,
-            fees_paid = obj["fees_paid"]?.jsonPrimitive?.longOrNull,
-            created_at = obj["created_at"]?.jsonPrimitive?.longOrNull,
-            expires_at = obj["expires_at"]?.jsonPrimitive?.longOrNull,
-            settled_at = obj["settled_at"]?.jsonPrimitive?.longOrNull,
-            settle_deadline = obj["settle_deadline"]?.jsonPrimitive?.longOrNull,
-            metadata = obj["metadata"]?.jsonObject?.toAnyMap(),
+            type = obj.stringOrNull("type"),
+            state = obj.stringOrNull("state"),
+            invoice = obj.stringOrNull("invoice"),
+            description = obj.stringOrNull("description"),
+            description_hash = obj.stringOrNull("description_hash"),
+            preimage = obj.stringOrNull("preimage"),
+            payment_hash = obj.stringOrNull("payment_hash"),
+            amount = obj.longOrNull("amount"),
+            fees_paid = obj.longOrNull("fees_paid"),
+            created_at = obj.longOrNull("created_at"),
+            expires_at = obj.longOrNull("expires_at"),
+            settled_at = obj.longOrNull("settled_at"),
+            settle_deadline = obj.longOrNull("settle_deadline"),
+            metadata = obj.anyMapOrNull("metadata"),
         )
     }
 
     private fun parsePayInvoiceSuccess(json: JsonObject): PayInvoiceSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return PayInvoiceSuccessResponse(
             result?.let {
                 PayInvoiceSuccessResponse.PayInvoiceResultParams(
-                    preimage = it["preimage"]?.jsonPrimitive?.content,
-                    fees_paid = it["fees_paid"]?.jsonPrimitive?.longOrNull,
+                    preimage = it.stringOrNull("preimage"),
+                    fees_paid = it.longOrNull("fees_paid"),
                 )
             },
         )
     }
 
     private fun parsePayInvoiceError(json: JsonObject): PayInvoiceErrorResponse {
-        val error = json["error"]?.jsonObject
+        val error = json.objOrNull("error")
         return PayInvoiceErrorResponse(
             error?.let {
                 PayInvoiceErrorResponse.PayInvoiceErrorParams(
                     code =
-                        it["code"]?.jsonPrimitive?.content?.let { codeName ->
+                        it.stringOrNull("code")?.let { codeName ->
                             try {
                                 NwcErrorCode.valueOf(codeName)
                             } catch (_: Exception) {
                                 null
                             }
                         },
-                    message = it["message"]?.jsonPrimitive?.content,
+                    message = it.stringOrNull("message"),
                 )
             },
         )
     }
 
     private fun parsePaySuccess(json: JsonObject): PaySuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return PaySuccessResponse(
             result?.let {
                 // contentOrNull, not content: an explicit JSON `null` (which Jackson writes
                 // for every null field) must read back as a real null, not the string "null".
                 PaySuccessResponse.PayResult(
-                    transaction_id = it["transaction_id"]?.jsonPrimitive?.contentOrNull,
-                    state = it["state"]?.jsonPrimitive?.contentOrNull,
-                    instruction_type = it["instruction_type"]?.jsonPrimitive?.contentOrNull,
-                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    fees_paid = it["fees_paid"]?.jsonPrimitive?.longOrNull,
-                    payment_hash = it["payment_hash"]?.jsonPrimitive?.contentOrNull,
-                    preimage = it["preimage"]?.jsonPrimitive?.contentOrNull,
-                    payer_proof = it["payer_proof"]?.jsonPrimitive?.contentOrNull,
-                    txid = it["txid"]?.jsonPrimitive?.contentOrNull,
-                    failure_reason = it["failure_reason"]?.jsonPrimitive?.contentOrNull,
-                    created_at = it["created_at"]?.jsonPrimitive?.longOrNull,
-                    settled_at = it["settled_at"]?.jsonPrimitive?.longOrNull,
+                    transaction_id = it.stringOrNull("transaction_id"),
+                    state = it.stringOrNull("state"),
+                    instruction_type = it.stringOrNull("instruction_type"),
+                    amount = it.longOrNull("amount"),
+                    fees_paid = it.longOrNull("fees_paid"),
+                    payment_hash = it.stringOrNull("payment_hash"),
+                    preimage = it.stringOrNull("preimage"),
+                    payer_proof = it.stringOrNull("payer_proof"),
+                    txid = it.stringOrNull("txid"),
+                    failure_reason = it.stringOrNull("failure_reason"),
+                    created_at = it.longOrNull("created_at"),
+                    settled_at = it.longOrNull("settled_at"),
                 )
             },
         )
     }
 
     private fun parseReceiveSuccess(json: JsonObject): ReceiveSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return ReceiveSuccessResponse(
             result?.let {
                 ReceiveSuccessResponse.ReceiveResult(
-                    bip321 = it["bip321"]?.jsonPrimitive?.contentOrNull,
-                    transaction_id = it["transaction_id"]?.jsonPrimitive?.contentOrNull,
+                    bip321 = it.stringOrNull("bip321"),
+                    transaction_id = it.stringOrNull("transaction_id"),
                 )
             },
         )
     }
 
     private fun parsePayKeysendSuccess(json: JsonObject): PayKeysendSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return PayKeysendSuccessResponse(
             result?.let {
                 PayKeysendSuccessResponse.PayKeysendResult(
-                    preimage = it["preimage"]?.jsonPrimitive?.content,
-                    fees_paid = it["fees_paid"]?.jsonPrimitive?.longOrNull,
+                    preimage = it.stringOrNull("preimage"),
+                    fees_paid = it.longOrNull("fees_paid"),
                 )
             },
         )
     }
 
     private fun parseListTransactionsSuccess(json: JsonObject): ListTransactionsSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return ListTransactionsSuccessResponse(
             result?.let {
                 ListTransactionsSuccessResponse.ListTransactionsResult(
-                    transactions = it["transactions"]?.jsonArray?.mapNotNull { t -> parseTransaction(t.jsonObject) },
-                    total_count = it["total_count"]?.jsonPrimitive?.longOrNull,
+                    transactions = it.objectListOrNull("transactions")?.mapNotNull { t -> parseTransaction(t) },
+                    total_count = it.longOrNull("total_count"),
                 )
             },
         )
     }
 
     private fun parseGetBalanceSuccess(json: JsonObject): GetBalanceSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return GetBalanceSuccessResponse(
             result?.let {
                 GetBalanceSuccessResponse.GetBalanceResult(
-                    balance = it["balance"]?.jsonPrimitive?.longOrNull,
+                    balance = it.longOrNull("balance"),
                 )
             },
         )
     }
 
     private fun parseGetInfoSuccess(json: JsonObject): GetInfoSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return GetInfoSuccessResponse(
             result?.let {
                 GetInfoSuccessResponse.GetInfoResult(
-                    alias = it["alias"]?.jsonPrimitive?.content,
-                    color = it["color"]?.jsonPrimitive?.content,
-                    pubkey = it["pubkey"]?.jsonPrimitive?.content,
-                    network = it["network"]?.jsonPrimitive?.content,
-                    block_height = it["block_height"]?.jsonPrimitive?.longOrNull,
-                    block_hash = it["block_hash"]?.jsonPrimitive?.content,
-                    methods = it["methods"]?.jsonArray?.map { m -> m.jsonPrimitive.content },
-                    notifications = it["notifications"]?.jsonArray?.map { n -> n.jsonPrimitive.content },
-                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
-                    lud16 = it["lud16"]?.jsonPrimitive?.content,
+                    alias = it.stringOrNull("alias"),
+                    color = it.stringOrNull("color"),
+                    pubkey = it.stringOrNull("pubkey"),
+                    network = it.stringOrNull("network"),
+                    block_height = it.longOrNull("block_height"),
+                    block_hash = it.stringOrNull("block_hash"),
+                    methods = it.stringListOrNull("methods"),
+                    notifications = it.stringListOrNull("notifications"),
+                    metadata = it.anyMapOrNull("metadata"),
+                    lud16 = it.stringOrNull("lud16"),
                 )
             },
         )
     }
 
     private fun parseGetBudgetSuccess(json: JsonObject): GetBudgetSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return GetBudgetSuccessResponse(
             result?.let {
                 GetBudgetSuccessResponse.GetBudgetResult(
-                    used_budget = it["used_budget"]?.jsonPrimitive?.longOrNull,
-                    total_budget = it["total_budget"]?.jsonPrimitive?.longOrNull,
-                    renews_at = it["renews_at"]?.jsonPrimitive?.longOrNull,
-                    renewal_period = it["renewal_period"]?.jsonPrimitive?.content,
+                    used_budget = it.longOrNull("used_budget"),
+                    total_budget = it.longOrNull("total_budget"),
+                    renews_at = it.longOrNull("renews_at"),
+                    renewal_period = it.stringOrNull("renewal_period"),
                 )
             },
         )
     }
 
     private fun parseSignMessageSuccess(json: JsonObject): SignMessageSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return SignMessageSuccessResponse(
             result?.let {
                 SignMessageSuccessResponse.SignMessageResult(
-                    message = it["message"]?.jsonPrimitive?.content,
-                    signature = it["signature"]?.jsonPrimitive?.content,
+                    message = it.stringOrNull("message"),
+                    signature = it.stringOrNull("signature"),
                 )
             },
         )
     }
 
     private fun parseCreateConnectionSuccess(json: JsonObject): CreateConnectionSuccessResponse {
-        val result = json["result"]?.jsonObject
+        val result = json.objOrNull("result")
         return CreateConnectionSuccessResponse(
             result?.let {
                 CreateConnectionSuccessResponse.CreateConnectionResult(
-                    wallet_pubkey = it["wallet_pubkey"]?.jsonPrimitive?.content,
+                    wallet_pubkey = it.stringOrNull("wallet_pubkey"),
                 )
             },
         )

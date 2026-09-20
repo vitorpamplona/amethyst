@@ -60,6 +60,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
@@ -1907,13 +1908,13 @@ class AmethystAppFunctions {
                 "Active Amethyst account is read-only (npub login). Sign in with a private key or NIP-46 bunker to publish.",
             )
         }
-        // NostrSignerExternal lives in quartz/androidMain and isn't visible
-        // to commonMain — but we're already in android-app code, so the
-        // class is on the classpath. Reflective name-check keeps the
-        // dependency edge clean and avoids hard-coupling the bridge to
-        // the NIP-55 implementation class.
-        val klass = signer::class.qualifiedName
-        if (klass == "com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal") {
+        // NostrSignerExternal lives in quartz/androidMain, which is on the
+        // classpath here because this is android-app code. This used to compare
+        // `signer::class.qualifiedName` against the fully-qualified name to
+        // avoid the import; R8 renames the class in release builds, so that
+        // comparison silently stopped matching and the external-signer branch
+        // never ran. A type check has no such failure mode.
+        if (signer is NostrSignerExternal) {
             throw AppFunctionNotSupportedException(
                 "Amethyst is configured to use an external NIP-55 signer (Amber). " +
                     "Write actions from Gemini aren't supported with this signer yet — " +

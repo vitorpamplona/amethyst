@@ -30,8 +30,8 @@ class Permission(
     fun toJson(): String = JsonMapperNip55.toJson(this)
 
     companion object {
-        fun fromJson(json: String): Permission = JsonMapperNip55.fromJsonTo<Permission>(json)
+        fun fromJson(json: String): Permission = JsonMapperNip55.fromJsonToPermission(json)
 
-        fun fromJsonArray(json: String): Array<Permission> = JsonMapperNip55.fromJsonTo<Array<Permission>>(json)
+        fun fromJsonArray(json: String): Array<Permission> = JsonMapperNip55.fromJsonToPermissionArray(json)
     }
 }

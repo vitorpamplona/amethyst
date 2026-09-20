@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip01Core.jackson
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class InliningTagArrayPrettyPrinterTest {
     val mapper =
-        jacksonObjectMapper().apply {
+        ObjectMapper().apply {
             setDefaultPrettyPrinter(InliningTagArrayPrettyPrinter())
         }
 

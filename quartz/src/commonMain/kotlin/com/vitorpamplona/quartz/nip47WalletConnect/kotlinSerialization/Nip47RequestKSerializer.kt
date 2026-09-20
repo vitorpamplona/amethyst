@@ -20,7 +20,16 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyMapOrNull
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyToJsonElement
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.booleanOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.decodeRootJsonObject
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.intOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.longOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objectListOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringListOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceParams
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionMethod
@@ -58,17 +67,13 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
@@ -258,8 +263,8 @@ object Nip47RequestKSerializer : KSerializer<Request> {
 
     override fun deserialize(decoder: Decoder): Request {
         val jsonDecoder = decoder as JsonDecoder
-        val jsonObject = jsonDecoder.decodeJsonElement().jsonObject
-        val method = jsonObject["method"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
+        val jsonObject = decoder.decodeRootJsonObject("An NWC request")
+        val method = jsonObject.stringOrNull("method")
 
         return when (method) {
             NwcMethod.PAY_INVOICE -> parsePayInvoice(jsonObject)
@@ -282,62 +287,61 @@ object Nip47RequestKSerializer : KSerializer<Request> {
     }
 
     private fun parsePayInvoice(json: JsonObject): PayInvoiceMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return PayInvoiceMethod(
             params?.let {
                 PayInvoiceParams(
-                    invoice = it["invoice"]?.jsonPrimitive?.content,
-                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
+                    invoice = it.stringOrNull("invoice"),
+                    amount = it.longOrNull("amount"),
+                    metadata = it.anyMapOrNull("metadata"),
                 )
             },
         )
     }
 
     private fun parsePay(json: JsonObject): PayMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return PayMethod(
             params?.let {
                 // contentOrNull / `as? JsonObject` treat an explicit JSON `null` as absent —
                 // Jackson (JVM/Android) writes null-valued keys, so a native/iOS peer parsing
                 // that output must not read `JsonNull` as the string "null" or crash on it.
                 PayParams(
-                    payment = it["payment"]?.jsonPrimitive?.contentOrNull,
-                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    payer_note = it["payer_note"]?.jsonPrimitive?.contentOrNull,
-                    metadata = (it["metadata"] as? JsonObject)?.toAnyMap(),
+                    payment = it.stringOrNull("payment"),
+                    amount = it.longOrNull("amount"),
+                    payer_note = it.stringOrNull("payer_note"),
+                    metadata = it.anyMapOrNull("metadata"),
                 )
             },
         )
     }
 
     private fun parseReceive(json: JsonObject): ReceiveMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return ReceiveMethod(
             params?.let {
                 ReceiveParams(
-                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    description = it["description"]?.jsonPrimitive?.contentOrNull,
-                    metadata = (it["metadata"] as? JsonObject)?.toAnyMap(),
+                    amount = it.longOrNull("amount"),
+                    description = it.stringOrNull("description"),
+                    metadata = it.anyMapOrNull("metadata"),
                 )
             },
         )
     }
 
     private fun parsePayKeysend(json: JsonObject): PayKeysendMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return PayKeysendMethod(
             params?.let {
                 PayKeysendParams(
-                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    pubkey = it["pubkey"]?.jsonPrimitive?.content,
-                    preimage = it["preimage"]?.jsonPrimitive?.content,
+                    amount = it.longOrNull("amount"),
+                    pubkey = it.stringOrNull("pubkey"),
+                    preimage = it.stringOrNull("preimage"),
                     tlv_records =
-                        it["tlv_records"]?.jsonArray?.map { record ->
-                            val obj = record.jsonObject
+                        it.objectListOrNull("tlv_records")?.map { record ->
                             TlvRecord(
-                                type = obj["type"]?.jsonPrimitive?.longOrNull,
-                                value = obj["value"]?.jsonPrimitive?.content,
+                                type = record.longOrNull("type"),
+                                value = record.stringOrNull("value"),
                             )
                         },
                 )
@@ -346,113 +350,113 @@ object Nip47RequestKSerializer : KSerializer<Request> {
     }
 
     private fun parseMakeInvoice(json: JsonObject): MakeInvoiceMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return MakeInvoiceMethod(
             params?.let {
                 MakeInvoiceParams(
-                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    description = it["description"]?.jsonPrimitive?.content,
-                    description_hash = it["description_hash"]?.jsonPrimitive?.content,
-                    expiry = it["expiry"]?.jsonPrimitive?.longOrNull,
-                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
+                    amount = it.longOrNull("amount"),
+                    description = it.stringOrNull("description"),
+                    description_hash = it.stringOrNull("description_hash"),
+                    expiry = it.longOrNull("expiry"),
+                    metadata = it.anyMapOrNull("metadata"),
                 )
             },
         )
     }
 
     private fun parseLookupInvoice(json: JsonObject): LookupInvoiceMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return LookupInvoiceMethod(
             params?.let {
                 LookupInvoiceParams(
-                    payment_hash = it["payment_hash"]?.jsonPrimitive?.content,
-                    invoice = it["invoice"]?.jsonPrimitive?.content,
+                    payment_hash = it.stringOrNull("payment_hash"),
+                    invoice = it.stringOrNull("invoice"),
                 )
             },
         )
     }
 
     private fun parseListTransactions(json: JsonObject): ListTransactionsMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return ListTransactionsMethod(
             params?.let {
                 ListTransactionsParams(
-                    from = it["from"]?.jsonPrimitive?.longOrNull,
-                    until = it["until"]?.jsonPrimitive?.longOrNull,
-                    limit = it["limit"]?.jsonPrimitive?.intOrNull,
-                    offset = it["offset"]?.jsonPrimitive?.intOrNull,
-                    unpaid = it["unpaid"]?.jsonPrimitive?.booleanOrNull,
-                    unpaid_outgoing = it["unpaid_outgoing"]?.jsonPrimitive?.booleanOrNull,
-                    unpaid_incoming = it["unpaid_incoming"]?.jsonPrimitive?.booleanOrNull,
-                    type = it["type"]?.jsonPrimitive?.content,
+                    from = it.longOrNull("from"),
+                    until = it.longOrNull("until"),
+                    limit = it.intOrNull("limit"),
+                    offset = it.intOrNull("offset"),
+                    unpaid = it.booleanOrNull("unpaid"),
+                    unpaid_outgoing = it.booleanOrNull("unpaid_outgoing"),
+                    unpaid_incoming = it.booleanOrNull("unpaid_incoming"),
+                    type = it.stringOrNull("type"),
                 )
             },
         )
     }
 
     private fun parseSignMessage(json: JsonObject): SignMessageMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return SignMessageMethod(
             params?.let {
                 SignMessageParams(
-                    message = it["message"]?.jsonPrimitive?.content,
+                    message = it.stringOrNull("message"),
                 )
             },
         )
     }
 
     private fun parseCreateConnection(json: JsonObject): CreateConnectionMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return CreateConnectionMethod(
             params?.let {
                 CreateConnectionParams(
-                    pubkey = it["pubkey"]?.jsonPrimitive?.content,
-                    name = it["name"]?.jsonPrimitive?.content,
-                    request_methods = it["request_methods"]?.jsonArray?.map { m -> m.jsonPrimitive.content },
-                    notification_types = it["notification_types"]?.jsonArray?.map { n -> n.jsonPrimitive.content },
-                    max_amount = it["max_amount"]?.jsonPrimitive?.longOrNull,
-                    budget_renewal = it["budget_renewal"]?.jsonPrimitive?.content,
-                    expires_at = it["expires_at"]?.jsonPrimitive?.longOrNull,
-                    isolated = it["isolated"]?.jsonPrimitive?.booleanOrNull,
-                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
+                    pubkey = it.stringOrNull("pubkey"),
+                    name = it.stringOrNull("name"),
+                    request_methods = it.stringListOrNull("request_methods"),
+                    notification_types = it.stringListOrNull("notification_types"),
+                    max_amount = it.longOrNull("max_amount"),
+                    budget_renewal = it.stringOrNull("budget_renewal"),
+                    expires_at = it.longOrNull("expires_at"),
+                    isolated = it.booleanOrNull("isolated"),
+                    metadata = it.anyMapOrNull("metadata"),
                 )
             },
         )
     }
 
     private fun parseMakeHoldInvoice(json: JsonObject): MakeHoldInvoiceMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return MakeHoldInvoiceMethod(
             params?.let {
                 MakeHoldInvoiceParams(
-                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    description = it["description"]?.jsonPrimitive?.content,
-                    description_hash = it["description_hash"]?.jsonPrimitive?.content,
-                    expiry = it["expiry"]?.jsonPrimitive?.longOrNull,
-                    payment_hash = it["payment_hash"]?.jsonPrimitive?.content,
-                    min_cltv_expiry_delta = it["min_cltv_expiry_delta"]?.jsonPrimitive?.intOrNull,
+                    amount = it.longOrNull("amount"),
+                    description = it.stringOrNull("description"),
+                    description_hash = it.stringOrNull("description_hash"),
+                    expiry = it.longOrNull("expiry"),
+                    payment_hash = it.stringOrNull("payment_hash"),
+                    min_cltv_expiry_delta = it.intOrNull("min_cltv_expiry_delta"),
                 )
             },
         )
     }
 
     private fun parseCancelHoldInvoice(json: JsonObject): CancelHoldInvoiceMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return CancelHoldInvoiceMethod(
             params?.let {
                 CancelHoldInvoiceParams(
-                    payment_hash = it["payment_hash"]?.jsonPrimitive?.content,
+                    payment_hash = it.stringOrNull("payment_hash"),
                 )
             },
         )
     }
 
     private fun parseSettleHoldInvoice(json: JsonObject): SettleHoldInvoiceMethod {
-        val params = json["params"]?.jsonObject
+        val params = json.objOrNull("params")
         return SettleHoldInvoiceMethod(
             params?.let {
                 SettleHoldInvoiceParams(
-                    preimage = it["preimage"]?.jsonPrimitive?.content,
+                    preimage = it.stringOrNull("preimage"),
                 )
             },
         )

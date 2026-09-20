@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.tor
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 
 /**
  * Pure, file- and JNI-free parsers over Arti's persisted guard sample
@@ -42,7 +42,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
  *   circuit — i.e. a real bootstrap reached the guard-confirmation stage.
  */
 object ArtiGuardState {
-    private val mapper = jacksonObjectMapper()
+    private val mapper = ObjectMapper()
 
     /** Convenience for tests/callers holding the raw file text. */
     fun parse(json: String): JsonNode = mapper.readTree(json)
