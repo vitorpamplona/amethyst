@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.contextvm.mcp.CvmMcpClient
 import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
 import com.vitorpamplona.quartz.contextvm.transport.DualSigner
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorClient
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -224,6 +225,65 @@ class CordnRuntime(
     /** Retires [invitation] without joining. There is no undo; see `decline`. */
     suspend fun decline(invitation: CordnInvitation) {
         registry.sessionOrNull(invitation.coordinator.pubKey)?.manager?.decline(invitation.welcome)
+    }
+
+    /**
+     * Asks to be added to [gid] on [config].
+     *
+     * Publishes a fresh KeyPackage first, because there is no way to be added
+     * without one: `spec/00.md` §4.2 gives cordn no KeyPackage event kind, so
+     * the coordinator is the only place an inviter can find it. This is the
+     * one moment where publishing is unambiguously what the user asked for —
+     * they are asking strangers to add them — which is why it happens here
+     * rather than silently at login (§8.4).
+     */
+    suspend fun requestToJoin(
+        config: CoordinatorConfig,
+        gid: String,
+    ): Long {
+        val session = session(config)
+        val published = session.keyPackages.publishNew()
+        return session.manager.requestToJoin(gid, published.keyPackageRef)
+    }
+
+    /**
+     * Everyone asking to join [gid], or an empty list if we hold no session.
+     *
+     * Fetched when asked for, never polled — the same §8 reasoning as
+     * [invitations]. **Any member can answer these**, not only an admin:
+     * cordn's `admin_pubkeys` is presentation metadata and nothing enforces
+     * it, so there is no admin check to make here and a UI that implied one
+     * would be inventing a boundary the protocol does not have.
+     */
+    suspend fun joinRequests(
+        coordinatorPubKey: HexKey,
+        gid: String,
+    ): List<JoinRequest> =
+        registry
+            .sessionOrNull(coordinatorPubKey)
+            ?.manager
+            ?.pendingJoinRequests()
+            ?.filter { it.gid == gid }
+            .orEmpty()
+
+    /** Adds the account behind [request] to its group. */
+    suspend fun acceptJoinRequest(
+        coordinatorPubKey: HexKey,
+        request: JoinRequest,
+    ) {
+        val session =
+            registry.sessionOrNull(coordinatorPubKey)
+                ?: throw IllegalStateException("no session for $coordinatorPubKey")
+        session.manager.acceptJoinRequest(request)
+        refresh(session, request.gid)
+    }
+
+    /** Retires [request] without adding anyone. */
+    suspend fun declineJoinRequest(
+        coordinatorPubKey: HexKey,
+        request: JoinRequest,
+    ) {
+        registry.sessionOrNull(coordinatorPubKey)?.manager?.declineJoinRequest(request)
     }
 
     /**

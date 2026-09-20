@@ -636,7 +636,7 @@ fun BuildNavigation(
             com.vitorpamplona.amethyst.ui.actions.nestsServers
                 .NestsServersScreen(accountViewModel, nav)
         }
-        composableFromEnd<Route.CordnLink> { CordnLinkScreen(nav) }
+        composableFromEnd<Route.CordnLink> { CordnLinkScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditBolt12Offers> { Bolt12OffersScreen(accountViewModel, nav) }

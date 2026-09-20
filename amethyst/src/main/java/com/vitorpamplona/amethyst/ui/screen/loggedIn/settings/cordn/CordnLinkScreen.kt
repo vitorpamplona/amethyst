@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -61,7 +62,9 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_link_paste
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_relays
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -84,9 +87,18 @@ import org.jetbrains.compose.resources.stringResource
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CordnLinkScreen(nav: INav) {
+fun CordnLinkScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     var input by remember { mutableStateOf("") }
     var inspection by remember { mutableStateOf<CordnLinkInspection?>(null) }
+    var requestState by remember { mutableStateOf<String?>(null) }
+    var requesting by remember { mutableStateOf(false) }
+    val runtime = accountViewModel.account.cordnRuntime
+    val scope = rememberCoroutineScope()
+    val requestFailed = stringRes(R.string.cordn_link_request_failed)
+    val asked = stringRes(R.string.cordn_link_request_sent)
     val clipboard = LocalClipboardManager.current
 
     Scaffold(
@@ -115,6 +127,7 @@ fun CordnLinkScreen(nav: INav) {
                     // half-typed ref is always invalid, and showing that while
                     // someone is still pasting is noise, not feedback.
                     inspection = null
+                    requestState = null
                 },
                 label = { Text(stringResource(Res.string.cordn_link_field)) },
                 singleLine = false,
@@ -182,10 +195,61 @@ fun CordnLinkScreen(nav: INav) {
                     }
 
                     Text(
+                        // Still true, and still worth saying: reading a link
+                        // is not joining, and the button below is the only
+                        // thing on this screen that tells anyone anything.
                         text = stringResource(Res.string.cordn_link_not_joinable),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+
+                    val coordinator = result.coordinator
+                    if (coordinator != null && runtime != null) {
+                        Button(
+                            onClick = {
+                                requesting = true
+                                requestState = null
+                                scope.launch {
+                                    requestState =
+                                        try {
+                                            runtime.requestToJoin(coordinator, result.ref.gid)
+                                            asked
+                                        } catch (e: Exception) {
+                                            e.message ?: requestFailed
+                                        }
+                                    requesting = false
+                                }
+                            },
+                            enabled = !requesting,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringRes(R.string.cordn_link_request))
+                        }
+
+                        Text(
+                            // Said before the tap, because it is the part that
+                            // cannot be undone: asking to join publishes a
+                            // KeyPackage under this account's own key and tells
+                            // the coordinator this account wants into this
+                            // group, whether or not anyone ever answers (§8.4).
+                            text = stringRes(R.string.cordn_link_request_disclosure),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        requestState?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color =
+                                    if (it == asked) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.error
+                                    },
+                            )
+                        }
+                    }
                 }
             }
         }

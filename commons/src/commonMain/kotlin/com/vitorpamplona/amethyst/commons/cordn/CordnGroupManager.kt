@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.commons.cordn
 import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.ConsumedJoinRequestRef
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ConsumedWelcomeRef
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.KeyPackagePublication
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnApplicationMessage
@@ -94,6 +96,9 @@ class CordnGroupManager(
 
     /** Acknowledgements a failed [retire] left to ride the next `welcome_take`. */
     private val pendingRetirements = mutableListOf<ConsumedWelcomeRef>()
+
+    /** As [pendingRetirements], for join requests. */
+    private val pendingRequestRetirements = mutableListOf<ConsumedJoinRequestRef>()
 
     /** What happened to one delivered payload. */
     sealed interface Delivery {
@@ -217,11 +222,15 @@ class CordnGroupManager(
     suspend fun invite(
         gid: String,
         targetPubKey: HexKey,
+        keyPackageRef: String? = null,
     ): InviteResult {
         val group = requireGroup(gid)
 
+        // By ref when we have one: a join request names the exact KeyPackage
+        // its sender published for this purpose, and taking a different one of
+        // theirs would spend a package they meant for someone else.
         val taken =
-            call { coordinator.takeKeyPackage(targetPubKey) }
+            call { coordinator.takeKeyPackage(keyPackageRef ?: targetPubKey) }
                 ?: throw CordnGroupException("the coordinator holds no KeyPackage for $targetPubKey")
         val verified = KeyPackagePublication.verify(taken.publicationEvent)
         if (verified.pubKey != targetPubKey) {
@@ -401,6 +410,79 @@ class CordnGroupManager(
     private fun drainRetirements(): List<ConsumedWelcomeRef> {
         val queued = pendingRetirements.toList()
         pendingRetirements.clear()
+        return queued
+    }
+
+    // ---- join requests --------------------------------------------------
+
+    /**
+     * Asks to be added to [gid], offering [keyPackageRef] as the way in.
+     *
+     * The requester side of a share link. It tells the coordinator, and
+     * through it the group's members, that this account wants in and which
+     * KeyPackage to use — nothing more. Only a member can actually add anyone,
+     * and nothing here obliges them to.
+     *
+     * This is an attributable call: the coordinator learns this account is
+     * interested in this group whether or not anyone ever accepts. That is
+     * unavoidable — there is no way to ask to join without asking — and it is
+     * the cost the exposure disclosure names.
+     */
+    suspend fun requestToJoin(
+        gid: String,
+        keyPackageRef: String,
+    ): Long = call { coordinator.storeJoinRequest(gid, keyPackageRef) }
+
+    /**
+     * Everyone asking to join a group this manager holds.
+     *
+     * Only this manager's own `gid`s are asked about, because those are the
+     * only ones it could act on. Like Welcomes, acknowledgements ride the next
+     * call, so a previous round's decisions are flushed here.
+     *
+     * **Any member can answer these, not only an admin.** `spec/01.md` §5.3
+     * makes `admin_pubkeys` presentation metadata and neither the spec nor the
+     * reference coordinator restricts who may commit — see
+     * [CordnGroupPolicy]'s "why there is no authorization hook". A UI that
+     * hid this behind an admin check would be inventing a boundary cordn does
+     * not have.
+     */
+    suspend fun pendingJoinRequests(): List<JoinRequest> {
+        if (groups.isEmpty()) return emptyList()
+        return call { coordinator.takeJoinRequests(groups.keys.toList(), drainRequestRetirements()) }
+    }
+
+    /**
+     * Adds the account behind [request] to its group, and retires the request.
+     *
+     * Retiring only after the invite lands: a request dropped before the
+     * Welcome exists is a person who asked, was told nothing, and has no way
+     * to ask again without a fresh link.
+     */
+    suspend fun acceptJoinRequest(request: JoinRequest): InviteResult {
+        val result = invite(request.gid, request.pubKey, request.keyPackageRef)
+        retireRequests(listOf(ConsumedJoinRequestRef(request.gid, request.pubKey, request.at)))
+        return result
+    }
+
+    /** Retires [request] without adding anyone. */
+    suspend fun declineJoinRequest(request: JoinRequest) {
+        retireRequests(listOf(ConsumedJoinRequestRef(request.gid, request.pubKey, request.at)))
+    }
+
+    /** As [retire], for join requests: `join_request_take_many` carries the acks. */
+    private suspend fun retireRequests(refs: List<ConsumedJoinRequestRef>) {
+        if (refs.isEmpty() || groups.isEmpty()) return
+        try {
+            call { coordinator.takeJoinRequests(groups.keys.toList(), refs) }
+        } catch (e: Exception) {
+            pendingRequestRetirements += refs
+        }
+    }
+
+    private fun drainRequestRetirements(): List<ConsumedJoinRequestRef> {
+        val queued = pendingRequestRetirements.toList()
+        pendingRequestRetirements.clear()
         return queued
     }
 

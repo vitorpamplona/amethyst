@@ -50,6 +50,23 @@ class FakeCoordinator(
     /** The account the manager under test is calling as, for Welcome routing. */
     private val callerPubKey: HexKey,
 ) : ICoordinator {
+    /**
+     * A second account's view of *this* coordinator's storage.
+     *
+     * The caller is fixed at construction because Welcome routing depends on
+     * it, so two accounts on one coordinator need two instances over one set
+     * of maps rather than one instance with a mutable caller. Everything
+     * stored is shared; only who is asking differs — which is exactly the
+     * situation a join request exists to handle.
+     */
+    fun viewAs(otherPubKey: HexKey): FakeCoordinator =
+        FakeCoordinator(otherPubKey).also {
+            it.keyPackages = keyPackages
+            it.welcomes = welcomes
+            it.streams = streams
+            it.joinRequests = joinRequests
+        }
+
     class StoredKeyPackage(
         val pubKey: HexKey,
         val keyPackageRef: String,
@@ -58,9 +75,10 @@ class FakeCoordinator(
         val lastResort: Boolean = false,
     )
 
-    val keyPackages = mutableMapOf<String, StoredKeyPackage>()
-    val welcomes = mutableMapOf<HexKey, MutableList<PendingWelcome>>()
-    val streams = mutableMapOf<String, MutableList<GroupMessage>>()
+    var keyPackages = mutableMapOf<String, StoredKeyPackage>()
+    var welcomes = mutableMapOf<HexKey, MutableList<PendingWelcome>>()
+    var streams = mutableMapOf<String, MutableList<GroupMessage>>()
+    var joinRequests = mutableMapOf<String, MutableList<JoinRequest>>()
 
     /** Every method name called, in order. */
     val calls = mutableListOf<String>()
@@ -136,7 +154,11 @@ class FakeCoordinator(
         keyPackageRef: String,
     ): Long {
         record("join_request_store")
-        return clock++
+        val at = clock++
+        // Keyed by group, not by caller: any member of the group can serve it,
+        // which is what `spec/01.md` §5.3 leaves open.
+        joinRequests.getOrPut(gid) { mutableListOf() } += JoinRequest(gid, callerPubKey, keyPackageRef, at)
+        return at
     }
 
     override suspend fun takeJoinRequests(
@@ -144,7 +166,10 @@ class FakeCoordinator(
         consumed: List<ConsumedJoinRequestRef>,
     ): List<JoinRequest> {
         record("join_request_take_many")
-        return emptyList()
+        consumed.forEach { ack ->
+            joinRequests[ack.gid]?.removeAll { it.gid == ack.gid && it.pubKey == ack.pubKey && it.at == ack.at }
+        }
+        return gids.flatMap { joinRequests[it].orEmpty() }
     }
 
     override suspend fun postMessage(

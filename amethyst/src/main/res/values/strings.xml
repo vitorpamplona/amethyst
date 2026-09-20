@@ -1622,6 +1622,17 @@
     <string name="cordn_invitations_load_failed">Could not read invitations.</string>
     <string name="cordn_invitations_entry">Invited to a cordn group?</string>
     <string name="cordn_invitations_entry_action">Review invitations</string>
+    <string name="cordn_link_request">Ask to join this group</string>
+    <string name="cordn_link_request_disclosure">This publishes a key package under your own account key and tells the coordinator you want into this group — whether or not anyone answers.</string>
+    <string name="cordn_link_request_sent">Asked. A member of the group has to add you; the invitation will show up under cordn invitations.</string>
+    <string name="cordn_link_request_failed">Could not ask to join.</string>
+    <string name="cordn_requests_title">Requests to join</string>
+    <string name="cordn_requests_check">Check for requests</string>
+    <string name="cordn_requests_none">Nobody is waiting to join.</string>
+    <string name="cordn_requests_accept">Add</string>
+    <string name="cordn_requests_decline">Dismiss</string>
+    <string name="cordn_requests_any_member">Any member of a cordn group can add someone. The admin list is a label, not a lock.</string>
+    <string name="cordn_requests_failed">Could not read the requests.</string>
     <string name="chat_type_cordn_title">cordn groups</string>
     <string name="chat_type_cordn_desc">End-to-end encrypted groups ordered by a coordinator you choose, instead of by relays.</string>
     <string name="chat_type_geohash_title">Location chats</string>
