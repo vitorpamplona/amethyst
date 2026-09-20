@@ -1633,6 +1633,11 @@
     <string name="cordn_requests_decline">Dismiss</string>
     <string name="cordn_requests_any_member">Any member of a cordn group can add someone. The admin list is a label, not a lock.</string>
     <string name="cordn_requests_failed">Could not read the requests.</string>
+    <string name="cordn_link_scan">Scan</string>
+    <string name="cordn_share_title">Share this group</string>
+    <string name="cordn_share_explainer">Anyone with this link can ask to join. A member still has to add them.</string>
+    <string name="cordn_share_copy">Copy link</string>
+    <string name="cordn_share_copied">Copied</string>
     <string name="chat_type_cordn_title">cordn groups</string>
     <string name="chat_type_cordn_desc">End-to-end encrypted groups ordered by a coordinator you choose, instead of by relays.</string>
     <string name="chat_type_geohash_title">Location chats</string>

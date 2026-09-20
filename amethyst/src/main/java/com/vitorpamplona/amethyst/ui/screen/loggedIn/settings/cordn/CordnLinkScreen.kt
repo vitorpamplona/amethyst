@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_link_relays
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -99,6 +100,7 @@ fun CordnLinkScreen(
     val scope = rememberCoroutineScope()
     val requestFailed = stringRes(R.string.cordn_link_request_failed)
     val asked = stringRes(R.string.cordn_link_request_sent)
+    var scanning by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
 
     Scaffold(
@@ -151,6 +153,9 @@ fun CordnLinkScreen(
                 ) {
                     Text(stringResource(Res.string.cordn_link_paste))
                 }
+                OutlinedButton(onClick = { scanning = true }) {
+                    Text(stringRes(R.string.cordn_link_scan))
+                }
                 if (input.isNotEmpty()) {
                     OutlinedButton(
                         onClick = {
@@ -159,6 +164,22 @@ fun CordnLinkScreen(
                         },
                     ) {
                         Text(stringResource(Res.string.cordn_link_clear))
+                    }
+                }
+            }
+
+            if (scanning) {
+                // A cordn ref is a long bech32 string nobody types twice.
+                // Reusing the app's scanner rather than writing one: the
+                // ref goes through exactly the same parse as a pasted link,
+                // so a scanned link cannot take a shortcut a typed one
+                // cannot.
+                SimpleQrCodeScanner {
+                    scanning = false
+                    if (!it.isNullOrEmpty()) {
+                        input = it
+                        inspection = CordnLinkInspection.of(it)
+                        requestState = null
                     }
                 }
             }
