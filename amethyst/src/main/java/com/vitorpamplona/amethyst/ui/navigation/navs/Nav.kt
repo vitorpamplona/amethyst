@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
@@ -102,6 +103,34 @@ class Nav(
     override fun navBottomBar(route: Route) {
         navigationScope.launch {
             ime.settle()
+
+            // A nav-bar tap asks for a tab, never for whatever the user pushed on top of one. Drop
+            // those pushes first, and without saving them, so the restoreState below can never hand
+            // a deep stack back. On phones this is always a no-op — AppBottomBar hides itself off
+            // tab roots, so the bar is only ever tapped from one — but the large-screen rail stays
+            // on screen the whole time and is routinely tapped from three screens deep.
+            popPushesAboveTabRoot()
+
+            // Home always sits at the bottom of the stack (it is the graph's start destination and
+            // the anchor of the popUpTo below), and so does the tab the user is already inside:
+            // popping back to it beats navigating to it. The tab root keeps the ViewModelStore and
+            // scroll position it already has, and the branch above it is saved under its own tab,
+            // exactly as the navigate path would have saved it.
+            //
+            // Home in particular MUST come back this way. `popUpTo(Home) { inclusive = false;
+            // saveState = true }` files the popped entries under the popUpTo target's own
+            // destination id as well as the popped tab's — the `if (!inclusive)` branch of
+            // NavControllerImpl.executePopOperations — so `navigate(Home) { restoreState = true }`
+            // hands Home back whatever was popped on the way out of some *other* tab. That is how
+            // tapping Home on the rail came back to the thread the user had left open three screens
+            // deep in another tab instead of to the home feed.
+            val existing = runCatching { controller.getBackStackEntry(route) }.getOrNull()
+            if (existing != null) {
+                controller.popBackStack(route, inclusive = false, saveState = true)
+                existing.savedStateHandle.set(BOTTOM_NAV_ROOT_KEY, true)
+                return@launch
+            }
+
             controller.navigate(route) {
                 // Clear sibling bottom-nav entries but keep Home (the start
                 // destination) below, so back-swipe from any tab returns to
@@ -143,6 +172,25 @@ class Nav(
                         runCatching { controller.getBackStackEntry(route) }.getOrNull()
                     }
             entry?.savedStateHandle?.set(BOTTOM_NAV_ROOT_KEY, true)
+        }
+    }
+
+    /**
+     * Drops every entry the user pushed on top of the tab root they are currently in, discarding
+     * that state rather than saving it — a nav-bar tap is a request for a tab, and nothing above a
+     * tab root should survive to be replayed by a later `restoreState`.
+     *
+     * Stops at the first entry stamped [BOTTOM_NAV_ROOT_KEY] by [navBottomBar], or at Home, which
+     * is a tab root the user may never have tapped because the graph starts there. Terminates
+     * either way: every iteration that does not return removes one entry from a finite back stack,
+     * and [NavHostController.popBackStack] reports false once there is nothing left to pop.
+     */
+    private fun popPushesAboveTabRoot() {
+        while (true) {
+            val top = controller.currentBackStackEntry ?: return
+            if (top.isBottomNavRoot()) return
+            if (top.destination.hasRoute(Route.Home::class)) return
+            if (!controller.popBackStack()) return
         }
     }
 
