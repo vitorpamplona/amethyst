@@ -63,10 +63,35 @@
 #     Console only auto-deobfuscates the AAB it was given.
 -keepattributes SourceFile,LineNumberTable
 
-# Annotations (jackson-module-kotlin reads @kotlin.Metadata; Jackson mixins and
-# kotlinx.serialization read their own), generic signatures, and the
-# inner/enclosing-class links that R8 requires alongside Signature.
--keepattributes *Annotation*,Signature,Exceptions,InnerClasses,EnclosingMethod
+# Generic signatures, plus the inner/enclosing-class links that travel with them.
+#
+# Signature is the load-bearing one: jacksonTypeRefOf() resolves generic types
+# through it at 18 call sites, and without it List<Event> erases to List and every
+# element comes back a LinkedHashMap.
+#
+# All three are ALSO in AGP's proguard-android-optimize.txt, which keeps
+# AnnotationDefault, EnclosingMethod, InnerClasses, Signature and the three
+# RuntimeVisible* annotation attributes. They stay spelled out here anyway: the
+# duplicate is free (measured at 0 bytes) and it means a change to AGP's default
+# file cannot quietly take Signature away from Jackson.
+#
+# Two attributes this line used to carry are gone, both measured on the arm64
+# release DEX:
+#
+#   * `*Annotation*` — over AGP's default its only contribution was the
+#     RuntimeInvisible* variants, which by definition cannot be read at runtime.
+#     Dropping it produced a byte-identical DEX (31,390,048 either way). Nothing
+#     we ship reads an annotation reflectively, and the libraries that do
+#     (kotlinx.serialization, appfunctions, AppSearch) match on RuntimeVisible*,
+#     which AGP already keeps.
+#   * `Exceptions` — @Throws metadata for 31 methods in shipped code, read by
+#     Java-interop compilers and by nothing at runtime. Worth 692 bytes.
+#
+# For the record, since it was wrong here for a while: this line used to credit
+# jackson-module-kotlin with reading @kotlin.Metadata through it. That module no
+# longer ships, and the Jackson mixins it also named were deleted along with the
+# NWC Jackson path.
+-keepattributes Signature,InnerClasses,EnclosingMethod
 
 # LocalVariableTable, LocalVariableTypeTable, MethodParameters and
 # -keepparameternames used to be kept here as well. They are debug metadata:

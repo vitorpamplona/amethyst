@@ -125,7 +125,12 @@ class JacksonMapper {
         fun fromJsonToEventList(json: String): List<Event> = mapper.readValue(json, eventListTypeInstance)
 
         /**
-         * The types this mapper has a registered deserializer for.
+         * The types this mapper has a registered deserializer for, by EXACT class.
+         *
+         * Exact is right here: `SimpleModule.addDeserializer(Event::class)` binds that
+         * class alone — Jackson's SimpleDeserializers does not walk up a hierarchy on
+         * the read side — so a subclass passed to [fromJsonTo] really would be
+         * unbound. The serializer side is the mirror image; see [checkSerializable].
          *
          * [fromJsonTo] is generic, so nothing in the type system stops a new
          * [OptimizedSerializable] being passed to it. Jackson would answer by binding
@@ -161,6 +166,43 @@ class JacksonMapper {
                         "reflectively and emit obfuscated field names in a release build. Register " +
                         "one in JacksonMapper, or route the type at KotlinSerializationMapper in " +
                         "OptimizedJsonMapper.",
+                )
+            }
+        }
+
+        /**
+         * The write-side twin of [checkRegistered], and the reason it is an `is` chain
+         * rather than a set: Jackson's SimpleSerializers DOES walk the hierarchy, so
+         * the serializer registered for [Event] serves every event kind and [Command]'s
+         * serves NegMsgMessage. Comparing exact classes here would reject all of them.
+         *
+         * Without this, [toJson] has the same hole [fromJsonTo] had. Hand it an
+         * [OptimizedSerializable] with no registered serializer and Jackson falls back
+         * to bean introspection, naming each field after its getter — names R8 renames,
+         * so a release build writes `{"a":…}` onto the wire while the debug build looks
+         * perfect.
+         *
+         * [BunkerRequest] and [BunkerResponse] are named instead of their [BunkerMessage]
+         * parent on purpose: the parent has no serializer of its own, so a third subclass
+         * should fail here rather than quietly bean-serialize.
+         */
+        private fun checkSerializable(value: OptimizedSerializable) {
+            val hasSerializer =
+                value is Event ||
+                    value is Filter ||
+                    value is Message ||
+                    value is Command ||
+                    value is EventTemplate<*> ||
+                    value is Rumor ||
+                    value is BunkerRequest ||
+                    value is BunkerResponse
+
+            if (!hasSerializer) {
+                throw IllegalArgumentException(
+                    "No Jackson serializer is registered for ${value::class}, so Jackson would " +
+                        "serialize it reflectively and emit obfuscated field names in a release " +
+                        "build. Register one in JacksonMapper, or route the type at " +
+                        "KotlinSerializationMapper in OptimizedJsonMapper.",
                 )
             }
         }
@@ -206,7 +248,10 @@ class JacksonMapper {
 
         fun toJson(event: ObjectNode?): String = mapper.writeValueAsString(event)
 
-        fun toJson(value: OptimizedSerializable): String = mapper.writeValueAsString(value)
+        fun toJson(value: OptimizedSerializable): String {
+            checkSerializable(value)
+            return mapper.writeValueAsString(value)
+        }
 
         fun toJson(tags: TagArray): String = mapper.writeValueAsString(tags)
     }
