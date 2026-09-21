@@ -38,11 +38,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,12 +48,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
-import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarLocalDayKeyRange
-import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_continues
@@ -67,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_day
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -76,29 +69,17 @@ import java.time.ZoneId
 
 @Composable
 fun CalendarDayView(
-    feedState: FeedContentState,
+    model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
 ) {
-    val state by feedState.feedContent.collectAsStateWithLifecycle()
-    val notes =
-        when (val s = state) {
-            is FeedState.Loaded ->
-                s.feed
-                    .collectAsStateWithLifecycle()
-                    .value.list
-                    .applyCalendarFilter(filterAddresses)
-            else -> emptyList()
-        }
+    val byDay by model.eventsByDay.collectAsStateWithLifecycle()
 
-    val today = remember { LocalDate.now() }
-    // Persisting an epoch-day Long is auto-saveable; arithmetic in [LocalDate] is DST-safe
-    // (millisecond stepping was off by an hour after spring/fall transitions).
-    var visibleEpochDay by rememberSaveable { mutableStateOf(today.toEpochDay()) }
-    val visibleDate = LocalDate.ofEpochDay(visibleEpochDay)
+    // Stepping in [LocalDate] rather than milliseconds keeps this DST-safe: millisecond stepping
+    // was off by an hour after spring/fall transitions.
+    val visibleEpochDay = model.visibleEpochDay
+    val visibleDate = model.visibleDate
 
-    val byDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
     val dayEvents = byDay[visibleDate.toEpochDay()].orEmpty()
 
     val sorted =
@@ -110,14 +91,15 @@ fun CalendarDayView(
     // Single LazyColumn — nav header is the first item so it scrolls with the disappearing
     // top bar instead of staying pinned mid-screen when the bar collapses.
     LazyColumn(
+        state = model.dayListState,
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier
                 .fillMaxSize()
                 .calendarSwipeNavigation(
                     key = visibleEpochDay,
-                    onSwipeLeft = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
-                    onSwipeRight = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
+                    onSwipeLeft = { model.shiftDays(1) },
+                    onSwipeRight = { model.shiftDays(-1) },
                 ),
     ) {
         item(key = "day-nav") {
@@ -125,9 +107,9 @@ fun CalendarDayView(
                 title = formatLongDate(visibleDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
                 prevContentDescription = stringRes(Res.string.calendar_nav_previous_day),
                 nextContentDescription = stringRes(Res.string.calendar_nav_next_day),
-                onPrev = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
-                onNext = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
-                onToday = { visibleEpochDay = LocalDate.now().toEpochDay() },
+                onPrev = { model.shiftDays(-1) },
+                onNext = { model.shiftDays(1) },
+                onToday = { model.visibleEpochDay = LocalDate.now().toEpochDay() },
             )
         }
 
@@ -144,7 +126,11 @@ fun CalendarDayView(
                     DayRow(
                         note = note,
                         visibleEpochDay = visibleEpochDay,
-                        onClick = { nav.nav(Route.Note(note.idHex)) },
+                        // The appointment's own screen, like every other calendar row opens —
+                        // not the generic thread view. `idHex` is the address for these
+                        // (addressable) notes, so the old Route.Note(idHex) would have handed
+                        // the thread screen an `naddr`-shaped id to resolve for no reason.
+                        onClick = { nav.nav(detailRouteFor(note)) },
                     )
                     HorizontalDivider()
                 }

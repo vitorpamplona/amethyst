@@ -39,6 +39,15 @@ enum class ShareTarget {
 
     /** "New Video": a NIP-71 video, straight into the Video feed. */
     VIDEO,
+
+    /**
+     * "Scan QR code": read a QR out of a shared picture instead of posting it.
+     *
+     * The common way a QR code reaches someone is as a screenshot or a photo in a chat, not as
+     * something in front of the camera. Without this the only way to use one was to display it on
+     * a second screen and point the phone at it.
+     */
+    SCAN_QR,
 }
 
 /**
@@ -71,6 +80,9 @@ object ShareIntentRouting {
     /** See the caveat on [SHARE_AS_DM_ALIAS_SIMPLE_NAME]. */
     const val SHARE_AS_VIDEO_ALIAS_SIMPLE_NAME = "ShareAsVideoAlias"
 
+    /** See the caveat on [SHARE_AS_DM_ALIAS_SIMPLE_NAME]. */
+    const val SCAN_QR_ALIAS_SIMPLE_NAME = "ScanQrCodeAlias"
+
     private val TARGET_BY_ALIAS =
         mapOf(
             SHARE_AS_DM_ALIAS_SIMPLE_NAME to ShareTarget.DIRECT_MESSAGE,
@@ -78,6 +90,7 @@ object ShareIntentRouting {
             SHARE_AS_PICTURE_ALIAS_SIMPLE_NAME to ShareTarget.PICTURE,
             SHARE_AS_SHORT_VIDEO_ALIAS_SIMPLE_NAME to ShareTarget.SHORT_VIDEO,
             SHARE_AS_VIDEO_ALIAS_SIMPLE_NAME to ShareTarget.VIDEO,
+            SCAN_QR_ALIAS_SIMPLE_NAME to ShareTarget.SCAN_QR,
         )
 
     /**

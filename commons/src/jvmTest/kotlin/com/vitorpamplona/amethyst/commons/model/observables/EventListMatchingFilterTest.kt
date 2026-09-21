@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.EventFactory
-import java.util.TreeSet
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
@@ -65,7 +64,7 @@ class EventListMatchingFilterTest {
         sink: (List<Event>) -> Unit,
     ) = EventListMatchingFilter<Event>(
         filter = withFilter,
-        atOnce = { TreeSet(CreatedAtIdHexComparator) },
+        atOnce = { emptyList() },
         update = sink,
     )
 

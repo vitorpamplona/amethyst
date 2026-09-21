@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address

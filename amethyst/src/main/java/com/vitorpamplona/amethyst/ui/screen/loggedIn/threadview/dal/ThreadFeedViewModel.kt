@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 
 class ThreadFeedViewModel(
     account: Account,

@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_action_btn_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_desc_label
@@ -67,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_btn_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_dialog_indicator_first_part
 import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_dialog_indicator_second_part
 import com.vitorpamplona.amethyst.commons.resources.list_management_dialog_title
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog

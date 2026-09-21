@@ -25,9 +25,9 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletArtifactPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity

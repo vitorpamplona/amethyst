@@ -80,6 +80,8 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
@@ -217,6 +219,9 @@ object RenderableKinds {
             NamedSiteEvent.KIND,
             RootNappletEvent.KIND,
             NamedNappletEvent.KIND,
+            // geocaches
+            GeocacheListingEvent.KIND,
+            GeocacheFoundLogEvent.KIND,
             // everything else with a card
             BadgeDefinitionEvent.KIND,
             EmojiPackEvent.KIND,

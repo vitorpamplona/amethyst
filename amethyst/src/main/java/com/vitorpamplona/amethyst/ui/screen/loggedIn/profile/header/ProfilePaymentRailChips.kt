@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_lightning_offer
@@ -63,7 +64,6 @@ import com.vitorpamplona.amethyst.commons.resources.clink_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_cashu
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_lightning
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_onchain
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.util.setText

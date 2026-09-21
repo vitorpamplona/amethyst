@@ -11,229 +11,177 @@ Proguard configuration for optimizing and obfuscating Android APK while preservi
 
 ## Amethyst Proguard Configuration
 
-**File:** `amethyst/proguard-rules.pro`
+**Files:**
 
-### Keep Kotlin Metadata
+- `amethyst/proguard-rules.pro` — the app's rules. Read it before adding
+  anything: it is commented rule by rule.
+- `quartz/consumer-rules.pro` — merged into the R8 configuration of **every**
+  app that depends on Quartz, this one included (wired via
+  `optimization.consumerKeepRules` in `quartz/build.gradle.kts`). A rule added
+  here silently applies to somebody else's whole program.
+- The AGP default `proguard-android-optimize.txt`, which already contributes the
+  Android-wide basics (Parcelable CREATOR fields, `native <methods>`, the enum
+  `values()`/`valueOf()` pair, …). Don't restate its rules.
+- `commons/`, `commonsUI/` and the other library modules deliberately have **no**
+  rules files. They are not minified and they wire no consumer rules, so a file
+  there would be dead configuration.
 
-```proguard
-# Kotlin metadata is required for reflection
--keep class kotlin.Metadata { *; }
--keep class kotlin.** { *; }
--dontwarn kotlin.**
+### The policy: keep only what is reached BY NAME
 
-# Kotlin serialization
--keepattributes *Annotation*, InnerClasses
--dontnote kotlinx.serialization.AnnotationsKt
--dontnote kotlinx.serialization.SerializationKt
+Google Play measures how much of a shipped app's DEX R8 actually optimized and
+renamed, and warns — then restricts store visibility and publishing — below 25%
+in either category. Amethyst has been on the wrong side of that line: a
+`-dontobfuscate` plus `-keepnames class ** { *; }` at the top of both
+`proguard-rules.pro` and `quartz/consumer-rules.pro`, and outright
+`-keep class com.vitorpamplona.** { *; }` for the app's own code, produced 0%
+obfuscation and 13% optimization. (`-keepnames` is not the mild rule it looks
+like: it expands to `-keep,allowshrinking`, which permits shrinking but neither
+renaming nor optimization — applied to `**` it disables R8 for the entire
+program, libraries included.)
 
--keep,includedescriptorclasses class com.vitorpamplona.**$$serializer { *; }
--keepclassmembers class com.vitorpamplona.** {
-    *** Companion;
-}
--keepclasseswithmembers class com.vitorpamplona.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
-```
+So the standing rule is: **a keep needs a named runtime mechanism that reads the
+name.** In this app those are, exhaustively:
 
-### Keep Nostr Event Classes
+| Mechanism | Example | Rule shape |
+|---|---|---|
+| JNI symbol `Java_<class>_<method>` | `ArtiNative`, secp256k1 | covered by the default `native <methods>` rule |
+| Native code calling *back* by name | `ArtiLogCallback.onLogLine`, looked up with `GetMethodID` in `tools/arti-build/src/lib.rs` | `-keep class …ArtiLogCallback { *; }` |
+| Generated code reflected over by a library | the AppFunctions bridge (`appfunctions.**`, play flavor only) | `-keep class <pkg>.** { *; }` |
+| Enum constant persisted as a string | `UISharedPreferences` writes `enum.name`, reads `Type.valueOf(s)` | `-keepclassmembers enum * { <fields>; … }` |
+| Class name in a manifest `<meta-data android:value>` | `AmethystCastOptionsProvider` | explicit `-keep` — AGP generates keeps from component `android:name`, **not** from meta-data |
+| Class name in WorkManager's database | the three `CoroutineWorker`s | `-keep class * extends androidx.work.ListenableWorker { <init>(...); }` |
 
-```proguard
-# Nostr events are serialized/deserialized
--keep class com.vitorpamplona.quartz.events.** { *; }
--keep class com.vitorpamplona.quartz.encoders.** { *; }
+What does **not** need a keep, and where the temptation usually comes from:
 
-# Keep event builders
--keep class com.vitorpamplona.quartz.builders.** { *; }
+- **Quartz events and tags.** `Event`, `Filter`, `Message`, `Command`, `Rumor`,
+  `EventTemplate`, `TagArray`, the NIP-46 Bunker messages and the NIP-55 intent
+  results all go through hand-written `StdSerializer`/`StdDeserializer` pairs
+  registered on `JacksonMapper` / `JsonMapperNip55`. Those read and write
+  property names as string literals, and `EventFactory` dispatches on kind with
+  a `when`, not by reflection. Renaming their fields changes nothing on the wire.
+- **`@Serializable` (kotlinx) classes**, including the type-safe navigation
+  routes. The compiler plugin generates a descriptor holding the serial name and
+  every property name as **compile-time string literals**, so obfuscation cannot
+  reach them. kotlinx-serialization ships its own consumer rules for the
+  `$$serializer`/`Companion` plumbing.
+- **Compose, Coil, OkHttp, Media3, Firebase, kotlin-reflect.** Every one of them
+  ships consumer rules inside its own artifact. Check
+  `build/outputs/mapping/<variant>/configuration.txt` — the fully merged
+  configuration — before writing a rule for a third-party library.
+- **Manifest-declared components** (activities, services, receivers, providers)
+  and classes named in layout/`res/xml`. AGP generates those keeps itself, which
+  is why `Intent().setClassName(ctx, "…NappletBrowserService")` is safe.
 
-# Keep tag classes
--keep class com.vitorpamplona.quartz.nip01Core.tags.** { *; }
-```
-
-### Keep Data Classes
-
-```proguard
-# Data classes used in ViewModels and serialization
--keep @kotlinx.serialization.Serializable class * { *; }
-
-# Keep all data classes
--keep class com.vitorpamplona.amethyst.model.** { *; }
--keep class com.vitorpamplona.amethyst.service.model.** { *; }
-```
-
-### Keep Compose Classes
-
-```proguard
-# Jetpack Compose
--keep class androidx.compose.** { *; }
--dontwarn androidx.compose.**
-
-# Compose runtime
--keep class androidx.compose.runtime.** { *; }
-
-# Compose UI
--keep class androidx.compose.ui.** { *; }
-
-# Material3
--keep class androidx.compose.material3.** { *; }
-
-# Navigation Compose - Keep serializable routes
--keep class * implements java.io.Serializable { *; }
--keepclassmembers class * implements java.io.Serializable {
-    static final long serialVersionUID;
-    private static final java.io.ObjectStreamField[] serialPersistentFields;
-    !static !transient <fields>;
-    private void writeObject(java.io.ObjectOutputStream);
-    private void readObject(java.io.ObjectInputStream);
-    java.lang.Object writeReplace();
-    java.lang.Object readResolve();
-}
-```
-
-### Keep OkHttp/Retrofit
+### Attributes
 
 ```proguard
-# OkHttp
--dontwarn okhttp3.**
--dontwarn okio.**
--keep class okhttp3.** { *; }
--keep class okio.** { *; }
-
-# OkHttp WebSockets (for Nostr relays)
--keep class okhttp3.internal.ws.** { *; }
-
-# Retrofit (if used)
--keepattributes Signature
--keepattributes Exceptions
--keep class retrofit2.** { *; }
-```
-
-### Keep Jackson (JSON)
-
-```proguard
-# Jackson JSON library
--keep class com.fasterxml.jackson.** { *; }
--keep class org.codehaus.** { *; }
--keepclassmembers class * {
-     @com.fasterxml.jackson.annotation.* <methods>;
-}
-
-# Jackson polymorphic types
--keepattributes RuntimeVisibleAnnotations
--keep @com.fasterxml.jackson.annotation.JsonTypeInfo class *
-```
-
-### Keep Secp256k1 (Crypto)
-
-```proguard
-# Secp256k1 native library
--keep class fr.acinq.secp256k1.** { *; }
-
-# Keep native methods
--keepclasseswithmembernames class * {
-    native <methods>;
-}
-```
-
-### Keep Tor
-
-```proguard
-# Tor library
--keep class com.msopentech.thali.toronionproxy.** { *; }
--dontwarn com.msopentech.thali.toronionproxy.**
-```
-
-### Keep ExoPlayer (Media)
-
-```proguard
-# ExoPlayer (Media3)
--keep class androidx.media3.** { *; }
--dontwarn androidx.media3.**
-
--keep class com.google.android.exoplayer2.** { *; }
--dontwarn com.google.android.exoplayer2.**
-```
-
-### Keep Coil (Image Loading)
-
-```proguard
-# Coil image loading
--keep class coil.** { *; }
--keep class coil3.** { *; }
--dontwarn coil.**
--dontwarn coil3.**
-```
-
-### Keep ViewModels
-
-```proguard
-# ViewModel classes
--keep class * extends androidx.lifecycle.ViewModel {
-    <init>();
-}
-
-# ViewModel factories
--keep class * extends androidx.lifecycle.ViewModelProvider$Factory {
-    <init>(...);
-}
-
-# Keep ViewModel constructors for reflection
--keepclassmembers class * extends androidx.lifecycle.ViewModel {
-    <init>(...);
-}
-```
-
-### Keep Parcelable
-
-```proguard
-# Parcelable
--keep class * implements android.os.Parcelable {
-  public static final android.os.Parcelable$Creator *;
-}
-
--keepclassmembers class * implements android.os.Parcelable {
-  public <fields>;
-  private <fields>;
-}
-```
-
-### Keep Enums
-
-```proguard
-# Enums
--keepclassmembers enum * {
-    public static **[] values();
-    public static ** valueOf(java.lang.String);
-}
-```
-
-### Remove Logging (Production)
-
-```proguard
-# Remove debug logging in release builds
--assumenosideeffects class android.util.Log {
-    public static *** d(...);
-    public static *** v(...);
-    public static *** i(...);
-}
-
-# Keep error/warning logs
--assumenosideeffects class android.util.Log {
-    public static *** e(...) return false;
-    public static *** w(...) return false;
-}
-```
-
-### Keep Crashlytics/Firebase
-
-```proguard
-# Firebase Crashlytics
+# What makes a crash report retraceable.
 -keepattributes SourceFile,LineNumberTable
--keep public class * extends java.lang.Exception
 
-# Firebase
--keep class com.google.firebase.** { *; }
--dontwarn com.google.firebase.**
+# jackson-module-kotlin reads @kotlin.Metadata; R8 requires InnerClasses and
+# EnclosingMethod alongside Signature.
+-keepattributes *Annotation*,Signature,Exceptions,InnerClasses,EnclosingMethod
 ```
+
+`LocalVariableTable`, `LocalVariableTypeTable`, `MethodParameters` and
+`-keepparameternames` are debug metadata that nothing in the app reads —
+jackson-module-kotlin takes parameter names from `@kotlin.Metadata`, not from
+`MethodParameters`. They were removed; don't add them back.
+
+`-renamesourcefileattribute` is deliberately **not** set, and the reason is not
+the usual one.
+
+Once R8 is minifying it rewrites every class's `SourceFile` to the marker
+`r8-map-id-<hash>` on its own — there is no rule that restores the original
+per-class `.kt` name. Verified by building it both ways: with
+`-renamesourcefileattribute SourceFile`, all 24,440 classes report the literal
+`"SourceFile"`; without it, they report the marker. So the rule cannot buy
+readability, it can only *destroy* the marker — and that marker is the
+`pg_map_id` header of the mapping that produced the build, which is what lets a
+pasted stack trace name the exact mapping file it needs.
+
+Two related facts worth knowing before someone tries to "fix" stack traces with
+keep rules:
+
+- **Raw line numbers are no longer source line numbers.** R8 renumbers them so
+  that one obfuscated line can encode a whole inlined frame stack. This is a
+  cost of *optimization*, not of renaming — it is new only because the old
+  blanket `-keepnames` had optimization switched off across the program, which
+  is the thing Play was flagging.
+- **Retrace therefore returns more than the old raw traces did**: it expands
+  the frames R8 inlined instead of collapsing them into one misleading line. A
+  one-frame crash can retrace to three.
+
+The workflow is `scripts/retrace.sh <mapping> [trace]`, documented in
+[`RELEASE_OPS.md` § 7](../../../../RELEASE_OPS.md). Every GitHub Release carries
+`amethyst-{googleplay,fdroid}-mapping-<version>.txt.gz`; Play Console needs
+nothing because AGP embeds the mapping in the `.aab` under
+`BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`.
+
+### Verifying a change to these rules
+
+R8 cannot see reflection, so a wrong keep rule fails **only in a release build,
+at runtime**. Before changing them:
+
+```bash
+./gradlew :amethyst:assemblePlayRelease -PdisableAbiSplits=true -PdisableUniversalApk=true
+```
+
+then read `amethyst/build/outputs/mapping/playRelease/`:
+
+- `configuration.txt` — every rule R8 actually saw, including each AAR's
+  consumer rules. This is the file that answers "does library X already keep
+  itself?"
+- `mapping.txt` — what got renamed. Lines whose left and right sides are equal
+  are classes a keep rule pinned; scan them for anything you did not intend.
+- `seeds.txt` / `usage.txt` — what the keeps matched, and what was removed.
+
+### The contract check
+
+R8 cannot see reflection, so a keep rule that quietly stops matching — a class
+moved to another package, a rule deleted in a merge, a DTO renamed — gives you a
+green build and an APK that breaks on a user's device.
+`tools/r8-verify/reflection-contract.txt` lists every name resolved from outside
+the DEX, and the verifier asserts each against what R8 actually emitted:
+
+```bash
+python3 tools/r8-verify/verify_reflection_contract.py \
+    amethyst/build/outputs/mapping/playRelease/
+```
+
+Under a second, no device. The release workflow runs it for both flavors before
+collecting assets, so a break fails the release instead of shipping.
+
+**Adding reflection means adding two things**: the keep rule, and a line in the
+contract. A rule with no contract line is unverified and will rot.
+
+Scope a line to one flavor with a leading `@play` / `@fdroid` when the class is
+only compiled into that variant — play-only code is absent from the F-Droid APK,
+and "absent" is indistinguishable from "R8 deleted it", so an unscoped line for
+it fails that release.
+
+Reflection that names a class R8 *cannot* rename needs no rule and no line: the
+platform trust manager `quic` probes for a 3-arg `checkServerTrusted` ships in
+Android, not in our DEX. The opposite case is the one to watch — a name of
+*ours* used as a value. `AmethystAppFunctions` compared
+`signer::class.qualifiedName` against `"…NostrSignerExternal"`; R8 renames that
+class, so the branch silently stopped running the day obfuscation was turned on.
+Prefer `is` over a name comparison; there is no keep rule that makes the latter
+safe to write.
+
+It reads both `mapping.txt` and `usage.txt`, because neither is enough alone —
+mapping.txt records only what *changed* (an intact `-keep ... { *; }` class has
+an empty body, and an unrenamed member has no line at all, so absence there
+means "preserved"), while a member R8 *deleted* appears only in usage.txt. It
+also cross-checks that the two files come from the same R8 run: mapping.txt is
+written during packaging, not at minify time, so a minify-only rebuild leaves a
+stale one behind next to a fresh usage.txt.
+
+What it cannot cover is reflection nobody wrote down. For that: a staged Play
+rollout (the crash reporter retraces itself, so breaks are legible within
+hours), and exercising NIP-47 wallet connect, NIP-46 bunker login, Tor,
+scheduled posts and a settings round-trip (change theme/font, kill, relaunch) on
+a minified build — those are the paths the keeps above exist for.
 
 ## Build Configuration
 
@@ -356,13 +304,15 @@ adb install app/build/outputs/apk/release/app-release.apk
 
 ### Issue: Compose Navigation Crashes
 
-**Cause:** @Serializable route classes were obfuscated.
+**Not** the route classes being obfuscated — that cannot happen. A type-safe
+route's pattern comes from its kotlinx-serialization descriptor, and the compiler
+plugin bakes the serial name and every property name in as string literals, so
+renaming the class leaves the route string untouched. Adding
+`-keep @kotlinx.serialization.Serializable class …routes.** { *; }` pins a large
+tree for no reason and hides the real cause.
 
-**Solution:**
-```proguard
-# Keep all route classes
--keep @kotlinx.serialization.Serializable class com.vitorpamplona.amethyst.ui.navigation.routes.** { *; }
-```
+Look instead at whether `navigation-common`'s own consumer rules made it into
+`configuration.txt`, and at the stack trace retraced through `mapping.txt`.
 
 ### Issue: Native Library Crashes
 

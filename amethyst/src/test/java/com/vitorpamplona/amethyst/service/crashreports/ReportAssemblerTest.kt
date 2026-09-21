@@ -35,7 +35,7 @@ class ReportAssemblerTest {
         val report = ReportAssembler().buildReport(e, "main")
 
         assertTrue(report.length < 2_000)
-        assertTrue(report.startsWith("IllegalArgumentException: "))
+        assertTrue(report.startsWith("java.lang.IllegalArgumentException: "))
         assertTrue(report.contains("Navigation destination that matches route"))
         assertTrue(report.trimEnd().endsWith("```"))
     }
@@ -48,7 +48,21 @@ class ReportAssemblerTest {
         val report = ReportAssembler().buildReport(e, "main")
 
         assertTrue(report.contains("java.lang.RuntimeException: boom"))
-        assertTrue(report.contains("com.example.Foo.bar(Foo.kt:42)"))
+        // The "at " prefix is load-bearing: retrace only rewrites frames it recognises.
+        assertTrue(report.contains("    at com.example.Foo.bar(Foo.kt:42)"))
         assertTrue(report.contains("java.lang.IllegalStateException: root cause"))
+    }
+
+    @Test
+    fun headlineNamesTheExceptionClassInFullSoItCanBeRetraced() {
+        // The headline is the line a maintainer skims and dedups on. Release builds are
+        // obfuscated, and `retrace` can only restore a class name it can resolve — a bare
+        // simple name has no package, so the headline has to carry the fully qualified one.
+        val e = IllegalStateException("boom")
+        e.stackTrace = arrayOf(StackTraceElement("com.example.Foo", "bar", "Foo.kt", 42))
+
+        val report = ReportAssembler().buildReport(e, "main")
+
+        assertTrue(report.startsWith("java.lang.IllegalStateException: "))
     }
 }

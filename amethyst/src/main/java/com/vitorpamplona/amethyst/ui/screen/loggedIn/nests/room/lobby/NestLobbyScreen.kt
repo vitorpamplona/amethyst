@@ -62,13 +62,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_chat_empty
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_host_label
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_listeners_count
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_no_listeners
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_open_action
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor

@@ -46,6 +46,7 @@
     <string name="road_event_speed_camera">Tezlik kamerasi</string>
     <string name="road_event_traffic_jam">Tirbandlik</string>
     <string name="road_event_unknown">Yo'l hodisasi</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Ochish</string>
     <string name="relay_monitor_rtt_read">O'qish</string>
     <string name="relay_monitor_rtt_write">Yozish</string>

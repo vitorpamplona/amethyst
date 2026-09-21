@@ -2,9 +2,9 @@
 
 Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexableContent()`
 expression. **Update this file in the same PR as any change to the searchable set or to an
-`indexableContent()` body** (see SKILL.md). Verified against the code 2026-08-25.
+`indexableContent()` body** (see SKILL.md). Verified against the code 2026-09-17.
 
-Counts: 130 concrete classes covering 133 kind values (`GitStatusEvent` spans 4 kinds;
+Counts: 133 concrete classes covering 136 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 has a collision — see the footnote). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
 
@@ -55,6 +55,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 5302 | NIP90ContentSearchRequestEvent | nip90Dvms/contentSearch | `searchQuery() ?: ""` |
 | 5303 | NIP90PeopleSearchRequestEvent | nip90Dvms/peopleSearch | `searchQuery() ?: ""` |
 | 6969 | ZapPollEvent | experimental/zapPolls | `buildString { append(content); pollOptionsArray().forEach { append('\n').append(it.descriptor) } }` |
+| 7516 | GeocacheFoundLogEvent | nipCCGeocaching/foundLog | `content` |
 | 8333 | OnchainZapEvent | nipBCOnchainZaps/zap | `content` |
 | 9002 | EditMetadataEvent | nip29RelayGroups/moderation | `(listOfNotNull(name(), about()) + hashtags())` NL |
 | 9041 | GoalEvent | nip75ZapGoals | `listOfNotNull(summary(), content)` NL |
@@ -129,6 +130,8 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 35128 | NamedSiteEvent | nip5aStaticWebsites | `listOfNotNull(title(), description())` NL |
 | 35129 | NamedNappletEvent | nip5dNapplets | `listOfNotNull(title(), description())` NL |
 | 36787 | MusicTrackEvent | experimental/music/track | `listOfNotNull(title(), artist(), album(), content)` NL |
+| 37516 | GeocacheListingEvent | nipCCGeocaching/listing | `listOfNotNull(cacheName(), content)` NL (the `hint` is deliberately not indexed — matching a hint is spoiling it) |
+| 37517 | GeocacheCurationListEvent | nipCCGeocaching/curation | `listOfNotNull(title(), description(), content)` NL |
 | 38000 | MintRecommendationEvent | nip87Ecash/recommendation | `content` |
 | 38192 | Ps1SaveEvent | experimental/ps1saves | `listOfNotNull(summary(), saveTitle(), region(), filename())` NL |
 | 38383 | P2POrderEvent | nip69P2pOrderEvents | `(listOfNotNull(makerName(), currency()) + paymentMethods().orEmpty()).joinToString(" ")` (SP) |

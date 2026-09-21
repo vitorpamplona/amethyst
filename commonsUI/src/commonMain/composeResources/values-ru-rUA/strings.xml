@@ -48,6 +48,7 @@
     <string name="road_event_speed_camera">Камера контроля скорости</string>
     <string name="road_event_traffic_jam">Пробка</string>
     <string name="road_event_unknown">Дорожное событие</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Открытие</string>
     <string name="relay_monitor_rtt_read">Чтение</string>
     <string name="relay_monitor_rtt_write">Запись</string>

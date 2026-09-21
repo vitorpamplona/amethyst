@@ -170,6 +170,9 @@ class RenderableKindsTest {
                 31925,
                 33401,
                 31990,
+                // geocache curation lists: the caches themselves are in the window, but a list of
+                // them has no card yet, so a result would be a blank row
+                37517,
             ).sorted(),
             omitted.sorted(),
             "the set of searchable kinds not shown in search changed",

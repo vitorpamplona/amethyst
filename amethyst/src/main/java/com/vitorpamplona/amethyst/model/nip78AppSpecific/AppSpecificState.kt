@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.model.nip78AppSpecific
 
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.awaitCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

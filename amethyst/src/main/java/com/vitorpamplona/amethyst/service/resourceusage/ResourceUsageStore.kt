@@ -20,12 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.io.File
 
 /**
@@ -60,6 +59,7 @@ class ResourceUsageStore(
      */
     private val keepDays: Long = 7,
 ) {
+    @Serializable
     data class UsageFile(
         val version: Int = 1,
         val days: Map<String, Map<String, Long>> = emptyMap(),
@@ -67,9 +67,18 @@ class ResourceUsageStore(
         val alertsOptOut: Boolean = false,
     )
 
-    private val mapper =
-        jacksonObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    /**
+     * `encodeDefaults = true` so this writes the same bytes Jackson did — kotlinx
+     * omits a value equal to its default, which would silently drop `"version":1`
+     * from every file this build rewrites. `ignoreUnknownKeys` matches the
+     * FAIL_ON_UNKNOWN_PROPERTIES=false it replaces, so a file written by a newer
+     * build still loads here.
+     */
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     private val mutex = Mutex()
     private var loaded = false
@@ -133,7 +142,7 @@ class ResourceUsageStore(
         data =
             try {
                 if (storageFile.exists() && storageFile.length() > 0) {
-                    mapper.readValue<UsageFile>(storageFile)
+                    json.decodeFromString<UsageFile>(storageFile.readText())
                 } else {
                     UsageFile()
                 }
@@ -148,7 +157,7 @@ class ResourceUsageStore(
         storageFile.parentFile?.mkdirs()
         val tmp = File(storageFile.parentFile, storageFile.name + ".tmp")
         try {
-            mapper.writeValue(tmp, data)
+            tmp.writeText(json.encodeToString(data))
             if (!tmp.renameTo(storageFile)) {
                 if (!storageFile.delete() || !tmp.renameTo(storageFile)) {
                     Log.e(TAG) { "Failed to rename $tmp to $storageFile" }

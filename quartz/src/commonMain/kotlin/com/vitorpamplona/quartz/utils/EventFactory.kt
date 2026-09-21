@@ -418,6 +418,10 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
@@ -645,6 +649,10 @@ class EventFactory {
                 FollowListEvent.KIND -> FollowListEvent(id, pubKey, createdAt, tags, content, sig)
                 FundraiserEvent.KIND -> FundraiserEvent(id, pubKey, createdAt, tags, content, sig)
                 GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
+                GeocacheListingEvent.KIND -> GeocacheListingEvent(id, pubKey, createdAt, tags, content, sig)
+                GeocacheFoundLogEvent.KIND -> GeocacheFoundLogEvent(id, pubKey, createdAt, tags, content, sig)
+                GeocacheVerificationEvent.KIND -> GeocacheVerificationEvent(id, pubKey, createdAt, tags, content, sig)
+                GeocacheCurationListEvent.KIND -> GeocacheCurationListEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashChatEvent.KIND -> GeohashChatEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashListEvent.KIND -> GeohashListEvent(id, pubKey, createdAt, tags, content, sig)
                 // kind:20001 is shared by BitChat's GeohashPresenceEvent and Buzz's

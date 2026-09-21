@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent

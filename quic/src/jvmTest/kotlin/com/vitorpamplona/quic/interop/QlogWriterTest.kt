@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quic.interop
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quic.connection.EncryptionLevel
 import org.junit.Test
 import java.io.File
@@ -73,7 +73,7 @@ class QlogWriterTest {
         val lines = tmp.readLines().filter { it.isNotBlank() }
         assertTrue(lines.size >= 12, "expected >= 12 lines (header + at least 11 events) but got ${lines.size}")
 
-        val mapper = jacksonObjectMapper()
+        val mapper = ObjectMapper()
 
         // Line 1: qlog header.
         val header = mapper.readTree(lines[0])
@@ -128,7 +128,7 @@ class QlogWriterTest {
             w.onAlpnNegotiated("h3")
         }
         val lines = tmp.readLines().filter { it.isNotBlank() }
-        val mapper = jacksonObjectMapper()
+        val mapper = ObjectMapper()
         val event = mapper.readTree(lines[1])
         assertEquals(50L, event.get("time").asLong(), "time must be relative to constructor (1050 - 1000)")
     }
@@ -152,7 +152,7 @@ class QlogWriterTest {
             QlogWriter(tmp, odcidHex = "00").use { w ->
                 w.onPacketSent(EncryptionLevel.INITIAL, 0, 1200, emptyList())
             }
-            val mapper = jacksonObjectMapper()
+            val mapper = ObjectMapper()
             val lines = tmp.readLines().filter { it.isNotBlank() }
             val frames = mapper.readTree(lines[1]).get("data").get("frames")
             assertTrue(frames.isArray, "frames must be an array even when empty")

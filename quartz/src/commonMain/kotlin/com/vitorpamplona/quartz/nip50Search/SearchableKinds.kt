@@ -103,6 +103,7 @@ object SearchableKinds {
             5302, // NIP90ContentSearchRequestEvent
             5303, // NIP90PeopleSearchRequestEvent
             6969, // ZapPollEvent
+            7516, // GeocacheFoundLogEvent
             8333, // OnchainZapEvent
             9002, // EditMetadataEvent
             9041, // GoalEvent
@@ -183,6 +184,8 @@ object SearchableKinds {
             35128, // NamedSiteEvent
             35129, // NamedNappletEvent
             36787, // MusicTrackEvent
+            37516, // GeocacheListingEvent
+            37517, // GeocacheCurationListEvent
             38000, // MintRecommendationEvent
             38192, // Ps1SaveEvent
             38383, // P2POrderEvent

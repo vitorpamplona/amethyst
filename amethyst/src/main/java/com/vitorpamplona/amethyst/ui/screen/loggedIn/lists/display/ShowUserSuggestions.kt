@@ -63,10 +63,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.in_the_list
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon

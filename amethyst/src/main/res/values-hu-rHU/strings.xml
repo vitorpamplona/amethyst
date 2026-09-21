@@ -1441,6 +1441,9 @@
     <string name="share_target_as_picture">Új kép</string>
     <string name="share_target_as_short_video">Új rövid videó</string>
     <string name="share_target_as_video">Új videó</string>
+    <string name="share_target_scan_qr">QR-kód beolvasása</string>
+    <string name="shortcut_scan_qr_short">QR-kód beolvasása</string>
+    <string name="shortcut_scan_qr_long">QR-kód beolvasása</string>
     <string name="new_highlight_title">Új kiemelés</string>
     <string name="new_highlight_passage_label">Kiemelt szöveg</string>
     <string name="new_highlight_note_placeholder">Adja hozzá a gondolatait…</string>
@@ -2392,4 +2395,5 @@
     <string name="health_connect_rationale_activity_label">Health Connect és Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="my_fitness">Fitnesz</string>
 </resources>

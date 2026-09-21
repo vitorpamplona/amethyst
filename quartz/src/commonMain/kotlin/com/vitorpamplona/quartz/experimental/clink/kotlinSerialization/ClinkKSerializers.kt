@@ -34,14 +34,19 @@ import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyToJsonElement
-import com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.toAnyMap
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.decodeRootJsonObject
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.intOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.longOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringListOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.toAnyMap
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
@@ -51,7 +56,6 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
@@ -60,19 +64,13 @@ import kotlinx.serialization.json.put
  * (`OfferRequest`/`OfferResponse`/`OfferReceipt`, `DebitRequest`/`DebitResponse`,
  * `ManageRequest`/`ManageResponse`). They mirror what Jackson does reflectively on
  * JVM/Android — including coercing a lone `details` object into a one-element list
- * (Jackson's `ACCEPT_SINGLE_VALUE_AS_ARRAY`) — so native targets parse the same wire shapes.
+ * (Jackson's `ACCEPT_SINGLE_VALUE_AS_ARRAY`) — so every target parses the same wire shapes.
+ *
+ * Field readers come from `nip01Core.kotlinSerialization.LenientJson`, shared with the
+ * NIP-47 serializers. The private copies that used to sit here read
+ * `it.jsonPrimitive.content`, which throws the moment a peer sends an object or an array
+ * where a string belongs — one malformed field took down the whole offer.
  */
-
-private fun JsonObject.stringOrNull(key: String): String? = get(key)?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
-
-private fun JsonObject.longOrNull(key: String): Long? = get(key)?.let { if (it is JsonNull) null else it.jsonPrimitive.longOrNull }
-
-private fun JsonObject.intOrNull(key: String): Int? = get(key)?.let { if (it is JsonNull) null else it.jsonPrimitive.intOrNull }
-
-private fun JsonObject.objectOrNull(key: String): JsonObject? = get(key) as? JsonObject
-
-private fun JsonObject.stringListOrNull(key: String): List<String>? = (get(key) as? JsonArray)?.map { it.jsonPrimitive.content }
-
 private fun serializeSatRange(range: SatRange): JsonObject =
     buildJsonObject {
         range.min?.let { put("min", it) }
@@ -117,11 +115,11 @@ object OfferRequestKSerializer : KSerializer<OfferRequest> {
     }
 
     override fun deserialize(decoder: Decoder): OfferRequest {
-        val obj = (decoder as JsonDecoder).decodeJsonElement().jsonObject
+        val obj = decoder.decodeRootJsonObject("A CLINK message")
         return OfferRequest(
             offer = obj.stringOrNull("offer"),
             amount_sats = obj.longOrNull("amount_sats"),
-            payer_data = obj.objectOrNull("payer_data")?.toAnyMap(),
+            payer_data = obj.objOrNull("payer_data")?.toAnyMap(),
             zap = obj.stringOrNull("zap"),
             expires_in_seconds = obj.longOrNull("expires_in_seconds"),
             description = obj.stringOrNull("description"),
@@ -148,12 +146,12 @@ object OfferResponseKSerializer : KSerializer<OfferResponse> {
     }
 
     override fun deserialize(decoder: Decoder): OfferResponse {
-        val obj = (decoder as JsonDecoder).decodeJsonElement().jsonObject
+        val obj = decoder.decodeRootJsonObject("A CLINK message")
         return OfferResponse(
             bolt11 = obj.stringOrNull("bolt11"),
             error = obj.stringOrNull("error"),
             code = obj.intOrNull("code"),
-            range = obj.objectOrNull("range")?.let { parseSatRange(it) },
+            range = obj.objOrNull("range")?.let { parseSatRange(it) },
             latest = obj.stringOrNull("latest"),
         )
     }
@@ -175,7 +173,7 @@ object OfferReceiptKSerializer : KSerializer<OfferReceipt> {
     }
 
     override fun deserialize(decoder: Decoder): OfferReceipt {
-        val obj = (decoder as JsonDecoder).decodeJsonElement().jsonObject
+        val obj = decoder.decodeRootJsonObject("A CLINK message")
         return OfferReceipt(
             res = obj.stringOrNull("res"),
             preimage = obj.stringOrNull("preimage"),
@@ -203,14 +201,14 @@ object DebitRequestKSerializer : KSerializer<DebitRequest> {
     }
 
     override fun deserialize(decoder: Decoder): DebitRequest {
-        val obj = (decoder as JsonDecoder).decodeJsonElement().jsonObject
+        val obj = decoder.decodeRootJsonObject("A CLINK message")
         return DebitRequest(
             pointer = obj.stringOrNull("pointer"),
             amount_sats = obj.longOrNull("amount_sats"),
             bolt11 = obj.stringOrNull("bolt11"),
             description = obj.stringOrNull("description"),
             k1 = obj.stringOrNull("k1"),
-            frequency = obj.objectOrNull("frequency")?.let { parseDebitFrequency(it) },
+            frequency = obj.objOrNull("frequency")?.let { parseDebitFrequency(it) },
         )
     }
 
@@ -248,15 +246,15 @@ object DebitResponseKSerializer : KSerializer<DebitResponse> {
     }
 
     override fun deserialize(decoder: Decoder): DebitResponse {
-        val obj = (decoder as JsonDecoder).decodeJsonElement().jsonObject
+        val obj = decoder.decodeRootJsonObject("A CLINK message")
         return DebitResponse(
             res = obj.stringOrNull("res"),
             preimage = obj.stringOrNull("preimage"),
             code = obj.intOrNull("code"),
             error = obj.stringOrNull("error"),
-            range = obj.objectOrNull("range")?.let { parseSatRange(it) },
+            range = obj.objOrNull("range")?.let { parseSatRange(it) },
             retry_after = obj.longOrNull("retry_after"),
-            delta = obj.objectOrNull("delta")?.let { parseGfyDelta(it) },
+            delta = obj.objOrNull("delta")?.let { parseGfyDelta(it) },
         )
     }
 }
@@ -279,12 +277,12 @@ object ManageRequestKSerializer : KSerializer<ManageRequest> {
     }
 
     override fun deserialize(decoder: Decoder): ManageRequest {
-        val obj = (decoder as JsonDecoder).decodeJsonElement().jsonObject
+        val obj = decoder.decodeRootJsonObject("A CLINK message")
         return ManageRequest(
             resource = obj.stringOrNull("resource"),
             action = obj.stringOrNull("action"),
             pointer = obj.stringOrNull("pointer"),
-            offer = obj.objectOrNull("offer")?.let { parseManageOffer(it) },
+            offer = obj.objOrNull("offer")?.let { parseManageOffer(it) },
         )
     }
 
@@ -297,7 +295,7 @@ object ManageRequestKSerializer : KSerializer<ManageRequest> {
     private fun parseManageOffer(obj: JsonObject): ManageOffer =
         ManageOffer(
             id = obj.stringOrNull("id"),
-            fields = obj.objectOrNull("fields")?.let { parseOfferFields(it) },
+            fields = obj.objOrNull("fields")?.let { parseOfferFields(it) },
         )
 
     private fun serializeOfferFields(fields: OfferFields): JsonObject =
@@ -342,7 +340,7 @@ object ManageResponseKSerializer : KSerializer<ManageResponse> {
     }
 
     override fun deserialize(decoder: Decoder): ManageResponse {
-        val obj = (decoder as JsonDecoder).decodeJsonElement().jsonObject
+        val obj = decoder.decodeRootJsonObject("A CLINK message")
         return ManageResponse(
             res = obj.stringOrNull("res"),
             resource = obj.stringOrNull("resource"),
@@ -350,9 +348,9 @@ object ManageResponseKSerializer : KSerializer<ManageResponse> {
             code = obj.intOrNull("code"),
             error = obj.stringOrNull("error"),
             field = obj.stringOrNull("field"),
-            range = obj.objectOrNull("range")?.let { parseSatRange(it) },
+            range = obj.objOrNull("range")?.let { parseSatRange(it) },
             retry_after = obj.longOrNull("retry_after"),
-            delta = obj.objectOrNull("delta")?.let { parseGfyDelta(it) },
+            delta = obj.objOrNull("delta")?.let { parseGfyDelta(it) },
         )
     }
 

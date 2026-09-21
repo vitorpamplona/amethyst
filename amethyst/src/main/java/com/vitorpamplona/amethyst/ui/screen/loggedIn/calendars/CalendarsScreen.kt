@@ -26,11 +26,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -63,26 +61,28 @@ fun CalendarsScreen(
     WatchAccountForCalendarsScreen(feedState, accountViewModel)
     CalendarsFilterAssemblerSubscription(accountViewModel)
 
-    var viewMode by rememberSaveable { mutableStateOf(CalendarsViewMode.FEED) }
-    var filterDTag by rememberSaveable { mutableStateOf<String?>(null) }
-    // Resolve the selected calendar's member addresses (or null when "All"). Plumbed into each
-    // view so the membership filter is applied client-side after the feed loads — changing the
-    // filter doesn't trigger a relay refetch.
-    val filterAddresses = rememberCalendarFilterAddresses(filterDTag, accountViewModel)
+    // Scoped to this screen's back-stack entry: opening an appointment disposes the composition
+    // and switching lenses disposes the branch the previous lens lived in, so none of what the
+    // user is looking at can live in `remember`/`rememberSaveable`. It is cleared when the entry
+    // itself goes. See [CalendarsViewModel].
+    val model: CalendarsViewModel = viewModel()
+    model.init(accountViewModel.userProfile().pubkeyHex, feedState)
+
+    val filterDTag by model.filterDTag.collectAsStateWithLifecycle()
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
             CalendarsTopBar(
-                viewMode = viewMode,
-                onViewModeChange = { viewMode = it },
+                viewMode = model.viewMode,
+                onViewModeChange = { model.viewMode = it },
                 accountViewModel = accountViewModel,
                 nav = nav,
                 trailing = {
                     CalendarFilterChip(
                         selectedDTag = filterDTag,
-                        onSelect = { filterDTag = it },
-                        accountViewModel = accountViewModel,
+                        onSelect = model::selectCalendar,
+                        model = model,
                     )
                 },
             )
@@ -105,15 +105,11 @@ fun CalendarsScreen(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
-                when (viewMode) {
-                    CalendarsViewMode.FEED ->
-                        CalendarFeedView(feedState, accountViewModel, nav, filterAddresses)
-                    CalendarsViewMode.MONTH ->
-                        CalendarMonthView(feedState, accountViewModel, nav, filterAddresses)
-                    CalendarsViewMode.WEEK ->
-                        CalendarWeekView(feedState, accountViewModel, nav, filterAddresses)
-                    CalendarsViewMode.DAY ->
-                        CalendarDayView(feedState, accountViewModel, nav, filterAddresses)
+                when (model.viewMode) {
+                    CalendarsViewMode.FEED -> CalendarFeedView(feedState, model, accountViewModel, nav)
+                    CalendarsViewMode.MONTH -> CalendarMonthView(model, accountViewModel, nav)
+                    CalendarsViewMode.WEEK -> CalendarWeekView(model, accountViewModel, nav)
+                    CalendarsViewMode.DAY -> CalendarDayView(model, accountViewModel, nav)
                 }
             }
         }

@@ -28,6 +28,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
@@ -701,6 +701,14 @@ class AppModules(
 
     // Caches all events in Memory
     val cache: LocalCache = LocalCache
+
+    // The cache lives in `commons` and knows nothing about this app. Hand it the pieces it
+    // cannot supply for itself — a scope, the NIP-95 blob directory, the relay identity and
+    // stats sinks, the debug flag and the main-thread assertion — before anything consumes an
+    // event, which is why this sits next to the cache rather than in a later init block.
+    init {
+        cache.appHost = AmethystLocalCacheHost(this, isDebug)
+    }
 
     // NIP-BC onchain zap verification backend. Wired up once at app init so
     // LocalCache.consume(OnchainZapEvent) can sum the on-chain output values

@@ -45,6 +45,7 @@
     <string name="road_event_speed_camera">Camera tốc độ</string>
     <string name="road_event_traffic_jam">Tắc đường</string>
     <string name="road_event_unknown">Sự cố đường bộ</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Mở</string>
     <string name="relay_monitor_rtt_read">Đọc</string>
     <string name="relay_monitor_rtt_write">Ghi</string>

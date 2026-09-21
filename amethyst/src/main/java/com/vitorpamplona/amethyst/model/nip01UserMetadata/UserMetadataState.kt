@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.nip01UserMetadata
 
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent

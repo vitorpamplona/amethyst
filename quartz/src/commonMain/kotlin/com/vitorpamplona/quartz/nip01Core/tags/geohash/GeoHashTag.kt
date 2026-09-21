@@ -40,6 +40,27 @@ class GeoHashTag {
 
         fun geoMipMap(geohash: String): List<String> = geohash.indices.map { geohash.substring(0, it + 1) }.reversed()
 
+        /**
+         * The prefixes of [geohash] between [minPrecision] and [maxPrecision] characters,
+         * coarse-to-fine.
+         *
+         * [geoMipMap] starts at one character and runs fine-to-coarse, which is what the geohash
+         * chat channels want. Specs that pin a precision band instead — NIP-CC asks geocache
+         * listings for 3 to 9 characters — want this: a 1- or 2-character geohash spans thousands
+         * of kilometres, so tagging one is noise on the relay and useless for proximity search.
+         *
+         * Returns an empty list when [geohash] is shorter than [minPrecision].
+         */
+        fun geoMipMap(
+            geohash: String,
+            minPrecision: Int,
+            maxPrecision: Int,
+        ): List<String> {
+            val finest = minOf(maxPrecision, geohash.length)
+            if (minPrecision > finest) return emptyList()
+            return (minPrecision..finest).map { geohash.substring(0, it) }
+        }
+
         fun geohashMipMap(geohash: String): TagArray = geoMipMap(geohash).map { assembleSingle(it) }.toTypedArray()
 
         fun assemble(geohash: String) = geohashMipMap(geohash)

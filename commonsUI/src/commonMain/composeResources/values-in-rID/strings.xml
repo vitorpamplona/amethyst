@@ -44,6 +44,7 @@
     <string name="road_event_speed_camera">Kamera kecepatan</string>
     <string name="road_event_traffic_jam">Kemacetan</string>
     <string name="road_event_unknown">Kejadian jalan</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Buka</string>
     <string name="relay_monitor_rtt_read">Baca</string>
     <string name="relay_monitor_rtt_write">Tulis</string>

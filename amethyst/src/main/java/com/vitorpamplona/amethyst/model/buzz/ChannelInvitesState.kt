@@ -24,8 +24,8 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent

@@ -77,7 +77,7 @@ import kotlinx.coroutines.launch
  * Every saved writable account is kept loaded in [AccountCacheState] whenever either condition
  * holds, so (a) participation flags are observable and (b) GiftWraps addressed to any of them get
  * unwrapped by the owning account's `newNotesPreProcessor`. Without this, wraps for non-active
- * accounts would sit in [com.vitorpamplona.amethyst.model.LocalCache] with no subscriber able to
+ * accounts would sit in [com.vitorpamplona.amethyst.commons.model.cache.LocalCache] with no subscriber able to
  * decrypt them.
  */
 class AlwaysOnNotificationServiceManager(
