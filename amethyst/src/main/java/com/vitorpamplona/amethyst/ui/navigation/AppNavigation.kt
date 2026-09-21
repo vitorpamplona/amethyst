@@ -290,6 +290,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SpammingUsersScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnCoordinatorsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnKeyPackagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnLinkScreen
@@ -641,6 +642,7 @@ fun BuildNavigation(
         composableFromEnd<Route.CordnLink> { CordnLinkScreen(accountViewModel, nav) }
         composableFromEnd<Route.CordnCoordinators> { CordnCoordinatorsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CordnKeyPackages> { CordnKeyPackagesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CordnBackup> { CordnBackupScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditBolt12Offers> { Bolt12OffersScreen(accountViewModel, nav) }

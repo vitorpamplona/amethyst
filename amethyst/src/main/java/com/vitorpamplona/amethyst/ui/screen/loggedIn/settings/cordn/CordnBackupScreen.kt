@@ -1,0 +1,255 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * Exporting and restoring cordn state.
+ *
+ * ## Why cordn has this when the rest of Amethyst does not
+ *
+ * Amethyst's "backup" is a key backup: your nsec, from which a relay-backed
+ * account rebuilds itself. A cordn group does not work that way. It is MLS
+ * state on **one device** plus an ordered stream on a coordinator that cannot
+ * read a byte of it, so the key alone restores nothing. Lose the device and
+ * the group is gone — not "until someone re-invites you", because a fresh
+ * invitation begins at a new epoch and everything before it stays unreadable
+ * forever.
+ *
+ * ## Restoring replaces a device, and the screen says so before the tap
+ *
+ * An MLS state export is a cloneable identity. Two devices holding one
+ * group's state and both committing fork the ratchet tree, and MLS does not
+ * recover: after the fork, messages silently fail to decrypt for somebody,
+ * with nothing on screen to explain it. So restoring wipes this device's
+ * cordn state and takes the file's — it is not a merge and it is not sync,
+ * and presenting it as either would be selling multi-device support that
+ * §5.3 deliberately does not exist.
+ *
+ * ## The file is as sensitive as the conversations
+ *
+ * It carries ratchet trees and KeyPackage private halves. The passphrase is
+ * the only thing protecting it once it leaves the app, which is why there is
+ * no "export without a passphrase" and why the warning names what is inside.
+ */
+@Composable
+fun CordnBackupScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val runtime = accountViewModel.account.cordnRuntime
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var passphrase by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var pendingRestore by remember { mutableStateOf<Uri?>(null) }
+
+    val exported = stringRes(R.string.cordn_backup_exported)
+    val restored = stringRes(R.string.cordn_backup_restored)
+    val failed = stringRes(R.string.cordn_backup_failed)
+
+    val saver =
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+            val target = uri ?: return@rememberLauncherForActivityResult
+            val runtimeNow = runtime ?: return@rememberLauncherForActivityResult
+            scope.launch {
+                busy = true
+                error = null
+                status = null
+                try {
+                    val bytes = runtimeNow.exportArchive(passphrase)
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(target)?.use { it.write(bytes) }
+                    }
+                    status = exported
+                    passphrase = ""
+                } catch (e: Exception) {
+                    error = e.message ?: failed
+                } finally {
+                    busy = false
+                }
+            }
+        }
+
+    val picker =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            pendingRestore = uri
+        }
+
+    Scaffold(
+        topBar = { TopBarWithBackButton(stringRes(R.string.cordn_backup_title), nav) },
+    ) { padding ->
+        if (runtime == null) {
+            Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
+                Text(stringRes(R.string.cordn_group_unavailable))
+            }
+            return@Scaffold
+        }
+
+        Column(
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.cordn_backup_explainer),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            OutlinedTextField(
+                value = passphrase,
+                onValueChange = {
+                    passphrase = it
+                    error = null
+                },
+                label = { Text(stringRes(R.string.cordn_backup_passphrase)) },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(stringRes(R.string.cordn_backup_contents_title), style = MaterialTheme.typography.titleSmall)
+                    Text(stringRes(R.string.cordn_backup_contents_body), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            Button(
+                onClick = { saver.launch("cordn-backup.bin") },
+                // No passphrase, no export. The file carries ratchet trees and
+                // private key material; there is no version of it that is safe
+                // to write unprotected.
+                enabled = !busy && passphrase.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringRes(R.string.cordn_backup_export))
+            }
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+            Text(stringRes(R.string.cordn_backup_restore_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringRes(R.string.cordn_backup_restore_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Button(
+                onClick = { picker.launch("*/*") },
+                enabled = !busy && passphrase.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringRes(R.string.cordn_backup_restore))
+            }
+
+            status?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
+        }
+    }
+
+    pendingRestore?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingRestore = null },
+            title = { Text(stringRes(R.string.cordn_backup_restore_confirm_title)) },
+            text = { Text(stringRes(R.string.cordn_backup_restore_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingRestore = null
+                    val runtimeNow = runtime ?: return@TextButton
+                    scope.launch {
+                        busy = true
+                        error = null
+                        status = null
+                        try {
+                            val bytes = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
+                            if (bytes == null) {
+                                error = failed
+                            } else {
+                                runtimeNow.importArchive(bytes, passphrase)
+                                status = restored
+                                passphrase = ""
+                            }
+                        } catch (e: Exception) {
+                            error = e.message ?: failed
+                        } finally {
+                            busy = false
+                        }
+                    }
+                }) {
+                    Text(stringRes(R.string.cordn_backup_restore), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRestore = null }) { Text(stringRes(R.string.cancel)) }
+            },
+        )
+    }
+}

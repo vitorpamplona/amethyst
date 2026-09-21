@@ -570,6 +570,8 @@ sealed class Route {
 
     @Serializable object CordnKeyPackages : Route()
 
+    @Serializable object CordnBackup : Route()
+
     @Serializable
     data class AgentConsole(
         val relayUrl: String,

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.cordn
 
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
+import com.vitorpamplona.amethyst.commons.cordn.CordnBackup
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLink
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
@@ -33,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.CordnSyncLoop
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
+import com.vitorpamplona.amethyst.commons.cordn.FileCordnGroupStore
+import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
@@ -451,6 +454,99 @@ class CordnRuntime(
             ?.keyPackages
             ?.withdraw(refs)
             .orEmpty()
+
+    /**
+     * Collects everything a replacement device would need.
+     *
+     * Reads from the stores rather than from memory, so a coordinator whose
+     * session failed to open is still exported — a backup that silently
+     * omitted the groups the app could not reach today would be worst
+     * precisely when it is needed.
+     */
+    suspend fun exportArchive(passphrase: String): ByteArray {
+        val configs = coordinatorStore.load()
+        val groups = mutableListOf<CordnBackup.Archive.Group>()
+        val keyPackages = mutableListOf<CordnBackup.Archive.KeyPackage>()
+
+        withContext(Dispatchers.IO) {
+            configs.forEach { config ->
+                val dir = CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, config.pubKey)
+                val groupStore = FileCordnGroupStore(dir, cipher)
+                val keyPackageStore = FileCordnKeyPackageStore(dir, cipher)
+
+                groupStore.listGroups().forEach { gid ->
+                    val state = groupStore.loadGroup(gid) ?: return@forEach
+                    groups +=
+                        CordnBackup.Archive.Group(
+                            coordinatorPubKey = config.pubKey,
+                            gid = gid,
+                            state = state,
+                            cursor = groupStore.loadCursor(gid),
+                            joinedViaRequest = groupStore.loadJoinedViaRequest(gid),
+                        )
+                }
+
+                keyPackageStore.list().forEach { ref ->
+                    val bundle = keyPackageStore.load(ref) ?: return@forEach
+                    keyPackages += CordnBackup.Archive.KeyPackage(config.pubKey, ref, bundle)
+                }
+            }
+        }
+
+        return CordnBackup.seal(
+            CordnBackup.Archive(accountSigner.pubKey, configs, groups, keyPackages),
+            passphrase,
+        )
+    }
+
+    /**
+     * Replaces this device's cordn state with [sealed]'s.
+     *
+     * **Replaces, and is not a merge.** An MLS state import is a cloneable
+     * identity: two devices holding one group's state and both committing fork
+     * the ratchet tree, and MLS does not recover — every message after the
+     * fork silently fails to decrypt for somebody. Merging would produce that
+     * on purpose. Restoring is for a device that has taken over from another,
+     * which is what §5.3 means by keeping multi-device a non-goal.
+     *
+     * An archive from a different account is refused outright: restoring one
+     * account's groups under another's key gives a device MLS state whose
+     * credentials name somebody else, and every Commit it made would be
+     * rejected by the rest of the group.
+     */
+    suspend fun importArchive(
+        sealed: ByteArray,
+        passphrase: String,
+    ) {
+        val archive = CordnBackup.open(sealed, passphrase)
+        require(archive.accountPubKey == accountSigner.pubKey) {
+            "this backup belongs to a different account"
+        }
+
+        stop()
+
+        withContext(Dispatchers.IO) {
+            // The old state goes first. Leaving it would merge two devices'
+            // histories for any gid present in both, which is the one outcome
+            // this must never produce.
+            File(filesDir, "cordn/${accountSigner.pubKey}").deleteRecursively()
+
+            archive.groups.forEach { group ->
+                val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, group.coordinatorPubKey), cipher)
+                store.saveGroup(group.gid, group.state)
+                group.cursor?.let { store.saveCursor(group.gid, it) }
+                if (group.joinedViaRequest) store.saveJoinedViaRequest(group.gid)
+            }
+
+            archive.keyPackages.forEach { keyPackage ->
+                FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, keyPackage.coordinatorPubKey), cipher)
+                    .save(keyPackage.keyPackageRef, keyPackage.bundle)
+            }
+        }
+
+        coordinatorStore.save(archive.coordinators)
+        start(archive.coordinators)
+    }
 
     /** What [coordinatorPubKey] says about itself, or null if it is not open. */
     suspend fun serverInfo(coordinatorPubKey: HexKey): CoordinatorServerInfo? = registry.sessionOrNull(coordinatorPubKey)?.serverInfo()

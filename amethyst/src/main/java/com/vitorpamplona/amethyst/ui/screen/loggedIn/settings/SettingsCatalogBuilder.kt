@@ -87,6 +87,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.cordn_link_title, MaterialSymbols.Dns, R.string.cordn_link_search_keywords, Route.CordnLink),
                     symEntry(R.string.cordn_coordinators_title, MaterialSymbols.Dns, R.string.cordn_coordinators_search_keywords, Route.CordnCoordinators),
                     symEntry(R.string.cordn_keypackages_title, MaterialSymbols.Key, R.string.cordn_keypackages_search_keywords, Route.CordnKeyPackages),
+                    symEntry(R.string.cordn_backup_title, MaterialSymbols.Dns, R.string.cordn_backup_search_keywords, Route.CordnBackup),
                 ),
         )
 
