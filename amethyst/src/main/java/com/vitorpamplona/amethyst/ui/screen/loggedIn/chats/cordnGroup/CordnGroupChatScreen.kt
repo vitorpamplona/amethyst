@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.media.MediaPlayer
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +46,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -68,6 +72,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
@@ -78,6 +83,8 @@ import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -92,6 +99,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * One cordn room.
@@ -256,6 +264,19 @@ private fun CordnGroupChat(
                         attachError = null
                         try {
                             sendAttachment(context, accountViewModel, room, uri)
+                        } catch (e: Exception) {
+                            attachError = e.message ?: uploadFailed
+                        } finally {
+                            attaching = false
+                        }
+                    }
+                },
+                onVoiceNote = { recording ->
+                    scope.launch {
+                        attaching = true
+                        attachError = null
+                        try {
+                            sendVoiceNote(context, accountViewModel, room, recording)
                         } catch (e: Exception) {
                             attachError = e.message ?: uploadFailed
                         } finally {
@@ -565,6 +586,7 @@ private fun CordnComposer(
     draft: String,
     attaching: Boolean,
     onAttach: (Uri) -> Unit,
+    onVoiceNote: (RecordingResult) -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
@@ -580,6 +602,7 @@ private fun CordnComposer(
         IconButton(onClick = { picker.launch("*/*") }, enabled = !attaching) {
             Icon(MaterialSymbols.AttachFile, contentDescription = stringRes(R.string.cordn_media_attach))
         }
+        VoiceNoteButton(enabled = !attaching, onRecorded = onVoiceNote)
         OutlinedTextField(
             value = draft,
             onValueChange = onDraftChange,
@@ -726,10 +749,12 @@ private fun CordnAttachment(
             }
         }
 
-        // Shown for a decrypted non-image too: there is nothing to render for
-        // an arbitrary file, and claiming success with nothing on screen reads
-        // as a broken message.
-        if (bytes != null && image == null) {
+        val audio = bytes
+        if (audio != null && attachment.isAudio) {
+            VoiceNotePlayer(audio, attachment.filename)
+        } else if (bytes != null && image == null) {
+            // Nothing to render for an arbitrary file, and claiming success
+            // with nothing on screen reads as a broken message.
             Text(
                 text = stringRes(R.string.cordn_media_opened, attachment.filename),
                 style = MaterialTheme.typography.labelSmall,
@@ -750,3 +775,141 @@ private fun ByteArray.toImageBitmapOrNull(): ImageBitmap? =
     } catch (e: Exception) {
         null
     }
+
+/**
+ * Hold to record, release to send.
+ *
+ * The permission is requested on the first press rather than when the room
+ * opens: opening a chat is not consent to use the microphone, and a dialog
+ * that appears before anyone reached for it trains people to dismiss it.
+ */
+@Composable
+private fun VoiceNoteButton(
+    enabled: Boolean,
+    onRecorded: (RecordingResult) -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val recorder = remember { VoiceMessageRecorder() }
+    var recording by remember { mutableStateOf(false) }
+    var granted by remember { mutableStateOf(hasMicPermission(context)) }
+
+    val permission =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
+
+    IconButton(
+        enabled = enabled,
+        onClick = {
+            if (!granted) {
+                permission.launch(Manifest.permission.RECORD_AUDIO)
+                return@IconButton
+            }
+            if (recording) {
+                recording = false
+                // Null when the press was too short to be a message. Dropping
+                // it silently is right: an accidental tap should not send a
+                // zero-second voice note to a group.
+                recorder.stop()?.let(onRecorded)
+            } else {
+                recording = true
+                recorder.start(context, scope)
+            }
+        },
+    ) {
+        Icon(
+            symbol = if (recording) MaterialSymbols.Stop else MaterialSymbols.Mic,
+            contentDescription = stringRes(if (recording) R.string.cordn_voice_stop else R.string.cordn_voice_record),
+            tint = if (recording) MaterialTheme.colorScheme.error else LocalContentColor.current,
+        )
+    }
+}
+
+private fun hasMicPermission(context: Context) = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+/**
+ * Sends a recording through exactly the same encrypted path as any other file.
+ *
+ * A voice note is a file: same codec, same Blossom upload, same `imeta`
+ * descriptor inside the envelope. The only cordn-specific part is deleting
+ * the cache file afterwards — the recorder writes plaintext audio to
+ * `cacheDir`, and leaving it there would keep an unencrypted copy of a
+ * message that was end-to-end encrypted everywhere else.
+ */
+private suspend fun sendVoiceNote(
+    context: Context,
+    accountViewModel: AccountViewModel,
+    room: CordnGroupChatroom,
+    recording: RecordingResult,
+) {
+    val session = accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey) ?: return
+    val group = session.manager.group(room.gid) ?: return
+
+    try {
+        val bytes = withContext(Dispatchers.IO) { recording.file.readBytes() }
+        val tag =
+            CordnMediaService(accountViewModel.account)
+                .upload(group, bytes, recording.mimeType, recording.file.name, context) ?: return
+        session.manager.send(room.gid, content = "", tags = arrayOf(tag))
+    } finally {
+        withContext(Dispatchers.IO) { recording.file.delete() }
+    }
+}
+
+/**
+ * Plays decrypted audio from memory, via a cache file the player can open.
+ *
+ * `MediaPlayer` cannot take a byte array, so the plaintext has to touch disk.
+ * It goes to a file this composable owns and deletes on dispose, rather than
+ * anywhere durable: the whole point of the codec above is that the only
+ * lasting copy of this audio is the ciphertext on the blob host.
+ */
+@Composable
+private fun VoiceNotePlayer(
+    bytes: ByteArray,
+    filename: String,
+) {
+    val context = LocalContext.current
+    var playing by remember { mutableStateOf(false) }
+
+    val scratch =
+        remember(bytes) {
+            File(context.cacheDir, "cordn-voice")
+                .apply { mkdirs() }
+                .let { File(it, "${bytes.contentHashCode()}-$filename") }
+                .also { it.writeBytes(bytes) }
+        }
+
+    val player =
+        remember(scratch) {
+            MediaPlayer().apply {
+                setDataSource(scratch.absolutePath)
+                prepare()
+                setOnCompletionListener { playing = false }
+            }
+        }
+
+    DisposableEffect(player) {
+        onDispose {
+            player.release()
+            scratch.delete()
+        }
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = {
+            if (playing) {
+                player.pause()
+                playing = false
+            } else {
+                player.start()
+                playing = true
+            }
+        }) {
+            Icon(
+                symbol = if (playing) MaterialSymbols.Stop else MaterialSymbols.PlayArrow,
+                contentDescription = stringRes(R.string.cordn_voice_play),
+            )
+        }
+        Text(filename, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}

@@ -1603,6 +1603,9 @@
     <string name="cordn_media_opened">%1$s decrypted. Nothing to show for this file type yet.</string>
     <string name="cordn_media_upload_failed">Could not send that file.</string>
     <string name="cordn_media_download_failed">Could not open that file.</string>
+    <string name="cordn_voice_record">Record a voice note</string>
+    <string name="cordn_voice_stop">Stop and send</string>
+    <string name="cordn_voice_play">Play voice note</string>
     <string name="cordn_send">Send</string>
     <string name="cordn_info_coordinator">Coordinator</string>
     <string name="cordn_info_gid">Group id</string>
