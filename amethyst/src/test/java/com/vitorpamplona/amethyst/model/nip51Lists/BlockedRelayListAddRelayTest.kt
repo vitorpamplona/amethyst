@@ -36,6 +36,7 @@ import io.mockk.unmockkStatic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -56,6 +57,16 @@ import org.junit.Test
  * [LocalCache].
  */
 class BlockedRelayListAddRelayTest {
+    /**
+     * Handed to every [Fixture] so [tearDown] can cancel it. [BlockedRelayListState] starts an
+     * eager `stateIn` and a forever `collect` on whatever scope it is handed, so a scope left alive
+     * here outlives the test: its coroutines keep decrypting on [Dispatchers.IO] with no
+     * [kotlinx.coroutines.CoroutineExceptionHandler] in context, and anything they throw reaches
+     * the JVM-wide handler — where `runTest` reports it against whichever *unrelated* test class
+     * happens to start next, as `UncaughtExceptionsBeforeTest`.
+     */
+    private val stateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     private val paid = RelayUrlNormalizer.normalize("wss://paid.example.com")
     private val alsoPaid = RelayUrlNormalizer.normalize("wss://other.example.com")
 
@@ -70,10 +81,15 @@ class BlockedRelayListAddRelayTest {
 
     @After
     fun tearDown() {
+        // Before unmocking: a collector still running after Looper goes back to its
+        // unmocked stub reads `null == null` as "the main thread" and throws.
+        stateScope.cancel()
         unmockkStatic(Looper::class)
     }
 
-    private class Fixture {
+    private class Fixture(
+        scope: CoroutineScope,
+    ) {
         val keyPair = KeyPair()
         val signer = NostrSignerInternal(keyPair)
         val decryptionCache = BlockedRelayListDecryptionCache(signer)
@@ -88,7 +104,7 @@ class BlockedRelayListAddRelayTest {
                 signer = signer,
                 cache = LocalCache,
                 decryptionCache = decryptionCache,
-                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                scope = scope,
                 settings = settings,
             )
 
@@ -101,7 +117,7 @@ class BlockedRelayListAddRelayTest {
     @Test
     fun blockingTheFirstRelayCreatesTheList() =
         runTest {
-            val f = Fixture()
+            val f = Fixture(stateScope)
 
             val event = f.state.addRelay(paid)
 
@@ -113,7 +129,7 @@ class BlockedRelayListAddRelayTest {
     @Test
     fun blockingASecondRelayKeepsTheFirst() =
         runTest {
-            val f = Fixture()
+            val f = Fixture(stateScope)
             f.land(f.state.addRelay(paid))
 
             val event = f.state.addRelay(alsoPaid)
@@ -124,7 +140,7 @@ class BlockedRelayListAddRelayTest {
     @Test
     fun blockingAnAlreadyBlockedRelayDoesNotDuplicateIt() =
         runTest {
-            val f = Fixture()
+            val f = Fixture(stateScope)
             f.land(f.state.addRelay(paid))
 
             val event = f.state.addRelay(paid)
@@ -140,7 +156,7 @@ class BlockedRelayListAddRelayTest {
     @Test
     fun blockedRelaysStayInEncryptedPrivateTags() =
         runTest {
-            val f = Fixture()
+            val f = Fixture(stateScope)
             f.land(f.state.addRelay(paid))
 
             val event = f.state.addRelay(alsoPaid)
