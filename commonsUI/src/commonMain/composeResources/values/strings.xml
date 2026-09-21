@@ -212,7 +212,7 @@
     <string name="geocache_logs_section">Logs</string>
     <string name="geocache_no_logs">No one has logged this cache yet. Be the first.</string>
     <string name="geocache_i_found_it">I found it</string>
-    <string name="geocache_didnt_find_it">Didn\'t find it</string>
+    <string name="geocache_didnt_find_it">Didn't find it</string>
     <string name="geocache_add_note">Add a note</string>
     <string name="geocache_needs_maintenance">Report needs maintenance</string>
     <string name="geocache_add_to_hunt">Add to a hunt</string>
@@ -233,7 +233,7 @@
     <string name="geocache_owner_no_finders">No verified finds yet, so there is nobody to lock in.</string>
     <string name="geocache_owner_show_qr">Show the verification code</string>
     <string name="geocache_owner_qr_warning">Print this and put it in the cache. Amethyst does not store it — if you lose it, finders can no longer prove they were there.</string>
-    <string name="geocache_log_type_dnf">Didn\'t find</string>
+    <string name="geocache_log_type_dnf">Didn't find</string>
     <string name="geocache_log_type_note">Note</string>
     <string name="geocache_log_type_maintenance">Needs maintenance</string>
     <string name="geocache_log_title">Log a find</string>
