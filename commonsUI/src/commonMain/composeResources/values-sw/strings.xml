@@ -426,8 +426,6 @@
     <string name="workout_hours">Masaa</string>
     <string name="workout_minutes">Dakika</string>
     <string name="workout_seconds">Sekunde</string>
-    <string name="workout_suggestion_connect_title">Shiriki mazoezi yako</string>
-    <string name="workout_suggestion_connect_message">Ruhusu Amethyst kusoma mazoezi yaliyokamilika kutoka Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) na kupendekeza chapisho.</string>
     <string name="workout_suggestion_connect_button">Unganisha</string>
     <string name="workout_from_health_connect">Kutoka Health Connect</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

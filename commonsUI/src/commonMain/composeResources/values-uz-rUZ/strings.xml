@@ -430,8 +430,6 @@
     <string name="workout_hours">Soatlar</string>
     <string name="workout_minutes">Daqiqalar</string>
     <string name="workout_seconds">Soniyalar</string>
-    <string name="workout_suggestion_connect_title">Mashqlaringizni ulashing</string>
-    <string name="workout_suggestion_connect_message">Amethyst dasturiga Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) dan tugatilgan mashqlarni o'qish va post taklif qilish imkonini bering.</string>
     <string name="workout_suggestion_connect_button">Ulash</string>
     <string name="workout_from_health_connect">Health Connect orqali</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

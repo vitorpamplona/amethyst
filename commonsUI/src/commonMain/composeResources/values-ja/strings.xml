@@ -419,8 +419,6 @@
     <string name="workout_hours">時間</string>
     <string name="workout_minutes">分</string>
     <string name="workout_seconds">秒</string>
-    <string name="workout_suggestion_connect_title">ワークアウトを共有しよう</string>
-    <string name="workout_suggestion_connect_message">AmethystがHealth Connect（Samsung Health、Google Fit、Fitbit、Garmin…）から完了したワークアウトを読み取り、投稿を提案できるようにしましょう。</string>
     <string name="workout_suggestion_connect_button">接続する</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Health Connectから</string>

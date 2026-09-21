@@ -425,8 +425,6 @@
     <string name="workout_hours">ชั่วโมง</string>
     <string name="workout_minutes">นาที</string>
     <string name="workout_seconds">วินาที</string>
-    <string name="workout_suggestion_connect_title">แชร์การออกกำลังกายของคุณ</string>
-    <string name="workout_suggestion_connect_message">ให้ Amethyst อ่านข้อมูลการออกกำลังกายที่เสร็จสิ้นจาก Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) และแนะนำโพสต์</string>
     <string name="workout_suggestion_connect_button">เชื่อมต่อ</string>
     <string name="workout_suggestion_distance_km">%1$s กม.</string>
     <string name="workout_from_health_connect">จาก Health Connect</string>

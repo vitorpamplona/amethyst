@@ -429,8 +429,6 @@
     <string name="workout_hours">ঘণ্টা</string>
     <string name="workout_minutes">মিনিট</string>
     <string name="workout_seconds">সেকেন্ড</string>
-    <string name="workout_suggestion_connect_title">আপনার ওয়ার্কআউট শেয়ার করুন</string>
-    <string name="workout_suggestion_connect_message">Amethyst-কে Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) থেকে সম্পন্ন ওয়ার্কআউট পড়তে এবং একটি পোস্ট পরামর্শ দিতে দিন।</string>
     <string name="workout_suggestion_connect_button">সংযোগ করুন</string>
     <string name="workout_suggestion_distance_km">%1$s কিমি</string>
     <string name="workout_from_health_connect">Health Connect থেকে</string>

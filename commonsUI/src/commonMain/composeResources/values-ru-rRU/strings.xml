@@ -431,8 +431,6 @@
     <string name="workout_hours">Часы</string>
     <string name="workout_minutes">Минуты</string>
     <string name="workout_seconds">Секунды</string>
-    <string name="workout_suggestion_connect_title">Поделитесь своими тренировками</string>
-    <string name="workout_suggestion_connect_message">Позвольте Amethyst читать завершённые тренировки из Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) и предлагать публикацию.</string>
     <string name="workout_suggestion_connect_button">Подключить</string>
     <string name="workout_suggestion_distance_km">%1$s км</string>
     <string name="workout_from_health_connect">Из Health Connect</string>

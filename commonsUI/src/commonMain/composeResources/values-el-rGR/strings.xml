@@ -428,8 +428,6 @@
     <string name="workout_hours">Ώρες</string>
     <string name="workout_minutes">Λεπτά</string>
     <string name="workout_seconds">Δευτερόλεπτα</string>
-    <string name="workout_suggestion_connect_title">Μοιραστείτε τις προπονήσεις σας</string>
-    <string name="workout_suggestion_connect_message">Αφήστε το Amethyst να διαβάσει ολοκληρωμένες προπονήσεις από το Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) και να προτείνει μια ανάρτηση.</string>
     <string name="workout_suggestion_connect_button">Σύνδεση</string>
     <string name="workout_from_health_connect">Από το Health Connect</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

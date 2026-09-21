@@ -424,8 +424,6 @@
     <string name="workout_hours">시간</string>
     <string name="workout_minutes">분</string>
     <string name="workout_seconds">초</string>
-    <string name="workout_suggestion_connect_title">운동 기록 공유</string>
-    <string name="workout_suggestion_connect_message">Amethyst가 Health Connect(Samsung Health, Google Fit, Fitbit, Garmin…)에서 완료된 운동을 읽어 게시물을 제안하도록 허용하세요.</string>
     <string name="workout_suggestion_connect_button">연결</string>
     <string name="workout_from_health_connect">Health Connect에서</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
