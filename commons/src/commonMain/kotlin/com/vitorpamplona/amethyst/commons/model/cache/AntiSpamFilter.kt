@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.model.cache
 
 import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.njumpLink
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -160,39 +162,43 @@ class AntiSpamFilter(
         return false
     }
 
-    @Synchronized
+    // Was @Synchronized, which is a JVM-only annotation: same mutual exclusion, spelled
+    // for every target. Only this method touches spamMessages for a given hash.
+    private val offenderLock = KmpLock()
+
     private fun logOffender(
         hashCode: Int,
         event: Event,
-    ): Spammer {
-        val spammer = spamMessages.get(hashCode)
+    ): Spammer =
+        offenderLock.withLock {
+            val spammer = spamMessages.get(hashCode)
 
-        return if (spammer == null) {
-            val newSpammer =
-                if (event is AddressableEvent) {
-                    Spammer(
-                        pubkeyHex = event.pubKey,
-                        duplicatedEventIds = setOf(),
-                        duplicatedEventAddresses = setOfNotNull(recentAddressables[hashCode], event.address()),
-                    )
-                } else {
-                    Spammer(
-                        pubkeyHex = event.pubKey,
-                        duplicatedEventIds = setOfNotNull(recentEventIds[hashCode], event.id),
-                        duplicatedEventAddresses = setOf(),
-                    )
-                }
-            spamMessages.put(hashCode, newSpammer)
-            newSpammer
-        } else {
-            if (event is AddressableEvent) {
-                spammer.duplicatedEventAddresses += event.address()
+            if (spammer == null) {
+                val newSpammer =
+                    if (event is AddressableEvent) {
+                        Spammer(
+                            pubkeyHex = event.pubKey,
+                            duplicatedEventIds = setOf(),
+                            duplicatedEventAddresses = setOfNotNull(recentAddressables[hashCode], event.address()),
+                        )
+                    } else {
+                        Spammer(
+                            pubkeyHex = event.pubKey,
+                            duplicatedEventIds = setOfNotNull(recentEventIds[hashCode], event.id),
+                            duplicatedEventAddresses = setOf(),
+                        )
+                    }
+                spamMessages.put(hashCode, newSpammer)
+                newSpammer
             } else {
-                spammer.duplicatedEventIds += event.id
+                if (event is AddressableEvent) {
+                    spammer.duplicatedEventAddresses += event.address()
+                } else {
+                    spammer.duplicatedEventIds += event.id
+                }
+                spammer
             }
-            spammer
         }
-    }
 
     val flowSpam = MutableStateFlow(AntiSpamState(this))
 }

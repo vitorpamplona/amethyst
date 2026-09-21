@@ -58,7 +58,8 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
-import com.vitorpamplona.amethyst.commons.util.dateFormatter
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
@@ -320,7 +321,6 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnZapReceiptValidator
-import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
@@ -413,6 +413,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -422,6 +423,8 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
+import kotlin.time.TimeSource
 
 /**
  * The in-memory event store: every `Note`, `User` and `Channel` the app has consumed, plus the
@@ -509,7 +512,7 @@ open class EventCache :
     val mintDirectory = MintDirectoryIndex()
 
     @Volatile private var mintDirectoryBackfilled = false
-    private val mintDirectoryBackfillLock = Any()
+    private val mintDirectoryBackfillLock = KmpLock()
 
     /**
      * Sweeps `notes` + `addressables` for any NIP-87 / NIP-61 event the
@@ -525,7 +528,7 @@ open class EventCache :
      */
     fun ensureMintDirectoryBackfilled() {
         if (mintDirectoryBackfilled) return
-        synchronized(mintDirectoryBackfillLock) {
+        mintDirectoryBackfillLock.withLock {
             if (mintDirectoryBackfilled) return
             runCatching {
                 notes.forEach { _, note -> note.event?.let(::updateMintIndex) }
@@ -2678,7 +2681,7 @@ open class EventCache :
         // stays in cache as a visible artifact but contributes 0 to zap totals.
         val recipientLnurl = recipientLnurl(event)
         val recipientLnurlpUrl = recipientLnurl?.let { LnurlForm.toUrl(it) }
-        val cachedInfo = recipientLnurlpUrl?.let { LnurlEndpointCache.get(it) }
+        val cachedInfo = recipientLnurlpUrl?.let { appHost.lnurlEndpoint(it) }
 
         val author = getOrCreateUser(event.pubKey)
         val repliesTo = computeReplyTo(event)
@@ -3334,9 +3337,9 @@ open class EventCache :
         val meter = verifyMeter
         if (meter == null) return justVerifyInner(event)
 
-        val start = System.nanoTime()
+        val start = TimeSource.Monotonic.markNow()
         val valid = justVerifyInner(event)
-        meter(System.nanoTime() - start, valid)
+        meter(start.elapsedNow().inWholeNanoseconds, valid)
         return valid
     }
 
@@ -3346,7 +3349,7 @@ open class EventCache :
                 event.checkSignature()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w("Event Verification Failed") { "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}" }
+                Log.w("Event Verification Failed") { "Kind: ${event.kind} created at ${event.createdAt} with message ${e.message}" }
             }
             false
         } else {

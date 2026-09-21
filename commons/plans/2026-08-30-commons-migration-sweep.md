@@ -1161,3 +1161,61 @@ Verified: `:commons:compileCommonMainKotlinMetadata`,
 `:commons:compileIosMainKotlinMetadata`, `:commons:jvmTest` (incl. the moved
 `NwcPaymentTrackerTest`, 4 tests), `:desktopApp:test`, `:cli:test`,
 `:amethyst:compileFdroidDebugKotlin`, `DvmHeartbeatTest`, `spotlessCheck`.
+
+### Steps 3–5 shipped: the cache group is `commonMain`
+
+`commons/src/jvmAndroid/…/model/cache/` now holds exactly one file, the
+`LargeSoftCache` actual. Everything else — `EventCache` (4k lines),
+`LocalCache`, `LocalCacheHost`, `AntiSpamFilter`, `CachePruner`, `CacheSearch`,
+`OnchainZapResolver` — is shared.
+
+**The NIP-95 sink.** `nip95BlobDir: File?` became `nip95Blobs: Nip95BlobStore?`,
+because a directory is not what the cache needs — somewhere to put bytes and a
+way to ask whether they are there already is. `FileSystemNip95BlobStore` is the
+okio-backed one, and okio was already a commons dependency. Its constructor
+takes a plain path string so Android needs no okio of its own, and
+`platformFileSystem` is a two-line expect/actual because okio declares
+`FileSystem.SYSTEM` per platform.
+
+Two bugs surfaced while rewriting that block. `decode()` returns `ByteArray?`
+and went straight into `FileOutputStream.write` — a platform type, so a null
+would have thrown past the `IOException` catch. And the note's copy dropped its
+content whenever a directory existed, *including* right after a failed write,
+losing the only copy of those bytes; content is now dropped only when the blob
+really is stored.
+
+**`SortedSet`.** `EventCache.filter` returns a `List<Note>` in the comparator's
+order, newest first. That order is load-bearing (the napplet gateway answers
+REQs from it). The comparator also defines uniqueness by reference, so the
+sorted set was collapsing the duplicate references a filter with a repeated
+kind produces; `toSet()` before sorting keeps exactly that, since `Note`
+declares no `equals()`.
+
+**The observables.** `NoteListMatchingFilter` / `EventListMatchingFilter` are
+now `expect`/`actual` with today's implementation untouched as the jvmAndroid
+actual and a throwing iOS stub. Their concurrency — every sorted-set write
+inside that key's `ConcurrentHashMap.compute` critical section — is not
+reassemblable from quartz's KMP primitives: `getOrPut` covers `new()`, but
+`remove()` needs the sorted-set removal *inside* the section, or a concurrent
+re-add inserts a comparator-equal entry that the later removal takes out
+instead, dropping the note for good. A copy-on-write `compute` cannot stand in
+either, since its CAS retry may run a side-effecting lambda twice.
+
+**What the move itself turned up**, none of it visible to an import grep:
+`@Synchronized` / `@Volatile` / `synchronized {}` (→ `KmpLock`,
+`kotlin.concurrent.Volatile`), `System.nanoTime` (→ `TimeSource.Monotonic`),
+`HashMap.merge` (→ a local `mergeMax`), `Dispatchers.IO` (just needs
+`import kotlinx.coroutines.IO`), the one `dateFormatter` log line (now logs the
+raw `created_at`), and `LnurlEndpointCache` — a quartz **jvmAndroid** singleton,
+reached through a new `LocalCacheHost.lnurlEndpoint` port whose default `null`
+means "cold cache", which is what a miss already meant.
+
+**Still true, and worth repeating:** commonMain is not iOS support. iOS now
+compiles the cache, and the cache's store and its two observables throw there.
+The remaining gap is three named files, not a module boundary.
+
+Verified: `:commons:compileCommonMainKotlinMetadata`,
+`:commons:compileIosMainKotlinMetadata`, `:commons:verifyKmpPurity`,
+`:commons:jvmTest`, `:desktopApp:test`, `:cli:test`,
+`:amethyst:compileFdroidDebugKotlin`, `:amethyst:testPlayDebugUnitTest`,
+`spotlessCheck`.

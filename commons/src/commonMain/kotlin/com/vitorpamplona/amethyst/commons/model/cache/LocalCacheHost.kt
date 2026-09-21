@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.commons.model.cache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 
 /**
@@ -69,6 +71,16 @@ interface LocalCacheHost {
      * relay-signed NIP-29 group metadata. `null` means unknown, which accepts the event.
      */
     fun relaySelfPubKey(relay: NormalizedRelayUrl): HexKey? = null
+
+    /**
+     * LNURL-pay endpoint metadata the shell has already resolved for [lnurlpUrl], used to
+     * validate a zap receipt's signer against the provider's `nostrPubkey` (NIP-57 Appendix F).
+     *
+     * `null` is "not cached", which is what a cache miss already means here: the receipt takes
+     * the slower resolver path instead. A host that caches nothing therefore behaves like a
+     * cold cache, not like a broken one.
+     */
+    fun lnurlEndpoint(lnurlpUrl: String): LnurlEndpointInfo? = null
 
     /**
      * Throws if called on the platform's main thread. Signature verification and the cache

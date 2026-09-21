@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -53,6 +55,10 @@ class AmethystLocalCacheHost(
     override val relayStats: RelayStats get() = modules.relayStats
 
     override fun relaySelfPubKey(relay: NormalizedRelayUrl): HexKey? = modules.nip11Cache.getFromCache(relay).self
+
+    // The zap path's LNURL cache is a quartz-side singleton the outbound-zap resolver
+    // fills; it is jvmAndroid-only, which is why the cache reads it through here.
+    override fun lnurlEndpoint(lnurlpUrl: String): LnurlEndpointInfo? = LnurlEndpointCache.get(lnurlpUrl)
 
     override fun assertNotMainThread() = checkNotInMainThread()
 }

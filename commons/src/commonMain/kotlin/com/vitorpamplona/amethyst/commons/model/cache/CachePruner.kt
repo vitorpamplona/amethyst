@@ -214,12 +214,12 @@ class CachePruner(
                         is BaseDMGroupEvent ->
                             if (giftWrapFloor != null) {
                                 val outerUntil = note.rumorHost?.createdAt ?: ev.createdAt
-                                if (outerUntil < giftWrapFloor) note.relays.forEach { giftWrapPruned.merge(it, outerUntil, ::maxOf) }
+                                if (outerUntil < giftWrapFloor) note.relays.forEach { giftWrapPruned.mergeMax(it, outerUntil) }
                             }
                         is PrivateDmEvent -> {
                             val until = ev.createdAt
-                            if (accountNip04Floor != null && until < accountNip04Floor) note.relays.forEach { accountNip04Pruned.merge(it, until, ::maxOf) }
-                            if (roomNip04Floor != null && until < roomNip04Floor) note.relays.forEach { roomNip04Pruned.merge(it, until, ::maxOf) }
+                            if (accountNip04Floor != null && until < accountNip04Floor) note.relays.forEach { accountNip04Pruned.mergeMax(it, until) }
+                            if (roomNip04Floor != null && until < roomNip04Floor) note.relays.forEach { roomNip04Pruned.mergeMax(it, until) }
                         }
                     }
 
@@ -499,4 +499,16 @@ class CachePruner(
 
         println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }
+}
+
+/**
+ * `Map.merge(key, value, ::maxOf)` spelled for every target — the JVM's own merge is not in the
+ * common stdlib. Keeps the highest value seen for [relay].
+ */
+private fun MutableMap<NormalizedRelayUrl, Long>.mergeMax(
+    relay: NormalizedRelayUrl,
+    value: Long,
+) {
+    val existing = this[relay]
+    this[relay] = if (existing == null) value else maxOf(existing, value)
 }
