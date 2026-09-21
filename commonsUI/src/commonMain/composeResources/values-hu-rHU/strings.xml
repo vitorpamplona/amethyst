@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">Sebességmérő kamera</string>
     <string name="road_event_traffic_jam">Forgalmi dugó</string>
     <string name="road_event_unknown">Útesemény</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
@@ -187,6 +188,36 @@
     </plurals>
     <string name="profile_banner">Profilplakát</string>
     <string name="point_to_the_qr_code">Fókuszálás a QR-kódra</string>
+    <string name="qr_scanner_camera_rationale">Az Amethystnek hozzáférésre van szüksége a kamerához a QR-kódok beolvasásához. Semmi sem kerül rögzítésre vagy feltöltésre, a képkockák a készüléken dekódolódnak, majd törlődnek.</string>
+    <string name="qr_scanner_grant_camera">Kamera engedélyezése</string>
+    <string name="qr_scanner_camera_blocked">Az Amethystnek nincs engedélye hozzáférni a kamerához. Az Android beállításaiban adhat engedélyt a hozzáféréshez.</string>
+    <string name="qr_scanner_open_settings">Beállítások megnyitása</string>
+    <string name="qr_scanner_unavailable">A QR-kód-olvasó nem indult el ezen az eszközön. A kódot azonban szövegként beillesztheti.</string>
+    <string name="qr_scanner_torch_on">Vaku bekapcsolása</string>
+    <string name="qr_scanner_torch_off">Vaku kikapcsolása</string>
+    <string name="qr_scanner_dark_hint">Sötét van, kapcsolja be a vakut</string>
+    <string name="qr_scanner_scan_image">Kép beolvasása</string>
+    <string name="qr_scanner_paste">Beillesztés</string>
+    <string name="qr_scanner_no_code_in_image">Nem található QR-kód a képen</string>
+    <string name="qr_scanner_clipboard_empty">A vágólapon nincs semmi a beolvasáshoz</string>
+    <string name="qr_scanner_pick_one">Érintse meg a beolvasandó kódot</string>
+    <string name="qr_scanner_sequence_progress">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</string>
+    <string name="qr_scanner_zoom_reset">Nagyítás visszaállítása</string>
+    <string name="qr_scanner_unsupported_title">Az Amethyst nem tudja megnyitni ezt a kódot</string>
+    <string name="qr_scanner_unsupported_secret">Ez a kód egy titkos kulcsot vagy párosítási titkot tartalmaz, ezért a tartalma itt nem jelenik meg. Használja azt a képernyőt, ahol meg kell adni.</string>
+    <string name="qr_scanner_kind_nsec">Ez egy privát kulcs. Ezt inkább illessze be a bejelentkezési képernyőn.</string>
+    <string name="qr_scanner_kind_wallet">Ez egy pénztárca-kapcsolat. A pénztárca beállításaiból adhatja hozzá.</string>
+    <string name="qr_scanner_kind_bunker">Ez egy távoli aláírói cím. Az Amethyst osztja ki ezeket, hogy más alkalmazások aláírásra kérhessék, ezzel a címmel azonban nem lehet bejelentkezni.</string>
+    <string name="qr_scanner_kind_signer">Ez egy olyan alkalmazás, amely csatlakozást kér az aláírási eszközéhez. Nyissa meg a NIP-46 aláírási eszköz képernyőjéről.</string>
+    <string name="qr_scanner_kind_lightning">Ez egy Lightning-számla.</string>
+    <string name="qr_scanner_kind_cashu">Ez egy Cashu-token.</string>
+    <string name="qr_scanner_kind_web">Ez egy webhivatkozás.</string>
+    <string name="qr_scanner_kind_text">Ez egy egyszerű szöveg, nem Nostr-kód.</string>
+    <string name="qr_scanner_kind_nostr_unsupported">Ez egy Nostr-kód, de ez a képernyő nem tudja megnyitni.</string>
+    <string name="qr_scanner_open_link">Hivatkozás megnyitása</string>
+    <string name="qr_scanner_copy">Másolás</string>
+    <string name="qr_scanner_copied">Másolva</string>
+    <string name="qr_scanner_try_again">Beolvasás újra</string>
     <string name="show_qr">QR-kód megjelenítése</string>
     <string name="profile_image">Profilkép</string>
     <string name="your_profile_image">Saját profilkép</string>

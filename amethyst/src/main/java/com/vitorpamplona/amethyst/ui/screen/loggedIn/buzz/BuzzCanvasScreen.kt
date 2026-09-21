@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -158,7 +159,7 @@ fun BuzzCanvasScreen(
         },
         floatingActionButton = {
             if (canEdit) {
-                FloatingActionButton(onClick = { editing = true }) {
+                FloatingActionButton(onClick = { editing = true }, shape = CircleShape) {
                     Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(Res.string.buzz_canvas_edit))
                 }
             }
@@ -236,6 +237,7 @@ private fun CanvasEditor(
         },
         floatingActionButton = {
             FloatingActionButton(
+                shape = CircleShape,
                 onClick = {
                     val relay =
                         RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: run {

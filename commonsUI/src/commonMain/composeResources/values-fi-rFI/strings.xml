@@ -46,6 +46,7 @@
     <string name="road_event_speed_camera">Nopeusvalvontakamera</string>
     <string name="road_event_traffic_jam">Ruuhka</string>
     <string name="road_event_unknown">Tietapahtuma</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Avaa</string>
     <string name="relay_monitor_rtt_read">Lue</string>
     <string name="relay_monitor_rtt_write">Kirjoita</string>

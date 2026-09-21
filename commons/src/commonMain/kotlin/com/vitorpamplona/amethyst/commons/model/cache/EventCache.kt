@@ -399,6 +399,10 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
@@ -1363,6 +1367,14 @@ open class EventCache :
 
             is CommentEvent -> {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is GeocacheFoundLogEvent -> {
+                // Files the log under the cache's addressable note, so a cache's replies hold its
+                // found logs next to the NIP-22 comments that carry its did-not-finds and
+                // maintenance notes. Both halves of a cache's history then arrive through the one
+                // collection the thread view already reads.
+                listOfNotNull(event.geocache()?.let { getOrCreateAddressableNote(it) })
             }
 
             is StreamMessageV2Event -> {
@@ -3814,6 +3826,8 @@ open class EventCache :
                 is ExternalIdentitiesEvent,
                 is FileServersEvent,
                 is FollowListEvent,
+                is GeocacheListingEvent,
+                is GeocacheCurationListEvent,
                 is GeohashListEvent,
                 is GitRepositoryEvent,
                 is GitRepositoryStateEvent,
@@ -3955,6 +3969,13 @@ open class EventCache :
                 is RequestToVanishEvent,
                 is CodeSnippetEvent,
                 is ZapPollEvent,
+                is GeocacheFoundLogEvent,
+                // A standalone kind 7517. NIP-CC lets a verification be published on its own as well
+                // as embedded in the log, so one can arrive; storing it keeps it out of the
+                // "Event Not Supported" log. It is proof material, not content — no feed asks for
+                // this kind, and nothing trusts one until GeocacheVerificationValidator has checked
+                // it against a listing.
+                is GeocacheVerificationEvent,
                 is RoadEventReportEvent,
                 is RoadEventConfirmationEvent,
                 is SealedRumorEvent,

@@ -47,6 +47,7 @@
     <string name="road_event_speed_camera">Radar</string>
     <string name="road_event_traffic_jam">Saobraćajna gužva</string>
     <string name="road_event_unknown">Saobraćajni događaj</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Otvori</string>
     <string name="relay_monitor_rtt_read">Čitaj</string>
     <string name="relay_monitor_rtt_write">Piši</string>

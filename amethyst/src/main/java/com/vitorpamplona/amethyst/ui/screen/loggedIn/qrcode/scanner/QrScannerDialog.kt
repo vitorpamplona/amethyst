@@ -106,11 +106,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.math.min
 
 /** What the caller did with a decoded payload — and therefore what the scanner does next. */
 enum class ScanOutcome {
@@ -350,8 +348,6 @@ private fun QrCameraScanner(
         snapshotFlow { state.zoomRatio }.collect { runCatching { control.setZoomRatio(it) } }
     }
 
-    AutoZoomSweep(state = state, enabled = camera != null)
-
     LaunchedEffect(state.notice) {
         if (state.notice != null) {
             delay(NOTICE_DURATION_MS)
@@ -366,13 +362,24 @@ private fun QrCameraScanner(
         }
     }
 
+    // One picture can hold several codes. Taking the first silently is the same mistake the
+    // camera refuses to make, so anything past one goes to the picker.
+    val readImage: (Uri) -> Unit = { uri ->
+        if (decoder != null) {
+            scope.launch {
+                val found = QrImageImport.decode(context, uri, decoder).map { it.text }.distinct()
+                when {
+                    found.isEmpty() -> state.notice = noCodeInImage
+                    found.size == 1 -> submit(found.first())
+                    else -> state.imageCodes = found.map(::classifyScannedPayload)
+                }
+            }
+        }
+    }
+
     val pickImage =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri == null || decoder == null) return@rememberLauncherForActivityResult
-            scope.launch {
-                val found = QrImageImport.decode(context, uri, decoder).firstOrNull()?.text
-                if (found == null) state.notice = noCodeInImage else submit(found)
-            }
+            if (uri != null) readImage(uri)
         }
 
     Box(
@@ -383,7 +390,6 @@ private fun QrCameraScanner(
                 .pointerInput(Unit) {
                     detectTransformGestures { _, _, zoom, _ ->
                         if (zoom != 1f) {
-                            state.onPinch()
                             state.zoomRatio = (state.zoomRatio * zoom).coerceIn(1f, maxOf(1f, state.maxZoomRatio))
                         }
                     }
@@ -420,17 +426,21 @@ private fun QrCameraScanner(
                     context = context,
                     decoder = decoder,
                     onText = submit,
-                    onImage = { uri ->
-                        if (decoder != null) {
-                            scope.launch {
-                                val found = QrImageImport.decode(context, uri, decoder).firstOrNull()?.text
-                                if (found == null) state.notice = noCodeInImage else submit(found)
-                            }
-                        }
-                    },
+                    onImage = readImage,
                     onEmpty = { state.notice = clipboardEmpty },
                 )
             },
+        )
+    }
+
+    if (state.imageCodes.isNotEmpty()) {
+        QrImageCodeChooser(
+            codes = state.imageCodes,
+            onPick = { picked ->
+                state.imageCodes = emptyList()
+                submit(picked.raw)
+            },
+            onDismiss = { state.imageCodes = emptyList() },
         )
     }
 
@@ -484,44 +494,6 @@ private fun ScanOverlayCanvas(
                 center = it,
                 style = Stroke(width = 2.dp.toPx()),
             )
-        }
-    }
-}
-
-/**
- * Sweeps the zoom while nothing is decoding.
- *
- * A code too small in frame to resolve is the single most common reason a scan fails, and no
- * amount of decoder tuning fixes it — there are not enough pixels per module to read. Rather than
- * leave the user to work that out and walk closer, the camera pushes in and back out on its own.
- * It stops for good once the user pinches: they have taken over.
- */
-@Composable
-private fun AutoZoomSweep(
-    state: QrScannerState,
-    enabled: Boolean,
-) {
-    LaunchedEffect(enabled, state.autoZoomEnabled) {
-        if (!enabled || !state.autoZoomEnabled) return@LaunchedEffect
-
-        var sweep = 0f
-        while (isActive) {
-            delay(AUTO_ZOOM_TICK_MS)
-
-            if (state.msSinceLastDetection < QrScannerState.AUTO_ZOOM_AFTER_MS) {
-                if (sweep != 0f) {
-                    sweep = 0f
-                    state.zoomRatio = 1f
-                }
-                continue
-            }
-
-            val ceiling = min(state.maxZoomRatio, QrScannerState.AUTO_ZOOM_MAX)
-            if (ceiling <= 1.01f) continue
-
-            sweep = (sweep + AUTO_ZOOM_TICK_MS.toFloat() / AUTO_ZOOM_PERIOD_MS) % 1f
-            val triangle = if (sweep < 0.5f) sweep * 2f else (1f - sweep) * 2f
-            state.zoomRatio = 1f + triangle * (ceiling - 1f)
         }
     }
 }
@@ -605,8 +577,6 @@ private val ANALYSIS_RESOLUTION =
             ResolutionStrategy(Size(1280, 720), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
         ).build()
 
-private const val AUTO_ZOOM_TICK_MS = 100L
-private const val AUTO_ZOOM_PERIOD_MS = 3_000f
 private const val NOTICE_DURATION_MS = 3_000L
 private const val FOCUS_RING_DURATION_MS = 800L
 private const val FOCUS_AUTO_CANCEL_SECONDS = 4L

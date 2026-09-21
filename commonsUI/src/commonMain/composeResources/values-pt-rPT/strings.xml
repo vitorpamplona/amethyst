@@ -47,6 +47,7 @@
     <string name="road_event_speed_camera">Radar de velocidade</string>
     <string name="road_event_traffic_jam">Congestionamento</string>
     <string name="road_event_unknown">Evento na via</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Abrir</string>
     <string name="relay_monitor_rtt_read">Leitura</string>
     <string name="relay_monitor_rtt_write">Escrita</string>

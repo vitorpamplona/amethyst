@@ -1567,6 +1567,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="share_target_as_picture">Nowe zdjęcie</string>
     <string name="share_target_as_short_video">Nowy filmik</string>
     <string name="share_target_as_video">Nowe wideo</string>
+    <string name="share_target_scan_qr">Zeskanuj QR kod</string>
+    <string name="shortcut_scan_qr_short">Skanuj QR </string>
+    <string name="shortcut_scan_qr_long">Zeskanuj QR kod</string>
     <string name="new_highlight_title">Nowe wyróżnienie</string>
     <string name="new_highlight_passage_label">Wyróżniony tekst</string>
     <string name="new_highlight_note_placeholder">Dodaj swoje przemyślenia…</string>

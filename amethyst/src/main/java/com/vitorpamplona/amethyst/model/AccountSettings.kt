@@ -170,6 +170,7 @@ class AccountSettings(
     val defaultHighlightsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCalendarsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
+    val defaultGeocachesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPublicChatsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLiveStreamsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -724,6 +725,7 @@ class AccountSettings(
             defaultHighlightsFollowList to TopFilter.Global,
             defaultCalendarsFollowList to TopFilter.Global,
             defaultProductsFollowList to TopFilter.AroundMe,
+            defaultGeocachesFollowList to TopFilter.AroundMe,
             defaultShortsFollowList to TopFilter.Global,
             defaultPublicChatsFollowList to TopFilter.Global,
             defaultLiveStreamsFollowList to TopFilter.Global,
@@ -919,6 +921,17 @@ class AccountSettings(
     fun changeDefaultProductsFollowList(name: TopFilter) {
         if (defaultProductsFollowList.value != name) {
             defaultProductsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultGeocachesFollowList(name: FeedDefinition) {
+        changeDefaultGeocachesFollowList(name.code)
+    }
+
+    fun changeDefaultGeocachesFollowList(name: TopFilter) {
+        if (defaultGeocachesFollowList.value != name) {
+            defaultGeocachesFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

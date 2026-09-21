@@ -123,6 +123,7 @@ class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 # renamed. Add a line here whenever an enum becomes a route argument.
 class com.vitorpamplona.amethyst.ui.navigation.routes.DiscoverTab
 class com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
+class com.vitorpamplona.amethyst.ui.navigation.routes.GeocacheTab
 
 
 # --- Enum constants persisted as strings -------------------------------------

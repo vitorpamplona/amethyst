@@ -38,11 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,12 +49,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
-import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MONTH_GRID_MAX_LANES
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MonthGridBarSegment
-import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
-import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_selected_suffix
 import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_today_suffix
@@ -75,57 +67,31 @@ import java.time.ZoneId
 
 @Composable
 fun CalendarMonthView(
-    feedState: FeedContentState,
+    model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
 ) {
-    val state by feedState.feedContent.collectAsStateWithLifecycle()
-    val notes =
-        when (val s = state) {
-            is FeedState.Loaded ->
-                s.feed
-                    .collectAsStateWithLifecycle()
-                    .value.list
-                    .applyCalendarFilter(filterAddresses)
-            else -> emptyList()
-        }
+    // Both derived on the model, off the main thread, and shared with the other lenses.
+    val eventsByDay by model.eventsByDay.collectAsStateWithLifecycle()
+    val barsByDay by model.monthBars.collectAsStateWithLifecycle()
 
-    val today = remember { LocalDate.now() }
-    // YearMonth is not Parcelable/auto-saveable; persist the two ints and rebuild on each read.
-    var visibleYear by rememberSaveable { mutableStateOf(today.year) }
-    var visibleMonthValue by rememberSaveable { mutableStateOf(today.monthValue) }
-    val visibleMonth = YearMonth.of(visibleYear, visibleMonthValue)
+    val today = model.today
+    val visibleMonth = model.visibleMonth
 
-    fun setVisibleMonth(ym: YearMonth) {
-        visibleYear = ym.year
-        visibleMonthValue = ym.monthValue
-    }
-
-    val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
-    val barsByDay by remember(notes) { derivedStateOf { computeMonthGridBars(notes) } }
-
-    var selectedDayKey by rememberSaveable { mutableStateOf<Long?>(null) }
-
-    val selectedEvents = selectedDayKey?.let { eventsByDay[it] }.orEmpty()
+    val selectedEvents = model.selectedDayKey?.let { eventsByDay[it] }.orEmpty()
 
     // Single LazyColumn — nav header + weekday header + grid scroll together with the
     // disappearing top bar so the grid doesn't stay pinned mid-screen when the bar collapses.
     LazyColumn(
+        state = model.monthListState,
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier
                 .fillMaxSize()
                 .calendarSwipeNavigation(
-                    key = visibleYear to visibleMonthValue,
-                    onSwipeLeft = {
-                        setVisibleMonth(visibleMonth.plusMonths(1))
-                        selectedDayKey = null
-                    },
-                    onSwipeRight = {
-                        setVisibleMonth(visibleMonth.minusMonths(1))
-                        selectedDayKey = null
-                    },
+                    key = visibleMonth,
+                    onSwipeLeft = { model.showMonth(visibleMonth.plusMonths(1)) },
+                    onSwipeRight = { model.showMonth(visibleMonth.minusMonths(1)) },
                 ),
     ) {
         item(key = "month-nav") {
@@ -133,18 +99,9 @@ fun CalendarMonthView(
                 title = formatMonthYear(visibleMonth.year, visibleMonth.monthValue - 1),
                 prevContentDescription = stringRes(Res.string.calendar_nav_previous_month),
                 nextContentDescription = stringRes(Res.string.calendar_nav_next_month),
-                onPrev = {
-                    setVisibleMonth(visibleMonth.minusMonths(1))
-                    selectedDayKey = null
-                },
-                onNext = {
-                    setVisibleMonth(visibleMonth.plusMonths(1))
-                    selectedDayKey = null
-                },
-                onToday = {
-                    setVisibleMonth(YearMonth.from(LocalDate.now()))
-                    selectedDayKey = null
-                },
+                onPrev = { model.showMonth(visibleMonth.minusMonths(1)) },
+                onNext = { model.showMonth(visibleMonth.plusMonths(1)) },
+                onToday = { model.showMonth(YearMonth.from(LocalDate.now())) },
             )
         }
 
@@ -157,9 +114,9 @@ fun CalendarMonthView(
                 visibleMonth = visibleMonth,
                 today = today,
                 barsByDay = barsByDay,
-                selectedDayKey = selectedDayKey,
+                selectedDayKey = model.selectedDayKey,
                 onDayClick = { dayKey ->
-                    selectedDayKey = if (selectedDayKey == dayKey) null else dayKey
+                    model.selectedDayKey = if (model.selectedDayKey == dayKey) null else dayKey
                 },
             )
         }

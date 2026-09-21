@@ -46,6 +46,7 @@
     <string name="road_event_speed_camera">வேக கண்காணிப்பு கேமரா</string>
     <string name="road_event_traffic_jam">போக்குவரத்து நெரிசல்</string>
     <string name="road_event_unknown">சாலை நிகழ்வு</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">திற</string>
     <string name="relay_monitor_rtt_read">படி</string>
     <string name="relay_monitor_rtt_write">எழுது</string>

@@ -1071,6 +1071,9 @@ class Account(
     val liveProductsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultProductsFollowList)
     val liveProductsFollowListsPerRelay = OutboxLoaderState(liveProductsFollowLists, cache, scope).flow
 
+    val liveGeocachesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultGeocachesFollowList)
+    val liveGeocachesFollowListsPerRelay = OutboxLoaderState(liveGeocachesFollowLists, cache, scope).flow
+
     val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultShortsFollowList)
     val liveShortsFollowListsPerRelay = OutboxLoaderState(liveShortsFollowLists, cache, scope).flow
 

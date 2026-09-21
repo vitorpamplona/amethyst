@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 /**
  * Floating action button for creating new chess game challenges
@@ -58,6 +61,9 @@ fun NewChessGameButton(
 
     FloatingActionButton(
         onClick = { showDialog = true },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
             symbol = MaterialSymbols.Add,

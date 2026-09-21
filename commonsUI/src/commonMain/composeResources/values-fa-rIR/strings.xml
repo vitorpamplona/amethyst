@@ -46,6 +46,7 @@
     <string name="road_event_speed_camera">دوربین سرعت‌سنج</string>
     <string name="road_event_traffic_jam">ترافیک</string>
     <string name="road_event_unknown">رویداد جاده‌ای</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">باز</string>
     <string name="relay_monitor_rtt_read">خواندن</string>
     <string name="relay_monitor_rtt_write">نوشتن</string>
