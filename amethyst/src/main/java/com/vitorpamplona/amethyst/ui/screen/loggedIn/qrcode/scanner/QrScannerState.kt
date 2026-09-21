@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
@@ -63,13 +62,6 @@ class QrScannerState {
     var zoomRatio by mutableFloatStateOf(1f)
     var maxZoomRatio by mutableFloatStateOf(1f)
 
-    /**
-     * Auto-zoom stops for good the first time the user pinches. Someone who has framed the shot
-     * themselves does not want the camera arguing about it.
-     */
-    var autoZoomEnabled by mutableStateOf(true)
-        private set
-
     /** A payload we decoded but the caller could not use; drives the explain-what-happened sheet. */
     var rejected by mutableStateOf<ScannedPayload?>(null)
 
@@ -88,16 +80,6 @@ class QrScannerState {
     private var lastSubmittedText: String? = null
     private var lastSubmittedAt = 0L
     private var darkSinceMs = 0L
-
-    /** Milliseconds since anything at all was decoded — what auto-zoom watches. */
-    var msSinceLastDetection by mutableLongStateOf(0L)
-        private set
-
-    private var lastDetectionMs = 0L
-
-    fun onPinch() {
-        autoZoomEnabled = false
-    }
 
     fun resetZoom() {
         zoomRatio = 1f
@@ -121,11 +103,6 @@ class QrScannerState {
         // whether or not the camera is busy reading something else.
         if (sequence.dropIfStale(nowMs)) sequenceProgress = null
 
-        // Seed the clock on the first frame. Left at zero, the very first empty frame would read
-        // as "nothing decoded since the epoch" and send auto-zoom hunting before the user has had
-        // a chance to aim.
-        if (lastDetectionMs == 0L) lastDetectionMs = nowMs
-
         // Nothing is decided while the "we can't open this" sheet is up: the user is reading it,
         // and the offending code is very probably still sitting in front of the lens.
         if (rejected != null) {
@@ -136,12 +113,9 @@ class QrScannerState {
         val found = scan.results.distinctBy { it.text }
         if (found.isEmpty()) {
             candidates = emptyList()
-            msSinceLastDetection = nowMs - lastDetectionMs
             return null
         }
 
-        lastDetectionMs = nowMs
-        msSinceLastDetection = 0
         candidates = found
 
         // A multi-part code is never complete on its first part, so it can't be a single answer.
@@ -232,11 +206,5 @@ class QrScannerState {
 
         /** Don't offer the torch for a thumb over the lens or a moment of shadow. */
         const val DARK_DWELL_MS = 1_000L
-
-        /** How long with nothing decoded before auto-zoom starts hunting. */
-        const val AUTO_ZOOM_AFTER_MS = 1_200L
-
-        /** Ceiling for the auto-zoom sweep — past this, focus and shake beat the extra reach. */
-        const val AUTO_ZOOM_MAX = 2.5f
     }
 }
