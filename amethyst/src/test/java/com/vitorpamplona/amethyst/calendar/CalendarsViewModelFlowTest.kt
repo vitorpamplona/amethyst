@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentsFeedFilter
@@ -29,16 +32,16 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -47,20 +50,27 @@ import org.junit.Test
  * "not loaded yet" answer used to be an empty set — which reads as "match nothing" and blanked
  * every lens until the kind-31924 arrived.
  *
+ * Real dispatchers throughout, no virtual time. The flows seed on [Dispatchers.Default] (the scan
+ * walks the whole cache and must stay off the UI thread), so their emissions land on real threads;
+ * a test-scheduler Main would sit there un-driven while the test blocked waiting for them, and
+ * every await would expire on the virtual clock first. Nothing here is driven by delays, so
+ * virtual time buys nothing.
+ *
+ * Main is [Dispatchers.Unconfined] rather than [Dispatchers.Default] so that cancelling the
+ * model's scope finishes synchronously on the cancelling thread. Cancellation is otherwise
+ * asynchronous, and a continuation that resumed after `resetMain()` threw "Main dispatcher had
+ * failed to initialize" onto a background thread — which `runTest` then reported against whatever
+ * unrelated test started next.
+ *
  * `LocalCache` is a process-wide object and JUnit's method order is hash-based, so every method
- * here uses its own author key and asserts only over that key's events.
+ * uses its own author key and asserts only over that key's events.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class CalendarsViewModelFlowTest {
-    // viewModelScope is Dispatchers.Main, and every flow below is a WhileSubscribed stateIn —
-    // nothing runs until something subscribes. The SAME dispatcher drives Main and the test body,
-    // so the model's coroutines and the test share one scheduler; two schedulers would leave the
-    // collectors parked and every assertion reading the initial value.
-    private val mainDispatcher = UnconfinedTestDispatcher()
-
+    // viewModelScope is Dispatchers.Main, and every flow is a WhileSubscribed stateIn, so nothing
+    // runs until something subscribes.
     @Before
     fun setUp() {
-        Dispatchers.setMain(mainDispatcher)
+        Dispatchers.setMain(Dispatchers.Unconfined)
     }
 
     @After
@@ -71,7 +81,7 @@ class CalendarsViewModelFlowTest {
     private fun calendar(
         id: String,
         pubKey: String,
-        dTag: String,
+        dTag: String?,
         title: String,
         members: List<Address> = emptyList(),
     ) = CalendarEvent(
@@ -80,7 +90,7 @@ class CalendarsViewModelFlowTest {
         createdAt = 1_700_000_000L,
         tags =
             (
-                listOf(arrayOf("d", dTag), arrayOf("title", title)) +
+                listOfNotNull(dTag?.let { arrayOf("d", it) }, arrayOf("title", title)) +
                     members.map { arrayOf("a", it.toValue()) }
             ).toTypedArray(),
         content = "",
@@ -95,93 +105,155 @@ class CalendarsViewModelFlowTest {
         id = id,
         pubKey = pubKey,
         createdAt = 1_700_000_000L,
-        tags =
-            arrayOf(
-                arrayOf("d", dTag),
-                arrayOf("title", "Standup"),
-                arrayOf("start", "1800000000"),
-            ),
+        tags = arrayOf(arrayOf("d", dTag), arrayOf("title", "Standup"), arrayOf("start", "1800000000")),
         content = "",
         sig = "sig",
     )
 
-    private fun boundModel(
-        scope: CoroutineScope,
+    /**
+     * Consumes [calendars] and hands back the notes they landed in, so the caller can hold them
+     * for the length of the test: `LocalCache.addressables` is a weak cache, and with nothing
+     * holding a reference a calendar can be collected out from under the assertions.
+     */
+    private fun consume(vararg calendars: CalendarEvent): List<AddressableNote?> {
+        calendars.forEach { LocalCache.justConsumeMyOwnEvent(it) }
+        return calendars.map { LocalCache.getAddressableNoteIfExists(it.address()) }
+    }
+
+    /**
+     * Runs [block] against a model bound to [pubKey], on real threads, and tears everything down.
+     *
+     * The model comes out of a real [ViewModelStore] so that clearing the store cancels its
+     * `viewModelScope` — the same thing the back stack does when the screen goes. Leaving it
+     * running outlived `resetMain()`, and the collectors then threw "Main dispatcher had failed
+     * to initialize" onto a background thread, which `runTest` reports against whichever test
+     * happens to start next.
+     */
+    private fun withModel(
         pubKey: String,
-    ): CalendarsViewModel {
-        val feed = FeedContentState(CalendarAppointmentsFeedFilter(seeEverythingAccount()), scope, LocalCache)
-        return CalendarsViewModel().also { it.init(pubKey, feed) }
+        block: suspend (CalendarsViewModel) -> Unit,
+    ) = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val store = ViewModelStore()
+        try {
+            val feed = FeedContentState(CalendarAppointmentsFeedFilter(seeEverythingAccount()), scope, LocalCache)
+            val model = ViewModelProvider(store, ViewModelProvider.NewInstanceFactory())[CalendarsViewModel::class.java]
+            model.init(pubKey, feed)
+            block(model)
+        } finally {
+            store.clear()
+            scope.cancel()
+        }
+    }
+
+    /** Subscribes until [predicate] holds, or fails. Subscribing is what starts the flow. */
+    private suspend fun <T> StateFlow<T>.await(
+        what: String,
+        predicate: (T) -> Boolean,
+    ): T =
+        withTimeoutOrNull(AWAIT_MS) { first(predicate) }
+            ?: throw AssertionError("$what: gave up, last value was $value")
+
+    /** Subscribes for a window and asserts nothing matching [predicate] ever shows up. */
+    private suspend fun <T> StateFlow<T>.never(
+        what: String,
+        predicate: (T) -> Boolean,
+    ) {
+        val seen = withTimeoutOrNull(SETTLE_MS) { first(predicate) }
+        if (seen != null) throw AssertionError("$what: saw $seen")
     }
 
     @Test
-    fun theCalendarPickerListsThisAccountsCalendars() =
-        runTest(mainDispatcher) {
-            val mine = "f1".repeat(32)
-            val someoneElse = "f2".repeat(32)
-            LocalCache.justConsumeMyOwnEvent(calendar("f3".repeat(32), mine, "work", "Work"))
-            LocalCache.justConsumeMyOwnEvent(calendar("f4".repeat(32), mine, "gigs", "Also mine"))
-            LocalCache.justConsumeMyOwnEvent(calendar("f5".repeat(32), someoneElse, "theirs", "Not mine"))
+    fun theCalendarPickerListsThisAccountsCalendars() {
+        val mine = "f1".repeat(32)
+        val someoneElse = "f2".repeat(32)
+        val held =
+            consume(
+                calendar("f3".repeat(32), mine, "work", "Work"),
+                calendar("f4".repeat(32), mine, "gigs", "Also mine"),
+                calendar("f5".repeat(32), someoneElse, "theirs", "Not mine"),
+            )
 
-            val model = boundModel(backgroundScope, mine)
-            backgroundScope.launch { model.ownCalendars.collect {} }
+        withModel(mine) { model ->
+            val listed = model.ownCalendars.await("the picker never loaded") { it.size >= 2 }
 
-            val titles = model.ownCalendars.value.map { it.title() }
-            assertEquals(listOf("Also mine", "Work"), titles) // sorted by title, case-insensitive
+            // Sorted by title, case-insensitive, and the other author's calendar is not here.
+            assertEquals(listOf("Also mine", "Work"), listed.map { it.title() })
         }
+
+        assertEquals("the calendars must stay reachable for the whole test", 3, held.size)
+    }
 
     @Test
     fun nothingIsFilteredUntilTheUserPicksACalendar() =
-        runTest(mainDispatcher) {
-            val mine = "e1".repeat(32)
-            val model = boundModel(backgroundScope, mine)
-            backgroundScope.launch { model.filterAddresses.collect {} }
-
-            assertNull("\"All\" must not narrow anything", model.filterAddresses.value)
+        withModel("e1".repeat(32)) { model ->
+            model.filterAddresses.never("\"All\" must not narrow anything") { it != null }
         }
 
     @Test
     fun aCalendarThatHasNotLoadedYetDoesNotFilterEverythingOut() =
-        runTest(mainDispatcher) {
-            val mine = "e2".repeat(32)
-            val model = boundModel(backgroundScope, mine)
-            backgroundScope.launch { model.filterAddresses.collect {} }
-
+        withModel("e2".repeat(32)) { model ->
             model.selectCalendar("a-calendar-that-is-not-in-the-cache")
 
             // The regression: this used to answer with an empty set, which `applyCalendarFilter`
             // reads as "match nothing" — every lens went blank.
-            assertNull("an unresolved calendar must not blank the screen", model.filterAddresses.value)
+            model.filterAddresses.never("an unresolved calendar must not blank the screen") { it != null }
         }
 
     @Test
-    fun pickingACalendarResolvesItsMembers() =
-        runTest(mainDispatcher) {
-            val mine = "e3".repeat(32)
-            val member = Address(CalendarTimeSlotEvent.KIND, mine, "standup")
-            LocalCache.justConsumeMyOwnEvent(appointment("e4".repeat(32), mine, "standup"))
-            LocalCache.justConsumeMyOwnEvent(calendar("e5".repeat(32), mine, "work", "Work", listOf(member)))
+    fun pickingACalendarResolvesItsMembers() {
+        val mine = "e3".repeat(32)
+        val member = Address(CalendarTimeSlotEvent.KIND, mine, "standup")
+        LocalCache.justConsumeMyOwnEvent(appointment("e4".repeat(32), mine, "standup"))
+        val held = consume(calendar("e5".repeat(32), mine, "work", "Work", listOf(member)))
 
-            val model = boundModel(backgroundScope, mine)
-            backgroundScope.launch { model.filterAddresses.collect {} }
-
+        withModel(mine) { model ->
             model.selectCalendar("work")
 
-            assertEquals(setOf(member), model.filterAddresses.value)
+            assertEquals(setOf(member), model.filterAddresses.await("never resolved") { it != null })
         }
 
+        assertEquals(1, held.size)
+    }
+
     @Test
-    fun pickingAnEmptyCalendarDoesFilterEverythingOut() =
-        runTest(mainDispatcher) {
-            val mine = "e6".repeat(32)
-            LocalCache.justConsumeMyOwnEvent(calendar("e7".repeat(32), mine, "empty", "Empty"))
+    fun pickingAnEmptyCalendarDoesFilterEverythingOut() {
+        val mine = "e6".repeat(32)
+        val held = consume(calendar("e7".repeat(32), mine, "empty", "Empty"))
 
-            val model = boundModel(backgroundScope, mine)
-            backgroundScope.launch { model.filterAddresses.collect {} }
-
+        withModel(mine) { model ->
             model.selectCalendar("empty")
 
             // A calendar that really lists nothing is the one case where an empty set is right.
-            assertEquals(emptySet<Address>(), model.filterAddresses.value)
-            assertTrue(model.filterAddresses.value?.isEmpty() == true)
+            assertEquals(emptySet<Address>(), model.filterAddresses.await("never resolved") { it != null })
         }
+
+        assertEquals(1, held.size)
+    }
+
+    @Test
+    fun aCalendarWithNoDTagCanStillBeFilteredBy() {
+        val mine = "e8".repeat(32)
+        val member = Address(CalendarTimeSlotEvent.KIND, mine, "standup")
+        // Addressed as `31924:<pubkey>:` — legal, and the picker offers it, so picking it has to
+        // narrow the feed. Resolving through a `#d: [""]` filter could not: the event carries no
+        // literal d tag for the matcher to find, which is why this resolves off the picker's list.
+        val held = consume(calendar("e9".repeat(32), mine, null, "Untagged", listOf(member)))
+
+        withModel(mine) { model ->
+            model.selectCalendar("")
+
+            assertEquals(setOf(member), model.filterAddresses.await("never resolved") { it != null })
+        }
+
+        assertEquals(1, held.size)
+    }
+
+    companion object {
+        /** Real milliseconds — every await crosses [Dispatchers.Default]. */
+        private const val AWAIT_MS = 5_000L
+
+        /** How long "it never happens" waits before believing it. */
+        private const val SETTLE_MS = 500L
+    }
 }

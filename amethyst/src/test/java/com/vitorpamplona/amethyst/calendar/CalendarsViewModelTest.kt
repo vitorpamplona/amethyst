@@ -20,11 +20,18 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.startOfWeek
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -35,10 +42,32 @@ import java.time.YearMonth
  * instead of being spelled out in each view's click handlers.
  */
 class CalendarsViewModelTest {
+    // The model's derived flows are `stateIn(viewModelScope, …)`, and stateIn launches its
+    // sharing coroutine as soon as the property initializer runs — so simply CONSTRUCTING the
+    // model touches Dispatchers.Main. Without these, that launch fails on a plain JVM test and
+    // the failure lands on a background thread, where `runTest` reports it against whichever
+    // test happens to start next. Clearing the store afterwards cancels the scope, exactly as
+    // the back stack does when the screen goes.
+    private var store = ViewModelStore()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        store = ViewModelStore()
+    }
+
+    @After
+    fun tearDown() {
+        store.clear()
+        Dispatchers.resetMain()
+    }
+
+    private fun newModel(): CalendarsViewModel = ViewModelProvider(store, ViewModelProvider.NewInstanceFactory())[CalendarsViewModel::class.java]
+
     @Test
     fun aFreshScreenOpensOnToday() {
         val today = LocalDate.now()
-        val model = CalendarsViewModel()
+        val model = newModel()
 
         assertEquals(CalendarsViewMode.FEED, model.viewMode)
         assertNull(model.filterDTag.value)
@@ -51,7 +80,7 @@ class CalendarsViewModelTest {
 
     @Test
     fun pagingTheMonthDropsTheDaySelectedInTheOldOne() {
-        val model = CalendarsViewModel()
+        val model = newModel()
         model.selectedDayKey = LocalDate.of(2025, 1, 15).toEpochDay()
 
         model.showMonth(model.visibleMonth.plusMonths(1))
@@ -61,7 +90,7 @@ class CalendarsViewModelTest {
 
     @Test
     fun pagingTheWeekMovesSevenDaysAndReturnsTheStripToTheFirstDay() {
-        val model = CalendarsViewModel()
+        val model = newModel()
         model.showWeekOf(LocalDate.of(2025, 1, 15)) // a Wednesday
         model.selectedDayIndex = 4
 
@@ -74,7 +103,7 @@ class CalendarsViewModelTest {
 
     @Test
     fun showWeekOfSnapsToTheSundayOnOrBeforeTheDate() {
-        val model = CalendarsViewModel()
+        val model = newModel()
 
         model.showWeekOf(LocalDate.of(2025, 1, 15)) // Wednesday
         assertEquals(LocalDate.of(2025, 1, 12), model.weekStart)
@@ -86,7 +115,7 @@ class CalendarsViewModelTest {
 
     @Test
     fun theStripsSelectedDateIsTheWeekStartPlusItsIndex() {
-        val model = CalendarsViewModel()
+        val model = newModel()
         model.showWeekOf(LocalDate.of(2025, 1, 15))
         model.selectedDayIndex = 3
 
@@ -97,7 +126,7 @@ class CalendarsViewModelTest {
     fun pagingTheDayCrossesDaylightSavingWithoutSlipping() {
         // US spring-forward lands on 2025-03-09; stepping by milliseconds used to land an hour
         // short and repeat a day. LocalDate arithmetic ignores zones, so a step is always a day.
-        val model = CalendarsViewModel()
+        val model = newModel()
         model.visibleEpochDay = LocalDate.of(2025, 3, 8).toEpochDay()
 
         model.shiftDays(1)
@@ -112,7 +141,7 @@ class CalendarsViewModelTest {
 
     @Test
     fun everyLensKeepsItsOwnScrollPosition() {
-        val model = CalendarsViewModel()
+        val model = newModel()
         val states = listOf(model.feedListState, model.monthListState, model.weekListState, model.dayListState)
 
         assertEquals("the lenses must not share one scroll offset", 4, states.distinct().size)

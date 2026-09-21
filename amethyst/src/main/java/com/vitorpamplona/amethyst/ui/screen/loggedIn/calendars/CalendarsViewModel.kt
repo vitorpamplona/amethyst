@@ -79,22 +79,29 @@ import java.time.YearMonth
  */
 @Stable
 class CalendarsViewModel : ViewModel() {
-    /** Read once, at the moment the screen is first opened, so every lens agrees on "today". */
-    val today: LocalDate = LocalDate.now()
+    /** The day this screen was first opened. Only the defaults below are anchored to it. */
+    private val openedOn: LocalDate = LocalDate.now()
+
+    /**
+     * Read live, not captured: this entry can outlive midnight, and a captured value left the
+     * month grid and the week strip highlighting yesterday while the "Today" buttons (which call
+     * [LocalDate.now] themselves) jumped somewhere else.
+     */
+    val today: LocalDate get() = LocalDate.now()
 
     var viewMode by mutableStateOf(CalendarsViewMode.FEED)
 
     // Month lens. YearMonth is rebuilt on read from two ints so the pieces stay primitive.
-    var visibleYear by mutableIntStateOf(today.year)
-    var visibleMonthValue by mutableIntStateOf(today.monthValue)
+    var visibleYear by mutableIntStateOf(openedOn.year)
+    var visibleMonthValue by mutableIntStateOf(openedOn.monthValue)
     var selectedDayKey by mutableStateOf<Long?>(null)
 
     // Week lens. Epoch-day, so the arithmetic stays in LocalDate and stays DST-safe.
-    var weekStartEpochDay by mutableLongStateOf(startOfWeek(today).toEpochDay())
+    var weekStartEpochDay by mutableLongStateOf(startOfWeek(openedOn).toEpochDay())
     var selectedDayIndex by mutableIntStateOf(0)
 
     // Day lens.
-    var visibleEpochDay by mutableLongStateOf(today.toEpochDay())
+    var visibleEpochDay by mutableLongStateOf(openedOn.toEpochDay())
 
     /**
      * One scroll position per lens, held here for the same reason as everything above. Every other
@@ -163,33 +170,38 @@ class CalendarsViewModel : ViewModel() {
                     .observeEvents<CalendarEvent>(
                         Filter(kinds = listOf(CalendarEvent.KIND), authors = listOf(myPubKey)),
                     ).map { calendars -> calendars.sortedBy { it.title()?.lowercase() ?: "" } }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+            }
+            // The seed scan inside observeEvents walks the whole notes cache (LocalCache.filter
+            // does that for every query, whatever the kinds), so it must not run on the UI thread.
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
      * The selected calendar's member addresses, or null when nothing is narrowing the feed.
+     *
+     * Resolved against [ownCalendars] — the picker's own list — rather than a second cache
+     * observer filtered on `#d`. Two reasons: it is one observer instead of two for the same
+     * data, and a `#d` filter cannot match a calendar published WITHOUT a d tag. Such a calendar
+     * is addressed as `31924:<pubkey>:` and the picker happily offers it (`dTag()` is ""), so
+     * filtering by it silently resolved to nothing and the chip sat there claiming a filter that
+     * wasn't applied. A string compare has no such blind spot.
      *
      * Null covers both "All is selected" and "the calendar hasn't loaded yet", and the difference
      * matters: the old code answered the second case with an EMPTY SET, which reads as "match
      * nothing" to [applyCalendarFilter] and blanked every lens until the kind-31924 arrived. An
      * empty set now only ever means a calendar that genuinely lists no appointments.
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
     val filterAddresses: StateFlow<Set<Address>?> =
-        combine(_filterDTag, inputs.filterNotNull()) { dTag, bound -> dTag to bound.myPubKey }
-            .flatMapLatest { (dTag, myPubKey) ->
-                if (dTag == null) {
-                    flowOf(null)
-                } else {
-                    LocalCache
-                        .observeLatestEvent<CalendarEvent>(
-                            Filter(
-                                kinds = listOf(CalendarEvent.KIND),
-                                authors = listOf(myPubKey),
-                                tags = mapOf("d" to listOf(dTag)),
-                            ),
-                        ).map { calendar -> calendar?.calendarEventAddresses()?.toSet() }
-                }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+        combine(_filterDTag, ownCalendars) { dTag, calendars ->
+            if (dTag == null) {
+                null
+            } else {
+                calendars
+                    .firstOrNull { it.dTag() == dTag }
+                    ?.calendarEventAddresses()
+                    ?.toSet()
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     // ------------------------------------------------------------------------------------------
     // What the lenses draw

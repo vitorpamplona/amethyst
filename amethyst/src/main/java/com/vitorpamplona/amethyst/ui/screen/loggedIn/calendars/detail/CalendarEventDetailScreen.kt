@@ -114,6 +114,8 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import org.jetbrains.compose.resources.pluralStringResource
 
@@ -852,22 +854,33 @@ private fun isLocationUrl(location: String): Boolean {
 /**
  * The kind-31925 RSVPs that a-tag [targetAddress], and the kind-31924 calendars that list it.
  *
- * Both go through [LocalCache.observeEvents], which registers the Nostr filter with the cache's
- * own index: this screen is woken for events that a-tag this appointment and nothing else. The
- * previous version collected `LocalCache.live.newEventBundles` — every event the app ingests —
- * and answered each batch with a full scan of the addressable cache.
+ * [LocalCache.observeEvents] registers the filter with the cache's own index, so this screen is
+ * woken for those two kinds rather than for every event the app ingests — which is what the
+ * previous `LocalCache.live.newEventBundles` collector did, answering each batch with a full
+ * scan of the addressable cache.
+ *
+ * The filter narrows by KIND and the a-tag check happens below, rather than putting the a-tag in
+ * the filter itself, because `FilterIndex` buckets an observer under its most selective dimension
+ * — the tag — and an edited event that DROPS the tag then lands in a different bucket and never
+ * wakes this observer. A calendar that removed this appointment would have gone on listing it
+ * until the screen was reopened. Both kinds are low-volume, so waking on the kind and re-checking
+ * here costs little and cannot go stale: the list re-emits on every matching event and the
+ * snapshot reads the live event off each note.
+ *
+ * The seed scan inside `observeEvents` walks the whole notes cache (`LocalCache.filter` does that
+ * for every query, whatever the kinds), so neither of these may run on the UI thread.
  */
 @Composable
 private fun rememberRsvpsFor(targetAddress: Address): State<List<CalendarRSVPEvent>> {
     val rsvps =
         remember(targetAddress) {
             LocalCache
-                .observeEvents<CalendarRSVPEvent>(
-                    Filter(
-                        kinds = listOf(CalendarRSVPEvent.KIND),
-                        tags = mapOf("a" to listOf(targetAddress.toValue())),
-                    ),
-                ).map { list -> list.sortedByDescending { it.createdAt } }
+                .observeEvents<CalendarRSVPEvent>(Filter(kinds = listOf(CalendarRSVPEvent.KIND)))
+                .map { all ->
+                    all
+                        .filter { it.calendarEventAddress() == targetAddress }
+                        .sortedByDescending { it.createdAt }
+                }.flowOn(Dispatchers.Default)
         }
 
     return rsvps.collectAsStateWithLifecycle(emptyList())
@@ -878,12 +891,12 @@ private fun rememberCalendarsContaining(targetAddress: Address): State<List<Cale
     val calendars =
         remember(targetAddress) {
             LocalCache
-                .observeEvents<CalendarEvent>(
-                    Filter(
-                        kinds = listOf(CalendarEvent.KIND),
-                        tags = mapOf("a" to listOf(targetAddress.toValue())),
-                    ),
-                ).map { list -> list.sortedByDescending { it.createdAt } }
+                .observeEvents<CalendarEvent>(Filter(kinds = listOf(CalendarEvent.KIND)))
+                .map { all ->
+                    all
+                        .filter { it.calendarEventAddresses().contains(targetAddress) }
+                        .sortedByDescending { it.createdAt }
+                }.flowOn(Dispatchers.Default)
         }
 
     return calendars.collectAsStateWithLifecycle(emptyList())
