@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.Dao
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -335,7 +335,7 @@ class AccountViewModel(
 
     /**
      * A fresh, relay-authenticated [INostrClient] whose received events do NOT
-     * land in the production [com.vitorpamplona.amethyst.model.LocalCache] — for
+     * land in the production [com.vitorpamplona.amethyst.commons.model.cache.LocalCache] — for
      * crawls (Event Sync, Cashu wallet discovery). The caller must `close()` it.
      */
     fun buildCrawlClient(): INostrClient {

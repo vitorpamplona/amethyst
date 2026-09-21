@@ -46,7 +46,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Makes a tray notification *observable*: it renders immediately from whatever
- * is already in [com.vitorpamplona.amethyst.model.LocalCache], then — if the
+ * is already in [com.vitorpamplona.amethyst.commons.model.cache.LocalCache], then — if the
  * involved users' names/pictures or the involved notes' content/media haven't
  * loaded yet — opens a bounded relay window, subscribes to those users and
  * notes, and re-renders the same notification (replacing it in place) as the

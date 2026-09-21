@@ -402,7 +402,7 @@ fun RenderMeetingRoomPresence(
 
     val user =
         remember(event.pubKey) {
-            com.vitorpamplona.amethyst.model.LocalCache
+            com.vitorpamplona.amethyst.commons.model.cache.LocalCache
                 .getOrCreateUser(event.pubKey)
         }
 

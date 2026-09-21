@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Keeps the user's joined geohash location channels ([account.geohashList]) live
- * in [com.vitorpamplona.amethyst.model.LocalCache] so they surface in the rooms
+ * in [com.vitorpamplona.amethyst.commons.model.cache.LocalCache] so they surface in the rooms
  * list and Home, mirroring [FollowingEphemeralChatSubAssembler]. Because the
  * events are ephemeral, this is a live tail — quiet cells simply have no last
  * message until one arrives.

@@ -94,6 +94,24 @@ class UriToRouteTest {
     }
 
     @Test
+    fun walletConnectDeepLinksRouteInEverySpellingIsWalletConnectRouteAccepts() {
+        // isWalletConnectRoute() accepts three spellings, so all three have to survive the parse
+        // behind it. They did not: `java.net.URI` calls a scheme followed by anything but `/` an
+        // *opaque* uri and reports it as having no query at all, so the one-colon form lost its
+        // `value=` and came back to the user as "that uri was invalid" -- while the `//` spelling
+        // of the very same link worked. Only the bare form was covered here before.
+        val encoded = URLEncoder.encode(NWC_URI, Charsets.UTF_8.name())
+
+        listOf(
+            "dlnwc?value=$encoded",
+            "amethyst+walletconnect:dlnwc?value=$encoded",
+            "amethyst+walletconnect://dlnwc?value=$encoded",
+        ).forEach { deepLink ->
+            assertEquals(deepLink, Route.WalletAddNwc(NWC_URI), uriToRoute(deepLink, account))
+        }
+    }
+
+    @Test
     fun theLauncherShortcutOpensTheScannerDirectly() {
         // res/xml/shortcuts.xml fires `amethyst:scanqr`. If this stops resolving, long-pressing the
         // app icon silently lands on the home feed instead of the camera.

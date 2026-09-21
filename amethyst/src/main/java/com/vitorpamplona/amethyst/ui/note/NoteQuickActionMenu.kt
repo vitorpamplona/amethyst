@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletio
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_unfollow
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
+import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
@@ -121,10 +122,6 @@ private fun lightenColor(
 
 val externalLinkForUser = { user: User ->
     njumpLink(user.toNProfile())
-}
-
-val njumpLink = { nip19BechAddress: String ->
-    "https://njump.to/$nip19BechAddress"
 }
 
 val nipLink = { nipNumber: String ->

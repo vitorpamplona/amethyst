@@ -67,7 +67,7 @@ import kotlinx.coroutines.withContext
  * produces the same diagnostic string regardless of which surface
  * triggered the lookup. Callers are expected to handle
  * [NamecoinResolveOutcome.Success] separately (it needs a [User]
- * lookup through [com.vitorpamplona.amethyst.model.LocalCache], which
+ * lookup through [com.vitorpamplona.amethyst.commons.model.cache.LocalCache], which
  * this helper has no access to).
  */
 fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveState =

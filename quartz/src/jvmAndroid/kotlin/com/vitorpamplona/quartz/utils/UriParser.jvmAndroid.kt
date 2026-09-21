@@ -28,8 +28,28 @@ actual class UriParser actual constructor(
 ) {
     private val myUri = URI.create(uri)
 
+    /**
+     * The query string, including the one [java.net.URI] refuses to find.
+     *
+     * A URI whose scheme is followed by anything other than `/` is *opaque* to `java.net.URI`:
+     * `amethyst+walletconnect:dlnwc?value=...` has no query at all as far as it is concerned, and
+     * the whole `dlnwc?value=...` is one scheme-specific part. Every other actual of this class
+     * looks for `?` wherever it sits, so on JVM and Android alone the parameters of an opaque URI
+     * silently vanished -- which is how a perfectly valid wallet-connect deep link came back as
+     * "that uri was invalid", while the `//` spelling of the very same link worked.
+     *
+     * The fragment needs no such rescue: `java.net.URI` does parse `#...` off an opaque URI.
+     */
+    private val rawQuery: String? =
+        myUri.rawQuery
+            ?: myUri
+                .takeIf { it.isOpaque }
+                ?.rawSchemeSpecificPart
+                ?.substringAfter('?', "")
+                ?.ifBlank { null }
+
     private val queryParameters: Map<String, List<String>> by lazy {
-        myUri.rawQuery?.ifBlank { null }?.let { query ->
+        rawQuery?.ifBlank { null }?.let { query ->
             val params = mutableMapOf<String, MutableList<String>>()
 
             query.split('&').forEach { paramValue ->

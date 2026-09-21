@@ -25,7 +25,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Debug
 import androidx.core.content.getSystemService
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizedUrls
 import com.vitorpamplona.quartz.utils.Log

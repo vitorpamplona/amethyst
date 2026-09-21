@@ -20,10 +20,9 @@
  */
 @file:Suppress("DEPRECATION")
 
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model.cache
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
@@ -40,9 +39,6 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
-import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -51,6 +47,8 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
+import com.vitorpamplona.amethyst.commons.model.nip90DVMs.DvmHeartbeatRegistry
+import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilter
@@ -60,11 +58,6 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
-import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
-import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
@@ -328,7 +321,6 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnZapReceiptValidator
-import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
@@ -425,6 +417,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -434,22 +427,32 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.util.SortedSet
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.time.TimeSource
 
-interface ILocalCache {
-    fun markAsSeen(
-        eventId: String,
-        relay: NormalizedRelayUrl,
-    ) {
-        // Default no-op; implementations may override to track seen events per relay
-    }
-}
+/**
+ * The in-memory event store: every `Note`, `User` and `Channel` the app has consumed, plus the
+ * indexes over them.
+ *
+ * A class rather than a singleton so a front end can own its cache and a test can have one to
+ * itself. Android uses the process-wide [LocalCache] instance; Desktop and tests build their own.
+ */
+open class EventCache :
+    ILocalCache,
+    ICacheProvider,
+    Dao {
+    /**
+     * What this cache needs from the application shell around it: a scope to verify on, the
+     * NIP-95 blob directory, the relay identity and stats sinks, and the main-thread assertion.
+     * Defaults to [LocalCacheHost.Default], which supplies none of them; Android installs its
+     * own during app startup.
+     */
+    @Volatile
+    var appHost: LocalCacheHost = LocalCacheHost
 
-object LocalCache : ILocalCache, ICacheProvider, Dao {
-    val antiSpam = AntiSpamFilter()
+    val antiSpam = AntiSpamFilter { appHost }
 
     val users = LargeSoftCache<HexKey, User>()
     val notes = LargeSoftCache<HexKey, Note>()
@@ -514,8 +517,8 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
      */
     val mintDirectory = MintDirectoryIndex()
 
-    @Volatile private var mintDirectoryBackfilled = false
-    private val mintDirectoryBackfillLock = Any()
+    @OptIn(ExperimentalAtomicApi::class)
+    private val mintDirectoryBackfilled = AtomicBoolean(false)
 
     /**
      * Sweeps `notes` + `addressables` for any NIP-87 / NIP-61 event the
@@ -529,15 +532,17 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
      * scan failure is swallowed so the index stays usable even if the
      * cache is in an unexpected state.
      */
+    @OptIn(ExperimentalAtomicApi::class)
     fun ensureMintDirectoryBackfilled() {
-        if (mintDirectoryBackfilled) return
-        synchronized(mintDirectoryBackfillLock) {
-            if (mintDirectoryBackfilled) return
-            runCatching {
-                notes.forEach { _, note -> note.event?.let(::updateMintIndex) }
-                addressables.forEach { _, note -> note.event?.let(::updateMintIndex) }
-            }
-            mintDirectoryBackfilled = true
+        // Claim the sweep with a CAS rather than a lock: exactly one caller gets true and does
+        // the work. A second caller returns immediately instead of blocking for the length of a
+        // full cache scan — it may see a partially filled index, which is the same thing it sees
+        // before any backfill runs, and one relay round-trip later it does not.
+        if (!mintDirectoryBackfilled.compareAndSet(false, true)) return
+
+        runCatching {
+            notes.forEach { _, note -> note.event?.let(::updateMintIndex) }
+            addressables.forEach { _, note -> note.event?.let(::updateMintIndex) }
         }
     }
 
@@ -575,6 +580,11 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         hidden: LiveHiddenUsers,
     ) = search.findNotesStartingWith(text, hidden)
 
+    override fun findUsersStartingWith(
+        prefix: String,
+        limit: Int,
+    ) = search.findUsersStartingWith(prefix, null, limit)
+
     override fun findPublicChatChannelsStartingWith(text: String) = search.findPublicChatChannelsStartingWith(text)
 
     override fun findEphemeralChatChannelsStartingWith(text: String) = search.findEphemeralChatChannelsStartingWith(text)
@@ -590,7 +600,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         }
     }
 
-    fun filter(filter: Filter): SortedSet<Note> = filter(filter) { true }
+    fun filter(filter: Filter): List<Note> = filter(filter) { true }
 
     /**
      * Every note matching [filter]'s NIP-01 fields that also satisfies [predicate].
@@ -603,7 +613,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     fun filter(
         filter: Filter,
         predicate: (Note) -> Boolean,
-    ): SortedSet<Note> {
+    ): List<Note> {
         val byKinds = filter.kinds?.filter { it.isAddressable() || it.isReplaceable() }
 
         val addressableMatches =
@@ -642,20 +652,26 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 }
             }
 
-        val all = (addressableMatches + noteMatches).toSortedSet(CreatedAtIdHexComparator)
+        // toSet() before sorting: a filter that repeats a kind scans that kind twice, and the
+        // SortedSet this used to return collapsed the repeats. Note declares no equals(), so a
+        // plain Set is the same reference-identity de-duplication that comparator gave.
+        //
+        // The order is the comparator's, newest first, and it is load-bearing: the napplet
+        // gateway answers REQs out of this, and NIP-01 has relays return events newest first.
+        val all = (addressableMatches + noteMatches).toSet().sortedWith(CreatedAtIdHexComparator)
         val limit = filter.limit ?: return all
 
         // Sorted first, then cut. Both halves arrive in hash-walk order, so taking before sorting
         // dropped whichever matches the walk happened to reach last — the newest ones as often as
         // not — and a query with 200 addressable matches never showed a single regular note.
         if (all.size <= limit) return all
-        return all.asSequence().take(limit).toCollection(sortedSetOf(CreatedAtIdHexComparator))
+        return all.take(limit)
     }
 
     fun observeNotes(filter: Filter): Flow<List<Note>> =
         callbackFlow {
             val newFilter =
-                NoteListMatchingFilter(filter, this@LocalCache::filter) {
+                NoteListMatchingFilter(filter, this@EventCache::filter) {
                     trySend(it)
                 }
 
@@ -671,7 +687,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     fun <T : Event> observeEvents(filter: Filter): Flow<List<T>> =
         callbackFlow {
             val cachedFilter =
-                EventListMatchingFilter<T>(filter, this@LocalCache::filter) {
+                EventListMatchingFilter<T>(filter, this@EventCache::filter) {
                     trySend(it)
                 }
 
@@ -865,8 +881,8 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         return null
     }
 
-    override fun getEventStream(): com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream =
-        object : com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream {
+    override fun getEventStream(): ICacheEventStream =
+        object : ICacheEventStream {
             override val newEventBundles = live.newEventBundles
             override val deletedEventBundles = live.deletedEventBundles
         }
@@ -2149,10 +2165,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         event: Event,
         relay: NormalizedRelayUrl,
     ): Boolean {
-        val self =
-            Amethyst.instance.nip11Cache
-                .getFromCache(relay)
-                .self ?: return true
+        val self = appHost.relaySelfPubKey(relay) ?: return true
         return event.pubKey == self
     }
 
@@ -2684,7 +2697,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         // stays in cache as a visible artifact but contributes 0 to zap totals.
         val recipientLnurl = recipientLnurl(event)
         val recipientLnurlpUrl = recipientLnurl?.let { LnurlForm.toUrl(it) }
-        val cachedInfo = recipientLnurlpUrl?.let { LnurlEndpointCache.get(it) }
+        val cachedInfo = recipientLnurlpUrl?.let { appHost.lnurlEndpoint(it) }
 
         val author = getOrCreateUser(event.pubKey)
         val repliesTo = computeReplyTo(event)
@@ -2730,7 +2743,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         attachZapToLiveActivityChannel(event, note, relay)
         refreshNewNoteObservers(note)
 
-        Amethyst.instance.applicationIOScope.launch {
+        appHost.scope.launch {
             try {
                 val info = resolver.resolve(recipientLnurlpUrl)
                 if (info == null) {
@@ -3092,25 +3105,31 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             note.addRelay(relay)
         }
 
+        // A host with nowhere to spill keeps the bytes in memory below instead.
+        val blobs = appHost.nip95Blobs
+
+        // Whether the bytes are in the store now. The note's copy may only drop its content
+        // once this is true — a store that refused the write is not somewhere to drop it.
+        var spilled = blobs != null && blobs.exists(event.id)
+
         val isVerified =
-            try {
-                val cachePath = Amethyst.instance.nip95cache
-                cachePath.mkdirs()
-                val file = File(cachePath, event.id)
-                if (!file.exists() && (wasVerified || justVerify(event))) {
-                    FileOutputStream(file).use { stream ->
-                        stream.write(event.decode())
-                    }
+            if (blobs == null || spilled) {
+                wasVerified
+            } else if (wasVerified || justVerify(event)) {
+                // decode() is null when the content is not the base64 the event claims, so
+                // there is nothing to spill and nothing this call can vouch for.
+                val bytes = event.decode()
+                if (bytes != null && blobs.store(event.id, bytes)) {
+                    spilled = true
                     Log.i(
                         "FileStorageEvent",
-                        "NIP95 File received from $relay and saved to disk as $file",
+                        "NIP95 File received from $relay and stored as ${event.id}",
                     )
                     true
                 } else {
                     wasVerified
                 }
-            } catch (e: IOException) {
-                Log.e("FileStorageEvent", "FileStorageEvent save to disk error: " + event.id, e)
+            } else {
                 wasVerified
             }
 
@@ -3118,11 +3137,17 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         if (note.event != null) return false
 
         if (isVerified || justVerify(event)) {
-            // this is an invalid event. But we don't need to keep the data in memory.
-            val eventNoData =
-                FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
+            // The blob is in the store, so the copy in the note drops its content. If it is
+            // not — no store, a refused write, undecodable content — the note is the only
+            // thing holding those bytes, so the event stays whole.
+            val stored =
+                if (spilled) {
+                    FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
+                } else {
+                    event
+                }
 
-            note.loadEvent(eventNoData, author, emptyList())
+            note.loadEvent(stored, author, emptyList())
 
             refreshNewNoteObservers(note)
 
@@ -3242,7 +3267,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
             requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-            Amethyst.instance.applicationIOScope.launch {
+            appHost.scope.launch {
                 responseCallback(event)
             }
 
@@ -3323,14 +3348,14 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     var verifyMeter: ((elapsedNanos: Long, valid: Boolean) -> Unit)? = null
 
     fun justVerify(event: Event): Boolean {
-        checkNotInMainThread()
+        appHost.assertNotMainThread()
 
         val meter = verifyMeter
         if (meter == null) return justVerifyInner(event)
 
-        val start = System.nanoTime()
+        val start = TimeSource.Monotonic.markNow()
         val valid = justVerifyInner(event)
-        meter(System.nanoTime() - start, valid)
+        meter(start.elapsedNow().inWholeNanoseconds, valid)
         return valid
     }
 
@@ -3340,7 +3365,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 event.checkSignature()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w("Event Verification Failed") { "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}" }
+                Log.w("Event Verification Failed") { "Kind: ${event.kind} created at ${event.createdAt} with message ${e.message}" }
             }
             false
         } else {
@@ -3370,7 +3395,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 deletionIndex.hasBeenDeletedBy(event)?.let { deletionEvent ->
                     getNoteIfExists(deletionEvent.id)?.let { note ->
                         if (!note.hasRelay(relay.url)) {
-                            if (isDebug) {
+                            if (appHost.isDebug) {
                                 Log.d("LocalCache") { "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
                             relay.sendIfConnected(EventCmd(deletionEvent))
@@ -3387,7 +3412,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             getAddressableNoteIfExists(event.address())?.let { note ->
                 note.event?.let { existingEvent ->
                     if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
-                        if (isDebug) {
+                        if (appHost.isDebug) {
                             Log.d("LocalCache") { "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
                         }
 

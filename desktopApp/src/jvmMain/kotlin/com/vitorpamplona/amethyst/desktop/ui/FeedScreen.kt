@@ -377,7 +377,7 @@ private fun FeedNoteCardBody(
             }
 
             // Original note content with actions inside card
-            val displayData = remember(originalEvent, metadataState) { originalEvent.toNoteDisplayData(localCache) }
+            val displayData = originalEvent.rememberDisplayData(localCache)
             val showRepostFollowPill =
                 account != null &&
                     onFollow != null &&
@@ -449,7 +449,7 @@ private fun FeedNoteCardBody(
             onDispose { note.clearFlow() }
         }
 
-        val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
+        val displayData = event.rememberDisplayData(localCache)
         val showFollowPill =
             account != null &&
                 onFollow != null &&

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
@@ -31,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.MultiHashtag
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.mine.MineFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.NoteFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayFeedFlow
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState

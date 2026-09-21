@@ -18,17 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -53,15 +52,24 @@ import kotlinx.coroutines.CancellationException
  * tested against a populated cache.
  */
 class CacheSearch(
-    private val cache: LocalCache,
+    private val cache: EventCache,
 ) {
+    /**
+     * Users whose name, display name, NIP-05 or lightning address matches [username], best first.
+     *
+     * [forAccount] is the reader: when given, their muted users and muted words are filtered out
+     * and the people they follow sort first. `null` searches everything and ranks on the name
+     * match alone — what a caller with no account in hand (a mention autocomplete, a spotlight)
+     * wants. [limit] caps the result *after* ranking, so the cap never costs the best matches.
+     */
     fun findUsersStartingWith(
         username: String,
-        forAccount: Account?,
+        forAccount: IAccount?,
+        limit: Int? = null,
     ): List<User> {
         if (username.isBlank()) return emptyList()
 
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         val key = decodePublicKeyAsHexOrNull(username)
 
@@ -89,24 +97,28 @@ class CacheSearch(
                             user.pubkeyHex.startsWith(username, true) ||
                             user.pubkeyNpub().startsWith(username, true)
                     ) &&
-                        (forAccount == null || (!forAccount.isHidden(user) && !metadata.anyPropertyContains(forAccount.hiddenUsers.flow.value.hiddenWordsCase)))
+                        (forAccount == null || (!forAccount.isHidden(user) && !metadata.anyPropertyContains(forAccount.hiddenWordsCase)))
                 }
             }
 
-        val findsFollowing = finds.associateWith { forAccount?.isFollowing(it) == true }
+        val following = forAccount?.followingKeySet() ?: emptySet()
+        val findsFollowing = finds.associateWith { it.pubkeyHex in following }
         val anyNameStartsWith = finds.associateWith { it.metadataOrNull()?.anyNameStartsWith(dualCase) == true }
         val anyAddressStartsWith = finds.associateWith { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == true }
         val displayNames = finds.associateWith { it.toBestDisplayName().lowercase() }
 
-        return finds.sortedWith(
-            compareBy(
-                { findsFollowing[it] == false },
-                { anyNameStartsWith[it] == false },
-                { anyAddressStartsWith[it] == false },
-                { displayNames[it] },
-                { it.pubkeyHex },
-            ),
-        )
+        val ranked =
+            finds.sortedWith(
+                compareBy(
+                    { findsFollowing[it] == false },
+                    { anyNameStartsWith[it] == false },
+                    { anyAddressStartsWith[it] == false },
+                    { displayNames[it] },
+                    { it.pubkeyHex },
+                ),
+            )
+
+        return if (limit != null) ranked.take(limit) else ranked
     }
 
     /**
@@ -152,7 +164,7 @@ class CacheSearch(
         filters: List<Filter>,
         hidden: LiveHiddenUsers,
     ): List<Note> {
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         if (filters.isEmpty()) return emptyList()
 
@@ -189,7 +201,7 @@ class CacheSearch(
         text: String,
         hidden: LiveHiddenUsers,
     ): List<Note> {
-        checkNotInMainThread()
+        cache.appHost.assertNotMainThread()
 
         if (text.isBlank()) return emptyList()
 

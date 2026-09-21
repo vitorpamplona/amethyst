@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteDisplayData
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -40,8 +41,25 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
  */
 @Composable
 fun Event.rememberDisplayData(cache: ICacheProvider?): NoteDisplayData {
-    val author = remember(pubKey, cache) { cache?.getUserIfExists(pubKey) }
-    val authorMetaValue by produceState<Any?>(initialValue = null, key1 = author) {
+    // getOrCreate, not getIfExists: a note is routinely cached before its author's profile is,
+    // and a null author here would leave nothing to observe, so the name would never correct
+    // itself from the pubkey stub.
+    val author = remember(pubKey, cache) { cache?.getOrCreateUser(pubKey) }
+    val authorMetaValue = rememberAuthorMetadataKey(author)
+    return remember(this, authorMetaValue) { toNoteDisplayData(cache) }
+}
+
+/**
+ * A token that changes whenever [author]'s kind-0 metadata arrives.
+ *
+ * Use it as a `remember` key wherever rendering reads an author's name or avatar. A note is
+ * almost always cached before its author's profile is, so a one-time lookup draws a pubkey stub
+ * and never corrects itself — the cache holds no note-by-author index to invalidate from, and
+ * should not: that index would strongly retain every note it knows.
+ */
+@Composable
+fun rememberAuthorMetadataKey(author: User?): Any? {
+    val metaValue by produceState<Any?>(initialValue = null, key1 = author) {
         val a = author
         if (a == null) {
             value = null
@@ -49,7 +67,7 @@ fun Event.rememberDisplayData(cache: ICacheProvider?): NoteDisplayData {
             a.metadata().flow.collect { value = it }
         }
     }
-    return remember(this, authorMetaValue) { toNoteDisplayData(cache) }
+    return metaValue
 }
 
 /**
