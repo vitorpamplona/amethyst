@@ -28,13 +28,37 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MonthGridBarSegment
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import java.time.YearMonth
 
 /**
  * Everything the calendar screen is *looking at*: which lens is open, which calendar the feed is
- * scoped to, and where each lens is parked — the month on the grid, the week on the strip, the day
- * on the agenda, the selected day, and the scroll offset of each list.
+ * scoped to, where each lens is parked, and the note lists the lenses draw.
  *
  * Scoped to the screen's `NavBackStackEntry`, so it is built the first time the user opens
  * Calendars and cleared when that entry leaves the back stack — not before. That is the whole
@@ -56,16 +80,9 @@ import java.time.YearMonth
 @Stable
 class CalendarsViewModel : ViewModel() {
     /** Read once, at the moment the screen is first opened, so every lens agrees on "today". */
-    private val today: LocalDate = LocalDate.now()
+    val today: LocalDate = LocalDate.now()
 
     var viewMode by mutableStateOf(CalendarsViewMode.FEED)
-
-    /**
-     * d-tag of the kind-31924 calendar the feed is scoped to, or null for "All". Deliberately not
-     * persisted anywhere: a filter that survived a relaunch would surprise a user who set it once
-     * and forgot.
-     */
-    var filterDTag by mutableStateOf<String?>(null)
 
     // Month lens. YearMonth is rebuilt on read from two ints so the pieces stay primitive.
     var visibleYear by mutableIntStateOf(today.year)
@@ -89,6 +106,150 @@ class CalendarsViewModel : ViewModel() {
     val monthListState = LazyListState()
     val weekListState = LazyListState()
     val dayListState = LazyListState()
+
+    /**
+     * What [init] binds. A flow rather than `lateinit` so the derived flows below can be declared
+     * as plain properties and simply wait for it: nothing downstream has to know whether the
+     * screen has composed yet.
+     */
+    private data class Inputs(
+        val myPubKey: HexKey,
+        val feed: FeedContentState,
+    )
+
+    private val inputs = MutableStateFlow<Inputs?>(null)
+
+    /** Idempotent — the screen calls it on every composition. */
+    fun init(
+        myPubKey: HexKey,
+        feedState: FeedContentState,
+    ) {
+        val bound = Inputs(myPubKey, feedState)
+        if (inputs.value != bound) inputs.value = bound
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // The membership filter
+    // ------------------------------------------------------------------------------------------
+
+    private val _filterDTag = MutableStateFlow<String?>(null)
+
+    /**
+     * d-tag of the kind-31924 calendar the feed is scoped to, or null for "All". Deliberately not
+     * persisted anywhere: a filter that survived a relaunch would surprise a user who set it once
+     * and forgot.
+     */
+    val filterDTag = _filterDTag.asStateFlow()
+
+    fun selectCalendar(dTag: String?) {
+        _filterDTag.value = dTag
+    }
+
+    /**
+     * The calendars this account owns, for the top-bar picker.
+     *
+     * [LocalCache.observeEvents] takes the Nostr filter to the cache's own index, so this wakes up
+     * for kind-31924s by this author and nothing else. The previous version collected
+     * `LocalCache.live.newEventBundles` — *every* event the app ingests — and answered each batch
+     * by rescanning the whole addressable cache and re-sorting, to render a chip label that
+     * changes about once a week.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val ownCalendars: StateFlow<List<CalendarEvent>> =
+        inputs
+            .filterNotNull()
+            .flatMapLatest { (myPubKey, _) ->
+                LocalCache
+                    .observeEvents<CalendarEvent>(
+                        Filter(kinds = listOf(CalendarEvent.KIND), authors = listOf(myPubKey)),
+                    ).map { calendars -> calendars.sortedBy { it.title()?.lowercase() ?: "" } }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /**
+     * The selected calendar's member addresses, or null when nothing is narrowing the feed.
+     *
+     * Null covers both "All is selected" and "the calendar hasn't loaded yet", and the difference
+     * matters: the old code answered the second case with an EMPTY SET, which reads as "match
+     * nothing" to [applyCalendarFilter] and blanked every lens until the kind-31924 arrived. An
+     * empty set now only ever means a calendar that genuinely lists no appointments.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val filterAddresses: StateFlow<Set<Address>?> =
+        combine(_filterDTag, inputs.filterNotNull()) { dTag, bound -> dTag to bound.myPubKey }
+            .flatMapLatest { (dTag, myPubKey) ->
+                if (dTag == null) {
+                    flowOf(null)
+                } else {
+                    LocalCache
+                        .observeLatestEvent<CalendarEvent>(
+                            Filter(
+                                kinds = listOf(CalendarEvent.KIND),
+                                authors = listOf(myPubKey),
+                                tags = mapOf("d" to listOf(dTag)),
+                            ),
+                        ).map { calendar -> calendar?.calendarEventAddresses()?.toSet() }
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    // ------------------------------------------------------------------------------------------
+    // What the lenses draw
+    // ------------------------------------------------------------------------------------------
+
+    /**
+     * The appointments on screen: the feed, narrowed by the membership filter. Every lens used to
+     * assemble this for itself, which is four copies of the same collect-and-filter and four
+     * chances for them to disagree.
+     *
+     * An empty list here means the feed is empty — [FeedState.Empty] is what
+     * [FeedContentState.updateFeed] emits when the rebuilt list has nothing in it, so it is the
+     * truth and not something to paper over.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val notes: StateFlow<List<Note>> =
+        combine(
+            inputs.filterNotNull().flatMapLatest { (_, feed) ->
+                feed.feedContent.flatMapLatest { state ->
+                    if (state is FeedState.Loaded) state.feed.map { it.list } else flowOf(emptyList())
+                }
+            },
+            filterAddresses,
+        ) { feedNotes, addresses ->
+            feedNotes.applyCalendarFilter(addresses)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /**
+     * Appointments bucketed by local day, multi-day ones repeated on every day they cover. Shared
+     * by the month grid, the week strip and the day agenda — each of them used to derive it from
+     * the same list and throw it away on every lens switch.
+     */
+    val eventsByDay: StateFlow<Map<Long, List<Note>>> =
+        notes
+            .map { groupByDayKeyExpanded(it) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+
+    /** Lane assignments for the month grid's bars. */
+    val monthBars: StateFlow<Map<Long, List<MonthGridBarSegment>>> =
+        notes
+            .map { computeMonthGridBars(it) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+
+    /** The feed lens's upcoming/past split. */
+    val upcomingPast: StateFlow<UpcomingPastSplit> =
+        notes
+            .map { partitionUpcomingPast(it) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+                UpcomingPastSplit(emptyList(), emptyList()),
+            )
+
+    // ------------------------------------------------------------------------------------------
+    // Paging
+    // ------------------------------------------------------------------------------------------
 
     var visibleMonth: YearMonth
         get() = YearMonth.of(visibleYear, visibleMonthValue)
@@ -121,6 +282,15 @@ class CalendarsViewModel : ViewModel() {
 
     fun shiftDays(delta: Long) {
         visibleEpochDay = visibleDate.plusDays(delta).toEpochDay()
+    }
+
+    companion object {
+        /**
+         * How long the cache observers and the feed collection stay up after the screen stops
+         * being watched. Long enough to ride out a configuration change without re-seeding every
+         * list, short enough that a backgrounded screen stops holding observers open.
+         */
+        private const val STOP_TIMEOUT_MS = 5_000L
     }
 }
 

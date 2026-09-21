@@ -38,9 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,12 +49,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
-import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MONTH_GRID_MAX_LANES
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MonthGridBarSegment
-import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
-import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_selected_suffix
 import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_today_suffix
@@ -73,28 +67,16 @@ import java.time.ZoneId
 
 @Composable
 fun CalendarMonthView(
-    feedState: FeedContentState,
     model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
 ) {
-    val state by feedState.feedContent.collectAsStateWithLifecycle()
-    val notes =
-        when (val s = state) {
-            is FeedState.Loaded ->
-                s.feed
-                    .collectAsStateWithLifecycle()
-                    .value.list
-                    .applyCalendarFilter(filterAddresses)
-            else -> emptyList()
-        }
+    // Both derived on the model, off the main thread, and shared with the other lenses.
+    val eventsByDay by model.eventsByDay.collectAsStateWithLifecycle()
+    val barsByDay by model.monthBars.collectAsStateWithLifecycle()
 
-    val today = remember { LocalDate.now() }
+    val today = model.today
     val visibleMonth = model.visibleMonth
-
-    val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
-    val barsByDay by remember(notes) { derivedStateOf { computeMonthGridBars(notes) } }
 
     val selectedEvents = model.selectedDayKey?.let { eventsByDay[it] }.orEmpty()
 

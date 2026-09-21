@@ -41,7 +41,7 @@ class CalendarsViewModelTest {
         val model = CalendarsViewModel()
 
         assertEquals(CalendarsViewMode.FEED, model.viewMode)
-        assertNull(model.filterDTag)
+        assertNull(model.filterDTag.value)
         assertEquals(YearMonth.from(today), model.visibleMonth)
         assertEquals(today, model.visibleDate)
         assertEquals(startOfWeek(today), model.weekStart)

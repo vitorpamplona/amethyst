@@ -39,7 +39,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,22 +46,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_filter_all
 import com.vitorpamplona.amethyst.commons.resources.calendar_filter_no_calendars
 import com.vitorpamplona.amethyst.commons.resources.calendar_filter_sheet_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 
 /**
  * Top-bar affordance that scopes the appointments feed to a single kind-31924 calendar's
  * member set. Selecting "All" clears the filter.
  *
- * Filter state lives on the screen (passed as [selectedDTag] / [onSelect]) so it survives a
+ * Filter state lives on [model] (passed in as [selectedDTag] / [onSelect]) so it survives a
  * configuration change and a trip into an appointment, but doesn't persist across launches —
  * keeping a filter sticky between sessions would surprise a user who set it once and forgot.
  * The filter is applied client-side after the feed loads, so changing it doesn't trigger a
@@ -73,14 +69,11 @@ import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 fun CalendarFilterChip(
     selectedDTag: String?,
     onSelect: (String?) -> Unit,
-    accountViewModel: AccountViewModel,
+    model: CalendarsViewModel,
 ) {
-    val myPubKey = accountViewModel.userProfile().pubkeyHex
-    val ownCalendars by produceState<List<CalendarEvent>>(initialValue = ownCalendars(myPubKey), myPubKey) {
-        LocalCache.live.newEventBundles.collect {
-            value = ownCalendars(myPubKey)
-        }
-    }
+    // Fed by a kind-31924 cache observer on the model, so it wakes for this account's calendars
+    // and not for every event the app ingests.
+    val ownCalendars by model.ownCalendars.collectAsStateWithLifecycle()
     val selected = ownCalendars.firstOrNull { it.dTag() == selectedDTag }
     val label =
         selected?.title()?.takeIf { it.isNotBlank() }
@@ -171,41 +164,3 @@ private fun FilterChoiceRow(
         )
     }
 }
-
-private fun ownCalendars(myPubKey: String): List<CalendarEvent> =
-    LocalCache.addressables
-        .filterIntoSet { _, note ->
-            val e = note.event
-            e is CalendarEvent && e.pubKey == myPubKey
-        }.mapNotNull { it.event as? CalendarEvent }
-        .sortedBy { it.title()?.lowercase() ?: "" }
-
-/**
- * Resolves the selected calendar's member address set, or null when no filter is set. Returned
- * set is suitable for `.filter { it.calendarAddress() in filter }` membership checks on the
- * notes the feed views render.
- */
-@Composable
-fun rememberCalendarFilterAddresses(
-    selectedDTag: String?,
-    accountViewModel: AccountViewModel,
-): Set<Address>? {
-    if (selectedDTag == null) return null
-    val myPubKey = accountViewModel.userProfile().pubkeyHex
-    val addr = remember(selectedDTag, myPubKey) { Address(CalendarEvent.KIND, myPubKey, selectedDTag) }
-    val state by produceState<Set<Address>?>(initialValue = null, addr) {
-        // Re-evaluate on relay-driven changes — when the user edits the calendar elsewhere, the
-        // member set updates here without leaving the screen.
-        value = lookupMembers(addr)
-        LocalCache.live.newEventBundles.collect {
-            value = lookupMembers(addr)
-        }
-    }
-    return state
-}
-
-private fun lookupMembers(addr: Address): Set<Address> =
-    (LocalCache.addressables.get(addr)?.event as? CalendarEvent)
-        ?.calendarEventAddresses()
-        ?.toSet()
-        ?: emptySet()

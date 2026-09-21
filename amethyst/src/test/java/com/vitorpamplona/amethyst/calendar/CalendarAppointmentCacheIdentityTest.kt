@@ -20,17 +20,10 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
-import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
-import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavFilter
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentsFeedFilter
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import io.mockk.every
-import io.mockk.mockk
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -134,37 +127,6 @@ class CalendarAppointmentCacheIdentityTest {
                 ?.event
                 ?.id,
         )
-    }
-
-    /**
-     * An account that sees everything: the appointments feed reads exactly two things off it,
-     * the calendars top-nav filter and the hidden-user sets.
-     */
-    private fun seeEverythingAccount(): Account {
-        val hiddenUsers =
-            mockk<HiddenUsersState>().also {
-                every { it.flow } returns
-                    MutableStateFlow(
-                        LiveHiddenUsers(
-                            showSensitiveContent = true,
-                            hiddenWordsCase = emptyList(),
-                            hiddenUsersHashCodes = emptySet(),
-                            spammersHashCodes = emptySet(),
-                        ),
-                    )
-            }
-
-        val global =
-            GlobalTopNavFilter(
-                outboxRelays = MutableStateFlow(emptySet()),
-                proxyRelays = MutableStateFlow(emptySet()),
-                relayFeeds = MutableStateFlow(emptySet()),
-            )
-
-        return mockk<Account>().also {
-            every { it.liveCalendarsFollowLists } returns MutableStateFlow(global)
-            every { it.hiddenUsers } returns hiddenUsers
-        }
     }
 
     @Test

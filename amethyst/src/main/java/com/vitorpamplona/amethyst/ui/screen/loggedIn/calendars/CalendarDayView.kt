@@ -38,7 +38,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,12 +48,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
-import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarLocalDayKeyRange
-import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_continues
@@ -73,29 +69,17 @@ import java.time.ZoneId
 
 @Composable
 fun CalendarDayView(
-    feedState: FeedContentState,
     model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
 ) {
-    val state by feedState.feedContent.collectAsStateWithLifecycle()
-    val notes =
-        when (val s = state) {
-            is FeedState.Loaded ->
-                s.feed
-                    .collectAsStateWithLifecycle()
-                    .value.list
-                    .applyCalendarFilter(filterAddresses)
-            else -> emptyList()
-        }
+    val byDay by model.eventsByDay.collectAsStateWithLifecycle()
 
     // Stepping in [LocalDate] rather than milliseconds keeps this DST-safe: millisecond stepping
     // was off by an hour after spring/fall transitions.
     val visibleEpochDay = model.visibleEpochDay
     val visibleDate = model.visibleDate
 
-    val byDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
     val dayEvents = byDay[visibleDate.toEpochDay()].orEmpty()
 
     val sorted =

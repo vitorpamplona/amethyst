@@ -29,9 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -62,13 +60,12 @@ fun CalendarFeedView(
     model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
 ) {
     RefresheableBox(feedState, true) {
         val state by feedState.feedContent.collectAsStateWithLifecycle()
 
         when (val s = state) {
-            is FeedState.Loaded -> CalendarFeedLoadedBody(s, feedState, model, accountViewModel, nav, filterAddresses)
+            is FeedState.Loaded -> CalendarFeedLoadedBody(feedState, model, accountViewModel, nav)
             is FeedState.Empty -> CalendarFeedEmpty()
             is FeedState.Loading -> Box(modifier = Modifier.fillMaxSize())
             is FeedState.FeedError -> CalendarFeedError(s)
@@ -78,20 +75,13 @@ fun CalendarFeedView(
 
 @Composable
 private fun CalendarFeedLoadedBody(
-    loaded: FeedState.Loaded,
     feedState: FeedContentState,
     model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>?,
 ) {
-    val items by loaded.feed.collectAsStateWithLifecycle()
-
-    val split by remember(filterAddresses) {
-        derivedStateOf {
-            partitionUpcomingPast(items.list.applyCalendarFilter(filterAddresses))
-        }
-    }
+    // Split on the model, off the main thread, from the same filtered list the other lenses read.
+    val split by model.upcomingPast.collectAsStateWithLifecycle()
 
     // The list state lives on the screen's ViewModel: a remembered one is rebuilt from scratch
     // when the screen comes back from an appointment, dropping the reader at the top of the feed

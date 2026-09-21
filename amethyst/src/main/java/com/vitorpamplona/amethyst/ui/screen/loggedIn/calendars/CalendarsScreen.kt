@@ -66,11 +66,9 @@ fun CalendarsScreen(
     // user is looking at can live in `remember`/`rememberSaveable`. It is cleared when the entry
     // itself goes. See [CalendarsViewModel].
     val model: CalendarsViewModel = viewModel()
+    model.init(accountViewModel.userProfile().pubkeyHex, feedState)
 
-    // Resolve the selected calendar's member addresses (or null when "All"). Plumbed into each
-    // view so the membership filter is applied client-side after the feed loads — changing the
-    // filter doesn't trigger a relay refetch.
-    val filterAddresses = rememberCalendarFilterAddresses(model.filterDTag, accountViewModel)
+    val filterDTag by model.filterDTag.collectAsStateWithLifecycle()
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -82,9 +80,9 @@ fun CalendarsScreen(
                 nav = nav,
                 trailing = {
                     CalendarFilterChip(
-                        selectedDTag = model.filterDTag,
-                        onSelect = { model.filterDTag = it },
-                        accountViewModel = accountViewModel,
+                        selectedDTag = filterDTag,
+                        onSelect = model::selectCalendar,
+                        model = model,
                     )
                 },
             )
@@ -108,14 +106,10 @@ fun CalendarsScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 when (model.viewMode) {
-                    CalendarsViewMode.FEED ->
-                        CalendarFeedView(feedState, model, accountViewModel, nav, filterAddresses)
-                    CalendarsViewMode.MONTH ->
-                        CalendarMonthView(feedState, model, accountViewModel, nav, filterAddresses)
-                    CalendarsViewMode.WEEK ->
-                        CalendarWeekView(feedState, model, accountViewModel, nav, filterAddresses)
-                    CalendarsViewMode.DAY ->
-                        CalendarDayView(feedState, model, accountViewModel, nav, filterAddresses)
+                    CalendarsViewMode.FEED -> CalendarFeedView(feedState, model, accountViewModel, nav)
+                    CalendarsViewMode.MONTH -> CalendarMonthView(model, accountViewModel, nav)
+                    CalendarsViewMode.WEEK -> CalendarWeekView(model, accountViewModel, nav)
+                    CalendarsViewMode.DAY -> CalendarDayView(model, accountViewModel, nav)
                 }
             }
         }
