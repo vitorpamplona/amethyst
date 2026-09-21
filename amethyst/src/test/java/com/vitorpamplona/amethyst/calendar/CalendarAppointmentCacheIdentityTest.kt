@@ -110,6 +110,15 @@ class CalendarAppointmentCacheIdentityTest {
         val event = appointment("c3".repeat(32), pubKey, "1-1")
         LocalCache.justConsumeMyOwnEvent(event)
 
+        // Held for the length of the test on purpose: `addressables` is a weak cache too, so
+        // without a reference the appointment can be collected out from under the assertions
+        // under GC pressure (it is exactly the feed's own list that holds the working set alive
+        // in the app). The difference the fix rests on is not weak-vs-strong, it is that this
+        // note is the one everything links to while the version note has its references moved
+        // away on arrival and is swept on every app switch.
+        @Suppress("UNUSED_VARIABLE")
+        val keepAlive = LocalCache.getAddressableNoteIfExists(event.address())
+
         // CachePruner.cleanMemory()/prunePastVersionsOfReplaceables() drop version notes on every
         // app switch (MemoryTrimmingService tier 1); `notes` holds them weakly anyway.
         LocalCache.notes.remove(event.id)
@@ -164,6 +173,9 @@ class CalendarAppointmentCacheIdentityTest {
         val event = appointment("d3".repeat(32), pubKey, "planning")
         LocalCache.justConsumeMyOwnEvent(event)
 
+        // Taken before the query, and held: see the note in the sweep test above.
+        val delivered = LocalCache.getAddressableNoteIfExists(event.address())
+
         val mine =
             CalendarAppointmentsFeedFilter(seeEverythingAccount())
                 .feed()
@@ -173,7 +185,7 @@ class CalendarAppointmentCacheIdentityTest {
         assertSame(
             "the feed must hand back the same object live updates deliver, or the two paths " +
                 "fight over which copy of the appointment is on screen",
-            LocalCache.getAddressableNoteIfExists(event.address()),
+            delivered,
             mine.first(),
         )
     }
@@ -183,6 +195,10 @@ class CalendarAppointmentCacheIdentityTest {
         val pubKey = "e1".repeat(32)
         val event = appointment("e3".repeat(32), pubKey, "review")
         LocalCache.justConsumeMyOwnEvent(event)
+
+        // Held for the length of the test: see the note in the sweep test above.
+        @Suppress("UNUSED_VARIABLE")
+        val keepAlive = LocalCache.getAddressableNoteIfExists(event.address())
 
         // Every app switch runs the tier-1 sweep; the version note does not survive it.
         LocalCache.notes.remove(event.id)
