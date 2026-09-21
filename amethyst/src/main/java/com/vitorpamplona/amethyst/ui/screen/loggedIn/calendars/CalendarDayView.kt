@@ -69,7 +69,6 @@ import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -148,7 +147,11 @@ fun CalendarDayView(
                     DayRow(
                         note = note,
                         visibleEpochDay = visibleEpochDay,
-                        onClick = { nav.nav(Route.Note(note.idHex)) },
+                        // The appointment's own screen, like every other calendar row opens —
+                        // not the generic thread view. `idHex` is the address for these
+                        // (addressable) notes, so the old Route.Note(idHex) would have handed
+                        // the thread screen an `naddr`-shaped id to resolve for no reason.
+                        onClick = { nav.nav(detailRouteFor(note)) },
                     )
                     HorizontalDivider()
                 }

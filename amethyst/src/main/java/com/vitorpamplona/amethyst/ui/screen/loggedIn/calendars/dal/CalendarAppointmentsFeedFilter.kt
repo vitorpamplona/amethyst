@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.upcomingFirstCalendarOrder
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.model.Account
@@ -29,6 +31,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Feed of NIP-52 calendar *appointments* — kinds 31922 (date-slot) and 31923 (time-slot). The
@@ -52,10 +55,31 @@ class CalendarAppointmentsFeedFilter(
 
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
+    /**
+     * Reads the ADDRESSABLE notes, not `LocalCache.notes`.
+     *
+     * 31922/31923 are addressable, so [LocalCache.consumeBaseReplaceable] keeps two objects per
+     * appointment: the canonical [com.vitorpamplona.amethyst.commons.model.AddressableNote] under
+     * its address, and a throwaway version note under the event id. Only the canonical one is
+     * handed to feeds when an event arrives, carries the relays it came from, and holds the latest
+     * version; the version note has its references moved away on arrival, records no relays, is
+     * weakly held, and is what [com.vitorpamplona.amethyst.model.CachePruner] sweeps on every app
+     * switch.
+     *
+     * Scanning `notes` here meant the full rebuild and the live update disagreed about which object
+     * represents an appointment: the same event arrived under two different [Note.idHex] values, so
+     * it could sit in the feed twice, and each rebuild after a resume swapped one identity for the
+     * other — the views flickered events in and out on every trip through the background. An edit
+     * showed up as a second entry for the same appointment, too, since both versions matched.
+     *
+     * [CalendarCollectionsFeedFilter] and [com.vitorpamplona.amethyst.ui.dal.ArticlesFeedFilter]
+     * already read addressables this way; this is the same query, narrowed to a kind range instead
+     * of walking every note in the cache.
+     */
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
+            LocalCache.addressables.filterIntoSet(APPOINTMENT_KINDS) { _, it ->
                 val e = it.event
                 (e is CalendarTimeSlotEvent || e is CalendarDateSlotEvent) && params.match(e, it.relays)
             }
@@ -70,19 +94,23 @@ class CalendarAppointmentsFeedFilter(
             account.hiddenUsers.flow.value,
         )
 
+    /**
+     * The [AddressableNote] check keeps the additive path on the same objects [feed] returns.
+     * `LocalCache` only ever hands feeds the canonical note for an addressable kind, so this
+     * rejects nothing that arrives today; it is here so a version note can never slip back in and
+     * put a second copy of an appointment next to the one already on screen.
+     */
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val params = buildFilterParams(account)
         return collection.filterTo(HashSet()) {
             val e = it.event
-            (e is CalendarTimeSlotEvent || e is CalendarDateSlotEvent) && params.match(e, it.relays)
+            it is AddressableNote && (e is CalendarTimeSlotEvent || e is CalendarDateSlotEvent) && params.match(e, it.relays)
         }
     }
 
-    override fun sort(items: Set<Note>): List<Note> =
-        items.sortedWith(
-            upcomingFirstCalendarOrder(
-                com.vitorpamplona.quartz.utils.TimeUtils
-                    .now(),
-            ),
-        )
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(upcomingFirstCalendarOrder(TimeUtils.now()))
+
+    companion object {
+        private val APPOINTMENT_KINDS = listOf(CalendarTimeSlotEvent.KIND, CalendarDateSlotEvent.KIND)
+    }
 }
