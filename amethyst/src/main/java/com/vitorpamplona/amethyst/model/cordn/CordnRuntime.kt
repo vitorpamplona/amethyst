@@ -90,42 +90,18 @@ class CordnRuntime(
     private val filesDir: File,
     private val scope: CoroutineScope,
     private val cipher: CordnBlobCipher = KeyStoreCordnBlobCipher(),
+    /**
+     * How a coordinator connection is opened. The default is the real one.
+     *
+     * A seam for the same reason [cipher] is one: the production path needs a
+     * relay, a transport and a live coordinator, so without it nothing in this
+     * class — the KeyPackage pool rule, purge, restore — could be tested at
+     * all. The ephemeral signer stays inside the default, because §8's
+     * identity split is not a thing a caller should be able to widen.
+     */
+    private val links: CordnCoordinatorLinkFactory = realLinks(accountSigner, client),
 ) {
     /** See the class KDoc: per-runtime, never written to disk. */
-    private val ephemeralSigner = NostrSignerInternal(KeyPair())
-
-    private val links =
-        CordnCoordinatorLinkFactory { _, config ->
-            val transport =
-                CvmTransport(
-                    relays = NostrClientCvmRelayPool(client, config.relays.toSet()),
-                    signers = DualSigner(accountSigner, ephemeralSigner),
-                    serverPubKey = config.pubKey,
-                    // Left at its default, which is REQUIRED (§8.6). Passing
-                    // anything else here is the one line that would silently
-                    // downgrade every coordinator call to plaintext.
-                    crypto = CvmGiftWrap(),
-                )
-
-            object : CordnCoordinatorLink {
-                override val coordinator = CoordinatorClient(CvmMcpClient(transport))
-
-                // Handshaken on demand, not at open: `initialize` is a call
-                // like any other (§8), and a coordinator that only ever hears
-                // from us when we have something to say tells it less than one
-                // that is greeted at every launch.
-                override suspend fun serverInfo() = coordinator.serverInfo()
-
-                override suspend fun close() {
-                    // Nothing to release. CvmTransport opens a subscription
-                    // per request and closes it in the same call — kind 25910
-                    // is ephemeral, so there is no long-lived stream to tear
-                    // down and no connection of its own. The relays it used
-                    // belong to the shared client, which outlives this link.
-                }
-            }
-        }
-
     private val registry =
         CordnCoordinatorRegistry(
             accountPubKey = accountSigner.pubKey,
@@ -636,6 +612,60 @@ class CordnRuntime(
 
     companion object {
         private const val TAG = "CordnRuntime"
+
+        /**
+         * The production link factory: a real ContextVM transport per
+         * coordinator.
+         *
+         * ## The ephemeral signer is created here, once, and never persisted
+         *
+         * `spec/00.md` §8 splits the identity a coordinator sees: the account
+         * key signs what must be attributable (publishing a KeyPackage,
+         * posting to a group), and a throwaway key signs everything else, so
+         * the coordinator cannot link a session's reads to an account. Which
+         * key signs which call is fixed by `CoordinatorMethod` and not a
+         * choice made here; what IS decided here is that the throwaway key
+         * lives as long as this factory and no longer. Persisting it would
+         * quietly undo the split — a "session" key reused across launches is
+         * just a second account key with worse ergonomics.
+         */
+        fun realLinks(
+            accountSigner: NostrSigner,
+            client: INostrClient,
+        ): CordnCoordinatorLinkFactory {
+            val ephemeralSigner = NostrSignerInternal(KeyPair())
+
+            return CordnCoordinatorLinkFactory { _, config ->
+                val transport =
+                    CvmTransport(
+                        relays = NostrClientCvmRelayPool(client, config.relays.toSet()),
+                        signers = DualSigner(accountSigner, ephemeralSigner),
+                        serverPubKey = config.pubKey,
+                        // Left at its default, which is REQUIRED (§8.6). Passing
+                        // anything else here is the one line that would silently
+                        // downgrade every coordinator call to plaintext.
+                        crypto = CvmGiftWrap(),
+                    )
+
+                object : CordnCoordinatorLink {
+                    override val coordinator = CoordinatorClient(CvmMcpClient(transport))
+
+                    // Handshaken on demand, not at open: `initialize` is a call
+                    // like any other (§8), and a coordinator that only ever hears
+                    // from us when we have something to say tells it less than one
+                    // that is greeted at every launch.
+                    override suspend fun serverInfo() = coordinator.serverInfo()
+
+                    override suspend fun close() {
+                        // Nothing to release. CvmTransport opens a subscription
+                        // per request and closes it in the same call — kind 25910
+                        // is ephemeral, so there is no long-lived stream to tear
+                        // down and no connection of its own. The relays it used
+                        // belong to the shared client, which outlives this link.
+                    }
+                }
+            }
+        }
     }
 }
 
