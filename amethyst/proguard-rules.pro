@@ -242,3 +242,4 @@
 # breaks here. Every enum used as a route argument needs its name too.
 -keep class com.vitorpamplona.amethyst.ui.navigation.routes.DiscoverTab { *; }
 -keep class com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType { *; }
+-keep class com.vitorpamplona.amethyst.ui.navigation.routes.GeocacheTab { *; }
