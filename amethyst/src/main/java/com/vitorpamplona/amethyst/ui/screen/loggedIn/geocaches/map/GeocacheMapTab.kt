@@ -111,13 +111,7 @@ fun GeocacheMapTab(
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
     val found = rememberMyFoundCacheIds(accountViewModel)
 
-    val listings =
-        when (val state = feedState) {
-            is FeedState.Loaded ->
-                state.feed.value.list
-                    .mapNotNull { it.event as? GeocacheListingEvent }
-            else -> emptyList()
-        }
+    val listings = rememberGeocacheListings(feedState)
 
     var peek by remember { mutableStateOf<GeocacheListingEvent?>(null) }
 
@@ -368,3 +362,21 @@ private fun markerFor(
         }
     }
 }
+
+/**
+ * Collects the loaded feed's own flow. [FeedState.Loaded] is handed out once and then mutated
+ * through its inner flow, so reading `.value` here would pin the map to whatever had arrived when
+ * the tab first composed — caches streaming in from relays would never get a pin.
+ */
+@Composable
+private fun rememberGeocacheListings(feedState: FeedState): List<GeocacheListingEvent> =
+    when (feedState) {
+        is FeedState.Loaded -> {
+            val loaded by feedState.feed.collectAsStateWithLifecycle()
+
+            remember(loaded) {
+                loaded.list.mapNotNull { it.event as? GeocacheListingEvent }
+            }
+        }
+        else -> emptyList()
+    }

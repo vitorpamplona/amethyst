@@ -39,13 +39,22 @@ fun rememberMyFoundCacheIds(accountViewModel: AccountViewModel): Set<String> {
     val finds by accountViewModel.feedStates.geocacheFindsFeed.feedContent
         .collectAsStateWithLifecycle()
 
-    val notes =
-        when (val state = finds) {
-            is FeedState.Loaded -> state.feed.value.list
-            else -> emptyList()
-        }
+    return when (val state = finds) {
+        is FeedState.Loaded -> rememberFoundCacheIds(state)
+        else -> emptySet()
+    }
+}
 
-    return remember(notes) {
-        notes.mapNotNullTo(mutableSetOf()) { (it.event as? GeocacheFoundLogEvent)?.geocacheId() }
+/**
+ * Collects the loaded feed's own flow. [FeedState.Loaded] is handed out once and then mutated
+ * through its inner flow, so reading `.value` here would freeze the set at whatever the feed held
+ * when the hunt screen first composed — the progress bar would never move.
+ */
+@Composable
+private fun rememberFoundCacheIds(state: FeedState.Loaded): Set<String> {
+    val loaded by state.feed.collectAsStateWithLifecycle()
+
+    return remember(loaded) {
+        loaded.list.mapNotNullTo(mutableSetOf()) { (it.event as? GeocacheFoundLogEvent)?.geocacheId() }
     }
 }
