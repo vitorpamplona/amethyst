@@ -187,7 +187,7 @@ fun QrScannerControls(
             )
         }
 
-        if (!state.autoZoomEnabled && state.zoomRatio > 1.05f) {
+        if (state.zoomRatio > 1.05f) {
             ZoomChip(
                 zoomRatio = state.zoomRatio,
                 onReset = { state.resetZoom() },
