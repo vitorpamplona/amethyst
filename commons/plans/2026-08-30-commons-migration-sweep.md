@@ -1083,3 +1083,44 @@ the ordering question above is answered first*:
 **Not on part B's critical path.** Desktop is JVM, so retiring
 `DesktopLocalCache` needs none of this. The payoff here is an iOS front end
 later, not anything queued now.
+
+### Step 1 shipped: `LargeSoftCache` is now `expect`/`actual` (iOS unimplemented)
+
+Decision on the ordering question above: **`expect`/`actual`, with the iOS
+actual deliberately missing.** Not a hash-map actual, and not a full sorted
+concurrent map yet — the third option, which keeps the invariant honest at the
+cost of iOS not being able to construct the cache.
+
+- `model/cache/LargeSoftCache.kt` → `commonMain`, as
+  `expect class LargeSoftCache<K : Any, V : Any>() : ICacheOperations<K, V>`.
+  Like quartz's `LargeCache`, the expect has to redeclare every member it
+  inherits from the interface — an expect class is not abstract, so the
+  inherited abstracts are its own to declare.
+- `LargeSoftCache.jvmAndroid.kt` is today's implementation unchanged in
+  behaviour: `ConcurrentSkipListMap<K, WeakReference<V>>` behind
+  `CacheOperations`. The collector defaults and both `forEach(BiConsumer)`
+  overloads stay JVM-side; only `size()` needed an `actual override`, the rest
+  actualize through inheritance. `java.lang.ref.WeakReference` became the
+  commons `WeakReference` expect — the same type on JVM, it is an `actual
+  typealias`.
+- `LargeSoftCache.ios.kt` **throws on every member.** Kotlin/Native has no
+  sorted concurrent map and no weak-valued one; a `HashMap` actual would
+  compile and then be wrong in exactly the way `LargeCacheRangeFallbackTest`
+  warns about — every bounded scan silently walking every entry. The stub
+  keeps `:commons` compiling for iOS and fails loudly if anything there tries
+  to construct a cache. Replacing it is now a self-contained task with a
+  written-down contract (key-sorted, weak values) rather than a blocker on the
+  rest of the migration.
+- `LargeSoftCacheAddressExt.kt` moved to `commonMain` with it — its ranged
+  `filter`/`filterIntoSet`/`mapNotNullIntoSet` calls are all `ICacheOperations`
+  members, so they need no platform code.
+
+Verified: `:commons:compileCommonMainKotlinMetadata`,
+`:commons:compileIosMainKotlinMetadata` (this runs on Linux and *does* enforce
+expect/actual matching — checked by breaking a member name on purpose and
+watching it fail), `:commons:verifyKmpPurity`, `:commons:jvmTest`,
+`:desktopApp:test`, `:cli:test`, `:amethyst:compileFdroidDebugKotlin`,
+`LargeCacheAddressableFilterTest`, `spotlessCheck`.
+
+Steps 2–5 are unchanged and still ahead; the iOS actual is now their peer, not
+their gate.
