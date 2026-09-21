@@ -173,6 +173,7 @@
     <string name="road_event_speed_camera">Fotoradar</string>
     <string name="road_event_traffic_jam">Korek</string>
     <string name="road_event_unknown">Wydarzenie drogowe</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zaps do tego są podzielone między:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Wartość-za-wartość</string>
@@ -709,6 +710,7 @@
     <string name="health_connect_rationale_privacy_policy">Przeczytaj pełną politykę prywatności</string>
     <string name="my_fitness_title">Moja kondycja</string>
     <string name="my_fitness_window">Ostatnie 4 tygodnie</string>
+    <string name="my_fitness_loading_metrics">Ładowanie odległości, kalorii i tętna…</string>
     <string name="my_fitness_window_note">Ostatnie cztery pełne tygodnie Twojego treningu: opublikowane przez Ciebie treningi oraz wszelkie dane zarejestrowane przez aplikację Health Connect na tym telefonie. Amethyst sporządza podsumowanie na urządzeniu i nie publikuje żadnej z tych informacji.</string>
     <string name="my_fitness_this_week">Bieżący tydzień</string>
     <string name="my_fitness_vs_last_week">w porównaniu z zeszłym tygodniem</string>

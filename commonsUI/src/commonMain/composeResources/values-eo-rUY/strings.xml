@@ -46,6 +46,7 @@
     <string name="road_event_speed_camera">Rapideca fotilo</string>
     <string name="road_event_traffic_jam">Trafika ŝtopado</string>
     <string name="road_event_unknown">Voja evento</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Malfermi</string>
     <string name="relay_monitor_rtt_read">Legi</string>
     <string name="relay_monitor_rtt_write">Skribi</string>

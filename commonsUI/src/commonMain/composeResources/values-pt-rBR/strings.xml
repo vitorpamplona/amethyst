@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">Radar de velocidade</string>
     <string name="road_event_traffic_jam">Congestionamento</string>
     <string name="road_event_unknown">Evento na via</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Os zaps para isto são divididos entre:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Valor-para-Valor</string>
