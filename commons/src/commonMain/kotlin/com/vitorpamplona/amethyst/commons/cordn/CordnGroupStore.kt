@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.codec.TlsWriter
 
 /**
  * Local storage for cordn group state, keyed by the delivery `gid`.
@@ -75,6 +77,66 @@ interface CordnGroupStore {
 
     /** Whether [gid] was admitted through a join request. */
     suspend fun loadJoinedViaRequest(gid: String): Boolean
+
+    /**
+     * Saves the per-room state a screen needs but the protocol does not.
+     *
+     * An unsent draft and a read position are not MLS state and never leave
+     * the device — but they go through the same store, and so the same
+     * encryption, for one reason: a draft is the plaintext of a message that
+     * was about to be end-to-end encrypted. Writing it somewhere softer than
+     * the conversation it belongs to would make the composer the weakest point
+     * in the whole feature.
+     */
+    suspend fun saveRoomState(
+        gid: String,
+        state: CordnRoomState,
+    )
+
+    /** The saved room state for [gid], or a blank one. */
+    suspend fun loadRoomState(gid: String): CordnRoomState
+}
+
+/**
+ * What a cordn room remembers between visits.
+ *
+ * @param draft text typed and not sent.
+ * @param lastReadCursor the newest cursor this account has seen in the room.
+ *   A cursor rather than a timestamp, because the coordinator's order is the
+ *   only one every member agrees on (`spec/00.md` §4) and a sender's clock is
+ *   a claim — the same reason the room itself sorts on it.
+ */
+data class CordnRoomState(
+    val draft: String = "",
+    val lastReadCursor: Long = 0L,
+) {
+    val isBlank: Boolean get() = draft.isEmpty() && lastReadCursor == 0L
+}
+
+/** The on-disk layout of a [CordnRoomState]. */
+object CordnRoomStateCodec {
+    const val VERSION = 1
+
+    fun encode(state: CordnRoomState): ByteArray {
+        val writer = TlsWriter()
+        writer.putUint16(VERSION)
+        writer.putOpaque2(state.draft.encodeToByteArray())
+        writer.putUint64(state.lastReadCursor)
+        return writer.toByteArray()
+    }
+
+    /** Blank on anything unreadable: a lost draft must not cost the room. */
+    fun decode(bytes: ByteArray): CordnRoomState =
+        try {
+            val reader = TlsReader(bytes)
+            if (reader.readUint16() != VERSION) {
+                CordnRoomState()
+            } else {
+                CordnRoomState(reader.readOpaque2().decodeToString(), reader.readUint64())
+            }
+        } catch (e: Exception) {
+            CordnRoomState()
+        }
 }
 
 /** A [CordnGroupStore] that keeps everything in memory. Tests, and nothing else. */
@@ -82,6 +144,7 @@ class InMemoryCordnGroupStore : CordnGroupStore {
     private val groups = mutableMapOf<String, ByteArray>()
     private val cursors = mutableMapOf<String, GroupCursor>()
     private val viaRequest = mutableSetOf<String>()
+    private val roomStates = mutableMapOf<String, CordnRoomState>()
 
     override suspend fun saveGroup(
         gid: String,
@@ -96,6 +159,7 @@ class InMemoryCordnGroupStore : CordnGroupStore {
         groups.remove(gid)
         cursors.remove(gid)
         viaRequest.remove(gid)
+        roomStates.remove(gid)
     }
 
     override suspend fun listGroups(): List<String> = groups.keys.toList()
@@ -105,6 +169,15 @@ class InMemoryCordnGroupStore : CordnGroupStore {
     }
 
     override suspend fun loadJoinedViaRequest(gid: String): Boolean = gid in viaRequest
+
+    override suspend fun saveRoomState(
+        gid: String,
+        state: CordnRoomState,
+    ) {
+        roomStates[gid] = state
+    }
+
+    override suspend fun loadRoomState(gid: String): CordnRoomState = roomStates[gid] ?: CordnRoomState()
 
     override suspend fun saveCursor(
         gid: String,

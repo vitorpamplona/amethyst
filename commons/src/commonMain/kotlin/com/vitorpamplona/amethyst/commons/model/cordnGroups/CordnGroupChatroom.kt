@@ -77,6 +77,8 @@ import kotlinx.coroutines.flow.asStateFlow
 class CordnGroupChatroom(
     val gid: String,
     val coordinatorPubKey: HexKey,
+    /** Whose room this is, so [unreadCount] can tell news from an echo. */
+    val accountPubKey: HexKey = "",
 ) : NotesGatherer {
     private val byId = LinkedHashMap<HexKey, CordnDeliveredMessage>()
 
@@ -142,6 +144,54 @@ class CordnGroupChatroom(
     private val _newest = MutableStateFlow<CordnDeliveredMessage?>(null)
     val newest: StateFlow<CordnDeliveredMessage?> = _newest.asStateFlow()
 
+    /** Text typed here and not sent. Restored from the store when the room opens. */
+    val draft = MutableStateFlow("")
+
+    private val _lastReadCursor = MutableStateFlow(0L)
+
+    /** The newest cursor this account has seen. See [unreadCount]. */
+    val lastReadCursor: StateFlow<Long> = _lastReadCursor.asStateFlow()
+
+    private val _unreadCount = MutableStateFlow(0)
+
+    /**
+     * How many messages have arrived past [lastReadCursor].
+     *
+     * Counted on the cursor rather than on `created_at` for the reason the
+     * room is ordered on it: a sender's clock is a claim, and one wrong clock
+     * would otherwise make a room permanently unread or silently swallow new
+     * messages. Annotations are excluded — a reaction to something already
+     * read is not an unread message — and so is this account's own traffic,
+     * because arriving back as an echo does not make it news.
+     */
+    val unreadCount: StateFlow<Int> = _unreadCount.asStateFlow()
+
+    /** Marks everything currently in the room as read. */
+    fun markRead() {
+        _lastReadCursor.value = maxOf(_lastReadCursor.value, byId.values.maxOfOrNull { it.cursor } ?: 0L)
+        recountUnread()
+    }
+
+    /** Restores what the store remembered for this room. */
+    fun restoreState(
+        draft: String,
+        lastReadCursor: Long,
+    ) {
+        this.draft.value = draft
+        _lastReadCursor.value = lastReadCursor
+        recountUnread()
+    }
+
+    private fun recountUnread() {
+        val read = _lastReadCursor.value
+        _unreadCount.value =
+            byId.values.count { message ->
+                message.cursor > read &&
+                    message.envelope.pubKey != accountPubKey &&
+                    message.envelope.kind in CONVERSATIONAL_KINDS
+            }
+    }
+
     /**
      * Adds [delivered], returning false when this room already had it.
      *
@@ -167,6 +217,8 @@ class CordnGroupChatroom(
     fun all(): List<CordnDeliveredMessage> = byId.values.toList()
 
     private fun recompute() {
+        recountUnread()
+
         val everything = byId.values.toList()
         _annotations.value = CordnAnnotationIndex.of(everything)
 
@@ -217,6 +269,15 @@ class CordnGroupChatroom(
             coordinatorPubKey: HexKey,
             gid: String,
         ): String = "cordn-$coordinatorPubKey-$gid"
+
+        /**
+         * What counts as an unread message.
+         *
+         * Only what someone said. A reaction, an edit, a deletion or a pin
+         * landing on something already read is not a new message, and badging
+         * the room for one would train people to ignore the badge.
+         */
+        val CONVERSATIONAL_KINDS = setOf(CordnMessageKinds.TEXT, CordnMessageKinds.THREAD_REPLY)
 
         /**
          * The coordinator's order, with the sender's clock only as a tiebreak.

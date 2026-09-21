@@ -535,6 +535,7 @@ private fun CordnGroupRoomCompose(
     val name by chatroom.name.collectAsStateWithLifecycle()
     val newest by chatroom.newest.collectAsStateWithLifecycle()
     val annotations by chatroom.annotations.collectAsStateWithLifecycle()
+    val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
 
     val groupName = name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.cordn_group_untitled, chatroom.gid.take(8))
 
@@ -554,9 +555,11 @@ private fun CordnGroupRoomCompose(
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Dns, R.string.cordn_group, modifier) },
         channelLastTime = newest?.envelope?.createdAt,
         channelLastContent = lastContent,
-        // No unread state yet: a cordn read marker is its own piece of work and
-        // claiming "new" on every row would be worse than claiming none.
-        hasNewMessages = false,
+        // Counted against the read position the room persists, on the
+        // coordinator's cursor rather than the sender's clock -- see
+        // CordnGroupChatroom.unreadCount for why a clock cannot be trusted
+        // with this. Annotations and this account's own echoes do not count.
+        hasNewMessages = unread > 0,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =

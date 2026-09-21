@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLink
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorRegistry
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
+import com.vitorpamplona.amethyst.commons.cordn.CordnRoomState
 import com.vitorpamplona.amethyst.commons.cordn.CordnSession
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.CordnSyncLoop
@@ -135,7 +136,7 @@ class CordnRuntime(
         )
 
     /** Every cordn room this account is in, for the inbox and the screens. */
-    val groups = CordnGroupList()
+    val groups = CordnGroupList(accountSigner.pubKey)
 
     private val loops = mutableMapOf<HexKey, CordnSyncLoop>()
     private val lock = Mutex()
@@ -159,7 +160,14 @@ class CordnRuntime(
         // Whatever the store already held, so a relaunch shows its rooms
         // before the first message of the session arrives.
         session.manager.gids.value
-            .forEach { refresh(session, it) }
+            .forEach {
+                refresh(session, it)
+                // Read positions come back with the rooms, not when a room is
+                // opened: an inbox that shows every room as unread until it is
+                // visited is worse than one with no unread state at all.
+                val saved = session.manager.roomState(it)
+                groups.get(config.pubKey, it)?.restoreState(saved.draft, saved.lastReadCursor)
+            }
         remember()
         maintainKeyPackages(session)
         return session
@@ -501,6 +509,33 @@ class CordnRuntime(
     ) {
         val room = groups.getOrCreate(session.coordinatorPubKey, gid)
         session.manager.group(gid)?.let { room.refreshFrom(it) }
+    }
+
+    /**
+     * Restores a room's draft and read position from disk, once.
+     *
+     * Called when a screen opens the room rather than at sync, because it is
+     * the only moment it matters and because every room's state would
+     * otherwise be read at login for rooms nobody opens.
+     */
+    suspend fun restoreRoomState(
+        coordinatorPubKey: HexKey,
+        gid: String,
+    ) {
+        val session = registry.sessionOrNull(coordinatorPubKey) ?: return
+        val room = groups.get(coordinatorPubKey, gid) ?: return
+        val saved = session.manager.roomState(gid)
+        room.restoreState(saved.draft, saved.lastReadCursor)
+    }
+
+    /** Persists [gid]'s draft and read position. */
+    suspend fun saveRoomState(
+        coordinatorPubKey: HexKey,
+        gid: String,
+    ) {
+        val session = registry.sessionOrNull(coordinatorPubKey) ?: return
+        val room = groups.get(coordinatorPubKey, gid) ?: return
+        session.manager.saveRoomState(gid, CordnRoomState(room.draft.value, room.lastReadCursor.value))
     }
 
     companion object {

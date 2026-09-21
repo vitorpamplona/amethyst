@@ -137,6 +137,7 @@ private fun atomicWrite(
  * <dir>/groups/<base64url(gid)>/state       — encrypted MlsGroupState
  * <dir>/groups/<base64url(gid)>/cursor      — encrypted GroupCursor
  * <dir>/groups/<base64url(gid)>/via-request — present iff admitted by request
+ * <dir>/groups/<base64url(gid)>/room        — encrypted draft + read position
  * ```
  *
  * Scope [dir] with [CordnStorageLayout.directoryFor]; this class trusts that it
@@ -158,6 +159,8 @@ class FileCordnGroupStore(
     private fun cursorFile(gid: String) = File(groupDir(gid), "cursor")
 
     private fun joinOriginFile(gid: String) = File(groupDir(gid), "via-request")
+
+    private fun roomStateFile(gid: String) = File(groupDir(gid), "room")
 
     override suspend fun saveGroup(
         gid: String,
@@ -219,6 +222,30 @@ class FileCordnGroupStore(
     }
 
     override suspend fun loadJoinedViaRequest(gid: String): Boolean = withContext(Dispatchers.IO) { joinOriginFile(gid).exists() }
+
+    override suspend fun saveRoomState(
+        gid: String,
+        state: CordnRoomState,
+    ) = withContext(Dispatchers.IO) {
+        // Deleted rather than blanked when there is nothing to remember, so an
+        // emptied draft leaves no plaintext behind in an old file.
+        if (state.isBlank) {
+            roomStateFile(gid).delete()
+            return@withContext
+        }
+        atomicWrite(roomStateFile(gid), cipher.encrypt(CordnRoomStateCodec.encode(state)))
+    }
+
+    override suspend fun loadRoomState(gid: String): CordnRoomState =
+        withContext(Dispatchers.IO) {
+            val file = roomStateFile(gid)
+            if (!file.exists()) return@withContext CordnRoomState()
+            try {
+                CordnRoomStateCodec.decode(cipher.decrypt(file.readBytes()))
+            } catch (e: Exception) {
+                CordnRoomState()
+            }
+        }
 }
 
 /**

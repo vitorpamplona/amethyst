@@ -41,7 +41,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * it shows up, and it is the same rule each time.
  */
 @Stable
-class CordnGroupList {
+class CordnGroupList(
+    /** Whose rooms these are; handed to every room for its unread count. */
+    private val accountPubKey: HexKey = "",
+) {
     /** A room's identity: the coordinator that serves it, plus its `gid`. */
     data class RoomKey(
         val coordinatorPubKey: HexKey,
@@ -61,7 +64,7 @@ class CordnGroupList {
     ): CordnGroupChatroom {
         val key = RoomKey(coordinatorPubKey, gid)
         rooms[key]?.let { return it }
-        val room = CordnGroupChatroom(gid, coordinatorPubKey)
+        val room = CordnGroupChatroom(gid, coordinatorPubKey, accountPubKey)
         rooms[key] = room
         _all.value = rooms.values.toList()
         return room

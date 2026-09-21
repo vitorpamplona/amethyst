@@ -406,4 +406,43 @@ class FileCordnStoresTest {
             store.deleteGroup("gid")
             assertFalse(store.loadJoinedViaRequest("gid"))
         }
+
+    @Test
+    fun `a draft is encrypted at rest, like the messages it was going to become`() =
+        runTest {
+            val store = groups()
+            store.saveGroup("gid", byteArrayOf(1))
+            store.saveRoomState("gid", CordnRoomState(draft = "the secret plan", lastReadCursor = 7))
+
+            assertEquals(CordnRoomState("the secret plan", 7), store.loadRoomState("gid"))
+            val onDisk = File(dir(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").readBytes()
+            assertFalse(onDisk.decodeToString().contains("the secret plan"), "a draft went to disk in the clear")
+        }
+
+    @Test
+    fun `clearing a draft removes the file rather than blanking it`() =
+        runTest {
+            // Overwriting in place would leave the old plaintext in whatever
+            // the filesystem still holds; there is nothing to keep once both
+            // fields are empty.
+            val store = groups()
+            store.saveGroup("gid", byteArrayOf(1))
+            store.saveRoomState("gid", CordnRoomState(draft = "typed"))
+            store.saveRoomState("gid", CordnRoomState())
+
+            assertFalse(File(dir(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").exists())
+            assertEquals(CordnRoomState(), store.loadRoomState("gid"))
+        }
+
+    @Test
+    fun `an unreadable room file costs the draft, never the room`() =
+        runTest {
+            val store = groups()
+            store.saveGroup("gid", byteArrayOf(1))
+            store.saveRoomState("gid", CordnRoomState(draft = "typed", lastReadCursor = 3))
+            File(dir(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").writeBytes(byteArrayOf(7, 7, 7))
+
+            assertEquals(CordnRoomState(), store.loadRoomState("gid"))
+            assertNotNull(store.loadGroup("gid"))
+        }
 }

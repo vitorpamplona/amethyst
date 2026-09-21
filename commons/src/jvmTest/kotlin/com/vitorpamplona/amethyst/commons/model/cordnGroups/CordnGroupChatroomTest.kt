@@ -277,6 +277,62 @@ class CordnGroupChatroomTest {
         )
     }
 
+    @Test
+    fun `unread counts what other people said, past the read position`() {
+        val room = CordnGroupChatroom("gid-1", coordinator, accountPubKey = alice)
+        room.addAll(
+            listOf(
+                message("01", at = 10, cursor = 1, author = bob),
+                message("02", at = 11, cursor = 2, author = bob),
+            ),
+        )
+        assertEquals(2, room.unreadCount.value)
+
+        room.markRead()
+        assertEquals(0, room.unreadCount.value)
+
+        room.add(message("03", at = 12, cursor = 3, author = bob))
+        assertEquals(1, room.unreadCount.value)
+    }
+
+    @Test
+    fun `your own messages are not unread, however they come back`() {
+        // A message echoes back from the coordinator with a cursor past the
+        // read position, exactly like someone else's. Counting it would badge
+        // every room the moment its owner spoke in it.
+        val room = CordnGroupChatroom("gid-1", coordinator, accountPubKey = alice)
+        room.add(message("01", at = 10, cursor = 1, author = alice))
+
+        assertEquals(0, room.unreadCount.value)
+    }
+
+    @Test
+    fun `a reaction to something already read is not an unread message`() {
+        val room = CordnGroupChatroom("gid-1", coordinator, accountPubKey = alice)
+        room.add(message("01", at = 10, cursor = 1, author = bob))
+        room.markRead()
+
+        room.add(message("02", at = 11, cursor = 2, author = bob, content = "\uD83D\uDC4D", kind = CordnMessageKinds.REACTION, tags = arrayOf(arrayOf("e", "01".padEnd(64, '0')))))
+
+        // Badging a room for a thumbs-up trains people to ignore the badge.
+        assertEquals(0, room.unreadCount.value)
+    }
+
+    @Test
+    fun `a restored read position is honoured before anything new arrives`() {
+        val room = CordnGroupChatroom("gid-1", coordinator, accountPubKey = alice)
+        room.addAll(
+            listOf(
+                message("01", at = 10, cursor = 1, author = bob),
+                message("02", at = 11, cursor = 2, author = bob),
+            ),
+        )
+        room.restoreState(draft = "half typed", lastReadCursor = 1)
+
+        assertEquals("half typed", room.draft.value)
+        assertEquals(1, room.unreadCount.value, "only the message past the saved cursor")
+    }
+
     /** A real cordn group, created the way [CordnGroupManager.createGroup] does. */
     private fun groupOf(
         creator: HexKey,

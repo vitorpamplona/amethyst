@@ -687,6 +687,18 @@ class CordnGroupManager(
     ) = call { coordinator.publishKeyPackage(keyPackageRef, keyPackageBase64) }
         .also { publishedKeyPackage = true }
 
+    /**
+     * The screen-side state saved for [gid] — an unsent draft and a read
+     * position. Neither is protocol; both are encrypted anyway, because a
+     * draft is the plaintext of a message that was about to be sealed.
+     */
+    suspend fun roomState(gid: String): CordnRoomState = store.loadRoomState(gid)
+
+    suspend fun saveRoomState(
+        gid: String,
+        state: CordnRoomState,
+    ) = store.saveRoomState(gid, state)
+
     // ---- plumbing --------------------------------------------------------
 
     private fun requireGroup(gid: String) = groups[gid] ?: throw CordnGroupException("not a member of $gid")

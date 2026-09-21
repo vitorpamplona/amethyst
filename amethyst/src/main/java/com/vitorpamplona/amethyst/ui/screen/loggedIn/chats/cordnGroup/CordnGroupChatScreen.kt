@@ -43,6 +43,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,6 +70,7 @@ import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -122,7 +125,7 @@ private fun CordnGroupChat(
     val scope = rememberCoroutineScope()
     val me = accountViewModel.account.signer.pubKey
 
-    var draft by remember { mutableStateOf("") }
+    val draft by room.draft.collectAsStateWithLifecycle()
     var replyingTo by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var editing by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var acting by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
@@ -131,6 +134,28 @@ private fun CordnGroupChat(
         accountViewModel.account.cordnRuntime
             ?.sessionOrNull(room.coordinatorPubKey)
             ?.manager
+
+    val runtime = accountViewModel.account.cordnRuntime
+
+    // Opening a room is what marks it read, and the read position and draft
+    // are written when leaving it. Saving on every keystroke would rewrite an
+    // encrypted file per character; saving on dispose loses nothing a process
+    // death would not have lost anyway.
+    DisposableEffect(room) {
+        onDispose {
+            room.markRead()
+            runtime?.let {
+                CoroutineScope(Dispatchers.IO).launch {
+                    it.saveRoomState(room.coordinatorPubKey, room.gid)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(room) {
+        runtime?.restoreRoomState(room.coordinatorPubKey, room.gid)
+        room.markRead()
+    }
 
     Scaffold(
         topBar = {
@@ -182,21 +207,21 @@ private fun CordnGroupChat(
                     label = stringRes(R.string.cordn_action_editing),
                     onCancel = {
                         editing = null
-                        draft = ""
+                        room.draft.value = ""
                     },
                 )
             }
 
             CordnComposer(
                 draft = draft,
-                onDraftChange = { draft = it },
+                onDraftChange = { room.draft.value = it },
                 onSend = {
                     val text = draft.trim()
                     if (text.isEmpty()) return@CordnComposer
 
                     val reply = replyingTo
                     val edit = editing
-                    draft = ""
+                    room.draft.value = ""
                     replyingTo = null
                     editing = null
 
@@ -229,7 +254,7 @@ private fun CordnGroupChat(
             onEdit = {
                 editing = message
                 replyingTo = null
-                draft = annotations.contentOf(message.envelope.id).orEmpty()
+                room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
                 acting = null
             },
             onDelete = {
