@@ -38,9 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +61,10 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_empty_week_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_week
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_week
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -90,12 +92,12 @@ fun CalendarWeekView(
 
     val today = remember { LocalDate.now() }
     // Persist the week-start as an epoch-day Long (auto-saveable), reconstruct LocalDate on use.
-    var weekStartEpochDay by rememberSaveable {
-        mutableStateOf(startOfWeek(today).toEpochDay())
-    }
+    // [rememberForeverState] rather than rememberSaveable so opening an appointment and coming
+    // back keeps the week the user had paged to.
+    var weekStartEpochDay by rememberForeverState(ViewStateKeys.CALENDAR_WEEK_START) { startOfWeek(today).toEpochDay() }
     val weekStart = LocalDate.ofEpochDay(weekStartEpochDay)
 
-    var selectedDayIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedDayIndex by rememberForeverState(ViewStateKeys.CALENDAR_WEEK_SELECTED_DAY) { 0 }
 
     val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
 
@@ -107,6 +109,7 @@ fun CalendarWeekView(
     // disappearingScaffoldPadding kept the strip pinned at a fixed offset, so when the top bar
     // collapsed on scroll the strip stayed put and left a visual gap.
     LazyColumn(
+        state = rememberForeverLazyListState(ScrollStateKeys.CALENDARS_WEEK_SCREEN),
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier

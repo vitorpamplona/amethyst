@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_export_event
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -110,6 +112,9 @@ private fun CollectionsBody(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     LazyColumn(
+        // Same as every other feed: park the offset in the process-scoped store so opening a
+        // calendar and coming back does not drop the reader at the top of the list.
+        state = rememberForeverLazyListState(ScrollStateKeys.CALENDAR_COLLECTIONS_SCREEN),
         // Reserve top space for the surrounding [DisappearingScaffold]'s top bar — without this
         // the first card scrolls under it on the initial render.
         contentPadding = rememberFeedContentPadding(FeedPadding),

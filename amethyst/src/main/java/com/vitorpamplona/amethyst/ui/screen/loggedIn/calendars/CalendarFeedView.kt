@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,7 +49,9 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_section_past
 import com.vitorpamplona.amethyst.commons.resources.calendar_section_upcoming
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -92,11 +93,16 @@ private fun CalendarFeedLoadedBody(
         }
     }
 
-    // Without this the top-bar filter switch fires `sendToTop()`, but the LazyColumn never hears
-    // it — so the scroll position from the previous filter (e.g. mid-way through a tiny People
-    // List) is preserved when the user flips back to Global, leaving the user staring at the
-    // past-events section of a 100-item feed instead of the top.
-    val listState = rememberLazyListState()
+    // [rememberForeverLazyListState], like every other feed in the app: a plain
+    // rememberLazyListState came back empty after an appointment, dropping the reader at the top
+    // of the feed on every tap. (ScrollStateKeys.CALENDARS_SCREEN was declared for this screen
+    // from the start and never wired up.)
+    //
+    // WatchScrollToTop: without it the top-bar filter switch fires `sendToTop()`, but the
+    // LazyColumn never hears it — so the scroll position from the previous filter (e.g. mid-way
+    // through a tiny People List) is preserved when the user flips back to Global, leaving the
+    // user staring at the past-events section of a 100-item feed instead of the top.
+    val listState = rememberForeverLazyListState(ScrollStateKeys.CALENDARS_SCREEN)
     WatchScrollToTop(feedState, listState)
 
     LazyColumn(

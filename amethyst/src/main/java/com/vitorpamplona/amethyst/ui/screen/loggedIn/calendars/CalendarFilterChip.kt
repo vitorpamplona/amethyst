@@ -62,10 +62,11 @@ import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
  * Top-bar affordance that scopes the appointments feed to a single kind-31924 calendar's
  * member set. Selecting "All" clears the filter.
  *
- * Filter state lives on the screen (passed as [selectedDTag] / [onSelect]) so it survives
- * configuration changes via rememberSaveable but doesn't persist across launches — keeping a
- * filter sticky between sessions would surprise a user who set it once and forgot. The filter
- * is applied client-side after the feed loads, so changing it doesn't trigger a relay refetch.
+ * Filter state lives on the screen (passed as [selectedDTag] / [onSelect]) so it survives a
+ * configuration change and a trip into an appointment, but doesn't persist across launches —
+ * keeping a filter sticky between sessions would surprise a user who set it once and forgot.
+ * The filter is applied client-side after the feed loads, so changing it doesn't trigger a
+ * relay refetch.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

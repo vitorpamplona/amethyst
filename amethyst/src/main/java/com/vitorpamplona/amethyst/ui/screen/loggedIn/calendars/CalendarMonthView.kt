@@ -40,9 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +63,10 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_today_suff
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_month
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_month
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -93,8 +95,10 @@ fun CalendarMonthView(
 
     val today = remember { LocalDate.now() }
     // YearMonth is not Parcelable/auto-saveable; persist the two ints and rebuild on each read.
-    var visibleYear by rememberSaveable { mutableStateOf(today.year) }
-    var visibleMonthValue by rememberSaveable { mutableStateOf(today.monthValue) }
+    // [rememberForeverState] rather than rememberSaveable so browsing to an appointment and back
+    // returns to the month the user was reading instead of snapping to today's.
+    var visibleYear by rememberForeverState(ViewStateKeys.CALENDAR_MONTH_YEAR) { today.year }
+    var visibleMonthValue by rememberForeverState(ViewStateKeys.CALENDAR_MONTH_VALUE) { today.monthValue }
     val visibleMonth = YearMonth.of(visibleYear, visibleMonthValue)
 
     fun setVisibleMonth(ym: YearMonth) {
@@ -105,13 +109,14 @@ fun CalendarMonthView(
     val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
     val barsByDay by remember(notes) { derivedStateOf { computeMonthGridBars(notes) } }
 
-    var selectedDayKey by rememberSaveable { mutableStateOf<Long?>(null) }
+    var selectedDayKey by rememberForeverState<Long?>(ViewStateKeys.CALENDAR_MONTH_SELECTED_DAY) { null }
 
     val selectedEvents = selectedDayKey?.let { eventsByDay[it] }.orEmpty()
 
     // Single LazyColumn — nav header + weekday header + grid scroll together with the
     // disappearing top bar so the grid doesn't stay pinned mid-screen when the bar collapses.
     LazyColumn(
+        state = rememberForeverLazyListState(ScrollStateKeys.CALENDARS_MONTH_SCREEN),
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier

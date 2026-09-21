@@ -40,9 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +64,10 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_empty_day_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_day
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -94,8 +96,9 @@ fun CalendarDayView(
 
     val today = remember { LocalDate.now() }
     // Persisting an epoch-day Long is auto-saveable; arithmetic in [LocalDate] is DST-safe
-    // (millisecond stepping was off by an hour after spring/fall transitions).
-    var visibleEpochDay by rememberSaveable { mutableStateOf(today.toEpochDay()) }
+    // (millisecond stepping was off by an hour after spring/fall transitions). [rememberForeverState]
+    // rather than rememberSaveable so the day the user paged to survives opening an appointment.
+    var visibleEpochDay by rememberForeverState(ViewStateKeys.CALENDAR_DAY_VISIBLE) { today.toEpochDay() }
     val visibleDate = LocalDate.ofEpochDay(visibleEpochDay)
 
     val byDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
@@ -110,6 +113,7 @@ fun CalendarDayView(
     // Single LazyColumn — nav header is the first item so it scrolls with the disappearing
     // top bar instead of staying pinned mid-screen when the bar collapses.
     LazyColumn(
+        state = rememberForeverLazyListState(ScrollStateKeys.CALENDARS_DAY_SCREEN),
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier

@@ -26,13 +26,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
@@ -63,8 +63,13 @@ fun CalendarsScreen(
     WatchAccountForCalendarsScreen(feedState, accountViewModel)
     CalendarsFilterAssemblerSubscription(accountViewModel)
 
-    var viewMode by rememberSaveable { mutableStateOf(CalendarsViewMode.FEED) }
-    var filterDTag by rememberSaveable { mutableStateOf<String?>(null) }
+    // [rememberForeverState], not rememberSaveable: opening an appointment disposes this screen,
+    // and coming back rebuilt it at its defaults — the feed lens, today's month, the top of the
+    // list. Every other feed in the app already parks its position in the same process-scoped
+    // store (see rememberForeverLazyListState); the lens and the filter belong there too, and the
+    // per-lens state below follows suit.
+    var viewMode by rememberForeverState(ViewStateKeys.CALENDARS_VIEW_MODE) { CalendarsViewMode.FEED }
+    var filterDTag by rememberForeverState<String?>(ViewStateKeys.CALENDARS_FILTER) { null }
     // Resolve the selected calendar's member addresses (or null when "All"). Plumbed into each
     // view so the membership filter is applied client-side after the feed loads — changing the
     // filter doesn't trigger a relay refetch.
