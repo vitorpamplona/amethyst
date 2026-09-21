@@ -1819,6 +1819,15 @@
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_media">Media</string>
     <string name="route_calendars">Calendars</string>
+    <string name="route_geocaches">Geocaches</string>
+    <string name="route_geocache_hunts">Cache hunts</string>
+    <string name="route_geocache_detail">Cache</string>
+    <string name="route_geocache_hunt_detail">Hunt</string>
+    <string name="route_log_geocache_find">Log a find</string>
+    <string name="route_new_geocache">Hide a cache</string>
+    <string name="route_edit_geocache">Edit cache</string>
+    <string name="route_new_geocache_hunt">New hunt</string>
+    <string name="route_edit_geocache_hunt">Edit hunt</string>
     <string name="route_calendar_collections">Calendar lists</string>
     <string name="route_chess">Chess</string>
     <string name="wallet">Wallet</string>

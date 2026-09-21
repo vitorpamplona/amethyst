@@ -207,6 +207,101 @@ sealed class Route {
         )
     }
 
+    /**
+     * The NIP-CC geocaching hub. [initialTab] lets a caller land on a specific tab — the
+     * "N caches here" chip on the geohash screen opens [GeocacheTab.MAP], a profile's find
+     * count opens [GeocacheTab.FINDS] — while the drawer entry opens the default.
+     */
+    @Serializable data class Geocaches(
+        val initialTab: GeocacheTab? = null,
+    ) : Route()
+
+    /** A single kind 37516 cache listing. The landing point for naddr deep links and feed taps. */
+    @Serializable data class GeocacheDetail(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    /**
+     * The kind 7516 found-log composer for the cache at this address. Opened from the bottom
+     * because it is a composer, not a destination. This is the only screen that may scan a
+     * cache's verification secret.
+     */
+    @Serializable data class LogGeocacheFind(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    /**
+     * The cache composer. [geohash] pre-fills the location when the composer is opened by
+     * long-pressing the map, so the pin lands where the finger did.
+     */
+    @Serializable data class NewGeocache(
+        val geohash: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable data class EditGeocache(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    /** A kind 37517 curation list — an ordered itinerary of caches. */
+    @Serializable data class GeocacheHunt(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    /**
+     * The hunt composer. [seedCache] is an `a`-tag value set by "Add to a hunt" on a cache's
+     * detail screen, so the hunt opens with that cache already on the itinerary — the moment
+     * someone wants a cache in a hunt is the moment they are looking at the cache.
+     */
+    @Serializable data class NewGeocacheHunt(
+        val seedCache: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable data class EditGeocacheHunt(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object Products : Route()
 
     /**
@@ -1166,6 +1261,19 @@ fun <T : Route> getRouteWithArguments(
 }
 
 @Serializable
+/**
+ * The tabs of [Route.Geocaches]. Views over one shared feed state rather than separate
+ * destinations, so the map costs no additional relay subscription and Back always returns to
+ * whichever list the user arrived from.
+ */
+enum class GeocacheTab {
+    NEARBY,
+    MAP,
+    HUNTS,
+    FINDS,
+    MINE,
+}
+
 enum class DiscoverTab {
     FOLLOWS,
     READS,

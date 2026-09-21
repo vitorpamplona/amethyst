@@ -136,6 +136,7 @@ private object PrefKeys {
     const val DEFAULT_HIGHLIGHTS_FOLLOW_LIST = "defaultHighlightsFollowList"
     const val DEFAULT_CALENDARS_FOLLOW_LIST = "defaultCalendarsFollowList"
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
+    const val DEFAULT_GEOCACHES_FOLLOW_LIST = "defaultGeocachesFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
     const val DEFAULT_PUBLIC_CHATS_FOLLOW_LIST = "defaultPublicChatsFollowList"
     const val DEFAULT_LIVE_STREAMS_FOLLOW_LIST = "defaultLiveStreamsFollowList"
@@ -537,6 +538,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_HIGHLIGHTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHighlightsFollowList.value))
                     putString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCalendarsFollowList.value))
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
+                    putString(PrefKeys.DEFAULT_GEOCACHES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultGeocachesFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
                     putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
                     putString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLiveStreamsFollowList.value))
@@ -984,6 +986,7 @@ object LocalPreferences {
                         defaultHighlightsFollowList = MutableStateFlow(followListPrefs.highlights),
                         defaultCalendarsFollowList = MutableStateFlow(followListPrefs.calendars),
                         defaultProductsFollowList = MutableStateFlow(followListPrefs.products),
+                        defaultGeocachesFollowList = MutableStateFlow(followListPrefs.geocaches),
                         defaultShortsFollowList = MutableStateFlow(followListPrefs.shorts),
                         defaultPublicChatsFollowList = MutableStateFlow(followListPrefs.publicChats),
                         defaultLiveStreamsFollowList = MutableStateFlow(followListPrefs.liveStreams),
@@ -1099,6 +1102,7 @@ object LocalPreferences {
         val highlights: TopFilter,
         val calendars: TopFilter,
         val products: TopFilter,
+        val geocaches: TopFilter,
         val shorts: TopFilter,
         val publicChats: TopFilter,
         val liveStreams: TopFilter,
@@ -1157,6 +1161,7 @@ object LocalPreferences {
             highlights = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_HIGHLIGHTS_FOLLOW_LIST, null), TopFilter.Global),
             calendars = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, null), TopFilter.Global),
             products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),
+            geocaches = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_GEOCACHES_FOLLOW_LIST, null), TopFilter.AroundMe),
             shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
             publicChats = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null), TopFilter.Global),
             liveStreams = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, null), TopFilter.Global),

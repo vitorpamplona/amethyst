@@ -188,6 +188,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.FavoriteAppsScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.GeocachesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.create.NewGeocacheScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.detail.GeocacheDetailScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.hunt.GeocacheHuntScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.hunt.NewGeocacheHuntScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.log.LogGeocacheFindScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitNewIssueScreen
@@ -498,6 +504,26 @@ fun BuildNavigation(
         }
         composableFromBottomArgs<Route.NewCalendarCollection> { NewCalendarCollectionScreen(nav, accountViewModel, it.dTag) }
         composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.Geocaches> { GeocachesScreen(it.initialTab, accountViewModel, nav) }
+        composableFromEndArgs<Route.GeocacheDetail> {
+            GeocacheDetailScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav)
+        }
+        composableFromEndArgs<Route.GeocacheHunt> {
+            GeocacheHuntScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav)
+        }
+        composableFromBottomArgs<Route.LogGeocacheFind> {
+            LogGeocacheFindScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav)
+        }
+        composableFromBottomArgs<Route.NewGeocache> {
+            NewGeocacheScreen(nav, accountViewModel, prefillGeohash = it.geohash)
+        }
+        composableFromBottomArgs<Route.EditGeocache> {
+            NewGeocacheScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
+        }
+        composableFromBottomArgs<Route.NewGeocacheHunt> { NewGeocacheHuntScreen(nav, accountViewModel, seedCache = it.seedCache) }
+        composableFromBottomArgs<Route.EditGeocacheHunt> {
+            NewGeocacheHuntScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
+        }
         composableFromEndArgs<Route.Shorts> { ShortsScreen(accountViewModel, nav, it.attachments, it.message) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
         composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }

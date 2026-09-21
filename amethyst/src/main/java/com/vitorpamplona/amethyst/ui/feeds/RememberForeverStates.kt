@@ -74,6 +74,10 @@ object ScrollStateKeys {
     const val CALENDARS_SCREEN = "CalendarsFeed"
     const val CALENDAR_COLLECTIONS_SCREEN = "CalendarCollectionsFeed"
     const val PRODUCTS_SCREEN = "ProductsFeed"
+    const val GEOCACHES_NEARBY = "GeocachesNearbyFeed"
+    const val GEOCACHES_HUNTS = "GeocacheHuntsFeed"
+    const val GEOCACHES_FINDS = "GeocacheFindsFeed"
+    const val GEOCACHES_MINE = "GeocacheMineFeed"
     const val SHORTS_SCREEN = "ShortsFeed"
     const val PUBLIC_CHATS_SCREEN = "PublicChatsFeed"
     const val FOLLOW_PACKS_SCREEN = "FollowPacksFeed"
@@ -95,6 +99,7 @@ object PagerStateKeys {
     const val HOME_SCREEN = "PagerHome"
     const val DISCOVER_SCREEN = "PagerDiscover"
     const val POLLS_SCREEN = "PagerPolls"
+    const val GEOCACHES_SCREEN = "PagerGeocaches"
     const val NOTIFICATION_SCREEN = "PagerNotification"
 }
 
