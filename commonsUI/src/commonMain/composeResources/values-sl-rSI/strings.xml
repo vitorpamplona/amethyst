@@ -173,6 +173,7 @@
     <string name="road_event_speed_camera">Hitrostna kamera</string>
     <string name="road_event_traffic_jam">Zastoj</string>
     <string name="road_event_unknown">Dogodek na cesti</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zapi bojo razdeljeni med:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Vrednost za vrednost</string>

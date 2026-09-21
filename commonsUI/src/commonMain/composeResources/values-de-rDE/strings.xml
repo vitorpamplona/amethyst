@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">Blitzer</string>
     <string name="road_event_traffic_jam">Stau</string>
     <string name="road_event_unknown">Straßenereignis</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zaps hierauf werden aufgeteilt zwischen:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>

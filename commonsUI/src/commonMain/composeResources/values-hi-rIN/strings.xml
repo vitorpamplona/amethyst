@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">गति चित्रग्राहक</string>
     <string name="road_event_traffic_jam">यातायात अचलता</string>
     <string name="road_event_unknown">मार्ग घटना</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
     <string name="podcast_value_split_percent">%1$d प्रतिशतप्रतिशत</string>
     <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
@@ -698,6 +699,7 @@
     <string name="health_connect_rationale_privacy_policy">सम्पूर्ण गोपनीयता नीति पढें</string>
     <string name="my_fitness_title">मेरा स्वास्थ्य</string>
     <string name="my_fitness_window">पिछले चार सप्ताह</string>
+    <string name="my_fitness_loading_metrics">दूरी उष्ममानइकाई तथा हृदयस्पन्दन गति का आवहन…</string>
     <string name="my_fitness_window_note">आपके अभ्यास के अन्तिम चार पूर्ण सप्ताह। व्यायाम जो आपने प्रकाशित किए। तथा जो भी स्वास्थ्यसंयोजन इस संचारयन्त्र पर अभिलेखन करता है। अमेथिस्ट इसका साराम्श कर निकालेगा यन्त्र पर तथा कुछ भी प्रकाशित नहीं करेगा।</string>
     <string name="my_fitness_this_week">इस सप्ताह</string>
     <string name="my_fitness_vs_last_week">पिछले सप्ताह की तुलना में</string>
