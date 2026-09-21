@@ -68,6 +68,15 @@ class CoordinatorClient(
     /** Performs the MCP handshake. Optional, but it is where CEP-35 tags ride. */
     suspend fun initialize() = mcp.initialize()
 
+    /**
+     * Handshakes and reports what the coordinator says about itself.
+     *
+     * Null when the server answered but named nothing, which MCP allows. Every
+     * field is a claim the coordinator makes about itself — see
+     * [CoordinatorServerInfo]; the pubkey is the identity (§8.5).
+     */
+    suspend fun serverInfo(): CoordinatorServerInfo? = CoordinatorServerInfo.from(initialize())?.takeIf { !it.isEmpty }
+
     // ---- stable identity -------------------------------------------------
 
     /**

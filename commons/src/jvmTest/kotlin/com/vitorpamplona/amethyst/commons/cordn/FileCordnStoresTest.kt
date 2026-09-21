@@ -353,4 +353,57 @@ class FileCordnStoresTest {
             val listFile = File(CordnStorageLayout.accountDirectoryFor(root, account), "coordinators")
             assertEquals(dir().parentFile, listFile.parentFile)
         }
+
+    @Test
+    fun `purging one coordinator leaves another coordinator's groups untouched`() =
+        runTest {
+            // What CordnRuntime.purge deletes. It has to be the coordinator's
+            // own directory and nothing above it: a gid is unique only within
+            // one coordinator, so two of them routinely hold state for the
+            // same gid and deleting a level too high takes both.
+            val other = "e".repeat(64)
+            groups().saveGroup("shared-gid", byteArrayOf(1, 2, 3))
+            FileCordnGroupStore(CordnStorageLayout.directoryFor(root, account, other), cipher)
+                .saveGroup("shared-gid", byteArrayOf(4, 5, 6))
+
+            CordnStorageLayout.directoryFor(root, account, coordinator).deleteRecursively()
+
+            assertNull(groups().loadGroup("shared-gid"))
+            assertContentEquals(
+                byteArrayOf(4, 5, 6),
+                FileCordnGroupStore(CordnStorageLayout.directoryFor(root, account, other), cipher).loadGroup("shared-gid"),
+            )
+        }
+
+    @Test
+    fun `purging a coordinator leaves the account's coordinator list alone`() =
+        runTest {
+            // The list names the coordinator being purged, so it has to be
+            // rewritten by whoever purges -- but it must not be destroyed by
+            // the delete itself, or purging one coordinator would forget every
+            // other one with it.
+            coordinators().save(listOf(CoordinatorConfig(coordinator, listOf(relay("wss://one.example.com")))))
+            groups().saveGroup("gid", byteArrayOf(1))
+
+            CordnStorageLayout.directoryFor(root, account, coordinator).deleteRecursively()
+
+            assertEquals(1, coordinators().load().size)
+        }
+
+    @Test
+    fun `a join-request marker is written once and goes with its group`() =
+        runTest {
+            val store = groups()
+            store.saveGroup("gid", byteArrayOf(1))
+            assertFalse(store.loadJoinedViaRequest("gid"))
+
+            store.saveJoinedViaRequest("gid")
+            store.saveJoinedViaRequest("gid")
+            assertTrue(store.loadJoinedViaRequest("gid"))
+
+            // A later re-join of the same gid is a different admission, so the
+            // old marker must not outlive the group it described.
+            store.deleteGroup("gid")
+            assertFalse(store.loadJoinedViaRequest("gid"))
+        }
 }

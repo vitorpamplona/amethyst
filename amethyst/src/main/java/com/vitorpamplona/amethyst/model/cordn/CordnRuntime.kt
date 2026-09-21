@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.cordn
 
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
+import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLink
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
@@ -39,6 +40,7 @@ import com.vitorpamplona.quartz.contextvm.mcp.CvmMcpClient
 import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
 import com.vitorpamplona.quartz.contextvm.transport.DualSigner
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorClient
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
@@ -49,8 +51,11 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -99,6 +104,12 @@ class CordnRuntime(
 
             object : CordnCoordinatorLink {
                 override val coordinator = CoordinatorClient(CvmMcpClient(transport))
+
+                // Handshaken on demand, not at open: `initialize` is a call
+                // like any other (§8), and a coordinator that only ever hears
+                // from us when we have something to say tells it less than one
+                // that is greeted at every launch.
+                override suspend fun serverInfo() = coordinator.serverInfo()
 
                 override suspend fun close() {
                     // Nothing to release. CvmTransport opens a subscription
@@ -328,6 +339,35 @@ class CordnRuntime(
         registry.forget(coordinatorPubKey)
         remember()
     }
+
+    /**
+     * Forgets [coordinatorPubKey] **and destroys everything stored for it**.
+     *
+     * Separate from [forget] because they are different decisions and only one
+     * of them is reversible. Forgetting closes the session and leaves the MLS
+     * state on disk, so re-adding the coordinator brings the groups back.
+     * Purging deletes the ratchet trees, the cursors and the KeyPackage
+     * private halves — after which those groups cannot be rejoined, only
+     * re-entered by a fresh invitation, because MLS state cannot be rebuilt
+     * from anywhere else.
+     *
+     * The coordinator is not told. It keeps whatever it already had; purging
+     * is about this device, not about undoing the exposure, and a UI that
+     * implied otherwise would be selling a deletion nobody can perform.
+     */
+    suspend fun purge(coordinatorPubKey: HexKey) {
+        forget(coordinatorPubKey)
+        groups.forgetCoordinator(coordinatorPubKey)
+        withContext(Dispatchers.IO) {
+            CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, coordinatorPubKey).deleteRecursively()
+        }
+    }
+
+    /** What [coordinatorPubKey] says about itself, or null if it is not open. */
+    suspend fun serverInfo(coordinatorPubKey: HexKey): CoordinatorServerInfo? = registry.sessionOrNull(coordinatorPubKey)?.serverInfo()
+
+    /** Live health for [coordinatorPubKey], as its calls have observed it. */
+    fun health(coordinatorPubKey: HexKey): StateFlow<CoordinatorHealth.State>? = registry.sessionOrNull(coordinatorPubKey)?.health?.state
 
     /**
      * Writes down which coordinators are open, so the next launch finds them.

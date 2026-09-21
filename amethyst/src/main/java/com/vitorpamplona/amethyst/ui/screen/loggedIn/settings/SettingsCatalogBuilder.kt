@@ -85,6 +85,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.relay_auth_settings_title, MaterialSymbols.Lock, R.string.relay_auth_search_keywords, Route.RelayAuthSettings),
                     symEntry(R.string.call_settings, MaterialSymbols.Phone, R.string.call_settings_search_keywords, Route.CallSettings),
                     symEntry(R.string.cordn_link_title, MaterialSymbols.Dns, R.string.cordn_link_search_keywords, Route.CordnLink),
+                    symEntry(R.string.cordn_coordinators_title, MaterialSymbols.Dns, R.string.cordn_coordinators_search_keywords, Route.CordnCoordinators),
                 ),
         )
 

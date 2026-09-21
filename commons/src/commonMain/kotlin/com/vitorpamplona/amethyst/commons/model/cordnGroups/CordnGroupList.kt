@@ -94,6 +94,12 @@ class CordnGroupList {
         }
     }
 
+    /** Drops every room served by [coordinatorPubKey]. For a purge. */
+    fun forgetCoordinator(coordinatorPubKey: HexKey) {
+        rooms.keys.filter { it.coordinatorPubKey == coordinatorPubKey }.forEach { rooms.remove(it) }
+        _all.value = rooms.values.toList()
+    }
+
     fun clear() {
         rooms.clear()
         _all.value = emptyList()

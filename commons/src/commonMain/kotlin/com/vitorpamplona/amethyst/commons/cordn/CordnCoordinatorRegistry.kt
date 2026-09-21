@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,9 @@ interface CordnCoordinatorScope {
     val coordinator: ICoordinator
     val groupStore: CordnGroupStore
     val keyPackageStore: CordnKeyPackageStore
+
+    /** What the coordinator says about itself, if this scope performed a handshake. */
+    suspend fun serverInfo(): CoordinatorServerInfo? = null
 
     /** Releases the transport. The stores outlive it; only the wire closes. */
     suspend fun close()
@@ -80,6 +84,9 @@ class CordnSession(
      * the first place that holds both.
      */
     suspend fun exposure(gid: String): GroupExposure = manager.exposure(gid, publishedKeyPackage = keyPackages.hasPublished())
+
+    /** What this coordinator says about itself. Claims, never identity (§8.5). */
+    suspend fun serverInfo(): CoordinatorServerInfo? = scope.serverInfo()
 
     internal suspend fun close() = scope.close()
 }

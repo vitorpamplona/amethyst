@@ -253,6 +253,30 @@ class CordnGroupChatroomTest {
         assertTrue(room.adminPubkeys.value.isEmpty())
     }
 
+    @Test
+    fun `forgetting a coordinator drops its rooms and keeps everyone else's`() {
+        // CordnRuntime.purge deletes one coordinator's files; the in-memory
+        // list has to lose exactly the same rooms. A gid is unique only within
+        // a coordinator, so two of them can hold the same gid as unrelated
+        // groups -- dropping by gid would take a stranger's room with it.
+        val list = CordnGroupList()
+        val other = "d".repeat(64)
+        list.getOrCreate(coordinator, "shared-gid")
+        list.getOrCreate(other, "shared-gid")
+        list.getOrCreate(other, "another")
+
+        list.forgetCoordinator(coordinator)
+
+        assertNull(list.get(coordinator, "shared-gid"))
+        assertEquals(2, list.all.value.size)
+        assertEquals(
+            setOf(other),
+            list.all.value
+                .map { it.coordinatorPubKey }
+                .toSet(),
+        )
+    }
+
     /** A real cordn group, created the way [CordnGroupManager.createGroup] does. */
     private fun groupOf(
         creator: HexKey,
