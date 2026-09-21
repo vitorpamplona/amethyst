@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.cashu
 
-import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 
 /**
  * In-memory directory of Cashu mint URLs the app has seen on the network,
@@ -43,14 +43,15 @@ import java.util.concurrent.ConcurrentHashMap
  * `https://` scheme are dropped — autocomplete on garbage tags would
  * surface noise.
  *
- * Thread-safe via `ConcurrentHashMap`; safe to call from any dispatcher.
+ * Thread-safe via [ConcurrentMap], whose `merge` is atomic on every target, so a
+ * count cannot be lost to a racing [add]; safe to call from any dispatcher.
  */
 class MintDirectoryIndex {
-    private val counts = ConcurrentHashMap<String, Int>()
+    private val counts = ConcurrentMap<String, Int>()
 
     fun add(rawUrl: String) {
         val key = normalize(rawUrl) ?: return
-        counts.merge(key, 1, Int::plus)
+        counts.merge(key, 1) { old, new -> old + new }
     }
 
     fun addAll(rawUrls: Iterable<String>) = rawUrls.forEach(::add)
@@ -69,7 +70,11 @@ class MintDirectoryIndex {
         val ranking =
             compareByDescending<Map.Entry<String, Int>> { it.value }
                 .thenBy { it.key }
-        return counts.entries
+        // snapshot() instead of a live view: the ranking sorts the whole entry set,
+        // and a copy cannot shift under the comparator while it does.
+        return counts
+            .snapshot()
+            .entries
             .asSequence()
             .filter { needle.isEmpty() || it.key.contains(needle) }
             .sortedWith(ranking)
@@ -79,7 +84,7 @@ class MintDirectoryIndex {
     }
 
     /** Total number of unique mint URLs in the index. */
-    fun size(): Int = counts.size
+    fun size(): Int = counts.size()
 
     /** Clears the index — for tests; production should let it accumulate. */
     fun clear() = counts.clear()

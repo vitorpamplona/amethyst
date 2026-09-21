@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.model.nip90DVMs
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Strong, process-wide record of the latest heartbeat per DVM announcement address
@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap
  * One entry per DVM address ever seen; timestamps only, so it stays tiny. `0` means "no beat".
  */
 object DvmHeartbeatRegistry {
-    private val latestBeatCreatedAt = ConcurrentHashMap<Address, MutableStateFlow<Long>>()
+    private val latestBeatCreatedAt = ConcurrentMap<Address, MutableStateFlow<Long>>()
 
     private fun flowFor(address: Address): MutableStateFlow<Long> = latestBeatCreatedAt.getOrPut(address) { MutableStateFlow(0L) }
 

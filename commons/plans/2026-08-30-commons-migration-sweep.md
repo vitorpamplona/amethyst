@@ -1124,3 +1124,40 @@ watching it fail), `:commons:verifyKmpPurity`, `:commons:jvmTest`,
 
 Steps 2–5 are unchanged and still ahead; the iOS actual is now their peer, not
 their gate.
+
+### Step 2 shipped: the `ConcurrentHashMap` holders
+
+Three of the six holders in the audit table above are now `commonMain`, each a
+straight swap onto a KMP primitive that already existed:
+
+- `MintDirectoryIndex` — `ConcurrentHashMap<String, Int>` → quartz
+  `ConcurrentMap`. `counts.merge(key, 1, Int::plus)` becomes
+  `merge(key, 1) { old, new -> old + new }`, which is atomic on every target,
+  so a count still cannot be lost to a racing `add`. `suggest()` now ranks over
+  `snapshot()` — a copy the comparator cannot see shift underneath it.
+- `DvmHeartbeatRegistry` — `ConcurrentMap.getOrPut` is the same atomic
+  get-or-create the `ConcurrentHashMap` version relied on, so two threads
+  racing the first beat for an address still agree on one `MutableStateFlow`.
+- `NwcPaymentTracker` — `ConcurrentMap` plus `kotlin.concurrent.atomics.AtomicInt`
+  for `spoofAttempts` (`incrementAndGet()` → `fetchAndIncrement()`, `get()` →
+  `load()`, under `@OptIn(ExperimentalAtomicApi::class)` as quartz already does
+  in `BleChunkAssembler` and `BanStore`). `containsKey` has no `ConcurrentMap`
+  equivalent and became a null check on `get`, which is the same question for a
+  map that never stores nulls. Its test moved to `commonTest`, so the tracker's
+  4 race cases now also run on iOS rather than JVM only.
+
+`OnchainZapResolver` cannot move yet — it reads `EventCache` — but its two
+`ConcurrentHashMap.newKeySet()` in-flight gates are now the commons
+`ConcurrentSet`, which is exactly `newKeySet()` on JVM/Android. That leaves it
+with no `java.*` import, so it travels with `EventCache` in step 5 for free.
+
+`MintDirectoryIndexTest` stayed in `jvmTest`: it is written against
+`org.junit.Assert`, and converting it to `kotlin.test` is unrelated churn.
+
+Remaining in the table: `EventListMatchingFilter` / `NoteListMatchingFilter`,
+which also carry `SortedSet` — they belong to step 3, not this one.
+
+Verified: `:commons:compileCommonMainKotlinMetadata`,
+`:commons:compileIosMainKotlinMetadata`, `:commons:jvmTest` (incl. the moved
+`NwcPaymentTrackerTest`, 4 tests), `:desktopApp:test`, `:cli:test`,
+`:amethyst:compileFdroidDebugKotlin`, `DvmHeartbeatTest`, `spotlessCheck`.

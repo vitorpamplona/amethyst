@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.OnchainZapVerifier
 import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.VerifiedOnchainZap
@@ -40,7 +41,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Coordinates NIP-BC on-chain zap verification on top of the chain backend.
@@ -71,10 +71,10 @@ class OnchainZapResolver(
     /**
      * In-flight set of event ids currently being verified. Prevents two `consume()`
      * calls (or a `consume` plus a reverify) from issuing parallel Esplora fetches
-     * for the same event. `ConcurrentHashMap.newKeySet` gives lock-free atomic `add`
+     * for the same event. [ConcurrentSet] gives lock-free atomic `add`
      * returning `true` only for the inserting caller.
      */
-    private val verifyingEventIds: MutableSet<HexKey> = ConcurrentHashMap.newKeySet()
+    private val verifyingEventIds = ConcurrentSet<HexKey>()
 
     /**
      * In-flight set of note id strings currently being reverified. Lets the on-chain
@@ -83,7 +83,7 @@ class OnchainZapResolver(
      * backstop; this one short-circuits earlier and avoids creating async coroutines
      * that would just no-op.
      */
-    private val reverifyingNoteIds: MutableSet<HexKey> = ConcurrentHashMap.newKeySet()
+    private val reverifyingNoteIds = ConcurrentSet<HexKey>()
 
     /**
      * Shared poller for the current bitcoin chain tip height. Each gallery that
