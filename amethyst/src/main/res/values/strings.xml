@@ -123,6 +123,8 @@
     <string name="follow_back">Follow back</string>
     <string name="hide_password">Hide Password</string>
     <string name="invalid_key">Invalid key</string>
+    <string name="login_bunker_not_supported">Amethyst for Android can\'t sign in with a bunker:// address. It hands these out so other apps can ask it to sign, but it cannot sign in with one. Use an external signer app, or Amethyst Desktop.</string>
+    <string name="login_nostrconnect_not_supported">That\'s an app asking to connect to your signer, not a way to sign in. Sign in first, then open it from the NIP-46 signer screen.</string>
     <string name="invalid_key_with_message">Invalid key: %1$s</string>
     <string name="password_is_required">Password is required</string>
     <string name="key_is_required">Key is required</string>
