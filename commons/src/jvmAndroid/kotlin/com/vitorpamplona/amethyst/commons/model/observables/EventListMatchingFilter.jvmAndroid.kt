@@ -66,7 +66,7 @@ import java.util.concurrent.ConcurrentSkipListSet
  * emitted list must never carry a duplicate id — a LazyColumn keyed on it would
  * crash — so [snapshot] deduplicates by the stable idHex as it materializes.
  */
-class EventListMatchingFilter<T : Event>(
+actual class EventListMatchingFilter<T : Event> actual constructor(
     private val filter: Filter,
     private val atOnce: (filter: Filter) -> List<Note>,
     private val update: (List<T>) -> Unit,
@@ -95,7 +95,7 @@ class EventListMatchingFilter<T : Event>(
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun new(
+    actual override fun new(
         event: Event,
         note: Note,
     ) {
@@ -134,7 +134,7 @@ class EventListMatchingFilter<T : Event>(
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun remove(note: Note) {
+    actual override fun remove(note: Note) {
         var removed = false
         byId.compute(note.idHex) { _, existing ->
             if (existing != null) {
@@ -147,7 +147,7 @@ class EventListMatchingFilter<T : Event>(
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun init() {
+    actual fun init() {
         sorted.clear()
         byId.clear()
         atOnce(filter).forEach { note ->

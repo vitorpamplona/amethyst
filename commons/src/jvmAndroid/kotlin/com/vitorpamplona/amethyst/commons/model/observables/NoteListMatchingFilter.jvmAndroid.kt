@@ -65,7 +65,7 @@ import java.util.concurrent.ConcurrentSkipListSet
  * a duplicate idHex — the LazyColumn keyed on it would crash — so [snapshot]
  * deduplicates by idHex as it materializes.
  */
-class NoteListMatchingFilter(
+actual class NoteListMatchingFilter actual constructor(
     private val filter: Filter,
     private val atOnce: (filter: Filter) -> List<Note>,
     private val update: (List<Note>) -> Unit,
@@ -94,7 +94,7 @@ class NoteListMatchingFilter(
         return Entry(note, note.createdAt() ?: Long.MIN_VALUE, event?.id ?: note.idHex)
     }
 
-    override fun new(
+    actual override fun new(
         event: Event,
         note: Note,
     ) {
@@ -122,7 +122,7 @@ class NoteListMatchingFilter(
         update(snapshot())
     }
 
-    override fun remove(note: Note) {
+    actual override fun remove(note: Note) {
         // Remove from [sorted] atomically with releasing the idHex slot.
         var removed = false
         byId.compute(note.idHex) { _, existing ->
@@ -135,7 +135,7 @@ class NoteListMatchingFilter(
         if (removed) update(snapshot())
     }
 
-    fun init() {
+    actual fun init() {
         sorted.clear()
         byId.clear()
         atOnce(filter).forEach { note ->
