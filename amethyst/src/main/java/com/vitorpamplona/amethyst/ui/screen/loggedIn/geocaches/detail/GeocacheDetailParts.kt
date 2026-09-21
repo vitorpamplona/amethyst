@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_note
 import com.vitorpamplona.amethyst.commons.resources.geocache_verified_find
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChip
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -142,8 +143,15 @@ fun GeocacheWinnerStrip(
     accountViewModel: AccountViewModel,
 ) {
     LoadUser(winner, accountViewModel) { user ->
+        // LoadUser resolves the User object, not its metadata, so reading the display name off it
+        // left the winner as a hex stub whenever their kind 0 arrived after this composed.
+        // observeUserName asks the relays for the profile and recomposes when it lands. The name
+        // stays an argument to the format string rather than a separate composable so translators
+        // keep control of the word order.
+        val name = user?.let { observeUserName(it, accountViewModel).value }
+
         Text(
-            text = stringResource(Res.string.geocache_ftf_won_by, user?.toBestDisplayName() ?: winner.take(8)),
+            text = stringResource(Res.string.geocache_ftf_won_by, name?.ifBlank { null } ?: winner.take(8)),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),

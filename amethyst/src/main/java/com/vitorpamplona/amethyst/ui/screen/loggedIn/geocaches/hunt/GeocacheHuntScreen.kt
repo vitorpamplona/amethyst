@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -217,7 +218,10 @@ private fun GeocacheHuntStop(
     nav: INav,
 ) {
     LoadAddressableNote(address, accountViewModel) { cacheNote ->
-        val listing = cacheNote?.event as? GeocacheListingEvent
+        // A hunt is a list of caches the reader has most likely never fetched, so the note comes
+        // back empty and `cacheNote.event` would stay null forever. observeNoteEvent asks the
+        // relays for it and recomposes this stop when it lands.
+        val listing = cacheNote?.let { observeNoteEvent<GeocacheListingEvent>(it, accountViewModel).value }
 
         Row(
             Modifier

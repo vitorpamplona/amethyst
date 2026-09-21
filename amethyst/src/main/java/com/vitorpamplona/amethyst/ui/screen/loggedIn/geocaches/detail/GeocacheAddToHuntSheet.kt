@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_new
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_none_yet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationRevision
 import kotlinx.coroutines.launch
@@ -93,14 +94,9 @@ fun GeocacheAddToHuntSheet(
     val me = accountViewModel.userProfile().pubkeyHex
 
     val mine =
-        remember(huntState, me) {
-            val notes =
-                (huntState as? FeedState.Loaded)
-                    ?.feed
-                    ?.value
-                    ?.list
-                    .orEmpty()
-            notes.mapNotNull { it.event as? GeocacheCurationListEvent }.filter { it.pubKey == me }
+        when (val state = huntState) {
+            is FeedState.Loaded -> rememberMyHunts(state, me)
+            else -> emptyList()
         }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
@@ -205,5 +201,25 @@ fun GeocacheAddToHuntSheet(
             // gesture navigation, where the reserved band is much smaller.
             Spacer(Modifier.navigationBarsPadding().height(16.dp))
         }
+    }
+}
+
+/**
+ * The reader's own hunts, collected from the feed's own flow.
+ *
+ * [FeedState.Loaded] is handed out once and mutated through its inner flow, so keying a
+ * `remember` on the outer state alone froze this list at whatever had arrived when the sheet
+ * opened — a hunt created moments earlier was missing from the very sheet that offers to add a
+ * cache to it.
+ */
+@Composable
+private fun rememberMyHunts(
+    state: FeedState.Loaded,
+    me: HexKey,
+): List<GeocacheCurationListEvent> {
+    val loaded by state.feed.collectAsStateWithLifecycle()
+
+    return remember(loaded, me) {
+        loaded.list.mapNotNull { it.event as? GeocacheCurationListEvent }.filter { it.pubKey == me }
     }
 }

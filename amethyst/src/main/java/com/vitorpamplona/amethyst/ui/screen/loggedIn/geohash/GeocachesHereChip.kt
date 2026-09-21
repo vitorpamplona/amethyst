@@ -30,24 +30,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_caches_here
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.GeocacheTab
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal.GeocacheListingKinds
-import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal.GeocachesHereFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -58,30 +61,45 @@ import org.jetbrains.compose.resources.stringResource
  * here". The chip is absent rather than zeroed when the cell holds nothing, because a permanent
  * "0 caches here" is noise on every other place in the world.
  *
- * Counting reads what is already in [LocalCache] rather than issuing a query. The geocaching
- * subscription is what fills that cache, so the number is "caches Amethyst knows about here" —
- * which is the honest claim, and it grows as the hub is used rather than pretending to be a
- * census of the relay network.
+ * Counted through a feed filter rather than a one-shot scan of LocalCache. The chip mounts the
+ * shared geocaching REQ, so a cell the reader has never visited fills in while they sit on it —
+ * a plain scan showed nothing and stayed at nothing, which read as "no caches here" when the
+ * truth was "nothing fetched yet".
  */
 @Composable
 fun GeocachesHereChip(
     geohash: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val model: GeocachesHereFeedViewModel =
+        viewModel(
+            key = geohash + "GeocachesHereFeedViewModel",
+            factory = GeocachesHereFeedViewModel.Factory(geohash, accountViewModel.account),
+        )
+
+    WatchLifecycleAndUpdateModel(model)
+
+    // The shared geocaching REQ. Without it the chip can only ever report caches some other
+    // screen happened to fetch first.
+    GeocachesFilterAssemblerSubscription(accountViewModel)
+
+    val feedState by model.feedState.feedContent.collectAsStateWithLifecycle()
+
+    when (val state = feedState) {
+        is FeedState.Loaded -> GeocachesHereCount(state, nav)
+        else -> Unit
+    }
+}
+
+@Composable
+private fun GeocachesHereCount(
+    state: FeedState.Loaded,
     nav: INav,
 ) {
     val palette = rememberGeocachePalette()
-
-    val count =
-        remember(geohash) {
-            LocalCache.addressables
-                .filterIntoSet(GeocacheListingKinds) { _, note ->
-                    val event = note.event
-                    // A listing publishes its whole ladder from 3 to 9 characters, so a cell
-                    // match is a prefix match against any tagged level rather than equality.
-                    event is GeocacheListingEvent &&
-                        !event.isArchived() &&
-                        event.geohashes().any { it.startsWith(geohash) || geohash.startsWith(it) }
-                }.size
-        }
+    val loaded by state.feed.collectAsStateWithLifecycle()
+    val count = loaded.list.size
 
     if (count == 0) return
 

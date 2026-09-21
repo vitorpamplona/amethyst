@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_remove
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_title
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_publish
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -180,7 +182,9 @@ fun NewGeocacheHuntScreen(
 
             model.caches.forEachIndexed { index, address ->
                 LoadAddressableNote(address, accountViewModel) { cacheNote ->
-                    val listing = cacheNote?.event as? GeocacheListingEvent
+                    // Same reason as the hunt screen's stops: a cache added by naddr has no event
+                    // in the cache yet, so this has to ask the relays and watch rather than read.
+                    val listing = cacheNote?.let { observeNoteEvent<GeocacheListingEvent>(it, accountViewModel).value }
 
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 6.dp),

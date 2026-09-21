@@ -114,7 +114,7 @@ fun GeoHashScreen(
         accountViewModel = accountViewModel,
     ) {
         Column {
-            GeocachesHereChip(tag.geohash, nav)
+            GeocachesHereChip(tag.geohash, accountViewModel, nav)
 
             RefresheableFeedView(
                 feedViewModel,
