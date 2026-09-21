@@ -86,6 +86,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.call_settings, MaterialSymbols.Phone, R.string.call_settings_search_keywords, Route.CallSettings),
                     symEntry(R.string.cordn_link_title, MaterialSymbols.Dns, R.string.cordn_link_search_keywords, Route.CordnLink),
                     symEntry(R.string.cordn_coordinators_title, MaterialSymbols.Dns, R.string.cordn_coordinators_search_keywords, Route.CordnCoordinators),
+                    symEntry(R.string.cordn_keypackages_title, MaterialSymbols.Key, R.string.cordn_keypackages_search_keywords, Route.CordnKeyPackages),
                 ),
         )
 

@@ -305,4 +305,34 @@ class CordnKeyPackagesTest : CordnTransportHarness() {
             second.restore()
             assertTrue(second.hasPublished(), "after restore()")
         }
+
+    @Test
+    fun `listPublished reports what the coordinator serves, not what we think we sent`() =
+        runTest {
+            val alice = Account()
+            val first = driving { alice.keyPackages.publishNew() }
+            driving { alice.keyPackages.publishNew() }
+
+            // Somebody invites Alice: kp_take consumes the single-use package.
+            // Our own record still has two; the coordinator has one, and it is
+            // the coordinator's count that decides whether the next invitation
+            // can happen at all.
+            driving { alice.coordinatorClient.takeKeyPackage(first.keyPackageRef) }
+
+            val listed = driving { alice.keyPackages.listPublished() }
+            assertEquals(2, alice.keyPackages.published.value.size, "our local record is unchanged")
+            assertEquals(1, listed.size, "the coordinator has one left")
+            assertFalse(listed.any { it.keyPackageRef == first.keyPackageRef })
+        }
+
+    @Test
+    fun `listPublished is scoped to this account`() =
+        runTest {
+            val alice = Account()
+            val bob = Account()
+            driving { alice.keyPackages.publishNew() }
+            driving { bob.keyPackages.publishNew() }
+
+            assertTrue(driving { alice.keyPackages.listPublished() }.all { it.pubKey == alice.pubKey })
+        }
 }

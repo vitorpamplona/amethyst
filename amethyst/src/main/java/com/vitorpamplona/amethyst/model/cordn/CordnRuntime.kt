@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -160,7 +161,41 @@ class CordnRuntime(
         session.manager.gids.value
             .forEach { refresh(session, it) }
         remember()
+        maintainKeyPackages(session)
         return session
+    }
+
+    /**
+     * Keeps the KeyPackage pool healthy on a coordinator this account already
+     * uses — and does nothing at all on one it does not.
+     *
+     * The condition is the whole design. Publishing a KeyPackage is an
+     * attributable act under the account key (§8.4): it tells the coordinator
+     * this account exists and is invitable, which is not something to do on
+     * someone's behalf at login. But once a KeyPackage IS published there, the
+     * coordinator already knows, and letting the pool drain silently has a
+     * cost with no matching benefit — `kp_take` consumes a single-use package,
+     * so the pool falls as people invite us, and an empty pool means the next
+     * invitation fails for a reason the inviter sees and the invitee never
+     * does.
+     *
+     * So: never the first package, always the ones after it. Publishing the
+     * first one stays an explicit act on the key-package screen or a join
+     * request.
+     *
+     * Runs detached and swallows failures: this is upkeep, and a coordinator
+     * that will not take a KeyPackage must not stop its groups from syncing.
+     */
+    private fun maintainKeyPackages(session: CordnSession) {
+        scope.launch {
+            try {
+                if (!session.keyPackages.hasPublished()) return@launch
+                session.keyPackages.topUp()
+                session.keyPackages.ensureLastResort()
+            } catch (e: Exception) {
+                Log.w(TAG, "could not top up key packages on ${session.coordinatorPubKey.take(8)}\u2026: ${e.message}", e)
+            }
+        }
     }
 
     /**
@@ -363,6 +398,52 @@ class CordnRuntime(
         }
     }
 
+    /**
+     * What this account has published on [coordinatorPubKey], and which of
+     * them this device can still open.
+     *
+     * Both halves matter and neither implies the other. The coordinator's
+     * listing is the truth about what an inviter can take; the local store is
+     * the truth about whether the resulting Welcome can be opened. A package
+     * listed there with no private half here belongs to another device of this
+     * account — or to an install that is gone, in which case anyone using it
+     * sends a Welcome nobody will ever read.
+     */
+    suspend fun keyPackages(coordinatorPubKey: HexKey): List<CordnKeyPackageRow> {
+        val session = registry.sessionOrNull(coordinatorPubKey) ?: return emptyList()
+        val held = session.keyPackages.published.value
+        return session.keyPackages.listPublished().map {
+            CordnKeyPackageRow(
+                keyPackageRef = it.keyPackageRef,
+                lastResort = it.lastResort,
+                at = it.at,
+                openableHere = it.keyPackageRef in held,
+            )
+        }
+    }
+
+    /** Publishes one KeyPackage. An attributable act under the account key (§8.4). */
+    suspend fun publishKeyPackage(
+        coordinatorPubKey: HexKey,
+        lastResort: Boolean = false,
+    ) {
+        val session =
+            registry.sessionOrNull(coordinatorPubKey)
+                ?: throw IllegalStateException("no session for $coordinatorPubKey")
+        session.keyPackages.publishNew(lastResort)
+    }
+
+    /** Withdraws [refs], coordinator first. See `CordnKeyPackages.withdraw`. */
+    suspend fun withdrawKeyPackages(
+        coordinatorPubKey: HexKey,
+        refs: List<String>,
+    ): List<String> =
+        registry
+            .sessionOrNull(coordinatorPubKey)
+            ?.keyPackages
+            ?.withdraw(refs)
+            .orEmpty()
+
     /** What [coordinatorPubKey] says about itself, or null if it is not open. */
     suspend fun serverInfo(coordinatorPubKey: HexKey): CoordinatorServerInfo? = registry.sessionOrNull(coordinatorPubKey)?.serverInfo()
 
@@ -454,3 +535,12 @@ data class CordnInvitations(
 ) {
     val isEmpty: Boolean get() = pending.isEmpty() && skipped.isEmpty() && unreachable.isEmpty()
 }
+
+/** One published KeyPackage, as the key-package screen shows it. */
+data class CordnKeyPackageRow(
+    val keyPackageRef: String,
+    val lastResort: Boolean,
+    val at: Long,
+    /** Whether this device holds the private half and could open its Welcome. */
+    val openableHere: Boolean,
+)

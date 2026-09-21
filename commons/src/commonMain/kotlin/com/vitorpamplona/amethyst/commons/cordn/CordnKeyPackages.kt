@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.AvailableKeyPackage
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
@@ -140,6 +141,16 @@ class CordnKeyPackages(
      * all of them — the direction a privacy surface should err in.
      */
     suspend fun hasPublished(): Boolean = store.list().isNotEmpty()
+
+    /**
+     * What the coordinator currently serves for this account.
+     *
+     * The coordinator's answer, not ours. `kp_take` consumes a single-use
+     * package, so our own record of what we published drifts upward from what
+     * is actually available the moment anyone invites us — and it is what is
+     * available that decides whether the next invitation can happen.
+     */
+    suspend fun listPublished(): List<AvailableKeyPackage> = coordinator.listKeyPackages().filter { it.pubKey == accountPubKey }
 
     /**
      * Generates a KeyPackage, keeps its private half, and publishes it.
