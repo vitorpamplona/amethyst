@@ -164,4 +164,57 @@ class CordnTransportIntegrationTest : CordnTransportHarness() {
             assertEquals(1, bobSees.skipped.size)
             assertEquals(bobRef, bobSees.skipped.single().keyPackageRef)
         }
+
+    @Test
+    fun `a live subscription delivers over the wire, not just a catch-up fetch`() =
+        runTest {
+            // The path that had no coverage at all. `msg_sub_many` is the one
+            // coordinator tool whose answer is not its result: it holds the
+            // call open and pushes each message as a CEP-41 stream fragment,
+            // which `CoordinatorClient` reassembles through `onStreamFragment`.
+            // Everything else about cordn delivery was exercised through
+            // `msg_fetch_many`, so the half the sync loop actually lives in was
+            // the untested one.
+            val alice = Account()
+            alice.manager.createGroup(gid, CordnGroupMetadata(name = "Live"))
+            driving { alice.manager.send(gid, "pushed, not polled") }
+
+            val delivered = mutableListOf<CordnGroupManager.Delivery>()
+            driving { alice.manager.subscribe(timeoutMs = 2_000) { delivered += it } }
+
+            // Alice's own message comes back as an Echo -- she sent it, so she
+            // cannot decrypt it, and that is the shape the sync loop files.
+            assertTrue(delivered.isNotEmpty(), "nothing arrived over the subscription")
+            assertTrue(
+                delivered.all { it.gid == gid },
+                "a subscription must not deliver another group's stream: ${delivered.map { it.gid }}",
+            )
+        }
+
+    @Test
+    fun `a subscriber reads what another member said, live`() =
+        runTest {
+            val alice = Account()
+            val bob = Account()
+            val (bobBundle, bobRef) = publishKeyPackage(bob)
+
+            val gid = "live-room"
+            alice.manager.createGroup(gid, CordnGroupMetadata(name = "Live"))
+            driving { alice.manager.invite(gid, bob.pubKey) }
+            driving { bob.manager.joinPendingWelcomes({ ref -> bobBundle.takeIf { ref == bobRef } }) }
+            driving { bob.manager.catchUp { } }
+
+            driving { alice.manager.send(gid, "said out loud") }
+
+            val delivered = mutableListOf<CordnGroupManager.Delivery>()
+            driving { bob.manager.subscribe(timeoutMs = 2_000) { delivered += it } }
+
+            val messages = delivered.filterIsInstance<CordnGroupManager.Delivery.Message>()
+            assertEquals(
+                listOf("said out loud"),
+                messages.map { it.received.envelope.content },
+                "got ${delivered.map { it::class.simpleName }}",
+            )
+            assertEquals(alice.pubKey, messages.single().received.sender, "MLS-authenticated, not claimed")
+        }
 }

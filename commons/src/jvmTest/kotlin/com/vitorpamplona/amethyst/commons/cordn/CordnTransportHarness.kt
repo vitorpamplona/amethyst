@@ -124,7 +124,15 @@ abstract class CordnTransportHarness {
                 // identity-split assertion rests on.
                 injectClientPubkey = true,
                 handler = fixture::handle,
-            ).also { it.start() }
+            ).also { server ->
+                server.start()
+                // `msg_sub_many` answers with stream frames rather than a
+                // result, so the fixture needs a way back onto the transport.
+                // Wired here because only this layer holds both halves.
+                fixture.emitStream = { frames, clientPubKey, requestEventId ->
+                    frames.forEach { server.reply(it, clientPubKey, requestEventId) }
+                }
+            }
         }
 
     /**

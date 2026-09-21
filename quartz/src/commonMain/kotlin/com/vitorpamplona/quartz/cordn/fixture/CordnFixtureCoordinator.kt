@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.quartz.cordn.fixture
 
+import com.vitorpamplona.quartz.contextvm.cep41OpenStreams.OpenStreamFrame
 import com.vitorpamplona.quartz.contextvm.fixture.CvmRequest
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcError
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcFailure
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcId
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcMessage
+import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcNotification
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcSuccess
+import com.vitorpamplona.quartz.contextvm.transfer.ProgressToken
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorFields
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorMethod
 import com.vitorpamplona.quartz.mls.codec.TlsReader
@@ -165,6 +168,26 @@ class CordnFixtureCoordinator(
         publications[keyPackageRef] =
             StoredKeyPackage(event.pubKey, keyPackageRef, false, clock++, event)
     }
+
+    /**
+     * Sends CEP-41 stream frames back to the caller, for `msg_sub_many`.
+     *
+     * Null by default, and a subscription then returns an empty result rather
+     * than failing: a fixture that needs the streaming half wires this to the
+     * server's `reply`, and one that only drives catch-up should not have to
+     * know the difference.
+     */
+    var emitStream: (suspend (frames: List<JsonRpcNotification>, clientPubKey: HexKey, requestEventId: HexKey) -> Unit)? = null
+
+    /** The `progressToken` CEP-41 frames must carry to reach the caller's receiver. */
+    private fun progressToken(params: JsonObject?): ProgressToken? =
+        params
+            ?.get("_meta")
+            ?.jsonObject
+            ?.get("progressToken")
+            ?.jsonPrimitive
+            ?.content
+            ?.let { ProgressToken.Text(it) }
 
     /** The handler to hand to `CvmFixtureServer`. */
     suspend fun handle(request: CvmRequest): JsonRpcMessage {
@@ -335,6 +358,33 @@ class CordnFixtureCoordinator(
                     buildJsonObject {
                         put(CoordinatorFields.MESSAGES, buildJsonArray { after(args).forEach { add(it) } })
                     }
+
+                CoordinatorMethod.MSG_SUB_MANY.wire -> {
+                    // The one tool whose answer is not its result. A real
+                    // coordinator holds the call open and pushes each message
+                    // as a CEP-41 stream fragment; the result arrives when the
+                    // stream ends. [emitStream] is how a fixture reaches the
+                    // transport to do that -- the handler signature returns one
+                    // message, which is exactly what a subscription is not.
+                    val token = progressToken(params)
+                    val emit = emitStream
+                    if (token != null && emit != null) {
+                        var progress = 1.0
+                        val frames = mutableListOf<JsonRpcNotification>()
+                        frames += OpenStreamFrame.start(token, progress).envelope.toNotification()
+                        after(args).forEachIndexed { index, message ->
+                            progress += 1.0
+                            frames +=
+                                OpenStreamFrame
+                                    .chunk(token, progress, index.toLong(), Json.encodeToString(JsonObject.serializer(), message))
+                                    .envelope
+                                    .toNotification()
+                        }
+                        frames += OpenStreamFrame.close(token, progress + 1.0).envelope.toNotification()
+                        emit(frames, caller.orEmpty(), request.event.id)
+                    }
+                    buildJsonObject {}
+                }
 
                 else -> buildJsonObject {}
             }

@@ -71,7 +71,19 @@ class FakeCoordinator(
         val pubKey: HexKey,
         val keyPackageRef: String,
         val base64: String,
-        val publicationEvent: Event,
+        /**
+         * The signed `kp_publish` request event (`spec/00.md` §7), or null when
+         * this fake recorded the publish itself.
+         *
+         * Null is structural, not laziness. `ICoordinator.publishKeyPackage`
+         * carries a ref and bytes and nothing else — the publication event is
+         * the *transport's* request event, which `CoordinatorClient` supplies
+         * and a fake sitting directly on the interface never sees. So this fake
+         * can say a package exists but cannot make it takeable;
+         * `CordnFixtureCoordinator`, which handles the request itself, can.
+         * Seed one with [seedKeyPackage] when a test needs an invite to work.
+         */
+        val publicationEvent: Event?,
         val lastResort: Boolean = false,
     )
 
@@ -110,6 +122,12 @@ class FakeCoordinator(
         keyPackageBase64: String,
     ): PublishedKeyPackage {
         record("kp_publish")
+        // Stored, so `kp_list` serves it back the way a real coordinator does.
+        // It used to return a receipt and keep nothing, which is invisible
+        // until someone tests `topUp` -- that counts what the coordinator
+        // holds, so against a fake that forgets, it publishes forever.
+        keyPackages[keyPackageRef] =
+            StoredKeyPackage(callerPubKey, keyPackageRef, keyPackageBase64, publicationEvent = null)
         return PublishedKeyPackage(keyPackageRef, false, clock++)
     }
 
@@ -126,8 +144,15 @@ class FakeCoordinator(
     override suspend fun takeKeyPackage(id: String): TakenKeyPackage? {
         record("kp_take")
         // `id` accepts a ref or an account hex, like the real one.
-        val stored = keyPackages[id] ?: keyPackages.values.firstOrNull { it.pubKey == id } ?: return null
-        return TakenKeyPackage(stored.pubKey, stored.keyPackageRef, stored.lastResort, clock++, stored.publicationEvent)
+        // Only a seeded package is takeable: without the publication event
+        // there is nothing for §9 verification to check, and handing back a
+        // package that cannot be verified would test a path no real
+        // coordinator can produce. See [StoredKeyPackage.publicationEvent].
+        val stored =
+            keyPackages[id]?.takeIf { it.publicationEvent != null }
+                ?: keyPackages.values.firstOrNull { it.pubKey == id && it.publicationEvent != null }
+                ?: return null
+        return TakenKeyPackage(stored.pubKey, stored.keyPackageRef, stored.lastResort, clock++, stored.publicationEvent!!)
     }
 
     override suspend fun storeWelcome(
