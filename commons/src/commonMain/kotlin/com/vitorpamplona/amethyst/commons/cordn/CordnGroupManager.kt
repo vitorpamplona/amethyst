@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.cordn.spec00Coordinator.KeyPackagePublication
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnApplicationMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.ReceivedMessage
 import com.vitorpamplona.quartz.cordn.spec03Payloads.SealedPayload
 import com.vitorpamplona.quartz.cordn.sync.CordnGroupSync
@@ -493,6 +494,53 @@ class CordnGroupManager(
     }
 
     // ---- messages --------------------------------------------------------
+
+    /**
+     * Sends a message that refers to another one — a reply, reaction, edit,
+     * deletion or pin.
+     *
+     * The kind and the tags are decided by
+     * [CordnMessageReferences.outbound], not here: a kind switch beside a tag
+     * switch is how the two stop agreeing, and that file holds both halves
+     * with tests over the round trip.
+     *
+     * ## It refuses what the fold would ignore
+     *
+     * `CordnAnnotationIndex` enforces cordn's authorization rules when folding
+     * annotations onto their targets, and edits and deletions are author-only
+     * there. Without the same check here, editing someone else's message would
+     * appear to work — the message goes out, the coordinator stores it, and
+     * every client including ours silently drops it. Failing at the call is
+     * the difference between a bug someone can report and one nobody can see.
+     *
+     * Reactions and pins are deliberately not checked: §5.1 makes a reaction
+     * anyone's and a pin any member's.
+     */
+    suspend fun post(
+        gid: String,
+        content: String = "",
+        replyTo: CordnMessageReferences.Target? = null,
+        reactionTo: CordnMessageReferences.Target? = null,
+        editTo: CordnMessageReferences.Target? = null,
+        deleteTo: CordnMessageReferences.Target? = null,
+        pinTo: CordnMessageReferences.Target? = null,
+        pinOp: CordnMessageReferences.PinOp = CordnMessageReferences.PinOp.ADD,
+    ): CordnEnvelope {
+        editTo?.let { require(it.pubKey == accountPubKey) { "only a message's author can edit it" } }
+        deleteTo?.let { require(it.pubKey == accountPubKey) { "only a message's author can delete it" } }
+
+        val outbound =
+            CordnMessageReferences.outbound(
+                content = content,
+                replyTo = replyTo,
+                reactionTo = reactionTo,
+                editTo = editTo,
+                deleteTo = deleteTo,
+                pinTo = pinTo,
+                pinOp = pinOp,
+            )
+        return send(gid, outbound.content, outbound.kind, outbound.tags)
+    }
 
     /** Sends [content] to [gid] as a cordn application message. */
     suspend fun send(

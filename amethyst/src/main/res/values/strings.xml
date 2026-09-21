@@ -1590,6 +1590,14 @@
     <string name="cordn_message_deleted">Message deleted</string>
     <string name="cordn_message_edited">edited</string>
     <string name="cordn_composer_hint">Message</string>
+    <string name="cordn_action_reply">Reply</string>
+    <string name="cordn_action_edit">Edit</string>
+    <string name="cordn_action_delete">Delete</string>
+    <string name="cordn_action_pin">Pin</string>
+    <string name="cordn_action_unpin">Unpin</string>
+    <string name="cordn_action_replying">Replying to: %1$s</string>
+    <string name="cordn_action_editing">Editing your message</string>
+    <string name="cordn_action_in_reply_to">Replying to: %1$s</string>
     <string name="cordn_send">Send</string>
     <string name="cordn_info_coordinator">Coordinator</string>
     <string name="cordn_info_gid">Group id</string>
