@@ -253,10 +253,18 @@ These are intentionally *documented*, not silently tolerated. Fix opportunistica
   namespaces expected to grow; do not fold them into `util` just for size.
 - **`onchain`** (on-chain zap splitting) is `quartz`-adjacent but un-numbered;
   leave readable unless a clear NIP number lands.
-- **`model/cache/LocalCache` is `jvmAndroid`, not `commonMain`**, because it
-  spills NIP-95 blobs through `java.io.File`. Promoting it needs an okio (or
-  `expect`) sink behind `LocalCacheHost.nip95BlobDir`; nothing else in the
-  move-group blocks iOS.
+- **`model/cache/EventCache` is `jvmAndroid`, not `commonMain`.** The NIP-95
+  `java.io.File` spill is the obvious blocker but not the binding one: the
+  cache's own storage, `LargeSoftCache`, is `jvmAndroid`
+  (`WeakReference` + `ConcurrentSkipListMap`), as are the two
+  `*ListMatchingFilter` observables, `MintDirectoryIndex` and
+  `NwcPaymentTracker`. Promoting the cache means promoting those first.
+  Most of it has answers already in the tree — `commons.util.WeakReference`
+  is an expect/actual, and quartz's `commonMain` has `ConcurrentMap`,
+  `ConcurrentSet` and `LargeCache` — so the genuinely new work is an okio (or
+  `expect`) blob sink and getting `java.util.SortedSet` out of
+  `EventCache.filter`'s signature, which has no common equivalent. See the
+  audit in `commons/plans/2026-08-30-commons-migration-sweep.md`.
 
 ---
 

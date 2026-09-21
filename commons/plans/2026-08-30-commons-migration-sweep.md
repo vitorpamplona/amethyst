@@ -1000,3 +1000,66 @@ GC-eligible on Desktop, as they already are on Android.
 **The test suite is not sufficient for this step.** 62 tests cover the consume
 path well, but nothing covers a stale render. Run the desktop app against a
 real relay before calling part B done.
+
+
+### Can `EventCache` go to `commonMain`? — audit (2026-09-21)
+
+Short answer: yes in principle, but it is a **port, not a move**, and the
+earlier note in this file ("needs an okio sink … nothing else in the
+move-group blocks iOS") was wrong. The file sink is the visible blocker; the
+binding one is that the cache's own storage is `jvmAndroid`.
+
+`commons` really does build `iosArm64`/`iosSimulatorArm64`, so this is a real
+constraint rather than a hypothetical one.
+
+**What must move with it** (`EventCache` cannot go alone):
+
+| Dependency | Why it is `jvmAndroid` |
+|---|---|
+| `LargeSoftCache` — `users`, `notes`, `addressables` | `java.lang.ref.WeakReference`, `ConcurrentSkipListMap`, `BiConsumer` |
+| `EventListMatchingFilter`, `NoteListMatchingFilter` | `SortedSet`, `ConcurrentHashMap`, `ConcurrentSkipListSet` |
+| `MintDirectoryIndex` | `ConcurrentHashMap` |
+| `NwcPaymentTracker` | `ConcurrentHashMap`, `AtomicInteger` |
+| `DvmHeartbeatRegistry`, `OnchainZapResolver` | `ConcurrentHashMap` |
+| `LocalCacheHost` | `java.io.File` |
+
+**Most of it already has an answer in the tree:**
+
+- `commons.util.WeakReference` is already an `expect`/`actual`, and its KDoc
+  already anticipates `kotlin.native.ref.WeakReference` for iOS.
+- quartz `commonMain` already ships `ConcurrentMap`, `ConcurrentSet`,
+  `ConcurrentHashCache` and `LargeCache` — so every `ConcurrentHashMap` /
+  `ConcurrentSkipListSet` above is a swap, not a design problem.
+- `LargeSoftCache`'s skip-list ordering is **not** load-bearing: its whole
+  surface is `get`/`put`/`remove`/`size`/`containsKey`/`keys`/`forEach`, with
+  no ordered read. `ConcurrentSkipListMap` is there for lock-free concurrency,
+  so quartz's `ConcurrentMap` should substitute — worth confirming nothing
+  iterates expecting order before relying on that.
+- `AtomicInteger` → `kotlin.concurrent.atomics`; `BiConsumer` → a function
+  type; the `dateFormatter` call is one log line and can go.
+- `androidx.collection.LruCache` in `AntiSpamFilter` is already KMP —
+  `commonMain` uses it in `blurhash/CosineCache` and `relays/EOSE`.
+
+**The two pieces of genuinely new work:**
+
+1. **NIP-95 blob sink.** `EventCache.consume(FileStorageEvent)` writes through
+   `java.io.File`/`FileOutputStream`. Needs okio or an `expect` sink behind
+   `LocalCacheHost.nip95BlobDir`.
+2. **`java.util.SortedSet` in the public API.** `EventCache.filter(Filter)`
+   returns one, and both `*ListMatchingFilter` observables take
+   `(Filter) -> SortedSet<Note>`. Kotlin has no common `SortedSet`, so this is
+   a signature change rippling into `CacheSearch`, both observables and
+   `LocalCacheSearchParityTest`.
+
+**Recommended order** (bottom-up; each step is independently shippable):
+
+1. `LargeSoftCache` → `commonMain` on the existing `WeakReference` expect plus
+   quartz's `ConcurrentMap`. This is the keystone — everything else is behind it.
+2. The `ConcurrentHashMap`/`ConcurrentSkipListSet` holders, mechanically.
+3. `SortedSet` out of `EventCache.filter`'s signature.
+4. The NIP-95 sink.
+5. `EventCache` + `LocalCacheHost` themselves.
+
+**Not on part B's critical path.** Desktop is JVM, so retiring
+`DesktopLocalCache` needs none of this. The payoff here is an iOS front end
+later, not anything queued now.
