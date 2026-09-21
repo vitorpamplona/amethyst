@@ -127,6 +127,21 @@ class CordnKeyPackages(
     }
 
     /**
+     * Whether this account has a KeyPackage published on this coordinator.
+     *
+     * Read from the store rather than from [published], so it is right before
+     * [restore] has run and right after a relaunch. It answers the §8.4 half
+     * of the exposure disclosure, which is about what the coordinator holds —
+     * not about what this process has done since it started.
+     *
+     * A private half with no published counterpart is possible (the publish
+     * failed and the store was not cleaned), and reporting that as "published"
+     * overstates the exposure by one KeyPackage rather than understating it by
+     * all of them — the direction a privacy surface should err in.
+     */
+    suspend fun hasPublished(): Boolean = store.list().isNotEmpty()
+
+    /**
      * Generates a KeyPackage, keeps its private half, and publishes it.
      *
      * The private half is stored **before** the call, not after: a publish that

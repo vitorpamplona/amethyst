@@ -134,8 +134,9 @@ private fun atomicWrite(
  * A [CordnGroupStore] on the filesystem, encrypted through [cipher].
  *
  * ```
- * <dir>/groups/<base64url(gid)>/state    — encrypted MlsGroupState
- * <dir>/groups/<base64url(gid)>/cursor   — encrypted GroupCursor
+ * <dir>/groups/<base64url(gid)>/state       — encrypted MlsGroupState
+ * <dir>/groups/<base64url(gid)>/cursor      — encrypted GroupCursor
+ * <dir>/groups/<base64url(gid)>/via-request — present iff admitted by request
  * ```
  *
  * Scope [dir] with [CordnStorageLayout.directoryFor]; this class trusts that it
@@ -155,6 +156,8 @@ class FileCordnGroupStore(
     private fun stateFile(gid: String) = File(groupDir(gid), "state")
 
     private fun cursorFile(gid: String) = File(groupDir(gid), "cursor")
+
+    private fun joinOriginFile(gid: String) = File(groupDir(gid), "via-request")
 
     override suspend fun saveGroup(
         gid: String,
@@ -204,6 +207,18 @@ class FileCordnGroupStore(
             val buffer = ByteBuffer.wrap(bytes)
             GroupCursor(fetchCursor = buffer.long, lastCursor = buffer.long)
         }
+
+    // Existence IS the flag, so there is nothing to encrypt and nothing to
+    // read back wrong. It only ever goes from absent to present -- a join
+    // request cannot be unsent -- and it is removed with the group because a
+    // later re-join of the same gid is a different admission.
+    override suspend fun saveJoinedViaRequest(gid: String) {
+        withContext(Dispatchers.IO) {
+            atomicWrite(joinOriginFile(gid), ByteArray(0))
+        }
+    }
+
+    override suspend fun loadJoinedViaRequest(gid: String): Boolean = withContext(Dispatchers.IO) { joinOriginFile(gid).exists() }
 }
 
 /**

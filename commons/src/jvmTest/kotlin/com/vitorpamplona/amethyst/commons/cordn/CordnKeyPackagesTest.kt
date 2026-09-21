@@ -32,6 +32,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -283,5 +284,25 @@ class CordnKeyPackagesTest : CordnTransportHarness() {
 
             val publish = assertNotNull(coordinator.calls.lastOrNull { it.method == "kp_publish" })
             assertEquals(alice.pubKey, publish.callerPubKey)
+        }
+
+    @Test
+    fun `whether a key package is published is read from the store, not from this session`() =
+        runTest {
+            val alice = Account()
+            val store = InMemoryCordnKeyPackageStore()
+            val first = CordnKeyPackages(alice.pubKey, alice.coordinatorClient, store)
+            assertFalse(first.hasPublished(), "nothing published yet")
+
+            driving { first.publishNew() }
+
+            // A second instance over the same store -- which is what a relaunch
+            // is. The coordinator still holds the KeyPackage, so an exposure
+            // card reporting "not published" here would understate what it
+            // knows, and would do it on every launch after the first.
+            val second = CordnKeyPackages(alice.pubKey, alice.coordinatorClient, store)
+            assertTrue(second.hasPublished(), "before restore()")
+            second.restore()
+            assertTrue(second.hasPublished(), "after restore()")
         }
 }

@@ -431,7 +431,13 @@ class CordnGroupManager(
     suspend fun requestToJoin(
         gid: String,
         keyPackageRef: String,
-    ): Long = call { coordinator.storeJoinRequest(gid, keyPackageRef) }
+    ): Long =
+        call { coordinator.storeJoinRequest(gid, keyPackageRef) }
+            // Written whether or not anyone ever answers. The exposure is the
+            // asking, not the joining -- the coordinator has the npub either
+            // way -- so recording it only on success would understate it in
+            // exactly the case where nothing else on screen mentions it.
+            .also { store.saveJoinedViaRequest(gid) }
 
     /**
      * Everyone asking to join a group this manager holds.
@@ -594,18 +600,29 @@ class CordnGroupManager(
     /**
      * What this coordinator learns about [gid]. See [GroupExposure].
      *
-     * @param joinedFromShareLink whether admission went through
-     *   `join_request_store`, which names the asker's real npub (§8.1).
+     * Every field is read back from durable state rather than from what this
+     * process happens to have watched. The distinction is the whole point of
+     * the disclosure: a coordinator does not forget at app restart, so an
+     * exposure surface that resets to a cheerful default at launch is not a
+     * softer version of the truth, it is the wrong answer.
+     *
+     * @param publishedKeyPackage whether this account has a KeyPackage
+     *   published here, which only whoever holds the KeyPackage store can say
+     *   (§8.4). `CordnSession.exposure` supplies it; the default is the
+     *   weaker "at least what this session did".
      */
-    fun exposure(
+    suspend fun exposure(
         gid: String,
-        joinedFromShareLink: Boolean = false,
+        publishedKeyPackage: Boolean = this.publishedKeyPackage,
     ): GroupExposure {
         requireGroup(gid)
         return GroupExposure(
             coordinator = config.pubKey,
             linkedGroupCount = groups.size,
-            joinedFromShareLink = joinedFromShareLink,
+            // §8.1: a join request names the asker's real npub against a
+            // specific group. Persisted at the moment it happens, because it
+            // is a thing the coordinator now knows permanently.
+            joinedFromShareLink = store.loadJoinedViaRequest(gid),
             publishedKeyPackage = publishedKeyPackage,
             // :contextvm's CvmGiftWrap defaults to REQUIRED and CoordinatorClient
             // does not undo it, so this is a fact about our transport, not a

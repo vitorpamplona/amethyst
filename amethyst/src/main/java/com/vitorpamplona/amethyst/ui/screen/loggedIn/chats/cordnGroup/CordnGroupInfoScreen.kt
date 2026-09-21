@@ -43,6 +43,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -166,15 +167,20 @@ private fun CordnGroupInfo(
 
         HorizontalDivider(Modifier.padding(vertical = 16.dp))
 
-        CordnExposureCard(
-            GroupExposure(
-                coordinator = coordinatorPubKey,
-                linkedGroupCount = 1,
-                joinedFromShareLink = false,
-                publishedKeyPackage = true,
-                encryptionPinned = true,
-            ),
-        )
+        // Computed, never asserted. Hardcoding these made the card look like a
+        // disclosure while reporting the same four values for every group --
+        // which is exactly the regression §7 risk 4 of the plan warns about.
+        val runtime = accountViewModel.account.cordnRuntime
+        val exposure by
+            produceState<GroupExposure?>(null, runtime, coordinatorPubKey, room.gid) {
+                value =
+                    runtime
+                        ?.sessionOrNull(coordinatorPubKey)
+                        ?.runCatching { exposure(room.gid) }
+                        ?.getOrNull()
+            }
+
+        exposure?.let { CordnExposureCard(it) }
     }
 }
 

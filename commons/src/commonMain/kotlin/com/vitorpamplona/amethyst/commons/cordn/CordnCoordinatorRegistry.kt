@@ -69,6 +69,18 @@ class CordnSession(
 ) {
     val coordinatorPubKey: HexKey get() = config.pubKey
 
+    /**
+     * What this coordinator learns about [gid], answered from everything the
+     * session holds rather than everything one object happens to see.
+     *
+     * The manager alone cannot say whether this account has a KeyPackage
+     * published here: it only knows what it published itself, this run, so
+     * after a relaunch it would report "no" about a KeyPackage sitting on the
+     * coordinator right now. The KeyPackage store knows, and the session is
+     * the first place that holds both.
+     */
+    suspend fun exposure(gid: String): GroupExposure = manager.exposure(gid, publishedKeyPackage = keyPackages.hasPublished())
+
     internal suspend fun close() = scope.close()
 }
 

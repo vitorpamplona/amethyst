@@ -59,12 +59,29 @@ interface CordnGroupStore {
     )
 
     suspend fun loadCursor(gid: String): GroupCursor?
+
+    /**
+     * Records that admission to [gid] went through `join_request_store`.
+     *
+     * Per-group side state beside the cursor, and durable for the same reason:
+     * it describes something the coordinator will not forget. §8.1 — a join
+     * request names the asker's real npub against a specific group, so once it
+     * has happened the coordinator can tie this account to this group forever.
+     * Whether *we* still remember changes nothing about what it knows, which
+     * is why this outlives the session that did it rather than resetting to a
+     * cheerful default at every launch.
+     */
+    suspend fun saveJoinedViaRequest(gid: String)
+
+    /** Whether [gid] was admitted through a join request. */
+    suspend fun loadJoinedViaRequest(gid: String): Boolean
 }
 
 /** A [CordnGroupStore] that keeps everything in memory. Tests, and nothing else. */
 class InMemoryCordnGroupStore : CordnGroupStore {
     private val groups = mutableMapOf<String, ByteArray>()
     private val cursors = mutableMapOf<String, GroupCursor>()
+    private val viaRequest = mutableSetOf<String>()
 
     override suspend fun saveGroup(
         gid: String,
@@ -78,9 +95,16 @@ class InMemoryCordnGroupStore : CordnGroupStore {
     override suspend fun deleteGroup(gid: String) {
         groups.remove(gid)
         cursors.remove(gid)
+        viaRequest.remove(gid)
     }
 
     override suspend fun listGroups(): List<String> = groups.keys.toList()
+
+    override suspend fun saveJoinedViaRequest(gid: String) {
+        viaRequest += gid
+    }
+
+    override suspend fun loadJoinedViaRequest(gid: String): Boolean = gid in viaRequest
 
     override suspend fun saveCursor(
         gid: String,

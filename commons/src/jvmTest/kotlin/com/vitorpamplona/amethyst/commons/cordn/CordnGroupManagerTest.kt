@@ -37,6 +37,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -520,6 +521,39 @@ class CordnGroupManagerTest {
 
             assertTrue(inbox.pending.isEmpty(), "nobody should be asked about a group they are in")
             assertEquals(CordnGroupManager.ALREADY_A_MEMBER, inbox.skipped.single().reason)
+        }
+
+    @Test
+    fun `asking to join is remembered across a restart, because the coordinator remembers`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val store = InMemoryCordnGroupStore()
+            val first = manager(alice, coordinator, store)
+            first.createGroup(gid, CordnGroupMetadata(name = "Asked"))
+
+            assertFalse(first.exposure(gid).joinedFromShareLink)
+            first.requestToJoin(gid, "kp-ref")
+            assertTrue(first.exposure(gid).joinedFromShareLink)
+
+            // A new manager over the same store, which is what a relaunch is.
+            // The coordinator still has the npub tied to this group, so an
+            // exposure card that came back clean here would be lying.
+            val second = manager(alice, coordinator, store)
+            second.restore()
+            assertTrue(second.exposure(gid).joinedFromShareLink)
+        }
+
+    @Test
+    fun `a failed join request still counts as asked`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Asked"))
+
+            aliceManager.requestToJoin(gid, "kp-ref")
+            // Nobody answers. The exposure is the asking, not the joining.
+            assertTrue(aliceManager.exposure(gid).joinedFromShareLink)
+            assertTrue(aliceManager.group(gid)!!.memberCount == 1)
         }
 
     /** Bob's own view of the coordinator, carrying whatever Alice's has stored. */
