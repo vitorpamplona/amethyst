@@ -145,6 +145,7 @@ import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -3804,6 +3805,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is GeocacheListingEvent,
                 is GeocacheCurationListEvent,
                 is GeohashListEvent,
+                is SnoObjectEvent,
                 is GitRepositoryEvent,
                 is GitRepositoryStateEvent,
                 is UserGraspListEvent,

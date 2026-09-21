@@ -3080,4 +3080,8 @@
     <string name="buzz_persona_publish">Publish persona</string>
     <string name="profile_card_follows_you">Follows you</string>
     <string name="profile_card_bot">Bot</string>
+    <string name="sno_object_title">3D object</string>
+    <string name="sno_object_details">%1$d vertices · %2$d faces</string>
+    <string name="sno_object_unreadable">This 3D object could not be read (rule %1$s)</string>
+    <string name="sno_object_turn_hint">Drag to turn</string>
 </resources>

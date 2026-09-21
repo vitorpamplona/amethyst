@@ -213,6 +213,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderSnoObject
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareRelease
@@ -257,6 +258,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -1365,6 +1367,10 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
+        is SnoObjectEvent -> {
+            RenderSnoObject(baseNote)
         }
 
         is ChessGameEvent -> {
