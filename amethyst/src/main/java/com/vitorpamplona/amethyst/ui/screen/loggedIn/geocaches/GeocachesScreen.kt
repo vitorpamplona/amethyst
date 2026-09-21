@@ -95,7 +95,16 @@ fun GeocachesScreen(
 
     DisappearingScaffold(
         isInvertedLayout = false,
-        topBar = { GeocachesTopBar(accountViewModel, nav) },
+        // The tab row belongs to the top bar, not to the content. DisappearingScaffold draws its
+        // content from the top of the window, behind the bar, so a tab row placed first in the
+        // content column lands under the status bar: invisible and untappable, which left Map,
+        // Hunts, Finds and Mine unreachable. DiscoveryScreen stacks its tabs the same way.
+        topBar = {
+            Column {
+                GeocachesTopBar(accountViewModel, nav)
+                GeocacheTabRow(pagerState)
+            }
+        },
         bottomBar = {
             AppBottomBar(Route.Geocaches(), nav, accountViewModel) { route ->
                 if (route is Route.Geocaches) {
@@ -117,8 +126,6 @@ fun GeocachesScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.fillMaxSize()) {
-            GeocacheTabRow(pagerState)
-
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), userScrollEnabled = false) { page ->
                 when (GeocacheTab.entries[page]) {
                     GeocacheTab.NEARBY ->

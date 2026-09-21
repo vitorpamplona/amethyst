@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 val RepliesAndReactionsToAddressesKinds1 =
@@ -55,6 +56,11 @@ val RepliesAndReactionsToAddressesKinds1 =
         CommentEvent.KIND,
         AttestationEvent.KIND,
         BadgeAwardEvent.KIND,
+        // A NIP-CC found log points at the cache it claims with a lowercase `a`, which is how
+        // every client writing them today does it. Without this the cache screen asks for
+        // engagement on the listing and never for its finds, so a cache with logs sitting on a
+        // relay we are already connected to still reads "No one has logged this cache yet".
+        GeocacheFoundLogEvent.KIND,
     )
 
 val PostsAndChatMessagesToAddresses =
