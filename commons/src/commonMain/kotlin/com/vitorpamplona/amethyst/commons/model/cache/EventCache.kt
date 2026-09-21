@@ -58,8 +58,6 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
-import com.vitorpamplona.amethyst.commons.util.KmpLock
-import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
@@ -424,6 +422,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.time.TimeSource
 
 /**
@@ -511,8 +511,8 @@ open class EventCache :
      */
     val mintDirectory = MintDirectoryIndex()
 
-    @Volatile private var mintDirectoryBackfilled = false
-    private val mintDirectoryBackfillLock = KmpLock()
+    @OptIn(ExperimentalAtomicApi::class)
+    private val mintDirectoryBackfilled = AtomicBoolean(false)
 
     /**
      * Sweeps `notes` + `addressables` for any NIP-87 / NIP-61 event the
@@ -526,15 +526,17 @@ open class EventCache :
      * scan failure is swallowed so the index stays usable even if the
      * cache is in an unexpected state.
      */
+    @OptIn(ExperimentalAtomicApi::class)
     fun ensureMintDirectoryBackfilled() {
-        if (mintDirectoryBackfilled) return
-        mintDirectoryBackfillLock.withLock {
-            if (mintDirectoryBackfilled) return
-            runCatching {
-                notes.forEach { _, note -> note.event?.let(::updateMintIndex) }
-                addressables.forEach { _, note -> note.event?.let(::updateMintIndex) }
-            }
-            mintDirectoryBackfilled = true
+        // Claim the sweep with a CAS rather than a lock: exactly one caller gets true and does
+        // the work. A second caller returns immediately instead of blocking for the length of a
+        // full cache scan — it may see a partially filled index, which is the same thing it sees
+        // before any backfill runs, and one relay round-trip later it does not.
+        if (!mintDirectoryBackfilled.compareAndSet(false, true)) return
+
+        runCatching {
+            notes.forEach { _, note -> note.event?.let(::updateMintIndex) }
+            addressables.forEach { _, note -> note.event?.let(::updateMintIndex) }
         }
     }
 
