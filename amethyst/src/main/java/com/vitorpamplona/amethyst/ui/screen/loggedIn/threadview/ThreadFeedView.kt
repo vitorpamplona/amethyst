@@ -225,6 +225,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayReview
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderSnoAvatar
 import com.vitorpamplona.amethyst.ui.note.types.RenderSnoObject
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
@@ -265,6 +266,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
@@ -1068,6 +1070,8 @@ private fun FullBleedNoteCompose(
                     RenderBirdDetection(baseNote)
                 } else if (noteEvent is SnoObjectEvent) {
                     RenderSnoObject(baseNote)
+                } else if (noteEvent is SnoAvatarEvent) {
+                    RenderSnoAvatar(baseNote)
                 } else if (noteEvent is Ps1SaveEvent) {
                     RenderPs1Save(baseNote)
                 } else if (noteEvent is GeocacheListingEvent) {

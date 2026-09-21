@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.cyberspace.deck0003Sno
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
@@ -32,7 +32,9 @@ import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
  * default avatar.
  *
  * Replaceable, so relays keep the newest per `(pubkey, kind)` and an identity
- * has exactly one avatar. This kind **was** 33331 with a `d` fixed at
+ * has exactly one avatar — which is why this extends [BaseReplaceableEvent]
+ * rather than plain `Event`, giving it the fixed-empty-`d` address the local
+ * store keys replaceables on. This kind **was** 33331 with a `d` fixed at
  * `"avatar"` before the spec moved it here, and 33331 was then handed to the
  * standalone objects of DECK-0003 §3.1 — so an old 33331 whose `d` is literally
  * `avatar` is not a surprise, merely stale.
@@ -51,7 +53,7 @@ class SnoAvatarEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     /** True when this identity asked for the default avatar, which owes no work. */
     fun isDefaultAvatar(): Boolean = content.isBlank()
 
