@@ -64,10 +64,6 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_empty_day_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_day
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -78,6 +74,7 @@ import java.time.ZoneId
 @Composable
 fun CalendarDayView(
     feedState: FeedContentState,
+    model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
@@ -93,12 +90,10 @@ fun CalendarDayView(
             else -> emptyList()
         }
 
-    val today = remember { LocalDate.now() }
-    // Persisting an epoch-day Long is auto-saveable; arithmetic in [LocalDate] is DST-safe
-    // (millisecond stepping was off by an hour after spring/fall transitions). [rememberForeverState]
-    // rather than rememberSaveable so the day the user paged to survives opening an appointment.
-    var visibleEpochDay by rememberForeverState(ViewStateKeys.CALENDAR_DAY_VISIBLE) { today.toEpochDay() }
-    val visibleDate = LocalDate.ofEpochDay(visibleEpochDay)
+    // Stepping in [LocalDate] rather than milliseconds keeps this DST-safe: millisecond stepping
+    // was off by an hour after spring/fall transitions.
+    val visibleEpochDay = model.visibleEpochDay
+    val visibleDate = model.visibleDate
 
     val byDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
     val dayEvents = byDay[visibleDate.toEpochDay()].orEmpty()
@@ -112,15 +107,15 @@ fun CalendarDayView(
     // Single LazyColumn — nav header is the first item so it scrolls with the disappearing
     // top bar instead of staying pinned mid-screen when the bar collapses.
     LazyColumn(
-        state = rememberForeverLazyListState(ScrollStateKeys.CALENDARS_DAY_SCREEN),
+        state = model.dayListState,
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier
                 .fillMaxSize()
                 .calendarSwipeNavigation(
                     key = visibleEpochDay,
-                    onSwipeLeft = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
-                    onSwipeRight = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
+                    onSwipeLeft = { model.shiftDays(1) },
+                    onSwipeRight = { model.shiftDays(-1) },
                 ),
     ) {
         item(key = "day-nav") {
@@ -128,9 +123,9 @@ fun CalendarDayView(
                 title = formatLongDate(visibleDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
                 prevContentDescription = stringRes(Res.string.calendar_nav_previous_day),
                 nextContentDescription = stringRes(Res.string.calendar_nav_next_day),
-                onPrev = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
-                onNext = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
-                onToday = { visibleEpochDay = LocalDate.now().toEpochDay() },
+                onPrev = { model.shiftDays(-1) },
+                onNext = { model.shiftDays(1) },
+                onToday = { model.visibleEpochDay = LocalDate.now().toEpochDay() },
             )
         }
 

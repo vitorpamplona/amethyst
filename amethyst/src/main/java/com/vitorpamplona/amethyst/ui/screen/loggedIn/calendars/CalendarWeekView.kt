@@ -61,10 +61,6 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_empty_week_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_week
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_week
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -75,6 +71,7 @@ import java.time.ZoneId
 @Composable
 fun CalendarWeekView(
     feedState: FeedContentState,
+    model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
@@ -91,17 +88,11 @@ fun CalendarWeekView(
         }
 
     val today = remember { LocalDate.now() }
-    // Persist the week-start as an epoch-day Long (auto-saveable), reconstruct LocalDate on use.
-    // [rememberForeverState] rather than rememberSaveable so opening an appointment and coming
-    // back keeps the week the user had paged to.
-    var weekStartEpochDay by rememberForeverState(ViewStateKeys.CALENDAR_WEEK_START) { startOfWeek(today).toEpochDay() }
-    val weekStart = LocalDate.ofEpochDay(weekStartEpochDay)
-
-    var selectedDayIndex by rememberForeverState(ViewStateKeys.CALENDAR_WEEK_SELECTED_DAY) { 0 }
+    val weekStart = model.weekStart
 
     val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
 
-    val selectedDate = weekStart.plusDays(selectedDayIndex.toLong())
+    val selectedDate = model.selectedWeekDate
     val dayNotes = eventsByDay[selectedDate.toEpochDay()].orEmpty()
 
     // Single LazyColumn containing nav + strip + day-summary + events so the whole stack
@@ -109,21 +100,15 @@ fun CalendarWeekView(
     // disappearingScaffoldPadding kept the strip pinned at a fixed offset, so when the top bar
     // collapsed on scroll the strip stayed put and left a visual gap.
     LazyColumn(
-        state = rememberForeverLazyListState(ScrollStateKeys.CALENDARS_WEEK_SCREEN),
+        state = model.weekListState,
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier
                 .fillMaxSize()
                 .calendarSwipeNavigation(
-                    key = weekStartEpochDay,
-                    onSwipeLeft = {
-                        weekStartEpochDay = weekStart.plusWeeks(1).toEpochDay()
-                        selectedDayIndex = 0
-                    },
-                    onSwipeRight = {
-                        weekStartEpochDay = weekStart.minusWeeks(1).toEpochDay()
-                        selectedDayIndex = 0
-                    },
+                    key = model.weekStartEpochDay,
+                    onSwipeLeft = { model.shiftWeeks(1) },
+                    onSwipeRight = { model.shiftWeeks(-1) },
                 ),
     ) {
         item(key = "week-nav") {
@@ -131,18 +116,9 @@ fun CalendarWeekView(
                 title = formatMonthYear(weekStart.year, weekStart.monthValue - 1),
                 prevContentDescription = stringRes(Res.string.calendar_nav_previous_week),
                 nextContentDescription = stringRes(Res.string.calendar_nav_next_week),
-                onPrev = {
-                    weekStartEpochDay = weekStart.minusWeeks(1).toEpochDay()
-                    selectedDayIndex = 0
-                },
-                onNext = {
-                    weekStartEpochDay = weekStart.plusWeeks(1).toEpochDay()
-                    selectedDayIndex = 0
-                },
-                onToday = {
-                    weekStartEpochDay = startOfWeek(LocalDate.now()).toEpochDay()
-                    selectedDayIndex = 0
-                },
+                onPrev = { model.shiftWeeks(-1) },
+                onNext = { model.shiftWeeks(1) },
+                onToday = { model.showWeekOf(LocalDate.now()) },
             )
         }
 
@@ -150,9 +126,9 @@ fun CalendarWeekView(
             WeekStrip(
                 weekStart = weekStart,
                 today = today,
-                selectedIndex = selectedDayIndex,
+                selectedIndex = model.selectedDayIndex,
                 eventsByDay = eventsByDay,
-                onSelect = { selectedDayIndex = it },
+                onSelect = { model.selectedDayIndex = it },
             )
         }
 
@@ -272,14 +248,4 @@ private fun DaySummaryHeader(date: LocalDate) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp),
     )
-}
-
-/**
- * Returns the Sunday on or before [date]. DST-safe because [LocalDate] arithmetic ignores zones.
- * `DayOfWeek.SUNDAY.value` is 7 in java.time, so `% 7` collapses Sunday → 0 with the rest of the
- * week following in order.
- */
-private fun startOfWeek(date: LocalDate): LocalDate {
-    val daysFromSunday = date.dayOfWeek.value % 7
-    return date.minusDays(daysFromSunday.toLong())
 }

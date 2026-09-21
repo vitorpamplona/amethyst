@@ -26,20 +26,10 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import kotlin.math.roundToInt
 
 private val savedScrollStates = mutableMapOf<String, ScrollState>()
-
-/**
- * Same idea as [savedScrollStates], for the small scalars a screen needs to come back to the
- * state the user left it in: which month the calendar grid is showing, which day is selected,
- * which lens (feed / month / week / day) is active. Process-scoped on purpose — it outlives a
- * screen's composition but not the app, so nothing here is ever stale across launches.
- */
-private val savedViewStates = mutableMapOf<String, Any?>()
 
 private data class ScrollState(
     val index: Int,
@@ -82,9 +72,6 @@ object ScrollStateKeys {
     const val HIGHLIGHTS_SCREEN = "HighlightsFeed"
     const val RELAY_GROUPS_DISCOVERY_SCREEN = "RelayGroupsDiscoveryFeed"
     const val CALENDARS_SCREEN = "CalendarsFeed"
-    const val CALENDARS_MONTH_SCREEN = "CalendarsMonthFeed"
-    const val CALENDARS_WEEK_SCREEN = "CalendarsWeekFeed"
-    const val CALENDARS_DAY_SCREEN = "CalendarsDayFeed"
     const val CALENDAR_COLLECTIONS_SCREEN = "CalendarCollectionsFeed"
     const val PRODUCTS_SCREEN = "ProductsFeed"
     const val SHORTS_SCREEN = "ShortsFeed"
@@ -109,52 +96,6 @@ object PagerStateKeys {
     const val DISCOVER_SCREEN = "PagerDiscover"
     const val POLLS_SCREEN = "PagerPolls"
     const val NOTIFICATION_SCREEN = "PagerNotification"
-}
-
-object ViewStateKeys {
-    const val CALENDARS_VIEW_MODE = "CalendarsViewMode"
-    const val CALENDARS_FILTER = "CalendarsMembershipFilter"
-    const val CALENDAR_MONTH_YEAR = "CalendarsMonthYear"
-    const val CALENDAR_MONTH_VALUE = "CalendarsMonthValue"
-    const val CALENDAR_MONTH_SELECTED_DAY = "CalendarsMonthSelectedDay"
-    const val CALENDAR_WEEK_START = "CalendarsWeekStart"
-    const val CALENDAR_WEEK_SELECTED_DAY = "CalendarsWeekSelectedDay"
-    const val CALENDAR_DAY_VISIBLE = "CalendarsDayVisible"
-}
-
-/**
- * What [rememberForeverLazyListState] does for a scroll offset, for the small scalars that decide
- * what a screen is showing: which month the calendar grid is on, which day is selected, which lens
- * is active.
- *
- * Plain `rememberSaveable` is not enough for those. It only restores a composition the saved-state
- * registry hands back, and a screen loses that in two ordinary cases: the user opens an item and
- * comes back (the observed calendar bug), and — always, with no registry involved — the value sits
- * inside a branch (`when (viewMode) { … }`) that leaves the composition when the user switches
- * lenses, which unregisters it outright. Parking the last value in a process-scoped map sidesteps
- * both; `rememberSaveable` still runs in front of it, so a configuration change keeps restoring
- * the way it always did.
- *
- * Process-scoped, like the scroll offsets above: [init] runs the first time this key is used in
- * this process and never again, so nothing here survives a relaunch.
- */
-@Composable
-fun <T> rememberForeverState(
-    key: String,
-    init: () -> T,
-): MutableState<T> {
-    val state =
-        rememberSaveable {
-            @Suppress("UNCHECKED_CAST")
-            val restored = if (savedViewStates.containsKey(key)) savedViewStates[key] as T else init()
-            mutableStateOf(restored)
-        }
-
-    DisposableEffect(key, state) {
-        onDispose { savedViewStates[key] = state.value }
-    }
-
-    return state
 }
 
 @Composable

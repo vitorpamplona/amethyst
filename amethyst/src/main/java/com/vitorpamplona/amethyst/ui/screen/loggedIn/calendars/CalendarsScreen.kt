@@ -26,13 +26,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
@@ -63,30 +61,29 @@ fun CalendarsScreen(
     WatchAccountForCalendarsScreen(feedState, accountViewModel)
     CalendarsFilterAssemblerSubscription(accountViewModel)
 
-    // [rememberForeverState], not rememberSaveable: opening an appointment disposes this screen,
-    // and coming back rebuilt it at its defaults — the feed lens, today's month, the top of the
-    // list. Every other feed in the app already parks its position in the same process-scoped
-    // store (see rememberForeverLazyListState); the lens and the filter belong there too, and the
-    // per-lens state below follows suit.
-    var viewMode by rememberForeverState(ViewStateKeys.CALENDARS_VIEW_MODE) { CalendarsViewMode.FEED }
-    var filterDTag by rememberForeverState<String?>(ViewStateKeys.CALENDARS_FILTER) { null }
+    // Scoped to this screen's back-stack entry: opening an appointment disposes the composition
+    // and switching lenses disposes the branch the previous lens lived in, so none of what the
+    // user is looking at can live in `remember`/`rememberSaveable`. It is cleared when the entry
+    // itself goes. See [CalendarsViewModel].
+    val model: CalendarsViewModel = viewModel()
+
     // Resolve the selected calendar's member addresses (or null when "All"). Plumbed into each
     // view so the membership filter is applied client-side after the feed loads — changing the
     // filter doesn't trigger a relay refetch.
-    val filterAddresses = rememberCalendarFilterAddresses(filterDTag, accountViewModel)
+    val filterAddresses = rememberCalendarFilterAddresses(model.filterDTag, accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
             CalendarsTopBar(
-                viewMode = viewMode,
-                onViewModeChange = { viewMode = it },
+                viewMode = model.viewMode,
+                onViewModeChange = { model.viewMode = it },
                 accountViewModel = accountViewModel,
                 nav = nav,
                 trailing = {
                     CalendarFilterChip(
-                        selectedDTag = filterDTag,
-                        onSelect = { filterDTag = it },
+                        selectedDTag = model.filterDTag,
+                        onSelect = { model.filterDTag = it },
                         accountViewModel = accountViewModel,
                     )
                 },
@@ -110,15 +107,15 @@ fun CalendarsScreen(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
-                when (viewMode) {
+                when (model.viewMode) {
                     CalendarsViewMode.FEED ->
-                        CalendarFeedView(feedState, accountViewModel, nav, filterAddresses)
+                        CalendarFeedView(feedState, model, accountViewModel, nav, filterAddresses)
                     CalendarsViewMode.MONTH ->
-                        CalendarMonthView(feedState, accountViewModel, nav, filterAddresses)
+                        CalendarMonthView(feedState, model, accountViewModel, nav, filterAddresses)
                     CalendarsViewMode.WEEK ->
-                        CalendarWeekView(feedState, accountViewModel, nav, filterAddresses)
+                        CalendarWeekView(feedState, model, accountViewModel, nav, filterAddresses)
                     CalendarsViewMode.DAY ->
-                        CalendarDayView(feedState, accountViewModel, nav, filterAddresses)
+                        CalendarDayView(feedState, model, accountViewModel, nav, filterAddresses)
                 }
             }
         }

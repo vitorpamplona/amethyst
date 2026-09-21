@@ -63,10 +63,6 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_today_suff
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_month
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_month
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.ViewStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -78,6 +74,7 @@ import java.time.ZoneId
 @Composable
 fun CalendarMonthView(
     feedState: FeedContentState,
+    model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
@@ -94,43 +91,25 @@ fun CalendarMonthView(
         }
 
     val today = remember { LocalDate.now() }
-    // YearMonth is not Parcelable/auto-saveable; persist the two ints and rebuild on each read.
-    // [rememberForeverState] rather than rememberSaveable so browsing to an appointment and back
-    // returns to the month the user was reading instead of snapping to today's.
-    var visibleYear by rememberForeverState(ViewStateKeys.CALENDAR_MONTH_YEAR) { today.year }
-    var visibleMonthValue by rememberForeverState(ViewStateKeys.CALENDAR_MONTH_VALUE) { today.monthValue }
-    val visibleMonth = YearMonth.of(visibleYear, visibleMonthValue)
-
-    fun setVisibleMonth(ym: YearMonth) {
-        visibleYear = ym.year
-        visibleMonthValue = ym.monthValue
-    }
+    val visibleMonth = model.visibleMonth
 
     val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
     val barsByDay by remember(notes) { derivedStateOf { computeMonthGridBars(notes) } }
 
-    var selectedDayKey by rememberForeverState<Long?>(ViewStateKeys.CALENDAR_MONTH_SELECTED_DAY) { null }
-
-    val selectedEvents = selectedDayKey?.let { eventsByDay[it] }.orEmpty()
+    val selectedEvents = model.selectedDayKey?.let { eventsByDay[it] }.orEmpty()
 
     // Single LazyColumn — nav header + weekday header + grid scroll together with the
     // disappearing top bar so the grid doesn't stay pinned mid-screen when the bar collapses.
     LazyColumn(
-        state = rememberForeverLazyListState(ScrollStateKeys.CALENDARS_MONTH_SCREEN),
+        state = model.monthListState,
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier
                 .fillMaxSize()
                 .calendarSwipeNavigation(
-                    key = visibleYear to visibleMonthValue,
-                    onSwipeLeft = {
-                        setVisibleMonth(visibleMonth.plusMonths(1))
-                        selectedDayKey = null
-                    },
-                    onSwipeRight = {
-                        setVisibleMonth(visibleMonth.minusMonths(1))
-                        selectedDayKey = null
-                    },
+                    key = visibleMonth,
+                    onSwipeLeft = { model.showMonth(visibleMonth.plusMonths(1)) },
+                    onSwipeRight = { model.showMonth(visibleMonth.minusMonths(1)) },
                 ),
     ) {
         item(key = "month-nav") {
@@ -138,18 +117,9 @@ fun CalendarMonthView(
                 title = formatMonthYear(visibleMonth.year, visibleMonth.monthValue - 1),
                 prevContentDescription = stringRes(Res.string.calendar_nav_previous_month),
                 nextContentDescription = stringRes(Res.string.calendar_nav_next_month),
-                onPrev = {
-                    setVisibleMonth(visibleMonth.minusMonths(1))
-                    selectedDayKey = null
-                },
-                onNext = {
-                    setVisibleMonth(visibleMonth.plusMonths(1))
-                    selectedDayKey = null
-                },
-                onToday = {
-                    setVisibleMonth(YearMonth.from(LocalDate.now()))
-                    selectedDayKey = null
-                },
+                onPrev = { model.showMonth(visibleMonth.minusMonths(1)) },
+                onNext = { model.showMonth(visibleMonth.plusMonths(1)) },
+                onToday = { model.showMonth(YearMonth.from(LocalDate.now())) },
             )
         }
 
@@ -162,9 +132,9 @@ fun CalendarMonthView(
                 visibleMonth = visibleMonth,
                 today = today,
                 barsByDay = barsByDay,
-                selectedDayKey = selectedDayKey,
+                selectedDayKey = model.selectedDayKey,
                 onDayClick = { dayKey ->
-                    selectedDayKey = if (selectedDayKey == dayKey) null else dayKey
+                    model.selectedDayKey = if (model.selectedDayKey == dayKey) null else dayKey
                 },
             )
         }
