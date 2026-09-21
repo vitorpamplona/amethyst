@@ -12,10 +12,14 @@ echo "$JAVA_HOME"
 echo "$(java -version)"
 echo "Running test... "
 
-# Single-variant pre-push tests. `./gradlew test` would compile six Android
-# variants of :amethyst (play/fdroid × debug/release/benchmark) plus full
-# native-libs merging per variant — ~6× the work of one variant. CI runs the
+# Single-variant pre-push tests. `./gradlew test` would compile nine Android
+# variants of :amethyst (complete/play/fdroid × debug/release/benchmark) plus
+# full native-libs merging per variant — ~9× the work of one variant. CI runs the
 # multi-flavor matrix on push to main; pre-push only needs one happy path.
+#
+# `complete` is the variant to run: it is the only channel that compiles both
+# shared source sets (src/google/ and src/health/), so its unit tests are the
+# superset — testPlayDebugUnitTest alone would skip every Health Connect test.
 #
 # Every KMP module's tests live under <module>:jvmTest - the Kotlin Multiplatform
 # plugin registers no plain `test` task - so a module missing from this list is a
@@ -31,7 +35,7 @@ TASKS=(
     :nestsClient:jvmTest
     :quic:jvmTest
     :marmotQuic:jvmTest
-    :amethyst:testPlayDebugUnitTest
+    :amethyst:testCompleteDebugUnitTest
     :cli:test
 )
 
