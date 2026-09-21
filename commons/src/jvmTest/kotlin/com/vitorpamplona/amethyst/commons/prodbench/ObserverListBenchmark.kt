@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.EventFactory
+import java.lang.management.ManagementFactory
 import java.util.Random
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
@@ -256,6 +257,175 @@ class ObserverListBenchmark {
                 }
             compare("re-deliver n=$n", c, s)
         }
+    }
+
+    // ------------------------------------------------------------ allocation / GC
+
+    /**
+     * Bytes allocated per operation, which is the GC-pressure question: a phone pays for young-gen
+     * churn in jank, not just in CPU. Measured with HotSpot's per-thread allocation counter, so it
+     * is exact rather than inferred from heap deltas, and single-threaded so the counter is this
+     * work and nothing else.
+     */
+    private fun allocatedBytes(): Long {
+        val bean = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
+        return bean.getThreadAllocatedBytes(Thread.currentThread().id)
+    }
+
+    private fun measureAllocation(
+        label: String,
+        warmups: Int = 2,
+        body: () -> Int,
+    ): Double {
+        repeat(warmups) { body() }
+        val before = allocatedBytes()
+        val ops = body()
+        val bytes = (allocatedBytes() - before).toDouble() / ops
+        println("  %-44s %12.0f bytes/op".format(label, bytes))
+        return bytes
+    }
+
+    private fun compareBytes(
+        name: String,
+        cowBytes: Double,
+        skipBytes: Double,
+    ) {
+        val ratio = cowBytes / skipBytes
+        val verdict =
+            when {
+                ratio < 0.95 -> "copy-on-write allocates %.2fx LESS".format(1 / ratio)
+                ratio > 1.05 -> "copy-on-write allocates %.2fx MORE".format(ratio)
+                else -> "parity"
+            }
+        println("  -> $name: $verdict\n")
+    }
+
+    @Test
+    fun allocationPerOperation() {
+        println("\n== bytes allocated per operation (GC pressure) ==")
+
+        // (a) The re-delivery path: the dominant steady-state call once a screen is warm.
+        for (n in listOf(100, 1000)) {
+            val fx = fixtures(n)
+            val f = Filter(kinds = listOf(TextNoteEvent.KIND), limit = n)
+            val a = cow(f).also { s -> fx.forEach { (e, note) -> s.new(e, note) } }
+            val b = skipList(f).also { s -> fx.forEach { (e, note) -> s.new(e, note) } }
+            val reps = 50_000
+
+            val c =
+                measureAllocation("copy-on-write re-deliver @$n") {
+                    for (i in 0 until reps) {
+                        val (e, note) = fx[i % n]
+                        a.new(e, note)
+                    }
+                    reps
+                }
+            val sk =
+                measureAllocation("skip list     re-deliver @$n") {
+                    for (i in 0 until reps) {
+                        val (e, note) = fx[i % n]
+                        b.new(e, note)
+                    }
+                    reps
+                }
+            compareBytes("re-deliver n=$n", c, sk)
+        }
+
+        // (b) The insert path, where copy-on-write copies the list and the skip list does not.
+        for (n in listOf(100, 1000)) {
+            val seed = fixtures(n)
+            val arrivals = fixtures(n * 2).drop(n).map { (e, _) -> e }
+            val f = Filter(kinds = listOf(TextNoteEvent.KIND))
+
+            fun run(make: () -> Observable): () -> Int =
+                {
+                    val subject = make()
+                    seed.forEach { (e, note) -> subject.new(e, note) }
+                    val notes =
+                        arrivals.map { e ->
+                            val note = Note(e.id)
+                            note.event = e
+                            e to note
+                        }
+                    val before = allocatedBytes()
+                    notes.forEach { (e, note) -> subject.new(e, note) }
+                    alloc.addAndGet(allocatedBytes() - before)
+                    arrivals.size
+                }
+
+            fun measureInner(
+                label: String,
+                body: () -> Int,
+            ): Double {
+                repeat(2) {
+                    alloc.set(0)
+                    body()
+                }
+                alloc.set(0)
+                val ops = body()
+                val bytes = alloc.get().toDouble() / ops
+                println("  %-44s %12.0f bytes/op".format(label, bytes))
+                return bytes
+            }
+
+            val c = measureInner("copy-on-write insert @$n", run { cow(f) })
+            val sk = measureInner("skip list     insert @$n", run { skipList(f) })
+            compareBytes("insert @n=$n", c, sk)
+        }
+        println("  blackhole=${blackhole.get()}")
+    }
+
+    private val alloc = AtomicLong()
+
+    /**
+     * The one place copy-on-write could lose on allocation: a lost CAS throws away the copy it
+     * just built and retries, so contention multiplies the bytes per insert. The skip list has no
+     * such amplification. Summed across the worker threads, since the counter is per-thread.
+     */
+    @Test
+    fun allocationUnderContention() {
+        println("\n== bytes allocated per insert under contention (CAS retry amplification) ==")
+        val ops = 4_000
+        val fx = fixtures(ops)
+        val f = Filter(kinds = listOf(TextNoteEvent.KIND), limit = 1000)
+
+        fun run(
+            threads: Int,
+            subject: Observable,
+        ): Double {
+            val bean = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
+            val total = AtomicLong()
+            val start = CountDownLatch(1)
+            val done = CountDownLatch(threads)
+            repeat(threads) { t ->
+                thread {
+                    start.await()
+                    val before = bean.getThreadAllocatedBytes(Thread.currentThread().id)
+                    var i = t
+                    while (i < ops) {
+                        val (e, note) = fx[i % fx.size]
+                        subject.new(e, note)
+                        i += threads
+                    }
+                    total.addAndGet(bean.getThreadAllocatedBytes(Thread.currentThread().id) - before)
+                    done.countDown()
+                }
+            }
+            start.countDown()
+            done.await()
+            return total.get().toDouble() / ops
+        }
+
+        for (threads in listOf(1, 4, 8)) {
+            run(threads, cow(f))
+            run(threads, skipList(f))
+            val c = run(threads, cow(f))
+            val sk = run(threads, skipList(f))
+            println("  %-44s %12.0f bytes/op".format("copy-on-write insert x$threads", c))
+            println("  %-44s %12.0f bytes/op".format("skip list     insert x$threads", sk))
+            compareBytes("insert x$threads", c, sk)
+        }
+        println("  blackhole=${blackhole.get()}")
     }
 
     // --------------------------------------------------------------- concurrent load

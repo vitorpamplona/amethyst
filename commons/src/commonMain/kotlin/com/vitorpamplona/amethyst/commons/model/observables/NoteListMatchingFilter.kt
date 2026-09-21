@@ -71,6 +71,17 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  *    per-event budget verifying signatures and parsing before it reaches an observer, so the
  *    contention window is a fraction of that. Worth revisiting if a profile ever says
  *    otherwise.
+ *
+ * **Garbage**, measured the same way, since on a phone young-gen churn is paid in jank rather
+ * than in CPU: re-delivery allocates **nothing at all** (a load and a set lookup — where the
+ * skip list's `compute` allocated a capturing lambda and a boxed `Ref.BooleanRef`, 56 bytes on
+ * every one of the commonest call in the app), and a single-threaded insert allocates 1.2x less
+ * than the skip list did. Under contention it inverts for the same reason the timing does — a
+ * lost CAS discards the copy it just built — reaching 2.0x more on 4 threads and 2.4x on 8.
+ *
+ * What neither implementation is, is cheap per insert: both materialize the whole list on every
+ * write, so an observer holding a thousand notes allocates ~78 KB each time one arrives. That is
+ * unchanged by this rewrite and is where the next win is, if one is wanted — not in the locking.
  */
 class NoteListMatchingFilter(
     private val filter: Filter,
