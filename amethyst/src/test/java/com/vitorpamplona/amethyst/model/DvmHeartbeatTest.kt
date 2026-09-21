@@ -160,9 +160,7 @@ class DvmHeartbeatTest {
                 sig = "cc".repeat(64),
             )
 
-        LocalCache.justConsume(appDef("dvm-x"), null, true)
-        LocalCache.justConsume(nonDiscoveryApp, null, true)
-        val consumed =
+        val secondSubscriptionApp =
             AppDefinitionEvent(
                 id = "c2".repeat(32),
                 pubKey = appDefPubKey,
@@ -171,7 +169,18 @@ class DvmHeartbeatTest {
                 content = """{"name":"Paid2","subscription":true}""",
                 sig = "cc".repeat(64),
             )
-        LocalCache.justConsume(consumed, null, true)
+
+        // `addressables` holds notes by WeakReference, so a GC between consuming these and
+        // scanning for them clears the lot and the scan returns nothing — which is exactly how
+        // this failed on CI, where the heap is tighter than a dev box's. A fixture has to hold
+        // what it expects to find, the same discipline LargeCacheAddressableFilterTest spells
+        // out; the forced GC below is what keeps that honest rather than assumed.
+        val held =
+            listOf(alive, appDef("dvm-x"), subscriptionApp, nonDiscoveryApp, secondSubscriptionApp)
+                .onEach { LocalCache.justConsume(it, null, true) }
+                .map { LocalCache.getOrCreateNote(it) }
+
+        System.gc()
 
         val scanned = LocalCache.cachedDvmAnnouncements()
 
@@ -180,5 +189,6 @@ class DvmHeartbeatTest {
         assertFalse("k=9999 apps are not content-discovery DVMs", scanned.any { it.dTag() == "other" })
         assertEquals("newest-first so the cap keeps the most relevant announcements", scanned.sortedByDescending { it.createdAt }, scanned)
         assertTrue("capped", scanned.size <= 100)
+        assertEquals("the fixture notes must stay reachable for the whole test", 5, held.size)
     }
 }
