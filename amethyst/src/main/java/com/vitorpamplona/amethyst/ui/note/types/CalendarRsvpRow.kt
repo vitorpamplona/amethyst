@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
@@ -191,14 +192,31 @@ private fun sendRsvp(
 ) {
     val relayHint = LocalCache.getNoteIfExists(eventId)?.relays?.firstOrNull()
     val aTag = ATag(targetAddress, relayHint)
+    // NIP-52's optional `e` tag: the `a` tag names the appointment's coordinate, which follows
+    // the host's edits, while this pins the exact revision the user answered. A reader can then
+    // tell an "accepted" cast against last week's time from one cast against the current one.
+    val eTag = ETag(eventId, relayHint, targetAddress.pubKeyHex)
     val pTag = PTag(targetAddress.pubKeyHex)
     val dTag = rsvpDTagFor(targetAddress)
 
+    // Only the host is p-tagged, per NIP-52 ("pubkey of the author of the calendar event being
+    // responded to"). The other invitees still receive this RSVP: EventBroadcaster follows the
+    // a-tag into the appointment and reads its participants' inbox relays from the appointment's
+    // own p tags (CalendarTimeSlotEvent/CalendarDateSlotEvent are PubKeyHintProviders).
+    //
+    // Copying those participants onto the RSVP as extra p tags would add no routing - the
+    // broadcaster's recursion and any local participant lookup read the same
+    // LocalCache.getAddressableNoteIfExists(targetAddress), so they are reachable in exactly the
+    // same cases - while giving every invitee a notification row for every other invitee's RSVP
+    // (kind 31925 is in NOTIFICATION_KINDS and tagsAnEventByUser returns true for it), bloating
+    // the signed event by a host-controlled number of tags, and muddying the spec's meaning of
+    // this kind's p tag.
     accountViewModel.launchSigner {
         accountViewModel.account.signAndComputeBroadcast(
             CalendarRSVPEvent.build(
                 calendarEventAddress = aTag,
                 status = status,
+                calendarEventId = eTag,
                 calendarEventAuthor = pTag,
                 dTag = dTag,
             ),

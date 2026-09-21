@@ -197,6 +197,36 @@
     </plurals>
     <string name="profile_banner">Baner profilu</string>
     <string name="point_to_the_qr_code">Najedź na QR kod</string>
+    <string name="qr_scanner_camera_rationale">Amethyst potrzebuje aparatu do skanowania kodów QR. Nic nie jest rejestrowane ani przesyłane — klatki są dekodowane na urządzeniu i usuwane.</string>
+    <string name="qr_scanner_grant_camera">Zezwalaj na kamerę</string>
+    <string name="qr_scanner_camera_blocked">Dostęp do kamery jest wyłączony dla Ametysta. Możesz go ponownie włączyć w ustawieniach Androida.</string>
+    <string name="qr_scanner_open_settings">Otwórz ustawienia</string>
+    <string name="qr_scanner_unavailable">Na tym urządzeniu nie udało się uruchomić dekodera kodów QR. Nadal możesz wkleić kod jako tekst.</string>
+    <string name="qr_scanner_torch_on">Włącz światło</string>
+    <string name="qr_scanner_torch_off">Wyłącz światło</string>
+    <string name="qr_scanner_dark_hint">Jest ciemno — włącz światło</string>
+    <string name="qr_scanner_scan_image">Zeskanuj zdjęcie</string>
+    <string name="qr_scanner_paste">Wklej</string>
+    <string name="qr_scanner_no_code_in_image">Nie znaleziono kodu QR na tym obrazku</string>
+    <string name="qr_scanner_clipboard_empty">Nic w schowku do skanowania</string>
+    <string name="qr_scanner_pick_one">Wybierz żądany kod</string>
+    <string name="qr_scanner_sequence_progress">Zdobyto %1$s z %2$s części — kontynuuj</string>
+    <string name="qr_scanner_zoom_reset">Zresetuj zoom</string>
+    <string name="qr_scanner_unsupported_title">Ametyst nie może otworzyć tego kodu</string>
+    <string name="qr_scanner_unsupported_secret">Ten kod zawiera klucz prywatny lub hasło parowania, dlatego jego treść nie jest tutaj wyświetlana. Należy skorzystać z odpowiedniego ekranu, na którym należy go wprowadzić.</string>
+    <string name="qr_scanner_kind_nsec">To jest klucz prywatny. Wklej go na ekranie logowania.</string>
+    <string name="qr_scanner_kind_wallet">To jest połączenie z portfelem. Dodaj je w ustawieniach portfela.</string>
+    <string name="qr_scanner_kind_bunker">To jest adres do zdalnego sygnatariusza. Amethyst udostępnia takie adresy, aby inne aplikacje mogły poprosić ją o podpisy — sam nie może się za pomocą takiego adresu zalogować.</string>
+    <string name="qr_scanner_kind_signer">Jest to aplikacja, która prosi o nawiązanie połączenia z Twoim urządzeniem do podpisu. Otwórz ją z poziomu ekranu urządzenia do podpisu zgodnego ze standardem NIP-46.</string>
+    <string name="qr_scanner_kind_lightning">To jest faktura Lightning.</string>
+    <string name="qr_scanner_kind_cashu">To jest token Cashu.</string>
+    <string name="qr_scanner_kind_web">To jest link do strony internetowej.</string>
+    <string name="qr_scanner_kind_text">To jest zwykły tekst, a nie kod Nostra.</string>
+    <string name="qr_scanner_kind_nostr_unsupported">To jest kod Nostr, ale nie może on zostać otwarty.</string>
+    <string name="qr_scanner_open_link">Otwórz link</string>
+    <string name="qr_scanner_copy">Kopiuj</string>
+    <string name="qr_scanner_copied">Skopiowano</string>
+    <string name="qr_scanner_try_again">Skanuj ponownie</string>
     <string name="show_qr">Pokaż QR kod</string>
     <string name="profile_image">Zdjęcie profilowe</string>
     <string name="your_profile_image">Twoje zdjęcie profilowe</string>
@@ -677,8 +707,47 @@
     <string name="health_connect_rationale_limit_publish">Żadna treść nie opuszcza Twojego telefonu, dopóki nie wybierzesz jednej z sugestii i sam nie opublikujesz wpisu. Amethyst nie posiada serwera: wpis trafia do skonfigurowanych przez Ciebie transmiterów Nostr.</string>
     <string name="health_connect_rationale_limit_optional">Cała ta funkcja jest opcjonalna. Można ją wyłączyć w sekcji Ustawienia → Tworzenie wiadomości lub w dowolnym momencie cofnąć uprawnienia w aplikacji Health Connect — pozostałe funkcje aplikacji Amethyst będą nadal działać.</string>
     <string name="health_connect_rationale_privacy_policy">Przeczytaj pełną politykę prywatności</string>
+    <string name="my_fitness_title">Moja kondycja</string>
+    <string name="my_fitness_window">Ostatnie 4 tygodnie</string>
+    <string name="my_fitness_window_note">Ostatnie cztery pełne tygodnie Twojego treningu: opublikowane przez Ciebie treningi oraz wszelkie dane zarejestrowane przez aplikację Health Connect na tym telefonie. Amethyst sporządza podsumowanie na urządzeniu i nie publikuje żadnej z tych informacji.</string>
+    <string name="my_fitness_this_week">Bieżący tydzień</string>
+    <string name="my_fitness_vs_last_week">w porównaniu z zeszłym tygodniem</string>
+    <string name="my_fitness_weekly_average">Średnia tygodniowa</string>
+    <string name="my_fitness_workouts">Treningi</string>
+    <string name="my_fitness_active_days">Aktywne dni</string>
+    <string name="my_fitness_streak">Seria dni</string>
+    <string name="my_fitness_time">Czas</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
+    <string name="my_fitness_duration_hours_minutes">%1$dg %2$dm</string>
+    <string name="my_fitness_duration_minutes">%1$dmin.</string>
+    <string name="my_fitness_duration_seconds">%1$ds</string>
+    <string name="my_fitness_distance">Odległość</string>
+    <string name="my_fitness_calories">Kalorie</string>
+    <string name="my_fitness_steps">Kroki</string>
+    <string name="my_fitness_elevation">Wspinaczka</string>
+    <string name="my_fitness_avg_heart_rate">Średnie tętno</string>
+    <string name="my_fitness_max_heart_rate">Maks. tętno</string>
+    <string name="my_fitness_by_activity">Wg aktywności</string>
+    <string name="my_fitness_bests">Największe wysiłki</string>
+    <string name="my_fitness_best_longest_distance">Najdłuższy dystans</string>
+    <string name="my_fitness_best_longest_duration">Najdłuższy trening</string>
+    <string name="my_fitness_best_biggest_climb">Największe wspięcie</string>
+    <string name="my_fitness_best_most_steps">Najwięcej kroków</string>
+    <string name="my_fitness_best_highest_heart_rate">Najwyższe tętno</string>
+    <string name="my_fitness_recent">Ostatnie treningi</string>
+    <string name="my_fitness_empty">W ciągu ostatnich 4 tygodni nie zarejestrowano żadnych danych. Wyświetlają się tutaj treningi, które publikujesz, oraz wszystkie dane zarejestrowane przez Twój zegarek.</string>
+    <string name="my_fitness_connect_title">Śledź swój trening</string>
+    <string name="my_fitness_connect_message">Połącz się z aplikacją Health Connect, aby sprawdzić swoje tygodniowe wyniki, trendy w ujęciu tygodniowym, najlepsze wyniki oraz passę treningową. Wszystkie dane są przechowywane w Twoim telefonie.</string>
+    <string name="my_fitness_connect_banner">Połącz aplikację Health Connect, aby dodać treningi zarejestrowane przez zegarek, wraz z tętnem, liczbą kroków i pokonanym wzniesieniem.</string>
+    <string name="my_fitness_connect_button">Połącz</string>
+    <string name="my_fitness_share">Udostępnij ten trening</string>
+    <string name="my_fitness_unit_bpm">uderzeń na minutę</string>
+    <string name="my_fitness_unit_kcal">kcal</string>
+    <string name="my_fitness_unit_km">km</string>
+    <string name="my_fitness_unit_mi">mil</string>
+    <string name="my_fitness_unit_m">m</string>
+    <string name="my_fitness_unit_ft">stopa</string>
     <string name="nsite_none_found">Nie znaleziono żadnych witryn nSite.</string>
     <string name="browser_reload">Odśwież</string>
     <string name="browser_unsupported">Przeglądarka w aplikacji wymaga Androida 11 lub nowszego.</string>
@@ -1253,6 +1322,8 @@
     <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
          form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
          translator's to change. -->
+    <string name="call_duration_minutes_seconds"></string>
+    <string name="call_duration_hours_minutes_seconds"></string>
     <string name="call_dismiss">Ignoruj</string>
     <string name="call_switch_camera">Przełącz kamerę</string>
     <string name="call_voice">Połączenie głosowe</string>
@@ -1663,6 +1734,7 @@
     <string name="wallet_no_transactions_for_filter">Brak transakcji spełniających te kryteria</string>
     <string name="wallet_loading">Wczytywanie…</string>
     <string name="wallet_incoming">Otrzymano</string>
+    <string name="wallet_open_zapped_note">Otwórz zappowany post</string>
     <string name="wallet_outgoing">Wysłano</string>
     <string name="wallet_refresh">Odśwież</string>
     <string name="wallet_filter_all">Wszystkie</string>

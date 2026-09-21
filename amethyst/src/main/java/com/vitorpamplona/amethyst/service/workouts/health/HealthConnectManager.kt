@@ -38,7 +38,15 @@ import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToInt
@@ -65,6 +73,16 @@ class HealthConnectManager(
 
         /** How far back the New Workout carousel looks for workouts to offer. */
         const val LOOKBACK_DAYS = 7L
+
+        /**
+         * How many per-session metric aggregations may be in flight at once.
+         *
+         * Each is an independent binder transaction into the Health Connect provider, so running
+         * them in series made the read scale with the window length. Capped rather than unbounded
+         * because the provider serves them from a finite thread/transaction pool, and a four-week
+         * window for a daily trainer would otherwise fire dozens at once.
+         */
+        private const val MAX_CONCURRENT_AGGREGATES = 6
 
         private const val DEFAULT_SOURCE = "Health Connect"
 
@@ -124,49 +142,153 @@ class HealthConnectManager(
     }
 
     /**
-     * All exercise sessions that ended within [since]..[now], mapped to
-     * [DetectedWorkout]. Sessions whose activity type Amethyst cannot represent
-     * are skipped. Returns an empty list (never throws) if Health Connect is
-     * unavailable or a read fails.
+     * One stage of a progressive Health Connect read. See [readWorkoutsProgressively].
+     */
+    data class WorkoutRead(
+        val workouts: List<DetectedWorkout>,
+        /**
+         * True while the per-session aggregate metrics (distance, calories, heart rate, steps,
+         * elevation) are still being fetched, so [workouts] currently carries nulls for them.
+         */
+        val metricsPending: Boolean,
+    )
+
+    /**
+     * All exercise sessions that ended within [since]..[now], mapped to [DetectedWorkout], in two
+     * stages.
+     *
+     * The session list itself is one IPC. Every optional metric — distance, calories, heart rate,
+     * steps, elevation — needs a *separate* [aggregate] round trip per session, and a four-week
+     * window for someone who trains daily is dozens of them. Waiting for all of that before
+     * showing anything is what made the My Fitness dashboard sit on a spinner for seconds.
+     *
+     * So this emits twice:
+     *  1. the sessions with what the read already knows — activity, title, start, duration,
+     *     source — and [WorkoutRead.metricsPending] true;
+     *  2. the same workouts with their metrics filled in, and the flag false.
+     *
+     * That first emission already carries everything the dashboard's counts, durations, streak,
+     * active days and per-activity split need. `WorkoutStats` totals and bests treat an absent
+     * metric as contributing nothing rather than zero, so the partial pass is honest rather than
+     * wrong — a distance cell is missing until it is known, not shown as 0.
+     *
+     * A single-emission caller that wants the finished numbers takes [readWorkouts].
+     *
+     * Aggregation is per *raw* session and merging happens after it, exactly as a one-shot read
+     * did: [WorkoutMerger] sums the members' metrics, so aggregating a merged span instead would
+     * fold in the breaks between segments and change the totals.
+     *
+     * Emits a single empty result (never throws) if Health Connect is unavailable or the read
+     * fails.
+     */
+    fun readWorkoutsProgressively(
+        since: Instant,
+        now: Instant = Instant.now(),
+    ): Flow<WorkoutRead> =
+        // flowOn(IO): callers collect from Dispatchers.Main, Health Connect's own calls suspend,
+        // but the PackageManager lookup in resolveSourceName is a blocking binder call — so the
+        // whole read moves off the UI thread rather than relying on each step to behave.
+        flow {
+            if (!isAvailable(context)) {
+                Log.i(TAG) { "readWorkouts: Health Connect unavailable (status=${HealthConnectClient.getSdkStatus(context)})" }
+                emit(WorkoutRead(emptyList(), metricsPending = false))
+                return@flow
+            }
+
+            val sessions =
+                try {
+                    client
+                        .readRecords(
+                            ReadRecordsRequest(
+                                recordType = ExerciseSessionRecord::class,
+                                timeRangeFilter = TimeRangeFilter.between(since, now),
+                            ),
+                        ).records
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Failed to read workouts from Health Connect", e)
+                    emit(WorkoutRead(emptyList(), metricsPending = false))
+                    return@flow
+                }
+
+            Log.i(TAG) { "readWorkouts: ${sessions.size} exercise session(s) in window $since .. $now" }
+
+            // Kept paired with their sessions: stage 2 aggregates over each raw session's own
+            // time range, which the mapped workout no longer carries once merging rewrites it.
+            val skeletons = sessions.mapNotNull { session -> mapSession(session)?.let { session to it } }
+
+            if (skeletons.isEmpty()) {
+                Log.i(TAG) { "readWorkouts: no mappable sessions" }
+                emit(WorkoutRead(emptyList(), metricsPending = false))
+                return@flow
+            }
+
+            emit(WorkoutRead(merge(skeletons.map { it.second }), metricsPending = true))
+
+            // Bounded fan-out rather than one-at-a-time: these are independent IPCs into the
+            // provider, and running them in series is what the window length multiplied. The
+            // permit cap keeps a month of daily training from opening 60 concurrent binder
+            // transactions at a provider that has a finite pool for them.
+            val detailed =
+                coroutineScope {
+                    val gate = Semaphore(MAX_CONCURRENT_AGGREGATES)
+                    skeletons
+                        .map { (session, workout) ->
+                            async { gate.withPermit { workout.withMetrics(aggregate(session)) } }
+                        }.awaitAll()
+                }
+
+            val merged = merge(detailed)
+            Log.i(TAG) { "readWorkouts: mapped ${detailed.size} -> ${merged.size} workout(s) after type/duration filtering and merging" }
+            emit(WorkoutRead(merged, metricsPending = false))
+        }.flowOn(Dispatchers.IO)
+
+    /**
+     * All exercise sessions in [since]..[now], with their metrics — the finished result of
+     * [readWorkoutsProgressively]. For callers that have nothing useful to show from a partial
+     * read and so gain nothing from the intermediate stage.
      */
     suspend fun readWorkouts(
         since: Instant,
         now: Instant = Instant.now(),
-    ): List<DetectedWorkout> {
-        if (!isAvailable(context)) {
-            Log.i(TAG) { "readWorkouts: Health Connect unavailable (status=${HealthConnectClient.getSdkStatus(context)})" }
-            return emptyList()
-        }
+    ): List<DetectedWorkout> = readWorkoutsProgressively(since, now).last().workouts
 
-        // The callers are composables launching into rememberCoroutineScope(), i.e.
-        // Dispatchers.Main. Health Connect's own calls suspend, but the PackageManager
-        // lookup in resolveSourceName is a blocking binder call, so the whole read
-        // moves off the UI thread rather than relying on each step to behave.
-        return withContext(Dispatchers.IO) {
-            try {
-                val response =
-                    client.readRecords(
-                        ReadRecordsRequest(
-                            recordType = ExerciseSessionRecord::class,
-                            timeRangeFilter = TimeRangeFilter.between(since, now),
-                        ),
-                    )
-                Log.i(TAG) { "readWorkouts: ${response.records.size} exercise session(s) in window $since .. $now" }
-                val mapped = response.records.mapNotNull { mapSession(it) }
-                // Fold split-up sessions of the same activity (a long run broken around
-                // breaks) into one suggestion so the composer offers the whole effort.
-                val merged = WorkoutMerger.mergeCloseWorkouts(mapped)
-                Log.i(TAG) { "readWorkouts: mapped ${mapped.size} -> ${merged.size} workout(s) after type/duration filtering and merging" }
-                merged
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w(TAG, "Failed to read workouts from Health Connect", e)
-                emptyList()
-            }
-        }
+    /**
+     * Folds split-up sessions of the same activity (a long run broken around breaks) into one
+     * workout so the composer offers the whole effort.
+     */
+    private fun merge(workouts: List<DetectedWorkout>) = WorkoutMerger.mergeCloseWorkouts(workouts)
+
+    /** Copies [totals] — the result of one [aggregate] call — onto a session skeleton. */
+    private fun DetectedWorkout.withMetrics(totals: AggregationResult?): DetectedWorkout {
+        if (totals == null) return this
+
+        return copy(
+            distanceMeters = totals[DistanceRecord.DISTANCE_TOTAL]?.inMeters,
+            // Prefer active calories (what RUNSTR publishes); fall back to total for
+            // sources that only record total energy. Total includes basal burn, so it
+            // over-reports the workout if used as the primary figure.
+            calories =
+                (
+                    totals[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
+                        ?: totals[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
+                )?.roundToInt(),
+            avgHeartRate = totals[HeartRateRecord.BPM_AVG]?.toInt(),
+            maxHeartRate = totals[HeartRateRecord.BPM_MAX]?.toInt(),
+            steps = totals[StepsRecord.COUNT_TOTAL]?.toInt(),
+            elevationGainMeters = totals[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters,
+        )
     }
 
-    private suspend fun mapSession(session: ExerciseSessionRecord): DetectedWorkout? {
+    /**
+     * The session as the record itself describes it: activity, title, when, how long, who wrote
+     * it. The optional metrics are left null for [withMetrics] to fill in — they each cost their
+     * own IPC, so they are not part of mapping a session.
+     *
+     * Null when the activity type is one Amethyst cannot represent, or the session has no
+     * positive duration.
+     */
+    private fun mapSession(session: ExerciseSessionRecord): DetectedWorkout? {
         val exercise = ExerciseTypeMapper.toExerciseType(session.exerciseType)
         if (exercise == null) {
             Log.i(TAG) {
@@ -187,27 +309,18 @@ class HealthConnectManager(
                 "from ${session.metadata.dataOrigin.packageName}"
         }
 
-        val totals = aggregate(session)
-
         return DetectedWorkout(
             id = session.metadata.id,
             exercise = exercise,
             title = session.title?.takeIf { it.isNotBlank() },
             startTimeEpochSeconds = session.startTime.epochSecond,
             durationSeconds = durationSeconds,
-            distanceMeters = totals?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters,
-            // Prefer active calories (what RUNSTR publishes); fall back to total for
-            // sources that only record total energy. Total includes basal burn, so it
-            // over-reports the workout if used as the primary figure.
-            calories =
-                (
-                    totals?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories
-                        ?: totals?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories
-                )?.roundToInt(),
-            avgHeartRate = totals?.get(HeartRateRecord.BPM_AVG)?.toInt(),
-            maxHeartRate = totals?.get(HeartRateRecord.BPM_MAX)?.toInt(),
-            steps = totals?.get(StepsRecord.COUNT_TOTAL)?.toInt(),
-            elevationGainMeters = totals?.get(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)?.inMeters,
+            distanceMeters = null,
+            calories = null,
+            avgHeartRate = null,
+            maxHeartRate = null,
+            steps = null,
+            elevationGainMeters = null,
             source = resolveSourceName(session.metadata.dataOrigin.packageName),
         )
     }

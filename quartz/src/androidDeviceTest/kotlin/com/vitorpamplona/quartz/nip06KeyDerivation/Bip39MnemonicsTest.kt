@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip06KeyDerivation
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -34,7 +34,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class Bip39MnemonicsTest {
     private val tests =
-        jacksonObjectMapper()
+        ObjectMapper()
             .readTree(javaClass.classLoader?.getResourceAsStream("bip39.vectors.json"))
 
     @Test

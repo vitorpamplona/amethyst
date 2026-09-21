@@ -80,4 +80,22 @@ data class DetectedWorkout(
      * sessions (e.g. a long run split around breaks) into a single suggestion.
      */
     val sessionCount: Int = 1,
-)
+) {
+    /**
+     * Whether this carries any metric beyond its duration.
+     *
+     * False means one of two things, and the difference matters to whoever is holding two copies
+     * of the same effort: the activity genuinely has none to record (a gym session has no
+     * distance and often no calories), or they are simply not known yet — a Health Connect
+     * session read before its per-session aggregations have come back. Either way a copy that
+     * has some is the better one to keep, which is what [TrainingLog.merge] uses this for.
+     */
+    val hasAnyMetric: Boolean
+        get() =
+            distanceMeters != null ||
+                calories != null ||
+                avgHeartRate != null ||
+                maxHeartRate != null ||
+                steps != null ||
+                elevationGainMeters != null
+}

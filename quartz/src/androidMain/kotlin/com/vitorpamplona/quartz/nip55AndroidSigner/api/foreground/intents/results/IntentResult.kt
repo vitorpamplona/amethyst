@@ -55,8 +55,8 @@ data class IntentResult(
                 rejected = data.extras?.containsKey("rejected"),
             )
 
-        fun fromJson(json: String): IntentResult = JsonMapperNip55.fromJsonTo<IntentResult>(json)
+        fun fromJson(json: String): IntentResult = JsonMapperNip55.fromJsonToIntentResult(json)
 
-        fun fromJsonArray(json: String): List<IntentResult> = JsonMapperNip55.fromJsonTo<List<IntentResult>>(json)
+        fun fromJsonArray(json: String): List<IntentResult> = JsonMapperNip55.fromJsonToIntentResultList(json)
     }
 }

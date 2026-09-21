@@ -73,6 +73,7 @@ class ShareTargetManifestTest {
                 ShareIntentRouting.SHARE_AS_PICTURE_ALIAS_SIMPLE_NAME,
                 ShareIntentRouting.SHARE_AS_SHORT_VIDEO_ALIAS_SIMPLE_NAME,
                 ShareIntentRouting.SHARE_AS_VIDEO_ALIAS_SIMPLE_NAME,
+                ShareIntentRouting.SCAN_QR_ALIAS_SIMPLE_NAME,
             )
 
         expected.forEach {

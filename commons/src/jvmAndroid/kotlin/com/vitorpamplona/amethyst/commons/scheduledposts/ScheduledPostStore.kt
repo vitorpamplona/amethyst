@@ -20,15 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.scheduledposts
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
@@ -37,9 +35,18 @@ class ScheduledPostStore(
     private val storageFile: File,
     private val nowSec: () -> Long = { System.currentTimeMillis() / 1000 },
 ) {
-    private val mapper =
-        jacksonObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    /**
+     * `encodeDefaults = true` so this writes the same bytes Jackson did — kotlinx
+     * omits a value equal to its default, which would silently drop `"version":1`
+     * from every file this build rewrites. `ignoreUnknownKeys` matches the
+     * FAIL_ON_UNKNOWN_PROPERTIES=false it replaces, so a file written by a newer
+     * build still loads here.
+     */
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     private val mutex = Mutex()
     private var loaded = false
@@ -330,7 +337,7 @@ class ScheduledPostStore(
         val fromDisk =
             try {
                 if (storageFile.exists() && storageFile.length() > 0) {
-                    mapper.readValue<ScheduledPostFile>(storageFile).posts.toMutableList()
+                    json.decodeFromString<ScheduledPostFile>(storageFile.readText()).posts.toMutableList()
                 } else {
                     // File vanished — treat as no external state; keep current in-memory.
                     return
@@ -348,7 +355,7 @@ class ScheduledPostStore(
         posts =
             try {
                 if (storageFile.exists() && storageFile.length() > 0) {
-                    mapper.readValue<ScheduledPostFile>(storageFile).posts.toMutableList()
+                    json.decodeFromString<ScheduledPostFile>(storageFile.readText()).posts.toMutableList()
                 } else {
                     mutableListOf()
                 }
@@ -408,7 +415,7 @@ class ScheduledPostStore(
         storageFile.parentFile?.mkdirs()
         val tmp = File(storageFile.parentFile, storageFile.name + ".tmp")
         try {
-            mapper.writeValue(tmp, ScheduledPostFile(version = 1, posts = snapshot))
+            tmp.writeText(json.encodeToString(ScheduledPostFile(version = 1, posts = snapshot)))
             // Restrict to owner-only BEFORE the rename so the store is never briefly
             // world-readable. It holds pre-signed events + the account's pubkey, which
             // must not leak to other local users on a shared machine.

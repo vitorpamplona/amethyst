@@ -1018,6 +1018,23 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "36.0.0"
 
+      # R8 cannot see reflection, so a keep rule that silently stops matching — a
+      # class moved to another package, a rule deleted, a DTO renamed — produces
+      # a green build and an APK that fails on a user's device. This asserts the
+      # reflective surface (JNI symbols, Jackson DTO field names, enum constants
+      # persisted in DataStore, WorkManager worker class names, the Cast
+      # OptionsProvider named in a manifest meta-data value) actually survived,
+      # against what R8 emitted for BOTH flavors. Runs before the assets are
+      # collected so a break fails the release rather than shipping.
+      - name: Verify R8 reflection contract
+        run: |
+          set -euo pipefail
+          for variant in playRelease fdroidRelease; do
+            echo "== $variant"
+            python3 tools/r8-verify/verify_reflection_contract.py \
+              "amethyst/build/outputs/mapping/${variant}/"
+          done
+
       - name: Collect Android assets (rename to canonical scheme)
         run: |
           set -euo pipefail
@@ -1041,6 +1058,34 @@ jobs:
              "dist/amethyst-googleplay-${TAG}.aab"
           cp "amethyst/build/outputs/bundle/fdroidRelease/amethyst-fdroid-release.aab" \
              "dist/amethyst-fdroid-${TAG}.aab"
+
+          # R8 mapping files — the ONLY way a crash report from this build is
+          # ever readable again. The release build is minified, so every class
+          # in every artifact above reports `r8-map-id-<hash>` as its source
+          # file and a renamed class/method; `scripts/retrace.sh <mapping>`
+          # turns that back into real names, files and lines (and expands the
+          # frames R8 inlined).
+          #
+          # Play Console deobfuscates by itself because AGP embeds the mapping
+          # in the .aab it was given. Nothing else does: a trace from an
+          # F-Droid, Zapstore, Accrescent or GitHub-APK user is unreadable
+          # without the matching file, and the mapping only exists on this
+          # runner. If it is not published here it is gone when the job ends.
+          #
+          # Gzipped because the raw text mapping is ~500 MB (~29 MB
+          # compressed). retrace.sh reads the .gz directly.
+          for flavor in play fdroid; do
+            case "$flavor" in
+              play)   name=googleplay ;;
+              fdroid) name=fdroid ;;
+            esac
+            src="amethyst/build/outputs/mapping/${flavor}Release/mapping.txt"
+            if [ ! -f "$src" ]; then
+              echo "::error::$src is missing — the release would ship with no way to read its crash reports."
+              exit 1
+            fi
+            gzip -c "$src" > "dist/amethyst-${name}-mapping-${TAG}.txt.gz"
+          done
           ls -la dist
 
       # Accrescent does not accept AABs or monolithic APKs — it requires a signed

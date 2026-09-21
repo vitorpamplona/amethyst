@@ -48,7 +48,12 @@ class ReportAssembler {
         threadName: String = Thread.currentThread().name,
     ): String =
         buildString {
-            append(e.javaClass.simpleName)
+            // Fully qualified, NOT simpleName. Release builds are obfuscated, so this
+            // headline would otherwise read "a: 1.16.0-PLAY" — and a bare simple name
+            // carries no package for `retrace` to resolve it against, so it would stay
+            // unreadable even after the rest of the report retraced cleanly. The FQN
+            // retraces back to the real exception class. See scripts/retrace.sh.
+            append(e.javaClass.name)
             append(": ")
             appendLine(BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
             appendLine()
@@ -101,8 +106,11 @@ class ReportAssembler {
             append("Thread: ")
             appendLine(threadName)
             appendLine(e.headline())
+            // "    at <frame>", not just "    <frame>": `at` is what every stack-trace
+            // parser keys on, R8's `retrace` included. Without it a release report is
+            // passed through untouched and stays obfuscated. See scripts/retrace.sh.
             e.stackTrace.forEach {
-                append("    ")
+                append("    at ")
                 appendLine(it.toString())
             }
             val cause = e.cause
@@ -111,7 +119,7 @@ class ReportAssembler {
                 append("    ")
                 appendLine(cause.headline())
                 cause.stackTrace.forEach {
-                    append("        ")
+                    append("        at ")
                     appendLine(it.toString())
                 }
             }

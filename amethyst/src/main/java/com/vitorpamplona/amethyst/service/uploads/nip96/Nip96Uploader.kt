@@ -26,7 +26,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.net.toFile
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -209,7 +209,7 @@ class Nip96Uploader {
 
                     val errorMessage =
                         try {
-                            val tree = jacksonObjectMapper().readTree(msg)
+                            val tree = ObjectMapper().readTree(msg)
                             val status = tree.get("status")?.asText()
                             val message = tree.get("message")?.asText()
                             if (status == "error" && message != null) {

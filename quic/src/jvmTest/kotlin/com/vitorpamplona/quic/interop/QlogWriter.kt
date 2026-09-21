@@ -21,7 +21,6 @@
 package com.vitorpamplona.quic.interop
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quic.connection.EncryptionLevel
 import com.vitorpamplona.quic.observability.QlogObserver
 import java.io.BufferedWriter
@@ -295,7 +294,7 @@ class QlogWriter(
     }
 
     companion object {
-        private val DEFAULT_MAPPER: ObjectMapper = jacksonObjectMapper()
+        private val DEFAULT_MAPPER: ObjectMapper = ObjectMapper()
 
         private fun packetTypeFor(level: EncryptionLevel): String =
             when (level) {

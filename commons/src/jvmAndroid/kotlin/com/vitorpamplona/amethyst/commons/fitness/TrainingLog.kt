@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.fitness
 
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import java.util.Collections
+import java.util.IdentityHashMap
 import kotlin.math.abs
 
 /**
@@ -47,9 +49,16 @@ object TrainingLog {
      * Combines both sources into one log, newest first.
      *
      * Where the same workout appears in both — the usual case once a user shares one that came
-     * from their watch — the Health Connect copy wins: it carries the metrics the published
-     * event may have dropped (heart rate, steps, climb), and its start time is the recorded one
-     * rather than a publish timestamp.
+     * from their watch — the Health Connect copy normally wins: it carries the metrics the
+     * published event may have dropped (heart rate, steps, climb), and its start time is the
+     * recorded one rather than a publish timestamp.
+     *
+     * That preference is only justified while the Health Connect copy actually has those metrics.
+     * It can arrive without them — its per-session aggregations are read separately and may not
+     * have come back yet, or may have failed — and then it is strictly worse than the published
+     * event it would displace. So a copy carrying no metric at all yields to a matching one that
+     * does, rather than evicting it and taking numbers off the screen. See
+     * [DetectedWorkout.hasAnyMetric].
      *
      * The winner keeps the loser's one piece of information: that a kind 1301 for this workout
      * exists. Dropping the published copy would otherwise lose that fact, and the survivor —
@@ -60,21 +69,33 @@ object TrainingLog {
         healthConnect: List<DetectedWorkout>,
         published: List<DetectedWorkout>,
     ): List<DetectedWorkout> {
-        val flagged =
-            healthConnect.map { recorded ->
-                if (published.any { recorded.isProbablySameWorkoutAs(it) }) {
-                    recorded.copy(alreadyPublished = true)
-                } else {
-                    recorded
+        val merged = ArrayList<DetectedWorkout>(healthConnect.size + published.size)
+        // The published copies that won their tie and are therefore already in [merged].
+        // Identity, not equality: two published workouts can be equal in every field, and one
+        // winning must not silently exclude the other from the pass below.
+        val kept = Collections.newSetFromMap(IdentityHashMap<DetectedWorkout, Boolean>())
+
+        healthConnect.forEach { recorded ->
+            val match = published.firstOrNull { candidate -> recorded.isProbablySameWorkoutAs(candidate) }
+
+            when {
+                match == null -> merged.add(recorded)
+                recorded.hasAnyMetric || !match.hasAnyMetric -> merged.add(recorded.copy(alreadyPublished = true))
+                else -> {
+                    // The published event is flagged as published by construction, so no copy.
+                    merged.add(match)
+                    kept.add(match)
                 }
             }
+        }
 
-        val deduped =
-            published.filterNot { candidate ->
-                healthConnect.any { it.isProbablySameWorkoutAs(candidate) }
-            }
+        // A published workout that any Health Connect copy matched is already represented by
+        // whichever of the two won — including the ones just added above.
+        published.forEach { candidate ->
+            if (candidate !in kept && healthConnect.none { it.isProbablySameWorkoutAs(candidate) }) merged.add(candidate)
+        }
 
-        return (flagged + deduped).sortedByDescending { it.startTimeEpochSeconds }
+        return merged.sortedByDescending { it.startTimeEpochSeconds }
     }
 
     private fun DetectedWorkout.isProbablySameWorkoutAs(other: DetectedWorkout): Boolean =

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.lnurl
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -48,7 +48,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class LightningAddressResolver(
     private val httpClient: OkHttpClient,
 ) {
-    private val mapper = jacksonObjectMapper()
+    private val mapper = ObjectMapper()
 
     /**
      * Result of resolving a lightning address to a BOLT11 invoice.
