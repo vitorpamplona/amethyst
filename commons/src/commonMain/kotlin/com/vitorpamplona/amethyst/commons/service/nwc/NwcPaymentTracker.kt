@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.commons.service.nwc
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.fetchAndIncrement
 
 /**
  * Tracks pending NIP-47 (Nostr Wallet Connect) payment requests awaiting responses.
@@ -45,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * the request on the relay could otherwise forge a response with their own
  * keypair and trick the client into displaying attacker-controlled data.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class NwcPaymentTracker {
     /**
      * Data for a pending payment request.
@@ -63,10 +66,10 @@ class NwcPaymentTracker {
         // right `e` tag but the wrong author. Surfaced to the UI when a
         // request times out so an actual attack can be distinguished from
         // an unresponsive wallet.
-        val spoofAttempts = AtomicInteger(0)
+        val spoofAttempts = AtomicInt(0)
     }
 
-    private val awaitingRequests = ConcurrentHashMap<HexKey, PendingRequest>(10)
+    private val awaitingRequests = ConcurrentMap<HexKey, PendingRequest>()
 
     /**
      * Registers a pending payment request.
@@ -118,7 +121,7 @@ class NwcPaymentTracker {
         if (requestId == null) return MatchResult.NoMatch
         val pending = awaitingRequests[requestId] ?: return MatchResult.NoMatch
         if (pending.expectedServicePubkey != responseAuthor) {
-            pending.spoofAttempts.incrementAndGet()
+            pending.spoofAttempts.fetchAndIncrement()
             return MatchResult.WrongAuthor(pending.expectedServicePubkey, responseAuthor)
         }
         // Author matches — atomically remove and return.
@@ -132,13 +135,13 @@ class NwcPaymentTracker {
      */
     fun spoofAttemptsFor(requestId: HexKey?): Int {
         if (requestId == null) return 0
-        return awaitingRequests[requestId]?.spoofAttempts?.get() ?: 0
+        return awaitingRequests[requestId]?.spoofAttempts?.load() ?: 0
     }
 
     /**
      * Checks if there's a pending request for the given ID.
      */
-    fun hasPendingRequest(requestId: HexKey): Boolean = awaitingRequests.containsKey(requestId)
+    fun hasPendingRequest(requestId: HexKey): Boolean = awaitingRequests[requestId] != null
 
     /**
      * Manually removes a pending request (e.g., on timeout).
@@ -153,5 +156,5 @@ class NwcPaymentTracker {
     /**
      * Returns count of pending requests (for debugging/monitoring).
      */
-    fun pendingCount(): Int = awaitingRequests.size
+    fun pendingCount(): Int = awaitingRequests.size()
 }

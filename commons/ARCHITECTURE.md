@@ -75,7 +75,7 @@ in `commonsUI`, under the same package.
 ### Domain models & data
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event-store interfaces + `UserMetadataCache`. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
+| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store: the `ICacheProvider` / `ILocalCache` ports and `UserMetadataCache` in commonMain, and the concrete `LocalCache` (plus `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port) in jvmAndroid. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
 | `defaults`     | no  | Static bootstrap data (default relays, channels). |
 
 ¹ `model` uses only the `@Stable`/`@Immutable` runtime annotations — CLI-safe.
@@ -253,6 +253,22 @@ These are intentionally *documented*, not silently tolerated. Fix opportunistica
   namespaces expected to grow; do not fold them into `util` just for size.
 - **`onchain`** (on-chain zap splitting) is `quartz`-adjacent but un-numbered;
   leave readable unless a clear NIP number lands.
+- **`model/cache/EventCache` is `jvmAndroid`, not `commonMain`.** The NIP-95
+  `java.io.File` spill is the obvious blocker but not the binding one: the
+  cache's own storage, `LargeSoftCache`, is `jvmAndroid`
+  (`WeakReference` + `ConcurrentSkipListMap`), as are the two
+  `*ListMatchingFilter` observables, `MintDirectoryIndex` and
+  `NwcPaymentTracker`. Promoting the cache means promoting those first.
+  The binding constraint is `LargeSoftCache`'s **sorted** store: it backs the
+  ranged `forEach(from, to, …)` that all of `LargeSoftCacheAddressExt` uses to
+  scan one kind's slice of the `Address` key space, and a hash map turns each
+  of those into a full scan. `quartz/linuxTest/LargeCacheRangeFallbackTest`
+  documents the matching invariant from the other side — the native range
+  overloads fall back to full scans, and that is deemed safe precisely
+  *because* the range callers live in the JVM-only `LargeSoftCache`. Moving
+  this needs a sorted KMP store first, not just the okio blob sink and the
+  `java.util.SortedSet` signature change. See the audit in
+  `commons/plans/2026-08-30-commons-migration-sweep.md`.
 
 ---
 

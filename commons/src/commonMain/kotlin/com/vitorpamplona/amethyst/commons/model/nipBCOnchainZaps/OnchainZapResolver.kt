@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nipBCOnchainZaps
+package com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps
 
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.OnchainZapVerifier
 import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.VerifiedOnchainZap
@@ -33,17 +33,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Coordinates NIP-BC on-chain zap verification on top of the chain backend.
@@ -62,7 +59,7 @@ import java.util.concurrent.ConcurrentHashMap
  * across cache eviction and doesn't accumulate here.
  */
 class OnchainZapResolver(
-    private val cache: LocalCache,
+    private val cache: EventCache,
 ) {
     /**
      * Caps the parallelism of [reverifyOnchainZapsForNote] so a thread with many
@@ -74,10 +71,10 @@ class OnchainZapResolver(
     /**
      * In-flight set of event ids currently being verified. Prevents two `consume()`
      * calls (or a `consume` plus a reverify) from issuing parallel Esplora fetches
-     * for the same event. `ConcurrentHashMap.newKeySet` gives lock-free atomic `add`
+     * for the same event. [ConcurrentSet] gives lock-free atomic `add`
      * returning `true` only for the inserting caller.
      */
-    private val verifyingEventIds: MutableSet<HexKey> = ConcurrentHashMap.newKeySet()
+    private val verifyingEventIds = ConcurrentSet<HexKey>()
 
     /**
      * In-flight set of note id strings currently being reverified. Lets the on-chain
@@ -86,7 +83,7 @@ class OnchainZapResolver(
      * backstop; this one short-circuits earlier and avoids creating async coroutines
      * that would just no-op.
      */
-    private val reverifyingNoteIds: MutableSet<HexKey> = ConcurrentHashMap.newKeySet()
+    private val reverifyingNoteIds = ConcurrentSet<HexKey>()
 
     /**
      * Shared poller for the current bitcoin chain tip height. Each gallery that
@@ -94,16 +91,11 @@ class OnchainZapResolver(
      * entries whenever the tip advances. Lazy + `WhileSubscribed` so the HTTP call
      * only fires when at least one UI surface needs it.
      *
-     * Lazy initialization is required because [Amethyst.instance] may not exist
-     * when [OnchainZapResolver] is first constructed. Falls back to a constant
-     * null-emitting [StateFlow] if the application scope isn't available yet
-     * (e.g. unit tests, ContentProvider invocations), so the lazy field doesn't
-     * permanently fail with `UninitializedPropertyAccessException`.
+     * Lazy so the scope is read from the cache's host after the app shell has installed
+     * it, rather than at construction time — the cache is a singleton and is built first.
      */
     val onchainTipHeightFlow: StateFlow<Long?> by lazy {
-        val scope =
-            runCatching { Amethyst.instance.applicationIOScope }.getOrNull()
-                ?: return@lazy MutableStateFlow<Long?>(null).asStateFlow()
+        val scope = cache.appHost.scope
 
         flow {
             while (true) {
@@ -150,7 +142,7 @@ class OnchainZapResolver(
 
         val verifier = OnchainZapVerifier(backend)
 
-        Amethyst.instance.applicationIOScope.launch {
+        cache.appHost.scope.launch {
             try {
                 verifyAndUpgradeOnchainZap(event, source, repliesTo, verifier)
             } finally {

@@ -60,7 +60,7 @@ import kotlin.coroutines.cancellation.CancellationException
  *    [Semaphore] window inside a [supervisorScope];
  *  - paginates each relay individually through Quartz's [fetchAllPages];
  *  - runs on a **fresh** [INostrClient] (built by [clientBuilder]) so the crawled
- *    events never pollute the production [com.vitorpamplona.amethyst.model.LocalCache].
+ *    events never pollute the production [com.vitorpamplona.amethyst.commons.model.cache.LocalCache].
  *
  * Unlike EventSync this neither republishes nor mutates state — it only collects
  * and hands the distinct events back to the wizard for parsing/verification.

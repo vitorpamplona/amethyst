@@ -776,10 +776,9 @@ Options, for the maintainer to pick:
   `NappletIdentityWatch`); `ScheduledPostStore` Jackson+`java.io.File` →
   kotlinx-serialization+okio (frees `ScheduledPostWorkGate`).
   `LargeSoftCache` stays parked (needs a WeakReference expect/actual).
-- **Wave 2: LocalCache move-group** (~200 files behind it) — **blocked on a
-  design decision**: `CachePruner`/`CacheSearch` call
-  `Account.isFollowing(...)`; either `IAccount` grows it (DesktopIAccount
-  must implement) or they take a narrower interface (recommended).
+- **Wave 2: LocalCache move-group** — **part A landed (2026-09-19)**, see the
+  section below. Part B (repoint `desktopApp`, delete `DesktopLocalCache.kt`)
+  is the remaining half.
 - **Wave 3: strings bridge** — **BUILT (2026-09-01)**. The pieces:
   - `commons/ui/StringRes.kt` (commonMain): `stringRes(StringResource)`,
     formatted + plural variants, `loadStringRes`/`loadPluralStringRes` for
@@ -826,3 +825,480 @@ Options, for the maintainer to pick:
   gradle re-extract.
 - stdlib atomics have no `incrementAndFetch()` here — use `addAndFetch(1)`;
   `withLock {}` can't assign outer `val`s — restructure to lambda-return.
+
+
+### Wave 2 part A landed — `LocalCache` is in `commons` (2026-09-19)
+
+`LocalCache` (4,021 lines) and its move-group now live in
+`commons/src/jvmAndroid/…/commons/model/`. `desktopApp` is untouched and still
+runs `DesktopLocalCache`; repointing it and deleting that 1,177-line fork is
+part B.
+
+**Where things went**
+
+| From `amethyst/…/model/` | To `commons/…/commons/model/` |
+|---|---|
+| `LocalCache.kt` | `cache/LocalCache.kt` |
+| `AntiSpamFilter.kt` | `cache/AntiSpamFilter.kt` |
+| `CachePruner.kt` | `cache/CachePruner.kt` |
+| `CacheSearch.kt` | `cache/CacheSearch.kt` |
+| `DvmHeartbeatRegistry.kt` | `nip90DVMs/DvmHeartbeatRegistry.kt` |
+| `nipBCOnchainZaps/OnchainZapResolver.kt` | `nipBCOnchainZaps/OnchainZapResolver.kt` |
+
+All in `jvmAndroid`: `LocalCache` spills NIP-95 blobs through `java.io.File`,
+and the other five either name `LocalCache` or use `java.util.concurrent`.
+
+**The seam: `LocalCacheHost`**
+
+A new port in `commons/…/model/cache/LocalCacheHost.kt` collects everything the
+cache needed from `Amethyst.instance` and friends — `scope`, `isDebug`,
+`nip95BlobDir`, `relayStats`, `relaySelfPubKey(relay)`, `assertNotMainThread()`.
+Every member has a default that is the honest answer for a host that supplies
+none of them, so the cache runs shell-less (Desktop, tests). `LocalCache.appHost`
+is the install point; Android installs `AmethystLocalCacheHost` from `AppModules`
+next to `val cache`, before any event is consumed. Named `appHost`, not `host`,
+because `host` is already a domain word in that file (NIP-29 host relay,
+gift-wrap host).
+
+The whole seam cut is 101 changed lines in a 4,021-line file:
+
+| Was | Now |
+|---|---|
+| `Amethyst.instance.nip11Cache.getFromCache(relay).self` | `appHost.relaySelfPubKey(relay)` |
+| `Amethyst.instance.applicationIOScope.launch` (×2) | `appHost.scope.launch` |
+| `Amethyst.instance.nip95cache` | `appHost.nip95BlobDir` |
+| `isDebug` (×2) | `appHost.isDebug` |
+| `checkNotInMainThread()` | `appHost.assertNotMainThread()` |
+| `ui.note.dateFormatter` | `commons.util.dateFormatter` (the twin already existed) |
+
+`nip95BlobDir` is nullable, so the `FileStorageEvent` path had to grow one
+branch: with nowhere to spill to, the note keeps the event whole instead of
+loading a content-stripped copy whose bytes are on no disk. Android always
+supplies the directory, so its behaviour is unchanged.
+
+**The design question the plan flagged, resolved**
+
+`CachePruner`/`CacheSearch` took `Account`. It turned out `IAccount` did not
+need to grow anything and Desktop needed no change:
+
+- `CacheSearch.findUsersStartingWith(…, forAccount: IAccount?)` — `isHidden`
+  and `hiddenWordsCase` are already on `IAccount`, and `isFollowing(user)` is
+  by definition `user.pubkeyHex in followingKeySet()`, which is too. Hoisting
+  the set out of the per-candidate lambda also stops rebuilding it per result.
+- `CachePruner.pruneHiddenMessages(account: IAccount)` — `Channel.pruneHiddenMessages`
+  already took `IAccount`.
+- `CachePruner.pruneHiddenEvents(hidden: LiveHiddenUsers)` — takes the mute list
+  by value, the idiom `ICacheProvider.findNotesMatching` already documents.
+  `IAccount` exposes hidden users only as hash codes, which would prune authors
+  the reader never muted.
+
+**Other pieces**
+
+- `ILocalCache` was declared inline in `LocalCache.kt` and used nowhere else;
+  hoisted to `commons/…/model/cache/ILocalCache.kt` (commonMain) as the
+  write-side port next to the read-side `ICacheProvider`.
+- `AntiSpamFilter`: `android.util.LruCache` → `androidx.collection.LruCache`,
+  already the commons idiom. Its `get` is Kotlin-nullable where the platform
+  class returned a platform type, so the two duplicate checks now read each
+  entry once into a local and smart-cast. It takes its host as `() -> LocalCacheHost`
+  rather than a value, because the cache that owns it is built before the shell
+  installs one.
+- `njumpLink` moved from `ui/note/NoteQuickActionMenu.kt` to
+  `commons/…/util/ExternalLinks.kt` (AntiSpamFilter logs one); the app's four
+  call sites import it from there.
+- `OnchainZapResolver.onchainTipHeightFlow` dropped its
+  `runCatching { Amethyst.instance }` fallback — `cache.appHost.scope` always
+  answers.
+
+**Left in `amethyst` on purpose:** `MiniFhir.kt`, which the original move-group
+listed. It is clean and movable, but `LocalCache` never referenced it (the hit
+was the phrase "Resource-usage ledger" in a comment), so it unlocks nothing here
+and would only widen the diff. `OnchainWalletState` likewise stays — `Account`
+and `RailCapability` use it, `OnchainZapResolver` does not.
+
+**Verified:** `:commons:compileKotlinJvm`, `:amethyst:compileFdroidDebugKotlin`,
+`:desktopApp:compileKotlin`, `:cli:compileKotlin`, `:commons:verifyKmpPurity`,
+`:commons:jvmTest`, `:cli:test`, `:amethyst:testPlayDebugUnitTest`,
+`spotlessApply`.
+
+
+### Wave 2 part B — compatibility analysis and the road to deleting `DesktopLocalCache` (2026-09-19)
+
+Part A moved the cache. Part B is retiring the Desktop fork. The naive framing
+("repoint ~70 consumers and delete 1,177 lines") is wrong; what follows is the
+measured picture.
+
+#### What is already compatible
+
+- **`consume()` coverage is a strict superset.** All 22 kinds Desktop routes
+  are handled; the 9 without a dedicated `EventCache` overload
+  (`TextNoteEvent`, `ContactListEvent`, `CommentEvent`,
+  `AdvertisedRelayListEvent`, `BlossomServersEvent`, `BookmarkListEvent`,
+  `OldBookmarkListEvent`, `ChatMessageRelayListEvent`, `FollowListEvent`) fall
+  into the generic replaceable/addressable group.
+- **13 of 13 core read methods match** by name and signature.
+- **Feed retention is already aligned** — both platforms hold feed content
+  strongly in the shared `FeedContentState`.
+- **The event stream is separable.** Desktop's `newEventBundles` is driven by
+  `DesktopRelaySubscriptionsCoordinator`, not by the cache, so Desktop can keep
+  owning `DesktopCacheEventStream` and does not inherit `LocalCacheFlow`'s
+  1 s `BundledInsert` window.
+
+#### Resolved during part B
+
+- **`notesByAuthor`** — a strong `ConcurrentHashMap<HexKey, MutableSet<Note>>`
+  of every note ever consumed, which defeated the `LargeSoftCache`
+  (`WeakReference`, despite the name) and made Desktop retain every note for
+  the life of the process. It also drove kind-0 metadata invalidation, which
+  Android has no counterpart for. Removed: every display-data site now observes
+  the author's `User` metadata flow through `Event.rememberDisplayData` (which
+  already existed, documented for this, with zero call sites).
+- **`object` vs `class`** — `EventCache` is now the class, `LocalCache` the
+  process-wide `object` over it. Android's ~350 static call sites were untouched.
+- **`findUsersStartingWith(prefix, limit)`** — `EventCache` now overrides the
+  port method instead of inheriting its `emptyList()` default.
+
+#### Still to do, and the shape it should take
+
+`DesktopLocalCache` should become a **facade over an owned `EventCache`**, not
+a deletion: ~500 lines of genuinely Desktop-specific state survive, and the
+~700 lines of `consumeXxx` routing go.
+
+1. **Storage unification first** (safe, mechanical): drop Desktop's `users` /
+   `notes` / `addressableNotes` / `liveChatChannels` and delegate to the owned
+   `EventCache`. Desktop's own `consumeXxx` methods keep working because they
+   go through `getOrCreateNote` / `getOrCreateAddressableNote`. Note the key
+   type widens (`addressableNotes<String, _>` → `addressables<Address, _>`);
+   the one external reader (`DesktopRelaySubscriptionsCoordinator:599`) ignores
+   the key.
+2. **Then swap routing kind by kind**, each step green against the 62 tests in
+   the 8 `desktop/cache` test classes, ending at
+   `cache.checkDeletionAndConsume(event, relay, true)`.
+3. **Desktop-only state stays**, moved behind the facade: `localRelayStore`
+   write-through, `followedUsers`, `accountPubkey`, `contactListEvents`,
+   `metadataVersion`, `followPackVersion` / `liveActivityVersion`, the
+   snapshots, `cachedAdvertisedRelayList`, follower/following counts,
+   `onProfileMetadataConsumed`, `appScope`, `eventStream`. The mutations are
+   concentrated in five places (metadata, contact list, follow pack, live
+   activity, `clear`) and re-derive cleanly from the event after consume.
+4. **Two Desktop-shaped `consume` overloads do not generalize** — the NIP-47
+   `LnZapPaymentRequestEvent` one takes a `zappedNote` and an `onResponse`
+   callback, and the response one drives `paymentTracker` + `appScope`. Android
+   reaches the same tracker through account state. Keep them Desktop-side.
+5. **`clear()`** has only 2 production call sites (`Main.kt`, logout/account
+   switch) plus 2 in tests. `EventCache` deliberately has no `clear()`:
+   `DeletionIndex`, `FilterIndex`, `HintIndexer` and `NwcPaymentTracker` have
+   no way to reset, so one would be a half-truth. Construct a fresh
+   `EventCache` instead — which is what making it a class bought.
+
+**Known behaviour changes to watch for when this lands:** kind-0 currently
+returns `false` from Desktop's `route()` and is therefore never written through
+to `LocalRelayStore`; `EventCache` returns `true` when the metadata updated, so
+profiles would start persisting. And notes outside a loaded feed become
+GC-eligible on Desktop, as they already are on Android.
+
+**The test suite is not sufficient for this step.** 62 tests cover the consume
+path well, but nothing covers a stale render. Run the desktop app against a
+real relay before calling part B done.
+
+
+### Can `EventCache` go to `commonMain`? — audit (2026-09-21)
+
+Short answer: yes in principle, but it is a **port, not a move**, and the
+earlier note in this file ("needs an okio sink … nothing else in the
+move-group blocks iOS") was wrong. The file sink is the visible blocker; the
+binding one is that the cache's own storage is `jvmAndroid`.
+
+`commons` really does build `iosArm64`/`iosSimulatorArm64`, so this is a real
+constraint rather than a hypothetical one.
+
+**What must move with it** (`EventCache` cannot go alone):
+
+| Dependency | Why it is `jvmAndroid` |
+|---|---|
+| `LargeSoftCache` — `users`, `notes`, `addressables` | `java.lang.ref.WeakReference`, `ConcurrentSkipListMap`, `BiConsumer` |
+| `EventListMatchingFilter`, `NoteListMatchingFilter` | `SortedSet`, `ConcurrentHashMap`, `ConcurrentSkipListSet` |
+| `MintDirectoryIndex` | `ConcurrentHashMap` |
+| `NwcPaymentTracker` | `ConcurrentHashMap`, `AtomicInteger` |
+| `DvmHeartbeatRegistry`, `OnchainZapResolver` | `ConcurrentHashMap` |
+| `LocalCacheHost` | `java.io.File` |
+
+**Most of it already has an answer in the tree:**
+
+- `commons.util.WeakReference` is already an `expect`/`actual`, and its KDoc
+  already anticipates `kotlin.native.ref.WeakReference` for iOS.
+- quartz `commonMain` already ships `ConcurrentMap`, `ConcurrentSet`,
+  `ConcurrentHashCache` and `LargeCache` — so every `ConcurrentHashMap` /
+  `ConcurrentSkipListSet` above is a swap, not a design problem.
+- ~~`LargeSoftCache`'s skip-list ordering is not load-bearing~~ — **wrong,
+  corrected 2026-09-21.** It is load-bearing, and it is the thing that stops
+  this migration. `LargeSoftCache` implements `CacheOperations` (which is
+  itself `quartz/jvmAndroid`, not commonMain) for its ranged
+  `forEach(from, to, …)`, backed by `ConcurrentSkipListMap.subMap`. The whole
+  of `LargeSoftCacheAddressExt` is built on it: `filter(kindStart(kind),
+  kindEnd(kind), …)` walks only one kind's slice of the `Address` key space,
+  and `filterIntoSet` is called 28 times. On a hash map every one of those
+  becomes a full scan of all addressables.
+- `AtomicInteger` → `kotlin.concurrent.atomics`; `BiConsumer` → a function
+  type; the `dateFormatter` call is one log line and can go.
+- `androidx.collection.LruCache` in `AntiSpamFilter` is already KMP —
+  `commonMain` uses it in `blurhash/CosineCache` and `relays/EOSE`.
+
+**The two pieces of genuinely new work:**
+
+1. **NIP-95 blob sink.** `EventCache.consume(FileStorageEvent)` writes through
+   `java.io.File`/`FileOutputStream`. Needs okio or an `expect` sink behind
+   `LocalCacheHost.nip95BlobDir`.
+2. **`java.util.SortedSet` in the public API.** `EventCache.filter(Filter)`
+   returns one, and both `*ListMatchingFilter` observables take
+   `(Filter) -> SortedSet<Note>`. Kotlin has no common `SortedSet`, so this is
+   a signature change rippling into `CacheSearch`, both observables and
+   `LocalCacheSearchParityTest`.
+
+**The invariant this would break.** `quartz/linuxTest/LargeCacheRangeFallbackTest`
+pins the native `LargeCache` range overloads to a deliberate full-scan
+fallback, and says why that is acceptable: *"the range overloads have no
+callers outside the JVM-only `LargeSoftCache`"*. Promoting `LargeSoftCache` to
+`commonMain` makes that statement false. Any move has to either give iOS a
+genuinely sorted store or accept — explicitly, not silently — that addressable
+lookups there are full scans.
+
+**Revised cost.** This is not the swap described above. It needs either an
+`expect`/`actual` `LargeSoftCache` with a hand-written sorted iOS actual (the
+`LargeCache` apple actual, for comparison, is 432 lines), or a KMP
+sorted-concurrent map that does not exist in the tree or the stdlib — which
+would want a `Comparable` bound on `Address` and would benefit quartz too.
+Neither is a step; both are projects.
+
+**Recommended order** (bottom-up; each step is independently shippable), *if
+the ordering question above is answered first*:
+
+1. `LargeSoftCache` → `commonMain` on the existing `WeakReference` expect plus
+   quartz's `ConcurrentMap`. This is the keystone — everything else is behind it.
+2. The `ConcurrentHashMap`/`ConcurrentSkipListSet` holders, mechanically.
+3. `SortedSet` out of `EventCache.filter`'s signature.
+4. The NIP-95 sink.
+5. `EventCache` + `LocalCacheHost` themselves.
+
+**Not on part B's critical path.** Desktop is JVM, so retiring
+`DesktopLocalCache` needs none of this. The payoff here is an iOS front end
+later, not anything queued now.
+
+### Step 1 shipped: `LargeSoftCache` is now `expect`/`actual` (iOS unimplemented)
+
+Decision on the ordering question above: **`expect`/`actual`, with the iOS
+actual deliberately missing.** Not a hash-map actual, and not a full sorted
+concurrent map yet — the third option, which keeps the invariant honest at the
+cost of iOS not being able to construct the cache.
+
+- `model/cache/LargeSoftCache.kt` → `commonMain`, as
+  `expect class LargeSoftCache<K : Any, V : Any>() : ICacheOperations<K, V>`.
+  Like quartz's `LargeCache`, the expect has to redeclare every member it
+  inherits from the interface — an expect class is not abstract, so the
+  inherited abstracts are its own to declare.
+- `LargeSoftCache.jvmAndroid.kt` is today's implementation unchanged in
+  behaviour: `ConcurrentSkipListMap<K, WeakReference<V>>` behind
+  `CacheOperations`. The collector defaults and both `forEach(BiConsumer)`
+  overloads stay JVM-side; only `size()` needed an `actual override`, the rest
+  actualize through inheritance. `java.lang.ref.WeakReference` became the
+  commons `WeakReference` expect — the same type on JVM, it is an `actual
+  typealias`.
+- `LargeSoftCache.ios.kt` **throws on every member.** Kotlin/Native has no
+  sorted concurrent map and no weak-valued one; a `HashMap` actual would
+  compile and then be wrong in exactly the way `LargeCacheRangeFallbackTest`
+  warns about — every bounded scan silently walking every entry. The stub
+  keeps `:commons` compiling for iOS and fails loudly if anything there tries
+  to construct a cache. Replacing it is now a self-contained task with a
+  written-down contract (key-sorted, weak values) rather than a blocker on the
+  rest of the migration.
+- `LargeSoftCacheAddressExt.kt` moved to `commonMain` with it — its ranged
+  `filter`/`filterIntoSet`/`mapNotNullIntoSet` calls are all `ICacheOperations`
+  members, so they need no platform code.
+
+Verified: `:commons:compileCommonMainKotlinMetadata`,
+`:commons:compileIosMainKotlinMetadata` (this runs on Linux and *does* enforce
+expect/actual matching — checked by breaking a member name on purpose and
+watching it fail), `:commons:verifyKmpPurity`, `:commons:jvmTest`,
+`:desktopApp:test`, `:cli:test`, `:amethyst:compileFdroidDebugKotlin`,
+`LargeCacheAddressableFilterTest`, `spotlessCheck`.
+
+Steps 2–5 are unchanged and still ahead; the iOS actual is now their peer, not
+their gate.
+
+### Step 2 shipped: the `ConcurrentHashMap` holders
+
+Three of the six holders in the audit table above are now `commonMain`, each a
+straight swap onto a KMP primitive that already existed:
+
+- `MintDirectoryIndex` — `ConcurrentHashMap<String, Int>` → quartz
+  `ConcurrentMap`. `counts.merge(key, 1, Int::plus)` becomes
+  `merge(key, 1) { old, new -> old + new }`, which is atomic on every target,
+  so a count still cannot be lost to a racing `add`. `suggest()` now ranks over
+  `snapshot()` — a copy the comparator cannot see shift underneath it.
+- `DvmHeartbeatRegistry` — `ConcurrentMap.getOrPut` is the same atomic
+  get-or-create the `ConcurrentHashMap` version relied on, so two threads
+  racing the first beat for an address still agree on one `MutableStateFlow`.
+- `NwcPaymentTracker` — `ConcurrentMap` plus `kotlin.concurrent.atomics.AtomicInt`
+  for `spoofAttempts` (`incrementAndGet()` → `fetchAndIncrement()`, `get()` →
+  `load()`, under `@OptIn(ExperimentalAtomicApi::class)` as quartz already does
+  in `BleChunkAssembler` and `BanStore`). `containsKey` has no `ConcurrentMap`
+  equivalent and became a null check on `get`, which is the same question for a
+  map that never stores nulls. Its test moved to `commonTest`, so the tracker's
+  4 race cases now also run on iOS rather than JVM only.
+
+`OnchainZapResolver` cannot move yet — it reads `EventCache` — but its two
+`ConcurrentHashMap.newKeySet()` in-flight gates are now the commons
+`ConcurrentSet`, which is exactly `newKeySet()` on JVM/Android. That leaves it
+with no `java.*` import, so it travels with `EventCache` in step 5 for free.
+
+`MintDirectoryIndexTest` stayed in `jvmTest`: it is written against
+`org.junit.Assert`, and converting it to `kotlin.test` is unrelated churn.
+
+Remaining in the table: `EventListMatchingFilter` / `NoteListMatchingFilter`,
+which also carry `SortedSet` — they belong to step 3, not this one.
+
+Verified: `:commons:compileCommonMainKotlinMetadata`,
+`:commons:compileIosMainKotlinMetadata`, `:commons:jvmTest` (incl. the moved
+`NwcPaymentTrackerTest`, 4 tests), `:desktopApp:test`, `:cli:test`,
+`:amethyst:compileFdroidDebugKotlin`, `DvmHeartbeatTest`, `spotlessCheck`.
+
+### Steps 3–5 shipped: the cache group is `commonMain`
+
+`commons/src/jvmAndroid/…/model/cache/` now holds exactly one file, the
+`LargeSoftCache` actual. Everything else — `EventCache` (4k lines),
+`LocalCache`, `LocalCacheHost`, `AntiSpamFilter`, `CachePruner`, `CacheSearch`,
+`OnchainZapResolver` — is shared.
+
+**The NIP-95 sink.** `nip95BlobDir: File?` became `nip95Blobs: Nip95BlobStore?`,
+because a directory is not what the cache needs — somewhere to put bytes and a
+way to ask whether they are there already is. `FileSystemNip95BlobStore` is the
+okio-backed one, and okio was already a commons dependency. Its constructor
+takes a plain path string so Android needs no okio of its own, and
+`platformFileSystem` is a two-line expect/actual because okio declares
+`FileSystem.SYSTEM` per platform.
+
+Two bugs surfaced while rewriting that block. `decode()` returns `ByteArray?`
+and went straight into `FileOutputStream.write` — a platform type, so a null
+would have thrown past the `IOException` catch. And the note's copy dropped its
+content whenever a directory existed, *including* right after a failed write,
+losing the only copy of those bytes; content is now dropped only when the blob
+really is stored.
+
+**`SortedSet`.** `EventCache.filter` returns a `List<Note>` in the comparator's
+order, newest first. That order is load-bearing (the napplet gateway answers
+REQs from it). The comparator also defines uniqueness by reference, so the
+sorted set was collapsing the duplicate references a filter with a repeated
+kind produces; `toSet()` before sorting keeps exactly that, since `Note`
+declares no `equals()`.
+
+**The observables.** `NoteListMatchingFilter` / `EventListMatchingFilter` are
+now `expect`/`actual` with today's implementation untouched as the jvmAndroid
+actual and a throwing iOS stub. Their concurrency — every sorted-set write
+inside that key's `ConcurrentHashMap.compute` critical section — is not
+reassemblable from quartz's KMP primitives: `getOrPut` covers `new()`, but
+`remove()` needs the sorted-set removal *inside* the section, or a concurrent
+re-add inserts a comparator-equal entry that the later removal takes out
+instead, dropping the note for good. A copy-on-write `compute` cannot stand in
+either, since its CAS retry may run a side-effecting lambda twice.
+
+**What the move itself turned up**, none of it visible to an import grep:
+`@Synchronized` / `@Volatile` / `synchronized {}` (→ `KmpLock`,
+`kotlin.concurrent.Volatile`), `System.nanoTime` (→ `TimeSource.Monotonic`),
+`HashMap.merge` (→ a local `mergeMax`), `Dispatchers.IO` (just needs
+`import kotlinx.coroutines.IO`), the one `dateFormatter` log line (now logs the
+raw `created_at`), and `LnurlEndpointCache` — a quartz **jvmAndroid** singleton,
+reached through a new `LocalCacheHost.lnurlEndpoint` port whose default `null`
+means "cold cache", which is what a miss already meant.
+
+**Still true, and worth repeating:** commonMain is not iOS support. iOS now
+compiles the cache, and the cache's store and its two observables throw there.
+The remaining gap is three named files, not a module boundary.
+
+Verified: `:commons:compileCommonMainKotlinMetadata`,
+`:commons:compileIosMainKotlinMetadata`, `:commons:verifyKmpPurity`,
+`:commons:jvmTest`, `:desktopApp:test`, `:cli:test`,
+`:amethyst:compileFdroidDebugKotlin`, `:amethyst:testPlayDebugUnitTest`,
+`spotlessCheck`.
+
+## Step 8 — measuring the copy-on-write observables (the "is it actually faster?" question)
+
+The rewrite of `NoteListMatchingFilter` / `EventListMatchingFilter` from
+`ConcurrentSkipListSet` + `ConcurrentHashMap` to copy-on-write over an
+`AtomicReference` was made for **portability** — `java.util.concurrent` has no
+KMP equivalent, and that is what kept these two in `jvmAndroid` with an iOS
+stub. That argument says nothing about speed, and these sit on a hot path:
+every consumed event is offered to each observer whose filter could match it,
+from each relay's socket coroutine. A few hundred events a second across a
+dozen relays reaches this code thousands of times a second.
+
+So it was measured rather than argued. `ObserverListBenchmark`
+(`commons/src/jvmTest/.../prodbench/`) keeps the skip-list implementation
+verbatim as the baseline and as a **differential oracle**: `bothImplementations
+Agree` asserts the two emit identical lists for identical input at limits
+`null` / 50 / 400, which is the property the rewrite had to preserve. It runs
+in ~7s and asserts only on correctness, never on wall time.
+
+**What the first run found:** the copy-on-write version was *slower* on the
+limited-filter insert path and **4.9x slower on 8 concurrent threads**, with
+zero thread scaling. The cause was not the design but one line —
+`State.plus` published `ids + added` and, over the limit, `ids + added -
+dropped`. Each operator allocates a full copy of the set, so the eviction path
+rebuilt the membership set **twice per insert**. Replacing both with a single
+`HashSet` copy (sized up front, mutated, then published) is the whole of the
+fix.
+
+**After that fix**, against the implementation it replaced:
+
+| shape | result |
+|---|---|
+| re-deliver an already listed note (steady state once a screen is warm) | **3.3–4.1x faster** |
+| insert into a populated *unlimited* list, n = 100 / 1000 | **1.3–1.5x faster**, widening with n |
+| cold fill, n = 5000 | **1.8x faster** |
+| concurrent inserts into the same observer, 1 thread | parity |
+| concurrent inserts into the same observer, 4 / 8 threads | **2.1–2.7x slower** |
+
+The last row is the real cost and is documented on both classes rather than
+buried here: threads serialize on one reference and a lost CAS discards its
+copy, where the skip list striped across keys and scaled with thread count. Two
+things bound it. The benchmark's threads do nothing but insert, while real
+ingest spends most of its per-event budget on signature verification and
+parsing before reaching an observer, so the contention window is a fraction of
+the measured one. And nearly every production observer registers with **no
+`limit`** — grep the `observeNotes` / `observeEvents` call sites — which is the
+shape copy-on-write wins.
+
+Worth revisiting if a profile ever disagrees. The lever would be the emit, not
+the lock: both implementations already materialize the whole list on every
+write, so an observer that only ever appends is paying O(n) to tell the UI
+about one new row.
+
+**Also worth recording:** "lock-free" was never the differentiator between the
+two. The skip-list version was lock-free too — `ConcurrentHashMap` stripes per
+key, so `compute` holds one bin, not a monitor. The choice was portability and
+speed, not locking.
+
+Verified: `:commons:jvmTest`, `:commons:compileIosMainKotlinMetadata`,
+`:commons:spotlessApply`.
+
+## Step 9 — the weak note cache has no strong referent in tests
+
+`compose-ui-test` went red on `DesktopCachePipelineTest`:
+`FollowingFeedFilter only includes notes from followed users`, `expected:<1> but
+was:<0>`, and it would not reproduce on a dev machine.
+
+The cause is this branch, indirectly. `DesktopLocalCache` kept a
+`notesByAuthor: ConcurrentHashMap<HexKey, MutableSet<Note>>` index for metadata
+invalidation — an unbounded strong map holding every note the Desktop app ever
+saw, which quietly defeated the point of storing them in a `LargeSoftCache`.
+Removing it was right (the Android cache never had one). But it was also the
+only thing keeping the test fixtures alive: every test consumes events and then
+queries the cache for the notes they produced, with nothing in between holding a
+reference. A GC landing in that window empties the cache.
+
+It reproduces deterministically with two `System.gc()` calls before the query,
+and it is not specific to that one test — all 46 consume sites have the shape,
+so CI's tighter heap just picked the victim. The fix routes every consume
+through an `ingest` helper that pins what the cache built for the lifetime of
+the test instance, the way a screen holds the notes it is showing in the app,
+and keeps the forced GC in the test that failed so the contract is asserted
+rather than left to the heap.
