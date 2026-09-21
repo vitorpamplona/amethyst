@@ -366,13 +366,24 @@ private fun QrCameraScanner(
         }
     }
 
+    // One picture can hold several codes. Taking the first silently is the same mistake the
+    // camera refuses to make, so anything past one goes to the picker.
+    val readImage: (Uri) -> Unit = { uri ->
+        if (decoder != null) {
+            scope.launch {
+                val found = QrImageImport.decode(context, uri, decoder).map { it.text }.distinct()
+                when {
+                    found.isEmpty() -> state.notice = noCodeInImage
+                    found.size == 1 -> submit(found.first())
+                    else -> state.imageCodes = found.map(::classifyScannedPayload)
+                }
+            }
+        }
+    }
+
     val pickImage =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri == null || decoder == null) return@rememberLauncherForActivityResult
-            scope.launch {
-                val found = QrImageImport.decode(context, uri, decoder).firstOrNull()?.text
-                if (found == null) state.notice = noCodeInImage else submit(found)
-            }
+            if (uri != null) readImage(uri)
         }
 
     Box(
@@ -420,17 +431,21 @@ private fun QrCameraScanner(
                     context = context,
                     decoder = decoder,
                     onText = submit,
-                    onImage = { uri ->
-                        if (decoder != null) {
-                            scope.launch {
-                                val found = QrImageImport.decode(context, uri, decoder).firstOrNull()?.text
-                                if (found == null) state.notice = noCodeInImage else submit(found)
-                            }
-                        }
-                    },
+                    onImage = readImage,
                     onEmpty = { state.notice = clipboardEmpty },
                 )
             },
+        )
+    }
+
+    if (state.imageCodes.isNotEmpty()) {
+        QrImageCodeChooser(
+            codes = state.imageCodes,
+            onPick = { picked ->
+                state.imageCodes = emptyList()
+                submit(picked.raw)
+            },
+            onDismiss = { state.imageCodes = emptyList() },
         )
     }
 

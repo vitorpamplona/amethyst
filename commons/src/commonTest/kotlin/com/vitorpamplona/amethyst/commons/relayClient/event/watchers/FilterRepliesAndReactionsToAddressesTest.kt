@@ -22,17 +22,35 @@ package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip51Lists.tags.RelayTag
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class FilterRepliesAndReactionsToAddressesTest {
     private val relay = RelayUrlNormalizer.normalizeOrNull("wss://one.example")!!
-    private val author = "b".repeat(64)
+    private val authorKey = "b".repeat(64)
 
     private fun addressable(address: Address) = AddressableNote(address).apply { addRelaySync(relay) }
+
+    private fun listingDeclaringLogRelay(
+        address: Address,
+        logRelay: NormalizedRelayUrl,
+    ) = addressable(address).apply {
+        event =
+            GeocacheListingEvent(
+                id = "c".repeat(64),
+                pubKey = authorKey,
+                createdAt = 1L,
+                tags = arrayOf(arrayOf("d", address.dTag), arrayOf(RelayTag.TAG_NAME, logRelay.url)),
+                content = "",
+                sig = "d".repeat(64),
+            )
+    }
 
     /**
      * A NIP-CC found log is the cache's history. It hangs off the listing by a lowercase `a`, the
@@ -42,7 +60,7 @@ class FilterRepliesAndReactionsToAddressesTest {
      */
     @Test
     fun asksForFoundLogsOfACache() {
-        val cache = addressable(Address(GeocacheListingEvent.KIND, author, "a-cache"))
+        val cache = addressable(Address(GeocacheListingEvent.KIND, authorKey, "a-cache"))
 
         val filters = filterRepliesAndReactionsToAddresses(listOf(cache), null)!!
 
@@ -51,6 +69,39 @@ class FilterRepliesAndReactionsToAddressesTest {
         assertTrue(
             askingByAddress.any { GeocacheFoundLogEvent.KIND in (it.filter.kinds ?: emptyList()) },
             "no filter asks for kind ${GeocacheFoundLogEvent.KIND} on the cache's address",
+        )
+    }
+
+    /**
+     * NIP-CC lets a cache name the relays its finds belong on, and Amethyst honours that when it
+     * publishes one. Asking for them anywhere else splits the write from the read: the logs land
+     * exactly where the listing said, and the cache screen — looking only at the owner's inbox and
+     * at wherever it happened to see the listing — reports the cache as never found.
+     */
+    @Test
+    fun asksTheRelaysTheCacheNamesForItsLogs() {
+        val logRelay = RelayUrlNormalizer.normalizeOrNull("wss://logs.example")!!
+        val cache = listingDeclaringLogRelay(Address(GeocacheListingEvent.KIND, authorKey, "a-cache"), logRelay)
+
+        val filters = filterRepliesAndReactionsToAddresses(listOf(cache), null)!!
+
+        assertTrue(
+            filters.any { it.relay == logRelay && GeocacheFoundLogEvent.KIND in (it.filter.kinds ?: emptyList()) },
+            "no filter asks ${logRelay.url} -- the relay the listing names -- for the cache's logs",
+        )
+    }
+
+    /** The declared relays are added to the usual ones, not swapped in for them. */
+    @Test
+    fun stillAsksTheRelayTheListingCameFrom() {
+        val logRelay = RelayUrlNormalizer.normalizeOrNull("wss://logs.example")!!
+        val cache = listingDeclaringLogRelay(Address(GeocacheListingEvent.KIND, authorKey, "a-cache"), logRelay)
+
+        val filters = filterRepliesAndReactionsToAddresses(listOf(cache), null)!!
+
+        assertEquals(
+            setOf(relay, logRelay),
+            filters.map { it.relay }.toSet(),
         )
     }
 }

@@ -76,6 +76,15 @@ class QrScannerState {
     /** A transient message (no code in that picture, empty clipboard, decoder unavailable). */
     var notice by mutableStateOf<String?>(null)
 
+    /**
+     * The codes found in one imported picture, when it held more than one.
+     *
+     * The camera answers this case by drawing every code it can see and waiting for a tap. An
+     * imported picture is not on screen to tap, so the choice moves to a list; empty means there
+     * is nothing to choose and the scanner behaves as before.
+     */
+    var imageCodes by mutableStateOf<List<ScannedPayload>>(emptyList())
+
     private var lastSubmittedText: String? = null
     private var lastSubmittedAt = 0L
     private var darkSinceMs = 0L
