@@ -1030,11 +1030,15 @@ constraint rather than a hypothetical one.
 - quartz `commonMain` already ships `ConcurrentMap`, `ConcurrentSet`,
   `ConcurrentHashCache` and `LargeCache` — so every `ConcurrentHashMap` /
   `ConcurrentSkipListSet` above is a swap, not a design problem.
-- `LargeSoftCache`'s skip-list ordering is **not** load-bearing: its whole
-  surface is `get`/`put`/`remove`/`size`/`containsKey`/`keys`/`forEach`, with
-  no ordered read. `ConcurrentSkipListMap` is there for lock-free concurrency,
-  so quartz's `ConcurrentMap` should substitute — worth confirming nothing
-  iterates expecting order before relying on that.
+- ~~`LargeSoftCache`'s skip-list ordering is not load-bearing~~ — **wrong,
+  corrected 2026-09-21.** It is load-bearing, and it is the thing that stops
+  this migration. `LargeSoftCache` implements `CacheOperations` (which is
+  itself `quartz/jvmAndroid`, not commonMain) for its ranged
+  `forEach(from, to, …)`, backed by `ConcurrentSkipListMap.subMap`. The whole
+  of `LargeSoftCacheAddressExt` is built on it: `filter(kindStart(kind),
+  kindEnd(kind), …)` walks only one kind's slice of the `Address` key space,
+  and `filterIntoSet` is called 28 times. On a hash map every one of those
+  becomes a full scan of all addressables.
 - `AtomicInteger` → `kotlin.concurrent.atomics`; `BiConsumer` → a function
   type; the `dateFormatter` call is one log line and can go.
 - `androidx.collection.LruCache` in `AntiSpamFilter` is already KMP —
@@ -1051,7 +1055,23 @@ constraint rather than a hypothetical one.
    a signature change rippling into `CacheSearch`, both observables and
    `LocalCacheSearchParityTest`.
 
-**Recommended order** (bottom-up; each step is independently shippable):
+**The invariant this would break.** `quartz/linuxTest/LargeCacheRangeFallbackTest`
+pins the native `LargeCache` range overloads to a deliberate full-scan
+fallback, and says why that is acceptable: *"the range overloads have no
+callers outside the JVM-only `LargeSoftCache`"*. Promoting `LargeSoftCache` to
+`commonMain` makes that statement false. Any move has to either give iOS a
+genuinely sorted store or accept — explicitly, not silently — that addressable
+lookups there are full scans.
+
+**Revised cost.** This is not the swap described above. It needs either an
+`expect`/`actual` `LargeSoftCache` with a hand-written sorted iOS actual (the
+`LargeCache` apple actual, for comparison, is 432 lines), or a KMP
+sorted-concurrent map that does not exist in the tree or the stdlib — which
+would want a `Comparable` bound on `Address` and would benefit quartz too.
+Neither is a step; both are projects.
+
+**Recommended order** (bottom-up; each step is independently shippable), *if
+the ordering question above is answered first*:
 
 1. `LargeSoftCache` → `commonMain` on the existing `WeakReference` expect plus
    quartz's `ConcurrentMap`. This is the keystone — everything else is behind it.

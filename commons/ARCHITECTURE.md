@@ -259,12 +259,16 @@ These are intentionally *documented*, not silently tolerated. Fix opportunistica
   (`WeakReference` + `ConcurrentSkipListMap`), as are the two
   `*ListMatchingFilter` observables, `MintDirectoryIndex` and
   `NwcPaymentTracker`. Promoting the cache means promoting those first.
-  Most of it has answers already in the tree — `commons.util.WeakReference`
-  is an expect/actual, and quartz's `commonMain` has `ConcurrentMap`,
-  `ConcurrentSet` and `LargeCache` — so the genuinely new work is an okio (or
-  `expect`) blob sink and getting `java.util.SortedSet` out of
-  `EventCache.filter`'s signature, which has no common equivalent. See the
-  audit in `commons/plans/2026-08-30-commons-migration-sweep.md`.
+  The binding constraint is `LargeSoftCache`'s **sorted** store: it backs the
+  ranged `forEach(from, to, …)` that all of `LargeSoftCacheAddressExt` uses to
+  scan one kind's slice of the `Address` key space, and a hash map turns each
+  of those into a full scan. `quartz/linuxTest/LargeCacheRangeFallbackTest`
+  documents the matching invariant from the other side — the native range
+  overloads fall back to full scans, and that is deemed safe precisely
+  *because* the range callers live in the JVM-only `LargeSoftCache`. Moving
+  this needs a sorted KMP store first, not just the okio blob sink and the
+  `java.util.SortedSet` signature change. See the audit in
+  `commons/plans/2026-08-30-commons-migration-sweep.md`.
 
 ---
 
