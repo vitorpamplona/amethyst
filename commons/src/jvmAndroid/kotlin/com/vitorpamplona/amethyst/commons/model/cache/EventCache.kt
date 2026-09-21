@@ -422,9 +422,6 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 import java.util.SortedSet
 
 /**
@@ -3084,42 +3081,43 @@ open class EventCache :
             note.addRelay(relay)
         }
 
-        // A host with no blob directory keeps the bytes in memory below instead of spilling them.
-        val cachePath = appHost.nip95BlobDir
+        // A host with nowhere to spill keeps the bytes in memory below instead.
+        val blobs = appHost.nip95Blobs
+
+        // Whether the bytes are in the store now. The note's copy may only drop its content
+        // once this is true — a store that refused the write is not somewhere to drop it.
+        var spilled = blobs != null && blobs.exists(event.id)
 
         val isVerified =
-            if (cachePath == null) {
+            if (blobs == null || spilled) {
                 wasVerified
-            } else {
-                try {
-                    cachePath.mkdirs()
-                    val file = File(cachePath, event.id)
-                    if (!file.exists() && (wasVerified || justVerify(event))) {
-                        FileOutputStream(file).use { stream ->
-                            stream.write(event.decode())
-                        }
-                        Log.i(
-                            "FileStorageEvent",
-                            "NIP95 File received from $relay and saved to disk as $file",
-                        )
-                        true
-                    } else {
-                        wasVerified
-                    }
-                } catch (e: IOException) {
-                    Log.e("FileStorageEvent", "FileStorageEvent save to disk error: " + event.id, e)
+            } else if (wasVerified || justVerify(event)) {
+                // decode() is null when the content is not the base64 the event claims, so
+                // there is nothing to spill and nothing this call can vouch for.
+                val bytes = event.decode()
+                if (bytes != null && blobs.store(event.id, bytes)) {
+                    spilled = true
+                    Log.i(
+                        "FileStorageEvent",
+                        "NIP95 File received from $relay and stored as ${event.id}",
+                    )
+                    true
+                } else {
                     wasVerified
                 }
+            } else {
+                wasVerified
             }
 
         // Already processed this event.
         if (note.event != null) return false
 
         if (isVerified || justVerify(event)) {
-            // The blob is on disk now, so the copy in the note drops its content. Without a
-            // directory to spill to there is nowhere else for it to live, so keep it whole.
+            // The blob is in the store, so the copy in the note drops its content. If it is
+            // not — no store, a refused write, undecodable content — the note is the only
+            // thing holding those bytes, so the event stays whole.
             val stored =
-                if (cachePath != null) {
+                if (spilled) {
                     FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
                 } else {
                     event

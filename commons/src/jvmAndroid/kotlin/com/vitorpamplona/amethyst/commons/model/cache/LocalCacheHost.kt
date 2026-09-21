@@ -26,14 +26,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import java.io.File
 
 /**
  * The handful of things the event cache needs from the application shell around it.
  *
  * The cache itself is a plain in-memory store and can run without any of them, so every
  * member here has a default that is the honest answer for a host that does not provide it
- * — an own scope, no NIP-95 spill directory, no relay identity, no stats sink. A front end
+ * — an own scope, nowhere to spill NIP-95 blobs, no relay identity, no stats sink. A front end
  * installs its own via [EventCache.appHost]; Android's `Amethyst` does so at startup,
  * Desktop and unit tests keep the defaults.
  *
@@ -57,10 +56,10 @@ interface LocalCacheHost {
     val isDebug: Boolean
 
     /**
-     * Directory the NIP-95 `FileStorageEvent` blobs are spilled to, so their bytes can leave
-     * memory once they are on disk. `null` keeps the event in memory and skips the spill.
+     * Where NIP-95 `FileStorageEvent` blobs are spilled, so their bytes can leave memory once
+     * they are stored. `null` keeps the event in memory and skips the spill.
      */
-    val nip95BlobDir: File?
+    val nip95Blobs: Nip95BlobStore?
 
     /** Per-relay counters the anti-spam filter reports duplicate events to. */
     val relayStats: RelayStats?
@@ -81,7 +80,7 @@ interface LocalCacheHost {
     companion object Default : LocalCacheHost {
         override val scope: CoroutineScope by lazy { CoroutineScope(Dispatchers.IO + SupervisorJob()) }
         override val isDebug = false
-        override val nip95BlobDir: File? = null
+        override val nip95Blobs: Nip95BlobStore? = null
         override val relayStats: RelayStats? = null
     }
 }

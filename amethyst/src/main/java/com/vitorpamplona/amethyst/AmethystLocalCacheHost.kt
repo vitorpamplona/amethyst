@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.amethyst
 
+import com.vitorpamplona.amethyst.commons.model.cache.FileSystemNip95BlobStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCacheHost
+import com.vitorpamplona.amethyst.commons.model.cache.Nip95BlobStore
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
-import java.io.File
 
 /**
  * Binds the shared [LocalCache] in `commons` to this app's shell.
@@ -45,7 +46,9 @@ class AmethystLocalCacheHost(
 ) : LocalCacheHost {
     override val scope: CoroutineScope get() = modules.applicationIOScope
 
-    override val nip95BlobDir: File get() = modules.nip95cache
+    // by lazy, not a getter: modules.nip95cache is itself lazy and creating the directory
+    // is the point of touching it, so this must not happen once per NIP-95 event.
+    override val nip95Blobs: Nip95BlobStore by lazy { FileSystemNip95BlobStore(modules.nip95cache.absolutePath) }
 
     override val relayStats: RelayStats get() = modules.relayStats
 
