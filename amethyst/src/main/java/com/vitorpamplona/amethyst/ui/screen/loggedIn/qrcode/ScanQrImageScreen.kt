@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrImageCodeChooser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrImageImport
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScanOutcomeSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScannedPayload
@@ -75,6 +76,11 @@ private sealed interface ImageScanState {
     /** No QR code in the picture at all, or the decoder could not start. */
     data class Failed(
         val message: String,
+    ) : ImageScanState
+
+    /** The picture held more than one code, so the reader says which one they meant. */
+    data class Choosing(
+        val codes: List<ScannedPayload>,
     ) : ImageScanState
 }
 
@@ -101,31 +107,42 @@ fun ScanQrImageScreen(
     val decoderUnavailable = stringRes(Res.string.qr_scanner_unavailable)
     val context = LocalContext.current
 
-    LaunchedEffect(uri, decoder) {
-        if (decoder == null) {
-            state = ImageScanState.Failed(decoderUnavailable)
-            return@LaunchedEffect
-        }
-
-        val text =
-            withContext(Dispatchers.IO) {
-                QrImageImport.decode(context, uri.toUri(), decoder).firstOrNull()?.text
-            }
-
-        if (text == null) {
-            state = ImageScanState.Failed(noCodeFound)
-            return@LaunchedEffect
-        }
-
-        val payload = classifyScannedPayload(text)
+    // Navigating or explaining, for one chosen code. Shared by the single-code path and the
+    // chooser, so both treat a hex pubkey and an unsupported payload the same way.
+    val resolve: (ScannedPayload) -> Unit = { payload ->
         // A bare hex pubkey is re-encoded first, the same as in the live scanner.
-        val routable = if (payload is ScannedPayload.HexPubKey) payload.npub else text
+        val routable = if (payload is ScannedPayload.HexPubKey) payload.npub else payload.raw
         val route = runCatching { uriToRoute(routable, accountViewModel.account) }.getOrNull()
 
         if (route != null) {
             nav.newStack(route)
         } else {
             state = ImageScanState.Unsupported(payload)
+        }
+    }
+
+    LaunchedEffect(uri, decoder) {
+        if (decoder == null) {
+            state = ImageScanState.Failed(decoderUnavailable)
+            return@LaunchedEffect
+        }
+
+        // Distinct: a picture of a screen often repeats the same code across a reflection or a
+        // duplicated crop, and offering the identical string twice is a choice with no answer.
+        val found =
+            withContext(Dispatchers.IO) {
+                QrImageImport
+                    .decode(context, uri.toUri(), decoder)
+                    .map { it.text }
+                    .distinct()
+                    .map(::classifyScannedPayload)
+            }
+
+        when {
+            found.isEmpty() -> state = ImageScanState.Failed(noCodeFound)
+            // One code is unambiguous, so asking would only add a tap.
+            found.size == 1 -> resolve(found.first())
+            else -> state = ImageScanState.Choosing(found)
         }
     }
 
@@ -154,9 +171,20 @@ fun ScanQrImageScreen(
                     }
                 }
 
-                is ImageScanState.Unsupported -> Unit
+                is ImageScanState.Unsupported, is ImageScanState.Choosing -> Unit
             }
         }
+    }
+
+    (state as? ImageScanState.Choosing)?.let { choosing ->
+        QrImageCodeChooser(
+            codes = choosing.codes,
+            onPick = { picked ->
+                state = ImageScanState.Working
+                resolve(picked)
+            },
+            onDismiss = { nav.popBack() },
+        )
     }
 
     (state as? ImageScanState.Unsupported)?.let { unsupported ->
