@@ -103,6 +103,8 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -647,6 +649,8 @@ class EventFactory {
                 FollowListEvent.KIND -> FollowListEvent(id, pubKey, createdAt, tags, content, sig)
                 FundraiserEvent.KIND -> FundraiserEvent(id, pubKey, createdAt, tags, content, sig)
                 GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
+                SnoObjectEvent.KIND -> SnoObjectEvent(id, pubKey, createdAt, tags, content, sig)
+                SnoAvatarEvent.KIND -> SnoAvatarEvent(id, pubKey, createdAt, tags, content, sig)
                 GeocacheListingEvent.KIND -> GeocacheListingEvent(id, pubKey, createdAt, tags, content, sig)
                 GeocacheFoundLogEvent.KIND -> GeocacheFoundLogEvent(id, pubKey, createdAt, tags, content, sig)
                 GeocacheVerificationEvent.KIND -> GeocacheVerificationEvent(id, pubKey, createdAt, tags, content, sig)
