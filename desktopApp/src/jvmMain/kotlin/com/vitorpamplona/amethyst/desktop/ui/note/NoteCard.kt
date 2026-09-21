@@ -528,7 +528,10 @@ fun QuotedNoteEmbed(
         onDispose { note.clearFlow() }
     }
 
-    val event = note.event
+    // Keyed on metadataState, not read bare: Note.loadEvent invalidates the metadata
+    // slot when the fetch lands, and an unread collectAsState recomposes nothing — the
+    // embed would sit on "Loading quoted note..." forever.
+    val event = remember(note, metadataState) { note.event }
     if (event != null) {
         // Re-derives when the author's kind-0 lands, so the embed's name and avatar fill in
         // after the note itself.

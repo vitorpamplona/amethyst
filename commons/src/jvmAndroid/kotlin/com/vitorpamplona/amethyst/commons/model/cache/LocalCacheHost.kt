@@ -34,11 +34,17 @@ import java.io.File
  * The cache itself is a plain in-memory store and can run without any of them, so every
  * member here has a default that is the honest answer for a host that does not provide it
  * — an own scope, no NIP-95 spill directory, no relay identity, no stats sink. A front end
- * installs its own via [LocalCache.host]; Android's `Amethyst` does so at startup, Desktop
- * and unit tests keep the defaults.
+ * installs its own via [EventCache.appHost]; Android's `Amethyst` does so at startup,
+ * Desktop and unit tests keep the defaults.
  *
  * This exists so [LocalCache] can live in `commons` without naming `Amethyst.instance`,
  * `BuildConfig` or `android.os.Looper`.
+ *
+ * **Android's `:napplet` process must never reach the cache.** Now that [LocalCache] lives
+ * in `commons`, `:nappletHost` can see it, where before it could not compile a reference at
+ * all. A stray one there would no longer fail fast on an unset `Amethyst.instance` — it
+ * would quietly build a second, empty cache in that process, with its own IO scope nothing
+ * cancels. Processes share no memory: the populated cache exists only in `main`.
  */
 interface LocalCacheHost {
     /** Scope for the cache's own background work: NIP-BC chain lookups and LNURL fetches. */
