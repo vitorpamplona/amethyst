@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.startOfWeek
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -41,6 +42,7 @@ import java.time.YearMonth
  * The paging arithmetic the calendar lenses share, now that it lives on the screen's ViewModel
  * instead of being spelled out in each view's click handlers.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class CalendarsViewModelTest {
     // The model's derived flows are `stateIn(viewModelScope, …)`, and stateIn launches its
     // sharing coroutine as soon as the property initializer runs — so simply CONSTRUCTING the
