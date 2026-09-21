@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_connect_title
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_distance
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_elevation
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_empty
+import com.vitorpamplona.amethyst.commons.resources.my_fitness_loading_metrics
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_max_heart_rate
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_recent
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_share
@@ -181,6 +182,7 @@ fun MyFitnessScreen(
                             // Only offered when it would actually add something: a device with no
                             // provider gets no banner to act on.
                             showConnectBanner = current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE,
+                            metricsPending = current.metricsPending,
                             onDetails = openRationale,
                             onConnect = requestPermissions,
                         ) { workout, label ->
@@ -226,6 +228,32 @@ private fun ConnectBanner(
     }
 }
 
+/**
+ * Shown while the per-session metrics are still being read from Health Connect. The dashboard
+ * below it is already real — counts, time, streak, the activity split — but its distance,
+ * calories and heart rate cells appear as each session's metrics land, and a row of numbers
+ * growing on its own needs saying out loud.
+ */
+@Composable
+private fun MetricsPendingNote() {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(14.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringRes(Res.string.my_fitness_loading_metrics),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 private fun ConnectPrompt(
     onDetails: () -> Unit,
@@ -263,6 +291,7 @@ private fun ConnectPrompt(
 private fun Dashboard(
     report: WorkoutStats.Report,
     showConnectBanner: Boolean,
+    metricsPending: Boolean,
     onDetails: () -> Unit,
     onConnect: () -> Unit,
     onShare: (DetectedWorkout, String) -> Unit,
@@ -274,12 +303,13 @@ private fun Dashboard(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         if (showConnectBanner) ConnectBanner(onDetails = onDetails, onConnect = onConnect)
+        if (metricsPending) MetricsPendingNote()
         ThisWeekCard(report, miles)
         ConsistencyRow(report)
         WindowTotalsCard(report, miles)
         ActivityBreakdown(report, miles)
         BestEfforts(report, miles)
-        RecentWorkouts(report, miles, onShare)
+        RecentWorkouts(report, miles, metricsPending, onShare)
 
         Text(
             text = stringRes(Res.string.my_fitness_window_note),
@@ -498,6 +528,7 @@ private fun bestValue(
 private fun RecentWorkouts(
     report: WorkoutStats.Report,
     miles: Boolean,
+    metricsPending: Boolean,
     onShare: (DetectedWorkout, String) -> Unit,
 ) {
     SectionCard(stringRes(Res.string.my_fitness_recent)) {
@@ -525,7 +556,16 @@ private fun RecentWorkouts(
                         // workout that is already posted would publish a second kind 1301 for
                         // the same effort — whether it came back from a relay, or is the
                         // Health Connect copy of one the user shared earlier.
-                        if (!workout.alreadyPublished) {
+                        //
+                        // Nor while the metrics are still loading. The composer route carries
+                        // them as primitives where 0 means absent, so sharing a workout whose
+                        // aggregations have not come back yet posts a kind 1301 with its
+                        // duration and nothing else — and then the workout counts as shared, so
+                        // the full numbers never get their turn. Everything still offering a
+                        // Share button in that window is a Health Connect workout, since a
+                        // published one is by definition already published, so the wait is
+                        // blanket rather than per-workout.
+                        if (!workout.alreadyPublished && !metricsPending) {
                             TextButton(onClick = { onShare(workout, label) }) {
                                 Text(stringRes(Res.string.my_fitness_share), style = MaterialTheme.typography.labelMedium)
                             }
