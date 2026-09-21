@@ -29,6 +29,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -104,10 +106,11 @@ import java.io.File
 /**
  * One cordn room.
  *
- * Deliberately minimal — text in, text out. Reactions, media, threading and
- * edits all exist in `spec/02.md` and in `CordnAnnotationIndex`, and none of
- * them are here yet: a composer that could send a kind the room cannot yet
- * render would produce messages this client shows as blanks.
+ * Every kind `spec/02.md` defines can now be both sent and read here: text,
+ * thread replies, reactions, edits, deletions and pins, plus encrypted
+ * attachments and voice notes. The rule that got us here is worth keeping —
+ * a composer must never be able to send a kind this room cannot render, or
+ * the sender's own messages appear as blanks to them.
  *
  * It renders the room's own envelopes rather than `Note`s, so nothing on this
  * screen goes through `LocalCache`. That is the point — a cordn message is not
@@ -213,6 +216,7 @@ private fun CordnGroupChat(
                         message = message,
                         room = room,
                         annotations = annotations,
+                        me = me,
                         accountViewModel = accountViewModel,
                         nav = nav,
                         // The edit if there is one, and nothing at all if the
@@ -489,6 +493,7 @@ private fun CordnMessageRow(
     message: CordnDeliveredMessage,
     room: CordnGroupChatroom,
     annotations: CordnAnnotationIndex,
+    me: HexKey,
     accountViewModel: AccountViewModel,
     nav: INav,
     text: String?,
@@ -496,11 +501,18 @@ private fun CordnMessageRow(
     onClick: () -> Unit,
     onReact: (String) -> Unit,
 ) {
+    val mentionsMe = remember(text, me) { text != null && me in CordnMentions.mentioned(text) }
+
     Column(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 6.dp),
+            // A mention is the one reason to pick a message out of a wall of
+            // them. Read from the content rather than from a `p` tag: a tag is
+            // a claim the sender makes about who they addressed, while the
+            // text is what everyone in the room actually sees.
+            .background(if (mentionsMe) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+            .padding(vertical = 6.dp, horizontal = if (mentionsMe) 6.dp else 0.dp),
     ) {
         Text(
             text = message.envelope.pubKey.take(8),
