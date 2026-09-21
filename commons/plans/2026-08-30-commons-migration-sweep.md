@@ -1219,3 +1219,86 @@ Verified: `:commons:compileCommonMainKotlinMetadata`,
 `:commons:jvmTest`, `:desktopApp:test`, `:cli:test`,
 `:amethyst:compileFdroidDebugKotlin`, `:amethyst:testPlayDebugUnitTest`,
 `spotlessCheck`.
+
+## Step 8 — measuring the copy-on-write observables (the "is it actually faster?" question)
+
+The rewrite of `NoteListMatchingFilter` / `EventListMatchingFilter` from
+`ConcurrentSkipListSet` + `ConcurrentHashMap` to copy-on-write over an
+`AtomicReference` was made for **portability** — `java.util.concurrent` has no
+KMP equivalent, and that is what kept these two in `jvmAndroid` with an iOS
+stub. That argument says nothing about speed, and these sit on a hot path:
+every consumed event is offered to each observer whose filter could match it,
+from each relay's socket coroutine. A few hundred events a second across a
+dozen relays reaches this code thousands of times a second.
+
+So it was measured rather than argued. `ObserverListBenchmark`
+(`commons/src/jvmTest/.../prodbench/`) keeps the skip-list implementation
+verbatim as the baseline and as a **differential oracle**: `bothImplementations
+Agree` asserts the two emit identical lists for identical input at limits
+`null` / 50 / 400, which is the property the rewrite had to preserve. It runs
+in ~7s and asserts only on correctness, never on wall time.
+
+**What the first run found:** the copy-on-write version was *slower* on the
+limited-filter insert path and **4.9x slower on 8 concurrent threads**, with
+zero thread scaling. The cause was not the design but one line —
+`State.plus` published `ids + added` and, over the limit, `ids + added -
+dropped`. Each operator allocates a full copy of the set, so the eviction path
+rebuilt the membership set **twice per insert**. Replacing both with a single
+`HashSet` copy (sized up front, mutated, then published) is the whole of the
+fix.
+
+**After that fix**, against the implementation it replaced:
+
+| shape | result |
+|---|---|
+| re-deliver an already listed note (steady state once a screen is warm) | **3.3–4.1x faster** |
+| insert into a populated *unlimited* list, n = 100 / 1000 | **1.3–1.5x faster**, widening with n |
+| cold fill, n = 5000 | **1.8x faster** |
+| concurrent inserts into the same observer, 1 thread | parity |
+| concurrent inserts into the same observer, 4 / 8 threads | **2.1–2.7x slower** |
+
+The last row is the real cost and is documented on both classes rather than
+buried here: threads serialize on one reference and a lost CAS discards its
+copy, where the skip list striped across keys and scaled with thread count. Two
+things bound it. The benchmark's threads do nothing but insert, while real
+ingest spends most of its per-event budget on signature verification and
+parsing before reaching an observer, so the contention window is a fraction of
+the measured one. And nearly every production observer registers with **no
+`limit`** — grep the `observeNotes` / `observeEvents` call sites — which is the
+shape copy-on-write wins.
+
+Worth revisiting if a profile ever disagrees. The lever would be the emit, not
+the lock: both implementations already materialize the whole list on every
+write, so an observer that only ever appends is paying O(n) to tell the UI
+about one new row.
+
+**Also worth recording:** "lock-free" was never the differentiator between the
+two. The skip-list version was lock-free too — `ConcurrentHashMap` stripes per
+key, so `compute` holds one bin, not a monitor. The choice was portability and
+speed, not locking.
+
+Verified: `:commons:jvmTest`, `:commons:compileIosMainKotlinMetadata`,
+`:commons:spotlessApply`.
+
+## Step 9 — the weak note cache has no strong referent in tests
+
+`compose-ui-test` went red on `DesktopCachePipelineTest`:
+`FollowingFeedFilter only includes notes from followed users`, `expected:<1> but
+was:<0>`, and it would not reproduce on a dev machine.
+
+The cause is this branch, indirectly. `DesktopLocalCache` kept a
+`notesByAuthor: ConcurrentHashMap<HexKey, MutableSet<Note>>` index for metadata
+invalidation — an unbounded strong map holding every note the Desktop app ever
+saw, which quietly defeated the point of storing them in a `LargeSoftCache`.
+Removing it was right (the Android cache never had one). But it was also the
+only thing keeping the test fixtures alive: every test consumes events and then
+queries the cache for the notes they produced, with nothing in between holding a
+reference. A GC landing in that window empties the cache.
+
+It reproduces deterministically with two `System.gc()` calls before the query,
+and it is not specific to that one test — all 46 consume sites have the shape,
+so CI's tighter heap just picked the victim. The fix routes every consume
+through an `ingest` helper that pins what the cache built for the lifetime of
+the test instance, the way a screen holds the notes it is showing in the app,
+and keeps the forced GC in the test that failed so the contract is asserted
+rather than left to the heap.

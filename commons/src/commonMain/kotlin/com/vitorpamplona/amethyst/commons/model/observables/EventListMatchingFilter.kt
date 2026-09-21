@@ -56,6 +56,21 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  *    concurrent structure plus a `HashSet` to strip the duplicates that walk could surface.
  *
  * The copy is O(n) per write, which is what the previous per-emit snapshot already cost.
+ *
+ * **Measured**, against the `ConcurrentSkipListSet` implementation this replaced — see
+ * `ObserverListBenchmark`, which keeps that implementation as the baseline and as a
+ * differential oracle:
+ *  - re-delivery of an already listed note (the steady state once a screen is warm): 3.3–4.1x
+ *    faster, because it is a load plus a set lookup where the skip list took a `compute`;
+ *  - insert into a populated unlimited list (what nearly every observer registers): 1.3–1.5x
+ *    faster at n = 100–1000, widening with n;
+ *  - concurrent inserts into the SAME observer: at parity on one thread, 2.1–2.7x slower on
+ *    4–8. That is the honest cost of this design: threads serialize on one reference and a
+ *    lost CAS throws away its copy, where the skip list striped across keys and scaled. It is
+ *    measured with threads doing nothing but inserting; real ingest spends most of its
+ *    per-event budget verifying signatures and parsing before it reaches an observer, so the
+ *    contention window is a fraction of that. Worth revisiting if a profile ever says
+ *    otherwise.
  */
 class EventListMatchingFilter<T : Event>(
     private val filter: Filter,
@@ -106,12 +121,21 @@ class EventListMatchingFilter<T : Event>(
         grown.add(entry)
         grown.addAll(entries.subList(at, entries.size))
 
-        if (limit == null || grown.size <= limit) return State(grown, ids + entry.note.idHex)
+        // One copy of the membership set per write. `ids + added` and `ids + added - dropped`
+        // read well but allocate one full set per operator, so the limit path paid for two;
+        // measured, that was the whole of this implementation's deficit against the skip list
+        // on a limited filter.
+        val nextIds = HashSet<HexKey>(((entries.size + 2) / 0.75f).toInt() + 1)
+        nextIds.addAll(ids)
+        nextIds.add(entry.note.idHex)
+
+        if (limit == null || grown.size <= limit) return State(grown, nextIds)
 
         // Over the limit: drop the oldest, which sorts last. That can be the entry just
         // inserted, and then it is simply not listed — as the previous pollLast() did.
         val dropped = grown.removeAt(grown.size - 1)
-        return State(grown, ids + entry.note.idHex - dropped.note.idHex)
+        nextIds.remove(dropped.note.idHex)
+        return State(grown, nextIds)
     }
 
     private fun State.minus(idHex: HexKey): State = State(entries.filterNot { it.note.idHex == idHex }, ids - idHex)
