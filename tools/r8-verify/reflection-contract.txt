@@ -63,8 +63,10 @@
 #                                 blocks enum unboxing across all 707 enums.
 #
 # Format — one per line, `#` comments to end of line:
-#   [@play|@fdroid]              optional leading scope: check this line only on
-#                                that flavor. Play-only code is absent from the
+#   [@google|@health|@complete|  optional leading scope: check this line only on
+#    @play|@fdroid]              those flavors. @google is complete+play (the
+#                                src/google/ source set), @health is
+#                                complete+fdroid. Google-only code is absent from the
 #                                F-Droid APK, and "absent" reads as "R8 deleted
 #                                it" — an unscoped line would fail that release.
 #   class  <fqn>                 class must keep its exact name
@@ -91,10 +93,10 @@ method zxingcpp.BarcodeReader readYBuffer readBitmap
 # No keep rule of ours backs the three workers below: androidx.work's own
 # consumer rules do. They stay listed so that if the library ever drops them,
 # the release fails here instead of on a user's phone.
-# <meta-data android:value> in the play manifest; the Cast framework
+# <meta-data android:value> in the complete/play manifests; the Cast framework
 # Class.forName()s it. AGP generates keeps for component android:name, not for
 # meta-data values, so nothing but an explicit rule protects this one.
-@play class com.vitorpamplona.amethyst.service.cast.chromecast.AmethystCastOptionsProvider
+@google class com.vitorpamplona.amethyst.service.cast.chromecast.AmethystCastOptionsProvider
 # WorkManager stores the class name in its own DB and instantiates it by name on
 # a later process start — including after an update that reshuffled the mapping.
 class  com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
@@ -103,8 +105,8 @@ class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 
 # The AppFunctions bridge is kept whole by a package rule, so this asserts the
 # rule still matches something. androidx.appfunctions reflects over the generated
-# inventories and @AppFunctionSerializable types; play-only source set.
-@play class com.vitorpamplona.amethyst.appfunctions.AmethystAppFunctions
+# inventories and @AppFunctionSerializable types; src/google/ source set only.
+@google class com.vitorpamplona.amethyst.appfunctions.AmethystAppFunctions
 
 # --- Jackson reflective data binding: field names ARE the wire format ---------
 # NIP-47 and CLINK used to be listed here. They are not data-bound reflectively

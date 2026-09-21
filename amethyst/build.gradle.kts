@@ -289,17 +289,84 @@ android {
 
     flavorDimensions += "channel"
 
+    // Three distribution channels, differing along two independent axes:
+    //
+    //                    Google services (Firebase, ML Kit, Cast, AppFunctions)   Health Connect
+    //   complete                              yes                                     yes
+    //   play                                  yes                                      no
+    //   fdroid                                 no                                     yes
+    //
+    // `complete` is what `play` used to be — the full app, shipped through GitHub releases and
+    // Zapstore. The `play` channel exists because Google Play keeps rejecting submissions over the
+    // Health Connect permissions, so it drops that integration entirely: no health permissions in
+    // the manifest, no androidx.health dependency, no My Fitness screen and no Health Connect
+    // loaders in the New Workout composer.
+    //
+    // The two axes are source sets rather than flavor dimensions on purpose: a second dimension
+    // would double the variant count for one combination nobody ships (fdroid without health), and
+    // would rename every existing task (`assemblePlayRelease`, `testPlayDebugUnitTest`, …) that CI
+    // and the release workflow drive. See the sourceSets block below for how they are wired.
     productFlavors {
-        create("play") {
+        create("complete") {
             isDefault = true
             dimension = "channel"
             buildConfigField("boolean", "IS_CASTING_AVAILABLE", "true")
+            buildConfigField("boolean", "IS_HEALTH_CONNECT_AVAILABLE", "true")
+        }
+
+        create("play") {
+            dimension = "channel"
+            buildConfigField("boolean", "IS_CASTING_AVAILABLE", "true")
+            buildConfigField("boolean", "IS_HEALTH_CONNECT_AVAILABLE", "false")
         }
 
         create("fdroid") {
             dimension = "channel"
             buildConfigField("boolean", "IS_CASTING_AVAILABLE", "false")
+            buildConfigField("boolean", "IS_HEALTH_CONNECT_AVAILABLE", "true")
         }
+    }
+
+    // Shared source sets for the two axes above. `src/<flavor>/` is still picked up automatically
+    // by AGP; these only add the folders more than one flavor needs:
+    //
+    //   src/google/    Google-services code (Firebase push, ML Kit translate/GenAI, Cast,
+    //                  AppFunctions) — complete + play. This is the old `src/play/`.
+    //   src/health/    Health Connect: the manager, My Fitness, the rationale screen and the
+    //                  New Workout carousel — complete + fdroid.
+    //   src/noHealth/  No-op stands-in for the two composables `src/main` calls into, so the
+    //                  call sites stay channel-agnostic — play only.
+    //
+    // The manifest is the one thing a source set cannot share (AGP takes exactly one per set), so
+    // src/complete/ and src/play/ each carry a copy of the Google-services declarations. Keep the
+    // two in sync; play's adds the `tools:node="remove"` block that strips Health Connect.
+    sourceSets {
+        // `java` and `kotlin` are separate directory sets: the first feeds javac, the second
+        // kotlinc. AGP's own defaults register src/<set>/java in both, which is why every .kt file
+        // in this module lives under a `java/` folder — registering a shared root in `java` alone
+        // compiles no Kotlin at all, and the flavor fails on unresolved imports.
+        fun shareSources(
+            sourceSet: String,
+            vararg roots: String,
+        ) = getByName(sourceSet) {
+            roots.forEach {
+                val sources = file("src/$it/java").path
+                java.directories.add(sources)
+                kotlin.directories.add(sources)
+                if (file("src/$it/res").isDirectory) res.directories.add(file("src/$it/res").path)
+            }
+        }
+
+        shareSources("complete", "google", "health")
+        shareSources("play", "google", "noHealth")
+        shareSources("fdroid", "health")
+
+        shareSources("testComplete", "testGoogle", "testHealth")
+        shareSources("testPlay", "testGoogle")
+        shareSources("testFdroid", "testHealth")
+
+        shareSources("androidTestComplete", "androidTestGoogle")
+        shareSources("androidTestPlay", "androidTestGoogle")
     }
 
     splits {
@@ -486,8 +553,45 @@ val verifyNativeAbis =
         }
     }
 
+// The `complete` and `play` channels ship the same Google-services declarations, but AGP gives a
+// source set exactly one manifest, so the block lives in two files. Drift is silent and expensive:
+// adding a Firebase meta-data or a Cast provider to one and forgetting the other produces a channel
+// whose push notifications or casting quietly stop working, and only on a user's device. `play` is
+// `complete` plus a Health Connect removal block, so complete's <application> must appear verbatim
+// inside play's.
+val verifyChannelManifests =
+    tasks.register("verifyChannelManifests") {
+        group = "verification"
+        description = "Checks that the play channel's manifest still carries the complete channel's Google-services declarations."
+
+        val completeManifest = file("src/complete/AndroidManifest.xml")
+        val playManifest = file("src/play/AndroidManifest.xml")
+        inputs.files(completeManifest, playManifest)
+
+        doLast {
+            // Everything from the end of complete's <application ...> opening tag onwards. play
+            // inserts its removals right after its own opening tag, so the rest has to match.
+            val shared =
+                completeManifest
+                    .readText()
+                    .substringAfter("<application")
+                    .substringAfter(">")
+
+            if (!playManifest.readText().contains(shared)) {
+                throw GradleException(
+                    buildString {
+                        appendLine("src/play/AndroidManifest.xml no longer contains src/complete/AndroidManifest.xml's <application> body.")
+                        appendLine("The two channels ship the same Google-services declarations (Firebase, Cast, AppFunctions);")
+                        appendLine("play only adds a block removing Health Connect on top of them.")
+                        append("Copy complete's <application> contents into play, below its `tools:node=\"remove\"` block.")
+                    },
+                )
+            }
+        }
+    }
+
 tasks.named("preBuild") {
-    dependsOn(verifyNativeAbis)
+    dependsOn(verifyNativeAbis, verifyChannelManifests)
 }
 
 // androidx.appfunctions-compiler runs in a per-module mode by default,
@@ -520,7 +624,7 @@ kotlin {
 }
 
 // Gradle schedules Kotlin compilations of different variants of this module
-// concurrently (e.g. playDebug + playBenchmark when CI runs unit tests, lint,
+// concurrently (e.g. completeDebug + playBenchmark when CI runs unit tests, lint,
 // and assembleBenchmark in one invocation), but they all share a single Kotlin
 // daemon whose heap (kotlin.daemon.jvmargs) cannot fit two full :amethyst
 // codegen passes — CI runs died with "GC overhead limit exceeded" inside the
@@ -550,8 +654,8 @@ composeCompiler {
 
 baselineProfile {
     // One profile for the whole app rather than per-flavour: the ingest path being
-    // captured is identical in play and fdroid, and a shared profile is what the
-    // fdroid build needs — it never receives Play Cloud Profiles.
+    // captured is identical in complete, play and fdroid, and a shared profile is what the
+    // complete and fdroid builds need — neither ever receives Play Cloud Profiles.
     mergeIntoMain = true
 
     // Keep the generated profile in source control so release builds do not depend on
@@ -636,8 +740,13 @@ dependencies {
     // Background Work
     implementation(libs.androidx.work.runtime.ktx)
 
-    // Reads workouts from Android Health Connect (Samsung Health, Google Fit, Fitbit, Garmin, …)
-    implementation(libs.androidx.health.connect.client)
+    // Reads workouts from Android Health Connect (Samsung Health, Google Fit, Fitbit, Garmin, …).
+    // Not on the `play` channel: Google Play keeps rejecting the submission over the health
+    // permissions, so that APK must not even link the library — its own manifest contributes
+    // health declarations of its own, which no `tools:node="remove"` on our side would cover.
+    listOf("complete", "fdroid").forEach { channel ->
+        addProvider("${channel}Implementation", libs.androidx.health.connect.client)
+    }
 
     // Websockets API
     implementation(libs.okhttp)
@@ -706,41 +815,47 @@ dependencies {
     // Dynamically adjust between phone and tablet UI
     implementation(libs.androidx.window.core.android)
 
-    // Local model for language identification
-    "playImplementation"(libs.google.mlkit.language.id)
+    // Everything Google-services below backs the code in src/google/, which both the `complete`
+    // and `play` channels compile. Only `fdroid` is kept free of it.
+    listOf("complete", "play").forEach { channel ->
+        val impl = "${channel}Implementation"
 
-    // Google services model the translate text
-    "playImplementation"(libs.google.mlkit.translate)
+        // Local model for language identification
+        addProvider(impl, libs.google.mlkit.language.id)
 
-    // On-device AI writing assistance (Gemini Nano via AICore)
-    "playImplementation"(libs.google.mlkit.genai.proofreading)
-    "playImplementation"(libs.google.mlkit.genai.prompt)
-    "playImplementation"(libs.google.mlkit.genai.rewriting)
+        // Google services model the translate text
+        addProvider(impl, libs.google.mlkit.translate)
 
-    // On-device alt-text suggestions: genai image description (preferred, descriptive sentences)
-    // with image-labeling as a keyword-join fallback for devices without AICore.
-    "playImplementation"(libs.google.mlkit.genai.image.description)
+        // On-device AI writing assistance (Gemini Nano via AICore)
+        addProvider(impl, libs.google.mlkit.genai.proofreading)
+        addProvider(impl, libs.google.mlkit.genai.prompt)
+        addProvider(impl, libs.google.mlkit.genai.rewriting)
 
-    // PushNotifications
-    "playImplementation"(platform(libs.firebase.bom))
-    "playImplementation"(libs.firebase.messaging)
+        // On-device alt-text suggestions: genai image description (preferred, descriptive
+        // sentences) with image-labeling as a keyword-join fallback for devices without AICore.
+        addProvider(impl, libs.google.mlkit.genai.image.description)
+
+        // PushNotifications
+        add(impl, platform(libs.firebase.bom))
+        addProvider(impl, libs.firebase.messaging)
+
+        // Google Cast SDK — Chromecast support. Not on fdroid because the framework
+        // hard-depends on Google Play services, which is unavailable on de-Googled /
+        // GrapheneOS devices that ship that build.
+        addProvider(impl, libs.play.services.cast.framework)
+
+        // androidx.appfunctions — Gemini App Functions adapter. Pre-stable
+        // (alpha) as of May 2026 — scoped to the Google channels so the F-Droid
+        // build stays free of Google AI dependencies. Surface is an
+        // AppFunctionService registered in each channel's AndroidManifest.xml,
+        // generated at compile time by the KSP-driven appfunctions-compiler.
+        addProvider(impl, libs.androidx.appfunctions.asProvider())
+        addProvider(impl, libs.androidx.appfunctions.service)
+        addProvider("ksp${channel.replaceFirstChar { it.uppercase() }}", libs.androidx.appfunctions.compiler)
+    }
 
     // PushNotifications(FDroid)
     "fdroidImplementation"(libs.unifiedpush)
-
-    // Google Cast SDK — Chromecast support. Play flavor only because the
-    // framework hard-depends on Google Play services, which is unavailable
-    // on de-Googled / GrapheneOS devices that ship the F-Droid build.
-    "playImplementation"(libs.play.services.cast.framework)
-
-    // androidx.appfunctions — Gemini App Functions adapter. Pre-stable
-    // (alpha) as of May 2026 — scoped to the play channel so the F-Droid
-    // build stays free of Google AI dependencies. Surface is an
-    // AppFunctionService registered in amethyst/src/play/AndroidManifest.xml,
-    // generated at compile time by the KSP-driven appfunctions-compiler.
-    "playImplementation"(libs.androidx.appfunctions)
-    "playImplementation"(libs.androidx.appfunctions.service)
-    "kspPlay"(libs.androidx.appfunctions.compiler)
 
     // Charts
     implementation(libs.vico.charts.compose)
@@ -869,3 +984,4 @@ androidComponents.onVariants { variant ->
         }
     }
 }
+

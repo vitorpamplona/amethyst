@@ -1,5 +1,15 @@
 # Health Connect — Play Console declaration
 
+> **Status: no longer submitted.** Play review kept rejecting the app over these permissions
+> whatever the declaration said, so the build was split instead: the **`play`** channel ships with
+> the Health Connect integration compiled out entirely — no health permissions in its manifest, no
+> `androidx.health` dependency, no My Fitness screen — and the full app now ships as the
+> **`complete`** channel through GitHub Releases and Zapstore, with F-Droid unchanged. See
+> BUILDING.md § "Distribution channels".
+>
+> Kept for the record, and because it is the text to resubmit if the Play channel ever carries
+> Health Connect again.
+
 Source text for the Health Connect permissions declaration in Play Console. Keep this file and
 the declaration in sync: Google re-reviews the declaration on every Health Connect permission
 change.

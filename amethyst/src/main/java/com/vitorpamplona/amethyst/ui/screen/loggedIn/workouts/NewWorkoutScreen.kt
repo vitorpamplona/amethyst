@@ -137,7 +137,8 @@ private fun NewWorkoutBody(
                 .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Tap a recent Health Connect workout to pre-load the form.
+        // Tap a recent Health Connect workout to pre-load the form. The Google Play channel
+        // compiles a no-op in its place (src/noHealth/), so nothing renders there.
         DetectedWorkoutCarousel(
             accountViewModel = accountViewModel,
             onPick = { postViewModel.applyPrefill(it) },

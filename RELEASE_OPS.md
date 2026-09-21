@@ -21,7 +21,7 @@ A release is one tag push that fans out to four live distribution channels:
 | **GitHub Releases** | Automatic — the `Create Release Assets` workflow builds + signs everything on the `v*` tag | CI |
 | **Google Play** | **Manual** — download the signed AAB from the GH Release, upload in Play Console | Maintainer |
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
-| **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
+| **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec. Its `google` variant serves the **`complete`** APKs | Maintainer |
 | **Homebrew + Winget** | ⚠️ **Not shipping.** The bump workflows run, but skip: neither package exists upstream yet | Nobody (see § 3) |
 
 Maven Central (the `quartz` library) also publishes automatically from the same
@@ -101,11 +101,14 @@ git -c credential.helper= -c credential.helper='!gh auth git-credential' push up
 ```
 
 When the `Create Release Assets` workflow finishes (~25–30 min) the GH Release
-holds **47 assets**, per the asset-name contract:
+holds **55 assets**, per the asset-name contract:
 
-- **Android (13):** 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the F-Droid
-  `.apks` set for Accrescent
-  (`amethyst-googleplay-*-v…apk` / `.aab`, `amethyst-fdroid-*-v…apk` / `.aab` / `.apks`)
+- **Android (21):** 5 Complete APKs + 5 Google Play APKs + 5 F-Droid APKs +
+  2 AABs + the F-Droid `.apks` set for Accrescent + 3 R8 mappings
+  (`amethyst-complete-*-v…apk`, `amethyst-googleplay-*-v…apk` / `.aab`,
+  `amethyst-fdroid-*-v…apk` / `.aab` / `.apks`). **Complete** is the full app;
+  **Google Play** is the same build with Health Connect stripped out, which is
+  the only one Play review accepts.
 - **Desktop (14):** macOS DMG (**arm64 only** — there is no Intel DMG), Windows
   MSI (x64 only — **no arm64 MSI**) + portable zip (x64, arm64), and Linux
   DEB/RPM/AppImage/flatpak/tar.gz in both x64 and arm64. BUILDING.md § Release
@@ -130,10 +133,10 @@ Nothing to do beyond pushing the tag. Verify the asset count (BUILDING.md
 § Verify). macOS is **arm64-only** — there is no Intel DMG, so a single
 `amethyst-desktop-<version>-macos-arm64.dmg` is the expected, correct result.
 
-Two of those assets are the R8 mapping files
-(`amethyst-{googleplay,fdroid}-mapping-<version>.txt.gz`). Do not prune them
-from old releases — they are the only way to read a crash report from a build
-that old (§ 7).
+Three of those assets are the R8 mapping files
+(`amethyst-{complete,googleplay,fdroid}-mapping-<version>.txt.gz`). Do not prune
+them from old releases — they are the only way to read a crash report from a
+build that old (§ 7).
 
 ### Google Play — manual upload
 1. Download `amethyst-googleplay-<version>.aab` from the GH Release.
@@ -154,7 +157,9 @@ What we own to keep that working:
 - The **`fdroid` flavor** (`amethyst/src/fdroid/…`) must stay free of
   proprietary deps — it swaps Firebase/Google services for UnifiedPush and
   no-op/open implementations (ML Kit, writing assistant, push). Google-only
-  libraries live behind the `play` flavor.
+  libraries live in `amethyst/src/google/`, which only the `complete` and `play`
+  flavors compile. Health Connect (`amethyst/src/health/`) is not one of them —
+  `fdroid` keeps it.
 - The fastlane metadata under `fastlane/metadata/android/` (descriptions,
   images). F-Droid reads per-version changelogs from
   `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` if present —
@@ -170,7 +175,7 @@ few days): <https://f-droid.org/packages/com.vitorpamplona.amethyst/>.
 [Zapstore](https://zapstore.dev/) is a Nostr-native app store. The `zsp` CLI
 reads [`zapstore.yaml`](zapstore.yaml) at the repo root (name, summary,
 description, tags, license, `icon`, screenshots, `supported_nips`, and the
-`variants` regexes that match our `*-fdroid-*.apk` / `*-googleplay-*.apk`
+`variants` regexes that match our `*-fdroid-*.apk` / `*-complete-*.apk`
 GH-release assets), then publishes a signed software-release event to Nostr
 relays.
 
@@ -264,13 +269,13 @@ release. Merge them to keep the reference packaging files current.
 
 ### Push notification server
 
-The Google Play (FCM) flavor delivers push through a server we operate at
+The two Google-services (FCM) flavors deliver push through a server we operate at
 `push.amethyst.social`, built from
 [`vitorpamplona/amethyst-push-notif-server`](https://github.com/vitorpamplona/amethyst-push-notif-server).
 It registers devices, watches their NIP-65 inbox / NIP-17 DM relays, and sends
 wake-up pushes.
 
-- **`play` flavor** → push via this server (Firebase/FCM).
+- **`complete` and `play` flavors** → push via this server (Firebase/FCM).
 - **`fdroid` flavor** → UnifiedPush through a distributor app the user installs
   (e.g. ntfy); it does **not** use our server.
 - Both are complemented by the on-device always-on `NotificationRelayService`
@@ -326,8 +331,8 @@ Owner assignments and rotation reminders live with the team (issue tracker).
       Both scripts error clearly until the one-time bootstrap PRs land (§ 3).
 - [ ] In-app "Release Notes" link opens the note matching `RELEASE_NOTES_ID`
       (only bumped on minor releases — patches keep pointing at the x.y.0 note).
-- [ ] Push still works on a `play` build (only if the push contract changed —
-      see § 4); UnifiedPush still works on an `fdroid` build.
+- [ ] Push still works on a `complete` or `play` build (only if the push
+      contract changed — see § 4); UnifiedPush still works on an `fdroid` build.
 
 If anything ships broken, see [`BUILDING.md` § Incident response](BUILDING.md#incident-response).
 
@@ -354,11 +359,12 @@ pbpaste | scripts/retrace.sh            # or straight off the clipboard
 ```
 
 Nothing else to supply. A report's first line names its own build —
-`java.lang.IllegalStateException: 1.16.0-PLAY` — so the script resolves the tag
-(`v1.16.0`) and the flavor (`PLAY` → `googleplay`), downloads that release's
-mapping asset and caches it. For a bare stack trace with no such header, name
-the build yourself with `--release v1.16.0 --flavor play`; for a build you made
-locally, pass its `mapping.txt` directly.
+`java.lang.IllegalStateException: 1.16.0-COMPLETE` — so the script resolves the
+tag (`v1.16.0`) and the flavor (`COMPLETE` → `complete`, `PLAY` → `googleplay`),
+downloads that release's mapping asset and caches it. For a bare stack trace with
+no such header, name the build yourself with
+`--release v1.16.0 --flavor complete`; for a build you made locally, pass its
+`mapping.txt` directly.
 
 ```
 java.lang.IllegalStateException: something blew up
@@ -385,7 +391,7 @@ error: this mapping did not build this report.
 ```
 
 `--force` overrides if you really mean it. (`googleplay` vs `fdroid` matters —
-the two flavors are separate R8 runs with different mappings.)
+the three flavors are separate R8 runs with different mappings.)
 
 **Per channel:**
 
@@ -421,7 +427,7 @@ something outside the DEX resolves a name at runtime — JNI symbols, Jackson DT
 field names, enum constants persisted in DataStore, WorkManager's stored worker
 class names, the Cast `OptionsProvider` named in a manifest `<meta-data>` value
 — and the release workflow asserts each one against what R8 actually emitted,
-for both flavors, before any asset is collected:
+for every shipped flavor, before any asset is collected:
 
 ```bash
 python3 tools/r8-verify/verify_reflection_contract.py \

@@ -8,14 +8,14 @@
 #
 # A report produced by ReportAssembler names its own build on line 1:
 #
-#     java.lang.IllegalStateException: 1.16.0-PLAY
+#     java.lang.IllegalStateException: 1.16.0-COMPLETE
 #
 # so that is all this needs to fetch the right mapping from the matching GitHub
-# Release (amethyst-googleplay-mapping-v1.16.0.txt.gz) and cache it.
+# Release (amethyst-complete-mapping-v1.16.0.txt.gz) and cache it.
 #
 # If you only have a bare stack trace with no such header, name the build:
 #
-#   scripts/retrace.sh --release v1.16.0 --flavor play trace.txt
+#   scripts/retrace.sh --release v1.16.0 --flavor complete trace.txt
 #
 # ... or point at a mapping yourself, e.g. for a build you made locally:
 #
@@ -137,7 +137,7 @@ if [ -z "$MAPPING" ]; then
         case "$header" in
             *": "*) ;;
             *) die "line 1 is not an Amethyst crash-report header, so the build is unknown.
-       Pass --release <tag> [--flavor play|fdroid], or a mapping file." ;;
+       Pass --release <tag> [--flavor complete|play|fdroid], or a mapping file." ;;
         esac
         vf="${header#*: }"
         vf="$(echo "$vf" | tr -d '[:space:]')"
@@ -163,10 +163,11 @@ if [ -z "$MAPPING" ]; then
 
     case "$RELEASE" in v*) ;; *) RELEASE="v$RELEASE" ;; esac
 
-    case "$(echo "${FLAVOR:-play}" | tr '[:upper:]' '[:lower:]')" in
+    case "$(echo "${FLAVOR:-complete}" | tr '[:upper:]' '[:lower:]')" in
+        complete)        channel=complete ;;
         play|googleplay) channel=googleplay ;;
         fdroid)          channel=fdroid ;;
-        *) die "unknown flavor '$FLAVOR' (expected play or fdroid)" ;;
+        *) die "unknown flavor '$FLAVOR' (expected complete, play or fdroid)" ;;
     esac
 
     asset="amethyst-${channel}-mapping-${RELEASE}.txt.gz"
@@ -222,7 +223,7 @@ if [ "$PARTITION" -eq 0 ]; then
        report:  $trace_id
        mapping: $map_id ($MAPPING_LABEL)
        Retracing anyway yields wrong names that look right. Check the release
-       tag and the flavor (play vs fdroid are separate R8 runs)."
+       tag and the flavor (complete, play and fdroid are separate R8 runs)."
         [ "$FORCE" -eq 1 ] && echo "warning: $msg" >&2 || die "$msg"
     fi
 fi

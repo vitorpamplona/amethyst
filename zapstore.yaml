@@ -141,9 +141,15 @@ supported_nips:
 # ═══════════════════════════════════════════════════════════════════
 
 # APK variant patterns (for apps with multiple builds)
+#
+# `google` points at the `complete` channel, not at `-googleplay-`: the Play Store rejects the
+# Health Connect permissions, so the APK uploaded there has that integration stripped out. Zapstore
+# users are sideloading and want the whole app, so they get the same Google-services build with
+# Health Connect still in it. `-googleplay-` assets are published too, for anyone who wants to
+# reproduce exactly what the Play Store serves.
 variants:
   fdroid: ".*-fdroid-.*\\.apk$"
-  google: ".*-googleplay-.*\\.apk$"
+  google: ".*-complete-.*\\.apk$"
 
 # ═══════════════════════════════════════════════════════════════════
 # PUBLISHING RELAYS

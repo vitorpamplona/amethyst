@@ -26,6 +26,9 @@ import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
 
 object PushNotificationUtils {
+    /** Names the push transport this channel was built with, for log tags. */
+    const val SERVICE_NAME = "UnifiedPushService"
+
     var lastToken: String? = null
     var hasInit: List<AccountInfo>? = null
 

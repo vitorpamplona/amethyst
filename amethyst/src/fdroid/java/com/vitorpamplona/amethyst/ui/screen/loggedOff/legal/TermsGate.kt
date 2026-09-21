@@ -25,6 +25,10 @@ import androidx.compose.runtime.Composable
 // F-Droid distributes Amethyst as MIT-licensed free software; there is no
 // terms-of-use acceptance layered on top of the source license, and the build
 // must not link to any external (e.g. GitHub) policy document.
+
+/** See the Google-services counterpart: nothing to tick here, so nothing to require. */
+const val TERMS_ACCEPTANCE_REQUIRED = false
+
 @Composable
 @Suppress("UNUSED_PARAMETER")
 fun TermsGate(

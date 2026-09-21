@@ -371,6 +371,13 @@ jobs:
       # variants are compile-equivalent for unit-test purposes; running all six
       # adds ~5× the kotlinc work without catching new defects on PRs. Push to
       # main still gets the full test matrix via the production-build path.
+      #
+      # Flavor scope: `play` and `fdroid` between them compile every source set —
+      # play covers src/google + src/noHealth, fdroid covers src/health — so their
+      # unit tests cover the code. `complete` is the only variant that compiles
+      # src/google and src/health together and merges its own manifest, so it gets
+      # an assemble (Debug, i.e. no second R8 run) to prove that combination builds.
+      # Only the two benchmark APKs that are actually uploaded get assembled.
       - name: Test + Build Android (gradle)
         run: |
           ./gradlew \
@@ -382,7 +389,9 @@ jobs:
             :nestsClient:jvmTest \
             :amethyst:testFdroidDebugUnitTest \
             :amethyst:testPlayDebugUnitTest \
-            :amethyst:assembleBenchmark \
+            :amethyst:assembleCompleteDebug \
+            :amethyst:assemblePlayBenchmark \
+            :amethyst:assembleFdroidBenchmark \
             -PdisableAbiSplits=true
 
       - name: Upload Android Lint Reports

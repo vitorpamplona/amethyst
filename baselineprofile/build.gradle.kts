@@ -15,9 +15,10 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // :amethyst has a `channel` dimension (play/fdroid). The recorded journey is the
-        // same either way — ingest does not differ by store — so record against play and
-        // let the consumer's mergeIntoMain share one profile with both flavours.
+        // :amethyst has a `channel` dimension (complete/play/fdroid). The recorded journey
+        // is the same for all three — ingest does not differ by store, and the channels differ
+        // only in Google services and Health Connect — so record against play and let the
+        // consumer's mergeIntoMain share one profile with every flavour.
         missingDimensionStrategy("channel", "play")
     }
 

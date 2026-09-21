@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -455,6 +456,11 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 resolveRoute = { Route.AllSettings },
             ),
     )
+        // My Fitness summarises Health Connect data, which the Google Play channel does not ship.
+        // Dropping it from the catalog rather than only from the pickers also covers the bottom bar
+        // and the drawer settings screens, which look every persisted id up here and skip the
+        // misses — so a MY_FITNESS synced in from a `complete` install simply doesn't render.
+        .filterKeys { BuildConfig.IS_HEALTH_CONNECT_AVAILABLE || it != NavBarItem.MY_FITNESS }
 
 val DefaultBottomBarItems: List<NavBarItem> =
     listOf(
@@ -511,9 +517,9 @@ val BottomBarCategories: List<NavBarCategory> =
         NavBarCategory(
             R.string.bottom_bar_category_you,
             MaterialSymbols.AccountCircle,
-            listOf(
+            listOfNotNull(
                 NavBarItem.PROFILE,
-                NavBarItem.MY_FITNESS,
+                NavBarItem.MY_FITNESS.takeIf { BuildConfig.IS_HEALTH_CONNECT_AVAILABLE },
                 NavBarItem.MY_LISTS,
                 NavBarItem.BOOKMARKS,
                 NavBarItem.WEB_BOOKMARKS,

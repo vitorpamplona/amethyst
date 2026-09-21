@@ -27,9 +27,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TERMS_ACCEPTANCE_REQUIRED
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 
 @Stable
@@ -69,7 +69,7 @@ class LoginViewModel : ViewModel() {
     ) {
         clear()
         this.isFirstLogin = isFirstLogin
-        acceptedTerms = !isFirstLogin || BuildConfig.FLAVOR != "play"
+        acceptedTerms = !isFirstLogin || !TERMS_ACCEPTANCE_REQUIRED
         if (newAccountKey != null) {
             key = TextFieldValue(newAccountKey)
         }
@@ -80,7 +80,7 @@ class LoginViewModel : ViewModel() {
         password = TextFieldValue("")
 
         errorManager.clearErrors()
-        acceptedTerms = BuildConfig.FLAVOR != "play"
+        acceptedTerms = !TERMS_ACCEPTANCE_REQUIRED
         processingLogin = false
         isTemporary = false
         offerTemporaryLogin = false

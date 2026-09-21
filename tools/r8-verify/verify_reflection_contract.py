@@ -35,16 +35,29 @@ MEMBER_LINE = re.compile(
 )
 
 
-FLAVORS = ("play", "fdroid")
+FLAVORS = ("complete", "play", "fdroid")
+
+# A scope names the set of flavors an entry applies to. The two that are not a
+# single flavor mirror the shared source sets in amethyst/build.gradle.kts:
+# `google` is src/google/ (Firebase, ML Kit, Cast, AppFunctions) and `health` is
+# src/health/ (Health Connect).
+SCOPES = {
+    "complete": frozenset({"complete"}),
+    "play": frozenset({"play"}),
+    "fdroid": frozenset({"fdroid"}),
+    "google": frozenset({"complete", "play"}),
+    "health": frozenset({"complete", "fdroid"}),
+}
 
 
 def parse_contract(path):
-    """Read the contract. A line may open with @<flavor> to scope it.
+    """Read the contract. A line may open with @<scope> to limit it.
 
-    Play-only code (the Cast provider, the AppFunctions bridge) is not compiled
-    into the F-Droid APK at all, so an unscoped entry for it would read as
-    "R8 deleted this" on that variant and fail a release the moment CI checked
-    both. `@play class ...` limits the check to the variant that has the class.
+    Google-services code (the Cast provider, the AppFunctions bridge) is not
+    compiled into the F-Droid APK at all, so an unscoped entry for it would read
+    as "R8 deleted this" on that variant and fail a release the moment CI checked
+    every flavor. `@google class ...` limits the check to the variants that have
+    the class. See SCOPES for the names.
     """
     entries = []
     with open(path, encoding="utf-8") as fh:
@@ -55,10 +68,11 @@ def parse_contract(path):
             parts = line.split()
             scope = None
             if parts[0].startswith("@"):
-                scope = parts[0][1:]
-                if scope not in FLAVORS:
-                    sys.exit(f"{path}:{lineno}: unknown flavor {scope!r}; "
-                             f"expected one of {', '.join(FLAVORS)}")
+                name = parts[0][1:]
+                if name not in SCOPES:
+                    sys.exit(f"{path}:{lineno}: unknown scope {name!r}; "
+                             f"expected one of {', '.join(sorted(SCOPES))}")
+                scope = SCOPES[name]
                 parts = parts[1:]
             if len(parts) < 2:
                 sys.exit(f"{path}:{lineno}: expected '<kind> <fqn> [names...]'")
@@ -70,7 +84,7 @@ def parse_contract(path):
 
 
 def flavor_of(mapping_dir):
-    """playRelease -> play, fdroidRelease -> fdroid, anything else -> None.
+    """completeRelease -> complete, playRelease -> play, … anything else -> None.
 
     None means "check everything": an unrecognised directory must not silently
     skip entries.
@@ -202,7 +216,7 @@ def main():
 
     entries = parse_contract(contract_path)
     flavor = flavor_of(mapping_dir)
-    in_scope = [e for e in entries if e[4] is None or e[4] == flavor]
+    in_scope = [e for e in entries if e[4] is None or flavor in e[4]]
     skipped = len(entries) - len(in_scope)
     entries = in_scope
     wanted = {fqn for _, fqn, _, _, _ in entries}

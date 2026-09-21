@@ -35,6 +35,14 @@ import com.vitorpamplona.amethyst.commons.resources.terms_of_use
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.stringRes
 
+/**
+ * Whether [TermsGate] renders anything the user has to tick. True here because both
+ * Google-services channels link the terms of use; the F-Droid source set says false, and the login
+ * and sign-up view models seed `acceptedTerms` from it — a channel with no checkbox must not leave
+ * the user unable to proceed.
+ */
+const val TERMS_ACCEPTANCE_REQUIRED = true
+
 @Composable
 fun TermsGate(
     checked: Boolean,

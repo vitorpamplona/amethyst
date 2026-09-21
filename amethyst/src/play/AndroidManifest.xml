@@ -1,9 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Google Play channel: everything `complete` ships except the Health Connect integration.
+  Google Play keeps rejecting the submission over the health permissions, so this manifest strips
+  every trace of them from the merged result.
+
+  The <application> declarations below are the Google-services ones and are IDENTICAL to
+  src/complete/AndroidManifest.xml — AGP allows a source set exactly one manifest, so the two
+  channels cannot share a file. Change one, change the other.
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      Health Connect removals. The declarations themselves live in src/main/AndroidManifest.xml,
+      shared by `complete` and `fdroid`; this channel subtracts them so the store listing asks for
+      no health permission and exposes no health entry point. The androidx.health library, which
+      would contribute declarations of its own, is not on this channel's classpath at all (see
+      amethyst/build.gradle.kts).
+    -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" tools:node="remove" />
+        <intent tools:node="remove">
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+    </queries>
+
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" tools:node="remove" />
+
     <application
         android:name=".Amethyst">
+
+        <!-- The Health Connect rationale screen and its Android 14+ VIEW_PERMISSION_USAGE alias.
+             Both are declared in src/main and are meaningless without the health permissions. -->
+        <activity
+            android:name=".ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity"
+            tools:node="remove" />
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            tools:node="remove" />
 
         <service
             android:name=".service.notifications.PushNotificationReceiverService"

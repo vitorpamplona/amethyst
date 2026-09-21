@@ -46,7 +46,7 @@ name.** In this app those are, exhaustively:
 |---|---|---|
 | JNI symbol `Java_<class>_<method>` | `ArtiNative`, secp256k1 | covered by the default `native <methods>` rule |
 | Native code calling *back* by name | `ArtiLogCallback.onLogLine`, looked up with `GetMethodID` in `tools/arti-build/src/lib.rs` | `-keep class …ArtiLogCallback { *; }` |
-| Generated code reflected over by a library | the AppFunctions bridge (`appfunctions.**`, play flavor only) | `-keep class <pkg>.** { *; }` |
+| Generated code reflected over by a library | the AppFunctions bridge (`appfunctions.**`, complete + play flavors) | `-keep class <pkg>.** { *; }` |
 | Enum constant persisted as a string | `UISharedPreferences` writes `enum.name`, reads `Type.valueOf(s)` | `-keepclassmembers enum * { <fields>; … }` |
 | Class name in a manifest `<meta-data android:value>` | `AmethystCastOptionsProvider` | explicit `-keep` — AGP generates keeps from component `android:name`, **not** from meta-data |
 | Class name in WorkManager's database | the three `CoroutineWorker`s | `-keep class * extends androidx.work.ListenableWorker { <init>(...); }` |
@@ -149,16 +149,17 @@ python3 tools/r8-verify/verify_reflection_contract.py \
     amethyst/build/outputs/mapping/playRelease/
 ```
 
-Under a second, no device. The release workflow runs it for both flavors before
+Under a second, no device. The release workflow runs it for every shipped flavor before
 collecting assets, so a break fails the release instead of shipping.
 
 **Adding reflection means adding two things**: the keep rule, and a line in the
 contract. A rule with no contract line is unverified and will rot.
 
-Scope a line to one flavor with a leading `@play` / `@fdroid` when the class is
-only compiled into that variant — play-only code is absent from the F-Droid APK,
-and "absent" is indistinguishable from "R8 deleted it", so an unscoped line for
-it fails that release.
+Scope a line with a leading `@google` (complete + play), `@health`
+(complete + fdroid), or a single `@complete` / `@play` / `@fdroid` when the class
+is only compiled into those variants — Google-services code is absent from the
+F-Droid APK, and "absent" is indistinguishable from "R8 deleted it", so an
+unscoped line for it fails that release.
 
 Reflection that names a class R8 *cannot* rename needs no rule and no line: the
 platform trust manager `quic` probes for a 3-arg `checkServerTrusted` ships in

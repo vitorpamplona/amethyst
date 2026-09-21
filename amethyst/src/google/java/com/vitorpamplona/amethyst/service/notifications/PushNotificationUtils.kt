@@ -30,6 +30,9 @@ import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
 object PushNotificationUtils {
+    /** Names the push transport this channel was built with, for log tags. */
+    const val SERVICE_NAME = "FirebaseMsgService"
+
     var lastToken: String? = null
     var hasInit: List<AccountInfo>? = null
 

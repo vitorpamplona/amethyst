@@ -968,8 +968,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-android-gradle-
 
+      # Only the two channels whose .aab is published: Google Play consumes the `play`
+      # bundle, Accrescent the `fdroid` one. The `complete` channel ships as APKs only, so
+      # building its bundle would be several minutes of R8 for an artifact nobody downloads.
       - name: Build AAB
-        run: ./gradlew clean bundleRelease --stacktrace
+        run: ./gradlew clean :amethyst:bundlePlayRelease :amethyst:bundleFdroidRelease --stacktrace
 
       - name: Sign AAB (Google Play)
         uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
@@ -1007,6 +1010,20 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "36.0.0"
 
+      # The full app: Google services AND Health Connect. Distributed through this GH
+      # Release and Zapstore — the Play Store rejects it over the health permissions, which
+      # is what the separate `play` channel above exists to avoid.
+      - name: Sign APK (Complete)
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
+        with:
+          releaseDirectory: amethyst/build/outputs/apk/complete/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "36.0.0"
+
       - name: Sign APK (F-Droid)
         uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
         with:
@@ -1024,12 +1041,12 @@ jobs:
       # reflective surface (JNI symbols, Jackson DTO field names, enum constants
       # persisted in DataStore, WorkManager worker class names, the Cast
       # OptionsProvider named in a manifest meta-data value) actually survived,
-      # against what R8 emitted for BOTH flavors. Runs before the assets are
+      # against what R8 emitted for EVERY shipped flavor. Runs before the assets are
       # collected so a break fails the release rather than shipping.
       - name: Verify R8 reflection contract
         run: |
           set -euo pipefail
-          for variant in playRelease fdroidRelease; do
+          for variant in completeRelease playRelease fdroidRelease; do
             echo "== $variant"
             python3 tools/r8-verify/verify_reflection_contract.py \
               "amethyst/build/outputs/mapping/${variant}/"
@@ -1041,7 +1058,13 @@ jobs:
           mkdir -p dist
           TAG="${GITHUB_REF_NAME}"
 
-          # Play APKs (5 variants)
+          # Complete APKs (5 variants) — the full app, what a sideloader wants.
+          for variant in universal x86 x86_64 arm64-v8a armeabi-v7a; do
+            cp "amethyst/build/outputs/apk/complete/release/amethyst-complete-${variant}-release-unsigned-signed.apk" \
+               "dist/amethyst-complete-${variant}-${TAG}.apk"
+          done
+
+          # Play APKs (5 variants) — the same app without the Health Connect integration.
           for variant in universal x86 x86_64 arm64-v8a armeabi-v7a; do
             cp "amethyst/build/outputs/apk/play/release/amethyst-play-${variant}-release-unsigned-signed.apk" \
                "dist/amethyst-googleplay-${variant}-${TAG}.apk"
@@ -1074,10 +1097,11 @@ jobs:
           #
           # Gzipped because the raw text mapping is ~500 MB (~29 MB
           # compressed). retrace.sh reads the .gz directly.
-          for flavor in play fdroid; do
+          for flavor in complete play fdroid; do
             case "$flavor" in
-              play)   name=googleplay ;;
-              fdroid) name=fdroid ;;
+              complete) name=complete ;;
+              play)     name=googleplay ;;
+              fdroid)   name=fdroid ;;
             esac
             src="amethyst/build/outputs/mapping/${flavor}Release/mapping.txt"
             if [ ! -f "$src" ]; then

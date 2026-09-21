@@ -212,6 +212,44 @@ When extracting a composable: move it to `commonsUI/commonMain/` (see
 `/kotlin-multiplatform`), then point both Android and Desktop at the shared
 version. `quartz/` is protocol-only — no composables.
 
+## Android Build Channels (three product flavors, one `channel` dimension)
+
+`:amethyst` builds three flavors, differing along two independent axes:
+
+| | Google services (Firebase, ML Kit, Cast, AppFunctions) | Health Connect |
+|---|---|---|
+| **`complete`** (default) | yes | yes |
+| **`play`** | yes | no |
+| **`fdroid`** | no | yes |
+
+`complete` is the full app (GitHub Releases + Zapstore). `play` exists only
+because Google Play review keeps rejecting the Health Connect permissions, so
+that channel compiles the integration out entirely.
+
+Where code goes — the shared source sets are wired in `amethyst/build.gradle.kts`
+→ `sourceSets`, and **`java` and `kotlin` are separate directory sets there**
+(register a shared root in both or kotlinc never sees it):
+
+- `amethyst/src/google/` — Google-services code → `complete` + `play`
+- `amethyst/src/health/` — Health Connect: manager, My Fitness, rationale
+  screen, New Workout carousel → `complete` + `fdroid`
+- `amethyst/src/noHealth/` — no-op stand-ins for the two composables `src/main`
+  calls into → `play` only
+- `amethyst/src/fdroid/` — UnifiedPush and open-source replacements → `fdroid`
+- test counterparts: `src/testGoogle/`, `src/testHealth/`
+
+Runtime gating uses `BuildConfig.IS_HEALTH_CONNECT_AVAILABLE` /
+`IS_CASTING_AVAILABLE`, never `BuildConfig.FLAVOR == "..."` — a string compare
+against one flavor name is what silently broke when the third channel was added.
+For anything a flavor either has or hasn't, prefer a const in the flavor source
+set itself (`WritingAssistantFactory.IS_SUPPORTED`, `TERMS_ACCEPTANCE_REQUIRED`,
+`PushNotificationUtils.SERVICE_NAME`).
+
+`src/complete/AndroidManifest.xml` and `src/play/AndroidManifest.xml` carry the
+same Google-services declarations (AGP allows one manifest per source set);
+`play` adds a `tools:node="remove"` block stripping Health Connect. The Gradle
+task `verifyChannelManifests` fails the build if the two drift.
+
 ## Build Commands
 
 ```bash

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.navigation.drawer
 
 import android.os.Build
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -105,9 +106,11 @@ private val DrawerNavigateItems: List<NavBarItem> =
     )
 
 private val DrawerYouItems: List<NavBarItem> =
-    listOf(
+    listOfNotNull(
         NavBarItem.PROFILE,
-        NavBarItem.MY_FITNESS,
+        // Health Connect, and with it My Fitness, is not compiled into the Google Play channel.
+        // [NavBarCatalog] drops the id there too, so this keeps the two in step.
+        NavBarItem.MY_FITNESS.takeIf { BuildConfig.IS_HEALTH_CONNECT_AVAILABLE },
         NavBarItem.MY_LISTS,
         NavBarItem.BOOKMARKS,
         NavBarItem.WEB_BOOKMARKS,

@@ -362,7 +362,7 @@ Quartz library in one pipeline.
 
 3. **Wait** for the `Create Release Assets` workflow to finish (~25–30 min).
 
-4. **Verify** — the GH Release should hold **49 assets**:
+4. **Verify** — the GH Release should hold **55 assets**:
    - **14 desktop**, one per matrix leg × format:
      - macOS arm64: `dmg` (1)
      - Windows x64: `msi` + portable `zip` (2)
@@ -377,11 +377,13 @@ Quartz library in one pipeline.
      ships no WiX (`windows-latest` has WiX 3.14 preinstalled, which is why
      the x64 leg gets an MSI). Revisit if that image gains WiX, or if
      jpackage learns the WiX 4+ `wix build` CLI.
-   - **15 Android** — 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the
-     F-Droid `.apks` set built for Accrescent + **2 R8 mapping files**
-     (`amethyst-{googleplay,fdroid}-mapping-<version>.txt.gz`). The mappings
-     are not optional extras: the release build is minified, so without them
-     no crash report from an APK/`.apks` user can be read. See
+   - **21 Android** — 5 Complete APKs + 5 Google Play APKs + 5 F-Droid APKs +
+     2 AABs + the F-Droid `.apks` set built for Accrescent + **3 R8 mapping
+     files** (`amethyst-{complete,googleplay,fdroid}-mapping-<version>.txt.gz`).
+     Complete is the full app; the Google Play build is the same one with Health
+     Connect stripped out. There is no Complete AAB — that channel ships as APKs.
+     The mappings are not optional extras: the release build is minified, so
+     without them no crash report from an APK/`.apks` user can be read. See
      [`RELEASE_OPS.md` § Crash reports](RELEASE_OPS.md#7-crash-reports--retrace).
    - **10 amy** — `tar.gz` (macOS arm64, Linux x64, Linux arm64),
      `deb` + `rpm` per Linux arch, portable `zip` per Windows arch, and the
@@ -544,17 +546,28 @@ distributes; the official Amethyst rollout for each is in
 | **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` — a *step* at the end of the `deploy-android` job, not a job of its own, so it does not appear in a job list | Automatic (CI) |
 | **Google Play** | Download the signed `amethyst-googleplay-<version>.aab` from the GH Release and upload it in Play Console | **Manual push** |
 | **F-Droid** | F-Droid's build server detects the new tag and **builds the `fdroid` flavor from source** per its recipe in the external [`fdroiddata`](https://gitlab.com/fdroid/fdroiddata) repo, then signs + publishes itself | **Pull (build-from-source)** |
-| **Zapstore** | The [`zsp`](https://zapstore.dev/) CLI reads [`zapstore.yaml`](zapstore.yaml) and publishes a Nostr software-release event signed with the app's nsec | **Manual push (Nostr)** |
+| **Zapstore** | The [`zsp`](https://zapstore.dev/) CLI reads [`zapstore.yaml`](zapstore.yaml) and publishes a Nostr software-release event signed with the app's nsec. Its `google` variant points at the **`complete`** APKs, not the Play ones | **Manual push (Nostr)** |
 | **Homebrew + Winget** | `bump-homebrew.yml` / `bump-winget.yml` open version-bump PRs on stable tags — **currently no-ops**: neither package has been bootstrapped upstream yet (§ Bootstrap) | Automatic (CI), inactive |
 
-Two channels need the build to stay split into product flavors (see
+Three channels need the build to stay split into product flavors (see
 `amethyst/build.gradle.kts` → `productFlavors`):
 
-- **`play`** carries Firebase / Google Play Services (push notifications, ML
-  Kit, etc.) → the Google Play AAB.
-- **`fdroid`** swaps those for UnifiedPush and no-op/open-source
-  implementations (`amethyst/src/fdroid/…`) so the build is free of proprietary
-  dependencies → what F-Droid builds and what Zapstore distributes.
+- **`complete`** is the full app: Firebase / Google Play Services (push
+  notifications, ML Kit, Cast, AppFunctions) **and** the Health Connect
+  integration → the `amethyst-complete-*` APKs on the GH Release, and what
+  Zapstore distributes to Google-services users.
+- **`play`** is `complete` minus Health Connect — no health permissions in the
+  manifest, no `androidx.health` dependency, no My Fitness screen, no Health
+  Connect suggestions in the New Workout composer → the Google Play AAB. It
+  exists because Play review keeps rejecting the health permissions.
+- **`fdroid`** swaps the Google dependencies for UnifiedPush and
+  no-op/open-source implementations (`amethyst/src/fdroid/…`) so the build is
+  free of proprietary dependencies, while keeping Health Connect → what F-Droid
+  builds and what Accrescent gets.
+
+The first two share `amethyst/src/google/` (everything Google-services) and
+differ only in whether `amethyst/src/health/` or `amethyst/src/noHealth/` is on
+the compile path; `complete` and `fdroid` share `amethyst/src/health/`.
 
 **F-Droid is pull, not push.** We never upload to F-Droid; its server builds our
 tagged source. Keeping the `fdroid` flavor proprietary-free and the

@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -132,13 +133,18 @@ fun ComposeSettingsContent(
                 description = R.string.tracked_broadcasts_setting_description,
             )
             SettingsDivider()
-            BooleanSwitchTile(
-                flow = sharedPrefs.suggestWorkoutsFromHealthConnect,
-                icon = MaterialSymbols.DirectionsRun,
-                title = R.string.suggest_workouts_setting_title,
-                description = R.string.suggest_workouts_setting_description,
-            )
-            SettingsDivider()
+            // The Google Play channel ships no Health Connect integration, so there is nothing for
+            // this toggle to switch on. The stored preference stays — the same account synced to a
+            // `complete` or F-Droid install still honours it there.
+            if (BuildConfig.IS_HEALTH_CONNECT_AVAILABLE) {
+                BooleanSwitchTile(
+                    flow = sharedPrefs.suggestWorkoutsFromHealthConnect,
+                    icon = MaterialSymbols.DirectionsRun,
+                    title = R.string.suggest_workouts_setting_title,
+                    description = R.string.suggest_workouts_setting_description,
+                )
+                SettingsDivider()
+            }
             AddClientTagTile(accountViewModel)
             SettingsDivider()
             SignatureTile(sharedPrefs.composeSignature)

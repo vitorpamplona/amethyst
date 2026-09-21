@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -43,13 +42,7 @@ class RegisterAccounts(
     private val accounts: List<AccountInfo>,
     private val client: (String) -> OkHttpClient,
 ) {
-    @Suppress("SENSELESS_COMPARISON")
-    val tag =
-        if (BuildConfig.FLAVOR == "play") {
-            "RegisterAccounts FirebaseMsgService"
-        } else {
-            "RegisterAccounts UnifiedPushService"
-        }
+    val tag = "RegisterAccounts ${PushNotificationUtils.SERVICE_NAME}"
 
     private suspend fun signAllAuths(
         notificationToken: String,
