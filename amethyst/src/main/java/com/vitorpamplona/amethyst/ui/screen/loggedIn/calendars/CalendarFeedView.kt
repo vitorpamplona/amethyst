@@ -25,14 +25,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -60,15 +57,15 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 @Composable
 fun CalendarFeedView(
     feedState: FeedContentState,
+    model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
 ) {
     RefresheableBox(feedState, true) {
         val state by feedState.feedContent.collectAsStateWithLifecycle()
 
         when (val s = state) {
-            is FeedState.Loaded -> CalendarFeedLoadedBody(s, feedState, accountViewModel, nav, filterAddresses)
+            is FeedState.Loaded -> CalendarFeedLoadedBody(feedState, model, accountViewModel, nav)
             is FeedState.Empty -> CalendarFeedEmpty()
             is FeedState.Loading -> Box(modifier = Modifier.fillMaxSize())
             is FeedState.FeedError -> CalendarFeedError(s)
@@ -78,25 +75,23 @@ fun CalendarFeedView(
 
 @Composable
 private fun CalendarFeedLoadedBody(
-    loaded: FeedState.Loaded,
     feedState: FeedContentState,
+    model: CalendarsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>?,
 ) {
-    val items by loaded.feed.collectAsStateWithLifecycle()
+    // Split on the model, off the main thread, from the same filtered list the other lenses read.
+    val split by model.upcomingPast.collectAsStateWithLifecycle()
 
-    val split by remember(filterAddresses) {
-        derivedStateOf {
-            partitionUpcomingPast(items.list.applyCalendarFilter(filterAddresses))
-        }
-    }
-
-    // Without this the top-bar filter switch fires `sendToTop()`, but the LazyColumn never hears
-    // it — so the scroll position from the previous filter (e.g. mid-way through a tiny People
-    // List) is preserved when the user flips back to Global, leaving the user staring at the
-    // past-events section of a 100-item feed instead of the top.
-    val listState = rememberLazyListState()
+    // The list state lives on the screen's ViewModel: a remembered one is rebuilt from scratch
+    // when the screen comes back from an appointment, dropping the reader at the top of the feed
+    // on every tap.
+    //
+    // WatchScrollToTop: without it the top-bar filter switch fires `sendToTop()`, but the
+    // LazyColumn never hears it — so the scroll position from the previous filter (e.g. mid-way
+    // through a tiny People List) is preserved when the user flips back to Global, leaving the
+    // user staring at the past-events section of a 100-item feed instead of the top.
+    val listState = model.feedListState
     WatchScrollToTop(feedState, listState)
 
     LazyColumn(

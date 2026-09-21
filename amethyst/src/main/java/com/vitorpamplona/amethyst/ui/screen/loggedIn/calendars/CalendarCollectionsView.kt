@@ -61,6 +61,9 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_export_event
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -84,7 +87,7 @@ fun CalendarCollectionsView(
         val state by feedState.feedContent.collectAsStateWithLifecycle()
 
         when (val s = state) {
-            is FeedState.Loaded -> CollectionsBody(s, accountViewModel, nav)
+            is FeedState.Loaded -> CollectionsBody(s, feedState, accountViewModel, nav)
             is FeedState.Empty -> EmptyCollections()
             is FeedState.Loading -> Box(modifier = Modifier.fillMaxSize())
             is FeedState.FeedError ->
@@ -105,11 +108,24 @@ fun CalendarCollectionsView(
 @Composable
 private fun CollectionsBody(
     loaded: FeedState.Loaded,
+    feedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+
+    // Same as every other feed: park the offset in the process-scoped store so opening a calendar
+    // and coming back does not drop the reader at the top of the list.
+    val listState = rememberForeverLazyListState(ScrollStateKeys.CALENDAR_COLLECTIONS_SCREEN)
+
+    // This list never had a state to scroll, so the bottom bar's Calendars tap has always been a
+    // no-op here — and worse than a no-op: `sendToTop()` latches `scrollToTopPending` and nothing
+    // ever cleared it, so every later call returned early. Now that the offset persists, leaving
+    // it unwatched would mean the tap can never get the reader back to the top.
+    WatchScrollToTop(feedState, listState)
+
     LazyColumn(
+        state = listState,
         // Reserve top space for the surrounding [DisappearingScaffold]'s top bar — without this
         // the first card scrolls under it on the initial render.
         contentPadding = rememberFeedContentPadding(FeedPadding),
