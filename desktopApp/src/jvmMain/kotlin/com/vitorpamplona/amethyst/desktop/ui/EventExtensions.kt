@@ -41,7 +41,10 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
  */
 @Composable
 fun Event.rememberDisplayData(cache: ICacheProvider?): NoteDisplayData {
-    val author = remember(pubKey, cache) { cache?.getUserIfExists(pubKey) }
+    // getOrCreate, not getIfExists: a note is routinely cached before its author's profile is,
+    // and a null author here would leave nothing to observe, so the name would never correct
+    // itself from the pubkey stub.
+    val author = remember(pubKey, cache) { cache?.getOrCreateUser(pubKey) }
     val authorMetaValue = rememberAuthorMetadataKey(author)
     return remember(this, authorMetaValue) { toNoteDisplayData(cache) }
 }
