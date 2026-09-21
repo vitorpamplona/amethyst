@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service.eventCache
 
 import android.content.ComponentCallbacks2
 import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.Log
 import java.util.concurrent.atomic.AtomicBoolean
@@ -63,7 +63,7 @@ class MemoryTrimmingService(
             // Tier 2: real reclaim pressure — drop events from muted/blocked users, old
             // messages, and unobserved reactions.
             account.forEach {
-                cache.pruner.pruneHiddenEvents(it)
+                cache.pruner.pruneHiddenEvents(it.hiddenUsers.flow.value)
                 cache.pruner.pruneHiddenMessages(it)
             }
             val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.apps.recommendations.ProfileAppRecommendationsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.articles.ArticlesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
@@ -35,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.DvmHear
 import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.followPacks.FollowPacksFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.geocaches.GeocachesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.geohash.GeoHashFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.RepositoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepositories.GitRepositoriesFilterAssembler
@@ -69,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssem
 import com.vitorpamplona.amethyst.commons.relayClient.video.VideoFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.wallet.OnchainZapsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.workouts.WorkoutsFilterAssembler
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.cachedDvmAnnouncements
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssembler
@@ -200,6 +201,7 @@ class RelaySubscriptionsCoordinator(
     val highlights = HighlightsFilterAssembler(client)
     val calendars = CalendarsFilterAssembler(client)
     val products = ProductsFilterAssembler(client)
+    val geocaches = GeocachesFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
     val publicChats = PublicChatsFilterAssembler(client)
     val liveStreams = LiveStreamsFilterAssembler(client)

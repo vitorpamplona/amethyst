@@ -47,6 +47,7 @@
     <string name="road_event_speed_camera">测速照相</string>
     <string name="road_event_traffic_jam">塞车</string>
     <string name="road_event_unknown">道路事件</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">打开</string>
     <string name="relay_monitor_rtt_read">读取</string>
     <string name="relay_monitor_rtt_write">写入</string>
@@ -439,6 +440,8 @@
     <string name="workout_suggestion_connect_button">连接</string>
     <string name="workout_suggestion_distance_km">%1$s 公里</string>
     <string name="workout_from_health_connect">来自 Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">尚未找到nSite。</string>
     <string name="browser_reload">重新加载</string>
     <string name="browser_unsupported">应用内浏览器需要 Android 11 或更高版本。</string>
@@ -761,6 +764,9 @@
     <string name="call_calling">正在呼叫\u2026</string>
     <string name="call_connecting">正在连.\u2026</string>
     <string name="call_ended">通话结束</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">忽略</string>
     <string name="call_switch_camera">切换相机</string>
     <string name="call_voice">语音通话</string>

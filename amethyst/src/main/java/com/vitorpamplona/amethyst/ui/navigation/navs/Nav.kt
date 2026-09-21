@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
@@ -102,6 +103,22 @@ class Nav(
     override fun navBottomBar(route: Route) {
         navigationScope.launch {
             ime.settle()
+
+            // A nav-bar tap asks for a tab, never for whatever the user pushed on top of one. Drop
+            // those pushes first, and without saving them, so the restoreState below can never hand
+            // a deep stack back. On phones this is always a no-op — AppBottomBar hides itself off
+            // tab roots, so the bar is only ever tapped from one — but the large-screen rail stays
+            // on screen the whole time and is routinely tapped from three screens deep.
+            popPushesAboveTabRoot()
+
+            // Dropping those pushes is often the whole job — re-tapping the tab the user is inside,
+            // and every tap of Home from somewhere inside Home, end here. Same already-there guard
+            // nav() uses, so a parameterized tab compares by its filled route.
+            if (getRouteWithArguments(route::class, controller) == route) {
+                controller.currentBackStackEntry?.savedStateHandle?.set(BOTTOM_NAV_ROOT_KEY, true)
+                return@launch
+            }
+
             controller.navigate(route) {
                 // Clear sibling bottom-nav entries but keep Home (the start
                 // destination) below, so back-swipe from any tab returns to
@@ -117,7 +134,15 @@ class Nav(
                     saveState = true
                 }
                 launchSingleTop = true
-                restoreState = true
+                // ...but never onto Home. A non-inclusive popUpTo files the popped entries under the
+                // popUpTo TARGET's own destination id as well as the popped tab's — the
+                // `if (!inclusive)` branch of NavControllerImpl.executePopOperations — so restoring
+                // here would hand Home the stack that was saved on the way out of some *other* tab.
+                // That is how tapping Home on the rail came back to a thread instead of the feed.
+                // Home is the anchor, so it is never popped and has no saved stack of its own to
+                // miss: launchSingleTop reuses the entry already sitting there, ViewModelStore and
+                // all.
+                restoreState = route != Route.Home
             }
             // Mark this entry as a tab root: hides the back arrow in canPop
             // and skips the horizontal slide in composableFromEnd.
@@ -143,6 +168,25 @@ class Nav(
                         runCatching { controller.getBackStackEntry(route) }.getOrNull()
                     }
             entry?.savedStateHandle?.set(BOTTOM_NAV_ROOT_KEY, true)
+        }
+    }
+
+    /**
+     * Drops every entry the user pushed on top of the tab root they are currently in, discarding
+     * that state rather than saving it — a nav-bar tap is a request for a tab, and nothing above a
+     * tab root should survive to be replayed by a later `restoreState`.
+     *
+     * Stops at the first entry stamped [BOTTOM_NAV_ROOT_KEY] by [navBottomBar], or at Home, which
+     * is a tab root the user may never have tapped because the graph starts there. Terminates
+     * either way: every iteration that does not return removes one entry from a finite back stack,
+     * and [NavHostController.popBackStack] reports false once there is nothing left to pop.
+     */
+    private fun popPushesAboveTabRoot() {
+        while (true) {
+            val top = controller.currentBackStackEntry ?: return
+            if (top.isBottomNavRoot()) return
+            if (top.destination.hasRoute(Route.Home::class)) return
+            if (!controller.popBackStack()) return
         }
     }
 

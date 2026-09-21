@@ -186,7 +186,7 @@ class NostrSignerPermissionLedger(
          * delete afterwards, in the same risk class as the original kind 1/6/7 set (notes, reposts,
          * reactions, pictures, videos, voice, public/live/relay chat, threads, polls, comments,
          * highlights, code snippets, file metadata, reports, torrents, long-form articles, wiki, status).
-         * Some are *addressable* (long-form 30023, wiki 30818, legacy video 34235/34236): re-signing
+         * Some are *addressable* (long-form 30023, wiki 30818, video 34235/34236): re-signing
          * with the same `d` tag replaces the app's own prior version at that address — an accepted
          * trade-off, since an app that can already post arbitrary notes could do equal reputational harm.
          * The set also includes two harmless non-content signatures:
@@ -247,8 +247,8 @@ class NostrSignerPermissionLedger(
                 LongTextNoteEvent.KIND, // 30023 — NIP-23 long-form articles (addressable content)
                 StatusEvent.KIND, // 30315 — ephemeral user status / presence
                 WikiNoteEvent.KIND, // 30818 — NIP-54 wiki articles (addressable content)
-                VideoHorizontalEvent.KIND, // 34235 — legacy addressable horizontal video (NIP-71)
-                VideoVerticalEvent.KIND, // 34236 — legacy addressable vertical video (NIP-71)
+                VideoHorizontalEvent.KIND, // 34235 — addressable horizontal video (NIP-71)
+                VideoVerticalEvent.KIND, // 34236 — addressable vertical video (NIP-71)
                 PublicationIndexEvent.KIND, // 30040 — NKBIP-01 publication index (addressable content)
                 LearningResourceEvent.KIND, // 30142 — learning resources (addressable content)
                 BlossomPieceIndexEvent.KIND, // 32176 — Blossom piece indexes (addressable content)

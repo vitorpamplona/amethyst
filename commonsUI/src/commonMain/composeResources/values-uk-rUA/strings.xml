@@ -48,6 +48,7 @@
     <string name="road_event_speed_camera">Камера швидкості</string>
     <string name="road_event_traffic_jam">Затор</string>
     <string name="road_event_unknown">Дорожня подія</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Відкрити</string>
     <string name="relay_monitor_rtt_read">Читати</string>
     <string name="relay_monitor_rtt_write">Писати</string>
@@ -435,6 +436,8 @@
     <string name="workout_suggestion_connect_button">Підключити</string>
     <string name="workout_suggestion_distance_km">%1$s км</string>
     <string name="workout_from_health_connect">З Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSites ще не знайдено.</string>
     <string name="browser_reload">Оновити</string>
     <string name="browser_unsupported">Вбудований браузер потребує Android 11 або новішої версії.</string>
@@ -756,6 +759,9 @@
     <string name="call_calling">Виклик…</string>
     <string name="call_connecting">З'єднання…</string>
     <string name="call_ended">Дзвінок завершено</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Закрити</string>
     <string name="call_switch_camera">Перемкнути камеру</string>
     <string name="call_voice">Голосовий дзвінок</string>

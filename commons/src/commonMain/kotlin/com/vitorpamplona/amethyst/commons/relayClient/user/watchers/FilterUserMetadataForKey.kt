@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.user.watchers
 
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.forEachChunk
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
@@ -90,27 +91,33 @@ fun filterUserMetadataForKey(
             }
         }
 
-    return perRelayUsers
-        .map { (relay, users) ->
-            val firstTimers = mutableSetOf<HexKey>()
-            val updates = mutableSetOf<HexKey>()
+    val filters = mutableListOf<RelayBasedFilter>()
 
-            var minimumTime: Long = Long.MAX_VALUE
+    perRelayUsers.forEach { (relay, users) ->
+        val firstTimers = mutableSetOf<HexKey>()
+        val updates = mutableSetOf<HexKey>()
 
-            users.forEach { user ->
-                val time = since.since(user)?.get(relay)?.time
-                if (time == null || user.metadataOrNull()?.flow?.value == null) {
-                    firstTimers.add(user.pubkeyHex)
-                } else {
-                    updates.add(user.pubkeyHex)
-                    if (time < minimumTime) {
-                        minimumTime = time
-                    }
+        var minimumTime: Long = Long.MAX_VALUE
+
+        users.forEach { user ->
+            val time = since.since(user)?.get(relay)?.time
+            if (time == null || user.metadataOrNull()?.flow?.value == null) {
+                firstTimers.add(user.pubkeyHex)
+            } else {
+                updates.add(user.pubkeyHex)
+                if (time < minimumTime) {
+                    minimumTime = time
                 }
             }
+        }
 
-            listOfNotNull(
-                if (firstTimers.isNotEmpty()) {
+        // Chunked for the same reason as FilterMissingEvents and FeedMetadataCoordinator:
+        // a relay that clamps `limit` answers only part of an oversized batch, silently.
+        // One screen can ask for far more than a hundred authors at once — a thread renders
+        // every reply row in one pass, and each row subscribes its own author.
+        if (firstTimers.isNotEmpty()) {
+            forEachChunk(firstTimers.sorted()) { chunk ->
+                filters.add(
                     RelayBasedFilter(
                         relay = relay,
                         filter =
@@ -118,13 +125,18 @@ fun filterUserMetadataForKey(
                                 purpose = SubPurpose.PROFILE_METADATA,
                                 accountPubKeys = listOfNotNull(accountPubKey),
                                 kinds = UserMetadataForKeyKinds,
-                                authors = firstTimers.sorted(),
+                                authors = chunk,
                             ),
-                    )
-                } else {
-                    null
-                },
-                if (updates.isNotEmpty()) {
+                    ),
+                )
+            }
+        }
+
+        if (updates.isNotEmpty()) {
+            // Every chunk keeps the group's earliest EOSE: splitting the authors must not
+            // narrow the window any of them is asked about.
+            forEachChunk(updates.sorted()) { chunk ->
+                filters.add(
                     RelayBasedFilter(
                         relay = relay,
                         filter =
@@ -132,13 +144,14 @@ fun filterUserMetadataForKey(
                                 purpose = SubPurpose.PROFILE_METADATA,
                                 accountPubKeys = listOfNotNull(accountPubKey),
                                 kinds = UserMetadataForKeyKinds,
-                                authors = updates.sorted(),
+                                authors = chunk,
                                 since = minimumTime,
                             ),
-                    )
-                } else {
-                    null
-                },
-            )
-        }.flatten()
+                    ),
+                )
+            }
+        }
+    }
+
+    return filters
 }

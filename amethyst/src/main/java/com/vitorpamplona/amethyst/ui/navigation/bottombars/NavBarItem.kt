@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.navigation.bottombars
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.routes.GeocacheTab
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.serialization.Serializable
@@ -40,6 +41,7 @@ enum class NavBarItem {
     DISCOVER,
     NOTIFICATIONS,
     PROFILE,
+    MY_FITNESS,
     MY_LISTS,
     BOOKMARKS,
     WEB_BOOKMARKS,
@@ -77,6 +79,8 @@ enum class NavBarItem {
     NESTS,
     LONGS,
     POLLS,
+    GEOCACHES,
+    GEOCACHE_HUNTS,
     BADGES,
     PRODUCTS,
     EMOJI_SETS,
@@ -255,6 +259,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.DirectionsRun,
                 resolveRoute = { Route.Workouts },
             ),
+        NavBarItem.MY_FITNESS to
+            NavBarItemDef(
+                id = NavBarItem.MY_FITNESS,
+                labelRes = R.string.my_fitness,
+                icon = MaterialSymbols.AutoMirrored.ShowChart,
+                resolveRoute = { Route.MyFitness },
+            ),
         NavBarItem.GIT_REPOSITORIES to
             NavBarItemDef(
                 id = NavBarItem.GIT_REPOSITORIES,
@@ -418,6 +429,20 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Poll,
                 resolveRoute = { Route.Polls },
             ),
+        NavBarItem.GEOCACHES to
+            NavBarItemDef(
+                id = NavBarItem.GEOCACHES,
+                labelRes = R.string.route_geocaches,
+                icon = MaterialSymbols.Explore,
+                resolveRoute = { Route.Geocaches() },
+            ),
+        NavBarItem.GEOCACHE_HUNTS to
+            NavBarItemDef(
+                id = NavBarItem.GEOCACHE_HUNTS,
+                labelRes = R.string.route_geocache_hunts,
+                icon = MaterialSymbols.Hiking,
+                resolveRoute = { Route.Geocaches(GeocacheTab.HUNTS) },
+            ),
         NavBarItem.BADGES to
             NavBarItemDef(
                 id = NavBarItem.BADGES,
@@ -505,6 +530,7 @@ val BottomBarCategories: List<NavBarCategory> =
             MaterialSymbols.AccountCircle,
             listOf(
                 NavBarItem.PROFILE,
+                NavBarItem.MY_FITNESS,
                 NavBarItem.MY_LISTS,
                 NavBarItem.BOOKMARKS,
                 NavBarItem.WEB_BOOKMARKS,
@@ -534,6 +560,8 @@ val BottomBarCategories: List<NavBarCategory> =
                 NavBarItem.MUSIC_PLAYLISTS,
                 NavBarItem.POLLS,
                 NavBarItem.PRODUCTS,
+                NavBarItem.GEOCACHES,
+                NavBarItem.GEOCACHE_HUNTS,
                 NavBarItem.WORKOUTS,
                 NavBarItem.GIT_REPOSITORIES,
                 NavBarItem.HIGHLIGHTS,

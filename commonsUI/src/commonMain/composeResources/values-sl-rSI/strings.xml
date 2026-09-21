@@ -173,6 +173,7 @@
     <string name="road_event_speed_camera">Hitrostna kamera</string>
     <string name="road_event_traffic_jam">Zastoj</string>
     <string name="road_event_unknown">Dogodek na cesti</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zapi bojo razdeljeni med:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Vrednost za vrednost</string>
@@ -659,6 +660,8 @@
     <string name="workout_suggestion_connect_button">Poveži</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Iz Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">nSites še niso najdena.</string>
     <string name="browser_reload">Ponovno naloži</string>
     <string name="browser_unsupported">Vgrajeni brskalnik zahteva Android 11 ali novejši.</string>
@@ -1230,6 +1233,9 @@
     <string name="call_calling">Kličem\u2026</string>
     <string name="call_connecting">Povezujem\u2026</string>
     <string name="call_ended">Klic zaključen</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Prekini</string>
     <string name="call_switch_camera">Zamenjaj kamero</string>
     <string name="call_voice">Govorni klic</string>

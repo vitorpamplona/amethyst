@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
@@ -29,7 +30,6 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -75,6 +75,8 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 
 /**
  * A minichat reply — a kind-1111 [CommentEvent] posted into a chat message's thread — should open
@@ -305,6 +307,19 @@ fun routeForInner(
 
         is com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent -> {
             Route.CalendarEventDetail(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+        }
+
+        // Geocaches route to their own screens for the same reason calendars do above: this one
+        // function is what a feed tap, a notification tap and a `nostr:naddr…` deep link all go
+        // through. Without these branches a cache opened from another NIP-CC client lands on the
+        // bare note view -- which is the interop path that matters most, since a treasures.to
+        // link is how most people will first meet a cache in Amethyst.
+        is GeocacheListingEvent -> {
+            Route.GeocacheDetail(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+        }
+
+        is GeocacheCurationListEvent -> {
+            Route.GeocacheHunt(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
         }
 
         is GiftWrapEvent, is SealedRumorEvent -> {

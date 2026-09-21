@@ -173,6 +173,7 @@
     <string name="road_event_speed_camera">Rychlostní radar</string>
     <string name="road_event_traffic_jam">Dopravní zácpa</string>
     <string name="road_event_unknown">Silniční událost</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zapy na toto se rozdělují mezi:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
@@ -674,6 +675,8 @@
     <string name="health_connect_rationale_limit_publish">Nic neopustí váš telefon, dokud sami neklepnete na návrh a příspěvek nezveřejníte. Amethyst nemá žádný server: příspěvek jde na relaye Nostr, které jste nastavili.</string>
     <string name="health_connect_rationale_limit_optional">Celá funkce je volitelná. Vypnete ji v Nastavení → Nastavení editoru, nebo kdykoli odeberete oprávnění v Health Connect — zbytek Amethystu funguje dál.</string>
     <string name="health_connect_rationale_privacy_policy">Přečíst si celé zásady ochrany soukromí</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Zatím nenalezeny žádné nSites.</string>
     <string name="browser_reload">Obnovit</string>
     <string name="browser_unsupported">Integrovaný prohlížeč vyžaduje Android 11 nebo novější.</string>
@@ -1245,6 +1248,9 @@
     <string name="call_calling">Volání\u2026</string>
     <string name="call_connecting">Připojování\u2026</string>
     <string name="call_ended">Hovor ukončen</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Zavřít</string>
     <string name="call_switch_camera">Přepnout kameru</string>
     <string name="call_voice">Hlasový hovor</string>

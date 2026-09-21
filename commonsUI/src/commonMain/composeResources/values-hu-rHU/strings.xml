@@ -4,7 +4,7 @@
     <string name="login_title">Üdvözöljük az Amethystben</string>
     <string name="login_subtitle">Jelentkezzen be Nostr a-fiókjába</string>
     <string name="login_subtitle_desktop">Asztali Nostr-kliens</string>
-    <string name="login_card_title">Jelentkezzen be Nostr-a kulcsával</string>
+    <string name="login_card_title">Jelentkezzen be a Nostr-a kulcsával</string>
     <string name="login_card_subtitle">nsec a teljes hozzáféréshez, bunker:// a távoli aláíróhoz, vagy npub a csak olvasható módhoz</string>
     <string name="login_with_key">Bejelentkezés kulccsal</string>
     <string name="login_button">Bejelentkezés</string>
@@ -21,7 +21,7 @@
     <string name="new_key_public_label">Nyilvános kulcs (megosztható):</string>
     <string name="new_key_secret_label">Titkos kulcs (SOHA ne ossza meg!):</string>
     <string name="new_key_continue_button">Elmentettem a kulcsaimat, folytatás</string>
-    <string name="new_key_saved_checkbox">Egy biztonságos helyre mentettem a kulcsaimat</string>
+    <string name="new_key_saved_checkbox">Biztonságos helyre mentettem a kulcsaimat</string>
     <string name="new_key_copy_encrypted_button">Titkosított másolása (ajánlott)</string>
     <string name="new_key_encrypt_password_label">Jelszó a titkosított biztonsági mentéshez</string>
     <string name="new_key_step_indicator">%1$d. lépés / %2$d</string>
@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">Sebességmérő kamera</string>
     <string name="road_event_traffic_jam">Forgalmi dugó</string>
     <string name="road_event_unknown">Útesemény</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
@@ -187,6 +188,36 @@
     </plurals>
     <string name="profile_banner">Profilplakát</string>
     <string name="point_to_the_qr_code">Fókuszálás a QR-kódra</string>
+    <string name="qr_scanner_camera_rationale">Az Amethystnek hozzáférésre van szüksége a kamerához a QR-kódok beolvasásához. Semmi sem kerül rögzítésre vagy feltöltésre, a képkockák a készüléken dekódolódnak, majd törlődnek.</string>
+    <string name="qr_scanner_grant_camera">Kamera engedélyezése</string>
+    <string name="qr_scanner_camera_blocked">Az Amethystnek nincs engedélye hozzáférni a kamerához. Az Android beállításaiban adhat engedélyt a hozzáféréshez.</string>
+    <string name="qr_scanner_open_settings">Beállítások megnyitása</string>
+    <string name="qr_scanner_unavailable">A QR-kód-olvasó nem indult el ezen az eszközön. A kódot azonban szövegként beillesztheti.</string>
+    <string name="qr_scanner_torch_on">Vaku bekapcsolása</string>
+    <string name="qr_scanner_torch_off">Vaku kikapcsolása</string>
+    <string name="qr_scanner_dark_hint">Sötét van, kapcsolja be a vakut</string>
+    <string name="qr_scanner_scan_image">Kép beolvasása</string>
+    <string name="qr_scanner_paste">Beillesztés</string>
+    <string name="qr_scanner_no_code_in_image">Nem található QR-kód a képen</string>
+    <string name="qr_scanner_clipboard_empty">A vágólapon nincs semmi a beolvasáshoz</string>
+    <string name="qr_scanner_pick_one">Érintse meg a beolvasandó kódot</string>
+    <string name="qr_scanner_sequence_progress">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</string>
+    <string name="qr_scanner_zoom_reset">Nagyítás visszaállítása</string>
+    <string name="qr_scanner_unsupported_title">Az Amethyst nem tudja megnyitni ezt a kódot</string>
+    <string name="qr_scanner_unsupported_secret">Ez a kód egy titkos kulcsot vagy párosítási titkot tartalmaz, ezért a tartalma itt nem jelenik meg. Használja azt a képernyőt, ahol meg kell adni.</string>
+    <string name="qr_scanner_kind_nsec">Ez egy privát kulcs. Ezt inkább illessze be a bejelentkezési képernyőn.</string>
+    <string name="qr_scanner_kind_wallet">Ez egy pénztárca-kapcsolat. A pénztárca beállításaiból adhatja hozzá.</string>
+    <string name="qr_scanner_kind_bunker">Ez egy távoli aláírói cím. Az Amethyst osztja ki ezeket, hogy más alkalmazások aláírásra kérhessék, ezzel a címmel azonban nem lehet bejelentkezni.</string>
+    <string name="qr_scanner_kind_signer">Ez egy olyan alkalmazás, amely csatlakozást kér az aláírási eszközéhez. Nyissa meg a NIP-46 aláírási eszköz képernyőjéről.</string>
+    <string name="qr_scanner_kind_lightning">Ez egy Lightning-számla.</string>
+    <string name="qr_scanner_kind_cashu">Ez egy Cashu-token.</string>
+    <string name="qr_scanner_kind_web">Ez egy webhivatkozás.</string>
+    <string name="qr_scanner_kind_text">Ez egy egyszerű szöveg, nem Nostr-kód.</string>
+    <string name="qr_scanner_kind_nostr_unsupported">Ez egy Nostr-kód, de ez a képernyő nem tudja megnyitni.</string>
+    <string name="qr_scanner_open_link">Hivatkozás megnyitása</string>
+    <string name="qr_scanner_copy">Másolás</string>
+    <string name="qr_scanner_copied">Másolva</string>
+    <string name="qr_scanner_try_again">Beolvasás újra</string>
     <string name="show_qr">QR-kód megjelenítése</string>
     <string name="profile_image">Profilkép</string>
     <string name="your_profile_image">Saját profilkép</string>
@@ -667,6 +698,47 @@
     <string name="health_connect_rationale_limit_publish">Semmi sem hagyja el az Ön eszközét, amíg rá nem koppint egy javaslatra, és saját maga közzé nem teszi a bejegyzést. Az Amethyst nem használ kiszolgálót: a bejegyzés az Ön által beállított Nostr-átjátszókra kerül.</string>
     <string name="health_connect_rationale_limit_optional">Egyetlen funkció sem kötelező. Bármikor kikapcsolhatja a Beállítások → Írás menüpontban, vagy visszavonhatja a Health Connectben megadott engedélyeket; az Amethyst többi része továbbra is működni fog.</string>
     <string name="health_connect_rationale_privacy_policy">Olvassa el a teljes adatvédelmi nyilatkozatot</string>
+    <string name="my_fitness_title">Fitnesz</string>
+    <string name="my_fitness_window">Elmúlt 4 hét</string>
+    <string name="my_fitness_window_note">Az edzés utolsó négy teljes hete: a közzétett edzések, valamint minden egyéb adat, amelyet a Health Connect rögzít ezen az eszközön. Az Amethyst az eszközön állítja össze az összefoglalót, és abból semmit sem tesz közzé.</string>
+    <string name="my_fitness_this_week">Ezen a héten</string>
+    <string name="my_fitness_vs_last_week">elmúlt héten</string>
+    <string name="my_fitness_weekly_average">Heti átlag</string>
+    <string name="my_fitness_workouts">Edzések</string>
+    <string name="my_fitness_active_days">Aktív napok</string>
+    <string name="my_fitness_streak">Napi sorozat</string>
+    <string name="my_fitness_time">Idő</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
+    <string name="my_fitness_duration_hours_minutes">%1$dó %2$dp</string>
+    <string name="my_fitness_duration_minutes">%1$dp</string>
+    <string name="my_fitness_duration_seconds">%1$dmp</string>
+    <string name="my_fitness_distance">Távolság</string>
+    <string name="my_fitness_calories">Kalória</string>
+    <string name="my_fitness_steps">Lépések</string>
+    <string name="my_fitness_elevation">Mászás</string>
+    <string name="my_fitness_avg_heart_rate">Átl. szívritmus</string>
+    <string name="my_fitness_max_heart_rate">Max. szívritmus</string>
+    <string name="my_fitness_by_activity">Tevékenység szerint</string>
+    <string name="my_fitness_bests">Legjobb igyekezet</string>
+    <string name="my_fitness_best_longest_distance">Leghosszabb távolság</string>
+    <string name="my_fitness_best_longest_duration">Leghosszabb edzés</string>
+    <string name="my_fitness_best_biggest_climb">Legmagasabb mászás</string>
+    <string name="my_fitness_best_most_steps">Legtöbb lépés</string>
+    <string name="my_fitness_best_highest_heart_rate">Legmagasabb pulzusszám</string>
+    <string name="my_fitness_recent">Legutóbbi edzések</string>
+    <string name="my_fitness_empty">Az elmúlt 4 hétben nem volt rögzítve semmi. A közzétett edzések, valamint az órá által rögzített adatok itt jelennek meg.</string>
+    <string name="my_fitness_connect_title">Edzések nyomon követése</string>
+    <string name="my_fitness_connect_message">Kapcsolja össze a Health Connecttel, hogy megtekintse a heti összesített adatait, a hétről hétre változó tendenciákat, a legjobb teljesítményeit és az edzéssorozatát. Minden adat az eszközön marad.</string>
+    <string name="my_fitness_connect_banner">Kapcsolja össze a Health Connect alkalmazással, hogy hozzáadhassa az órája által rögzített edzéseket, a pulzusszámmal, a lépések számával és a megmászott magassággal együtt.</string>
+    <string name="my_fitness_connect_button">Kapcsolódás</string>
+    <string name="my_fitness_share">Edzés megosztása</string>
+    <string name="my_fitness_unit_bpm">bpm</string>
+    <string name="my_fitness_unit_kcal">kcal</string>
+    <string name="my_fitness_unit_km">km</string>
+    <string name="my_fitness_unit_mi">mi</string>
+    <string name="my_fitness_unit_m">m</string>
+    <string name="my_fitness_unit_ft">láb</string>
     <string name="nsite_none_found">Még nem találhatók nOldalak.</string>
     <string name="browser_reload">Újratöltés</string>
     <string name="browser_unsupported">Az alkalmazáson belüli böngészőhöz Android 11 vagy újabb verzió szükséges.</string>
@@ -846,7 +918,7 @@
     <string name="nest_state_speaking">Most beszéljen</string>
     <string name="nest_state_mic_open">Mikrofon megnyitva</string>
     <string name="nest_leave_host_title">Befejezi ezt a hangszobát?</string>
-    <string name="nest_leave_host_body">Ön a házigazda. A szoba bezárása mindenkit le fog választani. Válassza a "Csak elhagyás" lehetőséget, ha később vissza szeretne térni — a szoba 8 óra inaktivitás után automatikusan bezár.</string>
+    <string name="nest_leave_host_body">Ön a házigazda. A szoba bezárása mindenkit le fog választani. Válassza a „Csak elhagyás” lehetőséget, ha később vissza szeretne térni — a szoba 8 óra inaktivitás után automatikusan bezáródik.</string>
     <string name="nest_leave_host_close">Szoba bezárása</string>
     <string name="nest_leave_host_just_leave">Csak elhagyás</string>
     <string name="nest_live_chip">ÉLŐ</string>
@@ -1238,6 +1310,11 @@
     <string name="call_calling">Hívás\u2026</string>
     <string name="call_connecting">Kapcsolódás\u2026</string>
     <string name="call_ended">A hívás befejeződött</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
+    <string name="call_duration_minutes_seconds">%1$02d:%2$02d</string>
+    <string name="call_duration_hours_minutes_seconds">%1$d:%2$02d:%3$02d</string>
     <string name="call_dismiss">Eltüntetés</string>
     <string name="call_switch_camera">Kameraváltás</string>
     <string name="call_voice">Hanghívás</string>
@@ -1644,6 +1721,7 @@
     <string name="wallet_no_transactions_for_filter">Nincs olyan olyan tranzakció, amely megfelelne ennek a szűrőnek</string>
     <string name="wallet_loading">Betöltés…</string>
     <string name="wallet_incoming">Fogadott</string>
+    <string name="wallet_open_zapped_note">Zapelt bejegyzés megnyitása</string>
     <string name="wallet_outgoing">Elküldött</string>
     <string name="wallet_refresh">Frissítés</string>
     <string name="wallet_filter_all">Összes</string>

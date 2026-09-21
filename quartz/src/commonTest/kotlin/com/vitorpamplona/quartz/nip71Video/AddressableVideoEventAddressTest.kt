@@ -25,7 +25,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Kinds 34235/34236 (legacy NIP-71 videos) are parameterized replaceable
+ * Kinds 34235/34236 (the addressable NIP-71 videos) are parameterized replaceable
  * events: their address MUST include the `d` tag. A wrong (empty-dTag)
  * address makes LocalCache consume the event into a different
  * AddressableNote than the one `a` tags point to, so quotes/reposts of

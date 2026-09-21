@@ -45,6 +45,7 @@
     <string name="road_event_speed_camera">กล้องจับความเร็ว</string>
     <string name="road_event_traffic_jam">การจราจรติดขัด</string>
     <string name="road_event_unknown">เหตุการณ์บนถนน</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">เปิด</string>
     <string name="relay_monitor_rtt_read">อ่าน</string>
     <string name="relay_monitor_rtt_write">เขียน</string>
@@ -429,6 +430,8 @@
     <string name="workout_suggestion_connect_button">เชื่อมต่อ</string>
     <string name="workout_suggestion_distance_km">%1$s กม.</string>
     <string name="workout_from_health_connect">จาก Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">ยังไม่พบ nSites</string>
     <string name="browser_reload">โหลดใหม่</string>
     <string name="browser_unsupported">เบราว์เซอร์ในแอปต้องใช้ Android 11 หรือใหม่กว่า</string>
@@ -741,6 +744,9 @@
     <string name="call_calling">กำลังโทร…</string>
     <string name="call_connecting">กำลังเชื่อมต่อ…</string>
     <string name="call_ended">สิ้นสุดการโทรแล้ว</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">ยกเลิก</string>
     <string name="call_switch_camera">สลับกล้อง</string>
     <string name="call_voice">โทรด้วยเสียง</string>

@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">Radar de velocidade</string>
     <string name="road_event_traffic_jam">Congestionamento</string>
     <string name="road_event_unknown">Evento na via</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Os zaps para isto são divididos entre:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Valor-para-Valor</string>
@@ -664,6 +665,8 @@
     <string name="health_connect_rationale_limit_publish">Nada sai do seu telefone até você tocar em uma sugestão e publicar por conta própria. O Amethyst não tem servidor: a publicação vai para os relays do Nostr que você configurou.</string>
     <string name="health_connect_rationale_limit_optional">Todo o recurso é opcional. Desative-o em Configurações → Configurações de composição, ou revogue as permissões no Health Connect a qualquer momento — o restante do Amethyst continua funcionando.</string>
     <string name="health_connect_rationale_privacy_policy">Ler a política de privacidade completa</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Nenhum nSite encontrado ainda.</string>
     <string name="browser_reload">Recarregar</string>
     <string name="browser_unsupported">O navegador integrado requer Android 11 ou superior.</string>
@@ -1235,6 +1238,9 @@
     <string name="call_calling">Chamando\u2026</string>
     <string name="call_connecting">Conectando\u2026</string>
     <string name="call_ended">Chamada encerrada</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Dispensar</string>
     <string name="call_switch_camera">Trocar câmera</string>
     <string name="call_voice">Chamada de voz</string>

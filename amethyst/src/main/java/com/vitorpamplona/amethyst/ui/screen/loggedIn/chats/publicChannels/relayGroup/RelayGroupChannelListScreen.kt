@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -88,7 +89,6 @@ import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_action
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_body
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_title
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.looksLikeNonNip29Relay
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName

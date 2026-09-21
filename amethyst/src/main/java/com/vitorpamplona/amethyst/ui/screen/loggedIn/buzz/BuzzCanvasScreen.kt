@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,13 +56,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_body_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_edit
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_empty
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -158,7 +159,7 @@ fun BuzzCanvasScreen(
         },
         floatingActionButton = {
             if (canEdit) {
-                FloatingActionButton(onClick = { editing = true }) {
+                FloatingActionButton(onClick = { editing = true }, shape = CircleShape) {
                     Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(Res.string.buzz_canvas_edit))
                 }
             }
@@ -236,6 +237,7 @@ private fun CanvasEditor(
         },
         floatingActionButton = {
             FloatingActionButton(
+                shape = CircleShape,
                 onClick = {
                     val relay =
                         RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: run {

@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.npub_hex_username
 import com.vitorpamplona.amethyst.commons.resources.search_by_hashtag
@@ -118,7 +119,6 @@ import com.vitorpamplona.amethyst.commons.ui.search.GroupCandidate
 import com.vitorpamplona.amethyst.commons.ui.search.SEARCH_PICKER_LIMIT
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
 import com.vitorpamplona.amethyst.commons.ui.search.TokenizedSearchField
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.model.preferences.DataStoreSearchHistoryStorage
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations

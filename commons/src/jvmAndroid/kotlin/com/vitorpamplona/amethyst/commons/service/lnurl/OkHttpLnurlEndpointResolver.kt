@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.lnurl
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
@@ -47,7 +47,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class OkHttpLnurlEndpointResolver(
     private val okHttpClient: (String) -> OkHttpClient,
 ) : LnurlEndpointResolver {
-    private val mapper = jacksonObjectMapper()
+    private val mapper = ObjectMapper()
 
     override suspend fun resolve(lnurlpUrl: String): LnurlEndpointInfo? = LnurlEndpointCache.getOrFetch(lnurlpUrl, ::fetch)
 

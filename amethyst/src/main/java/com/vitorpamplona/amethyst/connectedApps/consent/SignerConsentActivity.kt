@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_allow_always
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_fewer_options
@@ -94,7 +95,6 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_deny
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_remember
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_signing_as
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_messages_with
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav

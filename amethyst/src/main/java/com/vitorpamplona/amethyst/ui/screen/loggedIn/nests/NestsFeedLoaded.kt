@@ -61,6 +61,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.live_stream_ended_tag
 import com.vitorpamplona.amethyst.commons.resources.nests_ended_ago
@@ -69,7 +70,6 @@ import com.vitorpamplona.amethyst.commons.resources.nests_section_recently_ended
 import com.vitorpamplona.amethyst.commons.resources.nests_section_scheduled
 import com.vitorpamplona.amethyst.commons.resources.wallet_loading
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning

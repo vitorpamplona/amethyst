@@ -206,3 +206,20 @@ class CreateConnectionSuccessResponse(
         val wallet_pubkey: String? = null,
     )
 }
+
+/**
+ * A successful response whose `result_type` this build does not know.
+ *
+ * NIP-47 grows, and the wallet on the other end is somebody else's software: it may
+ * answer a method added after this release, or one from an extension we do not
+ * implement. Failing the whole parse would throw away a response that is perfectly
+ * well-formed and, for anything that reads [result] generically, perfectly usable —
+ * so the unrecognised ones arrive here with their result intact instead.
+ *
+ * It is deliberately NOT an [IErrorResponseLike]: an unknown answer is not a refusal,
+ * and code that branches on error must not treat it as one.
+ */
+class NwcUnknownResponse(
+    resultType: String,
+    val result: Map<String, Any?>? = null,
+) : Response(resultType)

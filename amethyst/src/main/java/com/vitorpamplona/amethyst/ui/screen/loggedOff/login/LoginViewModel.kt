@@ -128,6 +128,21 @@ class LoginViewModel : ViewModel() {
             return false
         }
 
+        // Caught here rather than left to the key parser. Neither of these is a key, so both used
+        // to fall through to the hex branch and come back as "Invalid key: ... Invalid hex
+        // bunker://...", which reads as "you mistyped it" for a string the user pasted correctly.
+        // Amethyst for Android is the bunker, never the bunker's client: the only remote signing it
+        // can persist is an external signer app (see AccountSettings.isWriteable).
+        val trimmedKey = key.text.trim()
+        if (trimmedKey.startsWith("bunker:", ignoreCase = true)) {
+            errorManager.error(R.string.login_bunker_not_supported)
+            return false
+        }
+        if (trimmedKey.startsWith("nostrconnect:", ignoreCase = true)) {
+            errorManager.error(R.string.login_nostrconnect_not_supported)
+            return false
+        }
+
         if (needsPassword && password.text.isBlank()) {
             errorManager.error(R.string.password_is_required)
             return false

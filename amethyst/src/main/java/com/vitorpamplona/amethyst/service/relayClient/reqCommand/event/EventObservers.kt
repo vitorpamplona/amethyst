@@ -74,10 +74,9 @@ fun observeNoteLocally(note: Note): State<NoteState> {
     return flow.collectAsStateWithLifecycle()
 }
 
-@Suppress("UNCHECKED_CAST")
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun <T : Event> observeNoteEvent(
+inline fun <reified T : Event> observeNoteEvent(
     note: Note,
     accountViewModel: AccountViewModel,
 ): State<T?> {

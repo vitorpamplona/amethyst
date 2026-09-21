@@ -46,6 +46,7 @@
     <string name="road_event_speed_camera">Rapideca fotilo</string>
     <string name="road_event_traffic_jam">Trafika ŝtopado</string>
     <string name="road_event_unknown">Voja evento</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Malfermi</string>
     <string name="relay_monitor_rtt_read">Legi</string>
     <string name="relay_monitor_rtt_write">Skribi</string>
@@ -434,6 +435,8 @@
     <string name="workout_suggestion_connect_message">Lasu Amethyst legi finitajn ekzercadojn el Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) kaj sugesti afiŝon.</string>
     <string name="workout_suggestion_connect_button">Konekti</string>
     <string name="workout_from_health_connect">El Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Ankoraŭ neniuj nSite-oj trovitaj.</string>
     <string name="browser_reload">Reŝargi</string>
     <string name="browser_unsupported">La en-aplikaĵa retumilo bezonas Android 11 aŭ pli novan.</string>
@@ -754,6 +757,9 @@
     <string name="call_calling">Alvokante…</string>
     <string name="call_connecting">Konektante…</string>
     <string name="call_ended">Alvoko finiĝis</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Malakcepti</string>
     <string name="call_switch_camera">Ŝanĝi fotilon</string>
     <string name="call_voice">Voĉa alvoko</string>

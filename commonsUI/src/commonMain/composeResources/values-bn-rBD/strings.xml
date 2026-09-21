@@ -46,6 +46,7 @@
     <string name="road_event_speed_camera">স্পিড ক্যামেরা</string>
     <string name="road_event_traffic_jam">যানজট</string>
     <string name="road_event_unknown">রাস্তার ঘটনা</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">খুলুন</string>
     <string name="relay_monitor_rtt_read">পড়ুন</string>
     <string name="relay_monitor_rtt_write">লিখুন</string>
@@ -433,6 +434,8 @@
     <string name="workout_suggestion_connect_button">সংযোগ করুন</string>
     <string name="workout_suggestion_distance_km">%1$s কিমি</string>
     <string name="workout_from_health_connect">Health Connect থেকে</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">এখনো কোনো nSite পাওয়া যায়নি।</string>
     <string name="browser_reload">পুনরায় লোড করুন</string>
     <string name="browser_unsupported">ইন-অ্যাপ ব্রাউজারের জন্য Android 11 বা নতুন সংস্করণ প্রয়োজন।</string>
@@ -750,6 +753,9 @@
     <string name="call_calling">কল করা হচ্ছে…</string>
     <string name="call_connecting">সংযুক্ত হচ্ছে…</string>
     <string name="call_ended">কল শেষ হয়েছে</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">বাতিল করুন</string>
     <string name="call_switch_camera">ক্যামেরা পরিবর্তন করুন</string>
     <string name="call_voice">ভয়েস কল</string>

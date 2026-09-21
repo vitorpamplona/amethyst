@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">Blitzer</string>
     <string name="road_event_traffic_jam">Stau</string>
     <string name="road_event_unknown">Straßenereignis</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zaps hierauf werden aufgeteilt zwischen:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
@@ -664,6 +665,8 @@
     <string name="health_connect_rationale_limit_publish">Nichts verlässt dein Telefon, bis du auf einen Vorschlag tippst und den Beitrag selbst veröffentlichst. Amethyst hat keinen Server: Der Beitrag geht an die Nostr-Relays, die du eingerichtet hast.</string>
     <string name="health_connect_rationale_limit_optional">Die gesamte Funktion ist optional. Schalte sie unter Einstellungen → Editor-Einstellungen aus oder entziehe die Berechtigungen jederzeit in Health Connect — der Rest von Amethyst funktioniert weiter.</string>
     <string name="health_connect_rationale_privacy_policy">Vollständige Datenschutzerklärung lesen</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Noch keine nSites gefunden.</string>
     <string name="browser_reload">Neu laden</string>
     <string name="browser_unsupported">Der In-App-Browser benötigt Android 11 oder neuer.</string>
@@ -1235,6 +1238,9 @@
     <string name="call_calling">Anruf\u2026</string>
     <string name="call_connecting">Verbindung wird hergestellt\u2026</string>
     <string name="call_ended">Anruf beendet</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Verwerfen</string>
     <string name="call_switch_camera">Kamera wechseln</string>
     <string name="call_voice">Sprachanruf</string>

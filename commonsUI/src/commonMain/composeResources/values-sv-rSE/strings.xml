@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">Fartkamera</string>
     <string name="road_event_traffic_jam">Trafikstockning</string>
     <string name="road_event_unknown">Väghändelse</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Värde -för-värde</string>
@@ -664,6 +665,8 @@
     <string name="health_connect_rationale_limit_publish">Ingenting lämnar din telefon förrän du trycker på ett förslag och publicerar inlägget själv. Amethyst har ingen server: inlägget går till de Nostr-reläer du har ställt in.</string>
     <string name="health_connect_rationale_limit_optional">Hela funktionen är valfri. Stäng av den under Inställningar → Skrivinställningar, eller återkalla behörigheterna i Health Connect när som helst — resten av Amethyst fortsätter att fungera.</string>
     <string name="health_connect_rationale_privacy_policy">Läs hela integritetspolicyn</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Inga nSites hittades ännu.</string>
     <string name="browser_reload">Ladda om</string>
     <string name="browser_unsupported">Den inbyggda webbläsaren kräver Android 11 eller senare.</string>
@@ -1235,6 +1238,9 @@
     <string name="call_calling">Ringer\u2026</string>
     <string name="call_connecting">Ansluter\u2026</string>
     <string name="call_ended">Samtalet avslutat</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Avvisa</string>
     <string name="call_switch_camera">Byt kamera</string>
     <string name="call_voice">Röstsamtal</string>

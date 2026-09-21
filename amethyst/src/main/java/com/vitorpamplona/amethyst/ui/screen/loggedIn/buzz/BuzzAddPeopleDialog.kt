@@ -63,7 +63,7 @@ import androidx.compose.runtime.LaunchedEffect as ComposeLaunchedEffect
  * [UserSuggestionState] engine the @-mention typeahead uses — over the local cache, the relays
  * (NIP-50) and NIP-05 identifiers, plus a pasted npub/nprofile.
  *
- * It used to search only [com.vitorpamplona.amethyst.model.LocalCache], so anyone the device had
+ * It used to search only [com.vitorpamplona.amethyst.commons.model.cache.LocalCache], so anyone the device had
  * never seen simply had no result and the only way through was to paste a raw hex key — which is
  * what the field's own hint told you to do. Searching the relays is what makes finding a person by
  * name work at all here.

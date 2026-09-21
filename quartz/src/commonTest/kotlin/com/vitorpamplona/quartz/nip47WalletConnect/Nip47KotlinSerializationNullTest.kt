@@ -39,7 +39,7 @@ import kotlin.test.assertNull
  * null, not the string "null", and must not crash on a null `metadata` object.
  *
  * Our own Jackson backend no longer emits those on request params — see
- * [com.vitorpamplona.quartz.nip01Core.jackson.OmitNullsMixin] — but a third-party
+ * Jackson's OmitNullsMixin, now deleted along with that path — but a third-party
  * wallet still may, so tolerating them on the way in remains required.
  */
 class Nip47KotlinSerializationNullTest {

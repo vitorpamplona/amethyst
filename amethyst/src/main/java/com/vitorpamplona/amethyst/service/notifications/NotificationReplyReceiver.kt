@@ -29,7 +29,7 @@ import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelAndPrune
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelChildlessGroupSummaries

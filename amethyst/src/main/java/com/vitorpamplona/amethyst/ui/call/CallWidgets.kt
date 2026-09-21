@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_calling
+import com.vitorpamplona.amethyst.commons.resources.call_duration_hours_minutes_seconds
+import com.vitorpamplona.amethyst.commons.resources.call_duration_minutes_seconds
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -400,10 +402,28 @@ fun GroupCallNames(
     }
 }
 
+/**
+ * Elapsed call time as a clock: `05:23`, and `1:05:23` once the call passes an hour.
+ *
+ * Hours are not folded into the minutes field — the previous version rendered a 65-minute call
+ * as "65:12".
+ *
+ * The pattern comes from a string resource rather than a literal so the separator and field
+ * order stay the translator's, and so the numbers are formatted with the locale Compose is
+ * configured with. `String.format` without an explicit locale follows the JVM-wide default,
+ * which is not the same thing in an app that has its own language picker.
+ */
+@Composable
 fun formatDuration(seconds: Long): String {
-    val mins = seconds / 60
+    val hours = seconds / 3600
+    val mins = (seconds % 3600) / 60
     val secs = seconds % 60
-    return "%02d:%02d".format(mins, secs)
+
+    return if (hours > 0) {
+        stringRes(Res.string.call_duration_hours_minutes_seconds, hours, mins, secs)
+    } else {
+        stringRes(Res.string.call_duration_minutes_seconds, mins, secs)
+    }
 }
 
 @Composable

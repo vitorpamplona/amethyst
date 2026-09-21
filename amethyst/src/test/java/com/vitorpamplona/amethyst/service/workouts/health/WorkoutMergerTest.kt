@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.workouts.health
 
+import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -223,6 +224,49 @@ class WorkoutMergerTest {
         assertEquals(3, merged.sessionCount)
         assertEquals(0, merged.startTimeEpochSeconds)
         assertEquals(1800, merged.durationSeconds)
+    }
+
+    @Test
+    fun skeletonsWithoutMetricsGroupExactlyAsTheFullyLoadedOnesDo() {
+        // The progressive read merges twice: once over session skeletons, to get something on
+        // screen, and again once each session's metrics have been aggregated. Grouping keys on
+        // type, start and duration only, so both passes must produce the same shape — otherwise
+        // the dashboard would reshuffle its workout list when the metrics land.
+        val loaded =
+            listOf(
+                workout("a", startTimeEpochSeconds = 0, durationSeconds = 600, distanceMeters = 2_000.0, calories = 150, avgHeartRate = 140, steps = 1_800),
+                workout("b", startTimeEpochSeconds = 1200, durationSeconds = 600, distanceMeters = 2_100.0, calories = 160, avgHeartRate = 150, steps = 1_900),
+                workout("c", exercise = ExerciseType.CYCLING, startTimeEpochSeconds = 20_000, durationSeconds = 3600, distanceMeters = 25_000.0),
+            )
+        val skeletons =
+            loaded.map {
+                it.copy(distanceMeters = null, calories = null, avgHeartRate = null, maxHeartRate = null, steps = null, elevationGainMeters = null)
+            }
+
+        val early = WorkoutMerger.mergeCloseWorkouts(skeletons)
+        val late = WorkoutMerger.mergeCloseWorkouts(loaded)
+
+        assertEquals(late.map { it.id }, early.map { it.id })
+        assertEquals(late.map { it.sessionCount }, early.map { it.sessionCount })
+        assertEquals(late.map { it.startTimeEpochSeconds }, early.map { it.startTimeEpochSeconds })
+        assertEquals(late.map { it.durationSeconds }, early.map { it.durationSeconds })
+    }
+
+    @Test
+    fun aggregatingPerSessionBeforeMergingIsWhatSumsASplitEffort() {
+        // Why the progressive read still aggregates each raw session and merges afterwards,
+        // rather than aggregating the merged span once: the merged workout's metrics are the
+        // sum of its members', and the span between them is not part of the effort.
+        val first = workout("a", startTimeEpochSeconds = 0, durationSeconds = 600, distanceMeters = 2_000.0, calories = 150, steps = 1_800)
+        val second = workout("b", startTimeEpochSeconds = 1200, durationSeconds = 600, distanceMeters = 2_100.0, calories = 160, steps = 1_900)
+
+        val merged = WorkoutMerger.mergeCloseWorkouts(listOf(first, second)).single()
+
+        assertEquals(4_100.0, merged.distanceMeters!!, 0.001)
+        assertEquals(310, merged.calories)
+        assertEquals(3_700, merged.steps)
+        // The 10-minute break between them is excluded: duration is the sum, not end minus start.
+        assertEquals(1200, merged.durationSeconds)
     }
 
     @Test

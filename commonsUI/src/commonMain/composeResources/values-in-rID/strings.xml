@@ -44,6 +44,7 @@
     <string name="road_event_speed_camera">Kamera kecepatan</string>
     <string name="road_event_traffic_jam">Kemacetan</string>
     <string name="road_event_unknown">Kejadian jalan</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">Buka</string>
     <string name="relay_monitor_rtt_read">Baca</string>
     <string name="relay_monitor_rtt_write">Tulis</string>
@@ -425,6 +426,8 @@
     <string name="workout_suggestion_connect_message">Biarkan Amethyst membaca latihan yang selesai dari Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) dan menyarankan postingan.</string>
     <string name="workout_suggestion_connect_button">Hubungkan</string>
     <string name="workout_from_health_connect">Dari Health Connect</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">Belum ada nSites ditemukan.</string>
     <string name="browser_reload">Muat ulang</string>
     <string name="browser_unsupported">Browser dalam aplikasi memerlukan Android 11 atau lebih baru.</string>
@@ -738,6 +741,9 @@
     <string name="call_calling">Memanggil…</string>
     <string name="call_connecting">Menghubungkan…</string>
     <string name="call_ended">Panggilan berakhir</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">Abaikan</string>
     <string name="call_switch_camera">Ganti kamera</string>
     <string name="call_voice">Panggilan suara</string>

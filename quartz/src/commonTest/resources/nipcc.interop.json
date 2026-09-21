@@ -1,0 +1,818 @@
+{
+ "note": "Real NIP-CC events captured from relay.damus.io / nos.lol / relay.primal.net / nostr.wine on 2026-09-18.",
+ "listings": [
+  {
+   "id": "d81904a39ac15990f062e48d4715942aa16a6b506aebb38722726b4e9296cf7d",
+   "pubkey": "86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47",
+   "created_at": 1780690677,
+   "kind": 37516,
+   "tags": [
+    [
+     "d",
+     "97a5cc"
+    ],
+    [
+     "name",
+     "Treasure Troll's Trunk"
+    ],
+    [
+     "D",
+     "1"
+    ],
+    [
+     "T",
+     "1"
+    ],
+    [
+     "S",
+     "regular"
+    ],
+    [
+     "g",
+     "u4x"
+    ],
+    [
+     "g",
+     "u4xs"
+    ],
+    [
+     "g",
+     "u4xsu"
+    ],
+    [
+     "g",
+     "u4xsug"
+    ],
+    [
+     "g",
+     "u4xsugk"
+    ],
+    [
+     "g",
+     "u4xsugkq"
+    ],
+    [
+     "g",
+     "u4xsugkq7"
+    ],
+    [
+     "n",
+     "first-to-find"
+    ],
+    [
+     "n",
+     "art"
+    ],
+    [
+     "F",
+     "271bffd30e11001c7909069742453e5ee37ce636d7fdd1f392a4c1d2cc6934ad"
+    ],
+    [
+     "image",
+     "https://blossom.ditto.pub/c084d5170a998433b5843b6648a90e250924aca8222edda88d29bbef5047dbc5.jpeg"
+    ],
+    [
+     "r",
+     "wss://relay.damus.io"
+    ],
+    [
+     "verification",
+     "f4bcedc64f28d195fb35d429b592533d9c6d76215f3d2bb41ad3300f2b57525c"
+    ],
+    [
+     "t",
+     "archived"
+    ]
+   ],
+   "content": "Within the hollow of the trunk, the treasure troll protects itself from the elements.",
+   "sig": "900b28c08f00a33b045fe73d4b483c59d8e683d94cd8d41fdbaca03cdd2d89f3c126d89e9a8a73ef2bf47aeb2d57cba7b3b8bb32b76a985320a092cee10ff720",
+   "_why": "first-to-find cache with a locked-in F winner"
+  },
+  {
+   "id": "e0c08e8c7e92fbbab2677e15671bb58f35c2227f1e6c89505668a938e32f693d",
+   "pubkey": "7324e05a946c66a7818fd0c0aca80b60fb1e95fde32357ef1a2087303dd0185e",
+   "created_at": 1781372711,
+   "kind": 37516,
+   "tags": [
+    [
+     "d",
+     "83e8cb"
+    ],
+    [
+     "name",
+     "Art under the tree"
+    ],
+    [
+     "D",
+     "2"
+    ],
+    [
+     "T",
+     "1"
+    ],
+    [
+     "S",
+     "regular"
+    ],
+    [
+     "g",
+     "u3q"
+    ],
+    [
+     "g",
+     "u3qc"
+    ],
+    [
+     "g",
+     "u3qcn"
+    ],
+    [
+     "g",
+     "u3qcnp"
+    ],
+    [
+     "g",
+     "u3qcnpp"
+    ],
+    [
+     "g",
+     "u3qcnppv"
+    ],
+    [
+     "g",
+     "u3qcnppvp"
+    ],
+    [
+     "n",
+     "art"
+    ],
+    [
+     "hint",
+     "Under the bench."
+    ],
+    [
+     "image",
+     "https://blossom.ditto.pub/b8d8cd48e153c917161ef262d29ea45988985bb77f91a52ee987cceddf4dcb16.jpeg"
+    ],
+    [
+     "r",
+     "wss://relay.ditto.pub/"
+    ],
+    [
+     "r",
+     "wss://relay.damus.io/"
+    ],
+    [
+     "r",
+     "wss://relay.dreamith.to/"
+    ],
+    [
+     "r",
+     "wss://relay.primal.net"
+    ],
+    [
+     "verification",
+     "c179650c38efd1cdab64450a9fbfdf9748c9bb336ac08f7298a9726b70768824"
+    ],
+    [
+     "client",
+     "Treasures",
+     "31990:86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47:cgdgkgvtgnb",
+     "wss://relay.ditto.pub"
+    ]
+   ],
+   "content": "Fine art underneath a tree.",
+   "sig": "fba48484750dfa3ed10ec2672d7cddc70f42fdf12f998f9c9557361c1602654a7409eec44413a46d9be7bf201de43f6daee7626e653432a409e10df9d365743e",
+   "_why": "art-modifier cache"
+  },
+  {
+   "id": "fb0f92191f6b4c220678854e77c170bc7065930000d39574149cbf25559d2c55",
+   "pubkey": "86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47",
+   "created_at": 1781282882,
+   "kind": 37516,
+   "tags": [
+    [
+     "d",
+     "f717fb"
+    ],
+    [
+     "name",
+     "Fire Ant March"
+    ],
+    [
+     "D",
+     "1"
+    ],
+    [
+     "T",
+     "1"
+    ],
+    [
+     "S",
+     "small"
+    ],
+    [
+     "g",
+     "9v6"
+    ],
+    [
+     "g",
+     "9v6k"
+    ],
+    [
+     "g",
+     "9v6kp"
+    ],
+    [
+     "g",
+     "9v6kps"
+    ],
+    [
+     "g",
+     "9v6kpsb"
+    ],
+    [
+     "g",
+     "9v6kpsbg"
+    ],
+    [
+     "g",
+     "9v6kpsbgh"
+    ],
+    [
+     "hint",
+     "Under an ant sculpture."
+    ],
+    [
+     "image",
+     "https://blossom.dreamith.to/6c0e2751070aa4d772788df71b58b3036b7f5ec46def7178f52d52453baaa405.jpeg"
+    ],
+    [
+     "r",
+     "wss://relay.damus.io"
+    ],
+    [
+     "verification",
+     "536643065c699b2a45d34c8ee905c857d73831da74f912179a694af15bd76428"
+    ],
+    [
+     "t",
+     "archived"
+    ]
+   ],
+   "content": "The fire ants march onward into battle, but one of the convoy must carry their treasure, no?",
+   "sig": "28e536d4d4bb883c956e6d277eccd128135aefe2dafa299a8a794c0f644190607322990bf231538600c1747cc8f910945529ff5737745050cff646517f8d5aaf",
+   "_why": "owner-archived cache"
+  },
+  {
+   "id": "f20c094111a16f3c283f13c73499d2127a560365117de5b1b3b82018ca6dfcb1",
+   "pubkey": "6d7f8814826e6dde3cf83461bb72bb19a1f59c6358f6aa82e9e4dcd8af9757d8",
+   "created_at": 1788533854,
+   "kind": 37516,
+   "tags": [
+    [
+     "d",
+     "15985f"
+    ],
+    [
+     "name",
+     "\u20bfAMO21 2026-09-26"
+    ],
+    [
+     "D",
+     "1"
+    ],
+    [
+     "T",
+     "2"
+    ],
+    [
+     "S",
+     "small"
+    ],
+    [
+     "g",
+     "u1x"
+    ],
+    [
+     "g",
+     "u1x0"
+    ],
+    [
+     "g",
+     "u1x0j"
+    ],
+    [
+     "g",
+     "u1x0jf"
+    ],
+    [
+     "g",
+     "u1x0jf5"
+    ],
+    [
+     "g",
+     "u1x0jf5m"
+    ],
+    [
+     "g",
+     "u1x0jf5m7"
+    ],
+    [
+     "hint",
+     "\u20bfaum"
+    ],
+    [
+     "image",
+     "https://blossom.ditto.pub/d913441a4225d507945e7205789c8e7b01a7b9ff1207530c5f32f8c893ea9a37.jpeg"
+    ],
+    [
+     "image",
+     "https://blossom.ditto.pub/77ed6e1e11cbdff542f5fa71aed92231f07b7aa99bedb4bae0f2b13b5b7b857b.jpeg"
+    ],
+    [
+     "content-warning",
+     "\u20bfaum"
+    ],
+    [
+     "r",
+     "wss://relay.ditto.pub/"
+    ],
+    [
+     "r",
+     "wss://relay.dreamith.to/"
+    ],
+    [
+     "r",
+     "wss://nostr.einundzwanzig.space"
+    ],
+    [
+     "r",
+     "wss://nos.lol"
+    ],
+    [
+     "verification",
+     "430eeae259cb05d9691a32e8da1e4536bef985ee341671399652d69d2749ce49"
+    ],
+    [
+     "t",
+     "hidden"
+    ],
+    [
+     "client",
+     "Treasures",
+     "31990:86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47:cgdgkgvtgnb",
+     "wss://relay.ditto.pub"
+    ]
+   ],
+   "content": "Bitcoin am Ottisee\nNur am Samstag, 26. September 2026\n\nEin Tag von Plebs f\u00fcr Plebs: Austausch, Vortr\u00e4ge und Workshops rund um Bitcoin \u2013 zwischen Gem\u00fcsebeeten, Wiese und See. Offen f\u00fcr alle, vom Einsteiger bis zum alten Hasen.",
+   "sig": "248f9b1ef7fe8e0fc0ebaf7968b491e6472369f5478ca8ee7093523472a05bbe71a68d4e5529521e1e66dc545b87f1eb8c1bb244f4cd03b0fa35c173874fc426",
+   "_why": "client-defined cache type we do not know"
+  },
+  {
+   "id": "f20c094111a16f3c283f13c73499d2127a560365117de5b1b3b82018ca6dfcb1",
+   "pubkey": "6d7f8814826e6dde3cf83461bb72bb19a1f59c6358f6aa82e9e4dcd8af9757d8",
+   "created_at": 1788533854,
+   "kind": 37516,
+   "tags": [
+    [
+     "d",
+     "15985f"
+    ],
+    [
+     "name",
+     "\u20bfAMO21 2026-09-26"
+    ],
+    [
+     "D",
+     "1"
+    ],
+    [
+     "T",
+     "2"
+    ],
+    [
+     "S",
+     "small"
+    ],
+    [
+     "g",
+     "u1x"
+    ],
+    [
+     "g",
+     "u1x0"
+    ],
+    [
+     "g",
+     "u1x0j"
+    ],
+    [
+     "g",
+     "u1x0jf"
+    ],
+    [
+     "g",
+     "u1x0jf5"
+    ],
+    [
+     "g",
+     "u1x0jf5m"
+    ],
+    [
+     "g",
+     "u1x0jf5m7"
+    ],
+    [
+     "hint",
+     "\u20bfaum"
+    ],
+    [
+     "image",
+     "https://blossom.ditto.pub/d913441a4225d507945e7205789c8e7b01a7b9ff1207530c5f32f8c893ea9a37.jpeg"
+    ],
+    [
+     "image",
+     "https://blossom.ditto.pub/77ed6e1e11cbdff542f5fa71aed92231f07b7aa99bedb4bae0f2b13b5b7b857b.jpeg"
+    ],
+    [
+     "content-warning",
+     "\u20bfaum"
+    ],
+    [
+     "r",
+     "wss://relay.ditto.pub/"
+    ],
+    [
+     "r",
+     "wss://relay.dreamith.to/"
+    ],
+    [
+     "r",
+     "wss://nostr.einundzwanzig.space"
+    ],
+    [
+     "r",
+     "wss://nos.lol"
+    ],
+    [
+     "verification",
+     "430eeae259cb05d9691a32e8da1e4536bef985ee341671399652d69d2749ce49"
+    ],
+    [
+     "t",
+     "hidden"
+    ],
+    [
+     "client",
+     "Treasures",
+     "31990:86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47:cgdgkgvtgnb",
+     "wss://relay.ditto.pub"
+    ]
+   ],
+   "content": "Bitcoin am Ottisee\nNur am Samstag, 26. September 2026\n\nEin Tag von Plebs f\u00fcr Plebs: Austausch, Vortr\u00e4ge und Workshops rund um Bitcoin \u2013 zwischen Gem\u00fcsebeeten, Wiese und See. Offen f\u00fcr alle, vom Einsteiger bis zum alten Hasen.",
+   "sig": "248f9b1ef7fe8e0fc0ebaf7968b491e6472369f5478ca8ee7093523472a05bbe71a68d4e5529521e1e66dc545b87f1eb8c1bb244f4cd03b0fa35c173874fc426",
+   "_why": "verified cache carrying a hint"
+  },
+  {
+   "id": "f20c094111a16f3c283f13c73499d2127a560365117de5b1b3b82018ca6dfcb1",
+   "pubkey": "6d7f8814826e6dde3cf83461bb72bb19a1f59c6358f6aa82e9e4dcd8af9757d8",
+   "created_at": 1788533854,
+   "kind": 37516,
+   "tags": [
+    [
+     "d",
+     "15985f"
+    ],
+    [
+     "name",
+     "\u20bfAMO21 2026-09-26"
+    ],
+    [
+     "D",
+     "1"
+    ],
+    [
+     "T",
+     "2"
+    ],
+    [
+     "S",
+     "small"
+    ],
+    [
+     "g",
+     "u1x"
+    ],
+    [
+     "g",
+     "u1x0"
+    ],
+    [
+     "g",
+     "u1x0j"
+    ],
+    [
+     "g",
+     "u1x0jf"
+    ],
+    [
+     "g",
+     "u1x0jf5"
+    ],
+    [
+     "g",
+     "u1x0jf5m"
+    ],
+    [
+     "g",
+     "u1x0jf5m7"
+    ],
+    [
+     "hint",
+     "\u20bfaum"
+    ],
+    [
+     "image",
+     "https://blossom.ditto.pub/d913441a4225d507945e7205789c8e7b01a7b9ff1207530c5f32f8c893ea9a37.jpeg"
+    ],
+    [
+     "image",
+     "https://blossom.ditto.pub/77ed6e1e11cbdff542f5fa71aed92231f07b7aa99bedb4bae0f2b13b5b7b857b.jpeg"
+    ],
+    [
+     "content-warning",
+     "\u20bfaum"
+    ],
+    [
+     "r",
+     "wss://relay.ditto.pub/"
+    ],
+    [
+     "r",
+     "wss://relay.dreamith.to/"
+    ],
+    [
+     "r",
+     "wss://nostr.einundzwanzig.space"
+    ],
+    [
+     "r",
+     "wss://nos.lol"
+    ],
+    [
+     "verification",
+     "430eeae259cb05d9691a32e8da1e4536bef985ee341671399652d69d2749ce49"
+    ],
+    [
+     "t",
+     "hidden"
+    ],
+    [
+     "client",
+     "Treasures",
+     "31990:86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47:cgdgkgvtgnb",
+     "wss://relay.ditto.pub"
+    ]
+   ],
+   "content": "Bitcoin am Ottisee\nNur am Samstag, 26. September 2026\n\nEin Tag von Plebs f\u00fcr Plebs: Austausch, Vortr\u00e4ge und Workshops rund um Bitcoin \u2013 zwischen Gem\u00fcsebeeten, Wiese und See. Offen f\u00fcr alle, vom Einsteiger bis zum alten Hasen.",
+   "sig": "248f9b1ef7fe8e0fc0ebaf7968b491e6472369f5478ca8ee7093523472a05bbe71a68d4e5529521e1e66dc545b87f1eb8c1bb244f4cd03b0fa35c173874fc426",
+   "_why": "cache carrying tags we ignore"
+  },
+  {
+   "id": "99f195b83702dd7e86802ec7b8c48d1bda624f715236c004417d3534b8be48ec",
+   "pubkey": "3f770d65d3a764a9c5cb503ae123e62ec7598ad035d836e2a810f3877a745b24",
+   "created_at": 1781637711,
+   "kind": 37516,
+   "tags": [
+    [
+     "d",
+     "7e155c"
+    ],
+    [
+     "name",
+     "Decentralized Geo"
+    ],
+    [
+     "D",
+     "1"
+    ],
+    [
+     "T",
+     "1"
+    ],
+    [
+     "S",
+     "small"
+    ],
+    [
+     "g",
+     "dr0"
+    ],
+    [
+     "g",
+     "dr0m"
+    ],
+    [
+     "g",
+     "dr0mx"
+    ],
+    [
+     "g",
+     "dr0mxr"
+    ],
+    [
+     "g",
+     "dr0mxrd"
+    ],
+    [
+     "g",
+     "dr0mxrdb"
+    ],
+    [
+     "g",
+     "dr0mxrdbk"
+    ],
+    [
+     "hint",
+     "Small"
+    ],
+    [
+     "image",
+     "https://nostr-relay.derekross.me/29ed5f4b383750d879ccec07b2ab90b1062edf2e91c5e38a5b1fc0227a121d59.jpg"
+    ],
+    [
+     "r",
+     "wss://relay.ditto.pub/"
+    ],
+    [
+     "r",
+     "wss://relay.dreamith.to/"
+    ],
+    [
+     "verification",
+     "a6390e089e152c3d9139f0326edcc6d1a3d81a148231c2d89456d8c4f7774117"
+    ],
+    [
+     "client",
+     "Treasures",
+     "31990:86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47:cgdgkgvtgnb",
+     "wss://relay.ditto.pub"
+    ]
+   ],
+   "content": "In these trees you will find centralized and decentralized geocaches. One is superior to the other. Log both for ultimate fun and rewards.",
+   "sig": "a2831c683f413619b2db6363df49d186531ce829287806f930accb63b447986ef47f6c2c4378a278e1ccd0c44c9e1610f762e1f0ea13eea7d21bfd06b9a1544e",
+   "_why": "cache with no t tag (defaults to traditional)"
+  },
+  {
+   "id": "0cd6948475174689fb5eae2ee005fe038acf6132fd5e3975873648ea638a8a71",
+   "pubkey": "0448b3908abf0abf0d4ab70d7ff5b142b1877e0fbb5713b7dc465d941ddcd18e",
+   "created_at": 1785828570,
+   "kind": 37516,
+   "tags": [
+    [
+     "client",
+     "Lightning Piggy"
+    ],
+    [
+     "d",
+     "piggy_msec73rj_zog9dx"
+    ],
+    [
+     "name",
+     "Hammershus Castle Ruin - Vestfl\u00f8jen"
+    ],
+    [
+     "g",
+     "u3f"
+    ],
+    [
+     "g",
+     "u3fd"
+    ],
+    [
+     "g",
+     "u3fd2"
+    ],
+    [
+     "g",
+     "u3fd2y"
+    ],
+    [
+     "g",
+     "u3fd2y0"
+    ],
+    [
+     "g",
+     "u3fd2y01"
+    ],
+    [
+     "g",
+     "u3fd2y01x"
+    ],
+    [
+     "D",
+     "2"
+    ],
+    [
+     "T",
+     "2"
+    ],
+    [
+     "S",
+     "micro"
+    ],
+    [
+     "t",
+     "traditional"
+    ],
+    [
+     "hint",
+     "Ba gur Jrfgjvat vasbezngvba obneq"
+    ],
+    [
+     "image",
+     "https://blossom.primal.net/93845b182ceb4cf4b2dcbf55c4eaa53b2ed8fcc4838c03e3b038c29b5889955e.jpg"
+    ],
+    [
+     "L",
+     "com.lightningpiggy.app"
+    ],
+    [
+     "l",
+     "payout-lnurl-w",
+     "com.lightningpiggy.app"
+    ],
+    [
+     "wait",
+     "10800"
+    ],
+    [
+     "uses",
+     "3"
+    ],
+    [
+     "amount",
+     "2100"
+    ],
+    [
+     "expiration",
+     "1817364570"
+    ]
+   ],
+   "content": "The old beautiful Hammershus Castle Ruin in the Westwing",
+   "sig": "c767f78b8c6dcaba2fe930fc4d6f91241bc2c34ee17c1b1be35ac8d899a6b0d604a72a6853989dac71c6e3e568ba85d21e81a067eb37305a9ecfa367a7b6691b",
+   "_why": "cache whose hint is published rot13'd"
+  }
+ ],
+ "foundLogs": [
+  {
+   "id": "04ce2417e9e0ccc2b84d04bd21fa12fafe2dde4ec9e80b21913a6daa82592b38",
+   "pubkey": "0461fcbecc4c3374439932d6b8f11269ccdb7cc973ad7a50ae362db135a474dd",
+   "created_at": 1777841899,
+   "kind": 7516,
+   "tags": [
+    [
+     "a",
+     "37516:86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47:f0badd"
+    ],
+    [
+     "verification",
+     "{\"kind\":7517,\"content\":\"Geocache verification for npub1q3sle0kvfsehgsuexttt3ugjd8xdklxfwwkh559wxckmzddywnws6cd26p\",\"tags\":[[\"a\",\"0461fcbecc4c3374439932d6b8f11269ccdb7cc973ad7a50ae362db135a474dd:naddr1qvzqqqyj3spzppscgyy746fhmrt0nq955z6xmf80pkvrat0yq0hpknqtd00z8z68qqrxvvrzv9jxg2dmuwy\"]],\"created_at\":1777841899,\"pubkey\":\"a1b9eba92fff5a6a9a97c309cca5422839e268d6d4b4225d4d8d733e1258f320\",\"id\":\"923668508d69db41ee05221c09b0b2d2232a4a19fc3164caeb6604bd7749f81c\",\"sig\":\"cadba4dc128b65e2dc798ac13bd2661de5a6938d2904ce14cdf65a70b122005247ba732dfb33f190ccfbfd40d003861ac62b173abe8c1ba8f1d3403d82f73c52\"}"
+    ],
+    [
+     "client",
+     "Treasures",
+     "31990:86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47:cgdgkgvtgnb",
+     "wss://relay.ditto.pub"
+    ]
+   ],
+   "content": "\u2764",
+   "sig": "f41702b5ebaf2a2e8c0cb51cd460cfecf5150c45e6a113df4cbbee1f5eed8d0f05788b5876c9725d60620ed9fdc8925a5924115f7c1f01b0b6698001f2ce21e2",
+   "_why": "found log with an embedded 7517"
+  },
+  {
+   "id": "e2a1aaab3c36f4d69e7e06a75b505a8cb642ba3c8785ccf7dc395590e8158b22",
+   "pubkey": "cf6f8d9eb960c3ed2d233967020ec3efda289d37f55e71d32dc15d7b429ab1bc",
+   "created_at": 1786195552,
+   "kind": 7516,
+   "tags": [
+    [
+     "client",
+     "Lightning Piggy"
+    ],
+    [
+     "a",
+     "37516:2093baa8621c5b255e8f4fc2c6fdfc10d8a5598a25517664efaba860735f1030:874497"
+    ],
+    [
+     "image",
+     "https://blossom.primal.net/7bb72ad9a51e76a914c756d82cf3e1fb0011c0f439ca2d832c0b61dabc8ef03c.jpg"
+    ]
+   ],
+   "content": "Found competing treasure:))",
+   "sig": "c1ef86cfe0cd1f49c6204e172a438b1c652a7139fd9f9ece25490cf0cdb0d4fe09b15c549696f2ad9220dbbdf0d1d98012c05ad3d7c745b581d3c944d3f76bda",
+   "_why": "plain found log"
+  }
+ ]
+}

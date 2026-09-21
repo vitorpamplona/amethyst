@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.MemorySnapshot
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectMemorySnapshot
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_explanation
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_settings_button
@@ -73,7 +74,6 @@ import com.vitorpamplona.amethyst.commons.resources.resource_usage_send_explanat
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_tor_explanation
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_tor_settings_button
 import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatBytes

@@ -46,6 +46,7 @@
     <string name="road_event_speed_camera">வேக கண்காணிப்பு கேமரா</string>
     <string name="road_event_traffic_jam">போக்குவரத்து நெரிசல்</string>
     <string name="road_event_unknown">சாலை நிகழ்வு</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="relay_monitor_rtt_open">திற</string>
     <string name="relay_monitor_rtt_read">படி</string>
     <string name="relay_monitor_rtt_write">எழுது</string>
@@ -434,6 +435,8 @@
     <string name="workout_suggestion_connect_button">இணைக்கவும்</string>
     <string name="workout_suggestion_distance_km">%1$s கி.மீ</string>
     <string name="workout_from_health_connect">Health Connect இலிருந்து</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
     <string name="nsite_none_found">இன்னும் nSites எதுவும் கிடைக்கவில்லை.</string>
     <string name="browser_reload">மீண்டும் ஏற்று</string>
     <string name="browser_unsupported">உள்-பயன்பாட்டு உலாவிக்கு Android 11 அல்லது புதியது தேவை.</string>
@@ -752,6 +755,9 @@
     <string name="call_calling">அழைக்கிறது…</string>
     <string name="call_connecting">இணைக்கிறது…</string>
     <string name="call_ended">அழைப்பு முடிந்தது</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
     <string name="call_dismiss">நிராகரி</string>
     <string name="call_switch_camera">கேமரா மாற்று</string>
     <string name="call_voice">குரல் அழைப்பு</string>

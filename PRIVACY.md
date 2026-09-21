@@ -3,7 +3,7 @@
 **App:** Amethyst (Android Nostr client)<br>
 **Publisher:** Vitor Pamplona<br>
 **Contact:** amethyst@vitorpamplona.com<br>
-**Last updated:** 2026-09-12
+**Last updated:** 2026-09-15
 
 Amethyst is free, open-source software (MIT License — see `LICENSE`). It is not a service. There is no Amethyst server, no Amethyst account, and the developer has no access to data stored on your device.
 
@@ -32,33 +32,39 @@ Configuration, cached events, keys, drafts, and other operational data live in t
 
 ### Health and fitness data (Health Connect)
 
-Amethyst's **Workouts** section lets you publish a summary of a finished workout to the Nostr relays you choose (a NIP-101e kind 1301 event), so the people who follow you can see it. To save you typing the numbers in by hand, Amethyst can read the workout your watch or fitness app already saved to **Android Health Connect** and pre-fill the post.
+Amethyst's **My Fitness** screen (drawer → You → My Fitness) summarises your own training for you: how much you did this week against last week, how your time splits across activities, your best efforts, how many days you trained, and your current streak. It builds that picture from the workouts your watch or fitness app has already saved to **Android Health Connect**.
 
-The feature is optional and off until you grant the permissions. Amethyst asks for them only when you open the New Workout composer — never on first launch.
+This is what the health permissions are for. The summary is computed on your phone and shown to you; nothing is sent anywhere to produce it, and you never have to post anything to use it.
+
+My Fitness also counts the workouts you have logged in Amethyst itself, so it works whether or not you connect Health Connect. Connecting adds the sessions your watch recorded and the details a hand-typed workout does not carry — heart rate, steps and climb.
+
+Separately, you may choose to publish one workout as a Nostr post (a NIP-101e kind 1301 event) so the people who follow you can see it. That takes a deliberate tap on "Share this workout", shows you the pre-filled post, and waits for you to confirm. It is never automatic.
+
+The feature is optional and off until you grant the permissions. Amethyst asks for them only when you open My Fitness or the New Workout composer — never on first launch.
 
 **What Amethyst reads, and what each type is for:**
 
 | Health Connect data type | Permission | What it is used for |
 | --- | --- | --- |
-| ExerciseSession | `READ_EXERCISE` | The workout itself: activity type, start time and duration — the title, date and duration of the post. |
-| Distance | `READ_DISTANCE` | The distance of the run, ride, walk or swim. |
-| ActiveCaloriesBurned | `READ_ACTIVE_CALORIES_BURNED` | The energy the workout burned. |
-| TotalCaloriesBurned | `READ_TOTAL_CALORIES_BURNED` | Fallback energy figure for sources that only record total energy. |
-| HeartRate | `READ_HEART_RATE` | Average and maximum heart rate over the workout — how hard the effort was. |
-| Steps | `READ_STEPS` | The step count of a run, walk or hike. |
-| ElevationGained | `READ_ELEVATION_GAINED` | How much you climbed. |
+| ExerciseSession | `READ_EXERCISE` | The workout itself: activity type, start and end. Drives your workout count, training time, per-activity breakdown, active days and streak. |
+| Distance | `READ_DISTANCE` | Weekly distance, the change against last week, your weekly average, distance per activity, and your longest distance. |
+| ActiveCaloriesBurned | `READ_ACTIVE_CALORIES_BURNED` | Weekly energy burned and its week-over-week change. |
+| TotalCaloriesBurned | `READ_TOTAL_CALORIES_BURNED` | Fallback for the same figure, for watches and apps that only record total energy. |
+| HeartRate | `READ_HEART_RATE` | Average and maximum heart rate per workout, your duration-weighted average for the period, and your highest heart rate. |
+| Steps | `READ_STEPS` | Your weekly step average and your highest step count. |
+| ElevationGained | `READ_ELEVATION_GAINED` | Your weekly climb average and your biggest climb. |
 
 Health Connect groups a few data types under one permission: `READ_EXERCISE` also covers CyclingPedalingCadence and `READ_STEPS` also covers StepsCadence. Amethyst does not read, store, or publish cadence — those types come attached to the permissions above and are never requested separately.
 
 **Limits on this access:**
 
 - **Read-only.** Amethyst never writes to Health Connect.
-- **Foreground only.** Reads happen only while the New Workout composer is on screen. Amethyst does not request `READ_HEALTH_DATA_IN_BACKGROUND` and has no background health worker.
-- **Last 7 days only.** Only sessions that finished in the previous 7 days are offered. Amethyst does not request `READ_HEALTH_DATA_HISTORY`.
+- **Foreground only.** Reads happen only while the My Fitness screen or the New Workout composer is on screen. Amethyst does not request `READ_HEALTH_DATA_IN_BACKGROUND` and has no background health worker.
+- **Last four weeks only.** Amethyst reads a rolling 28-day window and cannot see anything older. It does not request `READ_HEALTH_DATA_HISTORY`.
 - **No location.** Amethyst does not request `READ_EXERCISE_ROUTE`, so it never receives the GPS track of a workout.
-- **Nothing is uploaded automatically.** Health data stays on your device until you pick a suggestion, review the pre-filled post, and publish it yourself. The developer runs no server; a published post goes to the Nostr relays you configured, and those numbers then become public like any other post you make.
+- **Nothing is uploaded automatically.** Health data stays on your device. The My Fitness summary is computed locally and never transmitted. A workout only leaves your phone if you tap "Share this workout", review the pre-filled post, and publish it yourself — one workout at a time. The developer runs no server; a published post goes to the Nostr relays you configured, and those numbers then become public like any other post you make.
 - **No other use.** Health data is never used for advertising, analytics, profiling, or sale, and is never shared with third parties. It is not used to determine your eligibility for insurance, credit, or employment, and is not transferred to any such party.
-- **Revocable.** Turn the feature off under Settings → Compose → "Suggest workouts to share", or revoke the permissions in Health Connect at any time. Amethyst keeps the workout suggestions it has already shown only in memory; revoking access stops all reads immediately.
+- **Revocable.** Revoke the permissions in Health Connect at any time — My Fitness immediately drops back to its prompt — or turn the composer suggestions off under Settings → Compose Settings → "Suggest workouts to share". Amethyst keeps the summary and the suggestions only in memory; revoking access stops all reads immediately.
 
 ### What relays can see
 

@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.scheduledposts
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class ScheduledPostStatus {
     PENDING,
     PUBLISHING,
@@ -28,6 +31,7 @@ enum class ScheduledPostStatus {
     CANCELLED,
 }
 
+@Serializable
 data class ScheduledPost(
     val id: String,
     val accountPubkey: String,
@@ -44,6 +48,7 @@ data class ScheduledPost(
     val terminatedAtSec: Long? = null,
 )
 
+@Serializable
 data class ScheduledPostFile(
     val version: Int = 1,
     val posts: List<ScheduledPost> = emptyList(),

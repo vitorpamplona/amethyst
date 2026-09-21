@@ -165,6 +165,7 @@
     <string name="road_event_speed_camera">गति चित्रग्राहक</string>
     <string name="road_event_traffic_jam">यातायात अचलता</string>
     <string name="road_event_unknown">मार्ग घटना</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
     <string name="podcast_value_split_percent">%1$d प्रतिशतप्रतिशत</string>
     <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
@@ -186,7 +187,37 @@
         <item quantity="other">%1$d घटनाएँ</item>
     </plurals>
     <string name="profile_banner">परिचय ध्वजचित्र</string>
-    <string name="point_to_the_qr_code">क्यूआर॰ क्रमचित्र के अभिमुख करें</string>
+    <string name="point_to_the_qr_code">क्यूआर॰ चित्र अक्षरराशि के अभिमुख करें</string>
+    <string name="qr_scanner_camera_rationale">अमेथिस्ट को चित्रग्राहक चाहिए क्यूआर॰ चित्र अक्षरराशि परखने के लिए। कुछ भी अभिलेखित अथवा आरोहित नहीं। चित्र का विस्तारण यन्त्र पर किया जाएगा तथा हटा दिया जाएगा।</string>
+    <string name="qr_scanner_grant_camera">चित्रग्राहक अनुमति</string>
+    <string name="qr_scanner_camera_blocked">चित्रग्राहक अभिगमन निष्क्रिय कर दिया गया अमेथिस्ट के लिए। आप इसे पुनःसक्रिय कर सकते हैं आण्ड्रोइड स्थापना विकल्पों में।</string>
+    <string name="qr_scanner_open_settings">स्थापना विकल्प खोलें</string>
+    <string name="qr_scanner_unavailable">क्यूआर॰ विस्तारक इस यन्त्र पर आरम्भ नहीं किया जा सका। तो भी आप अक्षरराशि को लेख के रूप में चिपका सकते हैं।</string>
+    <string name="qr_scanner_torch_on">प्रकाशस्रोत सक्रिय करें</string>
+    <string name="qr_scanner_torch_off">प्रकाशस्रोत निष्क्रिय करें</string>
+    <string name="qr_scanner_dark_hint">अन्धकारमय है। प्रकाशस्रोत सक्रिय करके प्रयास करें</string>
+    <string name="qr_scanner_scan_image">चित्र परखें</string>
+    <string name="qr_scanner_paste">चिपकाएँ</string>
+    <string name="qr_scanner_no_code_in_image">उस चित्र में से कोई क्यूआर॰ चित्र अक्षरराशि प्राप्त नहीं</string>
+    <string name="qr_scanner_clipboard_empty">टाँकाफलक में कुछ भी नहीं परखने के लिए</string>
+    <string name="qr_scanner_pick_one">अक्षरराशि का चयन करें</string>
+    <string name="qr_scanner_sequence_progress">%2$s में से %1$s भाग प्राप्त। आगे बढें</string>
+    <string name="qr_scanner_zoom_reset">विस्तारण पुनःस्थापना</string>
+    <string name="qr_scanner_unsupported_title">अमेथिस्ट इस अक्षरराशि को नहीं खोल सकता</string>
+    <string name="qr_scanner_unsupported_secret">इस अक्षरराशि में एक निजी कुंचिका अथवा जोडनेवाला रहस्य है। इसलिए इसकी विषयवस्तु यहाँ दिखाया नहीं जाता। अनुकूल पटल का उपयोग करें।</string>
+    <string name="qr_scanner_kind_nsec">यह एक निजी कुंचिका है। प्रवेशांकन पटल पर चिपकाएँ।</string>
+    <string name="qr_scanner_kind_wallet">यह एक धनकोष संयोजन है। इसे जोडें धनकोष स्थापना विकल्पों में।</string>
+    <string name="qr_scanner_kind_bunker">यह एक दूरस्थ हस्ताक्षरकर्ता पता है। अमेथिस्ट इसे देता है अन्य क्रमकों को जिससे वे अमेथिस्ट से हस्ताक्षर अनुरोध कर सकते हैं। अमेथिस्ट इससे हस्ताक्षर करके प्रवेशांकन नहीं कर सकता।</string>
+    <string name="qr_scanner_kind_signer">यह एक क्रमक है जो आपके हस्ताक्षरकर्ता से जुडने का अनुरोध कर रहा है। इसे निप॰छियालीस हस्ताक्षरकर्ता पटल से खोलें।</string>
+    <string name="qr_scanner_kind_lightning">यह एक लैटनिंग चालान है।</string>
+    <string name="qr_scanner_kind_cashu">यह एक काशयू अक्षरराशि है।</string>
+    <string name="qr_scanner_kind_web">यह एक जाल योजक है।</string>
+    <string name="qr_scanner_kind_text">यह साधारण लेख है। नोस्टर सम्बन्धित अक्षरराशि नहीं।</string>
+    <string name="qr_scanner_kind_nostr_unsupported">यह नोस्टर सम्बन्धित अक्षरराशि है। पर इस पटल द्वारा नहीं खोला जा सकता।</string>
+    <string name="qr_scanner_open_link">योजक खोलें</string>
+    <string name="qr_scanner_copy">अनुकृति</string>
+    <string name="qr_scanner_copied">अनुकृत</string>
+    <string name="qr_scanner_try_again">पुनःपरखें</string>
     <string name="show_qr">क्यूआर॰ क्रमचित्र दिखाएँ</string>
     <string name="profile_image">परिचय चित्र</string>
     <string name="your_profile_image">आपका परिचय चित्र</string>
@@ -494,8 +525,8 @@
     <string name="share_as_qr_hint_web">किसी भी संचारयन्त्र चित्रग्राहक के साथ परखें</string>
     <string name="share_as_qr_hint_nostr">नोस्टर क्रमक के साथ परखें</string>
     <string name="share_as_qr_kind_picture">चित्र</string>
-    <string name="share_as_qr_code_description_web">क्यूआर॰ चित्र जिसमें इस टीका का एक जाल योजक समाविष्ट है</string>
-    <string name="share_as_qr_code_description_nostr">क्यूआर॰ चित्र जिसमें इस टीका का एक नोस्टर योजक समाविष्ट है</string>
+    <string name="share_as_qr_code_description_web">क्यूआर॰ चित्र अक्षरराशि जिसमें इस टीका का एक जाल योजक समाविष्ट है</string>
+    <string name="share_as_qr_code_description_nostr">क्यूआर॰ चित्र अक्षरराशि जिसमें इस टीका का एक नोस्टर योजक समाविष्ट है</string>
     <string name="share_as_qr_thumbnail_hidden_sensitive">अंगुलचित्र छिपाया गया संवेदनशिल विषयवस्तु के कारण</string>
     <string name="quick_action_copy_user_id">लेखक सूचक</string>
     <string name="quick_action_copy_text">लेख की अनुकृति करें</string>
@@ -631,7 +662,7 @@
     <string name="workout_speed">गति</string>
     <string name="workout_elevation">ऊँचाई वृद्धि</string>
     <string name="workout_elevation_loss">ऊँचाई घटाव</string>
-    <string name="workout_calories">उष्ममान</string>
+    <string name="workout_calories">उष्ममानइकाई</string>
     <string name="workout_steps">पद</string>
     <string name="workout_heart_rate">हृदय गति</string>
     <string name="workout_max_heart_rate">उच्चतम हृदय गति</string>
@@ -656,7 +687,7 @@
     <string name="health_connect_rationale_what_title">अमेथिस्ट क्या पढता है और क्यों</string>
     <string name="health_connect_rationale_exercise">व्यायाम। आप ने कौनसी क्रिया की। वह कब आरम्भ हुआ तथा कितने समय तक चला। यह व्यायाम स्वयम है। तथा पत्र का शीर्षक तथा कालावधि।</string>
     <string name="health_connect_rationale_distance">दूरी। आप कितने दूर गए। धवन चालन चलन तरण की दूरी के रूप में दिखाया जाएगा।</string>
-    <string name="health_connect_rationale_calories">सक्रिय तथा कुल उष्ममान। ऊर्जा जिसका व्यय व्यायाम से किया गया। सक्रिय उष्ममान उपयुक्त हैं जब आपके स्रोत उनका अभिलेखन करते हैं। कुल उष्ममान विकल्पतः उपयुक्त उन स्रोतों के लिए जो केवल कुल ऊर्जा का अभिलेखन करते हैं।</string>
+    <string name="health_connect_rationale_calories">सक्रिय तथा कुल उष्ममानइकाई। ऊर्जा जिसका व्यय व्यायाम से किया गया। सक्रिय उष्ममानइकाई उपयुक्त हैं जब आपके स्रोत उनका अभिलेखन करते हैं। कुल उष्ममानइकाई विकल्पतः उपयुक्त उन स्रोतों के लिए जो केवल कुल ऊर्जा का अभिलेखन करते हैं।</string>
     <string name="health_connect_rationale_heart_rate">हृदयस्पन्दन गति। मध्यमान तथा उच्चतम हृदयस्पन्दन गति व्यायाम के समय। मानक परिमाण कि श्रम कितना कठिन था।</string>
     <string name="health_connect_rationale_steps">पद। पदों की गणना एक धवन चलन अथवा पदयात्रा की।</string>
     <string name="health_connect_rationale_elevation">ऊँचाई वृद्धि। आप कितना ऊपर चढे। जो कि पृथकता है एक समतल चालन का एक पर्वतीय चालन से।</string>
@@ -666,6 +697,48 @@
     <string name="health_connect_rationale_limit_publish">आपके संचारयन्त्र से तब तक कुछ नहीं जाएगा जब तक आप एक सुझाव नहीं दबाते तथा पत्र का प्रकाशन आप स्वयम नहीं करते। अमेथिस्ट का कोई सेवासंगणक नहीं। पत्र उन नोस्टर पुनःप्रसारकों को जाएगा जिनको आपने समाकृत कर रखे हैं।</string>
     <string name="health_connect_rationale_limit_optional">यह सम्पूर्ण सुविधा विकल्पात्मक है। इसे निष्क्रिय करें स्थापना विकल्पों में सम्पादन पटल में। अथवा स्वास्थ्य संयोजन में अनुमतियाँ का निराकरण करें कभी भी। अमेथिस्ट के शेष भाग कार्य करते रहेंगे।</string>
     <string name="health_connect_rationale_privacy_policy">सम्पूर्ण गोपनीयता नीति पढें</string>
+    <string name="my_fitness_title">मेरा स्वास्थ्य</string>
+    <string name="my_fitness_window">पिछले चार सप्ताह</string>
+    <string name="my_fitness_loading_metrics">दूरी उष्ममानइकाई तथा हृदयस्पन्दन गति का आवहन…</string>
+    <string name="my_fitness_window_note">आपके अभ्यास के अन्तिम चार पूर्ण सप्ताह। व्यायाम जो आपने प्रकाशित किए। तथा जो भी स्वास्थ्यसंयोजन इस संचारयन्त्र पर अभिलेखन करता है। अमेथिस्ट इसका साराम्श कर निकालेगा यन्त्र पर तथा कुछ भी प्रकाशित नहीं करेगा।</string>
+    <string name="my_fitness_this_week">इस सप्ताह</string>
+    <string name="my_fitness_vs_last_week">पिछले सप्ताह की तुलना में</string>
+    <string name="my_fitness_weekly_average">साप्ताहिक मध्यमान</string>
+    <string name="my_fitness_workouts">व्यायाम</string>
+    <string name="my_fitness_active_days">सक्रिय दिन</string>
+    <string name="my_fitness_streak">लगातार इतने दिन</string>
+    <string name="my_fitness_time">समय</string>
+    <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
+         freely — these are English abbreviations for hour/minute/second. -->
+    <string name="my_fitness_duration_hours_minutes">%1$dघं॰ %2$dमि॰</string>
+    <string name="my_fitness_duration_minutes">%1$dमि॰</string>
+    <string name="my_fitness_duration_seconds">%1$dसे॰</string>
+    <string name="my_fitness_distance">दूरी</string>
+    <string name="my_fitness_calories">उष्ममानइकाई</string>
+    <string name="my_fitness_steps">पद</string>
+    <string name="my_fitness_elevation">आरोहण</string>
+    <string name="my_fitness_avg_heart_rate">मध्य॰ हृ॰गति</string>
+    <string name="my_fitness_max_heart_rate">उच्च॰ हृ॰गति</string>
+    <string name="my_fitness_by_activity">गतिविधि अनुसार</string>
+    <string name="my_fitness_bests">सर्वोत्तम प्रयास</string>
+    <string name="my_fitness_best_longest_distance">दीर्घतम दूरी</string>
+    <string name="my_fitness_best_longest_duration">दीर्घतम व्यायाम</string>
+    <string name="my_fitness_best_biggest_climb">बृहत्तम आरोहण</string>
+    <string name="my_fitness_best_most_steps">अधिकतम पद</string>
+    <string name="my_fitness_best_highest_heart_rate">उच्चतम हृदयस्पन्दन गति</string>
+    <string name="my_fitness_recent">निकटकाल व्यायाम</string>
+    <string name="my_fitness_empty">पिछले चार सप्ताह में कुछ भी अभिलेखित नहीं। व्यायाम जो आप प्रकाशित करते हैं तथा जो भी आपकी घडी अभिलेखित करती है सब यहाँ दिखेंगे।</string>
+    <string name="my_fitness_connect_title">व्यायाम के अभिलेख</string>
+    <string name="my_fitness_connect_message">स्वास्थ्यसंयोजन से जोड बनाएँ आपके साप्ताहिक संकलनों को देखने के लिए। तथा सप्ताहोत्तर सप्ताह प्रवृत्ति। तथा सर्वोत्तम प्रयासों को। तथा निरन्तार अभ्यास दिनों को। सब आपके संचारयन्त्र पर रहेगा।</string>
+    <string name="my_fitness_connect_banner">स्वास्थ्यसंयोजन से जोड बनाएँ आपकी घडी द्वारा अभिलेखित व्यायामों को जोडने के लिए। हृदयस्पन्दन गति तथा पद तथा आरोहण युक्त।</string>
+    <string name="my_fitness_connect_button">संयोजन</string>
+    <string name="my_fitness_share">व्यायाम बाँटें</string>
+    <string name="my_fitness_unit_bpm">स्पन्दनप्रतिमिनुट</string>
+    <string name="my_fitness_unit_kcal">सहस्रउष्ममानइकाई</string>
+    <string name="my_fitness_unit_km">सहस्रमीटर</string>
+    <string name="my_fitness_unit_mi">मील</string>
+    <string name="my_fitness_unit_m">मीटर</string>
+    <string name="my_fitness_unit_ft">पाद</string>
     <string name="nsite_none_found">कोई नोस्टरस्थान प्राप्त नहीं अब तक।</string>
     <string name="browser_reload">पुनःआवहन</string>
     <string name="browser_unsupported">क्रमकाभ्यन्तर जालवीक्षक के लिए आण्ड्रोइड ग्यारह अथवा नवीनतर आवश्यक।</string>
@@ -1237,6 +1310,11 @@
     <string name="call_calling">आह्वान चालू\u2026</string>
     <string name="call_connecting">संयोजन बन रहा है\u2026</string>
     <string name="call_ended">आह्वान समाप्त</string>
+    <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
+         form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
+         translator's to change. -->
+    <string name="call_duration_minutes_seconds">%1$02dमि॰%2$02dसे॰</string>
+    <string name="call_duration_hours_minutes_seconds">%1$dघं॰%2$02dमि॰%3$02dसे॰</string>
     <string name="call_dismiss">हटाएँ</string>
     <string name="call_switch_camera">अन्य चित्रग्राहक</string>
     <string name="call_voice">ध्‍वनि आह्वान</string>
@@ -1625,7 +1703,7 @@
     <string name="metadata_strip_failed_body">यह अभिलेख प्रारूप परितथ्य हटाने का अवलम्बन नहीं करता। निजी जानकारी जैसे स्थान तथा यन्त्र विवरण समाविष्ट हो सकते हैं। क्या तो भी आरोहण करें।</string>
     <string name="metadata_strip_failed_upload">तो भी आरोहण करें</string>
     <string name="edit_draft">पाण्डुलिपि सम्पादन</string>
-    <string name="login_with_qr_code">क्यूआर॰ क्रमचित्र के साथ प्रवेशांकन करें</string>
+    <string name="login_with_qr_code">क्यूआर॰ चित्र अक्षरराशि के साथ प्रवेशांकन करें</string>
     <string name="wallet_send">भेजें</string>
     <string name="wallet_receive">प्राप्त करें</string>
     <string name="wallet_transactions">लेनदेन</string>
@@ -1643,6 +1721,7 @@
     <string name="wallet_no_transactions_for_filter">इस छलनी के अनुकूल कोई लेनदेन नहीं</string>
     <string name="wallet_loading">आवहन चालू…</string>
     <string name="wallet_incoming">प्राप्त</string>
+    <string name="wallet_open_zapped_note">ज्साप किया गया टीका खोलें</string>
     <string name="wallet_outgoing">भेजा गया</string>
     <string name="wallet_refresh">नवीकरण</string>
     <string name="wallet_filter_all">सभी</string>
@@ -2086,8 +2165,8 @@
     <string name="expiration_date_select">समापन दिनांक तथा समय चुनें</string>
     <string name="expiration_expires_in">%1$s में समाप्त</string>
     <string name="expiration_time">समापन समय</string>
-    <string name="show_npub_as_a_qr_code">क्यूआर॰ क्रमचित्र के रूप में एनपुब॰ को दिखाएँ</string>
-    <string name="show_nprofile_as_a_qr_code">क्यूआर॰ क्रमचित्र के रूप में एन॰परिचय को दिखाएँ</string>
+    <string name="show_npub_as_a_qr_code">क्यूआर॰ चित्र अक्षरराशि के रूप में एनपुब॰ को दिखाएँ</string>
+    <string name="show_nprofile_as_a_qr_code">क्यूआर॰ चित्र अक्षरराशि के रूप में एनप्रोफैल॰ को दिखाएँ</string>
     <string name="dm_relays_not_found">आपके निजी आगतपेटिका पुनःप्रसारकों की स्थापना करें</string>
     <string name="dm_relays_not_found_description">यह स्थापना विकल्प सब को सूचित करता है आपको सन्देश भेजने के लिए कौनसे पुनःप्रसारकों का प्रयोग करना चाहिए। इनके बिना आप कुछ सन्देश प्राप्त नहीं कर पाएँगे।</string>
     <string name="dm_relays_not_found_examples2">ये अच्छे विकल्प हैं :\n - auth.nostr1.com (शुल्करहित)\n - inbox.nostr.wine (सशुल्क)\n - relay.0xchat.com (शुल्करहित)</string>
@@ -2197,7 +2276,7 @@
     <string name="accessibility_send">भेजें</string>
     <string name="accessibility_play_username">उपयोगकर्ता नाम को ध्वनि के रूप में चलाएँ</string>
     <string name="accessibility_pushpin">घुण्डी</string>
-    <string name="accessibility_scan_qr_code">क्यूआर॰ क्रमचित्र परखें</string>
+    <string name="accessibility_scan_qr_code">क्यूआर॰ चित्र अक्षरराशि परखें</string>
     <string name="accessibility_select_date">दिनांक का चयन करें</string>
     <string name="draft">पाण्डुलिपि</string>
     <string name="bounty_label">पुरस्कार</string>

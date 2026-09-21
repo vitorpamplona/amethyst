@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 
@@ -102,6 +103,7 @@ object KindRegistry {
             "community" to listOf(CommunityDefinitionEvent.KIND),
             "wiki" to listOf(WikiNoteEvent.KIND),
             "classified" to listOf(ClassifiedsEvent.KIND),
+            "geocache" to listOf(GeocacheListingEvent.KIND),
             "highlight" to listOf(HighlightEvent.KIND),
             "poll" to listOf(PollEvent.KIND),
             // The kinds the app's own feeds are windows onto, so a screen that seeds its search

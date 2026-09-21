@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion
 
 import android.text.format.DateUtils
-import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
+import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
 

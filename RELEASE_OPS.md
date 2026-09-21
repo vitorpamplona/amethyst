@@ -130,6 +130,11 @@ Nothing to do beyond pushing the tag. Verify the asset count (BUILDING.md
 § Verify). macOS is **arm64-only** — there is no Intel DMG, so a single
 `amethyst-desktop-<version>-macos-arm64.dmg` is the expected, correct result.
 
+Two of those assets are the R8 mapping files
+(`amethyst-{googleplay,fdroid}-mapping-<version>.txt.gz`). Do not prune them
+from old releases — they are the only way to read a crash report from a build
+that old (§ 7).
+
 ### Google Play — manual upload
 1. Download `amethyst-googleplay-<version>.aab` from the GH Release.
 2. Play Console → app `com.vitorpamplona.amethyst` → **Production** (or the
@@ -240,9 +245,9 @@ readable by anyone with push access here), so a maintainer runs the last step:
 ```bash
 # after merging the sync PRs
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...     # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.15.2
+scripts/bump-homebrew-cask.sh v1.16.0
 
-scripts/bump-winget.sh v1.15.2               # no token — uses your `gh` auth
+scripts/bump-winget.sh v1.16.0               # no token — uses your `gh` auth
 ```
 
 Both scripts re-verify the published artifact's sha256 before submitting, and
@@ -304,7 +309,7 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 
 ## 6. Post-release verification
 
-- [ ] GH Release: 47 assets, sizes sane, and the asset-name set matches the
+- [ ] GH Release: 49 assets, sizes sane, and the asset-name set matches the
       previous release (see the `diff` one-liner in BUILDING.md § Release
       runbook). macOS is arm64-only — do **not** look for an Intel DMG.
 - [ ] Maven Central: `quartz:<version>` resolves (allow tens of minutes of
@@ -325,3 +330,112 @@ Owner assignments and rotation reminders live with the team (issue tracker).
       see § 4); UnifiedPush still works on an `fdroid` build.
 
 If anything ships broken, see [`BUILDING.md` § Incident response](BUILDING.md#incident-response).
+
+---
+
+## 7. Crash reports & retrace
+
+Release builds are minified **and obfuscated** (they have to be: Play Console
+drops apps whose DEX is under 25% optimized or obfuscated out of store surfaces
+— see `amethyst/proguard-rules.pro` for the whole story). So a raw stack trace
+from a release build looks like this:
+
+```
+java.lang.IllegalStateException: something blew up
+	at onh.B(r8-map-id-12c710927a584543dbe1e2e867db95460bc44482efe53283f86798648c1cfc00:7)
+```
+
+That is not lost information, it is encoded information. Paste the report in and
+run it:
+
+```bash
+scripts/retrace.sh crash-report.txt
+pbpaste | scripts/retrace.sh            # or straight off the clipboard
+```
+
+Nothing else to supply. A report's first line names its own build —
+`java.lang.IllegalStateException: 1.16.0-PLAY` — so the script resolves the tag
+(`v1.16.0`) and the flavor (`PLAY` → `googleplay`), downloads that release's
+mapping asset and caches it. For a bare stack trace with no such header, name
+the build yourself with `--release v1.16.0 --flavor play`; for a build you made
+locally, pass its `mapping.txt` directly.
+
+```
+java.lang.IllegalStateException: something blew up
+	at androidx.compose.foundation.text.input.TextFieldCharSequence.getText(TextFieldCharSequence.kt:58)
+	at androidx.compose.foundation.text.input.TextFieldState.getText(TextFieldState.kt:146)
+	at com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel.onMessageChanged(ShortNotePostViewModel.kt:1727)
+```
+
+Note that retrace gave back **three** frames where the crash reported one: R8
+had inlined two of them. That is worth internalising — it is the reason a raw
+trace's line number cannot be trusted even in the pre-obfuscation builds, where
+optimization was already inlining. Retracing is not a tax obfuscation imposed;
+it is how you read an optimized build at all.
+
+**The wrong mapping is worse than none** — it produces confident, wrong names.
+So the script refuses to guess: the `r8-map-id-<hash>` in the trace *is* the
+`pg_map_id` header of the mapping that built it, and the two are compared before
+anything is printed:
+
+```
+error: this mapping did not build this report.
+       report:  deadbeef...
+       mapping: 12c71092... (amethyst-googleplay-mapping-v1.16.0.txt.gz)
+```
+
+`--force` overrides if you really mean it. (`googleplay` vs `fdroid` matters —
+the two flavors are separate R8 runs with different mappings.)
+
+**Per channel:**
+
+| Where the report came from | What to do |
+|---|---|
+| Play Console / Android vitals | Nothing. AGP embeds the mapping in the `.aab` (`BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`), so Play deobfuscates automatically. |
+| A NIP-17 DM from the in-app crash reporter, a GitHub issue, F-Droid, Zapstore, Accrescent | `scripts/retrace.sh <report>` — it reads the build off line 1 and fetches the mapping. |
+| A build you made locally | `scripts/retrace.sh amethyst/build/outputs/mapping/<variant>/mapping.txt report.txt` |
+
+`scripts/retrace.sh` downloads the R8 version named in the mapping's own header
+from Google's Maven and caches it, so it needs no pinned tooling and keeps
+working across AGP bumps. It needs no `gh` auth either — release assets on a
+public repo are plain HTTPS downloads.
+
+Two details of the report format in `ReportAssembler` exist for this and should
+not be "tidied" away: the headline carries the **fully qualified** exception
+class (a bare `simpleName` obfuscates to `a`, which retrace cannot resolve
+because it has no package), and stack frames are written as `    at <frame>`
+(retrace only rewrites frames it recognises, and it recognises them by the
+leading `at`). The script repairs the missing `at` on reports from older builds,
+but new reports should not need repairing.
+
+**Do not delete mapping assets from old releases.** They are the only copy —
+CI's are gone when the job ends, and a mapping cannot be regenerated after the
+fact (it would need a bit-identical rebuild, and R8's renaming is not stable
+across runs).
+
+### Did obfuscation break anything?
+
+R8 cannot see reflection, so nothing in the build tells you that a keep rule
+stopped matching. `tools/r8-verify/reflection-contract.txt` lists every place
+something outside the DEX resolves a name at runtime — JNI symbols, Jackson DTO
+field names, enum constants persisted in DataStore, WorkManager's stored worker
+class names, the Cast `OptionsProvider` named in a manifest `<meta-data>` value
+— and the release workflow asserts each one against what R8 actually emitted,
+for both flavors, before any asset is collected:
+
+```bash
+python3 tools/r8-verify/verify_reflection_contract.py \
+    amethyst/build/outputs/mapping/playRelease/
+```
+
+Run it on any local minified build too. It takes under a second and needs no
+device.
+
+**Adding reflection means adding two things**: the keep rule, and a line in the
+contract. A rule with no contract line is unverified and will rot silently.
+
+What this does *not* cover is reflection nobody wrote down. For that the honest
+controls are a staged Play rollout (the crash reporter retraces itself now, so
+a break is legible within hours) and exercising NIP-47 wallet connect, NIP-46
+bunker login, Tor, scheduled posts and a settings round-trip on a minified
+build before shipping.
