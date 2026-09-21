@@ -20,32 +20,32 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches
 
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_hide_a_cache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NewGeocacheButton(nav: INav) {
     FloatingActionButton(
         onClick = { nav.nav(Route.NewGeocache()) },
-        modifier = Modifier.size(55.dp),
-        shape = MaterialTheme.shapes.large,
+        modifier = Size55Modifier,
+        shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
             symbol = MaterialSymbols.Add,
             contentDescription = stringResource(Res.string.geocache_hide_a_cache),
-            modifier = Modifier.size(26.dp),
+            modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )
     }

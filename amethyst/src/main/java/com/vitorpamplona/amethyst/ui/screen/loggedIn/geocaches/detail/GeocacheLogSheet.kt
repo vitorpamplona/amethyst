@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -140,7 +141,7 @@ fun GeocacheLogSheet(
                 ) { Text(stringResource(Res.string.geocache_log_post)) }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.navigationBarsPadding().height(20.dp))
         }
     }
 }

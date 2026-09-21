@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -467,7 +468,15 @@ private fun GeocacheActionBar(
 
     Surface(tonalElevation = 3.dp) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            // navigationBarsPadding on the *content* rather than the Surface: the bar's
+            // background still runs to the bottom of the screen, while the buttons sit above
+            // the 3-button navigation instead of underneath it. Material3's Scaffold passes
+            // its window insets to the content slot only -- a bottomBar is expected to handle
+            // its own, which this one was not doing.
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // The status line replaces the find buttons rather than sitting above them, so the

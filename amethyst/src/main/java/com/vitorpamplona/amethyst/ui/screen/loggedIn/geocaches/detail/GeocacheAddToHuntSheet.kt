@@ -24,7 +24,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -197,7 +200,10 @@ fun GeocacheAddToHuntSheet(
                 }
             }
 
-            Text("", modifier = Modifier.padding(bottom = 24.dp))
+            // The sheet's last row has to clear the system navigation, and an empty Text was
+            // standing in for that. Spacer + the real inset is both honest and correct on
+            // gesture navigation, where the reserved band is much smaller.
+            Spacer(Modifier.navigationBarsPadding().height(16.dp))
         }
     }
 }
