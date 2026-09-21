@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.brought_to_you_by
 import com.vitorpamplona.amethyst.commons.resources.this_version_brought_to_you_by
@@ -63,7 +64,6 @@ import com.vitorpamplona.amethyst.commons.resources.version_name
 import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_description
 import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_title
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.ReusableZapButton

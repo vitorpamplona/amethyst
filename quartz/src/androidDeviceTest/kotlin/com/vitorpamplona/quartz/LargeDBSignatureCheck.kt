@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
@@ -41,8 +40,9 @@ class LargeDBSignatureCheck {
             val fullDBInputStream = javaClass.classLoader?.getResourceAsStream("nostr_vitor_short.json")
 
             val eventArray =
-                JacksonMapper.mapper.readValue<ArrayList<Event>>(
+                JacksonMapper.mapper.readValue(
                     InputStreamReader(fullDBInputStream),
+                    JacksonMapper.eventListTypeInstance,
                 ) as List<Event>
 
             var counter = 0
@@ -61,8 +61,9 @@ class LargeDBSignatureCheck {
             val fullDBInputStream = javaClass.classLoader?.getResourceAsStream("nostr_vitor_startup_data.json.gz")
 
             val eventArray =
-                JacksonMapper.mapper.readValue<ArrayList<Event>>(
+                JacksonMapper.mapper.readValue(
                     GZIPInputStream(fullDBInputStream),
+                    JacksonMapper.eventListTypeInstance,
                 ) as List<Event>
 
             var counter = 0

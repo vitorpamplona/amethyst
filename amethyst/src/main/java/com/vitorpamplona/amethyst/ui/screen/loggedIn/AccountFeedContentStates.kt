@@ -24,9 +24,9 @@ import android.content.ComponentCallbacks2
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
@@ -48,6 +48,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.D
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.dal.FollowPacksFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal.GeocacheFindsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal.GeocacheHuntsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal.GeocacheMineFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal.GeocachesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.dal.GitRepositoriesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.dal.HighlightsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
@@ -125,6 +129,10 @@ class AccountFeedContentStates(
     val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache)
     val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
+    val geocachesFeed = FeedContentState(GeocachesFeedFilter(account), scope, LocalCache)
+    val geocacheFindsFeed = FeedContentState(GeocacheFindsFeedFilter(account), scope, LocalCache)
+    val geocacheMineFeed = FeedContentState(GeocacheMineFeedFilter(account), scope, LocalCache)
+    val geocacheHuntsFeed = FeedContentState(GeocacheHuntsFeedFilter(account), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
     val publicChatsFeed = FeedContentState(PublicChatsFeedFilter(account), scope, LocalCache)
     val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache)
@@ -373,6 +381,10 @@ class AccountFeedContentStates(
         highlightsFeed.updateFeedWith(newNotes)
         relayGroupsDiscoveryFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
+        geocachesFeed.updateFeedWith(newNotes)
+        geocacheFindsFeed.updateFeedWith(newNotes)
+        geocacheMineFeed.updateFeedWith(newNotes)
+        geocacheHuntsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
         publicChatsFeed.updateFeedWith(newNotes)
         followPacksFeed.updateFeedWith(newNotes)
@@ -437,6 +449,10 @@ class AccountFeedContentStates(
         highlightsFeed.deleteFromFeed(newNotes)
         relayGroupsDiscoveryFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)
+        geocachesFeed.deleteFromFeed(newNotes)
+        geocacheFindsFeed.deleteFromFeed(newNotes)
+        geocacheMineFeed.deleteFromFeed(newNotes)
+        geocacheHuntsFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
         publicChatsFeed.deleteFromFeed(newNotes)
         followPacksFeed.deleteFromFeed(newNotes)
@@ -499,6 +515,10 @@ class AccountFeedContentStates(
         calendarAppointmentsFeed.trimToSize(maxItems)
         calendarCollectionsFeed.trimToSize(maxItems)
         productsFeed.trimToSize(maxItems)
+        geocachesFeed.trimToSize(maxItems)
+        geocacheFindsFeed.trimToSize(maxItems)
+        geocacheMineFeed.trimToSize(maxItems)
+        geocacheHuntsFeed.trimToSize(maxItems)
         shortsFeed.trimToSize(maxItems)
         publicChatsFeed.trimToSize(maxItems)
         followPacksFeed.trimToSize(maxItems)

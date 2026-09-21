@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
@@ -80,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.resources.pinned_to_top
 import com.vitorpamplona.amethyst.commons.resources.referenced_event_not_found
 import com.vitorpamplona.amethyst.commons.resources.relay_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel

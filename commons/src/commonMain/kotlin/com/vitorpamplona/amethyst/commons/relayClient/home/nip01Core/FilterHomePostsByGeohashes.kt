@@ -35,6 +35,11 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -52,6 +57,11 @@ val HomePostsByGeohashKinds =
         VoiceEvent.KIND,
         AttestationEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
+        PictureEvent.KIND,
+        VideoNormalEvent.KIND,
+        VideoShortEvent.KIND,
+        VideoHorizontalEvent.KIND,
+        VideoVerticalEvent.KIND,
     )
 
 fun filterHomePostsByGeohashes(

@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.BrowseEmojiSetsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasource.FollowPacksFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.GitRepositoriesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.HighlightsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
@@ -98,6 +99,13 @@ private fun PreloadFor(
         NavBarItem.PICTURES -> PicturesFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.WORKOUTS -> WorkoutsFilterAssemblerSubscription(accountViewModel)
+
+        // Both geocaching entries ride the same subscription: GeocacheFeedKinds fetches
+        // listings, found logs and curation lists together, so the Hunts shortcut needs no
+        // REQ of its own.
+        NavBarItem.GEOCACHES,
+        NavBarItem.GEOCACHE_HUNTS,
+        -> GeocachesFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.GIT_REPOSITORIES -> GitRepositoriesFilterAssemblerSubscription(accountViewModel)
 

@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -193,9 +194,10 @@ fun ThreadScreen(
         onDispose { subId?.let { coordinator.releaseInteractions(it) } }
     }
 
-    // Thread-author metadata + note interactions now load per row: each thread
-    // note renders through NoteCard, which opens composition-scoped UserFinder +
-    // EventFinder subscriptions. (requestInteractions above remains the thread's
+    // Thread-author metadata + note interactions load per row, through the
+    // composition-scoped UserFinder + EventFinder subscriptions that NoteCard
+    // opens. Reply rows render through CommentItem instead, so they open their
+    // own UserFinder below. (requestInteractions above remains the thread's
     // explicit interaction-refresh path.)
 
     // Fetch quoted notes referenced in thread content
@@ -369,21 +371,46 @@ fun ThreadScreen(
                                     )
                                 } else {
                                     replyNotes.forEachIndexed { index, note ->
-                                        val event = note.event
-
-                                        // Observe metadata + reactions so we recompose
-                                        // when author info arrives from relays
+                                        // Observe this note's own flows so the row recomposes
+                                        // when its event, reactions or zaps land. The author's
+                                        // profile is a separate observation, further down.
                                         val flowSet = remember(note) { note.flow() }
                                         val metadataState by flowSet.metadata.stateFlow.collectAsState()
                                         val reactionsState by flowSet.reactions.stateFlow.collectAsState()
                                         val zapsState by flowSet.zaps.stateFlow.collectAsState()
 
+                                        // A reply can be a placeholder until its event arrives.
+                                        // Note.loadEvent invalidates the metadata slot, so key
+                                        // the read on it rather than reading note.event bare —
+                                        // an unread collectAsState recomposes nothing.
+                                        val event = remember(note, metadataState) { note.event }
+
                                         DisposableEffect(note) { onDispose { note.clearFlow() } }
 
+                                        // getOrCreate, not getIfExists: the reply's author is
+                                        // often a stranger the cache has no User for yet, and a
+                                        // null here would leave the row with nothing to observe
+                                        // and nothing to subscribe to.
                                         val author =
-                                            remember(event?.pubKey, metadataState) {
-                                                event?.pubKey?.let { localCache.getUserIfExists(it) }
+                                            remember(event?.pubKey) {
+                                                event?.pubKey?.let { localCache.getOrCreateUser(it) }
                                             }
+
+                                        // Ask for the author's kind-0 while this row is composed.
+                                        // A reply renders through CommentItem, not NoteCard, so
+                                        // it does not inherit NoteCard's UserFinder — without
+                                        // this nothing ever requests these profiles and the row
+                                        // shows a truncated pubkey forever.
+                                        if (author != null) {
+                                            UserFinderFilterAssemblerSubscription(author)
+                                        }
+
+                                        // The reply almost always renders before its author's
+                                        // kind-0 does, so the name and avatar have to come from
+                                        // an observation rather than the lookup above.
+                                        val authorMeta = rememberAuthorMetadataKey(author)
+                                        val authorName = remember(author, authorMeta) { author?.toBestDisplayName() }
+                                        val authorAvatar = remember(author, authorMeta) { author?.profilePicture() }
 
                                         val reactionCount =
                                             remember(reactionsState) { note.countReactions() }
@@ -391,13 +418,13 @@ fun ThreadScreen(
 
                                         CommentItem(
                                             authorName =
-                                                author?.toBestDisplayName()
+                                                authorName
                                                     ?: event?.pubKey?.take(8)
                                                     ?: "",
                                             authorHandle =
                                                 author?.pubkeyNpub()?.take(16)?.let { "@$it..." }
                                                     ?: "",
-                                            authorAvatarUrl = author?.profilePicture(),
+                                            authorAvatarUrl = authorAvatar,
                                             authorPubKeyHex = event?.pubKey ?: "",
                                             content = event?.content ?: "",
                                             timeAgo = (event?.createdAt ?: 0L).toTimeAgo(),

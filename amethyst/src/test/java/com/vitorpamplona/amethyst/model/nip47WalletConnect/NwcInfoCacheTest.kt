@@ -36,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -45,7 +46,20 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class NwcInfoCacheTest {
     private var clock = 1_000L
+
+    /**
+     * Unconfined so a caller runs inline up to its first real suspension, but [NwcInfoCache] still
+     * hands its fetches to [Dispatchers.IO] — so this scope owns real background work and must not
+     * outlive the test. A fetch still running afterwards has no
+     * [kotlinx.coroutines.CoroutineExceptionHandler] in context, and anything it throws lands on
+     * the JVM-wide handler, where `runTest` reports it against whichever unrelated test class
+     * starts next.
+     */
     private val scope = CoroutineScope(Dispatchers.Unconfined)
+
+    @After
+    fun tearDown() = scope.cancel()
+
     private val relay = RelayUrlNormalizer.normalizeOrNull("wss://relay.example.com")!!
 
     private fun uri(pubkey: String) = Nip47WalletConnect.Nip47URINorm(pubkey, relay, "secret")

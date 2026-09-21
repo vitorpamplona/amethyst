@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.model.nip60Cashu
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryQueryState
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent

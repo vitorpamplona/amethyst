@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi

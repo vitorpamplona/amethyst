@@ -66,13 +66,13 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_add_recommendation
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_recommendation
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_my_recommendations
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_no_recommendations
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

@@ -89,6 +89,16 @@ class IndexableFieldVisitorTest {
         // Community definition: name + description + rules + content.
         assertAgrees(34550, arrayOf(arrayOf("name", "N"), arrayOf("description", "D"), arrayOf("rules", "R")), "c")
         assertAgrees(34550, emptyArray(), "c")
+
+        // Geocache listing: name + content. The `hint` is deliberately not indexed, so a listing
+        // that has one must still rejoin to exactly name + content.
+        assertAgrees(37516, arrayOf(arrayOf("name", "First Treasure"), arrayOf("hint", "In the branches")), "a cache")
+        assertAgrees(37516, emptyArray(), "a cache")
+
+        // Geocache curation list: title + description + content.
+        assertAgrees(37517, arrayOf(arrayOf("title", "T"), arrayOf("description", "D")), "c")
+        assertAgrees(37517, arrayOf(arrayOf("title", "T")), "c")
+        assertAgrees(37517, emptyArray(), "c")
     }
 
     @Test

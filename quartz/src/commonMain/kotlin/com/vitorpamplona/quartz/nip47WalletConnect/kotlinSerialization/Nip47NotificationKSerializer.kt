@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.decodeRootJsonObject
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.longOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedData
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedNotification
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
@@ -33,10 +37,8 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
@@ -88,16 +90,15 @@ object Nip47NotificationKSerializer : KSerializer<Notification> {
 
     override fun deserialize(decoder: Decoder): Notification {
         val jsonDecoder = decoder as JsonDecoder
-        val jsonObject = jsonDecoder.decodeJsonElement().jsonObject
-        val notificationType =
-            jsonObject["notification_type"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
+        val jsonObject = decoder.decodeRootJsonObject("An NWC notification")
+        val notificationType = jsonObject.stringOrNull("notification_type")
 
         return when (notificationType) {
             NwcNotificationType.PAYMENT_RECEIVED -> {
                 PaymentReceivedNotification(
                     notification =
                         Nip47ResponseKSerializer.parseTransaction(
-                            jsonObject["notification"]?.jsonObject,
+                            jsonObject.objOrNull("notification"),
                         ),
                 )
             }
@@ -106,24 +107,24 @@ object Nip47NotificationKSerializer : KSerializer<Notification> {
                 PaymentSentNotification(
                     notification =
                         Nip47ResponseKSerializer.parseTransaction(
-                            jsonObject["notification"]?.jsonObject,
+                            jsonObject.objOrNull("notification"),
                         ),
                 )
             }
 
             NwcNotificationType.HOLD_INVOICE_ACCEPTED -> {
-                val notifObj = jsonObject["notification"]?.jsonObject
+                val notifObj = jsonObject.objOrNull("notification")
                 HoldInvoiceAcceptedNotification(
                     notification =
                         notifObj?.let {
                             HoldInvoiceAcceptedData(
-                                type = it["type"]?.jsonPrimitive?.content,
-                                invoice = it["invoice"]?.jsonPrimitive?.content,
-                                payment_hash = it["payment_hash"]?.jsonPrimitive?.content,
-                                amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                                created_at = it["created_at"]?.jsonPrimitive?.longOrNull,
-                                expires_at = it["expires_at"]?.jsonPrimitive?.longOrNull,
-                                settle_deadline = it["settle_deadline"]?.jsonPrimitive?.longOrNull,
+                                type = it.stringOrNull("type"),
+                                invoice = it.stringOrNull("invoice"),
+                                payment_hash = it.stringOrNull("payment_hash"),
+                                amount = it.longOrNull("amount"),
+                                created_at = it.longOrNull("created_at"),
+                                expires_at = it.longOrNull("expires_at"),
+                                settle_deadline = it.longOrNull("settle_deadline"),
                             )
                         },
                 )

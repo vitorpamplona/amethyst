@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.Instant
 import java.time.ZoneId
@@ -81,12 +82,7 @@ fun CalendarEventListCard(
     val range = remember(note.idHex) { formatCalendarRange(note, context) }
     val relative = remember(note.idHex, view.startSeconds) { relativeTimeLabel(context, view, TimeUtils.now()) }
     val event = note.event ?: return
-    val detailRoute =
-        remember(event.id) {
-            val addr =
-                (event as? com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent)?.address()
-            addr?.let { Route.CalendarEventDetail(it) } ?: Route.Note(note.idHex)
-        }
+    val detailRoute = remember(event.id) { detailRouteFor(note) }
 
     Card(
         modifier =
@@ -242,4 +238,14 @@ private fun CalendarDateBadge(startSeconds: Long?) {
             fontWeight = FontWeight.Bold,
         )
     }
+}
+
+/**
+ * Where a calendar row goes when it is tapped: the appointment's own screen for an addressable
+ * event — which every 31922/31923 is — and the generic thread view for anything else that somehow
+ * reaches a calendar list. Shared so the feed card and the day-view row can't drift apart.
+ */
+fun detailRouteFor(note: Note): Route {
+    val address = (note.event as? BaseAddressableEvent)?.address()
+    return address?.let { Route.CalendarEventDetail(it) } ?: Route.Note(note.idHex)
 }

@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Dao
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.model.LocalCache.getOrCreateAddressableNoteInternal
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.getOrCreateAddressableNoteInternal
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote

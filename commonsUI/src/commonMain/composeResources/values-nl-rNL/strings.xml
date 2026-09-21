@@ -161,6 +161,7 @@
     <string name="road_event_speed_camera">Flitser</string>
     <string name="road_event_traffic_jam">File</string>
     <string name="road_event_unknown">Weggebeurtenis</string>
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zaps hiervoor worden verdeeld over:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>

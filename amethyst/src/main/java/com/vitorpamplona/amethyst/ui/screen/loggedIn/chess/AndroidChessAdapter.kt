@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessConfig
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEventBroadcaster
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEventPublisher
@@ -30,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.RelayFetchProgress
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelayGameSummary
 import com.vitorpamplona.amethyst.commons.nip64Chess.subscription.ChessFilterBuilder
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color

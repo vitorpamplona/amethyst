@@ -47,7 +47,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,10 +57,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.IcsExport
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -83,7 +84,6 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_share_nostr
 import com.vitorpamplona.amethyst.commons.resources.calendar_share_nostr_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.commons.resources.route_calendar_event_detail
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -113,6 +114,9 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import org.jetbrains.compose.resources.pluralStringResource
 
 /**
@@ -848,38 +852,52 @@ private fun isLocationUrl(location: String): Boolean {
 }
 
 /**
- * Reactive scan of [LocalCache] for kind-31925 RSVPs that a-tag [targetAddress]. Re-runs on
- * every new-event bundle so RSVPs that arrive while the screen is open appear without a manual
- * refresh. The scan is O(addressables) which is bounded by the relay subscription.
+ * The kind-31925 RSVPs that a-tag [targetAddress], and the kind-31924 calendars that list it.
+ *
+ * [LocalCache.observeEvents] registers the filter with the cache's own index, so this screen is
+ * woken for those two kinds rather than for every event the app ingests — which is what the
+ * previous `LocalCache.live.newEventBundles` collector did, answering each batch with a full
+ * scan of the addressable cache.
+ *
+ * The filter narrows by KIND and the a-tag check happens below, rather than putting the a-tag in
+ * the filter itself, because `FilterIndex` buckets an observer under its most selective dimension
+ * — the tag — and an edited event that DROPS the tag then lands in a different bucket and never
+ * wakes this observer. A calendar that removed this appointment would have gone on listing it
+ * until the screen was reopened. Both kinds are low-volume, so waking on the kind and re-checking
+ * here costs little and cannot go stale: the list re-emits on every matching event and the
+ * snapshot reads the live event off each note.
+ *
+ * The seed scan inside `observeEvents` walks the whole notes cache (`LocalCache.filter` does that
+ * for every query, whatever the kinds), so neither of these may run on the UI thread.
  */
 @Composable
-private fun rememberRsvpsFor(targetAddress: Address): State<List<CalendarRSVPEvent>> =
-    produceState(initialValue = findRsvpsFor(targetAddress), targetAddress) {
-        LocalCache.live.newEventBundles.collect {
-            value = findRsvpsFor(targetAddress)
+private fun rememberRsvpsFor(targetAddress: Address): State<List<CalendarRSVPEvent>> {
+    val rsvps =
+        remember(targetAddress) {
+            LocalCache
+                .observeEvents<CalendarRSVPEvent>(Filter(kinds = listOf(CalendarRSVPEvent.KIND)))
+                .map { all ->
+                    all
+                        .filter { it.calendarEventAddress() == targetAddress }
+                        .sortedByDescending { it.createdAt }
+                }.flowOn(Dispatchers.Default)
         }
-    }
+
+    return rsvps.collectAsStateWithLifecycle(emptyList())
+}
 
 @Composable
-private fun rememberCalendarsContaining(targetAddress: Address): State<List<CalendarEvent>> =
-    produceState(initialValue = findCalendarsContaining(targetAddress), targetAddress) {
-        LocalCache.live.newEventBundles.collect {
-            value = findCalendarsContaining(targetAddress)
+private fun rememberCalendarsContaining(targetAddress: Address): State<List<CalendarEvent>> {
+    val calendars =
+        remember(targetAddress) {
+            LocalCache
+                .observeEvents<CalendarEvent>(Filter(kinds = listOf(CalendarEvent.KIND)))
+                .map { all ->
+                    all
+                        .filter { it.calendarEventAddresses().contains(targetAddress) }
+                        .sortedByDescending { it.createdAt }
+                }.flowOn(Dispatchers.Default)
         }
-    }
 
-private fun findRsvpsFor(targetAddress: Address): List<CalendarRSVPEvent> =
-    LocalCache.addressables
-        .filterIntoSet { _, note ->
-            val e = note.event
-            e is CalendarRSVPEvent && e.calendarEventAddress() == targetAddress
-        }.mapNotNull { it.event as? CalendarRSVPEvent }
-        .sortedByDescending { it.createdAt }
-
-private fun findCalendarsContaining(targetAddress: Address): List<CalendarEvent> =
-    LocalCache.addressables
-        .filterIntoSet { _, note ->
-            val e = note.event
-            e is CalendarEvent && e.calendarEventAddresses().contains(targetAddress)
-        }.mapNotNull { it.event as? CalendarEvent }
-        .sortedByDescending { it.createdAt }
+    return calendars.collectAsStateWithLifecycle(emptyList())
+}

@@ -9,8 +9,10 @@
 # "Reproducible builds".
 #
 # Usage:
-#   ./verify-reproducible.sh              # both ABIs (arm64-v8a + x86_64)
+#   ./verify-reproducible.sh              # all four shipped ABIs
 #   ./verify-reproducible.sh --release    # arm64-v8a only (faster)
+#   ./verify-reproducible.sh --target=armv7-linux-androideabi
+#                                         # one ABI, by Rust target triple
 #
 # Prerequisites are the same as build-arti.sh (rustup, cargo-ndk, and the exact
 # Android NDK revision pinned in ANDROID_NDK_VERSION — a different revision is
@@ -33,10 +35,14 @@ sha256() {
 # x86_64 library: that build never touches it, so the untouched file hashed
 # identically in both runs and the script reported the whole tree reproducible
 # and matching the commit.
-ABIS="arm64-v8a x86_64"
-for arg in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
-    [ "$arg" = "--release" ] && ABIS="arm64-v8a"
-done
+#
+# Asked of build-arti.sh with the very flags it is about to receive, rather than
+# kept as a second copy of the ABI list here. A local copy would drift the moment
+# an ABI is added: this script would rebuild it twice, hash neither, and still
+# print ✅ REPRODUCIBLE — the same false pass the paragraph above describes.
+# Under `set -e` a failing --print-abis (e.g. an unknown triple) aborts here.
+ABIS="$("$SCRIPT_DIR/build-arti.sh" --print-abis ${PASSTHRU[@]+"${PASSTHRU[@]}"} | tr '\n' ' ')"
+ABIS="${ABIS% }"
 
 # sha256 of each built .so, keyed by ABI dir (relative paths → stable keys).
 hashes() {

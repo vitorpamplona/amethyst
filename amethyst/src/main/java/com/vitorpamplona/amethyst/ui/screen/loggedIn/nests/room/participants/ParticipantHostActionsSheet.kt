@@ -53,6 +53,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_confirm_cancel
 import com.vitorpamplona.amethyst.commons.resources.nest_confirm_force_mute_body
@@ -75,7 +76,6 @@ import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_faile
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_title
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage

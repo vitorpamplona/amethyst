@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.sha256.Sha256Hasher
 import org.junit.Rule
@@ -54,7 +54,7 @@ class EventCmdSerializerBenchmark {
 
     @Test
     fun jsonStringEncoderJackson() {
-        val jsonMapper = jacksonObjectMapper()
+        val jsonMapper = ObjectMapper()
         benchmarkRule.measureRepeated {
             jsonMapper.writeValueAsString(specialEncoders)
         }
@@ -62,7 +62,7 @@ class EventCmdSerializerBenchmark {
 
     @Test
     fun jsonStringEncoderSha256Jackson() {
-        val jsonMapper = jacksonObjectMapper()
+        val jsonMapper = ObjectMapper()
         benchmarkRule.measureRepeated {
             val digest = Sha256Hasher()
             digest.hash(jsonMapper.writeValueAsString(specialEncoders).toByteArray())

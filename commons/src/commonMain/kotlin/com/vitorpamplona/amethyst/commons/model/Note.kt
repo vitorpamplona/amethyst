@@ -64,6 +64,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
@@ -346,7 +347,14 @@ open class Note(
     fun relayUrlsForReactions(): List<NormalizedRelayUrl> {
         val authorRelay = author?.inboxRelays() ?: emptyList()
 
-        return authorRelay + relays
+        // A NIP-CC cache names where its finds belong, and that is exactly where Amethyst writes
+        // them (LogGeocacheFindViewModel sends to the same list). Reading back from anywhere else
+        // makes the write and the read land on disjoint relay sets: a cache whose log relays are
+        // neither the owner's inbox nor wherever we happened to see the listing reports "No one
+        // has logged this cache yet" while its logs sit precisely where the listing said to look.
+        val declaredLogRelays = (event as? GeocacheListingEvent)?.logRelays() ?: emptyList()
+
+        return authorRelay + relays + declaredLogRelays
     }
 
     fun relayHintUrl(): NormalizedRelayUrl? {

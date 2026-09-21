@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
@@ -123,6 +124,7 @@ private fun ToolbarIconButton(
         onClick = onClick,
         containerColor = containerColor,
         contentColor = contentColor,
+        shape = CircleShape,
         modifier =
             Modifier
                 .size(32.dp)
@@ -159,6 +161,7 @@ private fun ToolbarButton(
         onClick = onClick,
         containerColor = containerColor,
         contentColor = contentColor,
+        shape = CircleShape,
         modifier =
             Modifier
                 .size(32.dp)

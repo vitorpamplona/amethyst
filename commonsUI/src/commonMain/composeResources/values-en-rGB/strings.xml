@@ -13,6 +13,7 @@
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <!-- Custom emoji suggestions (NIP-30) -->
     <!-- Nicknames (NIP-85 contact cards) -->
+    <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="profile_image">Profile Image</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
          freely — these are English abbreviations for hour/minute/second. -->
