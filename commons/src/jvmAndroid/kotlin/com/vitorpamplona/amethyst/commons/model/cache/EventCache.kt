@@ -422,7 +422,6 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.util.SortedSet
 
 /**
  * The in-memory event store: every `Note`, `User` and `Channel` the app has consumed, plus the
@@ -590,7 +589,7 @@ open class EventCache :
         }
     }
 
-    fun filter(filter: Filter): SortedSet<Note> = filter(filter) { true }
+    fun filter(filter: Filter): List<Note> = filter(filter) { true }
 
     /**
      * Every note matching [filter]'s NIP-01 fields that also satisfies [predicate].
@@ -603,7 +602,7 @@ open class EventCache :
     fun filter(
         filter: Filter,
         predicate: (Note) -> Boolean,
-    ): SortedSet<Note> {
+    ): List<Note> {
         val byKinds = filter.kinds?.filter { it.isAddressable() || it.isReplaceable() }
 
         val addressableMatches =
@@ -642,14 +641,20 @@ open class EventCache :
                 }
             }
 
-        val all = (addressableMatches + noteMatches).toSortedSet(CreatedAtIdHexComparator)
+        // toSet() before sorting: a filter that repeats a kind scans that kind twice, and the
+        // SortedSet this used to return collapsed the repeats. Note declares no equals(), so a
+        // plain Set is the same reference-identity de-duplication that comparator gave.
+        //
+        // The order is the comparator's, newest first, and it is load-bearing: the napplet
+        // gateway answers REQs out of this, and NIP-01 has relays return events newest first.
+        val all = (addressableMatches + noteMatches).toSet().sortedWith(CreatedAtIdHexComparator)
         val limit = filter.limit ?: return all
 
         // Sorted first, then cut. Both halves arrive in hash-walk order, so taking before sorting
         // dropped whichever matches the walk happened to reach last — the newest ones as often as
         // not — and a query with 200 addressable matches never showed a single regular note.
         if (all.size <= limit) return all
-        return all.asSequence().take(limit).toCollection(sortedSetOf(CreatedAtIdHexComparator))
+        return all.take(limit)
     }
 
     fun observeNotes(filter: Filter): Flow<List<Note>> =

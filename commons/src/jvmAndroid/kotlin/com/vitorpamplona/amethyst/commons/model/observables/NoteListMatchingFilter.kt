@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import java.util.SortedSet
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
 
@@ -68,7 +67,7 @@ import java.util.concurrent.ConcurrentSkipListSet
  */
 class NoteListMatchingFilter(
     private val filter: Filter,
-    private val atOnce: (filter: Filter) -> SortedSet<Note>,
+    private val atOnce: (filter: Filter) -> List<Note>,
     private val update: (List<Note>) -> Unit,
 ) : Observable {
     /** A note plus the sort key captured at insertion time, so ordering never depends on mutable state. */
