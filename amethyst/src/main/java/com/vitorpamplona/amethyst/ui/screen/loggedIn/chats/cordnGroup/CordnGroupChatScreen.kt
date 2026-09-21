@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +33,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +45,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -53,6 +61,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,11 +76,14 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
@@ -76,6 +91,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * One cordn room.
@@ -133,6 +149,10 @@ private fun CordnGroupChat(
     var replyingTo by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var editing by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var acting by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
+    var attaching by remember { mutableStateOf(false) }
+    var attachError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val uploadFailed = stringRes(R.string.cordn_media_upload_failed)
 
     fun manager() =
         accountViewModel.account.cordnRuntime
@@ -183,6 +203,7 @@ private fun CordnGroupChat(
                 items(messages, key = { it.envelope.id }) { message ->
                     CordnMessageRow(
                         message = message,
+                        room = room,
                         annotations = annotations,
                         accountViewModel = accountViewModel,
                         nav = nav,
@@ -200,6 +221,15 @@ private fun CordnGroupChat(
             }
 
             HorizontalDivider()
+
+            attachError?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+            }
 
             val replyPreview = replyingTo
             if (replyPreview != null) {
@@ -220,6 +250,20 @@ private fun CordnGroupChat(
 
             CordnComposer(
                 draft = draft,
+                onAttach = { uri ->
+                    scope.launch {
+                        attaching = true
+                        attachError = null
+                        try {
+                            sendAttachment(context, accountViewModel, room, uri)
+                        } catch (e: Exception) {
+                            attachError = e.message ?: uploadFailed
+                        } finally {
+                            attaching = false
+                        }
+                    }
+                },
+                attaching = attaching,
                 onDraftChange = { room.draft.value = it },
                 onSend = {
                     val text = draft.trim()
@@ -422,6 +466,7 @@ private fun CordnChatTopBar(
 @Composable
 private fun CordnMessageRow(
     message: CordnDeliveredMessage,
+    room: CordnGroupChatroom,
     annotations: CordnAnnotationIndex,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -472,6 +517,14 @@ private fun CordnMessageRow(
             }
         }
 
+        // Only on a live message: a deleted one must not keep offering its
+        // attachment, and the blob is still on the host either way.
+        if (text != null) {
+            CordnMediaTag.parseAll(message.envelope.tags).forEach { attachment ->
+                CordnAttachment(attachment, room, accountViewModel)
+            }
+        }
+
         Reactions(annotations.reactions[message.envelope.id].orEmpty(), onReact)
     }
 }
@@ -510,13 +563,23 @@ private const val DEFAULT_REACTION = "\uD83D\uDC4D"
 @Composable
 private fun CordnComposer(
     draft: String,
+    attaching: Boolean,
+    onAttach: (Uri) -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
+    val picker =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let(onAttach)
+        }
+
     Row(
         Modifier.fillMaxWidth().padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        IconButton(onClick = { picker.launch("*/*") }, enabled = !attaching) {
+            Icon(MaterialSymbols.AttachFile, contentDescription = stringRes(R.string.cordn_media_attach))
+        }
         OutlinedTextField(
             value = draft,
             onValueChange = onDraftChange,
@@ -573,3 +636,117 @@ private fun MessageBody(
         }
     }
 }
+
+/**
+ * Encrypts the picked file and sends it as an attachment on an empty message.
+ *
+ * Reading the bytes into memory rather than streaming: the codec authenticates
+ * the whole file with one AEAD tag and hashes the plaintext, both of which
+ * need every byte anyway, and a group chat attachment is not a video archive.
+ */
+private suspend fun sendAttachment(
+    context: Context,
+    accountViewModel: AccountViewModel,
+    room: CordnGroupChatroom,
+    uri: Uri,
+) {
+    val session = accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey) ?: return
+    val group = session.manager.group(room.gid) ?: return
+
+    val resolver = context.contentResolver
+    val mime = resolver.getType(uri) ?: CordnMediaService.OPAQUE
+    val name = uri.lastPathSegment?.substringAfterLast('/') ?: "file"
+    val bytes = withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { it.readBytes() } } ?: return
+
+    val tag = CordnMediaService(accountViewModel.account).upload(group, bytes, mime, name, context) ?: return
+    session.manager.send(room.gid, content = "", tags = arrayOf(tag))
+}
+
+/**
+ * One attachment, fetched and decrypted on demand.
+ *
+ * Never automatically. A cordn attachment lives on a blob host that is not the
+ * coordinator and not a relay, and fetching one tells that host a specific
+ * person opened a specific message at a specific time. Auto-loading would make
+ * that happen for every message that scrolls past, which is exactly the leak
+ * an end-to-end encrypted group is supposed to avoid — so the first tap is the
+ * user's.
+ */
+@Composable
+private fun CordnAttachment(
+    attachment: CordnMediaAttachment,
+    room: CordnGroupChatroom,
+    accountViewModel: AccountViewModel,
+) {
+    val scope = rememberCoroutineScope()
+    var bytes by remember(attachment.url) { mutableStateOf<ByteArray?>(null) }
+    var loading by remember(attachment.url) { mutableStateOf(false) }
+    var error by remember(attachment.url) { mutableStateOf<String?>(null) }
+    val failed = stringRes(R.string.cordn_media_download_failed)
+
+    val image = remember(bytes) { bytes?.takeIf { attachment.isImage }?.toImageBitmapOrNull() }
+
+    Column(Modifier.padding(top = 6.dp)) {
+        if (image != null) {
+            Image(
+                bitmap = image,
+                contentDescription = attachment.filename,
+                modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                contentScale = ContentScale.Fit,
+            )
+        } else {
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        loading = true
+                        error = null
+                        try {
+                            val session = accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey)
+                            val group = session?.manager?.group(room.gid)
+                            if (group == null) {
+                                error = failed
+                            } else {
+                                bytes = CordnMediaService(accountViewModel.account).download(group, attachment)
+                            }
+                        } catch (e: Exception) {
+                            error = e.message ?: failed
+                        } finally {
+                            loading = false
+                        }
+                    }
+                },
+                enabled = !loading,
+            ) {
+                Icon(MaterialSymbols.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(
+                    text = stringRes(R.string.cordn_media_open, attachment.filename),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(start = 6.dp),
+                )
+            }
+        }
+
+        // Shown for a decrypted non-image too: there is nothing to render for
+        // an arbitrary file, and claiming success with nothing on screen reads
+        // as a broken message.
+        if (bytes != null && image == null) {
+            Text(
+                text = stringRes(R.string.cordn_media_opened, attachment.filename),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        error?.let {
+            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+/** Decoded bytes as a bitmap, or null when they are not an image this device reads. */
+private fun ByteArray.toImageBitmapOrNull(): ImageBitmap? =
+    try {
+        BitmapFactory.decodeByteArray(this, 0, size)?.asImageBitmap()
+    } catch (e: Exception) {
+        null
+    }
