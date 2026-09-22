@@ -87,7 +87,11 @@ match — the reviewer reads all three.
 
 ---
 
-## 1. App functionality
+## 1. App functionality — background, not a form field
+
+Google does not publish a matching field for this. Keep it as the brief for whoever fills the
+form, and as the source the § 3 blocks are written from; paste it only if the form offers a
+general description box. See the note at the top of § 3.
 
 > Amethyst is a social client for Nostr, an open decentralized social protocol. It also includes
 > a fitness feature, **My Fitness**, which is what uses Health Connect.
@@ -113,7 +117,11 @@ match — the reviewer reads all three.
 > or discard. Sharing is a user-initiated action on top of the tracking feature, with per-post
 > review and consent; it is never automatic, and the tracking feature is fully usable without it.
 
-## 2. Reviewer walkthrough
+## 2. Reviewer walkthrough — use only if the form asks
+
+Offer this where the form has a reviewer-notes, testing-instructions or demo field. If it has
+none, the walkthrough still matters: it is what someone testing the build should follow, and step
+2 is the one that stops a reviewer landing on an empty dashboard.
 
 > 1. Install and open Amethyst, and sign in (a key can be generated in-app).
 > 2. **Log one workout first, so the dashboard has something to summarise.** Drawer → **Feeds** →
@@ -148,13 +156,34 @@ match — the reviewer reads all three.
 >   **Workouts** → **+**. A workout logged that way appears in the dashboard without any health
 >   permission at all.
 
-## 3. Per-permission justification
+## 3. Per-data-type justification — paste these
 
-Each permission maps to a statistic the dashboard shows the user about their own training.
+**How the form is actually shaped.** Google does not publish the field labels for the
+declaration's second page, but its own guidance says that page is organised as **expandable
+sections per data-type category** — Activity and fitness, Body composition, Energy, Nutrition,
+Reproductive and sexual health, Respiratory system, Sleep management — each asking you to
+"provide an explanation of how your app uses each listed Health Connect data type."
+
+So the form is organised **by data type, not by narrative**. There is no box that corresponds to
+§ 1 below. Treat § 1 as background for whoever fills the form, and § 2 as something to offer only
+if the form gives you a general free-text or reviewer-notes field.
+
+**Which means each block below is written to stand alone.** Every one names My Fitness, says what
+the data type contributes to it, and states the user benefit, so a reviewer who reads a single
+expandable section gets the whole argument without needing the others. Paste the block for a data
+type into that data type's box, whichever category heading the form files it under. Expect
+exercise, distance, steps and elevation under **Activity and fitness**, and both calorie types
+under **Energy**; heart rate lands wherever the form lists it (it is not in the published
+category list — you will see it when the form renders).
+
+Do not condense these into one shared paragraph across boxes. A reviewer evaluating one data type
+should not have to infer the feature from another answer — that inference is what "lack of clear
+justification for the requested permissions" means in Google's published denial reasons.
 
 ### READ_EXERCISE — ExerciseSession (and CyclingPedalingCadence)
 
-> The workout itself, and the spine of the whole dashboard. Amethyst reads each session's
+> Used by **My Fitness**, Amethyst's personal training dashboard, which summarises the
+> user's own workouts back to them. This data type is the spine of that dashboard. Amethyst reads each session's
 > activity type, start time and end time to produce: the count of workouts this week versus last
 > week, total training time, the per-activity breakdown ("Cycling: 3×, 4h 10m"), the number of
 > active days, and the consecutive-day training streak. Every other metric below is aggregated
@@ -170,7 +199,8 @@ Each permission maps to a statistic the dashboard shows the user about their own
 
 ### READ_DISTANCE — Distance
 
-> Aggregated per workout and summed into the dashboard's distance figures: distance this week,
+> Used by **My Fitness**, Amethyst's personal training dashboard. Aggregated per workout and
+> summed into the distance figures it shows the user: distance this week,
 > the percentage change against last week, the four-week weekly average, distance per activity,
 > and the "Longest distance" best effort.
 >
@@ -180,7 +210,8 @@ Each permission maps to a statistic the dashboard shows the user about their own
 
 ### READ_ACTIVE_CALORIES_BURNED — ActiveCaloriesBurned
 
-> Aggregated per workout and summed into the dashboard's energy figures: calories this week and
+> Used by **My Fitness**, Amethyst's personal training dashboard. Aggregated per workout and
+> summed into the energy figures it shows the user: calories this week and
 > the change against last week. Active calories — energy burned by the activity, excluding
 > resting metabolism — are the correct measure of a workout's cost.
 >
@@ -189,7 +220,8 @@ Each permission maps to a statistic the dashboard shows the user about their own
 
 ### READ_TOTAL_CALORIES_BURNED — TotalCaloriesBurned
 
-> Fallback for the same figure. Several widely used watches and fitness apps record only total
+> Used by **My Fitness**, Amethyst's personal training dashboard, as the fallback for the
+> energy figure described under ActiveCaloriesBurned. Several widely used watches and fitness apps record only total
 > energy for a session and never write ActiveCaloriesBurned. Where active calories are missing,
 > Amethyst uses total calories so the energy statistics are not simply blank for those users;
 > where active calories exist they are always preferred, because total calories include basal
@@ -200,7 +232,8 @@ Each permission maps to a statistic the dashboard shows the user about their own
 
 ### READ_HEART_RATE — HeartRate
 
-> Aggregated per workout into the average and maximum heart rate, then combined across the window
+> Used by **My Fitness**, Amethyst's personal training dashboard. Aggregated per workout into
+> the average and maximum heart rate, then combined across the window
 > into a duration-weighted average heart rate (so a two-hour ride weighs more than a ten-minute
 > walk), a maximum for the period, the per-workout effort shown on each row of the recent list,
 > and the "Highest heart rate" best effort.
@@ -211,8 +244,8 @@ Each permission maps to a statistic the dashboard shows the user about their own
 
 ### READ_STEPS — Steps (and StepsCadence)
 
-> Aggregated per workout and summed into the weekly step average and the "Most steps" best
-> effort.
+> Used by **My Fitness**, Amethyst's personal training dashboard. Aggregated per workout and
+> summed into the weekly step average and the "Most steps" best effort it shows the user.
 >
 > Benefit to the user: for walking and hiking — and for many users the majority of their activity
 > — step count is the metric they actually track, and a weekly average is how they judge whether
@@ -224,8 +257,9 @@ Each permission maps to a statistic the dashboard shows the user about their own
 
 ### READ_ELEVATION_GAINED — ElevationGained
 
-> Aggregated per workout and summed into the weekly climb average and the "Biggest climb" best
-> effort, and shown per workout in the recent list.
+> Used by **My Fitness**, Amethyst's personal training dashboard. Aggregated per workout and
+> summed into the weekly climb average and the "Biggest climb" best effort, and shown per
+> workout in the recent list.
 >
 > Benefit to the user: elevation is what separates a flat week from a hard hilly one at identical
 > distance and time. Without it, a user training on hills sees no difference between a punishing
