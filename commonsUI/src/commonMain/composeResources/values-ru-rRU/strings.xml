@@ -118,6 +118,7 @@
     <string name="number_followers">%1$s Подписчиков</string>
     <string name="log_out">Выйти</string>
     <string name="show_more">Больше</string>
+    <string name="show_less">Скрыть</string>
     <string name="lightning_invoice">Lightning инвойс</string>
     <string name="invoice_expired">Истёк срок</string>
     <string name="clink_offer_pay_to">Кому</string>
@@ -2012,6 +2013,10 @@
     <string name="community_rules_violation_max_size_exceeded">Черновик занимает %1$d байт; в этом сообществе установлено ограничение %2$d байт для событий.</string>
     <string name="community_rules_violation_quota_exceeded">Сегодня вы уже опубликовали %1$d событий этого kind (лимит: %2$d).</string>
     <string name="compose_settings">Настройки редактора</string>
+    <string name="concord_channels_empty">Каналов еще нет.</string>
+    <string name="concord_invite_failed">Не удалось получить приглашение. Возможно, ссылка устарела или недоступна.</string>
+    <string name="concord_invite_links_title">Приглашения</string>
+    <string name="concord_invite_revoked_ok">Ссылка для приглашения отозвана.</string>
     <string name="connect_through_your_orbot_setup_short">Порт по умолчанию: 9050</string>
     <string name="connected_section">Подключённые Relays</string>
     <string name="connected_section_description">Текущий список используемых relay</string>
@@ -3014,9 +3019,4 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Lightning-сервис получателя по адресу %1$s недоступен. Он был вычислен из Lightning-адреса "%2$s". Ошибка: %3$s. Проверьте, работает ли сервер и правильно ли указан Lightning-адрес</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Не удалось создать Lightning-счёт от %1$s: элемент pr не найден в полученном JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Не удалось создать Lightning-счёт. Сообщение от %1$s: %2$s</string>
-    <string name="show_less">Скрыть</string>
-    <string name="concord_invite_failed">Не удалось получить приглашение. Возможно, ссылка устарела или недоступна.</string>
-    <string name="concord_invite_links_title">Приглашения</string>
-    <string name="concord_invite_revoked_ok">Ссылка для приглашения отозвана.</string>
-    <string name="concord_channels_empty">Каналов еще нет.</string>
 </resources>

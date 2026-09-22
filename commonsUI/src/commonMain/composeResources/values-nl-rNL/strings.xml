@@ -235,6 +235,7 @@
     <string name="number_followers">%1$s volgers</string>
     <string name="log_out">Uitloggen</string>
     <string name="show_more">Meer</string>
+    <string name="show_less">Minder tonen</string>
     <string name="lightning_invoice">Lightning-invoice</string>
     <string name="invoice_expired">Verlopen</string>
     <string name="clink_lightning_offer">CLINK-aanbod</string>
@@ -4612,7 +4613,6 @@
     <string name="write_to_relay_description">Aantal bytes verstuurd naar deze relay (filters + events)</string>
     <string name="zap_description">Zap</string>
     <string name="zaps">Zaps</string>
-    <string name="show_less">Minder tonen</string>
     <string name="block_hide_user"><![CDATA[Blokkeer en verberg gebruiker]]></string>
     <string name="rename">Hernoemen</string>
     <string name="save">Opslaan</string>

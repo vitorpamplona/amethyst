@@ -256,6 +256,7 @@
     <string name="health_connect_rationale_activity_label">Health Connect och Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Håller anslutningarna till dina inbox-relän aktiva för realtidsnotifieringar</string>
     <plurals name="always_on_notif_connected">
         <item quantity="one">Ansluten till %1$d inkorgsrelä</item>

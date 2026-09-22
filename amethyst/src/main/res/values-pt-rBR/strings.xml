@@ -256,6 +256,7 @@
     <string name="health_connect_rationale_activity_label">Health Connect e Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Mantém as conexões com seus relays de caixa de entrada ativas para notificações em tempo real</string>
     <plurals name="always_on_notif_connected">
         <item quantity="one">Conectado a %1$d relay de entrada</item>

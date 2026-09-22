@@ -259,6 +259,7 @@
     <string name="health_connect_rationale_activity_label">स्वास्थ्य संयोजन तथा अमेथिस्ट</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">आपके आगतपेटिका पुनःप्रसारकों के साथ संयोजन सक्रिय रखता है तत्काल सूचनाओं के लिए</string>
     <plurals name="always_on_notif_connected">
         <item quantity="one">संयोजित %1$d आगतपेटिका पुनःप्रसारक के साथ</item>

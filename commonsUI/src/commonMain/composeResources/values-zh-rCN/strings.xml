@@ -196,6 +196,7 @@
     <string name="number_followers">%1$s 关注者</string>
     <string name="log_out">退出</string>
     <string name="show_more">显示更多</string>
+    <string name="show_less">显示较少</string>
     <string name="lightning_invoice">闪电发票</string>
     <string name="invoice_expired">已过期</string>
     <string name="clink_lightning_offer">CLINK 报价</string>
@@ -3909,7 +3910,6 @@
     <string name="write_to_relay_description">向该中继发送事件和过滤请求所使用的数据量</string>
     <string name="zap_description">打闪</string>
     <string name="zaps">打闪</string>
-    <string name="show_less">显示较少</string>
     <string name="block_hide_user"><![CDATA[阻止并隐藏用户]]></string>
     <string name="rename">重命名</string>
     <string name="save">保存</string>
