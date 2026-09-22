@@ -778,7 +778,8 @@ private fun ProviderCell(
         ) {
             RobohashFallbackAsyncImage(
                 robot = pubKey,
-                model = user?.profilePicture(),
+                // Observed, so the picture appears when the provider's metadata arrives.
+                model = observedPicture(pubKey, accountViewModel),
                 contentDescription = null,
                 modifier = Modifier.size(22.dp).clip(CircleShape),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),

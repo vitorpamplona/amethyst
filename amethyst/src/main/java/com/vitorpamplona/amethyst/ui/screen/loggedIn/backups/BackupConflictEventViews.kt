@@ -44,10 +44,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,17 +67,22 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.LoadRelayGroupChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -85,8 +92,10 @@ import com.vitorpamplona.quartz.nip01Core.diff.ValueChange
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.HashtagTag
@@ -131,7 +140,7 @@ internal fun LazyListScope.eventDiffItems(
         is MetadataDiff -> profileItems(diff, conflict, presentation, accountViewModel, nav)
         is AdvertisedRelayListDiff -> nip65Items(conflict, nav)
         is NutzapInfoDiff -> nutzapItems(diff, conflict, presentation, accountViewModel, nav)
-        is SimpleGroupListDiff -> groupItems(diff, conflict)
+        is SimpleGroupListDiff -> groupItems(diff, conflict, accountViewModel, nav)
         else -> if (!listDiffItems(conflict, accountViewModel, nav)) genericDiffItems(buildRows(presentation), accountViewModel, nav)
     }
 }
@@ -444,7 +453,8 @@ private fun FacePile(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    val names = people.take(2).map { LocalCache.getUserIfExists(it)?.toBestDisplayName() ?: it.toShortDisplay() }
+    // Names and faces are observed, so people this device hasn't loaded yet resolve from relays.
+    val names = people.take(2).map { observedName(it, accountViewModel) }
     val summary =
         if (people.size > 2) {
             stringRes(R.string.backup_review_names_and_more, names.joinToString(", "), (people.size - 2).toString())
@@ -471,7 +481,7 @@ private fun FacePile(
                 ) {
                     RobohashFallbackAsyncImage(
                         robot = pubKey,
-                        model = LocalCache.getUserIfExists(pubKey)?.profilePicture(),
+                        model = observedPicture(pubKey, accountViewModel),
                         contentDescription = null,
                         modifier = Modifier.size(42.dp).clip(CircleShape),
                         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
@@ -490,6 +500,36 @@ private fun FacePile(
         )
     }
 }
+
+/**
+ * The user's metadata, observed: loads the [User] if needed, subscribes to their metadata
+ * on relays and recomposes when it arrives or changes in LocalCache.
+ */
+@Composable
+internal fun observedUserInfo(
+    pubKey: HexKey,
+    accountViewModel: AccountViewModel,
+): UserMetadata? {
+    var user by remember(pubKey) { mutableStateOf(accountViewModel.getUserIfExists(pubKey)) }
+    if (user == null) {
+        LaunchedEffect(pubKey) { user = accountViewModel.checkGetOrCreateUser(pubKey) }
+    }
+    val loaded = user ?: return null
+    val info by observeUserInfo(loaded, accountViewModel)
+    return info?.info
+}
+
+@Composable
+internal fun observedName(
+    pubKey: HexKey,
+    accountViewModel: AccountViewModel,
+): String = observedUserInfo(pubKey, accountViewModel)?.bestName() ?: pubKey.toShortDisplay()
+
+@Composable
+internal fun observedPicture(
+    pubKey: HexKey,
+    accountViewModel: AccountViewModel,
+): String? = observedUserInfo(pubKey, accountViewModel)?.profilePicture()
 
 @Composable
 private fun StruckPill(
@@ -1032,6 +1072,8 @@ private class GroupTile(
 private fun LazyListScope.groupItems(
     diff: SimpleGroupListDiff,
     conflict: ReplaceableBackupConflict,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val key = { g: GroupTag -> g.groupId + "@" + g.relayUrl }
     val removed =
@@ -1077,7 +1119,7 @@ private fun LazyListScope.groupItems(
     }
     items(tiles.chunked(2), key = { "group-" + key(it.first().group) }, contentType = { "group-row" }) { row ->
         Row(Pad.padding(top = 10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            row.forEach { GroupTileCard(it, Modifier.weight(1f)) }
+            row.forEach { GroupTileCard(it, accountViewModel, nav, Modifier.weight(1f)) }
             if (row.size == 1) Spacer(Modifier.weight(1f))
         }
     }
@@ -1086,19 +1128,54 @@ private fun LazyListScope.groupItems(
 @Composable
 private fun GroupTileCard(
     tile: GroupTile,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     modifier: Modifier,
 ) {
+    val relay = RelayUrlNormalizer.normalizeOrNull(tile.group.relayUrl)
+    if (relay == null) {
+        GroupTileContent(tile, tile.group.name ?: tile.group.groupId, null, accountViewModel, modifier, null)
+        return
+    }
+    LoadRelayGroupChannel(GroupId(tile.group.groupId, relay), accountViewModel) { channel ->
+        // Subscribes to the group's relay-signed metadata (even when not joined) and recomposes
+        // when its name or picture arrives.
+        val state by observeChannel(channel, accountViewModel)
+        val current = (state?.channel as? RelayGroupChannel) ?: channel
+        val name = current.event?.name() ?: tile.group.name ?: tile.group.groupId
+        GroupTileContent(tile, name, current.profilePicture(), accountViewModel, modifier) { nav.nav(routeFor(current)) }
+    }
+}
+
+@Composable
+private fun GroupTileContent(
+    tile: GroupTile,
+    name: String,
+    picture: String?,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier,
+    onClick: (() -> Unit)?,
+) {
     val tones = conflictTones()
-    val name = tile.group.name ?: tile.group.groupId
-    val hue = (name.hashCode() and 0xFFFF) / 65535f * 360f
-    Box(modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(14.dp)) {
+    Box(
+        modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(14.dp),
+    ) {
         Column(
             Modifier.alpha(if (tile.state == LaneState.DROPPED) 0.45f else 1f),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(Color.hsl(hue, 0.6f, 0.72f)), contentAlignment = Alignment.Center) {
-                Text(name.take(1).uppercase(), color = Color(0xFF17111F), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-            }
+            RobohashFallbackAsyncImage(
+                robot = tile.group.groupId + "@" + tile.group.relayUrl,
+                model = picture,
+                contentDescription = null,
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)),
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            )
             Column {
                 Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
