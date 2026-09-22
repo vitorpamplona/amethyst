@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnEncryptedMedia
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaEncryption
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -44,7 +43,7 @@ import java.io.ByteArrayInputStream
  * | --- | --- |
  * | the blob host | opaque bytes, their size, and who uploaded them |
  * | the coordinator | a sealed payload; not the URL, not the type, not the name |
- * | the group | everything, because they hold the epoch's exporter |
+ * | the group | everything, because the key rides in the sealed descriptor |
  *
  * Getting that split right is most of this file. The `imeta` descriptor —
  * URL, MIME type, filename, plaintext hash, nonce — rides **inside** the MLS
@@ -72,14 +71,13 @@ class CordnMediaService(
     private val account: Account,
 ) {
     /**
-     * Encrypts [bytes] under [group]'s epoch key and uploads the ciphertext.
+     * Encrypts [bytes] under a fresh per-file key and uploads the ciphertext.
      *
      * @return the `imeta` tag to put on the message, or null when the account
      *   has no Blossom server configured — there is nowhere to put a file and
      *   saying so beats a failure deeper in.
      */
     suspend fun upload(
-        group: MlsGroup,
         bytes: ByteArray,
         mimeType: String,
         filename: String,
@@ -90,8 +88,12 @@ class CordnMediaService(
                 account.settings.defaultFileServer.baseUrl
                     .ifBlank { return@withContext null }
 
-            val sealed = CordnMediaEncryption.encrypt(bytes, CordnMediaEncryption.fileKey(group), mimeType, filename)
-            CordnMediaTag.build(sealed, put(sealed, server, context))
+            // A fresh key per file, carried in the descriptor. Deriving it from
+            // the group would tie the attachment to the epoch it was sent in
+            // and lose it at the next Commit — see CordnMediaEncryption.
+            val fileKey = CordnMediaEncryption.newFileKey()
+            val sealed = CordnMediaEncryption.encrypt(bytes, fileKey, mimeType, filename)
+            CordnMediaTag.build(sealed, fileKey, put(sealed, server, context))
         }
 
     /**
@@ -128,17 +130,14 @@ class CordnMediaService(
     }
 
     /**
-     * Fetches [attachment] and opens it with [group]'s epoch key.
+     * Fetches [attachment] and opens it with the key it carries.
      *
      * Throws if the bytes do not authenticate. That is the right outcome and
      * not a rare one: a blob host can serve anything it likes for a URL, and
      * the AEAD tag plus the plaintext hash are the only reasons to believe
      * what came back is what was sent.
      */
-    suspend fun download(
-        group: MlsGroup,
-        attachment: CordnMediaAttachment,
-    ): ByteArray =
+    suspend fun download(attachment: CordnMediaAttachment): ByteArray =
         withContext(Dispatchers.IO) {
             val request =
                 Request
@@ -160,7 +159,7 @@ class CordnMediaService(
 
             CordnMediaEncryption.decrypt(
                 ciphertext = body,
-                fileKey = CordnMediaEncryption.fileKey(group),
+                fileKey = attachment.fileKeyBytes,
                 nonce = attachment.nonceBytes,
                 plaintextHash = attachment.hashBytes,
                 mimeType = attachment.mimeType,

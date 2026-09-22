@@ -193,12 +193,31 @@ class CvmTransport(
         throw CvmTransportException("subscription closed before a response arrived")
     }
 
+    /**
+     * Whether [message] is the answer to our call — from the peer we called.
+     *
+     * The sender check is the load-bearing one and it is checked first. This
+     * client subscribes to everything `p`-tagged to its own key, so **anyone**
+     * on the relay can gift-wrap a well-formed JSON-RPC response to us; the
+     * wrap's own signature proves only that its throwaway key signed it, and
+     * `CvmGiftWrap.unwrap` verifies the INNER signature without knowing who
+     * the inner signer ought to be. Without this, correlation rests on an `e`
+     * tag a forger simply omits (the check below skips a missing one) and a
+     * JSON-RPC id that is small and guessable — so a stranger could answer
+     * `kp_take` with their own KeyPackage, or `msg_fetch_many` with a stream
+     * of their choosing.
+     *
+     * `serverPubKey` is the coordinator's identity and the only thing that
+     * identifies it (`spec/00.md` §8.5), so it is exactly the right thing to
+     * compare against.
+     */
     private fun matches(
         message: CvmMessageEvent,
         requestEventId: HexKey,
         responseId: JsonRpcId,
         requestId: JsonRpcId,
     ): Boolean {
+        if (message.pubKey != serverPubKey) return false
         val inReplyTo = message.inReplyTo()
         if (inReplyTo != null && inReplyTo != requestEventId) return false
         return responseId == requestId

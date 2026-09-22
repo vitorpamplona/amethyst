@@ -694,7 +694,7 @@ private suspend fun sendAttachment(
     val name = uri.lastPathSegment?.substringAfterLast('/') ?: "file"
     val bytes = withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { it.readBytes() } } ?: return
 
-    val tag = CordnMediaService(accountViewModel.account).upload(group, bytes, mime, name, context) ?: return
+    val tag = CordnMediaService(accountViewModel.account).upload(bytes, mime, name, context) ?: return
     session.manager.send(room.gid, content = "", tags = arrayOf(tag))
 }
 
@@ -742,7 +742,7 @@ private fun CordnAttachment(
                             if (group == null) {
                                 error = failed
                             } else {
-                                bytes = CordnMediaService(accountViewModel.account).download(group, attachment)
+                                bytes = CordnMediaService(accountViewModel.account).download(attachment)
                             }
                         } catch (e: Exception) {
                             error = e.message ?: failed
@@ -861,7 +861,7 @@ private suspend fun sendVoiceNote(
         val bytes = withContext(Dispatchers.IO) { recording.file.readBytes() }
         val tag =
             CordnMediaService(accountViewModel.account)
-                .upload(group, bytes, recording.mimeType, recording.file.name, context) ?: return
+                .upload(bytes, recording.mimeType, recording.file.name, context) ?: return
         session.manager.send(room.gid, content = "", tags = arrayOf(tag))
     } finally {
         withContext(Dispatchers.IO) { recording.file.delete() }

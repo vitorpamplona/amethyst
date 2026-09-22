@@ -532,7 +532,18 @@ class CordnRuntime(
      */
     private suspend fun remember() {
         try {
-            coordinatorStore.save(registry.coordinators.value)
+            // Merged with what is already on disk, never replacing it.
+            // `registry.coordinators` is the coordinators with an OPEN
+            // session, so a coordinator whose relay is unreachable this launch
+            // is simply absent from it — and saving that set verbatim would
+            // erase it, turning "your relay was down" into "your groups are
+            // gone", silently and permanently. Keyed by pubkey because that is
+            // the coordinator's identity (§8.5): a reopened one with different
+            // relays is a corrected address, so the live entry wins.
+            val open = registry.coordinators.value
+            val openKeys = open.mapTo(mutableSetOf()) { it.pubKey }
+            val kept = coordinatorStore.load().filterNot { it.pubKey in openKeys }
+            coordinatorStore.save(kept + open)
         } catch (e: Exception) {
             Log.w(TAG, "could not persist the coordinator list: ${e.message}", e)
         }

@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.contextvm.transport
 import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmGiftWrap
 import com.vitorpamplona.quartz.contextvm.cep04Encryption.EncryptionMode
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
+import com.vitorpamplona.quartz.contextvm.core.CvmMessageEvent
 import com.vitorpamplona.quartz.contextvm.core.CvmTags
 import com.vitorpamplona.quartz.contextvm.fixture.CvmFixtureServer
 import com.vitorpamplona.quartz.contextvm.fixture.CvmRequest
@@ -174,6 +175,43 @@ class CvmTransportTest {
 
             val response = exchange(fixture, transport(), JsonRpcRequest(JsonRpcId.Num(0), "ping"))
             assertIs<JsonRpcSuccess>(response)
+        }
+
+    @Test
+    fun `CVM-CORE-15b ignores a correctly correlated response from the wrong signer`() =
+        runTest {
+            // The forgery this closes. A client subscribes to everything
+            // `p`-tagged to its own key, so anyone on the relay can gift-wrap
+            // a well-formed response to it — the wrap's signature proves only
+            // that its throwaway key signed it, and the inner signature is
+            // verified without knowing who the signer ought to be.
+            //
+            // The forged event is published straight to the pool rather than
+            // through a second fixture. A fixture subscribes for traffic
+            // addressed to itself and would never see a request `p`-tagged to
+            // the real server, so it would answer nothing and this test would
+            // pass by timing out for the wrong reason. (It did, at first.)
+            //
+            // The impostor does everything right except be the coordinator:
+            // matching JSON-RPC id, addressed to the very key this call is
+            // listening on, and no `e` tag — which CVM-CORE-15 establishes is
+            // accepted on its own. Identity is the coordinator's pubkey and
+            // nothing else (spec/00.md §8.5). Without that check a stranger
+            // answers `kp_take` with their own KeyPackage and we invite them.
+            val impostor = NostrSignerInternal(KeyPair())
+            val forged =
+                CvmMessageEvent.create(
+                    JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("ok", JsonPrimitive(true)) }),
+                    ephemeralSigner.pubKey,
+                    impostor,
+                )
+
+            val transport = transport()
+            val pending = async { transport.request(JsonRpcRequest(JsonRpcId.Num(0), "ping"), timeoutMs = 300) }
+            yield()
+            relays.publish(CvmGiftWrap().wrap(forged, ephemeralSigner.pubKey))
+
+            assertFailsWith<TimeoutCancellationException> { pending.await() }
         }
 
     @Test

@@ -126,7 +126,7 @@ class CordnMediaEncryptionTest {
     @Test
     fun `an imeta tag round-trips through parse`() {
         val sealed = roundTrip()
-        val tag = CordnMediaTag.build(sealed, url = "https://blossom.example.com/abc", dimensions = "800x600")
+        val tag = CordnMediaTag.build(sealed, key, url = "https://blossom.example.com/abc", dimensions = "800x600")
 
         val parsed = CordnMediaTag.parseAll(arrayOf(tag)).single()
 
@@ -145,7 +145,7 @@ class CordnMediaEncryptionTest {
         // The only thing a caller could do with a partial descriptor is start
         // a decrypt that must fail. A message with one broken attachment
         // should still show its other attachments and its text.
-        val good = CordnMediaTag.build(roundTrip(), url = "https://blossom.example.com/ok")
+        val good = CordnMediaTag.build(roundTrip(), key, url = "https://blossom.example.com/ok")
         val noNonce = arrayOf("imeta", "url https://blossom.example.com/bad", "m image/png", "filename x.png", "x " + "ab".repeat(32))
         val shortNonce = arrayOf("imeta", "url https://blossom.example.com/bad", "m image/png", "filename x.png", "x " + "ab".repeat(32), "n abcd")
 
@@ -161,8 +161,60 @@ class CordnMediaEncryptionTest {
         // separates them. Splitting on every space would truncate any filename
         // a person actually typed.
         val sealed = roundTrip(name = "my holiday photo.jpg")
-        val parsed = CordnMediaTag.parseAll(arrayOf(CordnMediaTag.build(sealed, url = "https://b.example.com/x"))).single()
+        val parsed = CordnMediaTag.parseAll(arrayOf(CordnMediaTag.build(sealed, key, url = "https://b.example.com/x"))).single()
 
         assertEquals("my holiday photo.jpg", parsed.filename)
+    }
+
+    @Test
+    fun `an attachment survives the epoch it was sent in`() {
+        // The bug this replaced: the file key was the group's CURRENT epoch
+        // exporter, and cordn retains no past epochs — so every attachment
+        // became permanently unopenable at the next Commit, for the sender
+        // too, with nothing failing until someone scrolled back.
+        //
+        // The key now travels with the descriptor, so opening a file needs
+        // only the message that announced it. Nothing here touches a group at
+        // all, which IS the property: there is no longer anything epoch-shaped
+        // for the decrypt path to depend on.
+        val fileKey = CordnMediaEncryption.newFileKey()
+        val sealed = CordnMediaEncryption.encrypt(file, fileKey, "image/jpeg", "photo.jpg")
+        val tag = CordnMediaTag.build(sealed, fileKey, url = "https://b.example.com/y")
+
+        val parsed = CordnMediaTag.parseAll(arrayOf(tag)).single()
+        val opened =
+            CordnMediaEncryption.decrypt(
+                sealed.ciphertext,
+                parsed.fileKeyBytes,
+                parsed.nonceBytes,
+                parsed.hashBytes,
+                parsed.mimeType,
+                parsed.filename,
+            )
+
+        assertContentEquals(file, opened)
+    }
+
+    @Test
+    fun `two files never share a key`() {
+        // One key per epoch used to mean the nonce was the only thing keeping
+        // two files' keystreams apart, so a repeated nonce broke every file in
+        // the epoch at once. Per-file keys retire that failure mode.
+        val a = CordnMediaEncryption.newFileKey()
+        val b = CordnMediaEncryption.newFileKey()
+
+        assertFalse(a.contentEquals(b))
+        assertEquals(CordnMediaEncryption.KEY_LENGTH, a.size)
+    }
+
+    @Test
+    fun `an imeta without a key is dropped rather than half-parsed`() {
+        // A descriptor with no key cannot open anything, so returning it would
+        // hand the UI an attachment whose only possible outcome is a failed
+        // decrypt.
+        val tag = CordnMediaTag.build(roundTrip(), key, url = "https://b.example.com/z")
+        val stripped = tag.filterNot { it.startsWith("${CordnMediaTag.KEY} ") }.toTypedArray()
+
+        assertTrue(CordnMediaTag.parseAll(arrayOf(stripped)).isEmpty())
     }
 }

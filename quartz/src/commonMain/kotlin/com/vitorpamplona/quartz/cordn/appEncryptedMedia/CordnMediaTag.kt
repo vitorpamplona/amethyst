@@ -49,12 +49,24 @@ object CordnMediaTag {
     const val FILENAME = "filename"
     const val HASH = "x"
     const val NONCE = "n"
+
+    /**
+     * The file's decryption key, hex.
+     *
+     * Safe here and nowhere else: an `imeta` tag is a tag on the cordn
+     * envelope, which is sealed inside the MLS application message, so this
+     * field never leaves the group. It is on the tag rather than derived from
+     * the group so an attachment outlives the epoch it was sent in — see
+     * [CordnMediaEncryption].
+     */
+    const val KEY = "k"
     const val DIMENSIONS = "dim"
     const val BLURHASH = "blurhash"
 
     /** Builds the `imeta` tag for an uploaded [media] at [url]. */
     fun build(
         media: CordnEncryptedMedia,
+        fileKey: ByteArray,
         url: String,
         dimensions: String? = null,
         blurhash: String? = null,
@@ -66,6 +78,7 @@ object CordnMediaTag {
             add("$FILENAME ${media.filename}")
             add("$HASH ${media.plaintextHash.toHexKey()}")
             add("$NONCE ${media.nonce.toHexKey()}")
+            add("$KEY ${fileKey.toHexKey()}")
             dimensions?.let { add("$DIMENSIONS $it") }
             blurhash?.let { add("$BLURHASH $it") }
         }.toTypedArray()
@@ -96,6 +109,7 @@ object CordnMediaTag {
             val filename = fields[FILENAME] ?: return@mapNotNull null
             val hash = fields[HASH]?.takeIf { it.length == HASH_HEX_LENGTH } ?: return@mapNotNull null
             val nonce = fields[NONCE]?.takeIf { it.length == NONCE_HEX_LENGTH } ?: return@mapNotNull null
+            val key = fields[KEY]?.takeIf { it.length == KEY_HEX_LENGTH } ?: return@mapNotNull null
 
             CordnMediaAttachment(
                 url = url,
@@ -103,12 +117,14 @@ object CordnMediaTag {
                 filename = filename,
                 plaintextHash = hash,
                 nonce = nonce,
+                fileKey = key,
                 dimensions = fields[DIMENSIONS],
                 blurhash = fields[BLURHASH],
             )
         }
 
     private const val HASH_HEX_LENGTH = 64
+    private const val KEY_HEX_LENGTH = 64
     private const val NONCE_HEX_LENGTH = 24
 }
 
@@ -119,11 +135,14 @@ data class CordnMediaAttachment(
     val filename: String,
     val plaintextHash: String,
     val nonce: String,
+    /** Hex; see [CordnMediaTag.KEY] for why it is carried rather than derived. */
+    val fileKey: String,
     val dimensions: String? = null,
     val blurhash: String? = null,
 ) {
     val hashBytes: ByteArray get() = plaintextHash.hexToByteArray()
     val nonceBytes: ByteArray get() = nonce.hexToByteArray()
+    val fileKeyBytes: ByteArray get() = fileKey.hexToByteArray()
 
     val isImage: Boolean get() = mimeType.startsWith("image/")
     val isAudio: Boolean get() = mimeType.startsWith("audio/")

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * A Nostr relay client, as the [CvmRelayPool] ContextVM expects.
@@ -54,7 +55,15 @@ class NostrClientCvmRelayPool(
         kinds: IntArray,
         onEvent: (Event) -> Unit,
     ): CvmSubscription {
-        val subId = "cordn-${pubKey.take(8)}-${nextId++}"
+        // Random rather than a counter, which is how the rest of the
+        // relay client names subscriptions (`newSubId`). A shared `nextId++`
+        // is not atomic, and `CvmTransport` opens one subscription per request
+        // and closes it in the same call — the sync loop and the UI issue
+        // requests concurrently, so two coroutines reading the same value is
+        // ordinary. Two subscriptions sharing an id means the first `close()`
+        // unsubscribes both, and the other request waits out its full
+        // 20-second timeout for a response the relay stopped sending.
+        val subId = "cordn-${pubKey.take(8)}-${RandomInstance.randomChars(8)}"
         val filter = Filter(kinds = kinds.toList(), tags = mapOf("p" to listOf(pubKey)))
 
         client.subscribe(
@@ -98,8 +107,5 @@ class NostrClientCvmRelayPool(
 
     companion object {
         private const val TAG = "CordnRelayPool"
-
-        /** Only has to be unique within this process. */
-        private var nextId = 0
     }
 }

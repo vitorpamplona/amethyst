@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.quartz.cordn.appEncryptedMedia
 
-import com.vitorpamplona.quartz.mls.group.MlsExporterLabel
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -31,49 +29,61 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  *
  * ## Not MIP-04, and not a refactor of it
  *
- * §4.5 of `quartz/plans/2026-09-17-cordn-interop.md` records the divergence:
- * the exporter *context* is the same word, and everything after it differs.
+ * §4.5 of `quartz/plans/2026-09-17-cordn-interop.md` records the divergence.
+ * The primitives are shared — ChaCha20-Poly1305, NIP-92 `imeta`, Blossom — and
+ * the codecs are not:
  *
  * | | Marmot MIP-04 v2 | cordn |
  * | --- | --- | --- |
- * | file key | `HKDF-Expand(exporter, context)`, per file | the exporter output, **directly** |
+ * | file key | `HKDF-Expand(exporter, context)`, per file | random, per file |
  * | AAD | `"mip04-v2"‖0‖hash‖0‖mime‖0‖filename` | `mime‖0‖filename‖0‖hash` |
  *
- * The primitives are shared — ChaCha20-Poly1305, NIP-92 `imeta`, Blossom — and
- * the two codecs are not. Feeding one's blob to the other produces an
- * authentication failure, which is the correct outcome and the reason this is
- * a separate file rather than a flag on [com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaEncryption].
+ * Feeding one's blob to the other produces an authentication failure, which is
+ * the correct outcome and the reason this is a separate file rather than a
+ * flag on [com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaEncryption].
  *
- * ## The nonce carries more weight here than in MIP-04
+ * ## Why the key is random rather than derived from the epoch
  *
- * MIP-04 derives a **per-file** key by expanding the exporter over the file's
- * own hash, so two files in one epoch never share a key. cordn does not: every
- * file sent in an epoch is encrypted under the *same* 32 bytes, and the nonce
- * is the only thing separating two files' keystreams.
+ * It was the exporter output at first, which is where MIP-04 starts from, and
+ * that is wrong for cordn specifically. MIP-04's exporter reaches back through
+ * Marmot's retained epoch secrets; cordn retains none, so `exporterSecret`
+ * only ever answers for the epoch the group is on **right now**. Every
+ * attachment would have become permanently unopenable at the next Commit —
+ * for the sender too, silently, until somebody scrolled back far enough to
+ * find a broken image.
  *
- * So [encrypt] draws a fresh random 96-bit nonce per file and there is no
- * deterministic option. Deriving a nonce from the file — which MIP-04 v1 did,
- * and which MIP-04 rejects blobs for — would be far worse here: under MIP-04
- * it meant nonce reuse within one file's key, while here it would mean two
- * files with identical bytes, or any deterministic collision, reusing a nonce
- * under a key shared by the whole epoch. That is a keystream reuse break, not
- * a theoretical weakening.
- *
- * Random 96-bit nonces under one key are safe to roughly 2^32 files per epoch
- * before collision probability becomes non-negligible, which no group chat
- * approaches between Commits.
+ * Carrying a per-file key costs nothing because [CordnMediaTag] rides inside
+ * the MLS envelope, so the key is already exactly as confidential and exactly
+ * as durable as the message that names it. It also removes the sharp edge the
+ * old design had: one key per epoch meant the nonce was the only thing
+ * separating two files' keystreams, so a repeated nonce was a keystream reuse
+ * break across every file in the epoch. Now a nonce is only ever used once,
+ * under a key used once.
  */
 object CordnMediaEncryption {
-    /** `MLS-Exporter("cordn", "encrypted-media", 32)`. */
-    val MEDIA_EXPORTER = MlsExporterLabel("cordn", "encrypted-media".encodeToByteArray(), 32)
-
     const val KEY_LENGTH = 32
     const val NONCE_LENGTH = 12
 
     private val NULL = byteArrayOf(0x00)
 
-    /** The 32-byte file key for [group]'s current epoch. Used as-is, not expanded. */
-    fun fileKey(group: MlsGroup): ByteArray = group.exporterSecret(MEDIA_EXPORTER.label, MEDIA_EXPORTER.context, MEDIA_EXPORTER.length)
+    /**
+     * A fresh 32-byte key for one file.
+     *
+     * Random, NOT derived from the group's epoch exporter, and the difference
+     * is the whole durability story for attachments. `exporterSecret` reads
+     * the **current** epoch's schedule and cordn retains no past epochs, so a
+     * key derived that way stops existing the moment anyone commits — every
+     * photo and voice note sent before the next join or leave would become
+     * permanently unopenable, for everyone including the sender, with no error
+     * until someone scrolled back.
+     *
+     * A per-file key costs nothing to carry because the descriptor that holds
+     * it ([CordnMediaTag]) rides **inside** the MLS envelope: it is already as
+     * confidential as the message, and already as durable. Forward secrecy is
+     * unchanged — a new member still cannot read history they were not sent,
+     * because they cannot read the messages carrying these keys either.
+     */
+    fun newFileKey(): ByteArray = RandomInstance.bytes(KEY_LENGTH)
 
     /**
      * Encrypts [plaintext] for a group, binding it to its type and name.

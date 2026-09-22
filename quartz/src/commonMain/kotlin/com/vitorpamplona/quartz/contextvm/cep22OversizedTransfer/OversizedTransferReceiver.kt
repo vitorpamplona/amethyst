@@ -37,10 +37,18 @@ data class OversizedLimits(
     val maxTotalBytes: Long = 8L * 1024 * 1024,
     val maxTotalChunks: Long = 4_096,
     /**
-     * How many out-of-order chunks may be buffered while waiting for earlier
-     * ones. Relay delivery can reorder, so some buffering is required, but it
-     * has to be bounded or a peer can park unbounded memory by withholding one
-     * low-`progress` chunk.
+     * The most chunks one transfer may consist of.
+     *
+     * It bounds memory, not a reordering window. Relay delivery can reorder
+     * and assembly is by `progress`, so every chunk has to be held until
+     * `end` — which means nothing is ever released early and this is the
+     * effective ceiling on a whole transfer. Bounded because otherwise a peer
+     * parks unbounded memory by withholding one low-`progress` chunk.
+     *
+     * Enforced at `start` as well as per chunk, so an over-large transfer is
+     * refused before any bytes move. Keep it at or below [maxTotalChunks],
+     * which bounds what a peer may *declare*; the larger of the two is
+     * otherwise decoration.
      */
     val maxPendingChunks: Int = 256,
 )
@@ -133,6 +141,16 @@ class OversizedTransferReceiver(
         }
         if (frame.totalChunks > limits.maxTotalChunks) {
             fail("declared totalChunks ${frame.totalChunks} exceeds the limit ${limits.maxTotalChunks}")
+        }
+        // Checked here, not only per chunk. Every chunk stays buffered until
+        // `end` — assembly is by `progress`, and relays reorder, so nothing can
+        // be released early — which makes [maxPendingChunks] the real ceiling
+        // on a transfer rather than a window within one. Leaving it to the
+        // per-chunk check would admit a transfer at `start`, let the sender
+        // push a few megabytes, and then fail it at chunk 257 every single
+        // time: the same refusal, paid for.
+        if (frame.totalChunks > limits.maxPendingChunks) {
+            fail("declared totalChunks ${frame.totalChunks} exceeds the buffer limit ${limits.maxPendingChunks}")
         }
         if (!frame.digest.startsWith(OversizedFrame.DIGEST_PREFIX_SHA256)) {
             fail("unsupported digest algorithm: ${frame.digest.substringBefore(':')}")

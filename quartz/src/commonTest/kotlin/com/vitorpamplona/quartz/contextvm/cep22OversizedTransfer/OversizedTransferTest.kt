@@ -244,6 +244,33 @@ class OversizedTransferTest {
     }
 
     @Test
+    fun `CVM-22-17b refuses at start a transfer larger than the chunk buffer`() {
+        // Every chunk is held until `end`, so maxPendingChunks is the ceiling
+        // on a whole transfer, not a reordering window. It used to be checked
+        // only per chunk, which admitted anything under maxTotalChunks and
+        // then failed it at chunk 257 — after the sender had pushed megabytes
+        // for a refusal that was certain from the start frame.
+        val rx = receiver(limits = OversizedLimits(maxTotalChunks = 4_096, maxPendingChunks = 2))
+
+        val refused =
+            assertFailsWith<OversizedTransferException> {
+                rx.accept(OversizedFrame.start(token, 1.0, digestOf(""), 100, 3))
+            }
+        assertTrue(
+            refused.message!!.contains("buffer limit"),
+            "the reason should name the buffer, not the declared total: ${refused.message}",
+        )
+    }
+
+    @Test
+    fun `CVM-22-17c admits a transfer that exactly fills the buffer`() {
+        // The boundary in the allowed direction, so the check is an upper
+        // bound rather than an off-by-one that rejects a legal transfer.
+        val rx = receiver(limits = OversizedLimits(maxTotalChunks = 4_096, maxPendingChunks = 2))
+        rx.accept(OversizedFrame.start(token, 1.0, digestOf(""), 100, 2))
+    }
+
+    @Test
     fun `CVM-22-18 rejects a chunk arriving before start`() {
         val rx = receiver()
         assertFailsWith<OversizedTransferException> {
