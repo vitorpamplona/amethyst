@@ -24,13 +24,12 @@ import android.content.Context
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnEncryptedMedia
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaEncryption
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -95,31 +94,34 @@ class CordnMediaService(
             CordnMediaTag.build(sealed, put(sealed, server, context))
         }
 
+    /**
+     * Uploads the ciphertext and returns the URL the host gave it.
+     *
+     * Every privacy decision is in [CordnBlobUpload]; this forwards it. Read
+     * that KDoc before changing an argument here — the wrong constant does not
+     * fail, it just tells a server something.
+     */
     private suspend fun put(
         sealed: CordnEncryptedMedia,
         server: String,
         context: Context,
     ): String {
-        // Blossom names the blob by the hash of what it stores, which is the
-        // ciphertext. The plaintext hash never reaches it.
-        val ciphertextHash = sha256(sealed.ciphertext).toHexKey()
+        val blob = CordnBlobUpload.of(sealed)
 
         val result =
             BlossomUploader().upload(
-                inputStream = ByteArrayInputStream(sealed.ciphertext),
-                hash = ciphertextHash,
-                length = sealed.ciphertext.size.toLong(),
-                baseFileName = ciphertextHash,
-                contentType = OPAQUE,
-                alt = null,
-                sensitiveContent = null,
+                inputStream = ByteArrayInputStream(blob.bytes),
+                hash = blob.hash,
+                length = blob.length,
+                baseFileName = blob.baseFileName,
+                contentType = blob.contentType,
+                alt = blob.alt,
+                sensitiveContent = blob.sensitiveContent,
                 serverBaseUrl = server,
                 okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                 httpAuth = { hash, size, alt -> account.createBlossomUploadAuth(hash, size, alt) },
                 context = context,
-                // Never /media: it asks the server to re-encode, and
-                // re-encoding ciphertext destroys it.
-                useMediaEndpoint = false,
+                useMediaEndpoint = blob.useMediaEndpoint,
             )
 
         return result.url ?: throw IllegalStateException("the blob server returned no URL")
@@ -165,9 +167,4 @@ class CordnMediaService(
                 filename = attachment.filename,
             )
         }
-
-    companion object {
-        /** What the blob host is told. The real type is in the sealed descriptor. */
-        const val OPAQUE = "application/octet-stream"
-    }
 }

@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
@@ -689,7 +690,7 @@ private suspend fun sendAttachment(
     val group = session.manager.group(room.gid) ?: return
 
     val resolver = context.contentResolver
-    val mime = resolver.getType(uri) ?: CordnMediaService.OPAQUE
+    val mime = resolver.getType(uri) ?: CordnBlobUpload.OPAQUE
     val name = uri.lastPathSegment?.substringAfterLast('/') ?: "file"
     val bytes = withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { it.readBytes() } } ?: return
 

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.cordn
+package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.quartz.contextvm.transport.CvmRelayPool
 import com.vitorpamplona.quartz.contextvm.transport.CvmSubscription
@@ -31,10 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Amethyst's relay client, as the [CvmRelayPool] ContextVM expects.
+ * A Nostr relay client, as the [CvmRelayPool] ContextVM expects.
  *
- * The adapter Stage A deliberately left open: everything below it is shared
- * KMP code, and this is the one part that needs the running app's relay pool.
+ * The adapter between the two halves: [INostrClient] is what every Amethyst
+ * front end already runs, and [CvmRelayPool] is the two operations ContextVM
+ * needs from one. Nothing here is platform-specific, so Android, the desktop
+ * app and `amy` share it.
  *
  * [relays] is the coordinator's own relay list, not the account's. A
  * coordinator has no address beyond its pubkey (`spec/00.md` §8.5), so the

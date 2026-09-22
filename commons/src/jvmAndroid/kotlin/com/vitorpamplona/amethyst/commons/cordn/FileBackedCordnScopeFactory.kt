@@ -20,45 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import java.io.File
-
-/** A live connection to one coordinator, and the way to close it. */
-interface CordnCoordinatorLink {
-    val coordinator: ICoordinator
-
-    /**
-     * What the coordinator says about itself, or null.
-     *
-     * Deliberately **not** on `ICoordinator`. That interface is "the eleven
-     * coordinator tools, as a contract" and its KDoc says it adds nothing to
-     * them; `initialize` is the MCP handshake, not a twelfth tool. It belongs
-     * to whoever owns the transport, which is this.
-     *
-     * The default is null so a substitute link — a fixture, a test double —
-     * does not have to invent a handshake it never performed.
-     */
-    suspend fun serverInfo(): CoordinatorServerInfo? = null
-
-    suspend fun close()
-}
-
-/**
- * Opens the ContextVM transport to a coordinator.
- *
- * The one piece [FileBackedCordnScopeFactory] cannot supply: a `CvmTransport`
- * needs a relay pool and the account's signers, which belong to whichever front
- * end is running. Everything else about a scope — where the bytes go and how
- * they are encrypted — is the same on every platform, so it is here.
- */
-fun interface CordnCoordinatorLinkFactory {
-    suspend fun connect(
-        accountPubKey: HexKey,
-        config: CoordinatorConfig,
-    ): CordnCoordinatorLink
-}
 
 /**
  * The production [CordnCoordinatorScopeFactory]: encrypted files on disk, plus

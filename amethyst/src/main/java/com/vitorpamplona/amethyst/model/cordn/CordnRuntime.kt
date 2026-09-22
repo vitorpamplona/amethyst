@@ -24,10 +24,10 @@ import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.cordn.CordnBackup
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
-import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLink
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorRegistry
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
+import com.vitorpamplona.amethyst.commons.cordn.CordnLinks
 import com.vitorpamplona.amethyst.commons.cordn.CordnRoomState
 import com.vitorpamplona.amethyst.commons.cordn.CordnSession
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
@@ -39,20 +39,13 @@ import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
-import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmGiftWrap
-import com.vitorpamplona.quartz.contextvm.mcp.CvmMcpClient
-import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
-import com.vitorpamplona.quartz.contextvm.transport.DualSigner
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorClient
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -99,7 +92,7 @@ class CordnRuntime(
      * all. The ephemeral signer stays inside the default, because §8's
      * identity split is not a thing a caller should be able to widen.
      */
-    private val links: CordnCoordinatorLinkFactory = realLinks(accountSigner, client),
+    private val links: CordnCoordinatorLinkFactory = CordnLinks.over(accountSigner, client),
 ) {
     /** See the class KDoc: per-runtime, never written to disk. */
     private val registry =
@@ -612,60 +605,6 @@ class CordnRuntime(
 
     companion object {
         private const val TAG = "CordnRuntime"
-
-        /**
-         * The production link factory: a real ContextVM transport per
-         * coordinator.
-         *
-         * ## The ephemeral signer is created here, once, and never persisted
-         *
-         * `spec/00.md` §8 splits the identity a coordinator sees: the account
-         * key signs what must be attributable (publishing a KeyPackage,
-         * posting to a group), and a throwaway key signs everything else, so
-         * the coordinator cannot link a session's reads to an account. Which
-         * key signs which call is fixed by `CoordinatorMethod` and not a
-         * choice made here; what IS decided here is that the throwaway key
-         * lives as long as this factory and no longer. Persisting it would
-         * quietly undo the split — a "session" key reused across launches is
-         * just a second account key with worse ergonomics.
-         */
-        fun realLinks(
-            accountSigner: NostrSigner,
-            client: INostrClient,
-        ): CordnCoordinatorLinkFactory {
-            val ephemeralSigner = NostrSignerInternal(KeyPair())
-
-            return CordnCoordinatorLinkFactory { _, config ->
-                val transport =
-                    CvmTransport(
-                        relays = NostrClientCvmRelayPool(client, config.relays.toSet()),
-                        signers = DualSigner(accountSigner, ephemeralSigner),
-                        serverPubKey = config.pubKey,
-                        // Left at its default, which is REQUIRED (§8.6). Passing
-                        // anything else here is the one line that would silently
-                        // downgrade every coordinator call to plaintext.
-                        crypto = CvmGiftWrap(),
-                    )
-
-                object : CordnCoordinatorLink {
-                    override val coordinator = CoordinatorClient(CvmMcpClient(transport))
-
-                    // Handshaken on demand, not at open: `initialize` is a call
-                    // like any other (§8), and a coordinator that only ever hears
-                    // from us when we have something to say tells it less than one
-                    // that is greeted at every launch.
-                    override suspend fun serverInfo() = coordinator.serverInfo()
-
-                    override suspend fun close() {
-                        // Nothing to release. CvmTransport opens a subscription
-                        // per request and closes it in the same call — kind 25910
-                        // is ephemeral, so there is no long-lived stream to tear
-                        // down and no connection of its own. The relays it used
-                        // belong to the shared client, which outlives this link.
-                    }
-                }
-            }
-        }
     }
 }
 
