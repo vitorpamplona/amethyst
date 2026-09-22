@@ -489,13 +489,13 @@ class AccountMarmotActions(
         val relays = keyPackagePublishRelays()
         if (relays.isEmpty()) return false
 
-        // Minting is destructive: `generateCurrentProfileKeyPackage` overwrites
-        // `activeBundles[slot]`, dropping the private keys of the KeyPackage
-        // already on relays. That is survivable when another device owns the
-        // newest one (nobody was going to invite us through ours anyway), but
-        // doing it when we ALREADY own the newest would destroy the very keys
-        // the current invites depend on — for no gain, since the answer would
-        // not change. So that case is a no-op that truthfully reports success.
+        // Minting no longer destroys the displaced bundle — the rotation
+        // manager retains it, keyed by the event id it was published as — but
+        // every regeneration still costs a keypair, a relay round trip, and a
+        // slot in the bounded retention map, where it can evict a bundle
+        // someone is about to invite us through. Republishing when we already
+        // own the newest KeyPackage buys none of that back, since the answer
+        // cannot change, so that case is a no-op reporting success truthfully.
         if (latestKeyPackageOwner() == LatestKeyPackageOwner.THIS_DEVICE) {
             Log.d("MarmotDbg") { "republishKeyPackageConfirmed: already the newest; not minting" }
             return true
