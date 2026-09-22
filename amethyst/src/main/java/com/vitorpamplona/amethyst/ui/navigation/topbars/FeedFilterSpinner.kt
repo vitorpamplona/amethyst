@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,7 +68,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
@@ -75,10 +75,23 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dvm_offline
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_select_an_option
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_selected
+import com.vitorpamplona.amethyst.commons.resources.feed_group_communities
+import com.vitorpamplona.amethyst.commons.resources.feed_group_dvms
+import com.vitorpamplona.amethyst.commons.resources.feed_group_feeds
+import com.vitorpamplona.amethyst.commons.resources.feed_group_hashtags
+import com.vitorpamplona.amethyst.commons.resources.feed_group_interest_sets
+import com.vitorpamplona.amethyst.commons.resources.feed_group_lists
+import com.vitorpamplona.amethyst.commons.resources.feed_group_locations
+import com.vitorpamplona.amethyst.commons.resources.feed_group_relays
+import com.vitorpamplona.amethyst.commons.resources.follow_geohash
 import com.vitorpamplona.amethyst.commons.resources.lack_location_permissions
 import com.vitorpamplona.amethyst.commons.resources.loading_location
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
 import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.select_an_option
+import com.vitorpamplona.amethyst.commons.resources.unfollow_geohash
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -105,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.StringResource
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -131,7 +145,7 @@ fun FeedFilterSpinner(
             }
         }
 
-    val currentText = selected?.name?.name(context) ?: selectAnOption
+    val currentText = selected?.name?.let { rememberDisplayName(it) } ?: selectAnOption
 
     val accessibilityDescription =
         if (selected != null) {
@@ -351,8 +365,8 @@ private fun FollowLocationToggle(
     IconButton(onClick = {
         if (!accountViewModel.isWriteable()) {
             accountViewModel.toastManager.toast(
-                R.string.read_only_user,
-                if (isFollowing) R.string.login_with_a_private_key_to_be_able_to_unfollow else R.string.login_with_a_private_key_to_be_able_to_follow,
+                Res.string.read_only_user,
+                if (isFollowing) Res.string.login_with_a_private_key_to_be_able_to_unfollow else Res.string.login_with_a_private_key_to_be_able_to_follow,
             )
         } else if (isFollowing) {
             accountViewModel.unfollowGeohash(tag)
@@ -364,12 +378,23 @@ private fun FollowLocationToggle(
             symbol = if (isFollowing) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
             contentDescription =
                 stringRes(
-                    if (isFollowing) R.string.unfollow_geohash else R.string.follow_geohash,
+                    if (isFollowing) Res.string.unfollow_geohash else Res.string.follow_geohash,
                 ),
             modifier = Size20Modifier,
             tint = if (isFollowing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+/**
+ * A [Name]'s displayed title. [Name.nameOrDefault] resolves a Compose string
+ * resource for the fixed-name variants, which is a suspend call, so the plain
+ * [Name.name] is shown for the frame it takes to arrive.
+ */
+@Composable
+private fun rememberDisplayName(name: Name): String {
+    val fallback = remember(name) { name.name() }
+    return produceState(fallback, name) { value = name.nameOrDefault() }.value
 }
 
 @Composable
@@ -391,7 +416,7 @@ fun RenderOption(
         is PeopleListName, is CommunityName, is FavoriteAlgoFeedName -> {
             val backed = option as NoteBackedName
             val noteState by observeNote(backed.note, accountViewModel)
-            val name = remember(noteState) { option.name(context) }
+            val name = rememberDisplayName(option)
             val appDefAddress = (option as? FavoriteAlgoFeedName)?.note?.address
             val heartbeatFresh =
                 if (appDefAddress != null) {
@@ -425,7 +450,7 @@ fun RenderOption(
         is InterestSetName,
         -> {
             Text(
-                text = option.name(context),
+                text = rememberDisplayName(option),
                 fontSize = Font14SP,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -434,16 +459,16 @@ fun RenderOption(
 }
 
 private enum class FeedGroup(
-    @param:androidx.annotation.StringRes val labelRes: Int,
+    val labelRes: StringResource,
 ) {
-    FEEDS(R.string.feed_group_feeds),
-    RELAYS(R.string.feed_group_relays),
-    HASHTAGS(R.string.feed_group_hashtags),
-    INTEREST_SETS(R.string.feed_group_interest_sets),
-    LOCATIONS(R.string.feed_group_locations),
-    DVMS(R.string.feed_group_dvms),
-    COMMUNITIES(R.string.feed_group_communities),
-    LISTS(R.string.feed_group_lists),
+    FEEDS(Res.string.feed_group_feeds),
+    RELAYS(Res.string.feed_group_relays),
+    HASHTAGS(Res.string.feed_group_hashtags),
+    INTEREST_SETS(Res.string.feed_group_interest_sets),
+    LOCATIONS(Res.string.feed_group_locations),
+    DVMS(Res.string.feed_group_dvms),
+    COMMUNITIES(Res.string.feed_group_communities),
+    LISTS(Res.string.feed_group_lists),
 }
 
 private fun FeedDefinition.group(): FeedGroup =
@@ -579,7 +604,7 @@ private fun GroupSection(
                             color = Color.Transparent,
                         ) {
                             Text(
-                                text = entry.name.name(context),
+                                text = rememberDisplayName(entry.name),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),

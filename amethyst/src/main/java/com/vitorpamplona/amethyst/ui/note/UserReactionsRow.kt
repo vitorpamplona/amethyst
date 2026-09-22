@@ -35,9 +35,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.today
+import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -61,7 +63,7 @@ fun UserReactionsRow(
     ) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.width(68.dp)) {
             Text(
-                text = stringRes(id = R.string.today),
+                text = stringRes(id = Res.string.today),
                 fontWeight = FontWeight.Bold,
             )
 
@@ -95,7 +97,7 @@ fun UserReactionsRow(
 private fun UserZapModel(model: NotificationSummaryState) {
     Icon(
         symbol = MaterialSymbols.Bolt,
-        contentDescription = stringRes(R.string.zaps),
+        contentDescription = stringRes(Res.string.zaps),
         modifier = Size24Modifier,
         tint = BitcoinOrange,
     )

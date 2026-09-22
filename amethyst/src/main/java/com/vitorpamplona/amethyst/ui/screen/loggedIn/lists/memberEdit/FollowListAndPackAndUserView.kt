@@ -36,9 +36,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.discover_follows
 import com.vitorpamplona.amethyst.commons.resources.discover_follows_explainer
 import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.follow_sets
@@ -150,7 +150,7 @@ fun FollowListAndPackAndUserView(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringRes(R.string.discover_follows),
+                        text = stringRes(Res.string.discover_follows),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.titleSmall,
                     )

@@ -67,15 +67,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_add
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_added
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_available
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_expand
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_no_favorites
+import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_no_groups
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_pinned
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_pinned_empty
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_remove
@@ -102,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 
 /** The chat catalog items whose picker row expands to a per-item picker (favorites / joined groups). */
 private val ExpandableItems =
@@ -134,7 +139,7 @@ fun BottomBarSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.bottom_bar_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.bottom_bar_settings), nav)
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {
@@ -168,7 +173,7 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     val pinned = state.pinned
     val pinnedKeys = remember(pinned) { state.pinnedKeys() }
 
-    val expandedCategories = rememberExpandedKeys<Int>()
+    val expandedCategories = rememberExpandedKeys<StringResource>()
     val expandedItems = rememberExpandedKeys<NavBarItem>()
 
     Column(
@@ -495,7 +500,7 @@ private fun PickerChildren(
         NavBarItem.BROWSER -> {
             val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
             if (favorites.isEmpty()) {
-                EmptyChildHint(R.string.bottom_bar_settings_no_favorites)
+                EmptyChildHint(Res.string.bottom_bar_settings_no_favorites)
             } else {
                 favorites.forEach { fav ->
                     val entry = BottomBarEntry.Favorite(fav.id)
@@ -521,7 +526,7 @@ private fun PickerChildren(
             val groups by accountViewModel.account.relayGroupList.liveRelayGroupList
                 .collectAsStateWithLifecycle()
             if (groups.isEmpty()) {
-                EmptyChildHint(R.string.bottom_bar_settings_no_groups)
+                EmptyChildHint(Res.string.bottom_bar_settings_no_groups)
             } else {
                 // Group joined groups by their host relay: the relay itself is addable (opens its home
                 // page listing every group on it) with each individual group nested beneath it. NIP-29
@@ -545,7 +550,7 @@ private fun PickerChildren(
             val communities by accountViewModel.account.concordChannelList.liveCommunities
                 .collectAsStateWithLifecycle()
             if (communities.isEmpty()) {
-                EmptyChildHint(R.string.bottom_bar_settings_no_groups)
+                EmptyChildHint(Res.string.bottom_bar_settings_no_groups)
             } else {
                 // Group by community: the community itself is addable (opens its channel list) with each
                 // channel nested beneath it — the mirror of the relay-group layout above.
@@ -576,7 +581,7 @@ private fun GroupChildList(
     onTogglePin: (BottomBarEntry) -> Unit,
 ) {
     if (entries.isEmpty()) {
-        EmptyChildHint(R.string.bottom_bar_settings_no_groups)
+        EmptyChildHint(Res.string.bottom_bar_settings_no_groups)
         return
     }
     entries.forEach { entry ->
@@ -753,7 +758,7 @@ private fun AddPill(
 ) {
     TogglePill(
         on = added,
-        label = stringRes(if (added) R.string.bottom_bar_settings_added else R.string.bottom_bar_settings_add),
+        label = stringRes(if (added) Res.string.bottom_bar_settings_added else Res.string.bottom_bar_settings_add),
         icon = if (added) MaterialSymbols.Check else MaterialSymbols.Add,
         onClick = onClick,
     )

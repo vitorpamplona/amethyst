@@ -42,7 +42,6 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.actions.BuzzInviteMinter
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -56,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_invite_dismiss
 import com.vitorpamplona.amethyst.commons.resources.buzz_invite_error_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_invite_link_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_invite_share
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -94,7 +94,7 @@ fun BuzzWorkspaceOverflowMenu(
     IconButton(onClick = { menuOpen = true }) {
         Icon(
             symbol = MaterialSymbols.MoreVert,
-            contentDescription = stringRes(R.string.more_options),
+            contentDescription = stringRes(Res.string.more_options),
             modifier = Modifier.size(24.dp),
         )
     }

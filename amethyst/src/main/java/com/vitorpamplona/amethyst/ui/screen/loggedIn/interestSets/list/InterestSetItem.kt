@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
@@ -41,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.interest_set_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.interest_set_clone
 import com.vitorpamplona.amethyst.commons.resources.interest_set_hashtag_count
+import com.vitorpamplona.amethyst.commons.resources.interest_set_rename
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -126,7 +127,7 @@ private fun InterestSetOptionsButton(
             onDismiss = { isMenuOpen.value = false },
         ) {
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.interest_set_rename)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.interest_set_rename)) {
                     onRename()
                     isMenuOpen.value = false
                 }
@@ -136,7 +137,7 @@ private fun InterestSetOptionsButton(
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(Res.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     isMenuOpen.value = false
                 }

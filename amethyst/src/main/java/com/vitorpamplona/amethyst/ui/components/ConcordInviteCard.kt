@@ -42,10 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_join
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_subtitle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -85,7 +85,7 @@ fun ConcordInviteCard(
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
     // Robohash seed: the community id once known (stable), else the link signer.
     val robotSeed = invite?.communityId ?: parsed.linkSignerPubKey
-    val title = invite?.name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.concord_home_title)
+    val title = invite?.name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.concord_home_title)
 
     ElevatedCard(
         onClick = { nav.nav(Route.ConcordInvite(linkText)) },

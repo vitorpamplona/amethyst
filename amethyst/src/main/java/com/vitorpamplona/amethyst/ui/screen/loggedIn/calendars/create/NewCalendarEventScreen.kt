@@ -55,7 +55,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -65,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_event_end
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_end_before_start
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_hashtags
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_image
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_image_upload_failed
+import com.vitorpamplona.amethyst.commons.resources.calendar_event_image_upload_failed_body
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_invalid
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_location
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_participant_input
@@ -75,6 +76,8 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_event_pick_image
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_start
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_summary
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_title
+import com.vitorpamplona.amethyst.commons.resources.edit_calendar_event
+import com.vitorpamplona.amethyst.commons.resources.new_calendar_event
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -108,7 +111,7 @@ fun NewCalendarEventScreen(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = if (vm.isEditing) R.string.edit_calendar_event else R.string.new_calendar_event,
+                titleRes = if (vm.isEditing) Res.string.edit_calendar_event else Res.string.new_calendar_event,
                 onCancel = { nav.popBack() },
                 onPost = {
                     accountViewModel.launchSigner {
@@ -275,8 +278,8 @@ private fun ImageRow(
                 val ok = vm.uploadAndSetImage(uri, mime, context)
                 if (!ok) {
                     accountViewModel.toastManager.toast(
-                        R.string.calendar_event_image_upload_failed,
-                        R.string.calendar_event_image_upload_failed_body,
+                        Res.string.calendar_event_image_upload_failed,
+                        Res.string.calendar_event_image_upload_failed_body,
                     )
                 }
             }

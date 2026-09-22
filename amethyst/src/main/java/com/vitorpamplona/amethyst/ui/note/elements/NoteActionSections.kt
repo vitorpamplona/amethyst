@@ -26,7 +26,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -36,25 +35,40 @@ import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label
 import com.vitorpamplona.amethyst.commons.resources.add_to_emoji_list
 import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist
 import com.vitorpamplona.amethyst.commons.resources.add_to_private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.add_to_public_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.article
 import com.vitorpamplona.amethyst.commons.resources.block_report
 import com.vitorpamplona.amethyst.commons.resources.broadcast
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_body
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_title
+import com.vitorpamplona.amethyst.commons.resources.concord_make_admin
+import com.vitorpamplona.amethyst.commons.resources.concord_remove_admin
 import com.vitorpamplona.amethyst.commons.resources.copy_note_id
 import com.vitorpamplona.amethyst.commons.resources.copy_raw_json
 import com.vitorpamplona.amethyst.commons.resources.copy_text
 import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
 import com.vitorpamplona.amethyst.commons.resources.edit_article
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
+import com.vitorpamplona.amethyst.commons.resources.edit_post
+import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.follow_set_add_author_from_note_action
 import com.vitorpamplona.amethyst.commons.resources.highlight_action
 import com.vitorpamplona.amethyst.commons.resources.manage_bookmark_label
+import com.vitorpamplona.amethyst.commons.resources.pin_to_profile
+import com.vitorpamplona.amethyst.commons.resources.post
+import com.vitorpamplona.amethyst.commons.resources.propose_an_edit
+import com.vitorpamplona.amethyst.commons.resources.quick_action_mute_thread
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_unmute_thread
 import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
 import com.vitorpamplona.amethyst.commons.resources.remove_from_private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.remove_from_public_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.request_deletion
 import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
+import com.vitorpamplona.amethyst.commons.resources.unfollow
+import com.vitorpamplona.amethyst.commons.resources.unpin_from_profile
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -132,14 +146,14 @@ fun noteActionSections(
             if (!state.isLoggedUser) {
                 if (!state.isFollowingAuthor) {
                     add(
-                        NoteAction(MaterialSymbols.PersonAdd, stringRes(R.string.follow)) {
+                        NoteAction(MaterialSymbols.PersonAdd, stringRes(Res.string.follow)) {
                             note.author?.let { accountViewModel.follow(it) }
                             handlers.onDismiss()
                         },
                     )
                 } else {
                     add(
-                        NoteAction(MaterialSymbols.PersonRemove, stringRes(R.string.unfollow)) {
+                        NoteAction(MaterialSymbols.PersonRemove, stringRes(Res.string.unfollow)) {
                             note.author?.let { accountViewModel.unfollow(it) }
                             handlers.onDismiss()
                         },
@@ -224,7 +238,7 @@ fun noteActionSections(
                 )
             }
             if (!isPrivateRumor) {
-                add(NoteAction(MaterialSymbols.Share, stringRes(R.string.quick_action_share), onClick = handlers.onShare))
+                add(NoteAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share), onClick = handlers.onShare))
             }
         }
 
@@ -238,7 +252,7 @@ fun noteActionSections(
                     add(
                         NoteAction(
                             MaterialSymbols.Edit,
-                            stringRes(if (state.isLoggedUser) R.string.edit_post else R.string.propose_an_edit),
+                            stringRes(if (state.isLoggedUser) Res.string.edit_post else Res.string.propose_an_edit),
                             onClick = handlers.onEditPost,
                         ),
                     )
@@ -280,7 +294,7 @@ fun noteActionSections(
                 add(
                     NoteAction(
                         MaterialSymbols.PushPin,
-                        stringRes(if (state.isPinnedNote) R.string.unpin_from_profile else R.string.pin_to_profile),
+                        stringRes(if (state.isPinnedNote) Res.string.unpin_from_profile else Res.string.pin_to_profile),
                     ) {
                         if (state.isPinnedNote) {
                             accountViewModel.removePin(note)
@@ -329,7 +343,7 @@ fun noteActionSections(
                 }
 
                 else -> {
-                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(Res.string.article) else stringRes(R.string.post)
+                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(Res.string.article) else stringRes(Res.string.post)
                     add(
                         NoteAction(MaterialSymbols.BookmarkAdd, stringRes(Res.string.manage_bookmark_label, noteBookmarkType)) {
                             if (note.event is LongTextNoteEvent) {
@@ -357,14 +371,14 @@ fun noteActionSections(
                     }
                     if (state.isPublicBookmarkNote) {
                         add(
-                            NoteAction(MaterialSymbols.BookmarkRemove, stringRes(R.string.remove_from_public_bookmarks)) {
+                            NoteAction(MaterialSymbols.BookmarkRemove, stringRes(Res.string.remove_from_public_bookmarks)) {
                                 accountViewModel.removePublicBookmark(note)
                                 handlers.onDismiss()
                             },
                         )
                     } else {
                         add(
-                            NoteAction(MaterialSymbols.Bookmark, stringRes(R.string.add_to_public_bookmarks)) {
+                            NoteAction(MaterialSymbols.Bookmark, stringRes(Res.string.add_to_public_bookmarks)) {
                                 accountViewModel.addPublicBookmark(note)
                                 handlers.onDismiss()
                             },
@@ -386,7 +400,7 @@ fun noteActionSections(
                 add(
                     NoteAction(
                         MaterialSymbols.AutoMirrored.VolumeOff,
-                        stringRes(if (isThreadMuted) R.string.quick_action_unmute_thread else R.string.quick_action_mute_thread),
+                        stringRes(if (isThreadMuted) Res.string.quick_action_unmute_thread else Res.string.quick_action_mute_thread),
                     ) {
                         if (isThreadMuted) {
                             accountViewModel.unmuteThread(note)
@@ -402,7 +416,7 @@ fun noteActionSections(
             // rumors through the gift-wrapped deletion); reporting yourself never
             // makes sense, so Report is others-only.
             if (state.isLoggedUser) {
-                add(NoteAction(MaterialSymbols.Delete, stringRes(R.string.request_deletion), isDestructive = true, onClick = handlers.onDeleteRequest))
+                add(NoteAction(MaterialSymbols.Delete, stringRes(Res.string.request_deletion), isDestructive = true, onClick = handlers.onDeleteRequest))
             } else {
                 add(NoteAction(MaterialSymbols.Report, stringRes(Res.string.block_report), isDestructive = true, onClick = handlers.onReport))
             }
@@ -417,7 +431,7 @@ fun noteActionSections(
                 add(
                     NoteAction(
                         MaterialSymbols.Shield,
-                        stringRes(if (isAdmin) R.string.concord_remove_admin else R.string.concord_make_admin),
+                        stringRes(if (isAdmin) Res.string.concord_remove_admin else Res.string.concord_make_admin),
                     ) {
                         accountViewModel.toggleConcordAdmin(note)
                         handlers.onDismiss()

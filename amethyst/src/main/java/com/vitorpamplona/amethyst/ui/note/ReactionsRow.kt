@@ -114,7 +114,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -125,10 +124,29 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.boost
+import com.vitorpamplona.amethyst.commons.resources.close_all_reactions_to_this_post
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.draft_note
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.fork
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_react_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_reply_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_zap_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_reply
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_send_zaps
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_like_posts
+import com.vitorpamplona.amethyst.commons.resources.no_payment_app_found_for_type
+import com.vitorpamplona.amethyst.commons.resources.no_reaction_type_setup_long_press_to_change
+import com.vitorpamplona.amethyst.commons.resources.no_reactions_setup
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.nutzap
+import com.vitorpamplona.amethyst.commons.resources.open_all_reactions_to_this_post
+import com.vitorpamplona.amethyst.commons.resources.payment_targets
+import com.vitorpamplona.amethyst.commons.resources.payto_amount_set_in_app
 import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
 import com.vitorpamplona.amethyst.commons.resources.quote
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_title
 import com.vitorpamplona.amethyst.commons.resources.sats_to_complete
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
@@ -406,7 +424,7 @@ fun PayReaction(
         ) {
             Icon(
                 symbol = MaterialSymbols.AccountBalanceWallet,
-                contentDescription = stringRes(R.string.payment_targets),
+                contentDescription = stringRes(Res.string.payment_targets),
                 tint = grayTint,
                 modifier = iconSizeModifier,
             )
@@ -575,9 +593,9 @@ private fun RenderShowIndividualReactionsButton(
             accountViewModel = accountViewModel,
         ) {
             if (it) {
-                ExpandLessIcon(modifier = Size22Modifier, R.string.close_all_reactions_to_this_post)
+                ExpandLessIcon(modifier = Size22Modifier, Res.string.close_all_reactions_to_this_post)
             } else {
-                ExpandMoreIcon(modifier = Size22Modifier, R.string.open_all_reactions_to_this_post)
+                ExpandMoreIcon(modifier = Size22Modifier, Res.string.open_all_reactions_to_this_post)
             }
         }
     }
@@ -835,16 +853,16 @@ fun ReplyReaction(
         onClick = {
             if (baseNote.isDraft()) {
                 accountViewModel.toastManager.toast(
-                    R.string.draft_note,
-                    R.string.it_s_not_possible_to_reply_to_a_draft_note,
+                    Res.string.draft_note,
+                    Res.string.it_s_not_possible_to_reply_to_a_draft_note,
                 )
             } else {
                 if (accountViewModel.isWriteable()) {
                     onPress()
                 } else {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_reply,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_reply,
                     )
                 }
             }
@@ -1192,8 +1210,8 @@ private fun likeClick(
 ) {
     if (baseNote.isDraft()) {
         accountViewModel.toastManager.toast(
-            R.string.draft_note,
-            R.string.it_s_not_possible_to_react_to_a_draft_note,
+            Res.string.draft_note,
+            Res.string.it_s_not_possible_to_react_to_a_draft_note,
         )
         return
     }
@@ -1202,15 +1220,15 @@ private fun likeClick(
     when {
         choices.isEmpty() -> {
             accountViewModel.toastManager.toast(
-                R.string.no_reactions_setup,
-                R.string.no_reaction_type_setup_long_press_to_change,
+                Res.string.no_reactions_setup,
+                Res.string.no_reaction_type_setup_long_press_to_change,
             )
         }
 
         !accountViewModel.isWriteable() -> {
             accountViewModel.toastManager.toast(
-                R.string.read_only_user,
-                R.string.login_with_a_private_key_to_like_posts,
+                Res.string.read_only_user,
+                Res.string.login_with_a_private_key_to_like_posts,
             )
         }
 
@@ -1237,15 +1255,16 @@ private data class OnchainZapRequest(
 fun payViaIntentOrManualSplit(
     payables: ImmutableList<ZapPaymentHandler.Payable>,
     context: Context,
+    noWalletFound: String,
     accountViewModel: AccountViewModel,
     nav: INav,
     onPaymentError: () -> Unit = {},
 ) {
     if (payables.size == 1) {
         val payable = payables.first()
-        payViaIntent(payable.invoice, context, { }) { error ->
+        payViaIntent(payable.invoice, context, noWalletFound, { }) { error ->
             onPaymentError()
-            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
         }
     } else {
         val uid = Uuid.random().toString()
@@ -1266,6 +1285,7 @@ fun ZapReaction(
     showCounter: Boolean = true,
     nav: INav,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
     // null = closed; OnchainZapRequest(amount=null) = open with no prefill;
@@ -1301,11 +1321,11 @@ fun ZapReaction(
                             onError = { _, message, user ->
                                 scope.launch {
                                     zappingProgress = 0f
-                                    accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                                    accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                                 }
                             },
                             onPayViaIntent = {
-                                payViaIntentOrManualSplit(it, context, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
+                                payViaIntentOrManualSplit(it, context, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                             },
                             onCustomAmount = {
                                 wantsToSetCustomZap = true
@@ -1346,12 +1366,12 @@ fun ZapReaction(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = {
-                    payViaIntentOrManualSplit(it, context, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
+                    payViaIntentOrManualSplit(it, context, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
                 onReloadNutzap = { amount ->
                     wantsToZap = false
@@ -1378,16 +1398,16 @@ fun ZapReaction(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        payViaIntent(payable.invoice, context, { }) { error ->
+                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                             zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
                         }
                     } else {
                         val uid = Uuid.random().toString()
@@ -1460,8 +1480,8 @@ fun zapClick(
 ) {
     if (baseNote.isDraft()) {
         accountViewModel.toastManager.toast(
-            R.string.draft_note,
-            R.string.it_s_not_possible_to_zap_to_a_draft_note,
+            Res.string.draft_note,
+            Res.string.it_s_not_possible_to_zap_to_a_draft_note,
         )
         return
     }
@@ -1475,8 +1495,8 @@ fun zapClick(
 
         !accountViewModel.isWriteable() -> {
             accountViewModel.toastManager.toast(
-                R.string.error_dialog_zap_error,
-                R.string.login_with_a_private_key_to_be_able_to_send_zaps,
+                Res.string.error_dialog_zap_error,
+                Res.string.login_with_a_private_key_to_be_able_to_send_zaps,
             )
         }
 
@@ -1767,7 +1787,7 @@ fun BoostTypeChoicePopupContent(
                 itemVerticalAlignment = CenterVertically,
             ) {
                 BoostActionChip(
-                    label = stringRes(R.string.boost),
+                    label = stringRes(Res.string.boost),
                     onClick = onBoost,
                 ) { tint ->
                     RepostedIcon(Size18Modifier, tint)
@@ -2490,9 +2510,9 @@ private fun PayToHandoffChip(
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val copiedMessage = stringRes(R.string.copied_to_clipboard)
-    val noAppMessage = stringRes(R.string.no_payment_app_found_for_type, style.label)
-    val amountElsewhere = stringRes(R.string.payto_amount_set_in_app, app?.label ?: style.label)
+    val copiedMessage = stringRes(Res.string.copied_to_clipboard)
+    val noAppMessage = stringRes(Res.string.no_payment_app_found_for_type, style.label)
+    val amountElsewhere = stringRes(Res.string.payto_amount_set_in_app, app?.label ?: style.label)
 
     Surface(
         shape = ButtonBorder,

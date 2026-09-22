@@ -20,24 +20,42 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_settings
+import com.vitorpamplona.amethyst.commons.resources.backup_keys
+import com.vitorpamplona.amethyst.commons.resources.danger_zone
+import com.vitorpamplona.amethyst.commons.resources.relays
+import com.vitorpamplona.amethyst.commons.resources.settings_section_appearance
+import com.vitorpamplona.amethyst.commons.resources.theme
+import org.jetbrains.compose.resources.StringResource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsCatalogFilterTest {
+    // Real catalog entries stand in for the rows, but their text comes from this map:
+    // filterSettings takes its lookup as a parameter precisely so the filter itself
+    // stays Compose-free, and resolving a StringResource for real would need a runtime.
+    private val accountCategory = Res.string.account_settings
+    private val dangerCategory = Res.string.danger_zone
+    private val relayEntry = Res.string.relays
+    private val uiEntry = Res.string.settings_section_appearance
+    private val backupEntry = Res.string.backup_keys
+    private val uiKeywords = Res.string.theme
+
     private val strings =
         mapOf(
-            100 to "Account Settings",
-            200 to "Danger Zone",
-            1 to "Relay Setup",
-            2 to "UI Preferences",
-            3 to "Backup Keys",
-            20 to "dark mode, theme, font size",
+            accountCategory to "Account Settings",
+            dangerCategory to "Danger Zone",
+            relayEntry to "Relay Setup",
+            uiEntry to "UI Preferences",
+            backupEntry to "Backup Keys",
+            uiKeywords to "dark mode, theme, font size",
         )
 
     private fun entry(
-        titleRes: Int,
-        keywordsRes: Int? = null,
+        titleRes: StringResource,
+        keywordsRes: StringResource? = null,
         isDanger: Boolean = false,
     ) = SettingsEntry(
         titleRes = titleRes,
@@ -50,17 +68,17 @@ class SettingsCatalogFilterTest {
     private val catalog =
         listOf(
             SettingsCategory(
-                titleRes = 100,
+                titleRes = accountCategory,
                 entries =
                     listOf(
-                        entry(1),
-                        entry(2, keywordsRes = 20),
+                        entry(relayEntry),
+                        entry(uiEntry, keywordsRes = uiKeywords),
                     ),
             ),
             SettingsCategory(
-                titleRes = 200,
+                titleRes = dangerCategory,
                 isDanger = true,
-                entries = listOf(entry(3, isDanger = true)),
+                entries = listOf(entry(backupEntry, isDanger = true)),
             ),
         )
 
@@ -88,30 +106,30 @@ class SettingsCatalogFilterTest {
     fun titleMatchIsCaseInsensitive() {
         val result = run("relay")
         assertEquals(1, result.size)
-        assertEquals(100, result[0].titleRes)
+        assertEquals(accountCategory, result[0].titleRes)
         assertEquals(1, result[0].entries.size)
-        assertEquals(1, result[0].entries[0].titleRes)
+        assertEquals(relayEntry, result[0].entries[0].titleRes)
     }
 
     @Test
     fun keywordMatchSurfacesEntryWhoseTitleDoesNotMatch() {
         val result = run("dark mode")
         assertEquals(1, result.size)
-        assertEquals(2, result[0].entries[0].titleRes) // UI Preferences, matched via keywords
+        assertEquals(uiEntry, result[0].entries[0].titleRes) // UI Preferences, matched via keywords
     }
 
     @Test
     fun categoryTitleMatchSurfacesWholeCategory() {
         val result = run("account")
         assertEquals(1, result.size)
-        assertEquals(100, result[0].titleRes)
+        assertEquals(accountCategory, result[0].titleRes)
         assertEquals(2, result[0].entries.size) // both rows shown because the category name matched
     }
 
     @Test
     fun categoryWithNoMatchesIsDropped() {
         val result = run("relay")
-        assertTrue(result.none { it.titleRes == 200 })
+        assertTrue(result.none { it.titleRes == dangerCategory })
     }
 
     @Test
@@ -130,8 +148,8 @@ class SettingsCatalogFilterTest {
     @Test
     fun prefixOfAWordMatches() {
         // "rel" is a prefix of "Relay" (title); "the" is a prefix of "theme" (keyword).
-        assertEquals(1, run("rel")[0].entries[0].titleRes)
-        assertEquals(2, run("the")[0].entries[0].titleRes)
+        assertEquals(relayEntry, run("rel")[0].entries[0].titleRes)
+        assertEquals(uiEntry, run("the")[0].entries[0].titleRes)
     }
 
     @Test
@@ -142,7 +160,7 @@ class SettingsCatalogFilterTest {
 
     @Test
     fun everyQueryTermMustPrefixSomeWord() {
-        assertEquals(2, run("dark size")[0].entries[0].titleRes) // both terms hit UI Preferences
+        assertEquals(uiEntry, run("dark size")[0].entries[0].titleRes) // both terms hit UI Preferences
         assertTrue(run("dark zzz").isEmpty()) // second term matches nothing
     }
 }

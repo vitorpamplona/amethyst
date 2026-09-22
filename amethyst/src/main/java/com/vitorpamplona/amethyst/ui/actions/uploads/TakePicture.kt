@@ -46,12 +46,13 @@ import androidx.core.content.FileProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.no_camera_app_found
 import com.vitorpamplona.amethyst.commons.resources.record_a_video
 import com.vitorpamplona.amethyst.commons.resources.take_a_picture
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -162,7 +163,7 @@ private suspend fun ActivityResultLauncher<Uri>.launchOrToast(
         try {
             this@launchOrToast.launch(uri)
         } catch (_: ActivityNotFoundException) {
-            Toast.makeText(context, R.string.no_camera_app_found, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, loadStringRes(Res.string.no_camera_app_found), Toast.LENGTH_LONG).show()
             onUnavailable()
         }
     }

@@ -34,19 +34,28 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.upload_error_title
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistantStatus
 import com.vitorpamplona.amethyst.commons.service.ai.WritingResult
 import com.vitorpamplona.amethyst.commons.service.ai.WritingTone
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -85,7 +94,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -286,8 +294,9 @@ open class ShortNotePostViewModel :
             logTag = "ShortNotePostViewModel",
             onError = { error ->
                 accountViewModel.toastManager.toast(
-                    stringRes(Amethyst.instance.appContext, R.string.error),
+                    Res.string.error,
                     error.message ?: "Voice anonymization failed",
+                    error,
                 )
             },
         )
@@ -1552,13 +1561,17 @@ open class ShortNotePostViewModel :
         useH265: Boolean,
         stripMetadata: Boolean = true,
         convertGifToMp4: Boolean = false,
-    ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata, convertGifToMp4)
-    } catch (_: SignerExceptions.ReadOnlyException) {
-        onError(
-            stringRes(context, R.string.read_only_user),
-            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
-        )
+    ) {
+        try {
+            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata, convertGifToMp4)
+        } catch (_: SignerExceptions.ReadOnlyException) {
+            viewModelScope.launch {
+                onError(
+                    loadStringRes(Res.string.read_only_user),
+                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
+                )
+            }
+        }
     }
 
     fun uploadUnsafe(
@@ -1637,8 +1650,8 @@ open class ShortNotePostViewModel :
 
                 multiOrchestrator = null
             } else {
-                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
+                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
             mediaUploadTracker.finishUpload()
@@ -1899,12 +1912,9 @@ open class ShortNotePostViewModel :
         val fileToUpload = activeFile ?: recording.file
         val waveform = activeWaveform ?: recording.amplitudes
         val appContext = Amethyst.instance.appContext
-        val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
-        val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
-        val uploadVoiceFailed = stringRes(appContext, R.string.upload_error_voice_message_failed)
-        val uploadVoiceExceptionMessage: (String) -> String = { detail ->
-            stringRes(appContext, R.string.upload_error_voice_message_exception, detail)
-        }
+        val uploadErrorTitle = loadStringRes(Res.string.upload_error_title)
+        val uploadVoiceNip95NotSupported = loadStringRes(Res.string.upload_error_voice_message_nip95_not_supported)
+        val uploadVoiceFailed = loadStringRes(Res.string.upload_error_voice_message_failed)
 
         isUploadingVoice = true
 
@@ -1960,7 +1970,10 @@ open class ShortNotePostViewModel :
                 }
             }
         } catch (e: Exception) {
-            onError(uploadErrorTitle, uploadVoiceExceptionMessage(e.message ?: e.javaClass.simpleName))
+            onError(
+                uploadErrorTitle,
+                loadStringRes(Res.string.upload_error_voice_message_exception, e.message ?: e.javaClass.simpleName),
+            )
             voiceRecording = null
         } finally {
             isUploadingVoice = false

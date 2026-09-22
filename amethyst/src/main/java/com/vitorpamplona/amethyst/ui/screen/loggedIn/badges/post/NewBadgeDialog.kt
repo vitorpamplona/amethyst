@@ -62,7 +62,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -72,12 +71,17 @@ import com.vitorpamplona.amethyst.commons.resources.badge_name_label
 import com.vitorpamplona.amethyst.commons.resources.badge_name_placeholder
 import com.vitorpamplona.amethyst.commons.resources.badge_upload_image_cta
 import com.vitorpamplona.amethyst.commons.resources.badge_upload_image_hint
+import com.vitorpamplona.amethyst.commons.resources.file_server
+import com.vitorpamplona.amethyst.commons.resources.file_server_description
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
+import com.vitorpamplona.amethyst.commons.resources.new_badge
+import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
+import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -140,7 +144,7 @@ fun NewBadgeDialog(
         Scaffold(
             topBar = {
                 CreatingTopBar(
-                    titleRes = R.string.new_badge,
+                    titleRes = Res.string.new_badge,
                     isActive = postViewModel::canPost,
                     onCancel = {
                         postViewModel.cancelModel()
@@ -310,7 +314,7 @@ private fun BadgeFormFields(
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    SettingsRow(R.string.file_server, R.string.file_server_description) {
+    SettingsRow(Res.string.file_server, Res.string.file_server_description) {
         TextSpinner(
             label = "",
             placeholder =
@@ -369,8 +373,8 @@ private fun BadgeFormFields(
     }
 
     SettingSwitchItem(
-        title = R.string.strip_metadata_label,
-        description = R.string.strip_metadata_description,
+        title = Res.string.strip_metadata_label,
+        description = Res.string.strip_metadata_description,
         modifier =
             Modifier
                 .fillMaxWidth()

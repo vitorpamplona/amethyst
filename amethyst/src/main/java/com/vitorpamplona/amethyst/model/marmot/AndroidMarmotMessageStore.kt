@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.marmot
 
+import com.vitorpamplona.amethyst.commons.marmot.EncryptedAppendLog
 import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
 import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -38,24 +39,16 @@ import java.io.File
  * <rootDir>/mls_groups/<nostrGroupId>/messages    — encrypted message log
  * ```
  *
- * The on-disk format (after decryption) is a sequence of length-prefixed
- * UTF-8 entries:
- * ```
- * uint32 count
- * for each entry:
- *   uint32 length
- *   byte[length] utf8
- * ```
- *
- * The whole blob is rewritten on each append (via atomic rename) — this
- * keeps encryption simple (one GCM nonce per write) and is acceptable for
- * conversation-scale histories.
+ * Every file here is an [EncryptedAppendLog], which owns the on-disk format and
+ * the migration from the original whole-blob one. Recording a message appends a
+ * small encrypted segment instead of rewriting the conversation, which is what
+ * keeps the cost of a send flat as the history grows.
  */
 class AndroidMarmotMessageStore(
     private val rootDir: File,
     private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
 ) : MarmotMessageStore {
-    private val writeMutex = Mutex()
+    private val logMutex = Mutex()
 
     init {
         Log.d(TAG) {
@@ -76,17 +69,16 @@ class AndroidMarmotMessageStore(
         nostrGroupId: String,
         innerEventJson: String,
     ) = withContext(Dispatchers.IO) {
-        writeMutex.withLock {
+        logMutex.withLock {
             try {
-                val existing = readAll(nostrGroupId).toMutableList()
-                if (innerEventJson in existing) {
+                val file = messagesFile(nostrGroupId)
+                if (log.contains(file, innerEventJson)) {
                     Log.d(TAG) { "appendMessage($nostrGroupId): duplicate entry skipped" }
                     return@withLock
                 }
-                existing.add(innerEventJson)
-                writeAll(nostrGroupId, existing)
+                log.append(file, innerEventJson)
                 Log.d(TAG) {
-                    "appendMessage($nostrGroupId): now ${existing.size} message(s) persisted"
+                    "appendMessage($nostrGroupId): now ${log.readAll(file).size} message(s) persisted"
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "appendMessage($nostrGroupId) FAILED: ${e.message}", e)
@@ -98,7 +90,7 @@ class AndroidMarmotMessageStore(
     override suspend fun loadMessages(nostrGroupId: String): List<String> =
         withContext(Dispatchers.IO) {
             try {
-                val messages = readAll(nostrGroupId)
+                val messages = logMutex.withLock { readAll(nostrGroupId) }
                 Log.d(TAG) {
                     "loadMessages($nostrGroupId): loaded ${messages.size} message(s)"
                 }
@@ -111,8 +103,9 @@ class AndroidMarmotMessageStore(
 
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
-            writeMutex.withLock {
+            logMutex.withLock {
                 for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId))) {
+                    log.forget(file)
                     if (file.exists() && !file.delete()) {
                         Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
                     }
@@ -138,7 +131,7 @@ class AndroidMarmotMessageStore(
         innerEventId: String,
         epoch: Long,
     ) = withContext(Dispatchers.IO) {
-        writeMutex.withLock {
+        logMutex.withLock {
             try {
                 val line = "$innerEventId $epoch"
                 val existing = readAllFrom(epochsFile(nostrGroupId)).toMutableList()
@@ -154,7 +147,8 @@ class AndroidMarmotMessageStore(
     override suspend fun loadEpochs(nostrGroupId: String): Map<String, Long> =
         withContext(Dispatchers.IO) {
             try {
-                readAllFrom(epochsFile(nostrGroupId))
+                logMutex
+                    .withLock { readAllFrom(epochsFile(nostrGroupId)) }
                     .mapNotNull { line ->
                         val parts = line.trim().split(' ')
                         if (parts.size != 2) return@mapNotNull null
@@ -185,7 +179,7 @@ class AndroidMarmotMessageStore(
         innerEventId: String,
         expiresAtSecs: Long,
     ) = withContext(Dispatchers.IO) {
-        writeMutex.withLock {
+        logMutex.withLock {
             try {
                 val existing = readAllFrom(expiriesFile(nostrGroupId)).toMutableList()
                 if (existing.any { it.substringBefore(' ') == innerEventId }) return@withLock
@@ -200,7 +194,8 @@ class AndroidMarmotMessageStore(
     override suspend fun loadExpiries(nostrGroupId: String): Map<String, Long> =
         withContext(Dispatchers.IO) {
             try {
-                readAllFrom(expiriesFile(nostrGroupId))
+                logMutex
+                    .withLock { readAllFrom(expiriesFile(nostrGroupId)) }
                     .mapNotNull { line ->
                         val parts = line.trim().split(' ')
                         if (parts.size != 2) return@mapNotNull null
@@ -225,7 +220,7 @@ class AndroidMarmotMessageStore(
         innerEventIds: Set<String>,
     ) = withContext(Dispatchers.IO) {
         if (innerEventIds.isEmpty()) return@withContext
-        writeMutex.withLock {
+        logMutex.withLock {
             try {
                 val kept =
                     readAll(nostrGroupId).filter { json ->
@@ -257,7 +252,7 @@ class AndroidMarmotMessageStore(
         epoch: Long,
         retentionSecs: Long,
     ) = withContext(Dispatchers.IO) {
-        writeMutex.withLock {
+        logMutex.withLock {
             try {
                 val existing = readAllFrom(epochRetentionsFile(nostrGroupId)).toMutableList()
                 if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
@@ -272,7 +267,8 @@ class AndroidMarmotMessageStore(
     override suspend fun loadEpochRetentions(nostrGroupId: String): Map<Long, Long> =
         withContext(Dispatchers.IO) {
             try {
-                readAllFrom(epochRetentionsFile(nostrGroupId))
+                logMutex
+                    .withLock { readAllFrom(epochRetentionsFile(nostrGroupId)) }
                     .mapNotNull { line ->
                         val parts = line.trim().split(' ')
                         if (parts.size != 2) return@mapNotNull null
@@ -302,7 +298,7 @@ class AndroidMarmotMessageStore(
         nostrGroupId: String,
         snapshotJson: String,
     ) = withContext(Dispatchers.IO) {
-        writeMutex.withLock {
+        logMutex.withLock {
             try {
                 writeAllTo(snapshotFile(nostrGroupId), listOf(snapshotJson))
             } catch (e: Exception) {
@@ -314,42 +310,37 @@ class AndroidMarmotMessageStore(
     override suspend fun loadGroupSnapshot(nostrGroupId: String): String? =
         withContext(Dispatchers.IO) {
             try {
-                readAllFrom(snapshotFile(nostrGroupId)).firstOrNull()
+                logMutex.withLock { readAllFrom(snapshotFile(nostrGroupId)) }.firstOrNull()
             } catch (e: Exception) {
                 Log.e(TAG, "loadGroupSnapshot($nostrGroupId) FAILED: ${e.message}", e)
                 null
             }
         }
 
+    // The segmented, constant-time-append log every file here is stored as.
+    // Guarded by [logMutex]: it caches decrypted entries so an append never has
+    // to read the log back, and that cache assumes a single owner.
+    private val log =
+        EncryptedAppendLog(
+            encrypt = { encryption.encrypt(it) },
+            // EncryptedAppendLog requires null, not a throw, for a segment it
+            // cannot open — KeyStoreEncryption.decrypt rethrows. Without this
+            // one bad segment would abort the whole read, and a caller that
+            // then sees an empty log can overwrite a history that was merely
+            // unreadable.
+            decrypt = {
+                try {
+                    encryption.decrypt(it)
+                } catch (e: Exception) {
+                    Log.w(TAG, "a log segment could not be decrypted and was skipped: ${e.message}", e)
+                    null
+                }
+            },
+        )
+
     private fun readAll(nostrGroupId: String): List<String> = readAllFrom(messagesFile(nostrGroupId))
 
-    private fun readAllFrom(file: File): List<String> {
-        if (!file.exists()) return emptyList()
-        val encrypted = file.readBytes()
-        val plain = encryption.decrypt(encrypted) ?: return emptyList()
-        if (plain.size < 4) return emptyList()
-
-        var offset = 0
-        val count =
-            ((plain[offset++].toInt() and 0xFF) shl 24) or
-                ((plain[offset++].toInt() and 0xFF) shl 16) or
-                ((plain[offset++].toInt() and 0xFF) shl 8) or
-                (plain[offset++].toInt() and 0xFF)
-
-        val result = ArrayList<String>(count.coerceAtMost(MAX_MESSAGES))
-        for (i in 0 until count) {
-            if (offset + 4 > plain.size) break
-            val len =
-                ((plain[offset++].toInt() and 0xFF) shl 24) or
-                    ((plain[offset++].toInt() and 0xFF) shl 16) or
-                    ((plain[offset++].toInt() and 0xFF) shl 8) or
-                    (plain[offset++].toInt() and 0xFF)
-            if (len < 0 || offset + len > plain.size) break
-            result.add(plain.copyOfRange(offset, offset + len).decodeToString())
-            offset += len
-        }
-        return result
-    }
+    private fun readAllFrom(file: File): List<String> = log.readAll(file)
 
     private fun writeAll(
         nostrGroupId: String,
@@ -359,51 +350,10 @@ class AndroidMarmotMessageStore(
     private fun writeAllTo(
         file: File,
         messages: List<String>,
-    ) {
-        file.parentFile?.mkdirs()
-
-        val encodedEntries = messages.map { it.encodeToByteArray() }
-        val totalSize = 4 + encodedEntries.sumOf { 4 + it.size }
-        val buffer = ByteArray(totalSize)
-        var offset = 0
-
-        val count = encodedEntries.size
-        buffer[offset++] = (count shr 24).toByte()
-        buffer[offset++] = (count shr 16).toByte()
-        buffer[offset++] = (count shr 8).toByte()
-        buffer[offset++] = count.toByte()
-
-        for (entry in encodedEntries) {
-            val len = entry.size
-            buffer[offset++] = (len shr 24).toByte()
-            buffer[offset++] = (len shr 16).toByte()
-            buffer[offset++] = (len shr 8).toByte()
-            buffer[offset++] = len.toByte()
-            entry.copyInto(buffer, offset)
-            offset += len
-        }
-
-        val encrypted = encryption.encrypt(buffer)
-        atomicWrite(file, encrypted)
-    }
-
-    private fun atomicWrite(
-        target: File,
-        data: ByteArray,
-    ) {
-        val tempFile = File(target.parentFile, "${target.name}.tmp")
-        tempFile.writeBytes(data)
-        if (!tempFile.renameTo(target)) {
-            tempFile.copyTo(target, overwrite = true)
-            if (!tempFile.delete()) {
-                Log.w(TAG) { "Failed to delete temp file after copy fallback: ${tempFile.absolutePath}" }
-            }
-        }
-    }
+    ) = log.rewrite(file, messages)
 
     companion object {
         private const val TAG = "AndroidMarmotMessageStore"
-        private const val MAX_MESSAGES = 1_000_000
         private val HEX_PATTERN = Regex("^[0-9a-fA-F]+$")
     }
 }

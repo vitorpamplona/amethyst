@@ -38,6 +38,7 @@ val ACCEPTING_RELAY = MarmotPublisher { _, _ -> true }
 class SnapshotStateStore : MlsGroupStateStore {
     private val states = mutableMapOf<String, ByteArray>()
     private val retained = mutableMapOf<String, List<ByteArray>>()
+    private val ratchets = mutableMapOf<String, ByteArray>()
 
     override suspend fun save(
         nostrGroupId: String,
@@ -51,6 +52,7 @@ class SnapshotStateStore : MlsGroupStateStore {
     override suspend fun delete(nostrGroupId: String) {
         states.remove(nostrGroupId)
         retained.remove(nostrGroupId)
+        ratchets.remove(nostrGroupId)
     }
 
     override suspend fun listGroups(): List<String> = states.keys.toList()
@@ -63,6 +65,19 @@ class SnapshotStateStore : MlsGroupStateStore {
     }
 
     override suspend fun loadRetainedEpochs(nostrGroupId: String): List<ByteArray> = retained[nostrGroupId] ?: emptyList()
+
+    // Implemented, not defaulted: a store that falls back to full writes never
+    // exercises the per-send record, and "restart between two sends" is exactly
+    // what these tests are for.
+    override suspend fun saveSenderRatchet(
+        nostrGroupId: String,
+        state: ByteArray,
+    ): Boolean {
+        ratchets[nostrGroupId] = state
+        return true
+    }
+
+    override suspend fun loadSenderRatchet(nostrGroupId: String): ByteArray? = ratchets[nostrGroupId]
 }
 
 class SnapshotMessageStore : MarmotMessageStore {

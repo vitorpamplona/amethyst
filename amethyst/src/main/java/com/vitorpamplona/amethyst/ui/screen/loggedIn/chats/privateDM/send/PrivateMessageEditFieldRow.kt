@@ -50,13 +50,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.recipient_missing_dm_relays
+import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.resources.retry_without_encryption
+import com.vitorpamplona.amethyst.commons.resources.this_message_will_disappear_in
 import com.vitorpamplona.amethyst.commons.resources.upload_without_encryption_warning
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
@@ -187,8 +189,8 @@ fun PrivateMessageEditFieldRow(
                 val context = LocalContext.current
                 Text(
                     stringRes(
-                        R.string.this_message_will_disappear_in,
-                        timeAheadNoDot(channelScreenModel.expirationDate, context),
+                        Res.string.this_message_will_disappear_in,
+                        timeAheadNoDot(channelScreenModel.expirationDate),
                     ),
                     fontSize = Font12SP,
                     color = MaterialTheme.colorScheme.placeholderText,
@@ -225,7 +227,7 @@ fun EditField(
         modifier = Modifier.fillMaxWidth(),
         placeholder = {
             Text(
-                text = stringRes(R.string.reply_here),
+                text = stringRes(Res.string.reply_here),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -381,7 +383,7 @@ fun EncryptedUploadErrorDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

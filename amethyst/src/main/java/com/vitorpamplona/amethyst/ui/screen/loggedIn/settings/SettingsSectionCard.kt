@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,11 +53,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.StringResource
 import androidx.compose.material3.Icon as Material3Icon
 
 @Composable
 internal fun SettingsSection(
-    @StringRes title: Int,
+    title: StringResource,
     isDanger: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -105,7 +105,7 @@ internal fun SettingsDivider() {
 /** Navigation row: icon + title + optional [trailing] (count badge, etc.) + chevron. */
 @Composable
 internal fun SettingsItem(
-    @StringRes title: Int,
+    title: StringResource,
     icon: MaterialSymbol,
     isDanger: Boolean = false,
     trailing: @Composable () -> Unit = {},
@@ -129,7 +129,7 @@ internal fun SettingsItem(
 /** Navigation row variant taking a drawable painter as the leading icon. */
 @Composable
 internal fun SettingsItem(
-    @StringRes title: Int,
+    title: StringResource,
     iconPainter: Int,
     iconPainterRef: Int,
     isDanger: Boolean = false,
@@ -154,7 +154,7 @@ internal fun SettingsItem(
 
 @Composable
 private fun SettingsItemRow(
-    @StringRes title: Int,
+    title: StringResource,
     isDanger: Boolean,
     trailing: @Composable () -> Unit,
     onClick: () -> Unit,
@@ -257,8 +257,8 @@ internal fun SettingsControlRow(
 @Composable
 internal fun SettingsSwitchTile(
     icon: MaterialSymbol,
-    @StringRes title: Int,
-    @StringRes description: Int,
+    title: StringResource,
+    description: StringResource,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -281,7 +281,7 @@ internal fun SettingsSwitchTile(
 @Composable
 internal fun SettingsSwitchTile(
     icon: MaterialSymbol,
-    @StringRes title: Int,
+    title: StringResource,
     checked: Boolean,
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,

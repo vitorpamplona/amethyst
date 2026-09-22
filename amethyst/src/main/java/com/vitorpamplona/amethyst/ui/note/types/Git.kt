@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -70,6 +69,11 @@ import com.vitorpamplona.amethyst.commons.resources.git_merge_base
 import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
+import com.vitorpamplona.amethyst.commons.resources.kind_git_issue
+import com.vitorpamplona.amethyst.commons.resources.kind_git_patch
+import com.vitorpamplona.amethyst.commons.resources.kind_git_pr
+import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
+import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
@@ -435,7 +439,7 @@ private fun RenderGitPatchEvent(
             horizontalArrangement = HeaderSpacing,
         ) {
             TypeChip(
-                text = stringRes(id = R.string.kind_git_patch),
+                text = stringRes(id = Res.string.kind_git_patch),
                 background = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
                 contentColor = MaterialTheme.colorScheme.tertiary,
             )
@@ -529,7 +533,7 @@ private fun RenderGitIssueEvent(
             horizontalArrangement = HeaderSpacing,
         ) {
             TypeChip(
-                text = stringRes(id = R.string.kind_git_issue),
+                text = stringRes(id = Res.string.kind_git_issue),
                 background = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                 contentColor = MaterialTheme.colorScheme.primary,
             )
@@ -618,7 +622,7 @@ private fun RenderGitPullRequestEvent(
             horizontalArrangement = HeaderSpacing,
         ) {
             TypeChip(
-                text = stringRes(id = R.string.kind_git_pr),
+                text = stringRes(id = Res.string.kind_git_pr),
                 background = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
                 contentColor = MaterialTheme.colorScheme.secondary,
                 symbol = MaterialSymbols.CallMerge,
@@ -736,7 +740,7 @@ private fun RenderGitPullRequestUpdateEvent(
             horizontalArrangement = HeaderSpacing,
         ) {
             TypeChip(
-                text = stringRes(id = R.string.kind_git_pr_update),
+                text = stringRes(id = Res.string.kind_git_pr_update),
                 background = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 symbol = MaterialSymbols.Sync,
@@ -830,7 +834,7 @@ private fun RenderGitRepositoryEvent(
 
             Column(modifier = Modifier.weight(1f, fill = true)) {
                 Text(
-                    text = stringRes(id = R.string.kind_git_repo),
+                    text = stringRes(id = Res.string.kind_git_repo),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,

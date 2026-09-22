@@ -33,7 +33,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.private_inbox_section
+import com.vitorpamplona.amethyst.commons.resources.private_inbox_section_explainer_profile
+import com.vitorpamplona.amethyst.commons.resources.public_home_section
+import com.vitorpamplona.amethyst.commons.resources.public_home_section_explainer_profile
+import com.vitorpamplona.amethyst.commons.resources.public_notif_section
+import com.vitorpamplona.amethyst.commons.resources.public_notif_section_explainer_profile
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -59,8 +65,8 @@ fun RelayFeedView(
     ) {
         item {
             SettingsCategory(
-                R.string.public_home_section,
-                R.string.public_home_section_explainer_profile,
+                Res.string.public_home_section,
+                Res.string.public_home_section_explainer_profile,
                 Modifier.padding(top = 10.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
             )
         }
@@ -69,8 +75,8 @@ fun RelayFeedView(
         }
         item {
             SettingsCategory(
-                R.string.public_notif_section,
-                R.string.public_notif_section_explainer_profile,
+                Res.string.public_notif_section,
+                Res.string.public_notif_section_explainer_profile,
                 Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
             )
         }
@@ -79,8 +85,8 @@ fun RelayFeedView(
         }
         item {
             SettingsCategory(
-                R.string.private_inbox_section,
-                R.string.private_inbox_section_explainer_profile,
+                Res.string.private_inbox_section,
+                Res.string.private_inbox_section_explainer_profile,
                 Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
             )
         }

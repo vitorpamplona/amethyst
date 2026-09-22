@@ -52,13 +52,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.brought_to_you_by
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.this_version_brought_to_you_by
 import com.vitorpamplona.amethyst.commons.resources.version_name
 import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_description
@@ -193,7 +193,7 @@ fun ZapTheDevsCard(
                     ) {
                         Icon(
                             symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(id = R.string.cancel),
+                            contentDescription = stringRes(id = Res.string.cancel),
                             tint = Color.White,
                             modifier = Modifier.size(20.dp),
                         )

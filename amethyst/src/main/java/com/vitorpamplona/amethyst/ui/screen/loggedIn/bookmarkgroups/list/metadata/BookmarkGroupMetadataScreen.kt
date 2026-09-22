@@ -41,13 +41,18 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.about_us
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_creation_screen_title
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_edit_sub_title
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_explainer
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_name_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_desc_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_name_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_edit_list_metadata
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.optional_picture_url
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -112,8 +117,8 @@ private fun BookmarkGroupMetadataScaffold(
         ) {
             item {
                 SettingsCategory(
-                    R.string.bookmark_list_edit_sub_title,
-                    R.string.bookmark_list_explainer,
+                    Res.string.bookmark_list_edit_sub_title,
+                    Res.string.bookmark_list_explainer,
                     SettingsCategoryFirstModifier,
                 )
 
@@ -139,7 +144,7 @@ fun BookmarkGroupMetadataTopBar(
 ) {
     if (bookmarkGroupInfoViewModel.isNewList) {
         CreatingTopBar(
-            titleRes = R.string.bookmark_list_creation_screen_title,
+            titleRes = Res.string.bookmark_list_creation_screen_title,
             isActive = bookmarkGroupInfoViewModel::canPost,
             onCancel = {
                 bookmarkGroupInfoViewModel.clear()
@@ -151,15 +156,15 @@ fun BookmarkGroupMetadataTopBar(
                     nav.popBack()
                 } catch (e: SignerExceptions.ReadOnlyException) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                     )
                 }
             },
         )
     } else {
         SavingTopBar(
-            titleRes = R.string.follow_set_edit_list_metadata,
+            titleRes = Res.string.follow_set_edit_list_metadata,
             isActive = bookmarkGroupInfoViewModel::canPost,
             onCancel = {
                 bookmarkGroupInfoViewModel.clear()
@@ -171,8 +176,8 @@ fun BookmarkGroupMetadataTopBar(
                     nav.popBack()
                 } catch (e: SignerExceptions.ReadOnlyException) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                     )
                 }
             },

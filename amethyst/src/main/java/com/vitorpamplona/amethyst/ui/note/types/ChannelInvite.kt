@@ -46,24 +46,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_messages
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_added_you
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_ignore
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_leave
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_unknown_actor
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
+import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ObserveAndDrawInnerUserPicture
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size22dp
@@ -188,7 +189,7 @@ fun RenderChannelInvite(
                 contentPadding = ButtonDefaults.TextButtonContentPadding,
                 modifier = Modifier.height(34.dp),
             ) {
-                Text(stringRes(R.string.add_to_messages), fontSize = 13.sp)
+                Text(stringRes(Res.string.add_to_messages), fontSize = 13.sp)
             }
         }
     }
@@ -337,7 +338,7 @@ private fun ChannelRosterLine(
         Text(
             text =
                 if (memberCount > 0) {
-                    pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount) + " · " + host
+                    pluralStringRes(Res.plurals.relay_group_member_count, memberCount, memberCount) + " · " + host
                 } else {
                     host
                 },

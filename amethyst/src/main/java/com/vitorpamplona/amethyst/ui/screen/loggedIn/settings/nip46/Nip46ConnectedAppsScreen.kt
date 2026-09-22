@@ -57,8 +57,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +64,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
@@ -78,13 +75,19 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_last_used
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_offline
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_online
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_reconnect
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relay_count
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_apps_empty
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_manage_apps
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_reconnecting
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -119,6 +122,7 @@ fun Nip46ConnectedAppsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val reconnectingStr = stringRes(Res.string.nip46_signer_reconnecting)
     val account = accountViewModel.account
     val signerPubKey = remember { account.signer.pubKey }
     val context = LocalContext.current
@@ -183,7 +187,7 @@ fun Nip46ConnectedAppsScreen(
                             online = online,
                             onReconnect = {
                                 account.client.reconnect(ignoreRetryDelays = true)
-                                Toast.makeText(context, R.string.nip46_signer_reconnecting, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, reconnectingStr, Toast.LENGTH_SHORT).show()
                             },
                             onClick = { nav.nav(Route.ConnectedAppDetail(entry.coordinate)) },
                         )
@@ -203,7 +207,7 @@ private fun Nip46AppCard(
     // Same identity line the detail screen (Nip46AppHeader) uses: the app's self-declared website
     // when it has one, npub otherwise — so a row and its detail never disagree.
     val subtitle = remember(entry.info?.url, entry.clientPubKey) { nip46ClientSubtitle(entry.info?.url, entry.clientPubKey) }
-    val title = entry.info?.name?.ifBlank { null } ?: stringResource(R.string.nip46_signer_remote_app)
+    val title = entry.info?.name?.ifBlank { null } ?: stringRes(Res.string.nip46_signer_remote_app)
     val relayCount = entry.info?.relays?.size ?: 0
 
     Card(
@@ -236,7 +240,7 @@ private fun Nip46AppCard(
                 )
                 val meta =
                     buildList {
-                        if (relayCount > 0) add(pluralStringResource(R.plurals.nip46_signer_app_relay_count, relayCount, relayCount))
+                        if (relayCount > 0) add(pluralStringRes(Res.plurals.nip46_signer_app_relay_count, relayCount, relayCount))
                         entry.lastUsedSeconds?.let { add(stringRes(Res.string.nip46_signer_app_last_used, it.toTimeAgo().trim())) }
                     }.joinToString("  ·  ")
                 if (meta.isNotEmpty()) {
@@ -317,7 +321,7 @@ internal fun Nip46LiveStatus(online: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Nip46StatusDot(online)
         Text(
-            stringResource(if (online) R.string.nip46_signer_app_online else R.string.nip46_signer_app_offline),
+            stringRes(if (online) Res.string.nip46_signer_app_online else Res.string.nip46_signer_app_offline),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

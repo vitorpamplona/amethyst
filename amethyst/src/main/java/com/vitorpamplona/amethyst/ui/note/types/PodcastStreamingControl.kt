@@ -46,14 +46,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_error_title
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream_rate
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream_requires_wallet
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_streamed_total
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -217,8 +218,8 @@ fun PodcastStreamingControl(
                 if (wantOn && !hasInAppWallet) {
                     // No NWC/CLINK wallet -> we won't auto-stream; tell the user why and stay off.
                     accountViewModel.toastManager.toast(
-                        R.string.podcast_value_error_title,
-                        R.string.podcast_value_stream_requires_wallet,
+                        Res.string.podcast_value_error_title,
+                        Res.string.podcast_value_stream_requires_wallet,
                     )
                 } else {
                     enabled = wantOn

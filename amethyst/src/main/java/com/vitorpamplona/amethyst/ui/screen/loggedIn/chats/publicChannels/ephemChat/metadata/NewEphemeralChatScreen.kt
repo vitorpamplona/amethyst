@@ -40,11 +40,13 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.channel_name
 import com.vitorpamplona.amethyst.commons.resources.group_relay
 import com.vitorpamplona.amethyst.commons.resources.my_awesome_group
+import com.vitorpamplona.amethyst.commons.resources.relay_chat
+import com.vitorpamplona.amethyst.commons.resources.relay_chat_explainer
+import com.vitorpamplona.amethyst.commons.resources.relay_chat_title
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -100,7 +102,7 @@ private fun ChannelMetadataScaffold(
     Scaffold(
         topBar = {
             PostingTopBar(
-                titleRes = R.string.relay_chat,
+                titleRes = Res.string.relay_chat,
                 isActive = postViewModel::canPost,
                 onCancel = {
                     nav.popBack()
@@ -127,8 +129,8 @@ private fun ChannelMetadataScaffold(
         ) {
             item {
                 SettingsCategory(
-                    R.string.relay_chat_title,
-                    R.string.relay_chat_explainer,
+                    Res.string.relay_chat_title,
+                    Res.string.relay_chat_explainer,
                     SettingsCategoryFirstModifier,
                 )
 

@@ -46,9 +46,9 @@ data class SignerFace(
  */
 class Nip46ConsentStrings(
     /** Human-readable label for an op, e.g. "read your private messages with Alice". */
-    val opLabel: (NostrSignerOp) -> String,
+    val opLabel: suspend (NostrSignerOp) -> String,
     /** Button text for the counterparty-scoped grant; the argument is the counterparty's name. */
-    val allowAlwaysFor: (String) -> String,
+    val allowAlwaysFor: suspend (String) -> String,
     /** Shown as the preview when Amethyst itself could not decrypt the message. */
     val decryptFailed: String,
 )

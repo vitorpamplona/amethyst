@@ -59,13 +59,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.in_the_list
+import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
@@ -274,7 +274,7 @@ private fun RowScope.HasUserTag(
         ) {
             Icon(
                 symbol = MaterialSymbols.Cancel,
-                contentDescription = stringRes(id = R.string.remove),
+                contentDescription = stringRes(id = Res.string.remove),
                 modifier = Modifier.size(15.dp),
                 tint = LightRedColor,
             )

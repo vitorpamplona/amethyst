@@ -27,7 +27,12 @@ import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reply_failed
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reply_retry
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reply_sending
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reply_unconfirmed
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -87,7 +92,7 @@ sealed interface ReplyState {
  * Returns false when nothing is posted under [notId] any more — the user swiped it away while
  * the reply was in flight. Nothing is re-posted in that case: they are done with it.
  */
-fun NotificationManager.renderReplyState(
+suspend fun NotificationManager.renderReplyState(
     applicationContext: Context,
     notId: Int,
     state: ReplyState,
@@ -105,7 +110,7 @@ fun NotificationManager.renderReplyState(
 
 private const val TAG = "InlineReplyFeedback"
 
-private fun NotificationManager.renderReplyStateOrThrow(
+private suspend fun NotificationManager.renderReplyStateOrThrow(
     applicationContext: Context,
     notId: Int,
     state: ReplyState,
@@ -126,7 +131,7 @@ private fun NotificationManager.renderReplyStateOrThrow(
             // `null` attributes the message to the MessagingStyle's own user.
             style?.addMessage(state.text, System.currentTimeMillis(), null as Person?)
                 ?: builder.setRemoteInputHistory(arrayOf(state.text))
-            builder.setSubText(stringRes(applicationContext, R.string.app_notification_reply_sending))
+            builder.setSubText(loadStringRes(Res.string.app_notification_reply_sending))
         }
 
         ReplyState.Sent -> {
@@ -136,14 +141,14 @@ private fun NotificationManager.renderReplyStateOrThrow(
 
         is ReplyState.Unconfirmed -> {
             if (style == null) builder.setRemoteInputHistory(arrayOf(state.text))
-            builder.setSubText(stringRes(applicationContext, R.string.app_notification_reply_unconfirmed))
+            builder.setSubText(loadStringRes(Res.string.app_notification_reply_unconfirmed))
         }
 
         is ReplyState.Failed -> {
             if (style == null) builder.setRemoteInputHistory(arrayOf(state.text))
-            builder.setSubText(stringRes(applicationContext, R.string.app_notification_reply_failed))
+            builder.setSubText(loadStringRes(Res.string.app_notification_reply_failed))
 
-            val retryLabel = stringRes(applicationContext, R.string.app_notification_reply_retry)
+            val retryLabel = loadStringRes(Res.string.app_notification_reply_retry)
 
             // Rebuilt from the posted notification, so its actions come with it — and a bare
             // clearActions() would take Reply and Mark Read with them, leaving a failed reply

@@ -56,16 +56,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_accept
 import com.vitorpamplona.amethyst.commons.resources.call_calling
 import com.vitorpamplona.amethyst.commons.resources.call_connecting
 import com.vitorpamplona.amethyst.commons.resources.call_dismiss
 import com.vitorpamplona.amethyst.commons.resources.call_ended
+import com.vitorpamplona.amethyst.commons.resources.call_hangup
+import com.vitorpamplona.amethyst.commons.resources.call_incoming
+import com.vitorpamplona.amethyst.commons.resources.call_incoming_video
+import com.vitorpamplona.amethyst.commons.resources.call_incoming_voice
+import com.vitorpamplona.amethyst.commons.resources.call_reject
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -133,7 +138,7 @@ fun CallScreen(
                         state.groupMembers - accountViewModel.account.signer.pubKey
                     }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(Res.string.call_incoming), accountViewModel = accountViewModel)
                 } else {
                     val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
                     val acceptWithPermission =
@@ -275,7 +280,7 @@ private fun CallInProgressUI(
             ) {
                 Icon(
                     MaterialSymbols.CallEnd,
-                    contentDescription = stringRes(R.string.call_hangup),
+                    contentDescription = stringRes(Res.string.call_hangup),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )
@@ -320,9 +325,9 @@ private fun IncomingCallUI(
                 text =
                     stringRes(
                         if (callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO) {
-                            R.string.call_incoming_video
+                            Res.string.call_incoming_video
                         } else {
-                            R.string.call_incoming_voice
+                            Res.string.call_incoming_voice
                         },
                     ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -340,7 +345,7 @@ private fun IncomingCallUI(
                 ) {
                     Icon(
                         MaterialSymbols.CallEnd,
-                        contentDescription = stringRes(R.string.call_reject),
+                        contentDescription = stringRes(Res.string.call_reject),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),
                     )
@@ -353,7 +358,7 @@ private fun IncomingCallUI(
                 ) {
                     Icon(
                         MaterialSymbols.Call,
-                        contentDescription = stringRes(R.string.call_accept),
+                        contentDescription = stringRes(Res.string.call_accept),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),
                     )

@@ -38,11 +38,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_cancel
 import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_open_settings
 import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_title
+import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_video
+import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_voice
 import com.vitorpamplona.amethyst.ui.stringRes
 
 fun hasPermission(
@@ -154,9 +155,9 @@ private fun CallPermissionDeniedDialog(
             Text(
                 stringRes(
                     if (isVideo) {
-                        R.string.call_permission_denied_video
+                        Res.string.call_permission_denied_video
                     } else {
-                        R.string.call_permission_denied_voice
+                        Res.string.call_permission_denied_voice
                     },
                 ),
             )

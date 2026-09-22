@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -74,7 +75,6 @@ import com.vitorpamplona.quartz.nipCCGeocaching.firstToFind.FirstToFindResolver
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationValidator
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * Every log filed under a cache, split the way the screen needs it.
@@ -151,7 +151,7 @@ fun GeocacheWinnerStrip(
         val name = user?.let { observeUserName(it, accountViewModel).value }
 
         Text(
-            text = stringResource(Res.string.geocache_ftf_won_by, name?.ifBlank { null } ?: winner.take(8)),
+            text = stringRes(Res.string.geocache_ftf_won_by, name?.ifBlank { null } ?: winner.take(8)),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
@@ -262,10 +262,10 @@ private fun GeocacheFindBadge(
     val muted = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
 
     when {
-        !log.hasVerificationAttached() -> GeocacheChip(stringResource(Res.string.geocache_found_it), muted)
+        !log.hasVerificationAttached() -> GeocacheChip(stringRes(Res.string.geocache_found_it), muted)
         GeocacheVerificationValidator.isValid(log, listing) ->
-            GeocacheChip("🔐  " + stringResource(Res.string.geocache_verified_find), palette.wash(palette.proven), strong = true)
-        else -> GeocacheChip("⚠️  " + stringResource(Res.string.geocache_invalid_proof), muted, dim = true)
+            GeocacheChip("🔐  " + stringRes(Res.string.geocache_verified_find), palette.wash(palette.proven), strong = true)
+        else -> GeocacheChip("⚠️  " + stringRes(Res.string.geocache_invalid_proof), muted, dim = true)
     }
 }
 
@@ -275,13 +275,13 @@ private fun GeocacheCommentBadge(comment: CommentEvent) {
 
     val label =
         when (comment.tags.declaredGeocacheLogType()) {
-            GeocacheLogType.DNF -> stringResource(Res.string.geocache_log_type_dnf)
-            GeocacheLogType.NOTE -> stringResource(Res.string.geocache_log_type_note)
-            GeocacheLogType.MAINTENANCE -> stringResource(Res.string.geocache_log_type_maintenance)
+            GeocacheLogType.DNF -> stringRes(Res.string.geocache_log_type_dnf)
+            GeocacheLogType.NOTE -> stringRes(Res.string.geocache_log_type_note)
+            GeocacheLogType.MAINTENANCE -> stringRes(Res.string.geocache_log_type_maintenance)
             // The owner's own retirement note. The listing's `archived` type is what actually
             // takes the cache out of play, and the screen already says so at the top, so
             // repeating it on the comment row would be noise.
-            GeocacheLogType.ARCHIVED -> stringResource(Res.string.geocache_archived)
+            GeocacheLogType.ARCHIVED -> stringRes(Res.string.geocache_archived)
             null -> return
         }
 

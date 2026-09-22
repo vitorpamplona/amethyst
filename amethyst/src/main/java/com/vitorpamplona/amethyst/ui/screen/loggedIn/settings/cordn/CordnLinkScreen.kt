@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_link_no_coordinator
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_not_joinable
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_paste
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_relays
+import com.vitorpamplona.amethyst.commons.resources.cordn_link_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -104,7 +105,7 @@ fun CordnLinkScreen(
     val clipboard = LocalClipboardManager.current
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(id = R.string.cordn_link_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_link_title), nav) },
     ) { insets ->
         Column(
             modifier =

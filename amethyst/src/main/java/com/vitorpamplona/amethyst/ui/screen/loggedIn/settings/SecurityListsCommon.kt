@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -78,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Re-runs [invalidate] whenever the user's block/mute state changes. `hiddenUsers.flow`
@@ -97,7 +97,7 @@ internal fun InvalidateOnBlockListChange(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BlockListTopBar(
-    @StringRes title: Int,
+    title: StringResource,
     selectedCount: Int,
     onCancel: () -> Unit,
     onUnblock: () -> Unit,
@@ -137,7 +137,7 @@ internal fun BlockListTopBar(
 internal fun SelectableUserList(
     modifier: Modifier = Modifier,
     viewModel: UserFeedViewModel,
-    @StringRes emptyMessage: Int,
+    emptyMessage: StringResource,
     selected: Set<String>,
     onToggle: (String) -> Unit,
     accountViewModel: AccountViewModel,
@@ -224,9 +224,7 @@ internal fun SelectableUserList(
 }
 
 @Composable
-internal fun EmptyState(
-    @StringRes message: Int,
-) {
+internal fun EmptyState(message: StringResource) {
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

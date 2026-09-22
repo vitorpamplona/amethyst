@@ -52,6 +52,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_title
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -94,7 +97,7 @@ fun CordnCoordinatorsScreen(
     val runtime = accountViewModel.account.cordnRuntime
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.cordn_coordinators_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_coordinators_title), nav) },
     ) { padding ->
         if (runtime == null) {
             Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
@@ -230,7 +233,7 @@ private fun CoordinatorCard(
             },
             dismissButton = {
                 TextButton(onClick = { confirmingPurge = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )

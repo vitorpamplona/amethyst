@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_invalid
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_title
@@ -103,7 +104,7 @@ fun AddClinkDebitWalletScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },

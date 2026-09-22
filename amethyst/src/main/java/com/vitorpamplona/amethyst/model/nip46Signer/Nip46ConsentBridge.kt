@@ -21,12 +21,16 @@
 package com.vitorpamplona.amethyst.model.nip46Signer
 
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_decrypt_failed
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
@@ -65,7 +69,7 @@ object Nip46ConsentBridge {
     ): AppConnectResult {
         val context = Amethyst.instance.appContext
         val meta = request.clientMetadata
-        val title = meta?.name?.ifBlank { null } ?: context.getString(R.string.nip46_signer_remote_app)
+        val title = meta?.name?.ifBlank { null } ?: loadStringRes(Res.string.nip46_signer_remote_app)
         val domain = meta?.url?.ifBlank { null } ?: (clientPubKey.take(12) + "…")
         // The identity being connected to lives in the coordinate; show it as an avatar + name.
         val face = accountFace(coordinate)
@@ -100,7 +104,7 @@ object Nip46ConsentBridge {
         requestedOps: List<NostrSignerOp>,
     ): AppConnectResult {
         val context = Amethyst.instance.appContext
-        val title = name?.ifBlank { null } ?: context.getString(R.string.nip46_signer_remote_app)
+        val title = name?.ifBlank { null } ?: loadStringRes(Res.string.nip46_signer_remote_app)
         val domain = url?.ifBlank { null } ?: (Nip46PermissionAuthorizer.clientPubKeyOf(coordinate)?.take(12)?.plus("…") ?: "")
         val face = accountFace(coordinate)
         val info =
@@ -138,7 +142,7 @@ object Nip46ConsentBridge {
     ): SignerOpGrant {
         val context = Amethyst.instance.appContext
         val info = runCatching { Amethyst.instance.nip46ClientStore.load(coordinate) }.getOrNull()
-        val title = info?.name?.ifBlank { null } ?: context.getString(R.string.nip46_signer_remote_app)
+        val title = info?.name?.ifBlank { null } ?: loadStringRes(Res.string.nip46_signer_remote_app)
 
         val consentInfo =
             Nip46ConsentInfoBuilder.build(
@@ -152,8 +156,8 @@ object Nip46ConsentBridge {
                 strings =
                     Nip46ConsentStrings(
                         opLabel = { it.label(context) },
-                        allowAlwaysFor = { context.getString(R.string.nip46_signer_allow_always_for, it) },
-                        decryptFailed = context.getString(R.string.nip46_signer_decrypt_failed),
+                        allowAlwaysFor = { loadStringRes(Res.string.nip46_signer_allow_always_for, it) },
+                        decryptFailed = loadStringRes(Res.string.nip46_signer_decrypt_failed),
                     ),
                 decrypt = { decryptWithAccountSigner(signer, it) },
             )

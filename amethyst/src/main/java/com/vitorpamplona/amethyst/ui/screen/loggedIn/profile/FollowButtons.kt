@@ -30,20 +30,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.follow_set_profile_actions_menu_description
+import com.vitorpamplona.amethyst.commons.resources.unfollow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.LeftHalfCircleButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun FollowButton(
-    text: Int = R.string.follow,
+    text: StringResource = Res.string.follow,
     // Needed for when browsing a user's profile, for list functionality.
     isInProfileActions: Boolean = false,
     onClick: () -> Unit,
@@ -69,7 +71,7 @@ fun UnfollowButton(
         shape = if (isInProfileActions) LeftHalfCircleButtonBorder else ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.unfollow))
+        Text(text = stringRes(Res.string.unfollow))
     }
 }
 

@@ -63,20 +63,26 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.music_track_album_label
 import com.vitorpamplona.amethyst.commons.resources.music_track_artist_label
 import com.vitorpamplona.amethyst.commons.resources.music_track_artist_placeholder
 import com.vitorpamplona.amethyst.commons.resources.music_track_audio_picked
+import com.vitorpamplona.amethyst.commons.resources.music_track_audio_upload_cta
+import com.vitorpamplona.amethyst.commons.resources.music_track_audio_upload_hint
+import com.vitorpamplona.amethyst.commons.resources.music_track_cover_upload_cta
+import com.vitorpamplona.amethyst.commons.resources.music_track_cover_upload_hint
 import com.vitorpamplona.amethyst.commons.resources.music_track_delete
 import com.vitorpamplona.amethyst.commons.resources.music_track_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.music_track_description_label
 import com.vitorpamplona.amethyst.commons.resources.music_track_duration_label
 import com.vitorpamplona.amethyst.commons.resources.music_track_title_label
 import com.vitorpamplona.amethyst.commons.resources.music_track_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.music_track_uploading_banner
+import com.vitorpamplona.amethyst.commons.resources.new_music_track
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -142,7 +148,7 @@ fun NewMusicTrackScreen(
     Scaffold(
         topBar = {
             SendingTopBar(
-                titleRes = R.string.new_music_track,
+                titleRes = Res.string.new_music_track,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
@@ -176,7 +182,7 @@ fun NewMusicTrackScreen(
             // their tiles for the whole operation (so the user doesn't think one phase is
             // done while the other is still running), and the banner gives clear
             // top-of-screen feedback that something IS happening.
-            if (isBusy) UploadInProgressBanner(R.string.music_track_uploading_banner)
+            if (isBusy) UploadInProgressBanner(Res.string.music_track_uploading_banner)
 
             CoverImagePicker(
                 cover = vm.coverMedia.value,
@@ -185,8 +191,8 @@ fun NewMusicTrackScreen(
                 onDelete = { vm.clearPickedCover() },
                 accountViewModel = accountViewModel,
                 enabled = !isBusy,
-                ctaRes = R.string.music_track_cover_upload_cta,
-                hintRes = R.string.music_track_cover_upload_hint,
+                ctaRes = Res.string.music_track_cover_upload_cta,
+                hintRes = Res.string.music_track_cover_upload_hint,
             )
 
             AudioFilePicker(
@@ -302,15 +308,15 @@ private fun AudioFilePicker(
             }
             if (enabled) {
                 TextButton(onClick = { vm.clearPickedAudio() }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             }
         }
     } else {
         UploadPlaceholder(
             iconSymbol = MaterialSymbols.MusicNote,
-            ctaRes = R.string.music_track_audio_upload_cta,
-            hintRes = R.string.music_track_audio_upload_hint,
+            ctaRes = Res.string.music_track_audio_upload_cta,
+            hintRes = Res.string.music_track_audio_upload_hint,
             onClick = onPick,
             aspectRatio = null,
             enabled = enabled,
@@ -372,7 +378,7 @@ private fun DeleteMusicTrackRow(
             },
             dismissButton = {
                 TextButton(onClick = { confirming = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )

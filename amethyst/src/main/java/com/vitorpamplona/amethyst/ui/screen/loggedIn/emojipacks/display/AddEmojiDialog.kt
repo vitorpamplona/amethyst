@@ -43,13 +43,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.emoji_add_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_address_label
+import com.vitorpamplona.amethyst.commons.resources.emoji_private_explainer
 import com.vitorpamplona.amethyst.commons.resources.emoji_private_toggle
+import com.vitorpamplona.amethyst.commons.resources.emoji_public_explainer
 import com.vitorpamplona.amethyst.commons.resources.emoji_shortcode_invalid
 import com.vitorpamplona.amethyst.commons.resources.emoji_shortcode_label
 import com.vitorpamplona.amethyst.commons.resources.emoji_url_label
@@ -163,9 +166,9 @@ fun AddEmojiDialog(
                     text =
                         stringRes(
                             if (isPrivate) {
-                                R.string.emoji_private_explainer
+                                Res.string.emoji_private_explainer
                             } else {
-                                R.string.emoji_public_explainer
+                                Res.string.emoji_public_explainer
                             },
                         ),
                     style = MaterialTheme.typography.bodySmall,
@@ -187,12 +190,12 @@ fun AddEmojiDialog(
                     )
                 },
             ) {
-                Text(stringRes(R.string.add))
+                Text(stringRes(Res.string.add))
             }
         },
         dismissButton = {
             Button(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

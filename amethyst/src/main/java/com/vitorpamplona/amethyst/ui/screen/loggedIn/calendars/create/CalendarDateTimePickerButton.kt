@@ -39,9 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_pick_time
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.text.DateFormat
@@ -135,7 +135,7 @@ fun CalendarDateTimePickerButton(
                 TextButton(onClick = {
                     reset()
                     showDate = false
-                }) { Text(stringRes(R.string.cancel)) }
+                }) { Text(stringRes(Res.string.cancel)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -165,7 +165,7 @@ fun CalendarDateTimePickerButton(
                 TextButton(onClick = {
                     reset()
                     showTime = false
-                }) { Text(stringRes(R.string.cancel)) }
+                }) { Text(stringRes(Res.string.cancel)) }
             },
         ) {
             TimePicker(state = timePickerState)

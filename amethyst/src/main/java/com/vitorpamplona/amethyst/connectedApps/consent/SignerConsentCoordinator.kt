@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_sign_title
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import kotlinx.coroutines.CompletableDeferred
@@ -140,7 +141,7 @@ object SignerConsentCoordinator {
                 activityClass = SignerConsentActivity::class.java,
                 extraKey = EXTRA_TOKEN,
                 token = "nip46-signer-consent",
-                titleRes = R.string.nip46_signer_notif_sign_title,
+                titleRes = Res.string.nip46_signer_notif_sign_title,
             )
         }
 

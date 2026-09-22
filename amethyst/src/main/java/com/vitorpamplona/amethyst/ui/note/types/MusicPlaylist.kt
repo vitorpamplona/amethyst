@@ -49,14 +49,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -67,8 +65,11 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_collaborative
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_edit_action
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_loading_track
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_more_tracks
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_private
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_track_count
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_unknown_track
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBanner
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBannerBackground
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -190,7 +192,7 @@ fun MusicPlaylistHeader(
                 Spacer(Modifier.padding(start = 6.dp))
                 val trackCount = trackAddresses.size
                 Text(
-                    text = pluralStringResource(R.plurals.music_playlist_track_count, trackCount, trackCount),
+                    text = pluralStringRes(Res.plurals.music_playlist_track_count, trackCount, trackCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
                 )
@@ -276,7 +278,7 @@ fun MusicPlaylistHeader(
                         HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                         val remaining = trackAddresses.size - MAX_PREVIEW_TRACKS
                         Text(
-                            text = pluralStringResource(R.plurals.music_playlist_more_tracks, remaining, remaining),
+                            text = pluralStringRes(Res.plurals.music_playlist_more_tracks, remaining, remaining),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.grayText,
                             modifier =
@@ -321,7 +323,7 @@ private fun MusicPlaylistCover(
                 is AsyncImagePainter.State.Success -> {
                     Image(
                         painter = painter,
-                        contentDescription = stringRes(R.string.preview_card_image_for, image),
+                        contentDescription = stringRes(Res.string.preview_card_image_for, image),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.matchParentSize(),
                     )
@@ -404,7 +406,7 @@ private fun TrackCountChip(
             )
             Spacer(Modifier.padding(start = 6.dp))
             Text(
-                text = pluralStringResource(R.plurals.music_playlist_track_count, trackCount, trackCount),
+                text = pluralStringRes(Res.plurals.music_playlist_track_count, trackCount, trackCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,

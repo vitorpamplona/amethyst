@@ -51,12 +51,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.resources.publication_contents
 import com.vitorpamplona.amethyst.commons.resources.publication_more_sections
 import com.vitorpamplona.amethyst.commons.resources.publication_section_count
@@ -435,7 +435,7 @@ private fun PublicationCover(
         if (cover != null) {
             MyAsyncImage(
                 imageUrl = cover,
-                contentDescription = stringRes(R.string.preview_card_image_for, cover),
+                contentDescription = stringRes(Res.string.preview_card_image_for, cover),
                 contentScale = ContentScale.Crop,
                 mainImageModifier = Modifier.fillMaxSize(),
                 loadedImageModifier = modifier,

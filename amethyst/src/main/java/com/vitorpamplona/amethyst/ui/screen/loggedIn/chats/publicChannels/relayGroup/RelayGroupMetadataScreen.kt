@@ -67,13 +67,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_create_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_flag_private
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_flag_private_desc
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_create_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_add_photo
 import com.vitorpamplona.amethyst.commons.resources.relay_group_change_photo
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_edit_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_about
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_geohash
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_geohash_hint
@@ -85,6 +90,8 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_hidden
 import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_hidden_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_invite_only
 import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_invite_only_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_private
+import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_private_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_restricted
 import com.vitorpamplona.amethyst.commons.resources.relay_group_flag_restricted_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_location_add
@@ -231,9 +238,9 @@ private fun RelayGroupMetadataScaffold(
                 CreatingTopBar(
                     titleRes =
                         when {
-                            !viewModel.isBuzzRelay -> R.string.relay_group_create_title
-                            viewModel.isForum -> R.string.buzz_forum_create_title
-                            else -> R.string.buzz_channel_create_title
+                            !viewModel.isBuzzRelay -> Res.string.relay_group_create_title
+                            viewModel.isForum -> Res.string.buzz_forum_create_title
+                            else -> Res.string.buzz_channel_create_title
                         },
                     isActive = { viewModel.canPost && (nip29Support == true || viewModel.isBuzzRelay) },
                     onCancel = nav::popBack,
@@ -241,7 +248,7 @@ private fun RelayGroupMetadataScaffold(
                 )
             } else {
                 SavingTopBar(
-                    titleRes = R.string.relay_group_edit_title,
+                    titleRes = Res.string.relay_group_edit_title,
                     isActive = viewModel::canPost,
                     onCancel = nav::popBack,
                     onPost = onSubmit,
@@ -438,8 +445,8 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
     // Buzz's `visibility`: open = searchable and anyone may join, private = hidden and invite-only.
     // One switch covers both, so it keeps NIP-29's private flag but says what Buzz actually does.
     LabeledSwitchRow(
-        label = stringRes(if (viewModel.isBuzzRelay) R.string.buzz_channel_flag_private else R.string.relay_group_flag_private),
-        description = stringRes(if (viewModel.isBuzzRelay) R.string.buzz_channel_flag_private_desc else R.string.relay_group_flag_private_desc),
+        label = stringRes(if (viewModel.isBuzzRelay) Res.string.buzz_channel_flag_private else Res.string.relay_group_flag_private),
+        description = stringRes(if (viewModel.isBuzzRelay) Res.string.buzz_channel_flag_private_desc else Res.string.relay_group_flag_private_desc),
         checked = viewModel.isPrivate,
     ) {
         viewModel.isPrivate = it

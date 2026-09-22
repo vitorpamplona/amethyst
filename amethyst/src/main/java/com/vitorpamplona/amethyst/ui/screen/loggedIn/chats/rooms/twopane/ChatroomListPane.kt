@@ -26,8 +26,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.known
+import com.vitorpamplona.amethyst.commons.resources.new_requests
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -56,8 +58,8 @@ fun ChatroomList(
         remember(knownFeedContentState) {
             derivedStateOf {
                 persistentListOf(
-                    MessagesTabItem(R.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
-                    MessagesTabItem(R.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
+                    MessagesTabItem(Res.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
+                    MessagesTabItem(Res.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
                 )
             }
         }

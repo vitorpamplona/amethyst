@@ -54,18 +54,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_a_blossom_server
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_add_url_label
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_busy
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_disable_all
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_enable_all
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_files_found
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_found_files
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_intro
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_manage_servers
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_no_targets
@@ -74,11 +78,13 @@ import com.vitorpamplona.amethyst.commons.resources.blossom_import_scan
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_scanning
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_source_failed
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_sources_section
+import com.vitorpamplona.amethyst.commons.resources.blossom_import_start_button
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_title
 import com.vitorpamplona.amethyst.commons.resources.delete_media_server
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -103,6 +109,7 @@ fun BlossomImportScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val blossomImportBusyStr = stringRes(Res.string.blossom_import_busy)
     val vm: BlossomImportViewModel = viewModel()
     vm.init(accountViewModel)
 
@@ -174,7 +181,7 @@ fun BlossomImportScreen(
                     TextButton(onClick = { vm.setAll(anyDisabled) }, enabled = sources.isNotEmpty()) {
                         Text(
                             stringRes(
-                                if (anyDisabled) R.string.blossom_import_enable_all else R.string.blossom_import_disable_all,
+                                if (anyDisabled) Res.string.blossom_import_enable_all else Res.string.blossom_import_disable_all,
                             ),
                         )
                     }
@@ -196,7 +203,7 @@ fun BlossomImportScreen(
                     color = MaterialTheme.colorScheme.grayText,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                 )
-                MediaServerEditField(R.string.add_a_blossom_server) { vm.addCustom(it) }
+                MediaServerEditField(Res.string.add_a_blossom_server) { vm.addCustom(it) }
             }
 
             item {
@@ -247,7 +254,7 @@ fun BlossomImportScreen(
                                     is ImportStart.Started -> nav.popBack()
                                     ImportStart.Busy ->
                                         Toast
-                                            .makeText(context, stringRes(context, R.string.blossom_import_busy), Toast.LENGTH_LONG)
+                                            .makeText(context, blossomImportBusyStr, Toast.LENGTH_LONG)
                                             .show()
                                     ImportStart.Empty -> {}
                                 }
@@ -367,7 +374,7 @@ private fun ScanStatusLabel(
         is SourceScanState.Found -> {
             val count = scan.count
             Text(
-                text = pluralStringResource(R.plurals.blossom_import_files_found, count, count),
+                text = pluralStringRes(Res.plurals.blossom_import_files_found, count, count),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (count > 0) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.grayText,
             )
@@ -398,13 +405,13 @@ private fun ImportResultCard(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = pluralStringResource(R.plurals.blossom_import_found_files, count, count),
+            text = pluralStringRes(Res.plurals.blossom_import_found_files, count, count),
             style = MaterialTheme.typography.bodyMedium,
         )
         FilledTonalButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
             Icon(symbol = MaterialSymbols.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text(pluralStringResource(R.plurals.blossom_import_start_button, count, count))
+            Text(pluralStringRes(Res.plurals.blossom_import_start_button, count, count))
         }
     }
 }

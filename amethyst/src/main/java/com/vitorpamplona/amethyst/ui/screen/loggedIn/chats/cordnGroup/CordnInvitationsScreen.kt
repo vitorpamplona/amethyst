@@ -53,6 +53,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.model.cordn.CordnInvitation
 import com.vitorpamplona.amethyst.model.cordn.CordnInvitations
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -118,7 +121,7 @@ fun CordnInvitationsScreen(
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
                 title = { Text(stringRes(R.string.cordn_invitations_title)) },
@@ -235,7 +238,7 @@ private fun InvitationCard(
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = welcome.metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.cordn_group_untitled, welcome.gid.take(8)),
+                text = welcome.metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, welcome.gid.take(8)),
                 style = MaterialTheme.typography.titleMedium,
             )
             welcome.metadata?.description?.takeIf { it.isNotBlank() }?.let {

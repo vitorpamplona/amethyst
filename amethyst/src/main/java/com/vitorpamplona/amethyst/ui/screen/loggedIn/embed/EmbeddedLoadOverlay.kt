@@ -35,12 +35,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.embedded_tab_load_failed
+import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
@@ -71,7 +70,7 @@ fun BoxScope.EmbeddedLoadOverlay(
             )
             Spacer(Modifier.height(16.dp))
             Button(onClick = onRetry) {
-                Text(stringResource(R.string.retry))
+                Text(stringRes(Res.string.retry))
             }
         } else {
             CircularProgressIndicator()

@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -61,7 +60,15 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
+import com.vitorpamplona.amethyst.commons.resources.concord_editing_banner
+import com.vitorpamplona.amethyst.commons.resources.concord_send_image_title
+import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
+import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
+import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
+import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
@@ -183,7 +190,7 @@ fun ConcordChannelScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
+                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
             )
@@ -358,14 +365,14 @@ private fun ConcordTypingIndicator(
 
     val label =
         when (typers.size) {
-            1 -> stringRes(R.string.concord_typing_one, rememberTypistName(typers[0], accountViewModel))
+            1 -> stringRes(Res.string.concord_typing_one, rememberTypistName(typers[0], accountViewModel))
             2 ->
                 stringRes(
-                    R.string.concord_typing_two,
+                    Res.string.concord_typing_two,
                     rememberTypistName(typers[0], accountViewModel),
                     rememberTypistName(typers[1], accountViewModel),
                 )
-            else -> stringRes(R.string.concord_typing_many)
+            else -> stringRes(Res.string.concord_typing_many)
         }
 
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
@@ -458,7 +465,7 @@ private fun ConcordMessageComposer(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringRes(com.vitorpamplona.amethyst.R.string.concord_editing_banner),
+                text = stringRes(Res.string.concord_editing_banner),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f).padding(start = 8.dp),
@@ -466,7 +473,7 @@ private fun ConcordMessageComposer(
             IconButton(onClick = { newMessageModel.cancelEdit() }) {
                 SymbolIcon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.cancel),
+                    contentDescription = stringRes(Res.string.cancel),
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -516,7 +523,7 @@ private fun ConcordMessageComposer(
             shape = EditFieldBorder,
             placeholder = {
                 Text(
-                    text = stringRes(com.vitorpamplona.amethyst.R.string.reply_here),
+                    text = stringRes(Res.string.reply_here),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -579,7 +586,7 @@ private fun ConcordFileUploadDialog(
 
     ChatFileUploadDialog(
         state = state,
-        title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_send_image_title)) },
+        title = { Text(stringRes(Res.string.concord_send_image_title)) },
         upload = {
             scope.launch(Dispatchers.IO) {
                 val community = newMessageModel.communityId

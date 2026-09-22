@@ -56,16 +56,22 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_created
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_unreadable
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_action
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_confirm
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_explainer
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_title
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_ok
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -137,7 +143,7 @@ fun ConcordInviteLinksScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(stringRes(R.string.concord_invite_links_title), fontWeight = FontWeight.Bold)
+                        Text(stringRes(Res.string.concord_invite_links_title), fontWeight = FontWeight.Bold)
                         if (communityName.isNotBlank()) {
                             Text(communityName, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
@@ -145,7 +151,7 @@ fun ConcordInviteLinksScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
             )
@@ -192,8 +198,8 @@ fun ConcordInviteLinksScreen(
                             try {
                                 val ok = account.concord.revokeConcordInvite(communityId, link.token)
                                 accountViewModel.toastManager.toast(
-                                    R.string.concord_invite_links_title,
-                                    if (ok) R.string.concord_invite_revoked_ok else R.string.concord_invite_revoked_failed,
+                                    Res.string.concord_invite_links_title,
+                                    if (ok) Res.string.concord_invite_revoked_ok else Res.string.concord_invite_revoked_failed,
                                 )
                                 // Re-read either way: on success the link is gone from the list, and on
                                 // failure the list is the only thing that can say whether it changed.
@@ -210,7 +216,7 @@ fun ConcordInviteLinksScreen(
             },
             dismissButton = {
                 TextButton(enabled = !revoking, onClick = { confirming = null }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )
@@ -259,11 +265,11 @@ private fun InviteLinkRow(
         }
 
         IconButton(enabled = enabled, onClick = { menuOpen = true }) {
-            SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(R.string.more_options))
+            SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options))
         }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.copy_to_clipboard)) },
+                text = { Text(stringRes(Res.string.copy_to_clipboard)) },
                 onClick = {
                     menuOpen = false
                     onCopy()

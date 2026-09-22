@@ -61,8 +61,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.location_channels
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
@@ -92,7 +93,7 @@ fun GeohashChatsScreen(
         topBar = {
             // No seed: this lists every location channel, so there is no one geohash to carry.
             UserDrawerSearchTopBar(accountViewModel, nav, null) {
-                Text(stringRes(R.string.location_channels), fontWeight = FontWeight.Bold)
+                Text(stringRes(Res.string.location_channels), fontWeight = FontWeight.Bold)
             }
         },
         bottomBar = {
@@ -109,7 +110,7 @@ fun GeohashChatsScreen(
                 ) {
                     SymbolIcon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.location_channels),
+                        contentDescription = stringRes(Res.string.location_channels),
                         tint = Color.White,
                         modifier = Modifier.size(26.dp),
                     )

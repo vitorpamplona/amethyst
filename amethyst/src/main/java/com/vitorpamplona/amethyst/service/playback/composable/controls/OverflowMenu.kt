@@ -37,14 +37,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_settings_video_quality
+import com.vitorpamplona.amethyst.commons.resources.download_to_phone
+import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.mute_button
+import com.vitorpamplona.amethyst.commons.resources.muted_button
 import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
 import com.vitorpamplona.amethyst.commons.resources.playback_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_fullscreen
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -165,7 +169,7 @@ fun OverflowMenuButton(
         ) {
             Icon(
                 symbol = MaterialSymbols.MoreVert,
-                contentDescription = stringRes(R.string.more_options),
+                contentDescription = stringRes(Res.string.more_options),
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Size20Modifier,
             )
@@ -195,7 +199,7 @@ fun OverflowMenuButton(
                         VideoPlayerAction.Mute -> {
                             M3ActionRow(
                                 icon = if (startingMuteState) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp,
-                                text = if (startingMuteState) stringRes(R.string.muted_button) else stringRes(R.string.mute_button),
+                                text = if (startingMuteState) stringRes(Res.string.muted_button) else stringRes(Res.string.mute_button),
                             ) {
                                 menuExpanded.value = false
                                 onMuteClick()
@@ -215,7 +219,7 @@ fun OverflowMenuButton(
                         VideoPlayerAction.Share -> {
                             M3ActionRow(
                                 icon = MaterialSymbols.Share,
-                                text = stringRes(R.string.share_or_save),
+                                text = stringRes(Res.string.share_or_save),
                             ) {
                                 menuExpanded.value = false
                                 onShareClick()
@@ -225,7 +229,7 @@ fun OverflowMenuButton(
                         VideoPlayerAction.Download -> {
                             M3ActionRow(
                                 icon = MaterialSymbols.SaveAlt,
-                                text = stringRes(R.string.download_to_phone),
+                                text = stringRes(Res.string.download_to_phone),
                             ) {
                                 menuExpanded.value = false
                                 onSaveClick()

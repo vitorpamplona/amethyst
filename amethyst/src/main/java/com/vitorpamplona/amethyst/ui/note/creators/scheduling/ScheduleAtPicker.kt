@@ -58,7 +58,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -74,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.resources.schedule_post_preset_next_mo
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_preset_tomorrow_morning
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_publishes_in
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_time_label
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_warning_multi
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_warning_single
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_warning_title
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -183,7 +184,7 @@ fun ScheduleAtPicker(
                     Text(stringRes(Res.string.schedule_post_pick_label), style = MaterialTheme.typography.bodyLarge)
                 } else {
                     Text(
-                        text = stringRes(Res.string.schedule_post_publishes_in, timeAheadNoDot(scheduledForSec, context)),
+                        text = stringRes(Res.string.schedule_post_publishes_in, timeAheadNoDot(scheduledForSec)),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
@@ -261,9 +262,9 @@ private fun ReliabilityWarning(hasMultipleAccounts: Boolean) {
                 text =
                     stringRes(
                         if (hasMultipleAccounts) {
-                            R.string.schedule_post_warning_multi
+                            Res.string.schedule_post_warning_multi
                         } else {
-                            R.string.schedule_post_warning_single
+                            Res.string.schedule_post_warning_single
                         },
                     ),
                 color = MaterialTheme.colorScheme.onErrorContainer,

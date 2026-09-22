@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_title
 import com.vitorpamplona.amethyst.model.cordn.CordnKeyPackageRow
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -95,7 +97,7 @@ fun CordnKeyPackagesScreen(
     val runtime = accountViewModel.account.cordnRuntime
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.cordn_keypackages_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_keypackages_title), nav) },
     ) { padding ->
         if (runtime == null) {
             Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {

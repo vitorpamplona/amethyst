@@ -1,128 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="zero">تم إخفاء هذا المنشور لأنه يحتوي على أكثر من %1$d وسم</item>
-        <item quantity="one">تم إخفاء هذا المنشور لأنه يحتوي على أكثر من %1$d وسم</item>
-        <item quantity="two">تم إخفاء هذا المنشور لأنه يحتوي على أكثر من %1$d وسمَين</item>
-        <item quantity="few">تم إخفاء هذا المنشور لأنه يحتوي على أكثر من %1$d وسوم</item>
-        <item quantity="many">تم إخفاء هذا المنشور لأنه يحتوي على أكثر من %1$d وسمًا</item>
-        <item quantity="other">تم إخفاء هذا المنشور لأنه يحتوي على أكثر من %1$d وسم</item>
-    </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="zero">%1$d أصل مجمَّع</item>
-        <item quantity="one">%1$d أصل مجمَّع</item>
-        <item quantity="two">%1$d أصلَان مجمَّعان</item>
-        <item quantity="few">%1$d أصول مجمَّعة</item>
-        <item quantity="many">%1$d أصلًا مجمَّعًا</item>
-        <item quantity="other">%1$d أصل مجمَّع</item>
-    </plurals>
-    <plurals name="thread_collapsed_reply_count">
-        <item quantity="zero">+%1$d\nردود</item>
-        <item quantity="one">+%1$d\nرد</item>
-        <item quantity="two">+%1$d\nردَّان</item>
-        <item quantity="few">+%1$d\nردود</item>
-        <item quantity="many">+%1$d\nردًّا</item>
-        <item quantity="other">+%1$d\nردود</item>
-    </plurals>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="spam">محتوى عشوائي</string>
-    <string name="spam_description">عدد الأحداث المزعجة من هذا المرحل</string>
-    <string name="impersonation">أنتحال</string>
-    <string name="illegal_behavior">تصرف غير قانوني</string>
-    <string name="request_deletion">طلب حذفها</string>
     <string name="block_hide_user"><![CDATA[حظر و إخفاء المستخدم]]></string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">قم بتسجيل الدخول باستخدام مفتاح خاص لتتمكن من الرد</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">قم بتسجيل الدخول باستخدام مفتاح خاص لتتمكن من تعزيز المشاركات</string>
-    <string name="login_with_a_private_key_to_like_posts">تسجيل الدخول باستخدام مفتاح خاص لإبداء الإعجاب بالمنشورات</string>
-    <string name="no_zap_amount_setup_long_press_to_change">لا يوجد إعداد لمبلغ Zap. اضغط لفترة طويلة للتغيير</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">قم بتسجيل الدخول باستخدام مفتاح خاص لتتمكن من إرسال Zaps</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">قم بتسجيل الدخول باستخدام مفتاح خاص لتتمكن من متابعة المستخدمين</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">قم بتسجيل الدخول بمفتاحك الخاص للتتمكن من إلغاء متابعة المستخدمين </string>
-    <string name="login_with_a_private_key_to_be_able_to_hide_word">قم بتسجيل الدخول باستخدام مفتاحك السري لتتمكن من إخفاء الكلمة أو الجملة</string>
-    <string name="login_with_a_private_key_to_be_able_to_show_word">قم بتسجيل الدخول باستخدام مفتاحك السري لتتمكن من إظهار الكلمة أو الجملة</string>
-    <string name="login_with_a_private_key_to_be_able_to_upload">أنت تستخدم مفتاحًا عامًا وهو للقراءة فقط. سجّل الدخول بمفتاح خاص لتتمكن من الرفع</string>
-    <string name="login_with_a_private_key_to_be_able_to_sign_events">أنت تستخدم مفتاحًا عامًا وهو للقراءة فقط. سجّل الدخول بمفتاح خاص لتتمكن من توقيع الأحداث</string>
-    <string name="unauthorized_exception">فك تشفير غير مصرح به</string>
-    <string name="unauthorized_exception_description">لم يأذن الموقِّع بعملية فك التشفير المطلوبة لإتمام هذه العملية. قم بتفعيل فك تشفير NIP-44 في تطبيق الموقِّع وحاول مرة أخرى</string>
-    <string name="signer_not_found_exception">الموقِّع غير موجود</string>
-    <string name="signer_not_found_exception_description">هل تم إلغاء تثبيت تطبيق الموقِّع؟ تحقق من تثبيته وأنه يحتوي على هذا الحساب. سجّل الخروج وأعد تسجيل الدخول إن تغيّر تطبيق الموقِّع.</string>
-    <string name="signer_illegal_state_exception_description">أعاد الموقِّع الخارجي بيانات غير متوقعة للطلب. قد يكون هناك خطأ في Amethyst أو في تطبيق الموقِّع.</string>
-    <string name="zaps">زاب</string>
-    <string name="boost">تعزيز</string>
     <string name="boosted">معزز</string>
     <string name="edited_number">تعديل #%1$s</string>
-    <string name="propose_an_edit">اقتراح تعديل</string>
-    <string name="add">إضافة</string>
-    <string name="error_parsing_error_message">خطأ أثناء تحليل رسالة الخطأ</string>
-    <string name="profile">الملف الشخصي</string>
-    <string name="security_filters">مرشحات الأمان</string>
-    <string name="clink_requesting_invoice">جارٍ طلب الفاتورة…</string>
-    <string name="clink_debit_no_response">لم تُكمل خدمة الخصم عملية الدفع.</string>
-    <string name="clink_confirm_pay_amount_via_source">دفع %1$s عبر %2$s؟</string>
-    <string name="clink_confirm_pay_via_source">دفع هذه الفاتورة عبر %1$s؟</string>
-    <string name="clink_offer_invalid_amount">أدخل مبلغًا صحيحًا لهذا العرض.</string>
-    <string name="clink_budget_one_time">مرة واحدة</string>
-    <string name="clink_budget_daily">يوميًا</string>
-    <string name="clink_budget_weekly">أسبوعيًا</string>
-    <string name="clink_budget_monthly">شهريًا</string>
-    <string name="pay">اإدفع</string>
-    <string name="send_payment_paying_via">جارٍ الدفع عبر %1$s…</string>
-    <string name="send_payment_failed">فشل الدفع</string>
-    <string name="send_payment_cashu_balance">القابل للإنفاق لهذا المستلم: %1$s sat</string>
-    <string name="send_payment_onchain_txid">المعاملة: %1$s</string>
-    <string name="preview_card_image_for">"معاينة صورة البطاقة لـ %1$s"</string>
-    <string name="description">الوصف</string>
-    <string name="what_s_on_your_mind">ما الذي يدور في ذهنك؟</string>
-    <string name="write_a_message">اكتب رسالة…</string>
-    <string name="post">نشر</string>
     <string name="save">حفظ</string>
-    <string name="send">إرسال</string>
-    <string name="create">إنشاء</string>
     <string name="rename">إعادة تسمية</string>
-    <string name="cancel">إلغاء</string>
-    <string name="error">خطأ</string>
-    <string name="errors">الأخطاء</string>
-    <string name="connection_success_rate_description">نسبة الاتصالات الناجحة بالـ relay</string>
-    <string name="download_to_phone">حفظ في الهاتف</string>
-    <string name="image_saved_to_the_gallery">تم حفظ الصورة في المعرض</string>
-    <string name="video_download_has_started_toast">بدأ تنزيل الفيديو…</string>
-    <string name="media_download_has_started_toast">بدأ تنزيل الوسائط…</string>
-    <string name="pin_conversation">تثبيت في الأعلى</string>
-    <string name="unpin_conversation">إلغاء التثبيت</string>
-    <string name="failed_to_save_the_image">فشل حفظ الصورة</string>
-    <string name="video_saved_to_the_gallery">تم حفظ الفيديو في الجهاز</string>
-    <string name="failed_to_save_the_video">فشل حفظ الفيديو</string>
-    <string name="pdf_saved_to_the_gallery">تم حفظ ملف PDF في Downloads/Amethyst</string>
-    <string name="failed_to_save_the_pdf">فشل حفظ ملف PDF</string>
-    <string name="no_camera_app_found">لم يتم العثور على تطبيق كاميرا في هذا الجهاز</string>
-    <string name="record_a_message_description">اضغط مطوّلًا لتسجيل رسالة</string>
-    <string name="upload_error_title">خطأ في الرفع</string>
-    <string name="upload_error_voice_message_failed">فشل رفع الرسالة الصوتية</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 غير مدعوم للرسائل الصوتية بعد</string>
-    <string name="upload_error_voice_message_exception">فشل رفع الصوت: %1$s</string>
-    <string name="voice_preset_none">لا شيء</string>
-    <string name="voice_preset_deep">عميق</string>
-    <string name="voice_preset_high">مرتفع</string>
-    <string name="voice_preset_neutral">محايد</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">لا يمتلك المستخدم عنوان (Lightning Address) لاستقبال sats</string>
-    <string name="reply_here">"الرد هنا…"</string>
-    <string name="known">معروف</string>
-    <string name="new_requests">طلبات جديدة</string>
-    <string name="blocked_users">المستخدمين المحظورين</string>
-    <string name="new_threads">المنشورات</string>
-    <string name="conversations">المحادثات</string>
-    <string name="more_options">المزيد من الخيارات</string>
-    <string name="show_private_key_qr_code">إظهار رمز QR المفتاح الخاص</string>
-    <string name="show_encrypted_private_key_qr_code">إظهار رمز QR المفتاح الخاص المشفر</string>
-    <string name="follow">متابعة</string>
-    <string name="follow_back">إرجاع المتابعة</string>
-    <string name="hide_password">اخفاء كلمة السر</string>
-    <string name="invalid_key">مفتاح غير صحيح</string>
-    <string name="invalid_key_with_message">مفتاح غير صالح: %1$s</string>
-    <string name="password_is_required">كلمة السر مطلوبة</string>
-    <string name="key_is_required">المفتاح مطلوب</string>
-    <string name="name_is_required">يجب ادخال اسم</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -131,177 +15,7 @@
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="changed_chat_profile_to">ملف المحادثة الجديد:</string>
-    <string name="leave">مغادرة</string>
-    <string name="unfollow">الغاء المتابعة</string>
-    <string name="ephemeral_relay_chat">محادثة تختفي</string>
-    <string name="relay_chat">محادثة relay</string>
-    <string name="relay_chat_title">محادثات relay</string>
-    <string name="relay_chat_explainer">محادثات relay هي مجموعات دردشة يتحكم فيها الـ relay المضيف.
-        إنها مرئية للجميع على Nostr ويمكن لأي شخص المشاركة فيها.
-        إنها مناسبة للمجتمعات المفتوحة حول مواضيع محددة. بعض هذه المجموعات مؤقتة
-    وبالتالي تختفي رسائل الدردشة بمرور الوقت</string>
-    <string name="public_chat">الدردشة العامة</string>
-    <string name="marmot_group">مجموعة MLS</string>
-    <string name="public_chat_title">بيانات المحادثة العامة</string>
-    <string name="public_chat_explainer">المحادثات العامة مرئية للجميع على Nostr ويمكن لأي شخص
-        المشاركة فيها. إنها مناسبة للمجتمعات المفتوحة حول مواضيع محددة.
-        يمكن التحكم في الإشراف عبر حذف المنشورات على relay المجموعة</string>
-    <string name="public_chat_relays_explainer">أدخل من 1 إلى 3 relay تستضيف هذه المجموعة.
-        تستخدم تطبيقات Nostr هذا الإعداد لمعرفة مكان تنزيل الرسائل وإرسالها.</string>
-    <string name="remove">ازالة</string>
-    <string name="never">ابداً</string>
-    <string name="now">الان</string>
-    <string name="h">س</string>
-    <string name="m">د</string>
-    <string name="d">يوم</string>
-    <string name="nudity">عُري</string>
-    <string name="profanity_hateful_speech">الألفاظ النابية / خطاب كراهية</string>
-    <string name="backup_keys">نسخ المفاتيح</string>
-    <string name="failed_to_encrypt_key">فشل في تشفير مفتاحك الخاص</string>
-    <string name="secret_key_copied_to_clipboard">مفتاحك السري (nsec) قد تم نسخه في الحافظة</string>
-    <string name="copy_my_secret_key">إنسخ مفتاحي السري</string>
-    <string name="biometric_authentication_failed">فشلت المصادقة</string>
-    <string name="biometric_authentication_failed_explainer">فشل التحقق البيومتري في مصادقة مالك هذا الهاتف</string>
-    <string name="biometric_authentication_failed_explainer_with_error">فشل التحقق البيومتري في مصادقة مالك هذا الهاتف. الخطأ: %1$s</string>
-    <string name="copied_note_text_to_clipboard">تم نسخ نص الملاحظة/المنشور إلى الحافظة</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">تم نسخ عنوان @npub المؤلف إلى الحافظة</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">تم نسخ رمز الملاحظة/المنشور (note ID) إلى الحافظة</string>
-    <string name="private_conversation_notification">"&lt;استحالة فك تشفير الرسالة الخاصة&gt;
-\n\n أنت الآن في محادثة خاصة/مشفرة بين %1$s و %2$s ."</string>
-    <string name="drawer_accounts">الحسابات</string>
-    <string name="drawer_section_navigate">التنقل</string>
-    <string name="drawer_section_you">أنت</string>
-    <string name="drawer_section_feeds">الخلاصات</string>
-    <string name="drawer_section_create">إنشاء</string>
-    <string name="drawer_section_system">النظام</string>
-    <string name="back">رجوع</string>
-    <string name="quick_action_share_browser_link">شارك رابط المتصفح</string>
-    <string name="quick_action_share">مشاركة</string>
-    <string name="share_as_image">مشاركة كصورة</string>
-    <string name="share_as_image_url">مشاركة كرابط صورة</string>
-    <string name="quick_action_copy_note_id">معرف الملاحظة</string>
-    <string name="quick_action_delete">حذف</string>
-    <string name="quick_action_mute_thread">كتم المحادثة</string>
-    <string name="quick_action_unmute_thread">إلغاء كتم المحادثة</string>
-    <string name="report_dialog_block_hide_user_btn"><![CDATA[حظر و إخفاء المستخدم]]></string>
-    <string name="block_only">حظر </string>
-    <string name="bookmarks">المفضلة</string>
-    <string name="migrate_bookmarks_success">تم نقل الإشارات المرجعية بنجاح</string>
-    <string name="drafts">المسودات</string>
-    <string name="scheduled_posts">المنشورات المجدولة</string>
-    <string name="schedule_post_button_add">جدولة منشور</string>
-    <string name="schedule_post_button_remove">إلغاء الجدولة</string>
-    <string name="schedule_post_warning_single">قد لا تُنشر المنشورات المجدولة حتى تعيد فتح التطبيق. فعّل الوضع الدائم في الإعدادات ← تفضيلات واجهة المستخدم لجدولة موثوقة في الخلفية.</string>
-    <string name="schedule_post_warning_multi">قد لا تُنشر المنشورات المجدولة حتى تعيد فتح التطبيق. لن تُطلق منشورات الحسابات الأخرى المجدولة أثناء نشاط هذا الحساب. فعّل الوضع الدائم في الإعدادات ← تفضيلات واجهة المستخدم لجدولة موثوقة في الخلفية.</string>
-    <string name="scheduled_posts_at_time">%1$s · خلال %2$s</string>
-    <string name="scheduled_posts_at_time_past">%1$s · منذ %2$s</string>
-    <string name="scheduled_posts_day_tomorrow">غدًا</string>
-    <string name="scheduled_posts_logout_toast_zero">تم تسجيل الخروج</string>
-    <plurals name="scheduled_posts_logout_toast">
-        <item quantity="zero">تم تسجيل الخروج</item>
-        <item quantity="one">تم تسجيل الخروج · تم حذف منشور مجدول واحد</item>
-        <item quantity="two">تم تسجيل الخروج · تم حذف منشورَين مجدولَين</item>
-        <item quantity="few">تم تسجيل الخروج · تم حذف %d منشورات مجدولة</item>
-        <item quantity="many">تم تسجيل الخروج · تم حذف %d منشورًا مجدولًا</item>
-        <item quantity="other">تم تسجيل الخروج · تم حذف %d منشور مجدول</item>
-    </plurals>
-    <string name="scheduled_posts_notification_sent_title">تم نشر المنشور المجدول</string>
-    <string name="scheduled_posts_notification_failed_title">فشل المنشور المجدول</string>
-    <string name="app_notification_scheduled_posts_channel_name">المنشورات المجدولة</string>
-    <string name="app_notification_scheduled_posts_channel_description">إشعارات عند نشر منشور مجدول أو فشل نشره.</string>
-    <string name="scheduled_posts_action_send_now">إرسال الآن</string>
-    <string name="scheduled_posts_error_prefix">خطأ: %1$s</string>
-    <string name="scheduled_posts_status_pending">مجدول</string>
-    <string name="scheduled_posts_status_publishing">جارٍ الإرسال…</string>
-    <string name="scheduled_posts_status_failed">فشل</string>
-    <string name="scheduled_posts_status_sent">أُرسل</string>
-    <string name="scheduled_posts_status_cancelled">ملغى</string>
-    <plurals name="scheduled_posts_logout_warning">
-        <item quantity="zero">لديك %d منشورات مجدولة لم تُنشر بعد. سيؤدي تسجيل الخروج إلى حذفها نهائيًا.</item>
-        <item quantity="one">لديك %d منشور مجدول لم يُنشر بعد. سيؤدي تسجيل الخروج إلى حذفه نهائيًا.</item>
-        <item quantity="two">لديك %d منشورَان مجدولان لم يُنشرا بعد. سيؤدي تسجيل الخروج إلى حذفهما نهائيًا.</item>
-        <item quantity="few">لديك %d منشورات مجدولة لم تُنشر بعد. سيؤدي تسجيل الخروج إلى حذفها نهائيًا.</item>
-        <item quantity="many">لديك %d منشورًا مجدولًا لم يُنشر بعد. سيؤدي تسجيل الخروج إلى حذفها نهائيًا.</item>
-        <item quantity="other">لديك %d منشور مجدول لم يُنشر بعد. سيؤدي تسجيل الخروج إلى حذفها نهائيًا.</item>
-    </plurals>
-    <plurals name="scheduled_posts_subtitle_queued">
-        <item quantity="zero">%d في الطابور</item>
-        <item quantity="one">%d في الطابور</item>
-        <item quantity="two">%d في الطابور</item>
-        <item quantity="few">%d في الطابور</item>
-        <item quantity="many">%d في الطابور</item>
-        <item quantity="other">%d في الطابور</item>
-    </plurals>
-    <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="zero"> · %d مستحق خلال ساعة</item>
-        <item quantity="one"> · %d مستحق خلال ساعة</item>
-        <item quantity="two"> · %d مستحقان خلال ساعة</item>
-        <item quantity="few"> · %d مستحقة خلال ساعة</item>
-        <item quantity="many"> · %d مستحقاً خلال ساعة</item>
-        <item quantity="other"> · %d مستحق خلال ساعة</item>
-    </plurals>
-    <plurals name="scheduled_posts_relay_count">
-        <item quantity="zero">إلى %d relay</item>
-        <item quantity="one">إلى %d relay</item>
-        <item quantity="two">إلى %d relays</item>
-        <item quantity="few">إلى %d relays</item>
-        <item quantity="many">إلى %d relays</item>
-        <item quantity="other">إلى %d relays</item>
-    </plurals>
-    <string name="scheduled_posts_event_id_copied">تم نسخ معرّف الملاحظة</string>
-    <string name="polls">استطلاعات</string>
-    <string name="open_polls">مفتوح</string>
-    <string name="closed_polls">مغلق</string>
-    <string name="badges">الشارات</string>
-    <string name="communities">المجتمعات</string>
-    <string name="new_community">مجتمع جديد</string>
-    <string name="edit_community">تعديل المجتمع</string>
-    <string name="new_community_moderators_section">المشرفون</string>
-    <string name="new_community_rules_section">قواعد قابلة للتحقق (اختياري)</string>
-    <string name="new_community_rules_kinds_section">أنواع الأحداث المسموح بها</string>
-    <string name="new_community_rules_kind_short_text">نص قصير (1)</string>
-    <string name="new_community_rules_kind_long_form">مقالة طويلة (30023)</string>
-    <string name="new_community_rules_kind_picture">منشور صورة (20)</string>
-    <string name="new_community_rules_kind_video">منشور فيديو (21)</string>
-    <string name="new_community_rules_kind_short_video">فيديو قصير (22)</string>
-    <string name="new_community_rules_kind_comment">تعليق مجتمعي (1111)</string>
-    <string name="new_community_rules_banned_section">المستخدمون المحظورون</string>
-    <string name="new_community_rules_wot_section">بوابة شبكة الثقة (اختياري)</string>
-    <string name="new_community_rules_max_event_size_section">الحجم الأقصى العالمي للحدث (اختياري)</string>
-    <string name="new_badge">شارة جديدة</string>
-    <string name="award_badge">منح الشارة</string>
-    <string name="profile_badges_title">شارات الملف الشخصي</string>
-    <string name="pictures">الصور</string>
-    <string name="workouts">التمارين</string>
-    <string name="new_workout">تمرين جديد</string>
-    <string name="exercise_running">الجري</string>
-    <string name="exercise_walking">المشي</string>
-    <string name="exercise_cycling">ركوب الدراجة</string>
-    <string name="exercise_hiking">التنزه</string>
-    <string name="exercise_swimming">السباحة</string>
-    <string name="exercise_rowing">التجديف</string>
-    <string name="exercise_strength">تمارين القوة</string>
-    <string name="exercise_yoga">اليوغا</string>
-    <string name="exercise_meditation">التأمل</string>
-    <string name="exercise_diet">الحمية الغذائية</string>
-    <string name="exercise_fasting">الصيام</string>
-    <string name="exercise_circuit">التمرين الدائري</string>
-    <string name="software_apps">التطبيقات</string>
     <string name="route_software_apps">التطبيقات</string>
-    <string name="browser">المتصفح</string>
-    <string name="browser_tor_on">يتم التحميل عبر Tor. اضغط للاستخدام عبر الإنترنت المفتوح.</string>
-    <string name="browser_tor_off">يتم التحميل عبر الإنترنت المفتوح. اضغط للاستخدام عبر Tor.</string>
-    <string name="browser_favorites">المفضلة</string>
-    <string name="favorite_apps">التطبيقات المفضلة</string>
-    <string name="favorite_app_add">إضافة إلى المفضلة</string>
-    <string name="favorite_app_remove">إزالة من المفضلة</string>
-    <string name="favorite_app_network_tor">يتم التحميل عبر Tor.</string>
-    <string name="favorite_app_network_open">يتم التحميل عبر الإنترنت المفتوح.</string>
-    <string name="favorite_notice_published">تم النشر على relays</string>
-    <string name="favorite_notice_uploaded">تم رفع ملف</string>
-    <string name="favorite_notice_paid">تم إجراء دفعة</string>
-    <string name="favorite_app_still_loading">هذا التطبيق غير محمّل بعد. حاول مجدداً بعد لحظة.</string>
-    <string name="favorite_app_recent">الأخيرة</string>
     <string name="napplet_permissions">أذونات nApplet</string>
     <string name="napplet_permissions_empty">لا توجد أذونات nApplet بعد</string>
     <string name="napplet_permissions_empty_subtitle">الأذونات التي تمنحها لـ nApplets ستظهر هنا.</string>
@@ -310,49 +24,11 @@
     <string name="napplet_permissions_revoke">إلغاء</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_identity">الهوية</string>
-    <string name="napplet_cap_keys">إجراءات لوحة المفاتيح</string>
-    <string name="napplet_cap_storage">التخزين</string>
-    <string name="napplet_cap_value">المدفوعات</string>
-    <string name="napplet_cap_resource">الشبكة</string>
-    <string name="napplet_cap_upload">الرفع</string>
     <string name="napplet_cap_shell_desc">سؤال عن القدرات المتاحة</string>
-    <string name="napplet_cap_identity_desc">قراءة مفتاحك العام</string>
-    <string name="napplet_cap_keys_desc">ربط اختصارات لوحة المفاتيح</string>
-    <string name="napplet_cap_relay_desc">قراءة أحداثك والتوقيع عليها ونشرها</string>
-    <string name="napplet_cap_storage_desc">تخزين خاص به</string>
-    <string name="napplet_cap_value_desc">دفع فواتير Lightning</string>
-    <string name="napplet_cap_resource_desc">جلب موارد الويب وموارد Blossom</string>
-    <string name="napplet_cap_upload_desc">رفع الملفات إلى خادم الوسائط الخاص بك</string>
-    <string name="napplet_cap_theme">المظهر</string>
-    <string name="napplet_cap_notify">الإشعارات</string>
-    <string name="napplet_cap_inc">المراسلة</string>
-    <string name="napplet_cap_theme_desc">مطابقة ألوان تطبيقك</string>
-    <string name="napplet_cap_notify_desc">عرض الإشعارات لك</string>
-    <string name="napplet_cap_inc_desc">تبادل الرسائل مع nApplets الأخرى</string>
     <!-- Napplet consent dialog -->
     <string name="napplet_consent_capability">القدرة: %1$s</string>
-    <string name="napplet_consent_get_pubkey">يريد هذا nApplet قراءة مفتاحك العام.</string>
-    <string name="napplet_consent_identity_read">يريد هذا nApplet قراءة ملفك الشخصي وبيانات حسابك.</string>
-    <string name="napplet_consent_publish">يريد هذا nApplet توقيع ونشر حدث من النوع %1$d نيابةً عنك.</string>
-    <string name="napplet_consent_publish_preview">يريد هذا nApplet توقيع ونشر حدث من النوع %1$d نيابةً عنك:</string>
-    <string name="napplet_consent_publish_encrypted">يريد هذا nApplet إرسال حدث مشفَّر نيابةً عنك.</string>
-    <string name="napplet_consent_query">يريد هذا nApplet قراءة الأحداث من relay الخاصة بك.</string>
-    <string name="napplet_consent_storage">يريد هذا nApplet استخدام مساحة التخزين الخاصة به.</string>
     <string name="napplet_consent_pay">يريد هذا nApplet دفع فاتورة Lightning.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
-    <string name="napplet_consent_resource">يريد هذا nApplet جلب مورد ويب.</string>
-    <string name="napplet_consent_upload">يريد هذا nApplet تحميل ملف إلى خادم الوسائط الخاص بك.</string>
-    <string name="napplet_consent_notify">يريد هذا nApplet عرض إشعارات لك.</string>
-    <string name="napplet_consent_sign">يريد هذا الموقع توقيع حدث من النوع %1$d باستخدام مفتاح Nostr الخاص بك.</string>
-    <plurals name="napplet_consent_pay_amount">
-        <item quantity="zero">يريد هذا nApplet دفع فاتورة Lightning بقيمة %1$d sat.</item>
-        <item quantity="one">يريد هذا nApplet دفع فاتورة Lightning بقيمة %1$d sat.</item>
-        <item quantity="two">يريد هذا nApplet دفع فاتورة Lightning بقيمة %1$d sats.</item>
-        <item quantity="few">يريد هذا nApplet دفع فاتورة Lightning بقيمة %1$d sats.</item>
-        <item quantity="many">يريد هذا nApplet دفع فاتورة Lightning بقيمة %1$d sats.</item>
-        <item quantity="other">يريد هذا nApplet دفع فاتورة Lightning بقيمة %1$d sats.</item>
-    </plurals>
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
@@ -385,203 +61,16 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="shorts">مقاطع قصيرة</string>
-    <string name="public_chats">المحادثات العامة</string>
-    <string name="follow_packs">حزم المتابعة</string>
-    <string name="live_streams">البث المباشر</string>
-    <string name="nest_raise_hand">رفع اليد</string>
-    <string name="nest_lower_hand">خفض اليد</string>
-    <string name="nest_mute">كتم الصوت</string>
-    <string name="nest_unmute">إلغاء كتم الصوت</string>
-    <string name="nest_chat_send_failed_title">تعذّر إرسال الرسالة</string>
-    <string name="nest_mic_mute">كتم الميكروفون</string>
-    <string name="nest_mic_unmute">إلغاء كتم الميكروفون</string>
-    <string name="nest_notification_channel_description">يبقي الصوت قيد التشغيل أثناء فتح الغرفة.</string>
-    <string name="nest_notification_listening">Nest متصل</string>
-    <string name="nest_notification_broadcasting">Nest — مباشر</string>
-    <string name="nest_notification_text">اضغط للعودة.</string>
-    <string name="nest_notification_stop">إيقاف</string>
-    <string name="nest_presence_raised_hand">رفع يده</string>
-    <string name="nest_presence_on_stage">صعد إلى المنصة</string>
-    <string name="nest_presence_speaking">يتحدث</string>
-    <string name="nest_presence_listening">انضم كمستمع</string>
-    <string name="nest_presence_left">غادر nest</string>
-    <string name="nest_leave">مغادرة</string>
-    <string name="nest_leave_host_close_failed">تعذّر تحديد الغرفة كمغلقة. جارٍ المغادرة على أي حال — ستُغلق الغرفة تلقائيًا.</string>
-    <plurals name="nest_listener_count">
-        <item quantity="zero">%1$d مستمع</item>
-        <item quantity="one">%1$d مستمع</item>
-        <item quantity="two">%1$d مستمعان</item>
-        <item quantity="few">%1$d مستمعين</item>
-        <item quantity="many">%1$d مستمعًا</item>
-        <item quantity="other">%1$d مستمع</item>
-    </plurals>
-    <string name="nest_hush_local">كتم هذا المتحدث محليًا</string>
-    <string name="nest_hush_local_restore">استعادة هذا المتحدث</string>
-    <string name="nest_participant_follow">متابعة</string>
-    <string name="nest_participant_unfollow">إلغاء المتابعة</string>
-    <string name="nest_participant_mute">كتم</string>
-    <string name="nest_participant_unmute">إلغاء الكتم</string>
-    <string name="nest_no_server_save_failed">تعذّر حفظ قائمة خوادم nest. حاول مجددًا.</string>
-    <string name="nests_servers_title">خوادم Nest</string>
-    <string name="nests_servers_my_section">خوادمك</string>
-    <string name="nests_servers_my_explainer">محفوظ كحدث قابل للاستبدال من النوع kind-10112 حتى يتمكن العملاء الآخرون من قراءة تفضيلاتك.</string>
-    <string name="nests_servers_recommended_section">الخوادم الموصى بها</string>
-    <string name="nests_servers_recommended_explainer">اقتراحات مدمجة يمكنك إضافتها إلى قائمتك بنقرة واحدة.</string>
-    <string name="longs">مقاطع فيديو</string>
-    <string name="route_music_tracks">موسيقى</string>
-    <string name="route_music_playlists">قوائم التشغيل</string>
-    <string name="route_podcast_episodes">الحلقات</string>
-    <string name="route_podcasts">البودكاست</string>
-    <plurals name="podcast_episode_count">
-        <item quantity="zero">%1$d حلقة</item>
-        <item quantity="one">%1$d حلقة</item>
-        <item quantity="two">%1$d حلقتان</item>
-        <item quantity="few">%1$d حلقات</item>
-        <item quantity="many">%1$d حلقة</item>
-        <item quantity="other">%1$d حلقة</item>
-    </plurals>
-    <string name="new_music_track">مقطع موسيقي جديد</string>
-    <string name="new_music_playlist">قائمة تشغيل جديدة</string>
-    <plurals name="music_playlist_track_count_short">
-        <item quantity="zero">%1$d مقطع</item>
-        <item quantity="one">%1$d مقطع</item>
-        <item quantity="two">%1$d مقطعان</item>
-        <item quantity="few">%1$d مقاطع</item>
-        <item quantity="many">%1$d مقطعًا</item>
-        <item quantity="other">%1$d مقطع</item>
-    </plurals>
-    <string name="add_to_public_bookmarks">إضافة إلى المفضلات العامة</string>
-    <string name="remove_from_public_bookmarks">إزالة من المفضلات العامة</string>
-    <string name="pin_to_profile">تثبيت في الملف الشخصي</string>
-    <string name="unpin_from_profile">إلغاء التثبيت من الملف الشخصي</string>
-    <string name="bookmark_list_creation_screen_title">قائمة إشارات مرجعية جديدة</string>
-    <string name="bookmark_list_edit_sub_title">بيانات تعريف قائمة الإشارات المرجعية</string>
-    <string name="interest_sets_title">مجموعات الوسوم</string>
-    <string name="interest_set_creation_screen_title">مجموعة اهتمامات جديدة</string>
-    <string name="interest_set_rename">إعادة التسمية</string>
-    <string name="private_note">جعل خاصاً: تغليف الملاحظة هدية للمستخدمين المُخطَرين فقط</string>
-    <string name="disable_private_note">جعل عاماً</string>
-    <string name="private_note_locked">الردود على الملاحظة الخاصة تبقى خاصة دائماً</string>
-    <string name="private_note_visible_to">مرئي لـ</string>
     <string name="private_note_no_receivers">لا يوجد مستلمون بعد: ستكون الملاحظة مرئية لك فقط. أضف أشخاصاً لمشاركتها معهم.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">إضافة</string>
     <string name="notify_remove_user">إزالة المستخدم من الإشعارات</string>
     <string name="notify_search_and_add_user">البحث عن مستخدم وإضافته للإشعارات</string>
-    <string name="bookmark_list_explainer">يمكن لأي شخص على Nostr رؤية بيانات تعريف قوائم الإشارات المرجعية. الأعضاء الخاصون فقط مشفَّرون.</string>
-    <string name="move_bookmark_to_public_label">نقل إلى العام</string>
-    <string name="move_bookmark_to_private_label">نقل إلى الخاص</string>
-    <string name="reload_mint_confirm">تعبئة وإرسال Zap</string>
-    <string name="reload_mint_send_confirm">إرسال Zap</string>
-    <string name="reload_mint_summary">تعبئة %1$s sats إلى %2$s وإرسال Zap %3$s %4$s sats · الرسوم ≈ %5$s sats</string>
-    <string name="poll_option_index">الخيار %s</string>
-    <string name="poll_single_choice">اختيار واحد</string>
-    <string name="poll_multiple_choice">اختيار متعدد</string>
-    <string name="poll_unable_to_vote">تعذر التصويت</string>
-    <string name="poll_is_closed_explainer">تم إغلاق الاستطلاع لأي تصويت جديد</string>
-    <string name="one_vote_per_user_on_atomic_votes">يسمح بصوت واحد فقط لكل مستخدم في هذا النوع من الاستطلاع</string>
-    <string name="poll_author_no_vote">لا يستطيع مؤلف الاستطلاع التصويت في استطلاعه.</string>
-    <string name="hash_verification_info_title">ماذا يعني هذا؟</string>
-    <string name="hash_verification_passed">هذا المحتوى هو نفسه منذ النشر</string>
-    <string name="hash_verification_failed">لقد تغير هذا المحتوى. ربما لم يشاهد مؤلفه التغيير أو يوافق عليه بعد.</string>
-    <string name="content_description_add_media">إضافة وسائط</string>
-    <string name="content_description_add_image">أضف صورة</string>
-    <string name="content_description_add_video">اضف فيديو</string>
-    <string name="content_description_add_document">أضف مستند</string>
-    <string name="file_server">خادم الملفات</string>
-    <string name="file_server_description">اختر خادم لرفع الملف به</string>
-    <string name="media_servers">خوادم الوسائط</string>
     <string name="set_preferred_media_servers">تعيين خوادم رفع الوسائط المفضلة لديك.</string>
     <string name="recommended_media_servers">خوادم الوسائط الموصى بها</string>
     <string name="built_in_servers_description">القائمة الافتراضية لـ Amethyst. يمكنك إضافتها بشكل فردي أو إضافة القائمة بأكملها.</string>
-    <string name="payment_targets">أهداف الدفع</string>
-    <string name="payment_targets_section_explainer">أضف عناوين دفع لشبكات مختلفة (مثل bitcoin، lightning، ethereum).</string>
-    <string name="no_payment_app_found">لم يتم العثور على تطبيق للتعامل مع هذه المدفوعات. يرجى تثبيت محفظة متوافقة.</string>
-    <string name="no_payment_app_found_for_type">لم يتم العثور على تطبيق مثبت للتعامل مع مدفوعات %1$s. يرجى تثبيت محفظة متوافقة.</string>
-    <string name="error_dialog_payment_error">تعذّر فتح الدفع</string>
-    <string name="privacy_options">خيارات الخصوصية</string>
-    <string name="follow_list_kind3follows">جميع المتابعات</string>
-    <string name="follow_list_kind3follows_users_only">جميع المتابَعين</string>
-    <string name="follow_list_kind3_follows_users_only">قائمة المتابَعين الافتراضية</string>
-    <string name="follow_list_aroundme">حولي</string>
-    <string name="follow_list_global">العالمي</string>
-    <string name="follow_list_curated">منسَّق</string>
-    <string name="follow_list_mine">قائمتي</string>
-    <string name="follow_list_mute_list">قائمة الكتم</string>
-    <string name="follow_set_creation_dialog_title">قائمة متابَعين جديدة</string>
-    <string name="follow_pack_creation_dialog_title">حزمة متابَعين جديدة</string>
-    <string name="follow_set_edit_list_metadata">تعديل القائمة</string>
-    <string name="connect_through_your_orbot_setup_short">المنفذ الافتراضي هو 9050</string>
-    <string name="orbot_socks_port">منفذ Orbot Socks</string>
-    <string name="use_internal_tor">محرك Tor النشط</string>
-    <string name="use_internal_tor_explainer">استخدم الإصدار الداخلي أو Orbot</string>
-    <string name="tor_preset">إعدادات Tor/الخصوصية المسبقة</string>
-    <string name="tor_preset_explainer">تعديل جميع الإعدادات أدناه بسرعة</string>
-    <string name="tor_use_onion_address">رابط/مرحل بصلي</string>
-    <string name="tor_use_onion_address_explainer">استخدام Tor لأي رابط .onion</string>
-    <string name="tor_use_dm_relays">مرحلات DM</string>
-    <string name="tor_use_dm_relays_explainer">استخدام Tor لإرسال و أستقبال الرسائل الخاصة</string>
-    <string name="tor_use_new_relays">مرحلات غير موثوقة</string>
-    <string name="tor_use_new_relays_explainer">أستخدام Tor لمرحلات الأحداث الواردة و المرسلة</string>
-    <string name="tor_use_trusted_relays">مرحلات موثوقة</string>
-    <string name="tor_use_trusted_relays_explainer">أستخدام Tor للإتصال بالمرحلات</string>
-    <string name="tor_use_profile_pictures">الصور الشخصية</string>
-    <string name="tor_use_profile_pictures_explainer">أستخدام Tor عند تنزيل الصور الشخصية</string>
-    <string name="tor_use_url_previews">معاينة الروابط</string>
-    <string name="tor_use_url_previews_explainer">أستخدام Tor لطلب معاينة الروابط</string>
-    <string name="tor_use_images">الصور</string>
-    <string name="tor_use_images_explainer">أستخدام Tor عند تنزيل الصور</string>
-    <string name="tor_use_videos">الفيديوهات</string>
-    <string name="tor_use_videos_explainer">أستخدام Tor عند تنزيل الفديوهات</string>
-    <string name="tor_use_money_operations">المعاملات المالية</string>
-    <string name="tor_use_money_operations_explainer">فرض Tor على عمليات Zap وتحويلات Lightning وCashu</string>
-    <string name="tor_use_nip05_verification">التحقق من عنوان Nostr</string>
-    <string name="tor_use_nip05_verification_explainer">أستخدام Tor عند التحقق من عناوين NIP-05</string>
-    <string name="tor_use_media_uploads">رفع الوسائط</string>
-    <string name="tor_use_media_uploads_explainer">أستخدام Tor عند رفع الوسائط</string>
-    <string name="tor_internal">مضمن</string>
-    <string name="tor_off">إيقاف</string>
-    <string name="tor_when_needed">أساسي</string>
-    <string name="tor_default">الافتراضي</string>
-    <string name="tor_small_payloads">الكل ما عدا الوسائط</string>
-    <string name="tor_full_privacy">الخصوصية الكاملة</string>
-    <string name="tor_custom">مخصص</string>
-    <string name="tor_when_needed_explainer">أستخدام Tor عندما يكون مطلوباً من الخادم</string>
-    <string name="tor_default_explainer">إخفاء عنوان الـIP من المرحلات العشوائية</string>
-    <string name="tor_small_payloads_explainer">إخفاء عنوان الـIP من الكل ماعدا الصور و الفيديوهات</string>
-    <string name="tor_full_privacy_explainer">إخفاء عنوان الـIP من جميع الإتصالات</string>
-    <string name="tor_custom_explainer">خصصه بنفسك</string>
-    <string name="app_notification_dms_channel_name">الرسائل الخاصة</string>
-    <string name="app_notification_dms_channel_description">التنبيه عند وصول رسالة خاصة</string>
-    <string name="app_notification_zaps_channel_name">تم استلام الزاب</string>
-    <string name="app_notification_zaps_channel_description">تنبيهك عند أستقبالك زاب</string>
-    <string name="app_notification_zaps_channel_message">ساتوشي %1$s</string>
-    <string name="app_notification_zaps_channel_message_from">من طرف %1$s</string>
-    <string name="app_notification_zaps_channel_message_for">ل %1$s</string>
-    <string name="app_notification_reply_label">رد</string>
-    <string name="app_notification_mark_read_label">تحديد كمقروء</string>
-    <string name="app_notification_dms_summary">رسائل جديدة</string>
-    <string name="app_notification_zaps_summary">Zaps جديدة</string>
-    <string name="app_notification_reactions_channel_name">التفاعلات</string>
-    <string name="app_notification_reactions_channel_description">يُعلمك عندما يتفاعل شخص ما مع منشورك</string>
-    <string name="app_notification_reactions_channel_message">تفاعل %1$s مع منشورك</string>
-    <string name="app_notification_reactions_channel_message_for">لـ %1$s</string>
-    <string name="app_notification_reactions_summary">تفاعلات جديدة</string>
-    <string name="app_notification_chess_channel_name">الشطرنج</string>
-    <string name="app_notification_chess_channel_description">يُعلمك بأحداث لعبة الشطرنج</string>
-    <string name="app_notification_chess_challenge_accepted">قبِل %1$s تحديك في الشطرنج</string>
-    <string name="app_notification_chess_your_turn">تحرّك %1$s — دورك</string>
-    <string name="app_notification_chess_summary">تحديثات الشطرنج</string>
-    <string name="app_notification_replies_channel_name">الردود</string>
-    <string name="app_notification_replies_channel_description">يُعلمك عندما يرد شخص ما على منشورك</string>
     <string name="app_notification_replies_channel_message">رد عليك %1$s</string>
     <string name="app_notification_replies_channel_message_for">على: %1$s</string>
-    <string name="app_notification_replies_summary">ردود جديدة</string>
-    <string name="app_notification_mentions_channel_name">الإشارات</string>
-    <string name="app_notification_mentions_channel_description">يُعلمك عندما يذكرك شخص ما أو يستشهد بك في منشور</string>
-    <string name="app_notification_mentions_channel_message">أشار إليك %1$s</string>
-    <string name="app_notification_mentions_summary">إشارات جديدة</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -591,28 +80,86 @@
     <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
     <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
-    <string name="app_notification_calls_channel_name">المكالمات الواردة</string>
-    <string name="app_notification_calls_channel_description">إشعارات للمكالمات الصوتية والمرئية الواردة</string>
-    <string name="call_incoming">مكالمة واردة</string>
-    <string name="call_incoming_voice">مكالمة صوتية واردة…</string>
-    <string name="call_incoming_video">مكالمة مرئية واردة…</string>
-    <string name="call_with">مكالمة مع %1$s</string>
-    <string name="call_ongoing">المكالمات</string>
-    <string name="call_ongoing_description">إشعار المكالمة الجارية</string>
-    <string name="call_hangup">إنهاء المكالمة</string>
-    <string name="call_accept">قبول</string>
-    <string name="call_reject">رفض</string>
-    <string name="call_mute">كتم الصوت</string>
-    <string name="call_unmute">إلغاء كتم الصوت</string>
-    <string name="call_camera_on">الكاميرا مفعّلة</string>
-    <string name="call_camera_off">الكاميرا معطّلة</string>
-    <string name="call_speaker">مكبّر الصوت</string>
-    <string name="call_earpiece">السماعة</string>
-    <string name="call_permission_denied_voice">يحتاج Amethyst إلى إذن الوصول إلى الميكروفون لبدء مكالمة صوتية. يُرجى تفعيله من إعدادات التطبيق.</string>
-    <string name="call_permission_denied_video">يحتاج Amethyst إلى إذن الوصول إلى الكاميرا والميكروفون لبدء مكالمة مرئية. يُرجى تفعيلهما من إعدادات التطبيق.</string>
-    <string name="call_settings">إعدادات المكالمات</string>
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <string name="always_on_notif_setting_title">خدمة الإشعارات الدائمة</string>
+    <string name="always_on_notif_setting_description">تحافظ على اتصال دائم بـ relay صندوق الوارد الخاص بك لضمان تسليم الإشعارات فورًا. تُظهر إشعارًا مستمرًا. تستهلك بطارية أكثر لكنها تضمن عدم فوات أي رسالة.</string>
+    <string name="preferences">تفضيلات التطبيق</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <!-- Compact labels for the segmented control. -->
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
+    <string name="messages_create_public_chat">عام</string>
+    <string name="messages_create_group">مجموعة</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
+    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
+    <string name="messages_new_message">خاص</string>
+    <string name="share_target_as_dm">إرسال كرسالة مباشرة</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
+    <string name="cashu_p2pk_section">مفتاح Nutzap (متقدم)</string>
+    <string name="cashu_p2pk_explainer">مفتاح خاص منفصل يُستخدم فقط لاستلام nutzaps وفق NIP-61. ليس مفتاح هويتك على Nostr.</string>
+    <string name="cashu_p2pk_autogen">توليد مفتاح جديد</string>
+    <string name="cashu_p2pk_manual_label">المفتاح الخاص P2PK (hex)</string>
+    <string name="wallet_save_changes">حفظ التغييرات</string>
+    <!-- Onchain zap send dialog -->
+    <string name="bottom_bar_settings_description">اسحب لإعادة الترتيب. فعّل أو عطّل لإضافة عنصر أو إزالته من الشريط السفلي. عند إزالة جميع العناصر، يُخفى الشريط السفلي.</string>
+    <string name="bottom_bar_settings_reorder">إعادة الترتيب</string>
+    <string name="home_tabs_settings_description">اختر التبويبات التي تظهر في الشاشة الرئيسية. عندما يكون تبويب واحد فقط نشطًا، يُخفى شريط التبويبات.</string>
+    <string name="profile_ui_settings_description">اختر الأقسام والتغذيات التي تظهر في شاشات الملف الشخصي للمستخدم. جميع الخيارات مفعّلة افتراضيًا.</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
+    <string name="git_web_address">الويب:</string>
+    <string name="git_repo_tab_overview">نظرة عامة</string>
+    <string name="git_repo_section_about">حول</string>
+    <string name="git_repo_section_links">الروابط</string>
+    <string name="git_repo_section_maintainers">المشرفون</string>
+    <string name="git_repo_section_topics">المواضيع</string>
+    <string name="media_servers_blossom_section">خوادم Blossom</string>
+    <string name="media_servers_blossom_explainer">أضف عددًا من الخوادم كما تشاء. يمكنك اختيار الخادم المناسب لاحقًا عند رفع صورتك</string>
+    <string name="torrent_download">تنزيل</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <!-- Kind display names for relay subscription filter chips -->
+    <!-- M3 Action Dialog titles -->
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
+    <!-- LAN cast (Chromecast) feature -->
+    <!-- HLS multi-resolution video sharing -->
+    <!-- NIP-75 Zap Goals -->
+    <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
+    <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
+    <!-- NIP-86 Relay Management -->
+    <!-- Emoji packs -->
+    <!-- NIP-9B community rules composer-side validation. -->
+    <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <!-- Marmot (MLS) group chats -->
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
+    <!-- Profile card (kind-0 rendered in the feed) -->
+    <!-- Health Connect: activity label, shown by Health Connect next to the link into our
+         rationale screen. Needs to be an Android resource (not a commons Compose resource)
+         because android:label on the manifest entry can only reference @string/. -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">يحافظ على الاتصال بـ relay صندوق الوارد الخاص بك لتلقّي الإشعارات في الوقت الفعلي</string>
-    <string name="always_on_notif_title">إشعارات Amethyst نشطة</string>
     <plurals name="always_on_notif_connected">
         <item quantity="zero">متصل بـ %1$d relay للصندوق الوارد</item>
         <item quantity="one">متصل بـ %1$d relay للصندوق الوارد</item>
@@ -629,847 +176,39 @@
         <item quantity="many">متصل بـ %1$d relay</item>
         <item quantity="other">متصل بـ %1$d relay</item>
     </plurals>
-    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
-         serves several jobs at once, so these deliberately sum to more than the relay count. -->
-    <!-- Activity labels, used where the app's own noun for the data type already means something
-         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
-         their profile screen. Naming the job avoids an active misreading. -->
-    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
-         Describe the real strategy, not the intent — these are read by people trying to explain
-         a relay count they think is too high. -->
-    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
-         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">جارٍ الاتصال بـ relay صندوق الوارد…</string>
-    <string name="always_on_notif_setting_title">خدمة الإشعارات الدائمة</string>
-    <string name="always_on_notif_setting_description">تحافظ على اتصال دائم بـ relay صندوق الوارد الخاص بك لضمان تسليم الإشعارات فورًا. تُظهر إشعارًا مستمرًا. تستهلك بطارية أكثر لكنها تضمن عدم فوات أي رسالة.</string>
-    <string name="split_notifications_setting_title">تقسيم الإشعارات حسب المتابَعين</string>
-    <string name="split_notifications_setting_description">عرض تبويبين للإشعارات — المتابَعون (الأشخاص الذين تتابعهم) والجميع. يضيء مؤشر غير المقروء فقط لنشاط الأشخاص الذين تتابعهم.</string>
-    <string name="show_messages_in_notifications_setting_title">إظهار الرسائل</string>
-    <string name="show_messages_in_notifications_setting_description">تضمين الرسائل المباشرة والجماعية في تبويب الإشعارات. أوقف التشغيل للاحتفاظ بالرسائل في تبويب الرسائل فقط.</string>
-    <string name="reply_notify">تنبيه: </string>
-    <string name="today">اليوم</string>
-    <string name="content_warning_hide_all_sensitive_content_option">إخفاء</string>
-    <string name="content_warning_show_all_sensitive_content_option">إظهار</string>
-    <string name="content_warning_see_warnings_option">تحذير</string>
-    <string name="filter_spam_from_strangers_title">تصفية الرسائل المزعجة</string>
-    <string name="filter_spam_from_strangers_explainer">تُخفي المنشورات من الغرباء التي تكررت بنفس المحتوى 5 مرات أو أكثر</string>
-    <string name="add_client_tag_title">إضافة وسم العميل إلى أحداثي</string>
-    <string name="add_client_tag_explainer">عند التفعيل، يُضيف Amethyst وسم عميل NIP-89 إلى الأحداث التي تنشرها.</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_title">التحذير عند وجود بلاغات</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_explainer">يعرض رسالة تحذير عندما تحتوي المنشورات أو الملفات الشخصية على بلاغات من أشخاص تتابعهم</string>
-    <string name="hide_community_rules_violations_title">إخفاء المنشورات التي تنتهك قواعد المجتمع</string>
-    <string name="hide_community_rules_violations_explainer">تُسقط المنشورات من خلاصات المجتمع عندما ينشر المجتمع وثيقة قواعد NIP-9B وتخفق فيها الحدث. لا تأثير عندما لا تملك المجتمع قواعد منظّمة.</string>
-    <string name="security_section_filtering_preferences">تفضيلات التصفية</string>
-    <string name="security_section_blocked_content">المحتوى المحجوب</string>
-    <string name="security_blocked_users_empty">لم تحجب أي مستخدمين بعد.</string>
-    <string name="security_spamming_users_empty">لم يُصنَّف أي حساب كرسائل مزعجة في هذه الجلسة.</string>
-    <string name="security_hidden_words_empty">لا توجد كلمات مخفية. أضف كلمة أدناه لإخفاء المنشورات التي تحتويها.</string>
-    <string name="no_reaction_type_setup_long_press_to_change">لم يتم تحديد أي نوع من ردود الفعل. اضغط مطولاً للتغيير</string>
-    <string name="read_from_relay">القراءة من الخادم (Relay)</string>
-    <string name="write_to_relay">الكتابة للخادم</string>
-    <string name="write_to_relay_description">عدد البايتات الذي تم إرساله إلى هذا المرحل</string>
-    <string name="read_from_relay_description">عدد البايتات الذي تم أستقباله من هذا المرحل</string>
-    <string name="privacy_policy">سياسة الخصوصية</string>
-    <string name="child_safety_standards">معايير سلامة الأطفال</string>
-    <string name="about_legal">حول &amp; القانونية</string>
-    <string name="cashu">رمز Cashu</string>
-    <string name="no_lightning_address_set">لم يتم تعيين عنوان Lightning</string>
-    <string name="relay_setup">مرحلات</string>
-    <string name="discover_follows">حزم المتابعة</string>
-    <string name="discover_reads">القراءات</string>
-    <string name="discover_content_v2">خوارزميات الخلاصة</string>
-    <string name="discover_marketplace">السوق</string>
-    <string name="discover_live_v2">البثوث المباشرة</string>
-    <string name="discover_community_v2">المجتمعات</string>
-    <string name="discover_chat">االدردشات</string>
-    <string name="add_sensitive_content_label">محتوى حساس</string>
-    <string name="add_sensitive_content_description">يُضيف تحذير محتوى حساس قبل عرض هذا المحتوى</string>
-    <string name="ui_preferences">تفضيلات الواجهة</string>
-    <string name="preferences">تفضيلات التطبيق</string>
-    <string name="translations">الترجمات</string>
-    <string name="reactions">التفاعلات</string>
-    <string name="settings">الإعدادات</string>
-    <string name="account_settings">إعدادات الحساب</string>
-    <string name="app_settings">إعدادات التطبيق</string>
-    <!-- Settings search -->
-    <!-- Settings search keywords: an English concept/protocol index that supplements the
-         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
-         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
-    <string name="danger_zone">منطقة الخطر</string>
-    <string name="reset_marmot_state">إعادة تعيين حالة Marmot</string>
-    <string name="reset_marmot_success">تمت إعادة تعيين حالة Marmot.</string>
-    <string name="reset_marmot_failure">فشلت إعادة تعيين حالة Marmot: %1$s</string>
-    <string name="connectivity_type_always">دائماً</string>
-    <string name="connectivity_type_unmetered_wifi_only">WiFi غير المحدودة</string>
-    <string name="connectivity_type_never">ابداً</string>
-    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
-    <string name="ui_feature_set_type_complete">كامل</string>
-    <string name="ui_feature_set_type_simplified">مبسّط</string>
-    <string name="ui_feature_set_type_performance">أداء</string>
-    <!-- Compact labels for the segmented control. -->
-    <string name="gallery_type_classic">كلاسيكي</string>
-    <string name="gallery_type_modern">حديث</string>
-    <string name="system">النظام</string>
-    <string name="light">فاتح</string>
-    <string name="dark">غامق</string>
-    <string name="wallet_connect">ربط المحفظة</string>
-    <string name="theme">المظهر</string>
-    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="automatically_load_images_gifs">معاينة الصورة</string>
-    <string name="automatically_play_videos">تشغيل الفيديو</string>
-    <string name="autoplay_videos">تشغيل الفيديو تلقائيًا</string>
-    <string name="automatically_show_url_preview">معاينة الرابط</string>
-    <string name="automatically_hide_nav_bars">التمرير الغامر</string>
-    <string name="automatically_hide_nav_bars_description">إخفاء أشرطة التنقل عند التمرير</string>
-    <string name="ui_style">وضع الواجهة</string>
-    <string name="ui_style_description">اختر نمط المنشور</string>
-    <string name="gallery_style">نمط معرض الملف الشخصي</string>
-    <string name="gallery_style_description">اختر نمط المعرض</string>
-    <string name="spamming_users">المستخدمون المزعجون</string>
-    <string name="muted_button">الصوت مكتوم. انقر لإلغاء كتم الصوت</string>
-    <string name="mute_button">الصوت مفعل. انقر لكتم الصوت</string>
-    <string name="skip_back">التخطي للخلف %d ثانية</string>
-    <string name="skip_forward">التخطي للأمام %d ثانية</string>
-    <string name="geohash_exclusive">منشور حصري للموقع</string>
-    <string name="geohash_exclusive_explainer">سيراه فقط متابعو الموقع. لن يراه متابعوك العامون.</string>
-    <plurals name="music_playlist_track_count">
-        <item quantity="zero">%1$d مقطع</item>
-        <item quantity="one">%1$d مقطع</item>
-        <item quantity="two">%1$d مقطع</item>
-        <item quantity="few">%1$d مقاطع</item>
-        <item quantity="many">%1$d مقطعًا</item>
-        <item quantity="other">%1$d مقطع</item>
-    </plurals>
-    <plurals name="music_playlist_more_tracks">
-        <item quantity="zero">+%1$d مقاطع إضافية</item>
-        <item quantity="one">+%1$d مقطع إضافي</item>
-        <item quantity="two">+%1$d مقطعان إضافيان</item>
-        <item quantity="few">+%1$d مقاطع إضافية</item>
-        <item quantity="many">+%1$d مقطعًا إضافيًا</item>
-        <item quantity="other">+%1$d مقاطع إضافية</item>
-    </plurals>
-    <string name="music_track_cover_upload_cta">تحميل صورة غلاف</string>
-    <string name="music_track_cover_upload_hint">اختر صورة مربعة لتكون غلاف هذا المقطع.</string>
-    <string name="music_track_audio_upload_cta">تحميل ملف صوتي</string>
-    <string name="music_track_audio_upload_hint">اختر ملف MP3 أو WAV أو FLAC. سيتم تحميله إلى خادم الوسائط الخاص بك عند الحفظ.</string>
-    <string name="music_track_uploading_banner">جارٍ تحميل الغلاف والصوت ونشرهما. سيستمر هذا حتى لو غادرت الشاشة.</string>
-    <string name="edit_music_playlist">تعديل قائمة التشغيل</string>
-    <string name="music_playlist_cover_upload_cta">تحميل صورة غلاف</string>
-    <string name="music_playlist_cover_upload_hint">اختر صورة مربعة لتكون غلاف قائمة التشغيل هذه.</string>
-    <string name="music_playlist_uploading_banner">جارٍ رفع الغلاف والنشر. سيستمر هذا حتى لو غادرت الشاشة.</string>
-    <string name="messages_create_public_chat">عام</string>
-    <string name="messages_create_group">مجموعة</string>
-    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
-         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
-    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">خاص</string>
-    <string name="messages_new_message_subject">الموضوع</string>
-    <string name="messages_cant_upload_title">تعذّر الرفع</string>
-    <string name="messages_cant_upload_explainer">أدخل وجهة الرسالة أولًا</string>
-    <string name="couldnt_find_nwc_wallets">لم يتم العثور على المحفظة</string>
-    <string name="couldnt_find_nwc_wallets_description">لم يتمكن Amethyst من العثور على أي تطبيقات محافظ تدعم Nostr Wallet Connect (NWC).
-\n\nما يمكنك فعله:
-\n\t1. التحقق من دعم NWC: تأكد من أن تطبيق محفظتك المفضل متوافق مع Nostr Wallet Connect.
-\n\t2. إنشاء اتصال: انتقل إلى تطبيق محفظتك وأنشئ اتصال NWC جديدًا.
-\n\t3. الربط بـ Amethyst: عادةً ما تتيح محفظتك ثلاثة خيارات:
-\n\t\t3.1 ربط تلقائي: زر لفتح Amethyst والاتصال به تلقائيًا. إذا كان الأمر كذلك، اضغط على الزر، وافتح Amethyst واضغط على حفظ في الشاشة الجديدة.
-\n\t\t3.2 ربط يدوي: عنوان URI للاتصال يمكنك نسخه والضغط على أيقونة اللصق في هذه الشاشة لإدخاله مباشرةً.
-\n\t\t3.3 رمز QR: تنشئ المحفظة رمز QR يمكنك قراءته من زر رمز QR في هذه الشاشة.
-    </string>
-    <string name="theme_description">مظهر غامق أو فاتح أو اوتوماتيكي</string>
-    <string name="automatically_load_images_gifs_description">تحميل الصور و الصور المتحركة تلقائياً</string>
-    <string name="automatically_play_videos_description">تشغيل الفيديوهات و الصور المتحركة تلقائياً</string>
-    <string name="autoplay_videos_description">تشغيل مقاطع الفيديو تلقائيًا عند ظهورها على الشاشة</string>
-    <string name="automatically_show_url_preview_description">إظهار معاينات الروابط</string>
-    <string name="copy_to_clipboard">نسخ إلى الحافظة</string>
-    <string name="copied_to_clipboard">تم النسخ إلى الحافظة</string>
-    <string name="share_or_save">مشاركة أو حفظ</string>
-    <string name="share_target_as_dm">إرسال كرسالة مباشرة</string>
-    <string name="media_added">تمت إضافة الوسائط</string>
-    <string name="media_added_to_profile_gallery">تمت إضافة الوسائط إلى معرض ملفك الشخصي</string>
-    <string name="error_dialog_zap_error">تعذّر إرسال الـ zap</string>
-    <string name="missing_lud16">إعداد Lightning مفقود</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">المستخدم %1$s ليس لديه عنوان Lightning مُعدّ لاستقبال sats</string>
-    <string name="error_opening_external_signer">خطأ في فتح تطبيق الموقِّع (signer app)</string>
-    <string name="error_opening_external_signer_description">لم يتم العثور على الموقّع، تأكد مما إذا لم يتم إلغاء تثبيت تثبيته</string>
-    <string name="error_video_playback_failed">تعذّر تشغيل هذا الفيديو</string>
-    <string name="error_video_playback_failed_description">الترميز أو التنسيق غير مدعوم على هذا الجهاز (%1$s). حاول فتحه في متصفحك.</string>
-    <string name="error_video_open_in_browser">فتح في المتصفح</string>
-    <string name="sign_request_rejected2">تم رفض طلب التوقيع</string>
-    <string name="sign_request_rejected_description">تأكد من أن تطبيق الموقِّع قد أذن بهذه المعاملة</string>
-    <string name="no_wallet_found_with_error">لم يتم العثور على محافظ لدفع فاتورة Lightning (الخطأ: %1$s). يرجى تثبيت محفظة Lightning لاستخدام الـ zaps</string>
-    <string name="no_wallet_found">لم يتم العثور على محافظ لدفع فاتورة Lightning. يرجى تثبيت محفظة Lightning لاستخدام الـ zaps</string>
-    <string name="no_blossom_apps_found_title">تعذّر فتح روابط Blossom</string>
-    <string name="no_blossom_apps_found_description">لم يتم العثور على تطبيقات Blossom. يرجى تثبيت تطبيق Blossom محلي لعرض هذا الملف</string>
-    <string name="hidden_words">الكلمات المخفية</string>
-    <string name="settings_muted_threads_title">الخيوط المكتومة</string>
-    <string name="settings_muted_threads_empty">لا توجد خيوط مكتومة</string>
-    <string name="automatically_show_profile_picture">صورة الملف الشخصي</string>
-    <string name="automatically_show_profile_picture_description">إظهار الصور الشخصية</string>
-    <string name="error_dialog_pay_invoice_error">تعذر دفع الفاتورة</string>
-    <string name="error_dialog_pay_withdraw_error">لا يمكن السحب</string>
-    <string name="cashu_failed_redemption">تعذّر استرداد Cashu</string>
-    <string name="cashu_failed_redemption_explainer_error_msg">أرسل mint رسالة الخطأ التالية: %1$s</string>
-    <string name="cashu_successful_redemption">تم استلام Cashu</string>
-    <string name="cashu_successful_redemption_explainer">%1$s sats أرسلت الى محفظتك
-(الرسوم: sats %2$s ) </string>
-    <string name="cashu_no_wallet_found">لم يتم العثور على محفظة Cashu متوافقة على النظام</string>
-    <string name="error_unable_to_fetch_invoice">تعذر جلب الinvoice من خوادم المستلم</string>
-    <string name="wallet_connect_pay_invoice_error_error">موفر wallet connect الخاص بك أعاد الخطأ التالي: %1$s</string>
-    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">تعذّر إنشاء LNUrl من عنوان Lightning \"%1$s\". تحقق من إعداد المستخدم</string>
-    <string name="could_not_fetch_invoice_from_details">تعذّر جلب الفاتورة من %1$s: %2$s</string>
-    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">خطأ في تحليل JSON من %1$s. تحقق من إعداد Lightning للمستخدم</string>
-    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">لم يتم العثور على عنوان URL للاستجابة في رد %1$s</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">مبلغ الinvoice غير صحيح (sats %1$s  ) من %2$s. كان يجب أن يكون %3$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">تعذّر إنشاء فاتورة Lightning قبل إرسال الـ zap. أرسلت محفظة Lightning للمستقبل الخطأ التالي: %1$s</string>
-    <string name="read_only_user">مستخدم في وضع القراءة فقط</string>
-    <string name="no_reactions_setup">لا توجد اعدادات لردود الفعل</string>
-    <string name="notification_settings">الإشعارات</string>
-    <string name="notification_settings_section_delivery">التسليم</string>
-    <string name="notification_settings_section_display">العرض داخل التطبيق</string>
-    <string name="notification_settings_section_categories">الفئات</string>
-    <string name="payment_required_title">رسالة من %1$s</string>
-    <string name="hi_seller_is_this_still_available">مرحبًا %1$s، هل هذا لا يزال متاحًا؟</string>
-    <string name="classifieds_category_clothing">ملابس</string>
-    <string name="classifieds_category_accessories">اكسسوارات</string>
-    <string name="classifieds_category_electronics">إلكترونيات</string>
-    <string name="classifieds_category_furniture">أثاث</string>
-    <string name="classifieds_category_collectibles">مقتنيات</string>
-    <string name="classifieds_category_books">كتب</string>
-    <string name="classifieds_category_pets">حيوانات أليفة</string>
-    <string name="classifieds_category_sports">الرياضة</string>
-    <string name="classifieds_category_fitness">اللياقة البدنية</string>
-    <string name="classifieds_category_art">فن</string>
-    <string name="classifieds_category_crafts">الحرف</string>
-    <string name="classifieds_category_home">الصفحة الرئيسية</string>
-    <string name="classifieds_category_office">المكتب</string>
-    <string name="classifieds_category_food">طعام</string>
-    <string name="classifieds_category_misc">متنوع</string>
-    <string name="classifieds_category_other">أخرى</string>
-    <string name="failed_to_upload_media_no_details">فشل في تحميل الوسائط</string>
-    <string name="could_not_open_the_compressed_file">تعذّر فتح الملف المضغوط</string>
-    <string name="failed_to_upload_media">خطأ في التحميل: %1$s</string>
-    <string name="server_did_not_provide_a_url_after_uploading">لم يوفر الخادم عنوان URL بعد الرفع</string>
-    <string name="could_not_download_from_the_server">تعذّر تنزيل الوسائط المرفوعة من الخادم</string>
-    <string name="could_not_check_downloaded_file">تعذّر التحقق من الملف المنزّل بعد الرفع: %1$s</string>
-    <string name="failed_to_upload_to_server_with_message">فشل الرفع إلى %1$s: %2$s</string>
-    <string name="failed_to_delete_with_message">فشل الحذف: %1$s</string>
-    <string name="media_too_big_for_nip95">الوسائط أكبر من اللازم لـ NIP-95</string>
-    <string name="encrypt_files_label">تشفير الملفات</string>
-    <string name="encrypt_files_description">تشفير الملفات قبل الرفع للحفاظ على الخصوصية. قد لا تقبل بعض الخوادم الملفات المشفرة في الحسابات المجانية.</string>
-    <string name="failed_to_upload_encrypted_media_title">فشل الرفع المشفر</string>
-    <string name="failed_to_upload_encrypted_media_message">كثير من الخوادم لا تقبل الملفات المشفرة في الحسابات المجانية. يمكنك إعادة المحاولة بدون تشفير.</string>
-    <string name="video_codec_h265_label">استخدام ترميز H.265/HEVC</string>
-    <string name="video_codec_h265_description">جودة أفضل بأحجام ملفات أصغر لكن ليس كل الأجهزة تدعم تشغيل H.265.</string>
-    <string name="convert_gif_to_mp4_label">تحويل GIF إلى MP4</string>
-    <string name="convert_gif_to_mp4_description">يحوّل ملفات GIF المتحركة إلى فيديو MP4 لحجم ملف أصغر وتوافق تشغيل أفضل.</string>
-    <string name="strip_metadata_label">إزالة البيانات الوصفية الخاصة</string>
-    <string name="strip_metadata_description">يحاول إزالة البيانات الوصفية الخاصة من ملفات الوسائط المدعومة قبل الرفع</string>
-    <string name="metadata_strip_failed_title">تعذّر إزالة البيانات الوصفية</string>
-    <string name="metadata_strip_failed_upload_cancelled">فشل إزالة البيانات الوصفية الخاصة من الوسائط. تم إلغاء الرفع.</string>
-    <string name="upload_cancelled">تم إلغاء الرفع</string>
-    <string name="avif_metadata_strip_failed">تعذّر إزالة البيانات الوصفية من AVIF: %1$s</string>
-    <string name="route_home">الصفحة الرئيسية</string>
-    <string name="route_discover">اكتشاف</string>
-    <string name="route_messages">الرسائل</string>
-    <string name="route_notifications">الإشعارات</string>
-    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
-         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="route_calendars">التقاويم</string>
-    <string name="route_calendar_collections">قوائم التقاويم</string>
-    <string name="route_chess">الشطرنج</string>
-    <string name="wallet">المحفظة</string>
-    <string name="wallet_add_cashu_title">محفظة Cashu (NIP-60)</string>
-    <string name="cashu_p2pk_section">مفتاح Nutzap (متقدم)</string>
-    <string name="cashu_p2pk_explainer">مفتاح خاص منفصل يُستخدم فقط لاستلام nutzaps وفق NIP-61. ليس مفتاح هويتك على Nostr.</string>
-    <string name="cashu_p2pk_autogen">توليد مفتاح جديد</string>
-    <string name="cashu_p2pk_manual_label">المفتاح الخاص P2PK (hex)</string>
-    <string name="wallet_edit_cashu_title">تعديل الـ mints</string>
-    <string name="wallet_save_changes">حفظ التغييرات</string>
-    <plurals name="cashu_mint_plus_others">
-        <item quantity="zero">+%1$d أخرى</item>
-        <item quantity="one">+%1$d أخرى</item>
-        <item quantity="two">+%1$d أخريان</item>
-        <item quantity="few">+%1$d أخريات</item>
-        <item quantity="many">+%1$d أخرى</item>
-        <item quantity="other">+%1$d أخرى</item>
-    </plurals>
-    <plurals name="cashu_mint_recommended_by_others">
-        <item quantity="zero">موصى به من قِبَل %1$d آخرين</item>
-        <item quantity="one">موصى به من قِبَل %1$d آخر</item>
-        <item quantity="two">موصى به من قِبَل %1$d آخرين</item>
-        <item quantity="few">موصى به من قِبَل %1$d آخرين</item>
-        <item quantity="many">موصى به من قِبَل %1$d آخرين</item>
-        <item quantity="other">موصى به من قِبَل %1$d آخرين</item>
-    </plurals>
-    <string name="cashu_mint_popular_header">Mints الشائعة</string>
-    <string name="cashu_mint_matches_header">Mints مطابقة</string>
-    <string name="cashu_history_incoming">مستلم</string>
-    <string name="cashu_history_outgoing">مُرسَل</string>
-    <string name="cashu_settings_delete_confirm_body">نشر طلب حذف لتوصية kind:38000 الخاصة بك لـ %1$s. ستحذفها الـ relays التي تحترم NIP-09.</string>
-    <string name="cashu_settings_restore_result">تم استرداد %1$s sats عبر %2$s أدلة.</string>
-    <string name="cashu_quote_confirm">دفع %1$s sat + ما يصل إلى %2$s sat كرسوم؟</string>
-    <string name="nutzap_failed_title">فشل Nutzap</string>
-    <string name="nutzap_failed_no_recipient">لا توجد مفتاح عمومي للمستلم في الملاحظة</string>
-    <string name="nutzap_failed_private_note">Nutzaps عامة وستكشف هذه الملاحظة الخاصة. استخدم Lightning zap بدلًا من ذلك.</string>
-    <string name="nutzap_failed_no_event">تعذّر بناء مرجع الحدث</string>
-    <string name="cashu_waiting_for_payment">في انتظار دفع الفاتورة…</string>
-    <string name="cashu_checking_mint">جارٍ فحص mint…</string>
-    <!-- Onchain zap send dialog -->
-    <string name="onchain_send_fee_slow">بطيء</string>
-    <string name="onchain_send_fee_normal">عادي</string>
-    <string name="onchain_send_fee_fast">سريع</string>
-    <string name="onchain_send_fee_eta_slow">~ساعة واحدة</string>
-    <string name="onchain_send_fee_eta_normal">~30 دقيقة</string>
-    <string name="onchain_send_fee_eta_fast">~10 دقائق</string>
-    <plurals name="onchain_send_button_amount_split">
-        <item quantity="zero">إرسال %1$s sats، بدون تقسيم</item>
-        <item quantity="one">إرسال %1$s sats، بطريقة %2$d</item>
-        <item quantity="two">إرسال %1$s sats، بطريقتين %2$d</item>
-        <item quantity="few">إرسال %1$s sats، %2$d طرق</item>
-        <item quantity="many">إرسال %1$s sats، %2$d طريقة</item>
-        <item quantity="other">إرسال %1$s sats، %2$d طريقة</item>
-    </plurals>
-    <plurals name="onchain_send_use_note_split">
-        <item quantity="zero">استخدام تقسيم zap الخاص بهذه الملاحظة بـ %1$d طرق</item>
-        <item quantity="one">استخدام تقسيم zap الخاص بهذه الملاحظة بطريقة %1$d</item>
-        <item quantity="two">استخدام تقسيم zap الخاص بهذه الملاحظة بطريقتين %1$d</item>
-        <item quantity="few">استخدام تقسيم zap الخاص بهذه الملاحظة بـ %1$d طرق</item>
-        <item quantity="many">استخدام تقسيم zap الخاص بهذه الملاحظة بـ %1$d طريقة</item>
-        <item quantity="other">استخدام تقسيم zap الخاص بهذه الملاحظة بـ %1$d طريقة</item>
-    </plurals>
-    <plurals name="onchain_send_splits_label">
-        <item quantity="zero">تقسيم بين %1$d مستلمين</item>
-        <item quantity="one">تقسيم بين %1$d مستلم</item>
-        <item quantity="two">تقسيم بين %1$d مستلمين</item>
-        <item quantity="few">تقسيم بين %1$d مستلمين</item>
-        <item quantity="many">تقسيم بين %1$d مستلمًا</item>
-        <item quantity="other">تقسيم بين %1$d مستلم</item>
-    </plurals>
-    <plurals name="onchain_send_splits_skipped">
-        <item quantity="zero">تخطي %1$d مستلمين لديهم عنوان Lightning فقط — تحتاج المعاملات على السلسلة إلى مفتاح عام Nostr لاشتقاق العنوان.</item>
-        <item quantity="one">تخطي %1$d مستلم لديه عنوان Lightning فقط — تحتاج المعاملات على السلسلة إلى مفتاح عام Nostr لاشتقاق العنوان.</item>
-        <item quantity="two">تخطي %1$d مستلمين لديهم عنوان Lightning فقط — تحتاج المعاملات على السلسلة إلى مفتاح عام Nostr لاشتقاق العنوان.</item>
-        <item quantity="few">تخطي %1$d مستلمين لديهم عنوان Lightning فقط — تحتاج المعاملات على السلسلة إلى مفتاح عام Nostr لاشتقاق العنوان.</item>
-        <item quantity="many">تخطي %1$d مستلمًا لديهم عنوان Lightning فقط — تحتاج المعاملات على السلسلة إلى مفتاح عام Nostr لاشتقاق العنوان.</item>
-        <item quantity="other">تخطي %1$d مستلم لديهم عنوان Lightning فقط — تحتاج المعاملات على السلسلة إلى مفتاح عام Nostr لاشتقاق العنوان.</item>
-    </plurals>
-    <string name="onchain_stage_loading_utxos">جارٍ تحميل الرصيد</string>
-    <string name="onchain_stage_building">جارٍ بناء المعاملة</string>
-    <string name="onchain_stage_signing">جارٍ التوقيع</string>
-    <string name="onchain_stage_broadcasting">جارٍ البث</string>
-    <string name="onchain_stage_publishing">جارٍ نشر الإيصال</string>
-    <string name="onchain_send_error_backend_not_configured">لم يتم تكوين واجهة خلفية لسلسلة Bitcoin</string>
-    <string name="onchain_send_error_load_utxos">تعذّر تحميل رصيد Bitcoin الخاص بك</string>
-    <string name="onchain_send_error_build">تعذّر بناء المعاملة</string>
-    <string name="onchain_send_error_recipient_dust">حصة أحد المستلمين أقل من الحد الأدنى</string>
-    <string name="onchain_send_error_sign">تعذّر توقيع المعاملة</string>
-    <string name="onchain_send_error_broadcast">تعذّر بث المعاملة</string>
-    <string name="onchain_send_error_publish_receipt">تم إرسال الدفع، ولكن تعذّر نشر إيصال zap</string>
-    <plurals name="onchain_send_error_publish_receipt_partial">
-        <item quantity="zero">تم إرسال الدفع (%1$d من %2$d إيصال منشور)، ولكن تعذّر نشر الإيصال التالي</item>
-        <item quantity="one">تم إرسال الدفع (%1$d من %2$d إيصال منشور)، ولكن تعذّر نشر الإيصال التالي</item>
-        <item quantity="two">تم إرسال الدفع (%1$d من %2$d إيصالين منشورين)، ولكن تعذّر نشر الإيصال التالي</item>
-        <item quantity="few">تم إرسال الدفع (%1$d من %2$d إيصالات منشورة)، ولكن تعذّر نشر الإيصال التالي</item>
-        <item quantity="many">تم إرسال الدفع (%1$d من %2$d إيصالًا منشورًا)، ولكن تعذّر نشر الإيصال التالي</item>
-        <item quantity="other">تم إرسال الدفع (%1$d من %2$d إيصال منشور)، ولكن تعذّر نشر الإيصال التالي</item>
-    </plurals>
-    <string name="route_import_follows">استيراد المتابَعين</string>
-    <string name="new_product">منتج جديد</string>
-    <string name="new_long_form_post">مقال جديد</string>
-    <string name="new_calendar_event">حدث تقويم جديد</string>
-    <string name="edit_calendar_event">تعديل حدث التقويم</string>
-    <string name="new_calendar_collection">تقويم جديد</string>
-    <string name="edit_calendar_collection">تعديل التقويم</string>
-    <string name="calendar_view_feed">موجز</string>
-    <string name="calendar_view_month">شهر</string>
-    <string name="calendar_view_week">أسبوع</string>
-    <string name="calendar_view_day">يوم</string>
-    <plurals name="calendar_day_a11y_events">
-        <item quantity="zero">%1$s، لا أحداث</item>
-        <item quantity="one">%1$s، %2$d حدث</item>
-        <item quantity="two">%1$s، %2$d حدثان</item>
-        <item quantity="few">%1$s، %2$d أحداث</item>
-        <item quantity="many">%1$s، %2$d حدثًا</item>
-        <item quantity="other">%1$s، %2$d حدث</item>
-    </plurals>
-    <string name="calendar_relative_ongoing">يجري الآن</string>
-    <string name="calendar_relative_ongoing_with_end">%1$s · ينتهي %2$s</string>
-    <string name="calendar_export_share_title">مشاركة حدث التقويم</string>
-    <string name="calendar_reminder_channel_name">تذكيرات التقويم</string>
-    <string name="calendar_reminder_channel_description">تنبيه عندما يوشك حدث تحضره على البدء.</string>
-    <string name="calendar_reminder_default_title">حدث تقويم</string>
-    <plurals name="calendar_reminder_body">
-        <item quantity="zero">يبدأ خلال %1$d دقائق</item>
-        <item quantity="one">يبدأ خلال %1$d دقيقة</item>
-        <item quantity="two">يبدأ خلال %1$d دقيقتين</item>
-        <item quantity="few">يبدأ خلال %1$d دقائق</item>
-        <item quantity="many">يبدأ خلال %1$d دقيقة</item>
-        <item quantity="other">يبدأ خلال %1$d دقيقة</item>
-    </plurals>
-    <string name="calendar_event_image_upload_failed">فشل رفع الصورة</string>
-    <string name="calendar_event_image_upload_failed_body">تعذّر رفع الصورة المختارة. حاول مرة أخرى أو الصق رابطًا.</string>
-    <string name="calendar_reminder_settings_title">تذكيرات التقويم</string>
-    <string name="calendar_reminder_settings_enabled_title">إرسال تذكيرات</string>
-    <string name="calendar_reminder_settings_enabled_subtitle">يُطلق إشعار عندما يوشك حدث تحضره على البدء.</string>
-    <plurals name="calendar_reminder_settings_lead_choice">
-        <item quantity="zero">%1$d دقيقة</item>
-        <item quantity="one">%1$d دقيقة</item>
-        <item quantity="two">%1$d دقيقتان</item>
-        <item quantity="few">%1$d دقائق</item>
-        <item quantity="many">%1$d دقيقة</item>
-        <item quantity="other">%1$d دقيقة</item>
-    </plurals>
-    <string name="calendar_open_in_maps">فتح في الخرائط</string>
-    <string name="calendar_open_link">فتح الرابط</string>
-    <string name="open_all_reactions_to_this_post">فتح جميع ردود الفعل على هذا المنشور</string>
-    <string name="close_all_reactions_to_this_post">إغلاق جميع ردود الفعل على هذا المنشور</string>
-    <string name="bottom_bar_settings">شريط التنقل السفلي</string>
-    <string name="bottom_bar_settings_description">اسحب لإعادة الترتيب. فعّل أو عطّل لإضافة عنصر أو إزالته من الشريط السفلي. عند إزالة جميع العناصر، يُخفى الشريط السفلي.</string>
-    <string name="bottom_bar_settings_reorder">إعادة الترتيب</string>
-    <string name="home_tabs_settings_description">اختر التبويبات التي تظهر في الشاشة الرئيسية. عندما يكون تبويب واحد فقط نشطًا، يُخفى شريط التبويبات.</string>
-    <string name="home_tab_everything">الكل</string>
-    <string name="profile_ui_settings">واجهة الملف الشخصي</string>
-    <string name="profile_ui_settings_description">اختر الأقسام والتغذيات التي تظهر في شاشات الملف الشخصي للمستخدم. جميع الخيارات مفعّلة افتراضيًا.</string>
-    <string name="profile_ui_setting_badges">شارات الملف الشخصي</string>
-    <string name="profile_ui_setting_app_recommendations">توصيات التطبيقات</string>
-    <string name="profile_ui_setting_zap_received_feed">تغذية Zap المستلم</string>
-    <string name="profile_ui_setting_followers_feed">تغذية المتابعين</string>
-    <string name="reactions_settings">صف التفاعلات</string>
-    <string name="video_player_settings">أزرار مشغّل الفيديو</string>
-    <string name="audio_visualizer_settings">مرئيات الصوت</string>
-    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
-    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
-    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
-    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
-    <!-- Buzz forum votes (kind 45002). -->
-    <string name="expiration_date_label">تاريخ انتهاء الصلاحية</string>
-    <string name="invalid_nip19_uri">عنوان غير صالح</string>
-    <string name="invalid_nip19_uri_description">تلقّى Amethyst رابطًا لفتحه لكن الرابط غير صالح: %1$s</string>
-    <string name="dm_relays_title">مرحلات الرسائل الخاصة</string>
-    <string name="search_relays_title">مرحلات البحث</string>
-    <string name="search_relays_not_found_examples">بعض المرحلات الجيدة:\n%1$s</string>
-    <string name="relay_settings">إعدادات المرحل</string>
-    <string name="public_home_section_explainer_profile">المستخدم ينشر محتواه إلى هذه الـ relays</string>
-    <string name="public_home_section_explainer">يخزّن هذا النوع من الـ relay جميع محتواك. سيرسل Amethyst منشوراتك إليها وسيستخدم الآخرون هذه الـ relays للعثور على محتواك. أدخل ما بين 1 و3 relays. يمكن أن تكون relays شخصية أو مدفوعة أو عامة.</string>
-    <string name="public_notif_section_explainer_profile">المستخدم يستقبل الإشعارات على هذه الـ relays</string>
-    <string name="public_notif_section_explainer">يستقبل هذا النوع من الـ relay جميع الردود والتعليقات والإعجابات والـ zaps على منشوراتك. يمكن أن تكون مدفوعة أو مجانية. القيود التي يضعها مشغّل الـ relay يمكن أن تحدّ من الإشعارات التي تستقبلها بشكل جيد أو سيء. على سبيل المثال، إذا كنت تتعرض لهجوم بريد مزعج في التعليقات، يمكن للـ relays المدفوعة تصفية البريد المزعج. أدخل ما بين 1 و3 relays.</string>
-    <string name="private_inbox_section_explainer_profile">المستخدم يستقبل الرسائل المباشرة على هذه الـ relays</string>
-    <string name="private_inbox_section_explainer">أدخل ما بين 1 و3 relays لتكون صندوقًا واردًا خاصًا. سيستخدم الآخرون هذه الـ relays لإرسال رسائل مباشرة إليك. يجب أن تقبل DM Inbox relays أي رسالة من أي شخص، لكن تسمح لك وحدك بتنزيلها. خيارات جيدة:\n - inbox.nostr.wine (مدفوع)\n - auth.nostr1.com (مجاني)\n - you.nostr1.com (relays شخصية - مدفوعة)</string>
-    <string name="keypackage_section_explainer">الـ relays التي تُنشر عليها MLS KeyPackages الخاصة بك (MIP-00). يجلب المستخدمون الآخرون هذه الـ KeyPackages لدعوتك إلى محادثات مجموعة Marmot. أدخل ما بين 1 و3 relays تقبل أحداث KeyPackage منك وتسمح بالقراءة العامة.</string>
-    <string name="private_outbox_section_explainer">أدخل ما بين 1 و3 relays لتخزين الأحداث التي لا يستطيع أحد رؤيتها، كالمسودات و/أو إعدادات التطبيق. من الأفضل أن تكون هذه الـ relays محلية أو تتطلب مصادقة قبل تنزيل محتوى كل مستخدم.</string>
-    <string name="connected_section_description">القائمة الحالية للـ relays المستخدمة</string>
-    <string name="search_section_explainer">قائمة الـ relays المستخدمة عند البحث عن المحتوى أو المستخدمين. لن يعمل وضع الوسوم والبحث إذا لم تكن هناك خيارات متاحة. تأكد من أنها تطبّق NIP-50.</string>
-    <string name="local_section_explainer">قائمة الـ relays التي تعمل على هذا الجهاز.</string>
-    <string name="send_kind0_to_local_relay_title">إعادة توجيه الملفات الشخصية إلى الـ relay المحلي</string>
-    <string name="send_kind0_to_local_relay_description">إرسال جميع أحداث الملف الشخصي المستلمة (kind 0) إلى الـ relay المحلي</string>
-    <string name="trusted_section_explainer">الـ relays التي تثق بها ولا تحتاج إلى اتصال Tor</string>
-    <string name="favorite_section_explainer">الـ relays التي تزورها كثيرًا لمشاهدة تغذيتها العالمية</string>
-    <string name="proxy_section_explainer">الـ relays التجميعية التي يجب أن يستخدمها التطبيق لتنزيل تغذياتك منها، مثل filter.nostr.wine. هذا يستبدل نموذج outbox وسيجعل التطبيق يتصل فقط بالـ relays الموجودة في قوائمك.</string>
-    <string name="broadcast_section_explainer">الـ relays المتخصصة في دفع ملاحظاتك إلى جميع الـ relays الأخرى، مثل sendit.nosflare.com. سيضيف Amethyst هذا الـ relay إلى جميع الأحداث الجديدة التي تصدر منك</string>
-    <string name="indexer_section_explainer">الـ relays المتخصصة في استضافة بيانات وصفية الجميع وقوائم الـ relays، مثل purplepag.es. سيستخدم Amethyst هذه الـ relays للعثور على المستخدمين الغير موجودين في قوائمك.</string>
-    <string name="blocked_section_explainer">لن يتصل Amethyst أبدًا بهذه الـ relays</string>
-    <string name="export_relay_settings">تصدير إعدادات الـ relay</string>
-    <string name="git_web_address">الويب:</string>
-    <string name="git_repo_tab_overview">نظرة عامة</string>
-    <string name="git_repo_section_about">حول</string>
-    <string name="git_repo_section_links">الروابط</string>
-    <string name="git_repo_section_maintainers">المشرفون</string>
-    <string name="git_repo_section_topics">المواضيع</string>
-    <string name="ots_info_title">إثبات الطابع الزمني</string>
-    <string name="ots_info_description">يوجد دليل على أن هذا المنشور تم توقيعه في وقت ما قبل %1$s. تم ختم الإثبات في بلوكتشين Bitcoin في ذلك التاريخ والوقت.</string>
-    <string name="edit_post">تعديل المنشور</string>
-    <string name="it_s_not_possible_to_reply_to_a_draft_note">لا يمكن الرد على ملاحظة مسودة</string>
-    <string name="it_s_not_possible_to_quote_to_a_draft_note">لا يمكن اقتباس ملاحظة مسودة</string>
-    <string name="it_s_not_possible_to_react_to_a_draft_note">لا يمكن التفاعل مع ملاحظة مسودة</string>
-    <string name="it_s_not_possible_to_zap_to_a_draft_note">لا يمكن إرسال Zap لملاحظة مسودة</string>
-    <string name="draft_note">ملاحظة مسودة</string>
-    <string name="http_status_400">طلب غير صالح - لا يستطيع الخادم معالجة الطلب أو يرفض ذلك.</string>
-    <string name="http_status_401">غير مصرح به - لا يمتلك المستخدم بيانات اعتماد مصادقة صالحة</string>
-    <string name="http_status_402">الدفع مطلوب - يشترط الخادم الدفع لإتمام الطلب</string>
-    <string name="http_status_403">محظور - لا يمتلك المستخدم صلاحيات الوصول اللازمة لتنفيذ الطلب</string>
-    <string name="http_status_404">غير موجود - لا يستطيع الخادم العثور على العنوان المطلوب</string>
-    <string name="http_status_405">الطريقة غير مسموح بها - يدعم الخادم طريقة الطلب لكن ليس المورد المستهدف</string>
-    <string name="http_status_406">غير مقبول - لا يجد الخادم أي محتوى يلبّي متطلبات الطلب.</string>
-    <string name="http_status_407">مصادقة الوكيل مطلوبة - لا يمتلك المستخدم بيانات اعتماد مصادقة صالحة</string>
-    <string name="http_status_408">انتهت مهلة الطلب - انتهت مهلة الخادم أثناء انتظاره لطرف آخر</string>
-    <string name="http_status_409">تعارض - لا يستطيع الخادم تلبية الطلب بسبب تعارض مع المورد</string>
-    <string name="http_status_410">غير متاح - تم حذف المحتوى المطلوب نهائيًا من الخادم ولن يُستعاد</string>
-    <string name="http_status_411">الطول مطلوب - يرفض الخادم الطلب لأنه يستلزم تحديد طول محدد</string>
-    <string name="http_status_412">فشل الشرط المسبق - لا يستوفي الخادم الشروط المسبقة للطلب المحددة في حقول الترويسة</string>
-    <string name="http_status_413">الحمولة كبيرة جدًا - الطلب أكبر من الحدود المحددة للخادم ويرفض معالجته</string>
-    <string name="http_status_414">URI طويل جدًا - عنوان URL الذي طلبه العميل طويل جدًا لمعالجته من قِبل الخادم.</string>
-    <string name="http_status_415">نوع وسائط غير مدعوم - يستخدم الطلب تنسيق وسائط لا يدعمه الخادم</string>
-    <string name="http_status_416">النطاق غير قابل للتحقيق - لا يستطيع الخادم تلبية القيمة المحددة في حقل ترويسة Range للطلب.</string>
-    <string name="http_status_417">فشل التوقع - لا يستطيع الخادم تلبية المتطلبات المحددة في حقل ترويسة Expect للطلب</string>
-    <string name="http_status_426">الترقية مطلوبة - يرفض الخادم معالجة الطلب باستخدام البروتوكول الحالي ما لم يرقّ العميل إلى بروتوكول مختلف.</string>
-    <string name="http_status_500">خطأ داخلي في الخادم - واجه الخادم خطأً غير متوقع ولا يستطيع إتمام الطلب</string>
-    <string name="http_status_501">غير منفّذ - لا يستطيع الخادم تلبية الطلب أو لا يتعرّف على طريقة الطلب</string>
-    <string name="http_status_502">بوابة خاطئة - يعمل الخادم كبوابة وتلقّى استجابة غير صالحة من المضيف</string>
-    <string name="http_status_503">الخدمة غير متاحة - يحدث هذا عادةً عندما يكون الخادم مثقلًا بالأحمال أو متوقفًا للصيانة</string>
-    <string name="http_status_504">انتهاء مهلة البوابة - كان الخادم يعمل كبوابة أو وكيل وانتهت مهلته أثناء انتظار استجابة</string>
-    <string name="http_status_505">إصدار HTTP غير مدعوم - لا يدعم الخادم إصدار HTTP المستخدم في الطلب</string>
-    <string name="http_status_506">المتغير يتفاوض أيضًا - يعاني الخادم من خطأ في الإعداد الداخلي</string>
-    <string name="http_status_507">مساحة تخزين غير كافية - لا يمتلك الخادم مساحة تخزين كافية لمعالجة الطلب بنجاح</string>
-    <string name="http_status_508">تم اكتشاف حلقة - اكتشف الخادم حلقة لا نهاية لها أثناء معالجة الطلب</string>
-    <string name="http_status_511">مصادقة الشبكة مطلوبة - يجب على العميل المصادقة للوصول إلى الشبكة</string>
-    <string name="media_servers_blossom_section">خوادم Blossom</string>
-    <string name="media_servers_blossom_explainer">أضف عددًا من الخوادم كما تشاء. يمكنك اختيار الخادم المناسب لاحقًا عند رفع صورتك</string>
-    <string name="add_a_nip96_server">إضافة خادم NIP-96</string>
-    <string name="add_a_blossom_server">إضافة خادم Blossom</string>
-    <string name="torrent_download">تنزيل</string>
-    <string name="torrent_failure">فشل فتح الملف</string>
-    <string name="torrent_no_apps">لا توجد تطبيقات torrent مثبّتة لفتح الملف وتنزيله.</string>
-    <string name="torrent_no_info">لا تحتوي الحدث على معلومات كافية لبناء رابط magnet</string>
-    <string name="my_lists">قوائمي</string>
-    <string name="feed_group_feeds">الخلاصات</string>
-    <string name="feed_group_hashtags">الوسوم</string>
-    <string name="feed_group_interest_sets">مجموعات الاهتمامات</string>
-    <string name="feed_group_locations">المواقع</string>
-    <string name="feed_group_communities">المجتمعات</string>
-    <string name="feed_group_lists">القوائم</string>
-    <string name="feed_group_dvms">خوارزميات الخلاصة</string>
-    <string name="follow_list_all_favorite_dvms">جميع خوارزميات الخلاصة المفضلة</string>
-    <string name="favorite_dvms_title">خوارزميات الخلاصة المفضلة</string>
-    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="private_message">رسالة خاصة</string>
-    <string name="public_message">رسالة عامة</string>
-    <string name="unable_to_share_image">تعذّرت مشاركة الصورة، يرجى المحاولة مرة أخرى لاحقًا…</string>
-    <string name="unable_to_share_video">تعذّرت مشاركة الفيديو، يرجى المحاولة مرة أخرى لاحقًا…</string>
-    <string name="downloading_video_for_sharing">جارٍ تنزيل الفيديو…</string>
-    <string name="dont_translate_from">عدم الترجمة من</string>
-    <string name="dont_translate_from_description">اللغات المعروضة هنا لن تُترجم. اختر لغة لإزالتها وإعادة ترجمتها.</string>
-    <string name="translate_to">الترجمة إلى</string>
-    <string name="translate_to_description">اختر اللغة التي تريد ترجمة المحتوى إليها.</string>
-    <string name="language_preferences">تفضيلات عرض اللغة</string>
-    <string name="language_preferences_description">لكل زوج لغوي مُترجم، اختر اللغة التي تريد عرضها أولًا.</string>
-    <string name="pause">إيقاف مؤقت</string>
-    <string name="play">تشغيل</string>
-    <string name="this_message_will_disappear_in">ستختفي هذه الرسالة خلال %1$s</string>
-    <string name="people_list_title">بيانات تعريفية لقائمة المتابعة</string>
-    <string name="people_list_explainer">يمكن لأي شخص على Nostr رؤية البيانات التعريفية لقوائم المتابعة. الأعضاء الخاصون فقط مشفّرون.</string>
-    <string name="follow_pack_title">بيانات تعريفية لحزمة المتابعة</string>
-    <string name="follow_pack_explainer">يمكن لأي شخص على Nostr رؤية البيانات التعريفية لحزمة المتابعة، وكثيرًا ما تُنشر في مواقع عديدة كأطقم بدء تشغيل للمستخدمين الجدد.</string>
-    <string name="follow_pack_edit_list_metadata">تعديل حزمة المتابعة</string>
-    <string name="expand">توسيع</string>
-    <string name="retry">إعادة المحاولة</string>
+    <string name="always_on_notif_title">إشعارات Amethyst نشطة</string>
+    <string name="call_ongoing">المكالمات</string>
+    <string name="call_ongoing_description">إشعار المكالمة الجارية</string>
+    <string name="call_with">مكالمة مع %1$s</string>
+    <string name="call_hangup">إنهاء المكالمة</string>
     <string name="reaction">تفاعل</string>
+    <string name="boost">تعزيز</string>
+    <string name="post">نشر</string>
     <string name="voice_post">منشور صوتي</string>
     <string name="voice_reply">رد صوتي</string>
-    <!-- Kind display names for relay subscription filter chips -->
-    <string name="kind_outbox_relays">Relays الصادرة</string>
-    <string name="kind_apps">التطبيقات</string>
-    <string name="kind_app_recommendations">توصيات التطبيقات</string>
-    <string name="kind_user_settings">إعدادات المستخدم</string>
-    <string name="kind_audio_header">رأس ملف الصوت</string>
-    <string name="kind_audio_track">مسار صوتي</string>
-    <string name="kind_music_track">مسار موسيقي</string>
-    <string name="kind_music_playlist">قائمة تشغيل موسيقية</string>
-    <string name="kind_podcast_episode">حلقة بودكاست</string>
-    <string name="kind_podcast_metadata">برنامج بودكاست</string>
-    <string name="kind_authored_podcasts">البودكاستات المؤلَّفة</string>
-    <string name="kind_favorite_podcasts">البودكاستات المفضلة</string>
-    <string name="kind_badge_awards">جوائز الشارات</string>
-    <string name="kind_badge_definitions">تعريفات الشارات</string>
-    <string name="kind_accepted_badge_set">مجموعة الشارات المقبولة</string>
-    <string name="kind_profile_badges">شارات الملف الشخصي</string>
-    <string name="kind_blocked_relays">Relays المحظورة</string>
-    <string name="kind_blossom_servers">خوادم Blossom</string>
-    <string name="kind_nests_servers">خوادم Nests</string>
-    <string name="kind_blossom_auth">مصادقة Blossom</string>
-    <string name="kind_broadcast_relays">Relays البثّ</string>
-    <string name="kind_bookmark_list">قائمة الإشارات المرجعية</string>
-    <string name="kind_old_bookmark_list">قائمة الإشارات المرجعية القديمة</string>
-    <string name="kind_day_appointment">موعد يومي</string>
-    <string name="kind_calendar">التقويم</string>
-    <string name="kind_appointment">موعد</string>
-    <string name="kind_appt_rsvp">تأكيد الموعد</string>
-    <string name="kind_chess_games">ألعاب الشطرنج</string>
-    <string name="kind_chess_auth">مصادقة الشطرنج</string>
-    <string name="kind_favorite_relays">المرحّلات المفضلة</string>
-    <string name="kind_chess_challenges">تحديات الشطرنج</string>
-    <string name="kind_chess_game_accept">قبول لعبة الشطرنج</string>
-    <string name="kind_chess_move">حركة الشطرنج</string>
-    <string name="kind_chess_game_end">نهاية لعبة الشطرنج</string>
-    <string name="kind_chess_draw_offer">عرض تعادل الشطرنج</string>
-    <string name="kind_channel_definition">تعريف القناة</string>
-    <string name="kind_channel_hide_msg">إخفاء رسالة القناة</string>
-    <string name="kind_channel_list">قائمة القنوات</string>
-    <string name="kind_channel_message">رسالة القناة</string>
-    <string name="kind_channel_metadata">بيانات القناة الوصفية</string>
-    <string name="kind_channel_mute_user">كتم مستخدم في القناة</string>
-    <string name="kind_dm_file">ملف DM</string>
-    <string name="kind_dm_message">رسالة DM</string>
-    <string name="kind_dm_relays">مرحّلات DM</string>
-    <string name="kind_classifieds">إعلانات مبوبة</string>
-    <string name="kind_comments">التعليقات</string>
-    <string name="kind_community_def">تعريف المجتمع</string>
-    <string name="kind_community_list">قائمة المجتمعات</string>
-    <string name="kind_community_post">منشور المجتمع</string>
-    <string name="kind_follow_list">قائمة المتابَعين</string>
-    <string name="kind_deletions">الحذوفات</string>
-    <string name="kind_drafts">المسودات</string>
-    <string name="kind_emoji_packs">حزم الرموز التعبيرية</string>
-    <string name="kind_emoji_pack_list">قائمة حزم الرموز التعبيرية</string>
-    <string name="kind_ephemeral_chat">دردشة مؤقتة</string>
-    <string name="kind_ephemeral_chatrooms">غرف دردشة مؤقتة</string>
-    <string name="kind_file_headers">رؤوس الملفات</string>
-    <string name="kind_profile_gallery">معرض الملف الشخصي</string>
-    <string name="kind_file_servers">خوادم الملفات</string>
-    <string name="kind_blob_data">بيانات Blob</string>
-    <string name="kind_blob_headers">رؤوس Blob</string>
-    <string name="kind_medical_data">البيانات الطبية</string>
-    <string name="kind_follow_packs">حزم المتابعة</string>
-    <string name="kind_reposts_16">إعادة نشر (16)</string>
-    <string name="kind_geohash_follows">متابعات Geohash</string>
-    <string name="kind_git_issue">مشكلة Git</string>
-    <string name="kind_git_patch">تصحيح Git</string>
-    <string name="kind_git_repo">مستودع Git</string>
-    <string name="kind_git_reply">رد Git</string>
-    <string name="kind_zap_goals">أهداف Zap</string>
-    <string name="kind_hashtag_follows">متابعات الوسوم</string>
-    <string name="kind_highlights">المقتطفات المميزة</string>
-    <string name="kind_http_auth">مصادقة Http</string>
-    <string name="kind_index_relay_list">قائمة مرحّلات الفهرس</string>
-    <string name="kind_adventure_prologue">مقدمة المغامرة</string>
-    <string name="kind_adventure_scene">مشهد المغامرة</string>
-    <string name="kind_adventure_reading">قراءة المغامرة</string>
-    <string name="kind_named_bookmarks">إشارات مرجعية مسماة</string>
-    <string name="kind_live_chats">الدردشات المباشرة</string>
-    <string name="kind_live_streams">البث المباشر</string>
-    <string name="kind_nwc_request">طلب NWC</string>
-    <string name="kind_nwc_response">استجابة NWC</string>
-    <string name="kind_private_zaps">Zaps الخاصة</string>
-    <string name="kind_zap_req">طلب Zap</string>
-    <string name="kind_blogs">المدونات</string>
-    <string name="kind_meeting_room">غرفة الاجتماع</string>
-    <string name="kind_room_presence">تواجد في الغرفة</string>
-    <string name="kind_meeting_space">فضاء الاجتماع</string>
-    <string name="kind_profile">الملف الشخصي</string>
-    <string name="kind_mute_list">قائمة الكتم</string>
-    <string name="kind_dvm_status">حالة DVM</string>
-    <string name="kind_dvm_content_req">طلب محتوى DVM</string>
-    <string name="kind_dvm_content_resp">استجابة محتوى DVM</string>
-    <string name="kind_dvm_user_req">طلب مستخدم DVM</string>
-    <string name="kind_dvm_user_resp">استجابة مستخدم DVM</string>
-    <string name="kind_people_lists">قوائم الأشخاص</string>
-    <string name="kind_pictures">الصور</string>
-    <string name="kind_workouts">التمارين الرياضية</string>
-    <string name="kind_pins">الدبابيس</string>
-    <string name="kind_zap_poll">استطلاع Zap</string>
-    <string name="kind_poll">استطلاع</string>
-    <string name="kind_poll_response">رد الاستطلاع</string>
-    <string name="kind_private_relays">مرحّلات خاصة</string>
-    <string name="kind_proxy_relays">مرحّلات وكيلة</string>
-    <string name="kind_public_message">رسالة عامة</string>
-    <string name="kind_reactions">ردود الفعل</string>
-    <string name="kind_contact_card">بطاقة جهة الاتصال</string>
-    <string name="kind_relay_auth">مصادقة المرحّل</string>
-    <string name="kind_relay_discovery">اكتشاف المرحّل</string>
-    <string name="kind_relay_monitor">إعلان مراقب المرحّل</string>
-    <string name="kind_relay_set">مجموعة المرحّلات</string>
-    <string name="kind_reports">التقارير</string>
-    <string name="kind_reposts">إعادة النشر</string>
-    <string name="kind_user_delete">حذف المستخدم</string>
-    <string name="kind_seals">الأختام</string>
-    <string name="kind_search_relays">مرحّلات البحث</string>
-    <string name="kind_user_status">حالة المستخدم</string>
-    <string name="kind_notes">الملاحظات</string>
-    <string name="kind_edits">التعديلات</string>
-    <string name="kind_torrents">الملفات التورنت</string>
-    <string name="kind_torrent_comments">تعليقات التورنت</string>
-    <string name="kind_trusted_relays">المرحّلات الموثوقة</string>
-    <string name="kind_trusted_providers">المزودون الموثوقون</string>
-    <string name="kind_video_repl">فيديو (Repl)</string>
-    <string name="kind_shorts_repl">مقاطع قصيرة (Repl)</string>
-    <string name="kind_video">فيديو</string>
-    <string name="kind_shorts">مقاطع قصيرة</string>
-    <string name="kind_voice_msg">رسالة صوتية</string>
-    <string name="kind_voice_reply">رد صوتي</string>
-    <string name="kind_web_bookmark">إشارة مرجعية للويب</string>
-    <string name="uptime">%1$d%% وقت التشغيل</string>
-    <string name="namecoin_settings">إعدادات Namecoin</string>
-    <string name="event_sync_title">مزامنة المرحّل</string>
-    <string name="ots_explorer_settings">مستكشف Bitcoin ‏(OTS)</string>
-    <string name="events_from_you">أحداث منك</string>
-    <string name="events_to_you">أحداث إليك</string>
-    <string name="searchable_events">أحداث قابلة للبحث</string>
-    <string name="profiles">الملفات الشخصية</string>
-    <string name="relay_settings_lower2">قوائم صندوق الصادر</string>
-    <string name="last_seen">آخر ظهور منذ %1$s</string>
-    <string name="last_seen_on_date">آخر ظهور في %1$s ‏(منذ %2$s)</string>
-    <string name="last_seen_just_now">آخر ظهور للتو</string>
-    <string name="last_seen_never">لم يُرَ قط</string>
-    <plurals name="duration_minutes">
-        <item quantity="zero">لا دقائق</item>
-        <item quantity="one">دقيقة واحدة</item>
-        <item quantity="two">دقيقتان</item>
-        <item quantity="few">%1$d دقائق</item>
-        <item quantity="many">%1$d دقيقة</item>
-        <item quantity="other">%1$d دقيقة</item>
-    </plurals>
-    <plurals name="duration_hours">
-        <item quantity="zero">لا ساعات</item>
-        <item quantity="one">ساعة واحدة</item>
-        <item quantity="two">ساعتان</item>
-        <item quantity="few">%1$d ساعات</item>
-        <item quantity="many">%1$d ساعة</item>
-        <item quantity="other">%1$d ساعة</item>
-    </plurals>
-    <plurals name="duration_days">
-        <item quantity="zero">لا أيام</item>
-        <item quantity="one">يوم واحد</item>
-        <item quantity="two">يومان</item>
-        <item quantity="few">%1$d أيام</item>
-        <item quantity="many">%1$d يوم</item>
-        <item quantity="other">%1$d يوم</item>
-    </plurals>
-    <plurals name="duration_weeks">
-        <item quantity="zero">لا أسابيع</item>
-        <item quantity="one">أسبوع واحد</item>
-        <item quantity="two">أسبوعان</item>
-        <item quantity="few">%1$d أسابيع</item>
-        <item quantity="many">%1$d أسبوع</item>
-        <item quantity="other">%1$d أسبوع</item>
-    </plurals>
-    <plurals name="duration_months">
-        <item quantity="zero">لا أشهر</item>
-        <item quantity="one">شهر واحد</item>
-        <item quantity="two">شهران</item>
-        <item quantity="few">%1$d أشهر</item>
-        <item quantity="many">%1$d شهر</item>
-        <item quantity="other">%1$d شهر</item>
-    </plurals>
-    <plurals name="duration_years">
-        <item quantity="zero">لا سنوات</item>
-        <item quantity="one">سنة واحدة</item>
-        <item quantity="two">سنتان</item>
-        <item quantity="few">%1$d سنوات</item>
-        <item quantity="many">%1$d سنة</item>
-        <item quantity="other">%1$d سنة</item>
-    </plurals>
-    <plurals name="cashu_pending_quotes_title">
-        <item quantity="zero">لا فواتير معلقة</item>
-        <item quantity="one">فاتورة معلقة واحدة</item>
-        <item quantity="two">فاتورتان معلقتان</item>
-        <item quantity="few">%1$d فواتير معلقة</item>
-        <item quantity="many">%1$d فاتورة معلقة</item>
-        <item quantity="other">%1$d فاتورة معلقة</item>
-    </plurals>
-    <plurals name="cashu_untrusted_mint_title">
-        <item quantity="zero">لا أموال محتجزة في mint غير مستخدم</item>
-        <item quantity="one">أموال محتجزة في %1$d mint لا تستخدمه</item>
-        <item quantity="two">أموال محتجزة في %1$d mint لا تستخدمهما</item>
-        <item quantity="few">أموال محتجزة في %1$d mints لا تستخدمها</item>
-        <item quantity="many">أموال محتجزة في %1$d mint لا تستخدمها</item>
-        <item quantity="other">أموال محتجزة في %1$d mint لا تستخدمها</item>
-    </plurals>
-    <string name="cashu_move_coins_done">تم نقل %1$s sat إلى %2$s.</string>
-    <!-- M3 Action Dialog titles -->
-    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
-    <!-- LAN cast (Chromecast) feature -->
-    <string name="cast_to_device">البث إلى جهاز</string>
-    <string name="cast_stop_casting">إيقاف البث</string>
-    <!-- HLS multi-resolution video sharing -->
-    <string name="share_hls_video">رفع HLS</string>
-    <string name="hls_state_uploading_with_label_format">جارٍ رفع %1$s (%2$d من %3$d)</string>
-    <string name="attestation">شهادة</string>
-    <string name="attestation_request">طلب الشهادة</string>
-    <string name="attestor_recommendation">توصية المُصدِّق</string>
-    <string name="attestor_proficiency">كفاءة المُصدِّق</string>
-    <string name="web_bookmarks">إشارات الويب المرجعية</string>
-    <string name="web_bookmark_add_title">إضافة إشارة ويب مرجعية</string>
-    <string name="web_bookmark_edit_title">تعديل إشارة الويب المرجعية</string>
-    <!-- NIP-75 Zap Goals -->
-    <string name="goal_progress">%1$s ممولة من هدف %2$s sat</string>
-    <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="new_goal">هدف جديد</string>
-    <string name="request_to_vanish">طلب الاختفاء</string>
-    <string name="vanish_request_sent">تم إرسال طلب الاختفاء</string>
-    <string name="vanish_history">سجل الاختفاء</string>
-    <!-- NIP-86 Relay Management -->
-    <string name="relay_management_tab_pubkeys">المستخدمون</string>
-    <string name="relay_management_tab_events">الأحداث</string>
-    <string name="relay_management_tab_kinds">الأنواع</string>
-    <string name="relay_management_tab_ips">عناوين IP</string>
-    <string name="relay_management_tab_settings">الإعدادات</string>
-    <string name="ai_writing_setting_title">اقتراح تحسينات النص</string>
-    <string name="ai_writing_setting_description">يستخدم نموذج ذكاء اصطناعي على الجهاز لاقتراح تصحيحات نصية وتغييرات في النبرة.</string>
-    <string name="tracked_broadcasts_setting_title">البث المتتبَّع</string>
-    <string name="tracked_broadcasts_setting_description">استخدم المذيع المتتبَّع عند إرسال الأحداث. يعرض تقدمًا مباشرًا وحالة كل relay أثناء البث.</string>
-    <string name="suggest_workouts_setting_title">اقتراح تمارين للمشاركة</string>
-    <string name="suggest_workouts_setting_description">يقرأ التمارين المنتهية من Health Connect (Samsung Health، Google Fit، Fitbit، Garmin…) ويقترح مشاركتها كمنشور. يُطلب الإذن فقط عند الاتصال.</string>
-    <string name="compose_settings">إعدادات الكتابة</string>
-    <string name="auto_create_drafts_setting_title">إنشاء مسودات تلقائياً</string>
-    <string name="auto_create_drafts_setting_description">يحفظ حدثاً كمسودة تلقائياً عند الكتابة أو مغادرة محرر النص بنص غير مُرسل، ويرسله إلى relay صناديق الصادر الخاصة.</string>
-    <!-- Emoji packs -->
-    <string name="new_emoji_pack">حزمة إيموجي جديدة</string>
-    <string name="edit_emoji_pack">تعديل حزمة الإيموجي</string>
-    <string name="manage_emoji_packs">حزم الإيموجي الخاصة بي</string>
-    <string name="emoji_sets">الإيموجي</string>
-    <string name="emoji_public_explainer">الإيموجي العامة مرئية للجميع وتظهر في قائمة ردود أفعالك ومنتقي الإكمال التلقائي \":\" عندما تكون هذه الحزمة في قائمة الإيموجي الخاصة بك.</string>
-    <string name="emoji_private_explainer">الإيموجي الخاصة مخزنة بشكل مشفر على relay ولا تراها إلا أنت. تظهر في قائمة ردود أفعالك ومنتقي \":\" تماماً مثل الإيموجي العامة.</string>
-    <!-- NIP-9B community rules composer-side validation. -->
-    <string name="community_rules_violation_kind_size_exceeded">حجم المسودة %1$d بايت؛ يحدد هذا المجتمع الحد الأقصى لهذا النوع بـ %2$d بايت.</string>
-    <string name="community_rules_violation_max_size_exceeded">حجم المسودة %1$d بايت؛ يحدد هذا المجتمع الحد الأقصى للأحداث بـ %2$d بايت.</string>
-    <string name="community_rules_violation_quota_exceeded">لقد نشرت بالفعل %1$d أحداث من هذا النوع اليوم (الحد الأقصى %2$d).</string>
-    <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
-    <string name="nowhere_link_card_generic">موقع Nowhere</string>
-    <string name="nowhere_link_card_event">حدث Nowhere</string>
-    <string name="nowhere_link_card_fundraiser">حملة تمويل Nowhere</string>
-    <string name="nowhere_link_card_store">متجر Nowhere</string>
-    <string name="nowhere_link_card_petition">عريضة Nowhere</string>
-    <string name="nowhere_link_card_message">رسالة Nowhere</string>
-    <string name="nowhere_link_card_drop">إسقاط Nowhere</string>
-    <string name="nowhere_link_card_art">فن Nowhere</string>
-    <string name="nowhere_link_card_forum">منتدى Nowhere</string>
-    <!-- Marmot (MLS) group chats -->
-    <plurals name="marmot_message_count">
-        <item quantity="zero">لا رسائل</item>
-        <item quantity="one">%1$d رسالة</item>
-        <item quantity="two">%1$d رسالتان</item>
-        <item quantity="few">%1$d رسائل</item>
-        <item quantity="many">%1$d رسالة</item>
-        <item quantity="other">%1$d رسالة</item>
-    </plurals>
-    <plurals name="marmot_member_count">
-        <item quantity="zero">لا أعضاء</item>
-        <item quantity="one">%1$d عضو</item>
-        <item quantity="two">%1$d عضوان</item>
-        <item quantity="few">%1$d أعضاء</item>
-        <item quantity="many">%1$d عضواً</item>
-        <item quantity="other">%1$d عضو</item>
-    </plurals>
-    <string name="marmot_group_info_updated">تم تحديث معلومات المجموعة</string>
-    <string name="marmot_failed_to_update">فشل التحديث: %1$s</string>
-    <string name="marmot_failed_to_create_group">فشل إنشاء المجموعة: %1$s</string>
-    <string name="marmot_failed_to_leave_group">فشل مغادرة المجموعة: %1$s</string>
-    <string name="marmot_adding_user">جارٍ إضافة %1$s…</string>
-    <string name="marmot_failed_to_add_user">فشل إضافة %1$s: %2$s</string>
-    <string name="marmot_unknown_error">خطأ غير معروف</string>
-    <string name="marmot_member_removed">تمت إزالة العضو</string>
-    <string name="marmot_failed_to_remove_member">فشل إزالة العضو: %1$s</string>
-    <string name="marmot_admin_granted">تم منح صلاحيات المسؤول</string>
-    <string name="marmot_failed_to_grant_admin">فشل منح صلاحيات المسؤول: %1$s</string>
-    <string name="marmot_admin_revoked">تم سحب صلاحيات المسؤول</string>
-    <string name="marmot_failed_to_revoke_admin">فشل سحب صلاحيات المسؤول: %1$s</string>
-    <string name="marmot_not_a_member">لست عضواً في هذه المجموعة</string>
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">خدمة Lightning للمستلم على %1$s غير متاحة. تم احتسابها من عنوان Lightning \"%2$s\". الخطأ: %3$s. تحقق مما إذا كان الخادم يعمل وما إذا كان عنوان Lightning صحيحاً</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">تعذر حل %1$s. تحقق مما إذا كنت متصلاً، وما إذا كان الخادم يعمل وما إذا كان عنوان Lightning %2$s صحيحاً.\n\nالاستثناء: %3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">خطأ في تحليل JSON من جلب فاتورة %1$s. تحقق من إعداد Lightning للمستخدم</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">تعذر إنشاء فاتورة Lightning. رسالة من %1$s: %2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">تعذر إنشاء فاتورة Lightning من %1$s: العنصر pr غير موجود في JSON الناتج.</string>
-    <!-- Buzz workflow run board -->
-    <!-- Buzz agent attestation -->
-    <!-- Buzz agent persona editor -->
-    <!-- Profile card (kind-0 rendered in the feed) -->
-    <!-- Health Connect: activity label, shown by Health Connect next to the link into our
-         rationale screen. Needs to be an Android resource (not a commons Compose resource)
-         because android:label on the manifest entry can only reference @string/. -->
-    <!-- My Fitness: the signed-in user's own training summary. Android resource because
-         NavBarItemDef labels are R.string ids. -->
-    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
+    <string name="private_message">رسالة خاصة</string>
+    <string name="nest_notification_broadcasting">Nest — مباشر</string>
+    <string name="nest_notification_channel_description">يبقي الصوت قيد التشغيل أثناء فتح الغرفة.</string>
+    <string name="nest_notification_listening">Nest متصل</string>
+    <string name="nest_notification_stop">إيقاف</string>
+    <string name="nest_notification_text">اضغط للعودة.</string>
+    <string name="nest_leave">مغادرة</string>
+    <string name="nest_mute">كتم الصوت</string>
+    <string name="nest_unmute">إلغاء كتم الصوت</string>
+    <string name="call_mute">كتم الصوت</string>
+    <string name="call_unmute">إلغاء كتم الصوت</string>
+    <string name="napplet_cap_identity">الهوية</string>
+    <string name="napplet_cap_keys">إجراءات لوحة المفاتيح</string>
+    <string name="napplet_cap_storage">التخزين</string>
+    <string name="napplet_cap_value">المدفوعات</string>
+    <string name="napplet_cap_resource">الشبكة</string>
+    <string name="napplet_cap_upload">الرفع</string>
+    <string name="napplet_cap_theme">المظهر</string>
+    <string name="napplet_cap_notify">الإشعارات</string>
+    <string name="napplet_cap_inc">المراسلة</string>
+    <string name="muted_button">الصوت مكتوم. انقر لإلغاء كتم الصوت</string>
+    <string name="mute_button">الصوت مفعل. انقر لكتم الصوت</string>
+    <string name="play">تشغيل</string>
+    <string name="pause">إيقاف مؤقت</string>
 </resources>

@@ -56,6 +56,8 @@ class FileMlsGroupStateStore(
 
     private fun retainedFile(id: String) = File(dir, "$id.retained")
 
+    private fun ratchetFile(id: String) = File(dir, "$id.ratchet")
+
     override suspend fun save(
         nostrGroupId: String,
         state: ByteArray,
@@ -68,7 +70,21 @@ class FileMlsGroupStateStore(
     override suspend fun delete(nostrGroupId: String) {
         stateFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "group state")
         retainedFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "retained epochs")
+        ratchetFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "sender ratchet")
     }
+
+    // The CLI reopens a fresh context per command, so "restart between two
+    // sends" is its normal mode rather than an edge case — it is the caller
+    // most dependent on this record being written, and read back, correctly.
+    override suspend fun saveSenderRatchet(
+        nostrGroupId: String,
+        state: ByteArray,
+    ): Boolean {
+        SecureFileIO.writeBytesAtomic(ratchetFile(nostrGroupId), state)
+        return true
+    }
+
+    override suspend fun loadSenderRatchet(nostrGroupId: String): ByteArray? = ratchetFile(nostrGroupId).takeIf { it.exists() }?.readBytes()
 
     override suspend fun listGroups(): List<String> =
         dir

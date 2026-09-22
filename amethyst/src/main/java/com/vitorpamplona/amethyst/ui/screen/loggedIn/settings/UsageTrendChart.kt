@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,13 +49,16 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_legend_cellular
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_legend_wifi
 import com.vitorpamplona.amethyst.service.resourceusage.UsageSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.chart.LastWeekLabelFormatter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.chart.makeLine
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
+import org.jetbrains.compose.resources.StringResource
 import kotlin.math.roundToInt
 
 /**
@@ -133,8 +135,8 @@ fun UsageTrendChart(
             modifier = Modifier.fillMaxWidth().height(170.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            LegendEntry(cellularColor, R.string.resource_usage_legend_cellular)
-            LegendEntry(wifiColor, R.string.resource_usage_legend_wifi)
+            LegendEntry(cellularColor, Res.string.resource_usage_legend_cellular)
+            LegendEntry(wifiColor, Res.string.resource_usage_legend_wifi)
         }
     }
 }
@@ -142,7 +144,7 @@ fun UsageTrendChart(
 @Composable
 private fun LegendEntry(
     color: Color,
-    @StringRes label: Int,
+    label: StringResource,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

@@ -33,7 +33,16 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_art
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_drop
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_event
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_forum
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_fundraiser
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_generic
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_message
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_petition
+import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_store
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
@@ -44,20 +53,20 @@ import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 // fall through to the generic "Nowhere site" label.
 private val nowhereToolLabels =
     mapOf(
-        "e" to R.string.nowhere_link_card_event,
-        "f" to R.string.nowhere_link_card_fundraiser,
-        "s" to R.string.nowhere_link_card_store,
-        "p" to R.string.nowhere_link_card_petition,
-        "m" to R.string.nowhere_link_card_message,
-        "d" to R.string.nowhere_link_card_drop,
-        "a" to R.string.nowhere_link_card_art,
-        "fo" to R.string.nowhere_link_card_forum,
+        "e" to Res.string.nowhere_link_card_event,
+        "f" to Res.string.nowhere_link_card_fundraiser,
+        "s" to Res.string.nowhere_link_card_store,
+        "p" to Res.string.nowhere_link_card_petition,
+        "m" to Res.string.nowhere_link_card_message,
+        "d" to Res.string.nowhere_link_card_drop,
+        "a" to Res.string.nowhere_link_card_art,
+        "fo" to Res.string.nowhere_link_card_forum,
     )
 
 @Composable
 fun NowhereLinkCard(segment: NowhereLinkSegment) {
     val uri = LocalUriHandler.current
-    val titleRes = segment.tool?.lowercase()?.let { nowhereToolLabels[it] } ?: R.string.nowhere_link_card_generic
+    val titleRes = segment.tool?.lowercase()?.let { nowhereToolLabels[it] } ?: Res.string.nowhere_link_card_generic
 
     Column(
         modifier =

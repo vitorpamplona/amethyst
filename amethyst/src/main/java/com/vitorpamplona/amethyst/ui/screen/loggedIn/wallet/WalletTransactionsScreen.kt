@@ -56,10 +56,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_all
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_non_zaps
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps
@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_open_zapped_note
 import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
 import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_failed
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -132,7 +133,7 @@ fun WalletTransactionsScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -168,7 +169,7 @@ fun WalletTransactionsScreen(
             // A wallet refusal (e.g. RESTRICTED) leaves the list empty. Without this
             // branch the screen would claim "no transactions yet" and hide the reason.
             EmptyState(
-                title = stringRes(R.string.wallet_transactions_load_failed),
+                title = stringRes(Res.string.wallet_transactions_load_failed),
                 modifier = Modifier.padding(padding).padding(24.dp),
                 description = currentError,
                 onRefresh = { walletViewModel.fetchTransactions() },

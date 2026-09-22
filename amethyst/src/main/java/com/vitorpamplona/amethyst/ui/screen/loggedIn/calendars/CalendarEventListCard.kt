@@ -55,7 +55,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -80,7 +79,7 @@ fun CalendarEventListCard(
     val view = note.appointmentView() ?: return
     val context = LocalContext.current
     val range = remember(note.idHex) { formatCalendarRange(note, context) }
-    val relative = remember(note.idHex, view.startSeconds) { relativeTimeLabel(context, view, TimeUtils.now()) }
+    val relative = rememberRelativeTimeLabel(view, note.idHex)
     val event = note.event ?: return
     val detailRoute = remember(event.id) { detailRouteFor(note) }
 

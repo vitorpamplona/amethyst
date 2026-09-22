@@ -64,11 +64,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.nest_audio_failed
 import com.vitorpamplona.amethyst.commons.resources.nest_broadcast_connecting
 import com.vitorpamplona.amethyst.commons.resources.nest_broadcast_failed
@@ -76,12 +76,19 @@ import com.vitorpamplona.amethyst.commons.resources.nest_connect
 import com.vitorpamplona.amethyst.commons.resources.nest_connecting_handshake
 import com.vitorpamplona.amethyst.commons.resources.nest_connecting_resolving
 import com.vitorpamplona.amethyst.commons.resources.nest_connecting_transport
+import com.vitorpamplona.amethyst.commons.resources.nest_leave
 import com.vitorpamplona.amethyst.commons.resources.nest_leave_stage
+import com.vitorpamplona.amethyst.commons.resources.nest_lower_hand
+import com.vitorpamplona.amethyst.commons.resources.nest_mic_mute
+import com.vitorpamplona.amethyst.commons.resources.nest_mic_unmute
 import com.vitorpamplona.amethyst.commons.resources.nest_mute_failed
 import com.vitorpamplona.amethyst.commons.resources.nest_open_settings
+import com.vitorpamplona.amethyst.commons.resources.nest_raise_hand
 import com.vitorpamplona.amethyst.commons.resources.nest_reactions_button
 import com.vitorpamplona.amethyst.commons.resources.nest_reconnecting
 import com.vitorpamplona.amethyst.commons.resources.nest_talk
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
+import com.vitorpamplona.amethyst.commons.resources.zap_description
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
@@ -462,6 +469,7 @@ private fun NestZapButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -491,7 +499,7 @@ private fun NestZapButton(
                     onError = { _, message, user ->
                         scope.launch {
                             zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                         }
                     },
                     onPayViaIntent = {
@@ -502,10 +510,10 @@ private fun NestZapButton(
                         zappingProgress = 0f
                         if (it.size == 1) {
                             val payable = it.first()
-                            payViaIntent(payable.invoice, context, { }) { error ->
+                            payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                                 zappingProgress = 0f
                                 accountViewModel.toastManager.toast(
-                                    R.string.error_dialog_zap_error,
+                                    Res.string.error_dialog_zap_error,
                                     UserBasedErrorMessage(error, payable.info.user),
                                 )
                             }
@@ -529,7 +537,7 @@ private fun NestZapButton(
         } else {
             Icon(
                 symbol = MaterialSymbols.Bolt,
-                contentDescription = stringRes(R.string.zap_description),
+                contentDescription = stringRes(Res.string.zap_description),
             )
         }
     }
@@ -553,7 +561,7 @@ private fun NestZapButton(
             onError = { _, message, user ->
                 scope.launch {
                     zappingProgress = 0f
-                    accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                    accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                 }
             },
             onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
@@ -565,10 +573,10 @@ private fun NestZapButton(
                 zappingProgress = 0f
                 if (it.size == 1) {
                     val payable = it.first()
-                    payViaIntent(payable.invoice, context, { }) { error ->
+                    payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                         zappingProgress = 0f
                         accountViewModel.toastManager.toast(
-                            R.string.error_dialog_zap_error,
+                            Res.string.error_dialog_zap_error,
                             UserBasedErrorMessage(error, payable.info.user),
                         )
                     }
@@ -592,7 +600,7 @@ private fun NestZapButton(
             onError = { _, message, user ->
                 scope.launch {
                     zappingProgress = 0f
-                    accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                    accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                 }
             },
             onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
@@ -604,10 +612,10 @@ private fun NestZapButton(
                 zappingProgress = 0f
                 if (it.size == 1) {
                     val payable = it.first()
-                    payViaIntent(payable.invoice, context, { }) { error ->
+                    payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                         zappingProgress = 0f
                         accountViewModel.toastManager.toast(
-                            R.string.error_dialog_zap_error,
+                            Res.string.error_dialog_zap_error,
                             UserBasedErrorMessage(error, payable.info.user),
                         )
                     }
@@ -692,7 +700,7 @@ private fun MicMuteToggle(
     ) {
         Icon(
             symbol = if (isMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
-            contentDescription = stringRes(if (isMuted) R.string.nest_mic_unmute else R.string.nest_mic_mute),
+            contentDescription = stringRes(if (isMuted) Res.string.nest_mic_unmute else Res.string.nest_mic_mute),
         )
     }
 }
@@ -708,7 +716,7 @@ private fun HandRaiseToggle(
     ) {
         Icon(
             symbol = MaterialSymbols.PanTool,
-            contentDescription = stringRes(if (handRaised) R.string.nest_lower_hand else R.string.nest_raise_hand),
+            contentDescription = stringRes(if (handRaised) Res.string.nest_lower_hand else Res.string.nest_raise_hand),
         )
     }
 }
@@ -728,7 +736,7 @@ private fun LeaveRoomButton(onClick: () -> Unit) {
             tint = MaterialTheme.colorScheme.error,
         )
         Spacer(Modifier.width(6.dp))
-        Text(stringRes(R.string.nest_leave))
+        Text(stringRes(Res.string.nest_leave))
     }
 }
 

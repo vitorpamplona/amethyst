@@ -20,9 +20,163 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
-import android.content.Context
-import androidx.annotation.StringRes
-import com.vitorpamplona.amethyst.R
+import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.attestation
+import com.vitorpamplona.amethyst.commons.resources.attestation_request
+import com.vitorpamplona.amethyst.commons.resources.attestor_proficiency
+import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation
+import com.vitorpamplona.amethyst.commons.resources.kind_accepted_badge_set
+import com.vitorpamplona.amethyst.commons.resources.kind_adventure_prologue
+import com.vitorpamplona.amethyst.commons.resources.kind_adventure_reading
+import com.vitorpamplona.amethyst.commons.resources.kind_adventure_scene
+import com.vitorpamplona.amethyst.commons.resources.kind_app_recommendations
+import com.vitorpamplona.amethyst.commons.resources.kind_appointment
+import com.vitorpamplona.amethyst.commons.resources.kind_apps
+import com.vitorpamplona.amethyst.commons.resources.kind_appt_rsvp
+import com.vitorpamplona.amethyst.commons.resources.kind_audio_header
+import com.vitorpamplona.amethyst.commons.resources.kind_audio_track
+import com.vitorpamplona.amethyst.commons.resources.kind_authored_podcasts
+import com.vitorpamplona.amethyst.commons.resources.kind_badge_awards
+import com.vitorpamplona.amethyst.commons.resources.kind_badge_definitions
+import com.vitorpamplona.amethyst.commons.resources.kind_blob_data
+import com.vitorpamplona.amethyst.commons.resources.kind_blob_headers
+import com.vitorpamplona.amethyst.commons.resources.kind_blocked_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_blogs
+import com.vitorpamplona.amethyst.commons.resources.kind_blossom_auth
+import com.vitorpamplona.amethyst.commons.resources.kind_blossom_servers
+import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_list
+import com.vitorpamplona.amethyst.commons.resources.kind_broadcast_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_calendar
+import com.vitorpamplona.amethyst.commons.resources.kind_channel_definition
+import com.vitorpamplona.amethyst.commons.resources.kind_channel_hide_msg
+import com.vitorpamplona.amethyst.commons.resources.kind_channel_list
+import com.vitorpamplona.amethyst.commons.resources.kind_channel_message
+import com.vitorpamplona.amethyst.commons.resources.kind_channel_metadata
+import com.vitorpamplona.amethyst.commons.resources.kind_channel_mute_user
+import com.vitorpamplona.amethyst.commons.resources.kind_chess_auth
+import com.vitorpamplona.amethyst.commons.resources.kind_chess_challenges
+import com.vitorpamplona.amethyst.commons.resources.kind_chess_draw_offer
+import com.vitorpamplona.amethyst.commons.resources.kind_chess_game_accept
+import com.vitorpamplona.amethyst.commons.resources.kind_chess_game_end
+import com.vitorpamplona.amethyst.commons.resources.kind_chess_games
+import com.vitorpamplona.amethyst.commons.resources.kind_chess_move
+import com.vitorpamplona.amethyst.commons.resources.kind_classifieds
+import com.vitorpamplona.amethyst.commons.resources.kind_comments
+import com.vitorpamplona.amethyst.commons.resources.kind_community_def
+import com.vitorpamplona.amethyst.commons.resources.kind_community_list
+import com.vitorpamplona.amethyst.commons.resources.kind_community_post
+import com.vitorpamplona.amethyst.commons.resources.kind_contact_card
+import com.vitorpamplona.amethyst.commons.resources.kind_day_appointment
+import com.vitorpamplona.amethyst.commons.resources.kind_deletions
+import com.vitorpamplona.amethyst.commons.resources.kind_dm_file
+import com.vitorpamplona.amethyst.commons.resources.kind_dm_message
+import com.vitorpamplona.amethyst.commons.resources.kind_dm_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_drafts
+import com.vitorpamplona.amethyst.commons.resources.kind_dvm_content_req
+import com.vitorpamplona.amethyst.commons.resources.kind_dvm_content_resp
+import com.vitorpamplona.amethyst.commons.resources.kind_dvm_status
+import com.vitorpamplona.amethyst.commons.resources.kind_dvm_user_req
+import com.vitorpamplona.amethyst.commons.resources.kind_dvm_user_resp
+import com.vitorpamplona.amethyst.commons.resources.kind_edits
+import com.vitorpamplona.amethyst.commons.resources.kind_emoji_pack_list
+import com.vitorpamplona.amethyst.commons.resources.kind_emoji_packs
+import com.vitorpamplona.amethyst.commons.resources.kind_ephemeral_chat
+import com.vitorpamplona.amethyst.commons.resources.kind_ephemeral_chatrooms
+import com.vitorpamplona.amethyst.commons.resources.kind_favorite_podcasts
+import com.vitorpamplona.amethyst.commons.resources.kind_favorite_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_file_headers
+import com.vitorpamplona.amethyst.commons.resources.kind_file_servers
+import com.vitorpamplona.amethyst.commons.resources.kind_follow_list
+import com.vitorpamplona.amethyst.commons.resources.kind_follow_packs
+import com.vitorpamplona.amethyst.commons.resources.kind_geohash_follows
+import com.vitorpamplona.amethyst.commons.resources.kind_gift_wraps
+import com.vitorpamplona.amethyst.commons.resources.kind_git_issue
+import com.vitorpamplona.amethyst.commons.resources.kind_git_patch
+import com.vitorpamplona.amethyst.commons.resources.kind_git_pr
+import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
+import com.vitorpamplona.amethyst.commons.resources.kind_git_reply
+import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
+import com.vitorpamplona.amethyst.commons.resources.kind_git_status_applied
+import com.vitorpamplona.amethyst.commons.resources.kind_git_status_closed
+import com.vitorpamplona.amethyst.commons.resources.kind_git_status_draft
+import com.vitorpamplona.amethyst.commons.resources.kind_git_status_open
+import com.vitorpamplona.amethyst.commons.resources.kind_hashtag_follows
+import com.vitorpamplona.amethyst.commons.resources.kind_highlights
+import com.vitorpamplona.amethyst.commons.resources.kind_http_auth
+import com.vitorpamplona.amethyst.commons.resources.kind_index_relay_list
+import com.vitorpamplona.amethyst.commons.resources.kind_live_chats
+import com.vitorpamplona.amethyst.commons.resources.kind_live_streams
+import com.vitorpamplona.amethyst.commons.resources.kind_medical_data
+import com.vitorpamplona.amethyst.commons.resources.kind_meeting_room
+import com.vitorpamplona.amethyst.commons.resources.kind_meeting_space
+import com.vitorpamplona.amethyst.commons.resources.kind_music_playlist
+import com.vitorpamplona.amethyst.commons.resources.kind_music_track
+import com.vitorpamplona.amethyst.commons.resources.kind_mute_list
+import com.vitorpamplona.amethyst.commons.resources.kind_named_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.kind_nests_servers
+import com.vitorpamplona.amethyst.commons.resources.kind_nip
+import com.vitorpamplona.amethyst.commons.resources.kind_nip04_dms
+import com.vitorpamplona.amethyst.commons.resources.kind_nns
+import com.vitorpamplona.amethyst.commons.resources.kind_nostr_connect
+import com.vitorpamplona.amethyst.commons.resources.kind_notes
+import com.vitorpamplona.amethyst.commons.resources.kind_nwc_request
+import com.vitorpamplona.amethyst.commons.resources.kind_nwc_response
+import com.vitorpamplona.amethyst.commons.resources.kind_old_bookmark_list
+import com.vitorpamplona.amethyst.commons.resources.kind_ots
+import com.vitorpamplona.amethyst.commons.resources.kind_outbox_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_pay_to
+import com.vitorpamplona.amethyst.commons.resources.kind_people_lists
+import com.vitorpamplona.amethyst.commons.resources.kind_pictures
+import com.vitorpamplona.amethyst.commons.resources.kind_pins
+import com.vitorpamplona.amethyst.commons.resources.kind_podcast_episode
+import com.vitorpamplona.amethyst.commons.resources.kind_podcast_metadata
+import com.vitorpamplona.amethyst.commons.resources.kind_poll
+import com.vitorpamplona.amethyst.commons.resources.kind_poll_response
+import com.vitorpamplona.amethyst.commons.resources.kind_private_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_private_zaps
+import com.vitorpamplona.amethyst.commons.resources.kind_profile
+import com.vitorpamplona.amethyst.commons.resources.kind_profile_badges
+import com.vitorpamplona.amethyst.commons.resources.kind_profile_gallery
+import com.vitorpamplona.amethyst.commons.resources.kind_proxy_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_public_message
+import com.vitorpamplona.amethyst.commons.resources.kind_reactions
+import com.vitorpamplona.amethyst.commons.resources.kind_relay_auth
+import com.vitorpamplona.amethyst.commons.resources.kind_relay_discovery
+import com.vitorpamplona.amethyst.commons.resources.kind_relay_monitor
+import com.vitorpamplona.amethyst.commons.resources.kind_relay_set
+import com.vitorpamplona.amethyst.commons.resources.kind_reports
+import com.vitorpamplona.amethyst.commons.resources.kind_reposts
+import com.vitorpamplona.amethyst.commons.resources.kind_reposts_16
+import com.vitorpamplona.amethyst.commons.resources.kind_room_presence
+import com.vitorpamplona.amethyst.commons.resources.kind_seals
+import com.vitorpamplona.amethyst.commons.resources.kind_search_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_shorts
+import com.vitorpamplona.amethyst.commons.resources.kind_shorts_repl
+import com.vitorpamplona.amethyst.commons.resources.kind_torrent_comments
+import com.vitorpamplona.amethyst.commons.resources.kind_torrents
+import com.vitorpamplona.amethyst.commons.resources.kind_trusted_providers
+import com.vitorpamplona.amethyst.commons.resources.kind_trusted_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_user_delete
+import com.vitorpamplona.amethyst.commons.resources.kind_user_settings
+import com.vitorpamplona.amethyst.commons.resources.kind_user_status
+import com.vitorpamplona.amethyst.commons.resources.kind_video
+import com.vitorpamplona.amethyst.commons.resources.kind_video_collaboration
+import com.vitorpamplona.amethyst.commons.resources.kind_video_list
+import com.vitorpamplona.amethyst.commons.resources.kind_video_repl
+import com.vitorpamplona.amethyst.commons.resources.kind_video_subtitles
+import com.vitorpamplona.amethyst.commons.resources.kind_voice_msg
+import com.vitorpamplona.amethyst.commons.resources.kind_voice_reply
+import com.vitorpamplona.amethyst.commons.resources.kind_wake
+import com.vitorpamplona.amethyst.commons.resources.kind_web_bookmark
+import com.vitorpamplona.amethyst.commons.resources.kind_wiki
+import com.vitorpamplona.amethyst.commons.resources.kind_workouts
+import com.vitorpamplona.amethyst.commons.resources.kind_zap_goals
+import com.vitorpamplona.amethyst.commons.resources.kind_zap_poll
+import com.vitorpamplona.amethyst.commons.resources.kind_zap_req
+import com.vitorpamplona.amethyst.commons.resources.kind_zaps
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
@@ -179,178 +333,182 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import org.jetbrains.compose.resources.StringResource
 
-/** Returns the `@StringRes` id for the translated kind name, or -1 if unknown. */
+/** Returns the catalog entry for the translated kind name, or null if unknown. */
 @Suppress("DEPRECATION")
-@StringRes
-fun kindDisplayName(kind: Int): Int =
+fun kindDisplayName(kind: Int): StringResource? =
     when (kind) {
-        AcceptedBadgeSetEvent.KIND -> R.string.kind_accepted_badge_set
-        AdvertisedRelayListEvent.KIND -> R.string.kind_outbox_relays
-        AppDefinitionEvent.KIND -> R.string.kind_apps
-        AppRecommendationEvent.KIND -> R.string.kind_app_recommendations
-        AppSpecificDataEvent.KIND -> R.string.kind_user_settings
-        AudioHeaderEvent.KIND -> R.string.kind_audio_header
-        AudioTrackEvent.KIND -> R.string.kind_audio_track
-        MusicTrackEvent.KIND -> R.string.kind_music_track
-        MusicPlaylistEvent.KIND -> R.string.kind_music_playlist
-        PodcastEpisodeEvent.KIND -> R.string.kind_podcast_episode
-        PodcastMetadataEvent.KIND -> R.string.kind_podcast_metadata
-        AuthoredPodcastsEvent.KIND -> R.string.kind_authored_podcasts
-        FavoritePodcastsListEvent.KIND -> R.string.kind_favorite_podcasts
-        AttestationEvent.KIND -> R.string.attestation
-        AttestationRequestEvent.KIND -> R.string.attestation_request
-        AttestorRecommendationEvent.KIND -> R.string.attestor_recommendation
-        AttestorProficiencyEvent.KIND -> R.string.attestor_proficiency
-        BadgeAwardEvent.KIND -> R.string.kind_badge_awards
-        BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
-        BlockedRelayListEvent.KIND -> R.string.kind_blocked_relays
-        BlossomServersEvent.KIND -> R.string.kind_blossom_servers
-        NestsServersEvent.KIND -> R.string.kind_nests_servers
-        BlossomAuthorizationEvent.KIND -> R.string.kind_blossom_auth
-        BroadcastRelayListEvent.KIND -> R.string.kind_broadcast_relays
-        BookmarkListEvent.KIND -> R.string.kind_bookmark_list
-        OldBookmarkListEvent.KIND -> R.string.kind_old_bookmark_list
-        CalendarDateSlotEvent.KIND -> R.string.kind_day_appointment
-        CalendarEvent.KIND -> R.string.kind_calendar
-        CalendarTimeSlotEvent.KIND -> R.string.kind_appointment
-        CalendarRSVPEvent.KIND -> R.string.kind_appt_rsvp
-        ChessGameEvent.KIND -> R.string.kind_chess_games
-        JesterEvent.KIND -> R.string.kind_chess_auth
-        RelayFeedsListEvent.KIND -> R.string.kind_favorite_relays
-        LiveChessGameChallengeEvent.KIND -> R.string.kind_chess_challenges
-        LiveChessGameAcceptEvent.KIND -> R.string.kind_chess_game_accept
-        LiveChessMoveEvent.KIND -> R.string.kind_chess_move
-        LiveChessGameEndEvent.KIND -> R.string.kind_chess_game_end
-        LiveChessDrawOfferEvent.KIND -> R.string.kind_chess_draw_offer
-        ChannelCreateEvent.KIND -> R.string.kind_channel_definition
-        ChannelHideMessageEvent.KIND -> R.string.kind_channel_hide_msg
-        ChannelListEvent.KIND -> R.string.kind_channel_list
-        ChannelMessageEvent.KIND -> R.string.kind_channel_message
-        ChannelMetadataEvent.KIND -> R.string.kind_channel_metadata
-        ChannelMuteUserEvent.KIND -> R.string.kind_channel_mute_user
-        ChatMessageEncryptedFileHeaderEvent.KIND -> R.string.kind_dm_file
-        ChatMessageEvent.KIND -> R.string.kind_dm_message
-        ChatMessageRelayListEvent.KIND -> R.string.kind_dm_relays
-        ClassifiedsEvent.KIND -> R.string.kind_classifieds
-        CommentEvent.KIND -> R.string.kind_comments
-        CommunityDefinitionEvent.KIND -> R.string.kind_community_def
-        CommunityListEvent.KIND -> R.string.kind_community_list
-        CommunityPostApprovalEvent.KIND -> R.string.kind_community_post
-        ContactListEvent.KIND -> R.string.kind_follow_list
-        DeletionEvent.KIND -> R.string.kind_deletions
-        DraftWrapEvent.KIND -> R.string.kind_drafts
-        EmojiPackEvent.KIND -> R.string.kind_emoji_packs
-        EmojiPackSelectionEvent.KIND -> R.string.kind_emoji_pack_list
-        EphemeralChatEvent.KIND -> R.string.kind_ephemeral_chat
-        EphemeralChatListEvent.KIND -> R.string.kind_ephemeral_chatrooms
-        FileHeaderEvent.KIND -> R.string.kind_file_headers
-        ProfileGalleryEntryEvent.KIND -> R.string.kind_profile_gallery
-        FileServersEvent.KIND -> R.string.kind_file_servers
-        FileStorageEvent.KIND -> R.string.kind_blob_data
-        FileStorageHeaderEvent.KIND -> R.string.kind_blob_headers
-        FhirResourceEvent.KIND -> R.string.kind_medical_data
-        FollowListEvent.KIND -> R.string.kind_follow_packs
-        GenericRepostEvent.KIND -> R.string.kind_reposts_16
-        GeohashListEvent.KIND -> R.string.kind_geohash_follows
-        GiftWrapEvent.KIND -> R.string.kind_gift_wraps
-        EphemeralGiftWrapEvent.KIND -> R.string.kind_gift_wraps
-        GitIssueEvent.KIND -> R.string.kind_git_issue
-        GitPatchEvent.KIND -> R.string.kind_git_patch
-        GitPullRequestEvent.KIND -> R.string.kind_git_pr
-        GitPullRequestUpdateEvent.KIND -> R.string.kind_git_pr_update
-        GitRepositoryEvent.KIND -> R.string.kind_git_repo
-        GitReplyEvent.KIND -> R.string.kind_git_reply
-        GitStatusOpenEvent.KIND -> R.string.kind_git_status_open
-        GitStatusAppliedEvent.KIND -> R.string.kind_git_status_applied
-        GitStatusClosedEvent.KIND -> R.string.kind_git_status_closed
-        GitStatusDraftEvent.KIND -> R.string.kind_git_status_draft
-        GoalEvent.KIND -> R.string.kind_zap_goals
-        HashtagListEvent.KIND -> R.string.kind_hashtag_follows
-        HighlightEvent.KIND -> R.string.kind_highlights
-        HTTPAuthorizationEvent.KIND -> R.string.kind_http_auth
-        IndexerRelayListEvent.KIND -> R.string.kind_index_relay_list
-        InteractiveStoryPrologueEvent.KIND -> R.string.kind_adventure_prologue
-        InteractiveStorySceneEvent.KIND -> R.string.kind_adventure_scene
-        InteractiveStoryReadingStateEvent.KIND -> R.string.kind_adventure_reading
-        LabeledBookmarkListEvent.KIND -> R.string.kind_named_bookmarks
-        LiveActivitiesChatMessageEvent.KIND -> R.string.kind_live_chats
-        LiveActivitiesEvent.KIND -> R.string.kind_live_streams
-        LnZapEvent.KIND -> R.string.kind_zaps
-        Bolt12ZapEvent.KIND -> R.string.kind_zaps
-        LnZapPaymentRequestEvent.KIND -> R.string.kind_nwc_request
-        LnZapPaymentResponseEvent.KIND -> R.string.kind_nwc_response
-        LnZapPrivateEvent.KIND -> R.string.kind_private_zaps
-        LnZapRequestEvent.KIND -> R.string.kind_zap_req
-        LongTextNoteEvent.KIND -> R.string.kind_blogs
-        MeetingRoomEvent.KIND -> R.string.kind_meeting_room
-        MeetingRoomPresenceEvent.KIND -> R.string.kind_room_presence
-        MeetingSpaceEvent.KIND -> R.string.kind_meeting_space
-        MetadataEvent.KIND -> R.string.kind_profile
-        MuteListEvent.KIND -> R.string.kind_mute_list
-        NNSEvent.KIND -> R.string.kind_nns
-        NipTextEvent.KIND -> R.string.kind_nip
-        NostrConnectEvent.KIND -> R.string.kind_nostr_connect
-        NIP90StatusEvent.KIND -> R.string.kind_dvm_status
-        NIP90ContentDiscoveryRequestEvent.KIND -> R.string.kind_dvm_content_req
-        NIP90ContentDiscoveryResponseEvent.KIND -> R.string.kind_dvm_content_resp
-        NIP90UserDiscoveryRequestEvent.KIND -> R.string.kind_dvm_user_req
-        NIP90UserDiscoveryResponseEvent.KIND -> R.string.kind_dvm_user_resp
-        OtsEvent.KIND -> R.string.kind_ots
-        PaymentTargetsEvent.KIND -> R.string.kind_pay_to
-        PeopleListEvent.KIND -> R.string.kind_people_lists
-        ProfileBadgesEvent.KIND -> R.string.kind_profile_badges
-        PictureEvent.KIND -> R.string.kind_pictures
-        WorkoutRecordEvent.KIND -> R.string.kind_workouts
-        PinListEvent.KIND -> R.string.kind_pins
-        ZapPollEvent.KIND -> R.string.kind_zap_poll
-        PollEvent.KIND -> R.string.kind_poll
-        PollResponseEvent.KIND -> R.string.kind_poll_response
-        PrivateDmEvent.KIND -> R.string.kind_nip04_dms
-        PrivateOutboxRelayListEvent.KIND -> R.string.kind_private_relays
-        ProxyRelayListEvent.KIND -> R.string.kind_proxy_relays
-        PublicMessageEvent.KIND -> R.string.kind_public_message
-        ReactionEvent.KIND -> R.string.kind_reactions
-        ContactCardEvent.KIND -> R.string.kind_contact_card
-        RelayAuthEvent.KIND -> R.string.kind_relay_auth
-        RelayDiscoveryEvent.KIND -> R.string.kind_relay_discovery
-        RelayMonitorEvent.KIND -> R.string.kind_relay_monitor
-        RelaySetEvent.KIND -> R.string.kind_relay_set
-        ReportEvent.KIND -> R.string.kind_reports
-        RepostEvent.KIND -> R.string.kind_reposts
-        RequestToVanishEvent.KIND -> R.string.kind_user_delete
-        SealedRumorEvent.KIND -> R.string.kind_seals
-        SearchRelayListEvent.KIND -> R.string.kind_search_relays
-        StatusEvent.KIND -> R.string.kind_user_status
-        TextNoteEvent.KIND -> R.string.kind_notes
-        TextNoteModificationEvent.KIND -> R.string.kind_edits
-        TorrentEvent.KIND -> R.string.kind_torrents
-        TorrentCommentEvent.KIND -> R.string.kind_torrent_comments
-        TrustedRelayListEvent.KIND -> R.string.kind_trusted_relays
-        TrustProviderListEvent.KIND -> R.string.kind_trusted_providers
-        VideoCurationSetEvent.KIND -> R.string.kind_video_list
-        VideoCollaborationEvent.KIND -> R.string.kind_video_collaboration
-        TextTrackEvent.KIND -> R.string.kind_video_subtitles
-        VideoHorizontalEvent.KIND -> R.string.kind_video_repl
-        VideoVerticalEvent.KIND -> R.string.kind_shorts_repl
-        VideoNormalEvent.KIND -> R.string.kind_video
-        VideoShortEvent.KIND -> R.string.kind_shorts
-        VoiceEvent.KIND -> R.string.kind_voice_msg
-        VoiceReplyEvent.KIND -> R.string.kind_voice_reply
-        WakeUpEvent.KIND -> R.string.kind_wake
-        WebBookmarkEvent.KIND -> R.string.kind_web_bookmark
-        WikiNoteEvent.KIND -> R.string.kind_wiki
-        else -> -1
+        AcceptedBadgeSetEvent.KIND -> Res.string.kind_accepted_badge_set
+        AdvertisedRelayListEvent.KIND -> Res.string.kind_outbox_relays
+        AppDefinitionEvent.KIND -> Res.string.kind_apps
+        AppRecommendationEvent.KIND -> Res.string.kind_app_recommendations
+        AppSpecificDataEvent.KIND -> Res.string.kind_user_settings
+        AudioHeaderEvent.KIND -> Res.string.kind_audio_header
+        AudioTrackEvent.KIND -> Res.string.kind_audio_track
+        MusicTrackEvent.KIND -> Res.string.kind_music_track
+        MusicPlaylistEvent.KIND -> Res.string.kind_music_playlist
+        PodcastEpisodeEvent.KIND -> Res.string.kind_podcast_episode
+        PodcastMetadataEvent.KIND -> Res.string.kind_podcast_metadata
+        AuthoredPodcastsEvent.KIND -> Res.string.kind_authored_podcasts
+        FavoritePodcastsListEvent.KIND -> Res.string.kind_favorite_podcasts
+        AttestationEvent.KIND -> Res.string.attestation
+        AttestationRequestEvent.KIND -> Res.string.attestation_request
+        AttestorRecommendationEvent.KIND -> Res.string.attestor_recommendation
+        AttestorProficiencyEvent.KIND -> Res.string.attestor_proficiency
+        BadgeAwardEvent.KIND -> Res.string.kind_badge_awards
+        BadgeDefinitionEvent.KIND -> Res.string.kind_badge_definitions
+        BlockedRelayListEvent.KIND -> Res.string.kind_blocked_relays
+        BlossomServersEvent.KIND -> Res.string.kind_blossom_servers
+        NestsServersEvent.KIND -> Res.string.kind_nests_servers
+        BlossomAuthorizationEvent.KIND -> Res.string.kind_blossom_auth
+        BroadcastRelayListEvent.KIND -> Res.string.kind_broadcast_relays
+        BookmarkListEvent.KIND -> Res.string.kind_bookmark_list
+        OldBookmarkListEvent.KIND -> Res.string.kind_old_bookmark_list
+        CalendarDateSlotEvent.KIND -> Res.string.kind_day_appointment
+        CalendarEvent.KIND -> Res.string.kind_calendar
+        CalendarTimeSlotEvent.KIND -> Res.string.kind_appointment
+        CalendarRSVPEvent.KIND -> Res.string.kind_appt_rsvp
+        ChessGameEvent.KIND -> Res.string.kind_chess_games
+        JesterEvent.KIND -> Res.string.kind_chess_auth
+        RelayFeedsListEvent.KIND -> Res.string.kind_favorite_relays
+        LiveChessGameChallengeEvent.KIND -> Res.string.kind_chess_challenges
+        LiveChessGameAcceptEvent.KIND -> Res.string.kind_chess_game_accept
+        LiveChessMoveEvent.KIND -> Res.string.kind_chess_move
+        LiveChessGameEndEvent.KIND -> Res.string.kind_chess_game_end
+        LiveChessDrawOfferEvent.KIND -> Res.string.kind_chess_draw_offer
+        ChannelCreateEvent.KIND -> Res.string.kind_channel_definition
+        ChannelHideMessageEvent.KIND -> Res.string.kind_channel_hide_msg
+        ChannelListEvent.KIND -> Res.string.kind_channel_list
+        ChannelMessageEvent.KIND -> Res.string.kind_channel_message
+        ChannelMetadataEvent.KIND -> Res.string.kind_channel_metadata
+        ChannelMuteUserEvent.KIND -> Res.string.kind_channel_mute_user
+        ChatMessageEncryptedFileHeaderEvent.KIND -> Res.string.kind_dm_file
+        ChatMessageEvent.KIND -> Res.string.kind_dm_message
+        ChatMessageRelayListEvent.KIND -> Res.string.kind_dm_relays
+        ClassifiedsEvent.KIND -> Res.string.kind_classifieds
+        CommentEvent.KIND -> Res.string.kind_comments
+        CommunityDefinitionEvent.KIND -> Res.string.kind_community_def
+        CommunityListEvent.KIND -> Res.string.kind_community_list
+        CommunityPostApprovalEvent.KIND -> Res.string.kind_community_post
+        ContactListEvent.KIND -> Res.string.kind_follow_list
+        DeletionEvent.KIND -> Res.string.kind_deletions
+        DraftWrapEvent.KIND -> Res.string.kind_drafts
+        EmojiPackEvent.KIND -> Res.string.kind_emoji_packs
+        EmojiPackSelectionEvent.KIND -> Res.string.kind_emoji_pack_list
+        EphemeralChatEvent.KIND -> Res.string.kind_ephemeral_chat
+        EphemeralChatListEvent.KIND -> Res.string.kind_ephemeral_chatrooms
+        FileHeaderEvent.KIND -> Res.string.kind_file_headers
+        ProfileGalleryEntryEvent.KIND -> Res.string.kind_profile_gallery
+        FileServersEvent.KIND -> Res.string.kind_file_servers
+        FileStorageEvent.KIND -> Res.string.kind_blob_data
+        FileStorageHeaderEvent.KIND -> Res.string.kind_blob_headers
+        FhirResourceEvent.KIND -> Res.string.kind_medical_data
+        FollowListEvent.KIND -> Res.string.kind_follow_packs
+        GenericRepostEvent.KIND -> Res.string.kind_reposts_16
+        GeohashListEvent.KIND -> Res.string.kind_geohash_follows
+        GiftWrapEvent.KIND -> Res.string.kind_gift_wraps
+        EphemeralGiftWrapEvent.KIND -> Res.string.kind_gift_wraps
+        GitIssueEvent.KIND -> Res.string.kind_git_issue
+        GitPatchEvent.KIND -> Res.string.kind_git_patch
+        GitPullRequestEvent.KIND -> Res.string.kind_git_pr
+        GitPullRequestUpdateEvent.KIND -> Res.string.kind_git_pr_update
+        GitRepositoryEvent.KIND -> Res.string.kind_git_repo
+        GitReplyEvent.KIND -> Res.string.kind_git_reply
+        GitStatusOpenEvent.KIND -> Res.string.kind_git_status_open
+        GitStatusAppliedEvent.KIND -> Res.string.kind_git_status_applied
+        GitStatusClosedEvent.KIND -> Res.string.kind_git_status_closed
+        GitStatusDraftEvent.KIND -> Res.string.kind_git_status_draft
+        GoalEvent.KIND -> Res.string.kind_zap_goals
+        HashtagListEvent.KIND -> Res.string.kind_hashtag_follows
+        HighlightEvent.KIND -> Res.string.kind_highlights
+        HTTPAuthorizationEvent.KIND -> Res.string.kind_http_auth
+        IndexerRelayListEvent.KIND -> Res.string.kind_index_relay_list
+        InteractiveStoryPrologueEvent.KIND -> Res.string.kind_adventure_prologue
+        InteractiveStorySceneEvent.KIND -> Res.string.kind_adventure_scene
+        InteractiveStoryReadingStateEvent.KIND -> Res.string.kind_adventure_reading
+        LabeledBookmarkListEvent.KIND -> Res.string.kind_named_bookmarks
+        LiveActivitiesChatMessageEvent.KIND -> Res.string.kind_live_chats
+        LiveActivitiesEvent.KIND -> Res.string.kind_live_streams
+        LnZapEvent.KIND -> Res.string.kind_zaps
+        Bolt12ZapEvent.KIND -> Res.string.kind_zaps
+        LnZapPaymentRequestEvent.KIND -> Res.string.kind_nwc_request
+        LnZapPaymentResponseEvent.KIND -> Res.string.kind_nwc_response
+        LnZapPrivateEvent.KIND -> Res.string.kind_private_zaps
+        LnZapRequestEvent.KIND -> Res.string.kind_zap_req
+        LongTextNoteEvent.KIND -> Res.string.kind_blogs
+        MeetingRoomEvent.KIND -> Res.string.kind_meeting_room
+        MeetingRoomPresenceEvent.KIND -> Res.string.kind_room_presence
+        MeetingSpaceEvent.KIND -> Res.string.kind_meeting_space
+        MetadataEvent.KIND -> Res.string.kind_profile
+        MuteListEvent.KIND -> Res.string.kind_mute_list
+        NNSEvent.KIND -> Res.string.kind_nns
+        NipTextEvent.KIND -> Res.string.kind_nip
+        NostrConnectEvent.KIND -> Res.string.kind_nostr_connect
+        NIP90StatusEvent.KIND -> Res.string.kind_dvm_status
+        NIP90ContentDiscoveryRequestEvent.KIND -> Res.string.kind_dvm_content_req
+        NIP90ContentDiscoveryResponseEvent.KIND -> Res.string.kind_dvm_content_resp
+        NIP90UserDiscoveryRequestEvent.KIND -> Res.string.kind_dvm_user_req
+        NIP90UserDiscoveryResponseEvent.KIND -> Res.string.kind_dvm_user_resp
+        OtsEvent.KIND -> Res.string.kind_ots
+        PaymentTargetsEvent.KIND -> Res.string.kind_pay_to
+        PeopleListEvent.KIND -> Res.string.kind_people_lists
+        ProfileBadgesEvent.KIND -> Res.string.kind_profile_badges
+        PictureEvent.KIND -> Res.string.kind_pictures
+        WorkoutRecordEvent.KIND -> Res.string.kind_workouts
+        PinListEvent.KIND -> Res.string.kind_pins
+        ZapPollEvent.KIND -> Res.string.kind_zap_poll
+        PollEvent.KIND -> Res.string.kind_poll
+        PollResponseEvent.KIND -> Res.string.kind_poll_response
+        PrivateDmEvent.KIND -> Res.string.kind_nip04_dms
+        PrivateOutboxRelayListEvent.KIND -> Res.string.kind_private_relays
+        ProxyRelayListEvent.KIND -> Res.string.kind_proxy_relays
+        PublicMessageEvent.KIND -> Res.string.kind_public_message
+        ReactionEvent.KIND -> Res.string.kind_reactions
+        ContactCardEvent.KIND -> Res.string.kind_contact_card
+        RelayAuthEvent.KIND -> Res.string.kind_relay_auth
+        RelayDiscoveryEvent.KIND -> Res.string.kind_relay_discovery
+        RelayMonitorEvent.KIND -> Res.string.kind_relay_monitor
+        RelaySetEvent.KIND -> Res.string.kind_relay_set
+        ReportEvent.KIND -> Res.string.kind_reports
+        RepostEvent.KIND -> Res.string.kind_reposts
+        RequestToVanishEvent.KIND -> Res.string.kind_user_delete
+        SealedRumorEvent.KIND -> Res.string.kind_seals
+        SearchRelayListEvent.KIND -> Res.string.kind_search_relays
+        StatusEvent.KIND -> Res.string.kind_user_status
+        TextNoteEvent.KIND -> Res.string.kind_notes
+        TextNoteModificationEvent.KIND -> Res.string.kind_edits
+        TorrentEvent.KIND -> Res.string.kind_torrents
+        TorrentCommentEvent.KIND -> Res.string.kind_torrent_comments
+        TrustedRelayListEvent.KIND -> Res.string.kind_trusted_relays
+        TrustProviderListEvent.KIND -> Res.string.kind_trusted_providers
+        VideoCurationSetEvent.KIND -> Res.string.kind_video_list
+        VideoCollaborationEvent.KIND -> Res.string.kind_video_collaboration
+        TextTrackEvent.KIND -> Res.string.kind_video_subtitles
+        VideoHorizontalEvent.KIND -> Res.string.kind_video_repl
+        VideoVerticalEvent.KIND -> Res.string.kind_shorts_repl
+        VideoNormalEvent.KIND -> Res.string.kind_video
+        VideoShortEvent.KIND -> Res.string.kind_shorts
+        VoiceEvent.KIND -> Res.string.kind_voice_msg
+        VoiceReplyEvent.KIND -> Res.string.kind_voice_reply
+        WakeUpEvent.KIND -> Res.string.kind_wake
+        WebBookmarkEvent.KIND -> Res.string.kind_web_bookmark
+        WikiNoteEvent.KIND -> Res.string.kind_wiki
+        else -> null
     }
 
 /**
- * Returns the translated display name for [kind] using Android string resources when available,
+ * Returns the translated display name for [kind] from the shared string catalog when available,
  * falling back to the English name from [KindNames], then to "k<number>".
  */
-fun kindNameFor(
-    context: Context,
-    kind: Int,
-): String {
-    val resId = kindDisplayName(kind)
-    return if (resId != -1) context.getString(resId) else (KindNames.nameFor(kind) ?: "k$kind")
+suspend fun kindNameFor(kind: Int): String {
+    val res = kindDisplayName(kind)
+    return if (res != null) loadStringRes(res) else (KindNames.nameFor(kind) ?: "k$kind")
+}
+
+/** Composition-side twin of [kindNameFor], for labels rendered straight into the UI. */
+@Composable
+fun kindName(kind: Int): String {
+    val res = kindDisplayName(kind)
+    return if (res != null) stringRes(res) else (KindNames.nameFor(kind) ?: "k$kind")
 }

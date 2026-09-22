@@ -68,7 +68,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -77,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.add_bitcoin_invoice
 import com.vitorpamplona.amethyst.commons.resources.cancel_bitcoin_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -409,7 +409,7 @@ private fun MessageField(postViewModel: EditPostViewModel) {
                 },
         placeholder = {
             Text(
-                text = stringRes(R.string.what_s_on_your_mind),
+                text = stringRes(Res.string.what_s_on_your_mind),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

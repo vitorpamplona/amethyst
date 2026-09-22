@@ -39,7 +39,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -48,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.mark_all_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_all_known_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_all_new_as_read
 import com.vitorpamplona.amethyst.commons.resources.mark_as_read_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -60,10 +60,11 @@ import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Immutable
 class MessagesTabItem(
-    val resource: Int,
+    val resource: StringResource,
     val scrollStateKey: String,
     val feedContentState: FeedContentState,
 )
@@ -103,7 +104,7 @@ fun MessagesTabHeader(
         ) {
             Icon(
                 symbol = MaterialSymbols.MoreVert,
-                contentDescription = stringRes(id = R.string.more_options),
+                contentDescription = stringRes(id = Res.string.more_options),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }

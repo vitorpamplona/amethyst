@@ -20,17 +20,26 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow_list_all_favorite_dvms
+import com.vitorpamplona.amethyst.commons.resources.follow_list_aroundme
+import com.vitorpamplona.amethyst.commons.resources.follow_list_curated
+import com.vitorpamplona.amethyst.commons.resources.follow_list_global
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3_follows_users_only
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows_users_only
+import com.vitorpamplona.amethyst.commons.resources.follow_list_mine
+import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list
+import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -53,6 +62,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
+import org.jetbrains.compose.resources.StringResource
 
 @Stable
 class TopNavFilterState(
@@ -62,25 +72,25 @@ class TopNavFilterState(
     val allFollows =
         FeedDefinition(
             code = TopFilter.AllFollows,
-            name = ResourceName(R.string.follow_list_kind3follows),
+            name = ResourceName(Res.string.follow_list_kind3follows),
         )
 
     val userFollows =
         FeedDefinition(
             code = TopFilter.AllUserFollows,
-            name = ResourceName(R.string.follow_list_kind3follows_users_only),
+            name = ResourceName(Res.string.follow_list_kind3follows_users_only),
         )
 
     val kind3Follows =
         FeedDefinition(
             code = TopFilter.DefaultFollows,
-            name = ResourceName(R.string.follow_list_kind3_follows_users_only),
+            name = ResourceName(Res.string.follow_list_kind3_follows_users_only),
         )
 
     val globalFollow =
         FeedDefinition(
             code = TopFilter.Global,
-            name = ResourceName(R.string.follow_list_global),
+            name = ResourceName(Res.string.follow_list_global),
         )
 
     // Notifications-only curated mode; in Notifications, Global itself shows
@@ -88,13 +98,13 @@ class TopNavFilterState(
     val selectedFollow =
         FeedDefinition(
             code = TopFilter.Selected,
-            name = ResourceName(R.string.follow_list_curated),
+            name = ResourceName(Res.string.follow_list_curated),
         )
 
     val aroundMe =
         FeedDefinition(
             code = TopFilter.AroundMe,
-            name = ResourceName(R.string.follow_list_aroundme),
+            name = ResourceName(Res.string.follow_list_aroundme),
         )
 
     // A UI-only entry: selecting it opens the map picker (handled in FeedFilterSpinner)
@@ -102,25 +112,25 @@ class TopNavFilterState(
     val teleport =
         FeedDefinition(
             code = TopFilter.TeleportPicker,
-            name = ResourceName(R.string.follow_list_teleport),
+            name = ResourceName(Res.string.follow_list_teleport),
         )
 
     val muteListFollow =
         FeedDefinition(
             code = TopFilter.MuteList(account.muteList.getMuteListAddress()),
-            name = ResourceName(R.string.follow_list_mute_list),
+            name = ResourceName(Res.string.follow_list_mute_list),
         )
 
     val mineFollow =
         FeedDefinition(
             code = TopFilter.Mine,
-            name = ResourceName(R.string.follow_list_mine),
+            name = ResourceName(Res.string.follow_list_mine),
         )
 
     val allFavoriteAlgoFeedsFollow =
         FeedDefinition(
             code = TopFilter.AllFavoriteAlgoFeeds,
-            name = ResourceName(R.string.follow_list_all_favorite_dvms),
+            name = ResourceName(Res.string.follow_list_all_favorite_dvms),
         )
 
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, muteListFollow)
@@ -535,7 +545,7 @@ class TopNavFilterState(
 sealed class Name {
     abstract fun name(): String
 
-    open fun name(context: Context) = name()
+    open suspend fun nameOrDefault() = name()
 }
 
 /**
@@ -570,11 +580,11 @@ class RelayName(
 
 @Stable
 class ResourceName(
-    val resourceId: Int,
+    val resourceId: StringResource,
 ) : Name() {
     override fun name() = " $resourceId " // Space to make sure it goes first
 
-    override fun name(context: Context) = stringRes(context, resourceId)
+    override suspend fun nameOrDefault() = loadStringRes(resourceId)
 }
 
 @Stable

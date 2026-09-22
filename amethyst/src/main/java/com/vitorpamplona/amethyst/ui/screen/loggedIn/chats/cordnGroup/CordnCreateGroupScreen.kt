@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -102,7 +104,7 @@ fun CordnCreateGroupScreen(
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
                 title = { Text(stringRes(R.string.cordn_create_title)) },

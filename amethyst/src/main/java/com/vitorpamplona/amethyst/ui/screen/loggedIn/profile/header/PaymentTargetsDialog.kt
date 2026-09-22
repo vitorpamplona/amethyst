@@ -50,12 +50,17 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_payment_error
+import com.vitorpamplona.amethyst.commons.resources.no_payment_app_found
 import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
+import com.vitorpamplona.amethyst.commons.resources.payment_targets
 import com.vitorpamplona.amethyst.commons.resources.show_qr
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -74,6 +79,7 @@ fun PaymentTargetsDialog(
     /** Returns true when it handled the target with an in-app wallet. */
     payInApp: ((PaymentTarget) -> Boolean)? = null,
 ) {
+    val noPaymentAppFoundStr = stringRes(Res.string.no_payment_app_found)
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboard.current
@@ -82,7 +88,7 @@ fun PaymentTargetsDialog(
     var qrContent by remember { mutableStateOf<String?>(null) }
 
     M3ActionDialog(
-        title = stringRes(R.string.payment_targets),
+        title = stringRes(Res.string.payment_targets),
         onDismiss = onDismiss,
     ) {
         M3ActionSection {
@@ -104,7 +110,7 @@ fun PaymentTargetsDialog(
                                 Toast
                                     .makeText(
                                         context,
-                                        stringRes(context, R.string.copied_to_clipboard),
+                                        loadStringRes(Res.string.copied_to_clipboard),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }
@@ -117,7 +123,7 @@ fun PaymentTargetsDialog(
                                 // wipe whatever the wallet app already had open.
                                 runCatching { uriHandler.openUri(paymentTargetUri(target)) }
                                     .onSuccess { onDismiss() }
-                                    .onFailure { errorMessage = stringRes(context, R.string.no_payment_app_found) }
+                                    .onFailure { errorMessage = noPaymentAppFoundStr }
                             }
                         },
                     )
@@ -132,7 +138,7 @@ fun PaymentTargetsDialog(
 
     errorMessage?.let { msg ->
         ErrorMessageDialog(
-            title = stringRes(R.string.error_dialog_payment_error),
+            title = stringRes(Res.string.error_dialog_payment_error),
             textContent = msg,
             onDismiss = { errorMessage = null },
         )
@@ -173,7 +179,7 @@ private fun PaymentTargetRow(
         IconButton(onClick = onCopy) {
             Icon(
                 symbol = MaterialSymbols.ContentCopy,
-                contentDescription = stringRes(R.string.copy_to_clipboard),
+                contentDescription = stringRes(Res.string.copy_to_clipboard),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

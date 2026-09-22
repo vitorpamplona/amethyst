@@ -50,15 +50,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
 import com.vitorpamplona.amethyst.commons.resources.delete_payment_target
 import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
 import com.vitorpamplona.amethyst.commons.resources.payment_target_authority
 import com.vitorpamplona.amethyst.commons.resources.payment_target_type
+import com.vitorpamplona.amethyst.commons.resources.payment_targets
 import com.vitorpamplona.amethyst.commons.resources.payment_targets_explainer
+import com.vitorpamplona.amethyst.commons.resources.payment_targets_section_explainer
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -100,7 +102,7 @@ fun PaymentTargetsScaffold(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.payment_targets,
+                titleRes = Res.string.payment_targets,
                 onCancel = {
                     viewModel.refresh()
                     onClose()
@@ -150,8 +152,8 @@ fun PaymentTargetsBody(viewModel: PaymentTargetsViewModel) {
     ) {
         item {
             SettingsCategory(
-                R.string.payment_targets,
-                R.string.payment_targets_section_explainer,
+                Res.string.payment_targets,
+                Res.string.payment_targets_section_explainer,
                 SettingsCategoryFirstModifier,
             )
         }
@@ -270,7 +272,7 @@ fun PaymentTargetAddField(onAdd: (type: String, authority: String) -> Unit) {
                 shape = ButtonBorder,
                 enabled = isValid,
             ) {
-                Text(text = stringRes(id = R.string.add), color = Color.White)
+                Text(text = stringRes(id = Res.string.add), color = Color.White)
             }
         }
     }

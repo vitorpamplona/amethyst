@@ -24,13 +24,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_payment_error
+import com.vitorpamplona.amethyst.commons.resources.no_payment_app_found_for_type
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -106,8 +108,8 @@ fun PaymentTargetChip(
                 runCatching { uriHandler.openUri(paymentTargetUri(target)) }
                     .onFailure {
                         accountViewModel.toastManager.toast(
-                            R.string.error_dialog_payment_error,
-                            R.string.no_payment_app_found_for_type,
+                            Res.string.error_dialog_payment_error,
+                            Res.string.no_payment_app_found_for_type,
                             style.label,
                         )
                     }

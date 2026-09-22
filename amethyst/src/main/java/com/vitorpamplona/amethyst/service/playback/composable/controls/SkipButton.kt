@@ -33,9 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.skip_back
+import com.vitorpamplona.amethyst.commons.resources.skip_forward
 import com.vitorpamplona.amethyst.service.playback.composable.SKIP_SECONDS
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -89,7 +91,7 @@ fun SkipButton(
     onClick: () -> Unit,
 ) {
     val icon = if (isForward) MaterialSymbols.Forward10 else MaterialSymbols.Replay10
-    val label = if (isForward) stringRes(R.string.skip_forward, SKIP_SECONDS) else stringRes(R.string.skip_back, SKIP_SECONDS)
+    val label = if (isForward) stringRes(Res.string.skip_forward, SKIP_SECONDS) else stringRes(Res.string.skip_back, SKIP_SECONDS)
     val tint = if (enabled) Color.White else Color.White.copy(alpha = 0.38f)
     IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(48.dp)) {
         Icon(symbol = icon, contentDescription = label, tint = tint, modifier = Modifier.size(32.dp))

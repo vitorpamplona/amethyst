@@ -52,14 +52,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_dismiss
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_hide
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_icon
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_who
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.types.reportTypeLabels
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -306,8 +306,8 @@ private fun OverflowChip(count: Int) {
 /** "Reported by 2 people you follow". The reason, if any, is rendered separately. */
 @Composable
 private fun reportWarningHeadline(state: UserReportWarningState): String =
-    pluralStringResource(
-        R.plurals.dm_sender_reported,
+    pluralStringRes(
+        Res.plurals.dm_sender_reported,
         state.reporterCount,
         state.reporterCount,
     )

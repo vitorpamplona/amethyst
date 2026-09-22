@@ -63,7 +63,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -75,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_headline
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_step1
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_step2
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_explainer
+import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_title
 import com.vitorpamplona.amethyst.commons.resources.remove_dvm_from_favorites
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -111,7 +111,7 @@ fun FavoriteAlgoFeedsListScreen(
         isInvertedLayout = false,
         topBar = {
             TopBarWithBackButton(
-                caption = stringRes(R.string.favorite_dvms_title),
+                caption = stringRes(Res.string.favorite_dvms_title),
                 nav = nav,
             )
         },

@@ -64,7 +64,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -76,7 +75,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.DefaultWebClients
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
@@ -91,9 +89,15 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_clear
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_napplets
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_nsites
+import com.vitorpamplona.amethyst.commons.resources.browser_favorites
 import com.vitorpamplona.amethyst.commons.resources.browser_go
 import com.vitorpamplona.amethyst.commons.resources.browser_recent_options
 import com.vitorpamplona.amethyst.commons.resources.browser_recent_remove
+import com.vitorpamplona.amethyst.commons.resources.browser_suggested
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_recent
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -115,6 +119,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /** How many of the most recent history entries the idle browser home surfaces under "Recent". */
@@ -148,6 +153,7 @@ private fun BrowserLauncher(
     nav: INav,
 ) {
     val context = LocalContext.current
+    val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
     val history by BrowserHistoryRegistry.history.collectAsStateWithLifecycle()
     val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
@@ -299,7 +305,7 @@ private fun BrowserLauncher(
                     suggested = suggested,
                     nsites = followedNsites,
                     napplets = followedNapplets,
-                    onOpenApp = { FavoriteAppLauncher.launch(context, it) },
+                    onOpenApp = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
                     onRemoveApp = { FavoriteAppsRegistry.remove(it.id) },
                     onAddApp = { FavoriteAppsRegistry.add(it) },
                     onOpenUrl = { open(it) },
@@ -341,7 +347,7 @@ private fun OmniBar(
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
-            placeholder = { Text(stringResource(CommonsR.string.browser_address_hint)) },
+            placeholder = { Text(stringRes(CommonsR.string.browser_address_hint)) },
             keyboardOptions =
                 KeyboardOptions(
                     capitalization = KeyboardCapitalization.None,
@@ -392,12 +398,12 @@ private fun SuggestionGrid(
 
     fun LazyGridScope.section(
         keyPrefix: String,
-        title: Int,
+        title: StringResource,
         rows: List<OmniboxSuggestions.Suggestion>,
         highlighted: Boolean,
     ) {
         if (rows.isEmpty()) return
-        item(key = "h-$keyPrefix") { SectionHeader(stringResource(title)) }
+        item(key = "h-$keyPrefix") { SectionHeader(stringRes(title)) }
         items(rows, key = { "$keyPrefix:" + it.url }) { suggestion ->
             SuggestionRow(
                 suggestion = suggestion,
@@ -412,9 +418,9 @@ private fun SuggestionGrid(
     }
 
     LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = modifier) {
-        section("f", R.string.browser_favorites, favorites, highlighted = true)
-        section("o", R.string.favorite_app_recent, recent, highlighted = false)
-        section("s", R.string.browser_suggested, discover, highlighted = false)
+        section("f", Res.string.browser_favorites, favorites, highlighted = true)
+        section("o", Res.string.favorite_app_recent, recent, highlighted = false)
+        section("s", Res.string.browser_suggested, discover, highlighted = false)
     }
 }
 
@@ -464,7 +470,7 @@ private fun SuggestionRow(
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(if (suggestion.isFavorite) R.string.favorite_app_remove else R.string.favorite_app_add)) },
+                    text = { Text(stringRes(if (suggestion.isFavorite) Res.string.favorite_app_remove else Res.string.favorite_app_add)) },
                     leadingIcon = {
                         Icon(if (suggestion.isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null)
                     },
@@ -515,11 +521,11 @@ private fun BrowserHome(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (apps.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "h-fav") { SectionHeader(stringResource(R.string.browser_favorites)) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-fav") { SectionHeader(stringRes(Res.string.browser_favorites)) }
             favoriteAppItems(apps, onOpenApp, onRemoveApp)
         }
         if (recents.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "h-rec") { SectionHeader(stringResource(R.string.favorite_app_recent)) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-rec") { SectionHeader(stringRes(Res.string.favorite_app_recent)) }
             items(recents, span = { GridItemSpan(maxLineSpan) }, key = { "r:" + it.url }) { entry ->
                 RecentRow(
                     entry = entry,
@@ -544,7 +550,7 @@ private fun BrowserHome(
             }
         }
         if (suggested.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "h-sug") { SectionHeader(stringResource(R.string.browser_suggested)) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-sug") { SectionHeader(stringRes(Res.string.browser_suggested)) }
             items(suggested, span = { GridItemSpan(maxLineSpan) }, key = { "s:" + it.app.url }) { entry ->
                 SuggestedRow(
                     entry = entry,
@@ -598,7 +604,7 @@ private fun SuggestedRow(
             )
         }
         IconButton(onClick = onAddFavorite) {
-            Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(R.string.favorite_app_add))
+            Icon(MaterialSymbols.StarBorder, contentDescription = stringRes(Res.string.favorite_app_add))
         }
     }
 }
@@ -705,7 +711,7 @@ private fun NostrAppRow(
             }
         }
         IconButton(onClick = onAddFavorite) {
-            Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(R.string.favorite_app_add))
+            Icon(MaterialSymbols.StarBorder, contentDescription = stringRes(Res.string.favorite_app_add))
         }
     }
 }
@@ -752,7 +758,7 @@ private fun RecentRow(
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(if (isFavorited) R.string.favorite_app_remove else R.string.favorite_app_add)) },
+                    text = { Text(stringRes(if (isFavorited) Res.string.favorite_app_remove else Res.string.favorite_app_add)) },
                     leadingIcon = {
                         Icon(if (isFavorited) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null)
                     },

@@ -28,11 +28,18 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_scheduled_posts_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_scheduled_posts_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_scheduled_posts_channel_name
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_error_prefix
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_notification_failed_title
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_notification_sent_title
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostNotifier
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.extractContentPreview
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Android [ScheduledPostNotifier]: posts a user-visible system notification when a
@@ -43,17 +50,17 @@ import com.vitorpamplona.amethyst.ui.stringRes
 class AndroidScheduledPostNotifier(
     private val context: Context,
 ) : ScheduledPostNotifier {
-    override fun notifySent(post: ScheduledPost) {
+    override suspend fun notifySent(post: ScheduledPost) {
         ensureChannel(context)
         post(
             context = context,
             notId = idFor(post.id),
-            title = stringRes(context, R.string.scheduled_posts_notification_sent_title),
+            title = loadStringRes(Res.string.scheduled_posts_notification_sent_title),
             body = extractContentPreview(post, 120),
         )
     }
 
-    override fun notifyFailed(
+    override suspend fun notifyFailed(
         post: ScheduledPost,
         error: String?,
     ) {
@@ -63,23 +70,23 @@ class AndroidScheduledPostNotifier(
             if (error.isNullOrBlank()) {
                 snippet
             } else {
-                "$snippet\n${stringRes(context, R.string.scheduled_posts_error_prefix, error)}"
+                "$snippet\n${loadStringRes(Res.string.scheduled_posts_error_prefix, error)}"
             }
         post(
             context = context,
             notId = idFor(post.id),
-            title = stringRes(context, R.string.scheduled_posts_notification_failed_title),
+            title = loadStringRes(Res.string.scheduled_posts_notification_failed_title),
             body = body,
         )
     }
 
-    private fun post(
+    private suspend fun post(
         context: Context,
         notId: Int,
         title: String,
         body: String,
     ) {
-        val channelId = stringRes(context, R.string.app_notification_scheduled_posts_channel_id)
+        val channelId = loadStringRes(Res.string.app_notification_scheduled_posts_channel_id)
         val tapIntent =
             Intent(context, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -126,15 +133,15 @@ class AndroidScheduledPostNotifier(
         private var channel: NotificationChannel? = null
         private const val SCHEDULED_POST_NOT_ID_BASE = 0x70000
 
-        fun ensureChannel(context: Context) {
+        suspend fun ensureChannel(context: Context) {
             if (channel != null) return
             channel =
                 NotificationChannel(
-                    stringRes(context, R.string.app_notification_scheduled_posts_channel_id),
-                    stringRes(context, R.string.app_notification_scheduled_posts_channel_name),
+                    loadStringRes(Res.string.app_notification_scheduled_posts_channel_id),
+                    loadStringRes(Res.string.app_notification_scheduled_posts_channel_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ).apply {
-                    description = stringRes(context, R.string.app_notification_scheduled_posts_channel_description)
+                    description = loadStringRes(Res.string.app_notification_scheduled_posts_channel_description)
                 }
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(channel!!)

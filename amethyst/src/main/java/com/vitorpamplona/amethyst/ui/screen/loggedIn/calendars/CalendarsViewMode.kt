@@ -20,8 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
-import androidx.annotation.StringRes
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_view_day
+import com.vitorpamplona.amethyst.commons.resources.calendar_view_feed
+import com.vitorpamplona.amethyst.commons.resources.calendar_view_month
+import com.vitorpamplona.amethyst.commons.resources.calendar_view_week
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Lenses on the same appointment timeline. Calendar *collections* (kind 31924) live on their
@@ -29,10 +33,10 @@ import com.vitorpamplona.amethyst.R
  * of the appointment data.
  */
 enum class CalendarsViewMode(
-    @StringRes val labelRes: Int,
+    val labelRes: StringResource,
 ) {
-    FEED(R.string.calendar_view_feed),
-    MONTH(R.string.calendar_view_month),
-    WEEK(R.string.calendar_view_week),
-    DAY(R.string.calendar_view_day),
+    FEED(Res.string.calendar_view_feed),
+    MONTH(Res.string.calendar_view_month),
+    WEEK(Res.string.calendar_view_week),
+    DAY(Res.string.calendar_view_day),
 }

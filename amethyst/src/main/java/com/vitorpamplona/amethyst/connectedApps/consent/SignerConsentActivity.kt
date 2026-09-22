@@ -60,8 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,7 +67,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -93,12 +90,16 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_signer_deny_op
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_allow
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_deny
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_remember
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_select_all
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_select_none
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_signing_as
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_messages_with
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -483,7 +484,7 @@ private fun BatchedConsentDialog(
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            pluralStringResource(R.plurals.nip46_signer_batch_title, pending.size, pending.size),
+                            pluralStringRes(Res.plurals.nip46_signer_batch_title, pending.size, pending.size),
                             style = MaterialTheme.typography.titleLarge,
                         )
                         account.accountName?.let { name ->
@@ -504,8 +505,8 @@ private fun BatchedConsentDialog(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 2.dp),
                 ) {
                     Text(
-                        stringResource(
-                            if (selected.size == pending.size) R.string.nip46_signer_batch_select_none else R.string.nip46_signer_batch_select_all,
+                        stringRes(
+                            if (selected.size == pending.size) Res.string.nip46_signer_batch_select_none else Res.string.nip46_signer_batch_select_all,
                         ),
                         style = MaterialTheme.typography.labelLarge,
                     )

@@ -44,11 +44,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.description
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.new_product
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -157,7 +158,7 @@ fun NewProductScreen(
     Scaffold(
         topBar = {
             PostingTopBar(
-                titleRes = R.string.new_product,
+                titleRes = Res.string.new_product,
                 isActive = postViewModel::canPost,
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
@@ -225,7 +226,7 @@ private fun NewProductBody(
                     accountViewModel = accountViewModel,
                 )
                 MessageField(
-                    R.string.description,
+                    Res.string.description,
                     postViewModel,
                     onContentReceived = { uri, mimeType ->
                         postViewModel.selectImage(

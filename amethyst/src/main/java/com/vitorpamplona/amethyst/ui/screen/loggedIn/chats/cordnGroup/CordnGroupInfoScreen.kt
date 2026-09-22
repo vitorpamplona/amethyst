@@ -60,6 +60,9 @@ import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
@@ -93,7 +96,7 @@ fun CordnGroupInfoScreen(
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
                 title = { Text(stringRes(R.string.cordn_group_info)) },
@@ -131,7 +134,7 @@ private fun CordnGroupInfo(
             .padding(16.dp),
     ) {
         Text(
-            text = name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.cordn_group_untitled, room.gid.take(8)),
+            text = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, room.gid.take(8)),
             style = MaterialTheme.typography.headlineSmall,
         )
         description?.takeIf { it.isNotBlank() }?.let {

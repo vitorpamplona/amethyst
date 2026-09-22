@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 
 /**
  * Android implementation of [MlsGroupStateStore] using file-based encrypted storage.
@@ -35,8 +36,9 @@ import java.io.File
  *
  * Storage layout:
  * ```
- * <rootDir>/mls_groups/<nostrGroupId>/state    — encrypted MlsGroupState
+ * <rootDir>/mls_groups/<nostrGroupId>/state     — encrypted MlsGroupState
  * <rootDir>/mls_groups/<nostrGroupId>/retained  — encrypted retained epoch secrets
+ * <rootDir>/mls_groups/<nostrGroupId>/ratchet   — encrypted OwnSenderRatchet
  * ```
  */
 class AndroidMlsGroupStateStore(
@@ -66,6 +68,8 @@ class AndroidMlsGroupStateStore(
     private fun stateFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "state")
 
     private fun retainedFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "retained")
+
+    private fun ratchetFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "ratchet")
 
     override suspend fun save(
         nostrGroupId: String,
@@ -165,6 +169,66 @@ class AndroidMlsGroupStateStore(
 
         atomicWrite(file, encryption.encrypt(buffer))
     }
+
+    /**
+     * The per-send ratchet position, written on its own so a message does not
+     * re-encrypt the whole group state to record ~72 bytes.
+     *
+     * Written atomically, through a temp file and a rename. An in-place write
+     * looked adequate — the record is small and written whole — but the failure
+     * it allows is the one this record exists to prevent. A torn record is
+     * discarded on load, which falls back to the position in the full state:
+     * that is the position as of the last COMMIT, behind by every send since.
+     * The next send would then re-emit every generation in between, reusing
+     * AEAD key+nonce pairs. With a rename, a crash leaves the previous complete
+     * record instead, which is at worst one send behind — and that send's
+     * ciphertext was never published, because publishing waits for this write.
+     */
+    override suspend fun saveSenderRatchet(
+        nostrGroupId: String,
+        state: ByteArray,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val file = ratchetFile(nostrGroupId)
+            try {
+                file.parentFile?.mkdirs()
+                val encrypted = encryption.encrypt(state)
+                val tempFile = File(file.parentFile, "${file.name}.tmp")
+                FileOutputStream(tempFile).use { out ->
+                    out.write(encrypted)
+                    out.fd.sync()
+                }
+                if (!tempFile.renameTo(file)) {
+                    tempFile.copyTo(file, overwrite = true)
+                    if (!tempFile.delete()) {
+                        Log.w(TAG) { "Failed to delete the temp ratchet file: ${tempFile.absolutePath}" }
+                    }
+                }
+                true
+            } catch (e: Exception) {
+                // Returning false sends the caller to a full state write, which
+                // is slower but carries the same guarantee. Swallowing this and
+                // returning true would drop the position on the floor.
+                Log.w(TAG, "saveSenderRatchet($nostrGroupId) FAILED, falling back to a full state write: ${e.message}", e)
+                false
+            }
+        }
+
+    override suspend fun loadSenderRatchet(nostrGroupId: String): ByteArray? =
+        withContext(Dispatchers.IO) {
+            val file = ratchetFile(nostrGroupId)
+            if (!file.exists()) return@withContext null
+            try {
+                encryption.decrypt(file.readBytes())
+            } catch (e: Exception) {
+                // Serious: the fallback is the full state's position, which is
+                // BEHIND, and a behind position re-emits used generations. The
+                // atomic write above is what should make this unreachable, so
+                // if it ever fires the group's key material is suspect.
+                Log.e(TAG, "loadSenderRatchet($nostrGroupId) unreadable — the ratchet may rewind: ${e.message}", e)
+                null
+            }
+        }
 
     override suspend fun loadRetainedEpochs(nostrGroupId: String): List<ByteArray> =
         withContext(Dispatchers.IO) {

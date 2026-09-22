@@ -55,18 +55,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
+import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps_empty
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
@@ -91,6 +92,7 @@ fun FavoriteAppsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
     val context = LocalContext.current
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
 
@@ -100,7 +102,7 @@ fun FavoriteAppsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.favorite_apps)) })
+            TopAppBar(title = { Text(stringRes(Res.string.favorite_apps)) })
         },
         bottomBar = {
             AppBottomBar(Route.FavoriteApps, nav, accountViewModel) { route -> nav.navBottomBar(route) }
@@ -123,7 +125,7 @@ fun FavoriteAppsScreen(
         } else {
             FavoriteAppsGrid(
                 apps = apps,
-                onOpen = { FavoriteAppLauncher.launch(context, it) },
+                onOpen = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
                 onRemove = { FavoriteAppsRegistry.remove(it.id) },
                 modifier =
                     Modifier
@@ -234,7 +236,7 @@ internal fun FavoriteAppCell(
 
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.favorite_app_remove)) },
+                text = { Text(stringRes(Res.string.favorite_app_remove)) },
                 leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
                 onClick = {
                     menuOpen = false

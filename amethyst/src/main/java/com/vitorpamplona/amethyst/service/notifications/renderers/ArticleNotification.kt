@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_message
+import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_message_highlight
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
@@ -30,7 +33,6 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 
@@ -56,9 +58,9 @@ object ArticleNotification {
         val isHighlight = event is HighlightEvent
         val titleRes =
             if (isHighlight) {
-                R.string.app_notification_articles_channel_message_highlight
+                Res.string.app_notification_articles_channel_message_highlight
             } else {
-                R.string.app_notification_articles_channel_message
+                Res.string.app_notification_articles_channel_message
             }
         val bodySource = if (event is HighlightEvent) event.quote() else event.content
         val rendered = NotificationContent.renderNoteText(bodySource)
@@ -80,7 +82,7 @@ object ArticleNotification {
             nm.postStandard(
                 category = NotificationCategory.ARTICLE,
                 id = event.id,
-                messageTitle = stringRes(context, titleRes, author.toBestDisplayName()),
+                messageTitle = loadStringRes(titleRes, author.toBestDisplayName()),
                 messageBody = body.text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),

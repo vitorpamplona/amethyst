@@ -30,19 +30,24 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_message
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_not_now
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_opt_out
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_send
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_title
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_bg_data
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_churn
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_conn_time
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_reconnects
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_wakelock
 import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -111,7 +116,7 @@ fun DisplayResourceUsageAlert(
             text = {
                 Text(
                     stringRes(
-                        R.string.resource_usage_alert_message,
+                        Res.string.resource_usage_alert_message,
                         reasonDescription(found),
                     ),
                 )
@@ -163,32 +168,32 @@ private fun reasonDescription(alert: ResourceUsageAlerts.Alert): String =
     when (alert.reason) {
         ResourceUsageAlerts.Reason.BACKGROUND_MOBILE_DATA ->
             stringRes(
-                R.string.resource_usage_reason_bg_data,
+                Res.string.resource_usage_reason_bg_data,
                 ResourceUsageReportAssembler.formatBytes(alert.value),
             )
 
         ResourceUsageAlerts.Reason.BACKGROUND_MOBILE_CONNECTION_TIME ->
             stringRes(
-                R.string.resource_usage_reason_conn_time,
+                Res.string.resource_usage_reason_conn_time,
                 ResourceUsageReportAssembler.formatConnHours(alert.value),
             )
 
         ResourceUsageAlerts.Reason.WAKELOCK_TIME ->
             stringRes(
-                R.string.resource_usage_reason_wakelock,
+                Res.string.resource_usage_reason_wakelock,
                 ResourceUsageReportAssembler.formatDurationMs(alert.value),
             )
 
         ResourceUsageAlerts.Reason.PROCESS_CHURN ->
-            pluralStringResource(
-                R.plurals.resource_usage_reason_churn,
+            pluralStringRes(
+                Res.plurals.resource_usage_reason_churn,
                 alert.value.toInt(),
                 alert.value.toInt(),
             )
 
         ResourceUsageAlerts.Reason.RECONNECT_CHURN ->
-            pluralStringResource(
-                R.plurals.resource_usage_reason_reconnects,
+            pluralStringRes(
+                Res.plurals.resource_usage_reason_reconnects,
                 alert.value.toInt(),
                 alert.value.toInt(),
             )

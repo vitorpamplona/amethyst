@@ -22,16 +22,27 @@ package com.vitorpamplona.amethyst.service
 
 import android.content.Context
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_failed
+import com.vitorpamplona.amethyst.commons.resources.bolt12_zap_error
+import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.error_unable_to_fetch_invoice
+import com.vitorpamplona.amethyst.commons.resources.missing_lud16
+import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error
+import com.vitorpamplona.amethyst.commons.resources.user_does_not_have_a_lightning_address_setup_to_receive_sats
+import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
@@ -53,6 +64,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import org.jetbrains.compose.resources.StringResource
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.round
 
@@ -210,17 +222,16 @@ class ZapPaymentHandler(
             errors.forEach {
                 val message =
                     if (it.user != null) {
-                        stringRes(
-                            context,
-                            R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
+                        loadStringRes(
+                            Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                             it.user.toBestDisplayName(),
                         )
                     } else {
-                        stringRes(context, R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats)
+                        loadStringRes(Res.string.user_does_not_have_a_lightning_address_setup_to_receive_sats)
                     }
 
                 onError(
-                    stringRes(context, R.string.missing_lud16),
+                    loadStringRes(Res.string.missing_lud16),
                     message,
                     it.user,
                 )
@@ -337,7 +348,7 @@ class ZapPaymentHandler(
         }
     }
 
-    private fun calculateZapValue(
+    private suspend fun calculateZapValue(
         amountMilliSats: Long,
         weight: Double,
         totalWeight: Double,
@@ -430,13 +441,11 @@ class ZapPaymentHandler(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 onError(
-                    stringRes(
-                        context,
-                        R.string.error_unable_to_fetch_invoice,
+                    loadStringRes(
+                        Res.string.error_unable_to_fetch_invoice,
                     ),
-                    stringRes(
-                        context,
-                        R.string.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error,
+                    loadStringRes(
+                        Res.string.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error,
                         e.message,
                     ),
                     null,
@@ -474,21 +483,25 @@ class ZapPaymentHandler(
                             comment = payable.message,
                         ),
                     onResponse = { response ->
-                        progress.step()
-                        response.nwcFailureDetail(context)?.let { detail ->
-                            onError(
-                                stringRes(context, R.string.error_dialog_pay_invoice_error),
-                                stringRes(context, R.string.wallet_connect_pay_invoice_error_error, detail),
-                                payable.info.user,
-                            )
+                        account.scope.launch {
+                            progress.step()
+                            response.nwcFailureDetail()?.let { detail ->
+                                onError(
+                                    loadStringRes(Res.string.error_dialog_pay_invoice_error),
+                                    loadStringRes(Res.string.wallet_connect_pay_invoice_error_error, detail),
+                                    payable.info.user,
+                                )
+                            }
                         }
                     },
                     onTimeout = {
-                        onError(
-                            stringRes(context, R.string.error_dialog_pay_invoice_error),
-                            nwcTimeoutMessage(context),
-                            payable.info.user,
-                        )
+                        account.scope.launch {
+                            onError(
+                                loadStringRes(Res.string.error_dialog_pay_invoice_error),
+                                nwcTimeoutMessage(),
+                                payable.info.user,
+                            )
+                        }
                     },
                 )
 
@@ -532,12 +545,12 @@ class ZapPaymentHandler(
         val progress = PaymentProgress(recipients.size, onProgress)
 
         mapNotNullAsync(recipients) { recipient: Bolt12Recipient ->
-            fun reportBolt12Error(
-                msgRes: Int,
+            suspend fun reportBolt12Error(
+                msgRes: StringResource,
                 detail: String?,
             ) {
-                val msg = if (detail != null) stringRes(context, msgRes, detail) else stringRes(context, msgRes)
-                onError(stringRes(context, R.string.bolt12_zap_error), msg, recipient.user)
+                val msg = if (detail != null) loadStringRes(msgRes, detail) else loadStringRes(msgRes)
+                onError(loadStringRes(Res.string.bolt12_zap_error), msg, recipient.user)
             }
 
             account.zaps.sendBolt12Zap(
@@ -547,7 +560,7 @@ class ZapPaymentHandler(
                 amountMillisats = calculateZapValue(totalAmountMilliSats, recipient.weight, totalWeight),
                 message = message,
                 zapType = zapType,
-                onError = ::reportBolt12Error,
+                onError = { msgRes, detail -> account.scope.launch { reportBolt12Error(msgRes, detail) } },
                 onNotPaid = { code, detail ->
                     val lnAddress = recipient.lnAddress
                     if (lnAddress != null && Bolt12LightningFallback.shouldRetry(code)) {
@@ -575,18 +588,20 @@ class ZapPaymentHandler(
                             // Nothing was paid on either rail. Report it as the lightning failure it
                             // is, rather than letting [sendBolt12Zap]'s catch call it "paid, no receipt".
                             Log.w("ZapPaymentHandler", "BOLT11 fallback failed after a refused BOLT12 offer", e)
-                            onError(stringRes(context, R.string.error_dialog_zap_error), e.message ?: e.toString(), recipient.user)
+                            onError(loadStringRes(Res.string.error_dialog_zap_error), e.message ?: e.toString(), recipient.user)
                         }
                     } else {
                         // bolt12_payment_failed always formats a detail; a wallet may send neither
                         // message nor a recognised code.
-                        reportBolt12Error(R.string.bolt12_payment_failed, detail ?: (code ?: NwcErrorCode.OTHER).name)
+                        reportBolt12Error(Res.string.bolt12_payment_failed, detail ?: (code ?: NwcErrorCode.OTHER).name)
                     }
                 },
                 onTimeout = {
-                    // No response callback will fire, so account for the settlement step here.
-                    reportBolt12Error(R.string.bolt12_payment_failed, nwcTimeoutMessage(context))
-                    progress.step()
+                    account.scope.launch {
+                        // No response callback will fire, so account for the settlement step here.
+                        reportBolt12Error(Res.string.bolt12_payment_failed, nwcTimeoutMessage())
+                        progress.step()
+                    }
                 },
                 onProcessed = { progress.step() },
             )
@@ -639,9 +654,9 @@ class ZapPaymentHandler(
                     progress.step()
                     if (response?.isOk() != true) {
                         onError(
-                            stringRes(context, R.string.error_dialog_pay_invoice_error),
+                            loadStringRes(Res.string.error_dialog_pay_invoice_error),
                             response?.failureDetail()
-                                ?: stringRes(context, R.string.clink_debit_no_response),
+                                ?: loadStringRes(Res.string.clink_debit_no_response),
                             payable.info.user,
                         )
                     }

@@ -40,17 +40,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_enabled_subtitle
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_enabled_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_lead_choice
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_lead_subtitle
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_lead_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_title
+import com.vitorpamplona.amethyst.commons.resources.settings_section_reminders
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
@@ -67,7 +71,7 @@ fun CalendarReminderSettingsScreen(nav: INav) {
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(R.string.calendar_reminder_settings_title), nav)
+            TopBarWithBackButton(stringRes(Res.string.calendar_reminder_settings_title), nav)
         },
     ) { padding ->
         Column(
@@ -78,14 +82,14 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            SettingsSection(R.string.settings_section_reminders) {
+            SettingsSection(Res.string.settings_section_reminders) {
                 // The switch writes straight to the device-scoped prefs and re-schedules (or
                 // cancels) the WorkManager job on the spot — no Save button, the change is applied
                 // the instant it's toggled.
                 SettingsSwitchTile(
                     icon = MaterialSymbols.Notifications,
-                    title = R.string.calendar_reminder_settings_enabled_title,
-                    description = R.string.calendar_reminder_settings_enabled_subtitle,
+                    title = Res.string.calendar_reminder_settings_enabled_title,
+                    description = Res.string.calendar_reminder_settings_enabled_subtitle,
                     checked = enabled,
                     onCheckedChange = {
                         enabled = it
@@ -119,7 +123,7 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                                 shape = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
                                 icon = {},
                             ) {
-                                Text(pluralStringResource(R.plurals.calendar_reminder_settings_lead_choice, choice, choice))
+                                Text(pluralStringRes(Res.plurals.calendar_reminder_settings_lead_choice, choice, choice))
                             }
                         }
                     }

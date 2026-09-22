@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import android.content.Context
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposes
-import com.vitorpamplona.amethyst.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_purpose_browsing
+import com.vitorpamplona.amethyst.commons.resources.relay_purpose_line
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.SubPurposeLabels
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -51,7 +53,7 @@ object RelayPurposeSummary {
      * Lines for the expanded notification, busiest first. Empty when nothing is attributed yet —
      * the caller must then fall back to the bare count rather than render an empty section.
      */
-    fun lines(ctx: Context): List<String> {
+    suspend fun lines(): List<String> {
         val client = Amethyst.instance.client
         val named = mutableMapOf<SubPurpose, MutableSet<NormalizedRelayUrl>>()
         val browsing = mutableSetOf<NormalizedRelayUrl>()
@@ -75,11 +77,11 @@ object RelayPurposeSummary {
             named.entries
                 .sortedWith(compareByDescending<Map.Entry<SubPurpose, Set<NormalizedRelayUrl>>> { it.value.size }.thenBy { it.key.name })
                 .map { (purpose, relays) ->
-                    pluralStringRes(ctx, R.plurals.relay_purpose_line, relays.size, ctx.getString(SubPurposeLabels.labelOf(purpose)), relays.size)
+                    loadPluralStringRes(Res.plurals.relay_purpose_line, relays.size, loadStringRes(SubPurposeLabels.labelOf(purpose)), relays.size)
                 }.toMutableList()
 
         if (browsing.isNotEmpty()) {
-            lines.add(pluralStringRes(ctx, R.plurals.relay_purpose_line, browsing.size, ctx.getString(R.string.relay_purpose_browsing), browsing.size))
+            lines.add(loadPluralStringRes(Res.plurals.relay_purpose_line, browsing.size, loadStringRes(Res.string.relay_purpose_browsing), browsing.size))
         }
         return lines
     }

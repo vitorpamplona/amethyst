@@ -83,6 +83,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
@@ -196,7 +199,7 @@ private fun CordnGroupChat(
     Scaffold(
         topBar = {
             CordnChatTopBar(
-                title = name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.cordn_group_untitled, room.gid.take(8)),
+                title = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, room.gid.take(8)),
                 onInfo = { nav.nav(Route.CordnGroupInfo(room.coordinatorPubKey, room.gid)) },
             )
         },
@@ -469,7 +472,7 @@ private fun ComposerBanner(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        TextButton(onClick = onCancel) { Text(stringRes(R.string.cancel), style = MaterialTheme.typography.labelSmall) }
+        TextButton(onClick = onCancel) { Text(stringRes(Res.string.cancel), style = MaterialTheme.typography.labelSmall) }
     }
 }
 

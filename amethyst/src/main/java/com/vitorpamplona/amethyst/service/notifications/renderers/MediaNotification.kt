@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_media_channel_message_photo
+import com.vitorpamplona.amethyst.commons.resources.app_notification_media_channel_message_video
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
@@ -30,7 +33,6 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
@@ -72,14 +74,14 @@ object MediaNotification {
             val user = author.toBestDisplayName()
             val titleRes =
                 if (isVideo) {
-                    R.string.app_notification_media_channel_message_video
+                    Res.string.app_notification_media_channel_message_video
                 } else {
-                    R.string.app_notification_media_channel_message_photo
+                    Res.string.app_notification_media_channel_message_photo
                 }
             nm.postStandard(
                 category = NotificationCategory.MEDIA,
                 id = event.id,
-                messageTitle = stringRes(context, titleRes, user),
+                messageTitle = loadStringRes(titleRes, user),
                 messageBody = NotificationContent.resolveMentions(event.content, 140).text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),

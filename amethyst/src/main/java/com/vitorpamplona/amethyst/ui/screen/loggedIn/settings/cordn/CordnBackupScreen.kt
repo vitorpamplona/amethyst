@@ -51,6 +51,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -136,7 +139,7 @@ fun CordnBackupScreen(
         }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.cordn_backup_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_backup_title), nav) },
     ) { padding ->
         if (runtime == null) {
             Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
@@ -248,7 +251,7 @@ fun CordnBackupScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingRestore = null }) { Text(stringRes(R.string.cancel)) }
+                TextButton(onClick = { pendingRestore = null }) { Text(stringRes(Res.string.cancel)) }
             },
         )
     }

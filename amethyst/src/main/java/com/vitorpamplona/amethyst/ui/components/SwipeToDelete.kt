@@ -48,11 +48,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.request_deletion
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +84,7 @@ fun SwipeToDeleteContainer(
 fun SwipeToDeleteWithConfirmation(
     modifier: Modifier = Modifier,
     onDelete: () -> Unit,
-    confirmLabelRes: Int = R.string.request_deletion,
+    confirmLabelRes: StringResource = Res.string.request_deletion,
     content: @Composable (RowScope.() -> Unit),
 ) {
     val scope = rememberCoroutineScope()
@@ -142,12 +145,12 @@ fun DismissBackground(dismissState: SwipeToDismissBoxState) {
     ) {
         Icon(
             MaterialSymbols.Delete,
-            contentDescription = stringRes(id = R.string.request_deletion),
+            contentDescription = stringRes(id = Res.string.request_deletion),
         )
         Spacer(modifier = Modifier)
         Icon(
             MaterialSymbols.Delete,
-            contentDescription = stringRes(id = R.string.request_deletion),
+            contentDescription = stringRes(id = Res.string.request_deletion),
         )
     }
 }
@@ -158,7 +161,7 @@ fun ConfirmDeleteBackground(
     dismissState: SwipeToDismissBoxState,
     onConfirmDelete: () -> Unit,
     onCancel: () -> Unit,
-    confirmLabelRes: Int = R.string.request_deletion,
+    confirmLabelRes: StringResource = Res.string.request_deletion,
 ) {
     val settled = dismissState.currentValue == Settled && dismissState.targetValue == Settled
 
@@ -219,12 +222,12 @@ fun ConfirmDeleteBackground(
         ) {
             Icon(
                 MaterialSymbols.Close,
-                contentDescription = stringRes(id = R.string.cancel),
+                contentDescription = stringRes(id = Res.string.cancel),
                 tint = Color.White,
             )
             Spacer(modifier = Modifier.padding(horizontal = 4.dp))
             Text(
-                text = stringRes(id = R.string.cancel),
+                text = stringRes(id = Res.string.cancel),
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
             )

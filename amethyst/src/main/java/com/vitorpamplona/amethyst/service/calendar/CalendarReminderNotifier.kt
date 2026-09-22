@@ -29,8 +29,12 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_channel_description
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_channel_id
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_channel_name
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Posts user-visible "starting soon" notifications for NIP-52 appointments the user has RSVP'd
@@ -52,7 +56,7 @@ object CalendarReminderNotifier {
      *                  calendar detail screen (CalendarTimeSlotEvent / CalendarDateSlotEvent
      *                  branches in RouteMaker resolve to Route.CalendarEventDetail).
      */
-    fun notifyReminder(
+    suspend fun notifyReminder(
         context: Context,
         eventId: String,
         title: String,
@@ -61,7 +65,7 @@ object CalendarReminderNotifier {
     ) {
         ensureChannel(context)
         val notId = idFor(eventId)
-        val channelId = stringRes(context, R.string.calendar_reminder_channel_id)
+        val channelId = loadStringRes(Res.string.calendar_reminder_channel_id)
         val tapIntent =
             Intent(context, MainActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
@@ -100,15 +104,15 @@ object CalendarReminderNotifier {
         }
     }
 
-    fun ensureChannel(context: Context) {
+    suspend fun ensureChannel(context: Context) {
         if (channel != null) return
         channel =
             NotificationChannel(
-                stringRes(context, R.string.calendar_reminder_channel_id),
-                stringRes(context, R.string.calendar_reminder_channel_name),
+                loadStringRes(Res.string.calendar_reminder_channel_id),
+                loadStringRes(Res.string.calendar_reminder_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = stringRes(context, R.string.calendar_reminder_channel_description)
+                description = loadStringRes(Res.string.calendar_reminder_channel_description)
             }
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(channel!!)

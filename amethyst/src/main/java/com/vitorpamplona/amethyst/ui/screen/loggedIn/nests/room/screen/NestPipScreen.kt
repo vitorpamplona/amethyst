@@ -46,11 +46,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_audio_dropped
+import com.vitorpamplona.amethyst.commons.resources.nest_lower_hand
+import com.vitorpamplona.amethyst.commons.resources.nest_mic_mute
+import com.vitorpamplona.amethyst.commons.resources.nest_mic_unmute
 import com.vitorpamplona.amethyst.commons.resources.nest_reconnecting
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
@@ -254,7 +256,7 @@ private fun PipSelfStatus(
             Icon(
                 symbol = if (isMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
                 contentDescription =
-                    stringRes(if (isMuted) R.string.nest_mic_mute else R.string.nest_mic_unmute),
+                    stringRes(if (isMuted) Res.string.nest_mic_mute else Res.string.nest_mic_unmute),
                 tint = if (isMuted) MaterialTheme.colorScheme.error else PIP_SPEAKING_COLOR,
                 modifier = Modifier.size(STATUS_ICON_SIZE),
             )
@@ -262,7 +264,7 @@ private fun PipSelfStatus(
         if (handRaised) {
             Icon(
                 symbol = MaterialSymbols.PanTool,
-                contentDescription = stringRes(R.string.nest_lower_hand),
+                contentDescription = stringRes(Res.string.nest_lower_hand),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(STATUS_ICON_SIZE),
             )

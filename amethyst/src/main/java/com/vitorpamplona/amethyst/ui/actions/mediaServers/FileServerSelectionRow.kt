@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.file_server
+import com.vitorpamplona.amethyst.commons.resources.file_server_description
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
@@ -49,7 +51,7 @@ fun FileServerSelectionRow(
             ?: fileServers.firstOrNull()?.name
             ?: ""
 
-    SettingsRow(R.string.file_server, R.string.file_server_description) {
+    SettingsRow(Res.string.file_server, Res.string.file_server_description) {
         TextSpinner(
             label = "",
             placeholder = placeholder,

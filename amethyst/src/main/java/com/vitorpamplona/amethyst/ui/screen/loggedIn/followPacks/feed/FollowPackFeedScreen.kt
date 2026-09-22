@@ -50,12 +50,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.conversations
 import com.vitorpamplona.amethyst.commons.resources.members
+import com.vitorpamplona.amethyst.commons.resources.new_threads
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
@@ -233,7 +236,7 @@ private fun FollowPackFeedTopBar(
                         ) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                                contentDescription = stringRes(R.string.back),
+                                contentDescription = stringRes(Res.string.back),
                             )
                         }
                     }
@@ -283,12 +286,12 @@ private fun FollowPackFeedTopBar(
             val coroutineScope = rememberCoroutineScope()
             Tab(
                 selected = pagerState.currentPage == 0,
-                text = { Text(text = stringRes(R.string.new_threads)) },
+                text = { Text(text = stringRes(Res.string.new_threads)) },
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
             )
             Tab(
                 selected = pagerState.currentPage == 1,
-                text = { Text(text = stringRes(R.string.conversations)) },
+                text = { Text(text = stringRes(Res.string.conversations)) },
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
             )
             Tab(
@@ -311,7 +314,7 @@ private fun DisplayBanner(
     noteEvent?.image()?.let {
         AsyncImage(
             model = it,
-            contentDescription = stringRes(R.string.preview_card_image_for, it),
+            contentDescription = stringRes(Res.string.preview_card_image_for, it),
             contentScale = ContentScale.Crop,
             modifier = Modifier,
         )

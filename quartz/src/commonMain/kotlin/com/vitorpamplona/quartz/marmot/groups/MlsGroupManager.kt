@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.mls.group.DecryptedMessage
 import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.mls.group.OwnSenderRatchet
 import com.vitorpamplona.quartz.mls.group.RetainedEpochSecrets
 import com.vitorpamplona.quartz.mls.messages.CommitResult
 import com.vitorpamplona.quartz.mls.messages.ExternalJoinResult
@@ -144,8 +145,27 @@ class MlsGroupManager(
                         continue
                     }
                     val state = MlsGroupState.decodeTls(stateBytes)
-                    groups[nostrGroupId] = MlsGroup.restore(state, MarmotGroupPolicy)
+                    // main needs the local binding for the sender-ratchet
+                    // restore below; this branch supplies Marmot's policy.
+                    val group = MlsGroup.restore(state, MarmotGroupPolicy)
+                    groups[nostrGroupId] = group
                     Log.d(TAG) { "restoreAll(): restored group $nostrGroupId (${stateBytes.size} bytes)" }
+
+                    // Sends since the last full write left their position here
+                    // rather than rewriting the whole state. Applying it can
+                    // only move the ratchet forward (see
+                    // [MlsGroup.restoreOwnSenderRatchet]); skipping it would
+                    // reuse generations this leaf has already published.
+                    store.loadSenderRatchet(nostrGroupId)?.let { bytes ->
+                        OwnSenderRatchet.decodeTlsOrNull(bytes)?.let { record ->
+                            if (group.restoreOwnSenderRatchet(record)) {
+                                Log.d(TAG) {
+                                    "restoreAll(): advanced $nostrGroupId sender ratchet to " +
+                                        "app gen ${record.applicationGeneration} from its standalone record"
+                                }
+                            }
+                        }
+                    }
 
                     // Restore retained epochs
                     val retained = store.loadRetainedEpochs(nostrGroupId)
@@ -659,13 +679,18 @@ class MlsGroupManager(
      * Encrypt an application message.
      * Synchronized to prevent nonce reuse from concurrent encryption.
      *
-     * The group state is persisted after every send. Encrypting advances the
-     * SecretTree ratchet (RFC 9420 §9) but does not change the epoch, so
+     * The ratchet position is persisted after every send. Encrypting advances
+     * the SecretTree ratchet (RFC 9420 §9) but does not change the epoch, so
      * without this save a restart between two messages would reload the
      * pre-send ratchet position and re-emit an already-used generation —
      * reusing the AEAD key+nonce and getting rejected by strict receivers.
-     * State was previously persisted only at commits, which left every
-     * inter-commit send unprotected.
+     *
+     * What is written is the ~72-byte [OwnSenderRatchet] record, not the whole
+     * group state: the advance touches this leaf's SecretTree entry and
+     * nothing else, so re-encrypting the tree, the context and the epoch
+     * secrets alongside it was pure overhead on the send path. A store that
+     * has not adopted the split falls back to the full write, so the guarantee
+     * does not depend on the optimisation.
      */
     suspend fun encrypt(
         nostrGroupId: HexKey,
@@ -673,7 +698,7 @@ class MlsGroupManager(
     ): ByteArray =
         mutex.withLock {
             val ciphertext = requireGroup(nostrGroupId).encrypt(plaintext)
-            persistGroup(nostrGroupId)
+            persistSenderRatchet(nostrGroupId)
             ciphertext
         }
 
@@ -947,6 +972,26 @@ class MlsGroupManager(
         groups[nostrGroupId]
             ?: throw IllegalStateException("Not a member of group $nostrGroupId")
 
+    /**
+     * Persist where our sender ratchet got to, without rewriting the group.
+     *
+     * Falls back to a full [persistGroup] when the store does not implement the
+     * split, or when the group has no ratchet entry to record yet. Both are
+     * correct-but-slower, never correct-but-lossy: the position must be on disk
+     * before the ciphertext it produced can be published.
+     */
+    private suspend fun persistSenderRatchet(nostrGroupId: HexKey) {
+        val group = groups[nostrGroupId]
+        if (group == null) {
+            Log.w(TAG) { "persistSenderRatchet($nostrGroupId): group not in memory, skipping" }
+            return
+        }
+        val record = group.exportOwnSenderRatchet()
+        if (record == null || !store.saveSenderRatchet(nostrGroupId, record.encodeTls())) {
+            persistGroup(nostrGroupId)
+        }
+    }
+
     private suspend fun persistGroup(nostrGroupId: HexKey) {
         val group = groups[nostrGroupId]
         if (group == null) {
@@ -958,6 +1003,13 @@ class MlsGroupManager(
             val encoded = state.encodeTls()
             Log.d(TAG) { "persistGroup($nostrGroupId): serialized ${encoded.size} bytes, calling store.save" }
             store.save(nostrGroupId, encoded)
+
+            // The standalone record now describes a position this state already
+            // contains, and after an epoch change it describes a ratchet that no
+            // longer exists. Rewriting it keeps the two in step; a restore would
+            // reject a stale one on its epoch anyway, but leaving one behind
+            // makes every restore reason about a record it must then discard.
+            group.exportOwnSenderRatchet()?.let { store.saveSenderRatchet(nostrGroupId, it.encodeTls()) }
 
             // Also persist retained epochs — but only when the window actually
             // moved. See [retainedEpochRevision].

@@ -28,10 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geohash_chat_open
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -158,8 +160,8 @@ fun GeoHashActionOptions(
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_unfollow,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_unfollow,
                 )
             } else {
                 accountViewModel.unfollowGeohash(tag)
@@ -169,8 +171,8 @@ fun GeoHashActionOptions(
         FollowButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_follow,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_follow,
                 )
             } else {
                 accountViewModel.followGeohash(tag)
