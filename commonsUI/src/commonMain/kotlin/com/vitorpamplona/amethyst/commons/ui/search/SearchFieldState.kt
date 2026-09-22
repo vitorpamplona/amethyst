@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.search
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.commons.search.ActivePicker
 import com.vitorpamplona.amethyst.commons.search.PartialToken
 import com.vitorpamplona.amethyst.commons.search.PartialTokens
@@ -47,36 +47,51 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 class SearchFieldState(
     initial: String = "",
 ) {
-    var value by mutableStateOf(TextFieldValue(initial, TextRange(initial.length)))
-        private set
+    /**
+     * The field's own editing state. The text field edits it directly — keystrokes, IME
+     * composition and selection never pass through this class — so everything below *derives*
+     * from it rather than being told about changes.
+     */
+    val textState = TextFieldState(initial, TextRange(initial.length))
 
     /** True while the field has focus; a picker only belongs under a field being typed in. */
     var focused by mutableStateOf(false)
         private set
 
+    /**
+     * Where the date token the calendar state below belongs to starts. A different date token is
+     * a different calendar: the month the reader paged to belonged to the token they left, so
+     * both values only count while the caret is still in the token they were set for.
+     */
+    private var calendarToken by mutableStateOf<Int?>(null)
+
     /** The month the calendar is showing, once the reader has paged away from the token's own. */
-    private var pagedMonth by mutableStateOf<SearchDate?>(null)
+    private var pagedMonthValue by mutableStateOf<SearchDate?>(null)
+    private val pagedMonth: SearchDate? get() = pagedMonthValue?.takeIf { calendarToken == currentDateToken() }
+
+    private var calendarCursorValue by mutableStateOf<SearchDate?>(null)
 
     /** The day the keyboard cursor is on inside the grid, or null while the pointer leads. */
-    var calendarCursor by mutableStateOf<SearchDate?>(null)
-        private set
+    val calendarCursor: SearchDate? get() = calendarCursorValue?.takeIf { calendarToken == currentDateToken() }
 
-    val text: String get() = value.text
+    val text: String get() = textState.text.toString()
 
     /**
      * Where a token would settle, for the renderer: the caret while the reader is typing, and
      * null once they have left, so every token pills.
      */
-    val settleCaret: Int? get() = if (focused && value.selection.collapsed) value.selection.start else null
+    val settleCaret: Int?
+        get() {
+            val selection = textState.selection
+            return if (focused && selection.collapsed) selection.start else null
+        }
 
     /** Which picker the caret's position calls for, or null. */
     val activePicker: ActivePicker?
-        get() =
-            if (!focused || !value.selection.collapsed) {
-                null
-            } else {
-                PartialTokens.activePicker(value.text, value.selection.start)
-            }
+        get() {
+            val caret = settleCaret ?: return null
+            return PartialTokens.activePicker(text, caret)
+        }
 
     /**
      * The month the calendar draws: the one the reader paged to, else the one they half-typed,
@@ -84,19 +99,16 @@ class SearchFieldState(
      */
     fun calendarMonth(token: PartialToken): SearchDate = pagedMonth ?: SearchCalendar.typedMonth(token.partial) ?: LocalClock.today().firstOfMonth()
 
-    fun onValueChange(next: TextFieldValue) {
-        val tokenMoved = PartialTokens.dateAt(next.text, next.selection.start)?.start != PartialTokens.dateAt(value.text, value.selection.start)?.start
-        value = next
-        // A different date token is a different calendar; the month the reader paged to belonged
-        // to the token they left.
-        if (tokenMoved) resetCalendar()
-    }
+    private fun currentDateToken(): Int? = PartialTokens.dateAt(text, textState.selection.start)?.start
 
     fun setText(
         next: String,
         caret: Int = next.length,
     ) {
-        value = TextFieldValue(next, TextRange(caret.coerceIn(0, next.length)))
+        textState.edit {
+            replace(0, length, next)
+            selection = TextRange(caret.coerceIn(0, next.length))
+        }
         resetCalendar()
     }
 
@@ -114,7 +126,7 @@ class SearchFieldState(
         token: PartialToken,
         replacement: String,
     ) {
-        val (next, caret) = PartialTokens.replaceToken(value.text, token, replacement)
+        val (next, caret) = PartialTokens.replaceToken(text, token, replacement)
         setText(next, caret)
     }
 
@@ -154,9 +166,9 @@ class SearchFieldState(
         months: Int,
     ) {
         val next = calendarMonth(token).firstOfMonth(months)
-        pagedMonth = next
         // A cursor that fell off the month it was on is not on any day the grid draws.
-        if (!next.sameMonth(calendarCursor)) calendarCursor = null
+        val cursor = calendarCursor?.takeIf { next.sameMonth(it) }
+        setCalendar(token, next, cursor)
     }
 
     /** Move the keyboard cursor by [days], opening the month it lands in. */
@@ -169,16 +181,29 @@ class SearchFieldState(
         val next =
             calendarCursor?.plusDays(days)
                 ?: if (today.sameMonth(shown)) today else shown.firstOfMonth()
-        calendarCursor = next
-        pagedMonth = next.firstOfMonth()
+        setCalendar(token, next.firstOfMonth(), next)
     }
 
     fun hoverCalendar(day: SearchDate?) {
-        calendarCursor = day
+        val token = currentDateToken() ?: return
+        setCalendar(token, pagedMonth, day)
     }
 
-    private fun resetCalendar() {
-        pagedMonth = null
-        calendarCursor = null
+    private fun setCalendar(
+        token: PartialToken,
+        month: SearchDate?,
+        cursor: SearchDate?,
+    ) = setCalendar(token.start, month, cursor)
+
+    private fun setCalendar(
+        tokenStart: Int?,
+        month: SearchDate?,
+        cursor: SearchDate?,
+    ) {
+        calendarToken = tokenStart
+        pagedMonthValue = month
+        calendarCursorValue = cursor
     }
+
+    private fun resetCalendar() = setCalendar(null, null, null)
 }
