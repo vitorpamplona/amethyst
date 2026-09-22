@@ -95,7 +95,7 @@ fun GitRepositoriesTopBar(
                     followListsModel = accountViewModel.feedStates.feedListOptions,
                     listName = list,
                     accountViewModel = accountViewModel,
-                    onChange = accountViewModel.account.settings::changeDefaultGitRepositoriesFollowList,
+                    onChange = { accountViewModel.account.settings.changeDefaultGitRepositoriesFollowList(it.code) },
                 )
             }
         },

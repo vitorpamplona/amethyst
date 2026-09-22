@@ -29,7 +29,12 @@ import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mergeMutedPublicChats
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
@@ -40,12 +45,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
-import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -769,19 +768,11 @@ class AccountSettings(
         if (changed) saveAccountSettings()
     }
 
-    fun changeDefaultHomeFollowList(name: FeedDefinition) {
-        changeDefaultHomeFollowList(name.code)
-    }
-
     fun changeDefaultHomeFollowList(name: TopFilter) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultStoriesFollowList(name: FeedDefinition) {
-        changeDefaultStoriesFollowList(name.code)
     }
 
     fun changeDefaultStoriesFollowList(name: TopFilter) {
@@ -791,19 +782,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultNotificationFollowList(name: FeedDefinition) {
-        changeDefaultNotificationFollowList(name.code)
-    }
-
     fun changeDefaultNotificationFollowList(name: TopFilter) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultDiscoveryFollowList(name: FeedDefinition) {
-        changeDefaultDiscoveryFollowList(name.code)
     }
 
     fun changeDefaultDiscoveryFollowList(name: TopFilter) {
@@ -813,19 +796,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPollsFollowList(name: FeedDefinition) {
-        changeDefaultPollsFollowList(name.code)
-    }
-
     fun changeDefaultPollsFollowList(name: TopFilter) {
         if (defaultPollsFollowList.value != name) {
             defaultPollsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultCommunitiesFollowList(name: FeedDefinition) {
-        changeDefaultCommunitiesFollowList(name.code)
     }
 
     fun changeDefaultCommunitiesFollowList(name: TopFilter) {
@@ -835,19 +810,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPicturesFollowList(name: FeedDefinition) {
-        changeDefaultPicturesFollowList(name.code)
-    }
-
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultRelayGroupsDiscoveryFollowList(name: FeedDefinition) {
-        changeDefaultRelayGroupsDiscoveryFollowList(name.code)
     }
 
     fun changeDefaultRelayGroupsDiscoveryFollowList(name: TopFilter) {
@@ -857,19 +824,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultNappletsFollowList(name: FeedDefinition) {
-        changeDefaultNappletsFollowList(name.code)
-    }
-
     fun changeDefaultNappletsFollowList(name: TopFilter) {
         if (defaultNappletsFollowList.value != name) {
             defaultNappletsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultNsitesFollowList(name: FeedDefinition) {
-        changeDefaultNsitesFollowList(name.code)
     }
 
     fun changeDefaultNsitesFollowList(name: TopFilter) {
@@ -879,19 +838,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultWorkoutsFollowList(name: FeedDefinition) {
-        changeDefaultWorkoutsFollowList(name.code)
-    }
-
     fun changeDefaultWorkoutsFollowList(name: TopFilter) {
         if (defaultWorkoutsFollowList.value != name) {
             defaultWorkoutsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultGitRepositoriesFollowList(name: FeedDefinition) {
-        changeDefaultGitRepositoriesFollowList(name.code)
     }
 
     fun changeDefaultGitRepositoriesFollowList(name: TopFilter) {
@@ -901,19 +852,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultHighlightsFollowList(name: FeedDefinition) {
-        changeDefaultHighlightsFollowList(name.code)
-    }
-
     fun changeDefaultHighlightsFollowList(name: TopFilter) {
         if (defaultHighlightsFollowList.value != name) {
             defaultHighlightsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultCalendarsFollowList(name: FeedDefinition) {
-        changeDefaultCalendarsFollowList(name.code)
     }
 
     fun changeDefaultCalendarsFollowList(name: TopFilter) {
@@ -923,19 +866,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultProductsFollowList(name: FeedDefinition) {
-        changeDefaultProductsFollowList(name.code)
-    }
-
     fun changeDefaultProductsFollowList(name: TopFilter) {
         if (defaultProductsFollowList.value != name) {
             defaultProductsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultGeocachesFollowList(name: FeedDefinition) {
-        changeDefaultGeocachesFollowList(name.code)
     }
 
     fun changeDefaultGeocachesFollowList(name: TopFilter) {
@@ -945,19 +880,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultShortsFollowList(name: FeedDefinition) {
-        changeDefaultShortsFollowList(name.code)
-    }
-
     fun changeDefaultShortsFollowList(name: TopFilter) {
         if (defaultShortsFollowList.value != name) {
             defaultShortsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultPublicChatsFollowList(name: FeedDefinition) {
-        changeDefaultPublicChatsFollowList(name.code)
     }
 
     fun changeDefaultPublicChatsFollowList(name: TopFilter) {
@@ -967,19 +894,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultLiveStreamsFollowList(name: FeedDefinition) {
-        changeDefaultLiveStreamsFollowList(name.code)
-    }
-
     fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
         if (defaultLiveStreamsFollowList.value != name) {
             defaultLiveStreamsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultNestsFollowList(name: FeedDefinition) {
-        changeDefaultNestsFollowList(name.code)
     }
 
     fun changeDefaultNestsFollowList(name: TopFilter) {
@@ -989,19 +908,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultLongsFollowList(name: FeedDefinition) {
-        changeDefaultLongsFollowList(name.code)
-    }
-
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultArticlesFollowList(name: FeedDefinition) {
-        changeDefaultArticlesFollowList(name.code)
     }
 
     fun changeDefaultArticlesFollowList(name: TopFilter) {
@@ -1011,19 +922,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultMusicTracksFollowList(name: FeedDefinition) {
-        changeDefaultMusicTracksFollowList(name.code)
-    }
-
     fun changeDefaultMusicTracksFollowList(name: TopFilter) {
         if (defaultMusicTracksFollowList.value != name) {
             defaultMusicTracksFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultMusicPlaylistsFollowList(name: FeedDefinition) {
-        changeDefaultMusicPlaylistsFollowList(name.code)
     }
 
     fun changeDefaultMusicPlaylistsFollowList(name: TopFilter) {
@@ -1033,19 +936,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPodcastEpisodesFollowList(name: FeedDefinition) {
-        changeDefaultPodcastEpisodesFollowList(name.code)
-    }
-
     fun changeDefaultPodcastEpisodesFollowList(name: TopFilter) {
         if (defaultPodcastEpisodesFollowList.value != name) {
             defaultPodcastEpisodesFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultPodcastsFollowList(name: FeedDefinition) {
-        changeDefaultPodcastsFollowList(name.code)
     }
 
     fun changeDefaultPodcastsFollowList(name: TopFilter) {
@@ -1055,19 +950,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultSoftwareAppsFollowList(name: FeedDefinition) {
-        changeDefaultSoftwareAppsFollowList(name.code)
-    }
-
     fun changeDefaultSoftwareAppsFollowList(name: TopFilter) {
         if (defaultSoftwareAppsFollowList.value != name) {
             defaultSoftwareAppsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultBadgesFollowList(name: FeedDefinition) {
-        changeDefaultBadgesFollowList(name.code)
     }
 
     fun changeDefaultBadgesFollowList(name: TopFilter) {
@@ -1077,10 +964,6 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultBrowseEmojiSetsFollowList(name: FeedDefinition) {
-        changeDefaultBrowseEmojiSetsFollowList(name.code)
-    }
-
     fun changeDefaultBrowseEmojiSetsFollowList(name: TopFilter) {
         if (defaultBrowseEmojiSetsFollowList.value != name) {
             defaultBrowseEmojiSetsFollowList.tryEmit(name)
@@ -1088,19 +971,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultFollowPacksFollowList(name: FeedDefinition) {
-        changeDefaultFollowPacksFollowList(name.code)
-    }
-
     fun changeDefaultFollowPacksFollowList(name: TopFilter) {
         if (defaultFollowPacksFollowList.value != name) {
             defaultFollowPacksFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultAppRecommendationsFollowList(name: FeedDefinition) {
-        changeDefaultAppRecommendationsFollowList(name.code)
     }
 
     fun changeDefaultAppRecommendationsFollowList(name: TopFilter) {

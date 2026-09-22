@@ -56,7 +56,7 @@ fun ArticlesTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultArticlesFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultArticlesFollowList(it.code) },
         )
     }
 }

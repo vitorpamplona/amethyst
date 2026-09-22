@@ -18,9 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.drawer
-
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+package com.vitorpamplona.amethyst.commons.model.navigation
 
 /**
  * Which drawer rows the user cannot hide.
@@ -71,34 +69,4 @@ object DrawerItemVisibility {
      * user made on another one.
      */
     fun sanitize(hidden: Set<NavBarItem>): Set<NavBarItem> = hidden - MandatoryDrawerItems
-
-    /** The rows of [section] to render, in the section's fixed order. */
-    fun visibleItems(
-        section: DrawerSection,
-        hidden: Set<NavBarItem>,
-    ): List<NavBarItem> = section.items.filter { isVisible(hidden, it) }
-
-    /** How many of [section]'s rows are currently hidden — shown on the collapsed section header. */
-    fun hiddenCount(
-        section: DrawerSection,
-        hidden: Set<NavBarItem>,
-    ): Int = section.items.count { !isVisible(hidden, it) }
-
-    /** Whether [section] has any row the user is allowed to switch off — gates its bulk actions. */
-    fun hasHideableRows(section: DrawerSection): Boolean = section.items.any { it !in MandatoryDrawerItems }
-
-    /** Hides every row of [section] that can be hidden, leaving the mandatory ones. */
-    fun hideAll(
-        hidden: Set<NavBarItem>,
-        section: DrawerSection,
-    ): Set<NavBarItem> = hidden + section.items.filter { it !in MandatoryDrawerItems }
-
-    /** Shows every row of [section] again. */
-    fun showAll(
-        hidden: Set<NavBarItem>,
-        section: DrawerSection,
-    ): Set<NavBarItem> = hidden - section.items.toSet()
-
-    /** Total hidden rows across every section — the count the settings screen shows at the top. */
-    fun totalHidden(hidden: Set<NavBarItem>): Int = DrawerSections.sumOf { hiddenCount(it, hidden) }
 }

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.preferences
 
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames
+import com.vitorpamplona.amethyst.commons.model.navigation.toNames
 import com.vitorpamplona.amethyst.model.AccountNavigationPreferencesInternal
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.navBarItemsFromNames
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.toNames
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import org.junit.Assert.assertEquals
 import org.junit.Test

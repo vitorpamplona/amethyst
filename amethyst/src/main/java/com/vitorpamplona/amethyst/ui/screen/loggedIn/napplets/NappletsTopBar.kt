@@ -97,7 +97,7 @@ private fun NappletsTopNavFilterBar(accountViewModel: AccountViewModel) {
         placeholderCode = listName,
         explainer = stringRes(Res.string.select_list_to_filter),
         options = allLists,
-        onSelect = { selected: FeedDefinition -> accountViewModel.account.settings.changeDefaultNappletsFollowList(selected) },
+        onSelect = { selected: FeedDefinition -> accountViewModel.account.settings.changeDefaultNappletsFollowList(selected.code) },
         accountViewModel = accountViewModel,
     )
 }

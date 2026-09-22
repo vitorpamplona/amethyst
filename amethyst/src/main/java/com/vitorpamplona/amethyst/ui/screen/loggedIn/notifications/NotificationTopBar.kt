@@ -64,7 +64,7 @@ fun NotificationTopBar(
                 followListsModel = accountViewModel.feedStates.feedListOptions,
                 listName = list,
                 accountViewModel = accountViewModel,
-                onChange = accountViewModel.account.settings::changeDefaultNotificationFollowList,
+                onChange = { accountViewModel.account.settings.changeDefaultNotificationFollowList(it.code) },
             )
         } else {
             Text(text = stringRes(Res.string.route_notifications))

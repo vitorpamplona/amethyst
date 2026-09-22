@@ -60,7 +60,7 @@ fun PodcastEpisodesTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultPodcastEpisodesFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultPodcastEpisodesFollowList(it.code) },
         )
     }
 }

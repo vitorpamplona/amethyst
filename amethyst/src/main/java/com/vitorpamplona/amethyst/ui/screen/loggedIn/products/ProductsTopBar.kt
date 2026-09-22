@@ -56,7 +56,7 @@ fun ProductsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultProductsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultProductsFollowList(it.code) },
         )
     }
 }
