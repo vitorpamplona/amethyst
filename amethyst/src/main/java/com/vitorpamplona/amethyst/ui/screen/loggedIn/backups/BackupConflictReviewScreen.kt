@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -48,11 +47,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,13 +72,20 @@ import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.timeAbsolute
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
+import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListDiff
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListDiff
 
 /** A row of the review list, flattened so hundreds of entries scroll lazily. */
 @Immutable
@@ -184,12 +191,14 @@ private fun BackupConflictReview(
     onKeepNew: () -> Unit,
 ) {
     val presentation = presentationOf(conflict.diff)
+    val ui = remember(conflict.slot) { ReviewUiState() }
+    val (keepLabel, restoreLabel) = actionLabels(conflict)
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(conflict.eventType))), nav)
+            TopBarWithBackButton(eventTitle(conflict), nav)
         },
-        bottomBar = { ReviewActions(onRestore, onKeepNew) },
+        bottomBar = { ReviewActions(keepLabel, restoreLabel, onRestore, onKeepNew) },
     ) { padding ->
         val layoutDirection = LocalLayoutDirection.current
         LazyColumn(
@@ -210,16 +219,9 @@ private fun BackupConflictReview(
                 ),
         ) {
             item(key = "intro", contentType = "intro") {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    BackupConflictIntro(conflict)
-                    Text(
-                        text = stringRes(R.string.backup_conflict_restore_explainer),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
+                BackupConflictIntro(conflict, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             }
-            eventDiffItems(conflict, presentation, accountViewModel, nav)
+            eventDiffItems(conflict, presentation, ui, accountViewModel, nav)
         }
     }
 }
@@ -278,6 +280,8 @@ internal fun SectionRow(row: ReviewRow.Section) {
 
 @Composable
 private fun ReviewActions(
+    keepLabel: String,
+    restoreLabel: String,
     onRestore: () -> Unit,
     onKeepNew: () -> Unit,
 ) {
@@ -292,30 +296,65 @@ private fun ReviewActions(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePaddingSafe()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            OutlinedButton(onClick = onKeepNew, modifier = Modifier.weight(1f)) {
-                Text(stringRes(R.string.backup_conflict_keep_new), textAlign = TextAlign.Center)
+            OutlinedButton(onClick = onKeepNew, modifier = Modifier.weight(1f).height(52.dp)) {
+                Text(keepLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold)
             }
-            Button(onClick = onRestore, modifier = Modifier.weight(1f)) {
-                Text(stringRes(R.string.backup_conflict_restore_mine), textAlign = TextAlign.Center)
+            Button(onClick = onRestore, modifier = Modifier.weight(1f).height(52.dp)) {
+                Text(restoreLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
-/** What the event is for and when the other app changed it. */
+/** "Follow list", "Mute list"…: the event's name as a title. */
 @Composable
-private fun BackupConflictIntro(conflict: ReplaceableBackupConflict) {
-    val context = LocalContext.current
-    Text(
-        text = stringRes(eventTypeExplainer(conflict.eventType)),
-        style = MaterialTheme.typography.bodySmall,
-        fontStyle = FontStyle.Italic,
-    )
-    Spacer(Modifier.height(12.dp))
-    Text(stringRes(R.string.backup_conflict_intro, timeAbsolute(conflict.cause.createdAt, context)))
+internal fun eventTitle(conflict: ReplaceableBackupConflict): String = stringRes(eventTypeName(conflict.eventType)).replaceFirstChar { it.uppercase() }
+
+/** The two choices, worded for what they do to this event: "Keep 120" / "Restore 523". */
+@Composable
+private fun actionLabels(conflict: ReplaceableBackupConflict): Pair<String, String> =
+    when (val diff = conflict.diff) {
+        is ContactListDiff -> {
+            val saved = (conflict.saved as? ContactListEvent)?.followCount() ?: 0
+            val new = (conflict.incoming as? ContactListEvent)?.followCount() ?: 0
+            stringRes(R.string.backup_action_keep_count, new.toString()) to stringRes(R.string.backup_action_restore_count, saved.toString())
+        }
+        is MuteListDiff -> {
+            val removed = diff.publicMutes.removed.size
+            stringRes(R.string.backup_conflict_keep_new) to
+                if (removed > 0) stringRes(R.string.backup_action_remute, removed.toString()) else stringRes(R.string.backup_conflict_restore_mine)
+        }
+        is SimpleGroupListDiff -> {
+            val removed = diff.groups.removed.size
+            stringRes(R.string.backup_conflict_keep_new) to
+                if (removed > 0) stringRes(R.string.backup_action_rejoin, removed.toString()) else stringRes(R.string.backup_conflict_restore_mine)
+        }
+        is MetadataDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_profile)
+        is AdvertisedRelayListDiff, is RelayListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_relays)
+        else -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_conflict_restore_mine)
+    }
+
+/** When the other app changed it, and what the event is for. */
+@Composable
+private fun BackupConflictIntro(
+    conflict: ReplaceableBackupConflict,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = stringRes(R.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt, LocalContext.current)),
+            style = MaterialTheme.typography.labelLarge,
+            color = conflictTones().removed,
+        )
+        Text(
+            text = stringRes(eventTypeExplainer(conflict.eventType)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
 }
 
 internal val EntryPadding = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)

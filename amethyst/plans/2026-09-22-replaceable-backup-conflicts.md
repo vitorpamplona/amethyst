@@ -58,12 +58,18 @@ only surviving copy of the user's data is gone.
    ephemeral rooms (tap → room) and relays (tap → relay info). Leaving the screen without
    deciding keeps the card and the frozen backup.
 
-   The list is laid out per event (`BackupConflictEventViews.kt`, `eventDiffItems`): a
-   profile compares each changed field saved vs new side by side, with picture and banner
-   shown as images and removed fields highlighted; a NIP-65 list is a relay table with the
-   saved and new read/write access and a count of unchanged relays; follow and mute lists
-   get a count header (on this device vs new version) above the linked people. Other
-   events use the generic removed / added / changed sections. The screen offers:
+   The list is laid out per event (`BackupConflictEventViews.kt`, `eventDiffItems`), each
+   leading with one picture of the change (`BackupConflictVisuals.kt`; red lost, green
+   gained, amber changed, all from the theme): the follow list shows saved → new counts, a
+   kept/dropped/new split bar, Dropped/New/Edited tabs and a searchable grid of faces; the
+   mute list a shield with the unmuted count, per-kind tiles, a face pile, struck-through
+   words and the private-items card; the profile both versions side by side as mini
+   cards, then inline field diffs with images as thumbnails; NIP-65 reach numbers ("people
+   find your posts on 2 of 3 relays") over outbox and inbox lanes; nutzap info a key swap
+   drawn as color fingerprints with a warning, then mints; groups a tile per group, faded
+   when you'd leave it. Other events use the generic removed / added / changed sections.
+   Buttons are worded per event ("Keep 120" / "Restore 523", "Re-mute 37", "Rejoin 3").
+   The screen offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
      `created_at = max(now, incoming + 1)`, dropping the old `client` tag (so the signer

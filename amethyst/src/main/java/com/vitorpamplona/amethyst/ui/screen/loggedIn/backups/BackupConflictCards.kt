@@ -20,17 +20,22 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.backups
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,8 +44,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -48,20 +57,24 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
-
-private const val MAX_INDIVIDUAL_CARDS = 2
+import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
 
 /**
  * Cards at the top of Home, one per open [ReplaceableBackupConflict]: another app replaced
  * one of the account's backed-up lists (or the profile) with a version that lost data. They
  * can't be dismissed. They stay until the user decides on the review screen they open
- * ([BackupConflictReviewScreen]), where the differences can be inspected. With more than
- * [MAX_INDIVIDUAL_CARDS] conflicts they fold into one card with a row per conflict, so they
- * don't cover the feed.
+ * ([BackupConflictReviewScreen]), where the differences can be inspected.
+ *
+ * The most recent conflict gets a lead card with a headline and a picture of the change
+ * (the follow list's shrink bar, or lost/gained counts); the rest collapse into slim pills
+ * so they don't cover the feed.
  */
 @Composable
 fun BackupConflictCards(
@@ -73,110 +86,143 @@ fun BackupConflictCards(
         .collectAsStateWithLifecycle()
     if (conflictMap.isEmpty()) return
 
-    val conflicts = conflictMap.values.sortedBy { it.cause.createdAt }
+    val conflicts = conflictMap.values.sortedByDescending { it.cause.createdAt }
     val open = { conflict: ReplaceableBackupConflict -> nav.nav(Route.BackupConflictReview(conflict.slot)) }
 
-    if (conflicts.size <= MAX_INDIVIDUAL_CARDS) {
-        conflicts.forEach { conflict ->
-            ConflictCardSurface(modifier) {
-                ConflictRow(
-                    title = stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(conflict.eventType))),
-                    conflict = conflict,
-                    onClick = { open(conflict) },
-                )
-            }
-        }
-    } else {
-        ConflictCardSurface(modifier) {
-            Column {
-                Text(
-                    text = stringRes(R.string.backup_conflict_many_title, conflicts.size.toString()),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp),
-                )
-                conflicts.forEach { conflict ->
-                    ConflictRow(
-                        title = stringRes(eventTypeName(conflict.eventType)).replaceFirstChar { it.uppercase() },
-                        conflict = conflict,
-                        onClick = { open(conflict) },
-                    )
-                }
-            }
-        }
+    // Home's padding only covers the top bar; in landscape a side 3-button navigation bar
+    // or a display cutout would otherwise sit on top of the cards.
+    Column(
+        modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        LeadConflictCard(conflicts.first()) { open(conflicts.first()) }
+        conflicts.drop(1).forEach { conflict -> ConflictPill(conflict) { open(conflict) } }
     }
 }
 
+/** Items lost, gained and changed, counting encrypted content as one item. */
+private class ConflictCounts(
+    val removed: Int,
+    val added: Int,
+    val changed: Int,
+)
+
 @Composable
-private fun ConflictCardSurface(
-    modifier: Modifier,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        // Home's padding only covers the top bar; in landscape a side 3-button navigation bar
-        // or a display cutout would otherwise sit on top of the card.
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 4.dp,
-        shadowElevation = 4.dp,
-        content = content,
+private fun countsOf(conflict: ReplaceableBackupConflict): ConflictCounts {
+    val presentation = presentationOf(conflict.diff)
+    val content = presentation.content
+    return ConflictCounts(
+        removed = presentation.removedCount + if (content == ContentChange.CLEARED) 1 else 0,
+        added = presentation.addedCount + if (content == ContentChange.ADDED) 1 else 0,
+        changed = presentation.changedCount + if (content == ContentChange.CHANGED) 1 else 0,
     )
 }
 
+/** A headline that says what happened, in the event's own terms. */
 @Composable
-private fun ConflictRow(
-    title: String,
+private fun headlineOf(
+    conflict: ReplaceableBackupConflict,
+    counts: ConflictCounts,
+): String =
+    when (conflict.diff) {
+        is ContactListDiff -> stringRes(R.string.backup_card_follows_shrank)
+        is MuteListDiff -> stringRes(R.string.backup_card_mutes_visible, counts.removed.toString())
+        else -> stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(conflict.eventType)))
+    }
+
+@Composable
+private fun LeadConflictCard(
     conflict: ReplaceableBackupConflict,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val tones = conflictTones()
+    val counts = countsOf(conflict)
+    Surface(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
     ) {
-        Icon(
-            symbol = MaterialSymbols.SyncProblem,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-        )
-        Spacer(modifier = StdHorzSpacer)
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = conflictSummary(conflict),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        Column(
+            Modifier.border(1.dp, tones.removed.copy(alpha = 0.35f), RoundedCornerShape(22.dp)).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(tones.removedContainer()), contentAlignment = Alignment.Center) {
+                    Icon(symbol = MaterialSymbols.SyncProblem, contentDescription = null, tint = tones.removed)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(headlineOf(conflict, counts), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        stringRes(R.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt, LocalContext.current)),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                }
+                Icon(symbol = MaterialSymbols.ChevronRight, contentDescription = stringRes(R.string.backup_conflict_review), tint = MaterialTheme.colorScheme.placeholderText)
+            }
+            val diff = conflict.diff
+            if (diff is ContactListDiff) {
+                val saved = (conflict.saved as? ContactListEvent)?.followCount() ?: 0
+                val new = (conflict.incoming as? ContactListEvent)?.followCount() ?: 0
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(saved.toString(), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    SplitBar(
+                        listOf(
+                            BarSegment(saved - diff.follows.removed.size, tones.kept),
+                            BarSegment(diff.follows.removed.size, tones.removed.copy(alpha = 0.6f)),
+                            BarSegment(diff.follows.added.size, tones.added),
+                        ),
+                        Modifier.weight(1f),
+                        height = 8.dp,
+                    )
+                    Text(new.toString(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = tones.removed)
+                }
+            } else {
+                CountChips(counts)
+            }
         }
-        Icon(
-            symbol = MaterialSymbols.ChevronRight,
-            contentDescription = stringRes(R.string.backup_conflict_review),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
-/** "12 removed · 3 added · 1 changed", counting encrypted content as one item. */
 @Composable
-private fun conflictSummary(conflict: ReplaceableBackupConflict): String {
-    val presentation = presentationOf(conflict.diff)
-    val content = presentation.content
-    val removed = presentation.removedCount + if (content == ContentChange.CLEARED) 1 else 0
-    val added = presentation.addedCount + if (content == ContentChange.ADDED) 1 else 0
-    val changed = presentation.changedCount + if (content == ContentChange.CHANGED) 1 else 0
-    return listOfNotNull(
-        if (removed > 0) stringRes(R.string.backup_conflict_count_removed, removed.toString()) else null,
-        if (added > 0) stringRes(R.string.backup_conflict_count_added, added.toString()) else null,
-        if (changed > 0) stringRes(R.string.backup_conflict_count_changed, changed.toString()) else null,
-    ).joinToString(" · ")
+private fun CountChips(counts: ConflictCounts) {
+    val tones = conflictTones()
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (counts.removed > 0) StatusTag(stringRes(R.string.backup_conflict_count_removed, counts.removed.toString()), tones.removed)
+        if (counts.added > 0) StatusTag(stringRes(R.string.backup_conflict_count_added, counts.added.toString()), tones.added)
+        if (counts.changed > 0) StatusTag(stringRes(R.string.backup_conflict_count_changed, counts.changed.toString()), tones.changed)
+    }
+}
+
+@Composable
+private fun ConflictPill(
+    conflict: ReplaceableBackupConflict,
+    onClick: () -> Unit,
+) {
+    val tones = conflictTones()
+    val counts = countsOf(conflict)
+    Surface(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 4.dp,
+        shadowElevation = 2.dp,
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(Modifier.size(32.dp).clip(CircleShape).background(tones.changedContainer()), contentAlignment = Alignment.Center) {
+                Icon(symbol = MaterialSymbols.SyncProblem, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
+            }
+            Text(headlineOf(conflict, counts), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (counts.removed > 0) StatusTag("−" + counts.removed, tones.removed)
+        }
+    }
 }
