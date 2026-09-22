@@ -60,6 +60,7 @@ import com.vitorpamplona.quartz.marmot.mls.messages.Welcome
 import com.vitorpamplona.quartz.marmot.mls.schedule.EpochSecrets
 import com.vitorpamplona.quartz.marmot.mls.schedule.KeySchedule
 import com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree
+import com.vitorpamplona.quartz.marmot.mls.schedule.SenderRatchetState
 import com.vitorpamplona.quartz.marmot.mls.tree.BinaryTree
 import com.vitorpamplona.quartz.marmot.mls.tree.Capabilities
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
@@ -328,6 +329,81 @@ class MlsGroup private constructor(
             // the group's keys and nobody holding the proposal to evict them.
             pendingProposals = pendingProposals.toList(),
         )
+    }
+
+    /**
+     * Where our own sender ratchet has got to, for the small per-send record.
+     *
+     * Null before this leaf has sent anything at the current epoch: there is no
+     * position yet, and the full state already says so.
+     */
+    fun exportOwnSenderRatchet(): OwnSenderRatchet? {
+        val state = secretTree.exportSenderStates()[myLeafIndex] ?: return null
+        return OwnSenderRatchet(
+            epoch = epoch,
+            leafIndex = myLeafIndex,
+            treeBinder = OwnSenderRatchet.binderFor(epochSecrets.encryptionSecret),
+            handshakeSecret = state.handshakeSecret,
+            handshakeGeneration = state.handshakeGeneration,
+            applicationSecret = state.applicationSecret,
+            applicationGeneration = state.applicationGeneration,
+        )
+    }
+
+    /**
+     * Apply a per-send ratchet record saved after the full state it accompanies.
+     *
+     * Refuses anything that is not demonstrably about this exact position. A
+     * different leaf, a different epoch, or a different SecretTree at the same
+     * epoch — which convergence produces when it swaps one epoch-N state for a
+     * rival one after a fork — all mean the record describes a ratchet that no
+     * longer exists. A chain already at or past the recorded generation means
+     * the state was the fresher of the two.
+     *
+     * When it does apply, each chain independently takes whichever side is
+     * further along. That is what makes this safe to do at all — the operation
+     * can only skip generations FORWARD. Skipping forward wastes key material;
+     * going backwards would re-emit a generation already used, which reuses an
+     * AEAD key+nonce pair and is the failure this record exists to prevent.
+     *
+     * @return true when the position moved.
+     */
+    fun restoreOwnSenderRatchet(record: OwnSenderRatchet): Boolean {
+        if (record.epoch != epoch || record.leafIndex != myLeafIndex) return false
+        if (!record.treeBinder.contentEquals(OwnSenderRatchet.binderFor(epochSecrets.encryptionSecret))) return false
+
+        val current = secretTree.exportSenderStates()[myLeafIndex]
+        if (current == null) {
+            secretTree.importSenderStates(
+                mapOf(
+                    myLeafIndex to
+                        SenderRatchetState(
+                            handshakeSecret = record.handshakeSecret,
+                            handshakeGeneration = record.handshakeGeneration,
+                            applicationSecret = record.applicationSecret,
+                            applicationGeneration = record.applicationGeneration,
+                        ),
+                ),
+            )
+            return true
+        }
+
+        val handshakeAhead = record.handshakeGeneration > current.handshakeGeneration
+        val applicationAhead = record.applicationGeneration > current.applicationGeneration
+        if (!handshakeAhead && !applicationAhead) return false
+
+        secretTree.importSenderStates(
+            mapOf(
+                myLeafIndex to
+                    SenderRatchetState(
+                        handshakeSecret = if (handshakeAhead) record.handshakeSecret else current.handshakeSecret,
+                        handshakeGeneration = if (handshakeAhead) record.handshakeGeneration else current.handshakeGeneration,
+                        applicationSecret = if (applicationAhead) record.applicationSecret else current.applicationSecret,
+                        applicationGeneration = if (applicationAhead) record.applicationGeneration else current.applicationGeneration,
+                    ),
+            ),
+        )
+        return true
     }
 
     /**

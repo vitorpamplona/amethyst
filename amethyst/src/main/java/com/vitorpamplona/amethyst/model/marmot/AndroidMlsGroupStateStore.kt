@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 
 /**
  * Android implementation of [MlsGroupStateStore] using file-based encrypted storage.
@@ -35,8 +36,9 @@ import java.io.File
  *
  * Storage layout:
  * ```
- * <rootDir>/mls_groups/<nostrGroupId>/state    — encrypted MlsGroupState
+ * <rootDir>/mls_groups/<nostrGroupId>/state     — encrypted MlsGroupState
  * <rootDir>/mls_groups/<nostrGroupId>/retained  — encrypted retained epoch secrets
+ * <rootDir>/mls_groups/<nostrGroupId>/ratchet   — encrypted OwnSenderRatchet
  * ```
  */
 class AndroidMlsGroupStateStore(
@@ -66,6 +68,8 @@ class AndroidMlsGroupStateStore(
     private fun stateFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "state")
 
     private fun retainedFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "retained")
+
+    private fun ratchetFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "ratchet")
 
     override suspend fun save(
         nostrGroupId: String,
@@ -165,6 +169,56 @@ class AndroidMlsGroupStateStore(
 
         atomicWrite(file, encryption.encrypt(buffer))
     }
+
+    /**
+     * The per-send ratchet position, written on its own so a message does not
+     * re-encrypt the whole group state to record ~72 bytes.
+     *
+     * Deliberately NOT the atomic temp-file-and-rename the state uses. That
+     * costs two file operations plus a directory sync for a record smaller than
+     * a block, and it is not what durability needs here: the record is written
+     * whole, and a half-written one fails to decrypt and is discarded, which
+     * falls back to the full state's position. What matters is that the bytes
+     * are on the device before the message they describe goes out, so the write
+     * is followed by an fsync.
+     */
+    override suspend fun saveSenderRatchet(
+        nostrGroupId: String,
+        state: ByteArray,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val file = ratchetFile(nostrGroupId)
+            try {
+                file.parentFile?.mkdirs()
+                val encrypted = encryption.encrypt(state)
+                FileOutputStream(file).use { out ->
+                    out.write(encrypted)
+                    out.fd.sync()
+                }
+                true
+            } catch (e: Exception) {
+                // Returning false sends the caller to a full state write, which
+                // is slower but carries the same guarantee. Swallowing this and
+                // returning true would drop the position on the floor.
+                Log.w(TAG, "saveSenderRatchet($nostrGroupId) FAILED, falling back to a full state write: ${e.message}", e)
+                false
+            }
+        }
+
+    override suspend fun loadSenderRatchet(nostrGroupId: String): ByteArray? =
+        withContext(Dispatchers.IO) {
+            val file = ratchetFile(nostrGroupId)
+            if (!file.exists()) return@withContext null
+            try {
+                encryption.decrypt(file.readBytes())
+            } catch (e: Exception) {
+                // A torn or unreadable record says nothing trustworthy about
+                // where the ratchet is. The full state's own position stands,
+                // which is behind but never ahead.
+                Log.w(TAG, "loadSenderRatchet($nostrGroupId) unreadable, ignoring: ${e.message}", e)
+                null
+            }
+        }
 
     override suspend fun loadRetainedEpochs(nostrGroupId: String): List<ByteArray> =
         withContext(Dispatchers.IO) {
