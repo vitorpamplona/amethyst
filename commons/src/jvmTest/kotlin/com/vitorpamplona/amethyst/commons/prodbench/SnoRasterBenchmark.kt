@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.prodbench
 
+import com.vitorpamplona.amethyst.commons.sno.SnoLighting
 import com.vitorpamplona.amethyst.commons.sno.SnoRasterizer
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoParser
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload
@@ -66,11 +67,19 @@ class SnoRasterBenchmark {
     private fun millisPerFrame(
         payload: SnoPayload,
         size: Int,
+        lighting: SnoLighting? = null,
     ): Double {
-        repeat(WARMUP) { SnoRasterizer.render(payload, size, size) }
+        repeat(WARMUP) { SnoRasterizer.render(payload, size, size, lighting = lighting) }
         val start = System.nanoTime()
-        repeat(RUNS) { SnoRasterizer.render(payload, size, size) }
+        repeat(RUNS) { SnoRasterizer.render(payload, size, size, lighting = lighting) }
         return (System.nanoTime() - start) / 1e6 / RUNS
+    }
+
+    private fun millisToLight(payload: SnoPayload): Double {
+        repeat(3) { SnoLighting.of(payload) }
+        val start = System.nanoTime()
+        repeat(5) { SnoLighting.of(payload) }
+        return (System.nanoTime() - start) / 1e6 / 5
     }
 
     @Test
@@ -94,6 +103,25 @@ class SnoRasterBenchmark {
         // Sluggish by design rather than frozen: this one is why the viewer
         // rasters off the composition thread and caps its size.
         assertTrue(viewer < 500.0, "the ceiling should stay inside the cap's budget, was ${fmt(viewer)} ms")
+    }
+
+    @Test
+    fun theLightIsPaidOncePerObjectAndNotPerFrame() {
+        // Winding the faces outward walks a ray from every face against every
+        // other one, which is quadratic in the face count and by far the most
+        // expensive thing this feature does. It depends on the object alone, so
+        // the viewer holds it across a turn; what has to stay cheap is the
+        // frame, and a lit frame differs from a flat one by three multiplies a
+        // pixel.
+        val realCost = millisToLight(real)
+        val ceiling = millisToLight(adversarial)
+        val flatFrame = millisPerFrame(real, VIEWER_PX)
+        val litFrame = millisPerFrame(real, VIEWER_PX, SnoLighting.of(real))
+        println("winding + light: real (94f) ${fmt(realCost)} ms, adversarial (1004f) ${fmt(ceiling)} ms")
+        println("a ${VIEWER_PX}px frame of a real object: flat ${fmt(flatFrame)} ms, lit ${fmt(litFrame)} ms")
+
+        assertTrue(realCost < 50.0, "lighting a real object should be a blink, was ${fmt(realCost)} ms")
+        assertTrue(litFrame < flatFrame * 2 + 5, "a lit frame should cost about what a flat one does, was ${fmt(litFrame)} ms")
     }
 
     private fun fmt(value: Double) = ((value * 100).toLong() / 100.0).toString()

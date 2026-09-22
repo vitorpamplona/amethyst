@@ -29,6 +29,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,12 +51,21 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.sno_light_off
+import com.vitorpamplona.amethyst.commons.resources.sno_light_on
 import com.vitorpamplona.amethyst.commons.service.image.toComposeImageBitmap
+import com.vitorpamplona.amethyst.commons.sno.SnoLighting
 import com.vitorpamplona.amethyst.commons.sno.SnoRasterizer
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoMode
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 /** How many degrees a one-finger drag of one pixel turns the object. */
 private const val DEGREES_PER_PIXEL = 0.5f
@@ -82,6 +95,10 @@ private const val GESTURE_RASTER_PX = 384
  */
 private const val MAX_RESTING_RASTER_PX = 1440
 
+/** The light switch, small enough to sit over a corner of the object. */
+private val TOGGLE_SIZE = 32.dp
+private val TOGGLE_INSET = 4.dp
+
 /**
  * A Simple Nostr Object the reader can turn, move and zoom.
  *
@@ -92,6 +109,13 @@ private const val MAX_RESTING_RASTER_PX = 1440
  * drawn, which costs nothing per frame; when the gesture ends the object is
  * redrawn at the resolution the zoom now deserves, so it sharpens where it
  * settled rather than staying an upscaled bitmap.
+ *
+ * A solid object also offers a light switch, because turning something over to
+ * understand its shape is the one case DECK-0003 §4 has in mind when it allows
+ * a client to light an object: unlit, a cube of a single colour is a flat
+ * hexagon however far you turn it. The feed keeps §4's unlit default, so an
+ * object looks the same everywhere it is quoted, and the switch starts off.
+ * See [SnoLighting] for what it does and what it costs.
  *
  * Unlike [SnoThumbnail] this does not go through Coil: a turn produces a new
  * angle every frame and each would become its own cache entry, evicting the
@@ -112,6 +136,11 @@ fun SnoObjectViewer(
     var panX by remember(eventId) { mutableFloatStateOf(0f) }
     var panY by remember(eventId) { mutableFloatStateOf(0f) }
     var gesturing by remember(eventId) { mutableStateOf(false) }
+    var lit by remember(eventId) { mutableStateOf(false) }
+    // Winding the faces outward walks a ray from every face against every other
+    // one, so it is worth its own cache: it depends on the object alone and not
+    // on the angle, and a turn would otherwise pay for it sixty times a second.
+    val lighting = remember(payload) { LightingCache() }
     val backgroundArgb = if (background == Color.Transparent) 0 else background.toArgb()
 
     BoxWithConstraints(
@@ -172,7 +201,7 @@ fun SnoObjectViewer(
         // the turn coarse instead of freezing the gesture.
         var bitmap by remember(eventId) { mutableStateOf<ImageBitmap?>(null) }
 
-        LaunchedEffect(payload, rasterPx, yaw, pitch, backgroundArgb) {
+        LaunchedEffect(payload, rasterPx, yaw, pitch, backgroundArgb, lit) {
             bitmap =
                 withContext(Dispatchers.Default) {
                     val pixels =
@@ -183,6 +212,7 @@ fun SnoObjectViewer(
                             yawDegrees = yaw,
                             pitchDegrees = pitch,
                             background = backgroundArgb,
+                            lighting = if (lit) lighting.of(payload) else null,
                         )
                     PlatformImage.create(pixels, rasterPx, rasterPx).toComposeImageBitmap()
                 }
@@ -206,7 +236,41 @@ fun SnoObjectViewer(
                 )
             }
         }
+
+        // Only a filled object has faces for a light to fall on; points and
+        // wireframes look the same lit or not, so they are not offered a switch.
+        if (payload.mode == SnoMode.SOLID && payload.faceCount > 0) {
+            IconButton(
+                onClick = { lit = !lit },
+                modifier = Modifier.align(Alignment.TopEnd).padding(TOGGLE_INSET).size(TOGGLE_SIZE),
+            ) {
+                Icon(
+                    MaterialSymbols.BrightnessMedium,
+                    contentDescription = stringResource(if (lit) Res.string.sno_light_on else Res.string.sno_light_off),
+                    tint =
+                        if (lit) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    filled = lit,
+                )
+            }
+        }
     }
+}
+
+/**
+ * One object's lighting, kept until the object changes.
+ *
+ * Not Compose state: it is written from the drawing coroutine and read only
+ * there, and making it state would recompose the view for a value nothing in
+ * composition looks at.
+ */
+private class LightingCache {
+    private var lighting: SnoLighting? = null
+
+    fun of(payload: SnoPayload): SnoLighting = lighting ?: SnoLighting.of(payload).also { lighting = it }
 }
 
 private fun wrapDegrees(value: Float): Float {

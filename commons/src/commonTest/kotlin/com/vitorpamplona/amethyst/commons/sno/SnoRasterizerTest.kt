@@ -100,7 +100,12 @@ class SnoRasterizerTest {
             )
         val lit = pixels.filter { it != 0 }
         assertTrue(lit.isNotEmpty())
-        assertTrue(lit.all { it == 0xFFFFFFFF.toInt() }, "every covered pixel should be the face colour, flat")
+        assertEquals(0xFFFFFFFF.toInt(), pixels.at(dim / 2, dim / 2), "the fill should be the face colour, opaque")
+        // Colour only: the vertex dots §1.5 lays over every mode feather at
+        // their rim, so a pixel at the edge of one carries partial alpha. What
+        // §1.4a decides is the colour, and no pixel anywhere shows a trace of
+        // the red, green and blue this object's vertices carry.
+        assertTrue(lit.all { it and 0xFFFFFF == 0xFFFFFF }, "every covered pixel should be the face colour, flat")
     }
 
     @Test
@@ -143,8 +148,41 @@ class SnoRasterizerTest {
     @Test
     fun pointsModeDrawsTheVerticesAndNotTheTriangle() {
         val pixels = SnoRasterizer.render(triangle(mode = "points"), dim, dim, yawDegrees = 0f, pitchDegrees = 0f)
-        assertTrue(pixels.litCount() <= 3, "three vertices should light at most three pixels, lit ${pixels.litCount()}")
-        assertTrue(pixels.litCount() >= 1)
+        // Three round dots a couple of pixels across, and nothing between them:
+        // the whole triangle would be some 1400 pixels.
+        assertTrue(pixels.litCount() in 3..60, "three vertices should light three small dots, lit ${pixels.litCount()}")
+        assertEquals(0, pixels.at(dim / 2, dim / 2), "points mode must not fill the triangle")
+    }
+
+    @Test
+    fun theVerticesAreDrawnInEveryMode() {
+        // §1.5: "A client SHOULD also draw the vertices as points in every
+        // mode". Under a solid they are a hint rather than a second shape —
+        // small, and laid over the fill at part alpha — so what shows they are
+        // there is that the dot on the apex reaches a little past it, into
+        // pixels no fill of this triangle can cover.
+        val wide = 512
+        val pixels = SnoRasterizer.render(triangle(), wide, wide, yawDegrees = 0f, pitchDegrees = 0f)
+        // The apex of the triangle lands just under a thirteenth of the way down.
+        val apexRow = (wide * 0.08f).toInt()
+        assertEquals(0, pixels[(apexRow - 10) * wide + wide / 2], "well above the apex is empty")
+        assertTrue(pixels[apexRow * wide + wide / 2] != 0, "the apex's own vertex dot reaches above the fill")
+    }
+
+    @Test
+    fun aFaceColourMarksItsVerticesInThatColourToo() {
+        // The other half of §1.4a: where a face carries its own colour, that is
+        // what the object shows, and the vertex dots over it are that colour as
+        // well rather than the three the payload's `colors` still carries.
+        val pixels =
+            SnoRasterizer.render(
+                triangle(colors = "[238,235,239]", extra = ""","facecolors":[225]"""),
+                dim,
+                dim,
+                yawDegrees = 0f,
+                pitchDegrees = 0f,
+            )
+        assertTrue(pixels.filter { it != 0 }.all { it and 0xFFFFFF == 0xFFFFFF }, "no dot should show a vertex colour")
     }
 
     @Test
@@ -210,7 +248,10 @@ class SnoRasterizerTest {
     fun aSingleVertexDoesNotCrash() {
         val dot = parse("""{"v":2,"name":"d","unit":0,"mode":"points","vertices":[[0,0,0]],"colors":[225],"faces":[]}""")
         val pixels = SnoRasterizer.render(dot, dim, dim)
-        assertEquals(1, pixels.litCount())
+        // One vertex is the whole object, so it is drawn at the size the shape
+        // profile allows and centred in the frame.
+        assertTrue(pixels.litCount() in 1..160, "one vertex, lit ${pixels.litCount()}")
+        assertTrue(pixels.at(dim / 2, dim / 2) != 0, "the one vertex should be in the middle")
     }
 
     @Test
