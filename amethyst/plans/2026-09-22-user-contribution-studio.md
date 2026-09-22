@@ -138,6 +138,82 @@ One new route, `Route.ContributionStudio`, reachable from the drawer next to
    Amethyst. Contributors following `CONTRIBUTING-WITH-AI.md` get the build-log paste-ups
    generated from the step events rather than typed by hand.
 
+## Shape: a pinned "Your Amethyst Developer" chat, not a dashboard
+
+The studio reads better as a **conversation** than as a board. A user who wants a feature
+types a sentence; runs, diffs and approvals arrive as replies. Two findings make this cheap:
+
+- **Pinning already exists.** `AccountSyncedSettings.chats.pinnedChatrooms` is a synced
+  `Set<ChatroomKey>`; `ChatroomListKnownFeedFilter.sort()` floats pinned rooms to the top of
+  Messages, and `UserRoomCompose` already renders the pin toggle in its overflow. A DM room
+  with the agent's npub is pinnable **today, with no new code**.
+- **The chat timeline already renders agent activity.** `ChatMessageCompose` dispatches
+  `RenderBuzzDiff` for 40008 and `RenderBuzzActivityRow` for the job/huddle family
+  (`isBuzzActivityRow`), with per-kind labels for requested / accepted / progress / result /
+  cancelled / errored in `RenderBuzzNotes.kt`.
+
+### Which room, though — the one real trade-off
+
+| | **NIP-17 DM with the agent's npub** | **Relay-group room of one** on their own `amy serve --buzz` |
+|---|---|---|
+| Pinnable today | **yes** (`ChatroomKey`-based) | no — pinning is keyed on user sets, not groups |
+| Rich cards today | no — text only; needs new renderers | **yes** — diff/progress/result rows already render |
+| Setup cost | none; works over the user's normal DM relays | user must run a relay |
+| Agent side | `amy dm` already sends/receives NIP-17 | `amy buzz …` already posts to the channel |
+| Feels like | a DM, because it is one | a group chat with one member |
+
+**Recommend NIP-17 as the shell, with structured payloads carried inside it.** The agent
+publishes its own kind-0 (`name: "Your Amethyst Developer"`, avatar), so the room labels
+itself; the user pins it once and it sits at the top of Messages. Structured moments — a
+diff, an approval gate, a test summary — ride as a payload inside the DM (rendered as a card)
+or as a `q` reference to the 40008/46010 event on the user's own relay, with "Open review"
+deep-linking to the run-detail screen for the full per-file diff. Chat for the conversation,
+a screen for the diff; don't try to review 40 files in a bubble.
+
+### What "just chatting" actually needs
+
+- **Intake bridge.** The runner watches 43001/46020, not chat lines. Either the room's
+  composer publishes a workflow trigger alongside the message (app-side, keeps `amy`
+  unchanged — preferred), or `amy` grows a `--watch-dm` intake that treats a DM from an
+  allowlisted npub as a task. Either way the allowlist is `--accept-from <the user's npub>`,
+  or the agent becomes a free coding service for anyone who DMs it.
+- **Liveness.** A chat with no reply for six minutes reads as broken. Emit progress (43003 /
+  46003) on a heartbeat and render it as a status line under the last bubble, not as a wall of
+  messages. The DVM liveness work in `amethyst/plans/2026-09-10-dvm-heartbeat-liveness.md` is
+  the same problem.
+- **Parallel runs.** Chat is linear; two runs interleaved in one thread is unreadable. Thread
+  each run as a reply chain off its first message, and keep the run list as a second tab.
+- **Approve/deny inline.** A 46010 gate should render as a card with two buttons publishing
+  46030/46031 — the write helpers already exist on `Account`.
+- **Injection hygiene.** The moment a task quotes someone else's issue, the transcript is
+  attacker-influenced text arriving in a chat bubble. Render as data; no tap-to-run
+  affordances derived from transcript content.
+
+### Identity and credentials — one account per user, not one account for everyone
+
+The chat is a **client**; it never holds a model credential. Each user's runner authenticates
+as that user, with their own Claude Code login and their own git credential. That is not just
+a privacy nicety — pointing thousands of users at a single Claude account would break in three
+separate ways:
+
+1. **Terms.** Subscription seats are per-person. Fanning one seat out to a user base is
+   account sharing, and it is the kind of thing that gets the account terminated rather than
+   throttled.
+2. **Capacity.** One account's rate limits are sized for one developer. A few dozen concurrent
+   agent runs would starve each other, and queueing would make the chat feel dead.
+3. **Cost and liability.** Whoever holds the key pays for every run and owns whatever the agent
+   does with the git credential attached to it.
+
+If a hosted option is ever wanted, it has to be a real service: per-user API keys or per-user
+billing on top of the API, with the operator as an accountable middleman. That is a different
+product from Amethyst, and it should stay outside the app. Inside the app, the only supported
+model is **bring your own runner, bring your own account** — which is also the only model that
+matches a client with no central server.
+
+For users with no box, the honest answers are (a) bring your own VPS, or (b) discover a
+third-party runner as a NIP-89 handler and pay it per run — a market of providers, not one
+maintainer-funded endpoint. Metering already exists in the 44200 turn metrics.
+
 ## Gaps to build (prioritized)
 
 **P0 — make the loop usable by one motivated user**
