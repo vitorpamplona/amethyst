@@ -72,7 +72,7 @@ fun SnoObjectCard(
 
         Spacer(Modifier.width(12.dp))
 
-        Column {
+        Column(Modifier.weight(1f)) {
             Text(
                 text = payload.name.ifBlank { stringResource(Res.string.sno_object_title) },
                 style = MaterialTheme.typography.titleMedium,
@@ -84,6 +84,7 @@ fun SnoObjectCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

@@ -71,7 +71,7 @@ fun SnoAvatarCard(
 
         Spacer(Modifier.width(12.dp))
 
-        Column {
+        Column(Modifier.weight(1f)) {
             Text(
                 text = name ?: payload.name.ifBlank { stringResource(Res.string.sno_avatar_title) },
                 style = MaterialTheme.typography.titleMedium,
@@ -83,6 +83,7 @@ fun SnoAvatarCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
