@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -82,9 +83,22 @@ object BuzzDmNotification {
         val accountNpub = NotificationRoutes.accountNpub(account)
         // The channel's kind-39000 naddr routes straight to the chatroom via the
         // existing naddr → Route.RelayGroup path (no message load needed on tap).
+        val channelNAddr = channel.toNAddr()
         val uri =
-            channel.toNAddr()?.let { NotificationRoutes.relayGroupUri(it, accountNpub) }
+            channelNAddr?.let { NotificationRoutes.relayGroupUri(it, accountNpub) }
                 ?: NotificationRoutes.noteUri(note, accountNpub)
+
+        // Only the naddr identifies the room durably; without it there is no conversation to
+        // pin a shortcut to. The message-content gate is the early return at the top.
+        val conversation =
+            channelNAddr?.let {
+                Conversation(
+                    id = NotificationRoutes.relayGroupShortcutId(it, accountNpub),
+                    label = channel.toBestDisplayName(),
+                    iconUrl = channel.profilePicture(),
+                    isGroup = true,
+                )
+            }
 
         val nm = context.notificationManager()
 
@@ -107,6 +121,7 @@ object BuzzDmNotification {
                 applicationContext = context,
                 accountPictureUrl = account.userProfile().profilePicture(),
                 replyAction = null,
+                conversation = conversation,
             )
         }
     }

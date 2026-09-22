@@ -59,6 +59,21 @@ fun observeNote(
     return flow.collectAsStateWithLifecycle()
 }
 
+/**
+ * [observeNote] without the relay half: watches LocalCache and asks no relay for the note.
+ *
+ * For a NIP-17 rumor, which has no fetchable id — putting one in a REQ would tell relays the
+ * private event's identity, the leak [com.vitorpamplona.amethyst.commons.model.Note.isPrivateRumor]
+ * guards everywhere else. Nothing is lost by not asking: a rumor only ever reaches the cache by
+ * unwrapping the envelope that carried it, and the always-on gift-wrap tail re-fetches a week of
+ * those on every cold start, so this flow fires on its own once the envelope lands.
+ */
+@Composable
+fun observeNoteLocally(note: Note): State<NoteState> {
+    val flow = remember(note) { note.flow().metadata.stateFlow }
+    return flow.collectAsStateWithLifecycle()
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 inline fun <reified T : Event> observeNoteEvent(

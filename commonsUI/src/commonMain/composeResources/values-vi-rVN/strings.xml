@@ -424,8 +424,6 @@
     <string name="workout_hours">Giờ</string>
     <string name="workout_minutes">Phút</string>
     <string name="workout_seconds">Giây</string>
-    <string name="workout_suggestion_connect_title">Chia sẻ bài tập của bạn</string>
-    <string name="workout_suggestion_connect_message">Cho phép Amethyst đọc bài tập đã hoàn thành từ Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) và đề xuất bài đăng.</string>
     <string name="workout_suggestion_connect_button">Kết nối</string>
     <string name="workout_from_health_connect">Từ Health Connect</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

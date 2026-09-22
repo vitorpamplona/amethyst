@@ -34,7 +34,9 @@ class PollTypeTag {
     companion object {
         const val TAG_NAME = "polltype"
 
-        fun isTag(tag: Array<String>) = tag.has(2) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        // has(1), matching parse: NIP-88's tag is `["polltype", "<type>"]` with nothing after it,
+        // so requiring a third element made this answer false for every conformant tag.
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         fun parse(tag: Array<String>): PollType? {
             ensure(tag.has(1)) { return null }

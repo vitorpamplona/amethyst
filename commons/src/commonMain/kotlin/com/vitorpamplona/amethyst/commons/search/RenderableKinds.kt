@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -176,6 +177,10 @@ object RenderableKinds {
             VideoShortEvent.KIND,
             VideoHorizontalEvent.KIND,
             VideoVerticalEvent.KIND,
+            // A video list has a card of its own, so by the rule the omission list states — in
+            // ALL when Amethyst can render it — it belongs in the window. Its title and
+            // description are what Quartz indexes, which is exactly what a reader would search.
+            VideoCurationSetEvent.KIND,
             AudioHeaderEvent.KIND,
             AudioTrackEvent.KIND,
             MusicTrackEvent.KIND,

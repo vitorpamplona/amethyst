@@ -428,8 +428,6 @@
     <string name="workout_hours">Sati</string>
     <string name="workout_minutes">Minuti</string>
     <string name="workout_seconds">Sekunde</string>
-    <string name="workout_suggestion_connect_title">Podelite svoje treninge</string>
-    <string name="workout_suggestion_connect_message">Dozvolite Amethyst-u da čita završene treninge iz Health Connect-a (Samsung Health, Google Fit, Fitbit, Garmin…) i predloži objavu.</string>
     <string name="workout_suggestion_connect_button">Poveži</string>
     <string name="workout_from_health_connect">Iz Health Connect-a</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

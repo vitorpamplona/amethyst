@@ -67,6 +67,8 @@ object MaterialSymbols {
     val ChessKnight = MaterialSymbol("\uF25E")
     val Checklist = MaterialSymbol("\uE6B1")
     val ChevronRight = MaterialSymbol("\uE5CC")
+    val ClosedCaption = MaterialSymbol("\uE996")
+    val ClosedCaptionDisabled = MaterialSymbol("\uF1DC")
     val Circle = MaterialSymbol("\uEF4A")
     val Clear = MaterialSymbol("\uE5CD")
     val Close = MaterialSymbol("\uE5CD")

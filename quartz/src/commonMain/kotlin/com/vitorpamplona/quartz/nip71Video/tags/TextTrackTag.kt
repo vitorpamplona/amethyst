@@ -20,16 +20,34 @@
  */
 package com.vitorpamplona.quartz.nip71Video.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * NIP-71 `text-track`: supplementary timed text for a video (captions, subtitles, chapters,
+ * metadata).
+ *
+ * The spec is inconsistent about the payload — its prose calls [ref] a "link to WebVTT file"
+ * while its example writes an encoded event — and publishers use both. divine.video emits a
+ * Blossom URL and an addressable `39307:<pubkey>:subtitles:<d>` coordinate for the same track,
+ * so [ref] is deliberately untyped: whatever identifies the track. Positions 3 and 4 carry the
+ * kind of information and its language code, per the prose.
+ */
 data class TextTrackTag(
-    val eventId: HexKey,
-    var relay: String? = null,
+    val ref: String,
+    val relay: String? = null,
+    val type: String? = null,
+    val language: String? = null,
 ) {
-    fun toTagArray() = arrayOfNotNull(TAG_NAME, eventId, relay)
+    // Positions are meaningful, so a gap before a field that IS set has to be written as an
+    // empty string rather than dropped — otherwise `language` would be read as `type`.
+    fun toTagArray(): Array<String> =
+        when {
+            language != null -> arrayOf(TAG_NAME, ref, relay ?: "", type ?: "", language)
+            type != null -> arrayOf(TAG_NAME, ref, relay ?: "", type)
+            relay != null -> arrayOf(TAG_NAME, ref, relay)
+            else -> arrayOf(TAG_NAME, ref)
+        }
 
     companion object {
         const val TAG_NAME = "text-track"
@@ -38,12 +56,19 @@ data class TextTrackTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return TextTrackTag(tag[1], tag.getOrNull(2))
+            return TextTrackTag(
+                ref = tag[1],
+                relay = tag.getOrNull(2)?.ifBlank { null },
+                type = tag.getOrNull(3)?.ifBlank { null },
+                language = tag.getOrNull(4)?.ifBlank { null },
+            )
         }
 
         fun assemble(
-            eventId: HexKey,
+            ref: String,
             relay: String?,
-        ) = arrayOfNotNull(TAG_NAME, eventId, relay)
+            type: String? = null,
+            language: String? = null,
+        ) = TextTrackTag(ref, relay, type, language).toTagArray()
     }
 }

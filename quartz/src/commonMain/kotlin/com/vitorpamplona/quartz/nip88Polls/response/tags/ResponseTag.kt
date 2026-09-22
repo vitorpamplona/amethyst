@@ -38,6 +38,9 @@ class ResponseTag {
 
         fun assemble(code: String) = arrayOf(TAG_NAME, code)
 
-        fun assemble(responses: Set<String>) = responses.map { code -> assemble(code) }
+        // A List, not a Set: NIP-88 reads a single-choice answer as "the first response tag",
+        // so the order these are written in is load-bearing and an unordered Set would leave the
+        // recorded answer to iteration order.
+        fun assemble(responses: List<String>) = responses.map { code -> assemble(code) }
     }
 }

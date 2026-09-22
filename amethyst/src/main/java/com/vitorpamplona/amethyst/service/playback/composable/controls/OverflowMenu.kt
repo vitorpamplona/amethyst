@@ -79,6 +79,9 @@ fun OverflowMenuButtonPreview() {
                 onCastClick = {},
                 castIcon = MaterialSymbols.Cast,
                 castContentDescription = "",
+                onCaptionsClick = {},
+                captionsIcon = MaterialSymbols.ClosedCaption,
+                captionsContentDescription = "",
             )
         }
     }
@@ -98,6 +101,9 @@ fun AnimatedOverflowMenuButton(
     onCastClick: () -> Unit,
     castIcon: MaterialSymbol,
     castContentDescription: String,
+    onCaptionsClick: () -> Unit,
+    captionsIcon: MaterialSymbol,
+    captionsContentDescription: String,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
@@ -118,6 +124,9 @@ fun AnimatedOverflowMenuButton(
             onCastClick = onCastClick,
             castIcon = castIcon,
             castContentDescription = castContentDescription,
+            onCaptionsClick = onCaptionsClick,
+            captionsIcon = captionsIcon,
+            captionsContentDescription = captionsContentDescription,
         )
     }
 }
@@ -135,6 +144,9 @@ fun OverflowMenuButton(
     onCastClick: () -> Unit,
     castIcon: MaterialSymbol,
     castContentDescription: String,
+    onCaptionsClick: () -> Unit,
+    captionsIcon: MaterialSymbol,
+    captionsContentDescription: String,
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
 
@@ -237,6 +249,16 @@ fun OverflowMenuButton(
                             ) {
                                 menuExpanded.value = false
                                 onCastClick()
+                            }
+                        }
+
+                        VideoPlayerAction.Captions -> {
+                            M3ActionRow(
+                                icon = captionsIcon,
+                                text = captionsContentDescription,
+                            ) {
+                                menuExpanded.value = false
+                                onCaptionsClick()
                             }
                         }
                     }

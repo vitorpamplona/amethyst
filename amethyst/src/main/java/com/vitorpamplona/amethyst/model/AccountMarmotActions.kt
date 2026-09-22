@@ -31,10 +31,45 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.coroutines.cancellation.CancellationException
+
+/**
+ * How long a [LatestKeyPackageOwner.NONE] answer may be reused.
+ *
+ * Much shorter than a definite answer's life, because NONE is ambiguous:
+ * `fetchAll` returns an empty list for a device that reached no relay at all
+ * rather than throwing, so "nobody has published one" and "we are offline"
+ * arrive identically. Long enough to stop repeated entries from re-fanning the
+ * query, short enough that the banner is not suppressed for a quarter of an
+ * hour after the network comes back.
+ */
+private const val NONE_MAX_AGE_SECONDS = 60L
+
+/**
+ * Which install owns the newest KeyPackage currently on the account's relays.
+ *
+ * An inviter picks the highest `created_at` kind:30443 and nothing else
+ * ([KeyPackageFetcher.fetchKeyPackage]), and only the install holding that
+ * bundle's private keys can open the Welcome it produces. With the same
+ * account signed in twice, the two installs publish under different random
+ * d-tag slots, so both KeyPackages persist and the most recent publisher
+ * silently owns every future invite.
+ */
+enum class LatestKeyPackageOwner {
+    /** This install holds the bundle — invites land here. */
+    THIS_DEVICE,
+
+    /** A newer KeyPackage we have no private keys for — invites land elsewhere. */
+    OTHER_DEVICE,
+
+    /** Nothing published for this account, or nowhere to ask. */
+    NONE,
+}
 
 /**
  * Marmot (MLS encrypted groups) orchestration for an [Account]: group create/
@@ -47,6 +82,9 @@ import kotlin.coroutines.cancellation.CancellationException
 class AccountMarmotActions(
     private val account: Account,
 ) {
+    /** Last (timestamp, answer) from [latestKeyPackageOwner], for passive callers. */
+    private var lastOwnerCheck: Pair<Long, LatestKeyPackageOwner>? = null
+
     /**
      * Resolve the relay set for a Marmot group. Prefer the relays carried in
      * the MLS GroupContext metadata so every member converges on the same
@@ -330,6 +368,10 @@ class AccountMarmotActions(
                 }
                 account.client.publish(event, relays)
             }
+            // A rotation we just published makes this device the newest owner.
+            // Leaving the old answer in place would keep the banner warning for
+            // up to its full life about a state that no longer exists.
+            lastOwnerCheck = null
         }
     }
 
@@ -350,6 +392,9 @@ class AccountMarmotActions(
         }
         account.cache.justConsumeMyOwnEvent(event)
         account.client.publish(event, relays)
+        // Same as the rotation path: we have just changed who owns the newest
+        // KeyPackage, so any cached answer is stale by construction.
+        lastOwnerCheck = null
     }
 
     /**
@@ -398,6 +443,98 @@ class AccountMarmotActions(
     suspend fun hasPublishedKeyPackage(): Boolean {
         val manager = account.marmotManager ?: return false
         return manager.hasActiveKeyPackages()
+    }
+
+    /**
+     * Ask the relays which install currently owns this account's invites.
+     *
+     * Deliberately a read, never a self-correcting one. Republishing whenever
+     * the answer is [LatestKeyPackageOwner.OTHER_DEVICE] would deadlock two
+     * installs against each other — each device's correction is the other's
+     * trigger, and neither ever settles — so the decision belongs to the user,
+     * with this as the evidence.
+     *
+     * Queries the same set we publish our own KeyPackages to, which is the
+     * inviter's view of us minus their own outbox: `fetchRelaysFor` unions our
+     * NIP-65 write set and our legacy kind:10051 with the inviter's outbox, and
+     * the first two are exactly [keyPackagePublishRelays].
+     */
+    suspend fun latestKeyPackageOwner(maxAgeSeconds: Long = 0L): LatestKeyPackageOwner {
+        val manager = account.marmotManager ?: return LatestKeyPackageOwner.NONE
+        val relays = keyPackagePublishRelays()
+        if (relays.isEmpty()) return LatestKeyPackageOwner.NONE
+
+        // A passive caller (the groups-screen banner) may reuse a recent answer.
+        // Without this, every entry to that screen fanned a REQ out across the
+        // whole write set — and the thing it asks about only changes when
+        // another device publishes, which is rare enough to cache.
+        val cached = lastOwnerCheck
+        if (maxAgeSeconds > 0 && cached != null) {
+            val maxAge =
+                if (cached.second == LatestKeyPackageOwner.NONE) {
+                    minOf(maxAgeSeconds, NONE_MAX_AGE_SECONDS)
+                } else {
+                    maxAgeSeconds
+                }
+            if (TimeUtils.now() - cached.first <= maxAge) return cached.second
+        }
+
+        val latest = KeyPackageFetcher.fetchKeyPackage(account.client, account.signer.pubKey, relays)
+
+        val owner =
+            when {
+                latest == null -> LatestKeyPackageOwner.NONE
+                manager.ownsKeyPackage(latest) -> LatestKeyPackageOwner.THIS_DEVICE
+                else -> LatestKeyPackageOwner.OTHER_DEVICE
+            }
+        Log.d("MarmotDbg") {
+            "latestKeyPackageOwner: newest KeyPackage id=${latest?.id?.take(8)}… " +
+                "createdAt=${latest?.createdAt} owner=$owner"
+        }
+        // Cached even when nothing was found: that answer cost the same fan-out
+        // as any other, so leaving it uncached would re-run the whole query on
+        // every entry for exactly the accounts with nothing on their relays.
+        lastOwnerCheck = TimeUtils.now() to owner
+        return owner
+    }
+
+    /**
+     * The user-initiated republish behind the invite-device banner and the
+     * settings row. Returns whether a relay actually accepted the KeyPackage.
+     *
+     * Deliberately not [publishMarmotKeyPackage]. That one is the best-effort
+     * startup path: it early-returns in silence for a read-only account or an
+     * empty relay set and then hands the event to a fire-and-forget
+     * `client.publish`, so a caller reporting the outcome to someone watching
+     * would call every one of those failures a success.
+     */
+    suspend fun republishKeyPackageConfirmed(): Boolean {
+        val manager = account.marmotManager ?: return false
+        if (!account.isWriteable()) return false
+        val relays = keyPackagePublishRelays()
+        if (relays.isEmpty()) return false
+
+        // Minting no longer destroys the displaced bundle — the rotation
+        // manager retains it, keyed by the event id it was published as — but
+        // every regeneration still costs a keypair, a relay round trip, and a
+        // slot in the bounded retention map, where it can evict a bundle
+        // someone is about to invite us through. Republishing when we already
+        // own the newest KeyPackage buys none of that back, since the answer
+        // cannot change, so that case is a no-op reporting success truthfully.
+        if (latestKeyPackageOwner() == LatestKeyPackageOwner.THIS_DEVICE) {
+            Log.d("MarmotDbg") { "republishKeyPackageConfirmed: already the newest; not minting" }
+            return true
+        }
+
+        val event = manager.generateKeyPackageEvent(relays.toList())
+        account.cache.justConsumeMyOwnEvent(event)
+        val accepted = account.client.publishAndConfirm(event, relays)
+        Log.d("MarmotDbg") {
+            "republishKeyPackageConfirmed: id=${event.id.take(8)}… accepted=$accepted on ${relays.size} relay(s)"
+        }
+        // The answer we just changed; a stale cache would keep the banner up.
+        lastOwnerCheck = if (accepted) TimeUtils.now() to LatestKeyPackageOwner.THIS_DEVICE else null
+        return accepted
     }
 
     /**

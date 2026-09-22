@@ -606,8 +606,6 @@
     <string name="workout_hours">Uren</string>
     <string name="workout_minutes">Minuten</string>
     <string name="workout_seconds">Seconden</string>
-    <string name="workout_suggestion_connect_title">Deel je workouts</string>
-    <string name="workout_suggestion_connect_message">Laat Amethyst voltooide workouts lezen uit Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) en voorstellen om ze als bericht te delen.</string>
     <string name="workout_suggestion_connect_button">Verbinden</string>
     <string name="workout_from_health_connect">Van Health Connect</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

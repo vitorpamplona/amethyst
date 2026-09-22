@@ -317,6 +317,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
@@ -1233,6 +1234,12 @@ class Account(
 
     suspend fun changeReactionRowItems(items: List<ReactionRowItem>) {
         if (settings.changeReactionRowItems(items)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    suspend fun changeCaptionsEnabled(enabled: Boolean) {
+        if (settings.changeCaptionsEnabled(enabled)) {
             sendNewAppSpecificData()
         }
     }
@@ -2337,7 +2344,15 @@ class Account(
         val poll = cache.getOrCreateNote(event.id).toEventHint<PollEvent>()
 
         if (poll != null) {
-            val template = PollResponseEvent.build(poll, responses)
+            // The poll decides how its answers are counted, so it decides which builder applies:
+            // a single-choice answer is the first tag only, and sending several would record
+            // whichever one the reader saw first.
+            val template =
+                when (event.pollType()) {
+                    PollType.SINGLE_CHOICE ->
+                        responses.firstOrNull()?.let { PollResponseEvent.buildSingleChoice(poll, it) } ?: return
+                    PollType.MULTI_CHOICE -> PollResponseEvent.buildMultipleChoice(poll, responses)
+                }
 
             val signedEvent = signer.sign(template)
 

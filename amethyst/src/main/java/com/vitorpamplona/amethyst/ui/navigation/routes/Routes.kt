@@ -1110,6 +1110,12 @@ sealed class Route {
 
     @Serializable data class EventRedirect(
         val id: String,
+        /**
+         * The event is a NIP-17 rumor, so [id] is a private event id that must never reach
+         * a relay: the screen watches LocalCache for it and issues no REQ. The envelope that
+         * carries it comes back on its own through the always-on gift-wrap tail.
+         */
+        val isPrivate: Boolean = false,
     ) : Route()
 
     @Serializable

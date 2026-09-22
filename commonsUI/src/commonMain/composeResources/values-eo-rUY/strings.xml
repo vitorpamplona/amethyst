@@ -431,8 +431,6 @@
     <string name="workout_hours">Horoj</string>
     <string name="workout_minutes">Minutoj</string>
     <string name="workout_seconds">Sekundoj</string>
-    <string name="workout_suggestion_connect_title">Kunhavigi viajn ekzercadojn</string>
-    <string name="workout_suggestion_connect_message">Lasu Amethyst legi finitajn ekzercadojn el Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) kaj sugesti afiŝon.</string>
     <string name="workout_suggestion_connect_button">Konekti</string>
     <string name="workout_from_health_connect">El Health Connect</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

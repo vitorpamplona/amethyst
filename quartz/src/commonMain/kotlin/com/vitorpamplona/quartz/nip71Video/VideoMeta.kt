@@ -34,6 +34,9 @@ data class VideoMeta(
     val hash: String? = null,
     val size: Int? = null,
     val service: String? = null,
+    // Non-standard `hls` property (divine.video): the adaptive manifest for the same
+    // footage this entry's `url` serves progressively. See [HlsImetaTag].
+    val hls: String? = null,
     val fallback: List<String> = emptyList(),
     val image: List<String> = emptyList(),
     val thumbhash: String? = null,
@@ -60,6 +63,7 @@ data class VideoMeta(
                 blurhash?.let { blurhash(it) }
                 thumbhash?.let { thumbhash(it) }
                 service?.let { service(it) }
+                hls?.let { hls(it) }
                 fallback.forEach { fallback(it) }
                 image.forEach { image(it) }
                 bitrate?.let { bitrate(it) }
@@ -80,6 +84,7 @@ data class VideoMeta(
                 hash = iMeta.hash()?.firstOrNull(),
                 size = iMeta.size()?.firstOrNull()?.toIntOrNull(),
                 service = iMeta.service()?.firstOrNull(),
+                hls = iMeta.hls()?.firstOrNull(),
                 fallback = iMeta.fallback() ?: emptyList(),
                 image = iMeta.image() ?: emptyList(),
                 thumbhash = iMeta.thumbhash()?.firstOrNull(),

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.service.notifications.ConversationShortcuts
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -398,6 +399,11 @@ class AccountSessionManager(
             // `:napplet` call ProfileStore.deleteProfile(name) — and that must refuse a profile still in
             // use by a live WebView. Not wired for this release; there is no existing hook that reaches
             // the sandbox on account deletion.
+            // The launcher is the one place an account's contacts live outside our own
+            // storage, so the conversation shortcuts go before anything else — whether or not
+            // this is the account currently on screen. See [ConversationShortcuts].
+            ConversationShortcuts.removeForAccount(Amethyst.instance.appContext, accountInfo.npub)
+
             if (accountInfo.npub == currentAccountNPub()) {
                 // Drop the Nest bridge ref before tearing down the
                 // current account so the audio-room activity can't

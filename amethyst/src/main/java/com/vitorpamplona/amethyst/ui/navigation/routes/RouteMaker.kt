@@ -51,6 +51,10 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -60,9 +64,13 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.isGeohashedScoped
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.isHashtagScoped
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -97,6 +105,62 @@ fun minichatRouteFor(note: Note): Route? {
 }
 
 private fun Note.isInChatGatherer(): Boolean = inGatherers?.any { it is ConcordChannel || it is RelayGroupChannel || it is PublicChatChannel } == true
+
+/**
+ * Kinds whose destination is `Route.Note(id)` — the generic thread view — no matter what the
+ * event body turns out to say. Mirrors the `else ->` branch of [routeForInner]: every kind here
+ * is a plain note that carries nothing (no channel id, no `a` tag, no chatroom key) that could
+ * send it somewhere more specific.
+ *
+ * **An addressable kind can never be listed here**, however plain it looks. [routeForInner]
+ * sends those to `Route.Note(addressTag())` through its `is AddressableEvent` branch, and the
+ * difference is not cosmetic: relays do not serve a replaceable by the id of one of its
+ * versions, so routing by id is a dead end. This bit the NIP-71 video kinds — 21/22 are regular
+ * but 34235/34236 extend `AddressableVideoEvent` — which is why the pair is split below and why
+ * `RouteForPointerTest` walks this list against [routeForInner] itself rather than trusting it.
+ *
+ * `internal` so that test can iterate the real list: a kind added here is covered by
+ * construction, not by someone remembering to add a case.
+ */
+internal val THREAD_VIEW_KINDS =
+    intArrayOf(
+        TextNoteEvent.KIND,
+        CommentEvent.KIND,
+        PollEvent.KIND,
+        PictureEvent.KIND,
+        // NIP-71 regular video only (21/22). The addressable pair, 34235/34236, is cited by
+        // `naddr` and routed by address — see the warning above.
+        VideoNormalEvent.KIND,
+        VideoShortEvent.KIND,
+        HighlightEvent.KIND,
+        GitIssueEvent.KIND,
+        GitPatchEvent.KIND,
+        GitPullRequestEvent.KIND,
+        GitPullRequestUpdateEvent.KIND,
+    )
+
+/**
+ * Route for an event we hold only a NIP-19 pointer to — its id plus, when the pointer carries
+ * one, its [kind] — because the body has not reached [LocalCache] yet.
+ *
+ * Notification deep links are the reason this exists. A push normally wakes a *cold* process,
+ * so by the time the user taps the tray the cache is empty and [routeFor] can say nothing
+ * better than [Route.EventRedirect] — a bare "looking for event" screen the user sits on until
+ * the event is re-fetched. An `nevent` already states the kind, which for an ordinary note is
+ * the whole answer, so a reply or a mention can open its thread immediately and let the screen
+ * fill itself in.
+ *
+ * Returns null when the kind is absent or needs the body to place the event, leaving the
+ * caller's redirect in charge.
+ */
+fun routeForPointer(
+    kind: Int?,
+    id: HexKey,
+): Route? {
+    if (kind == null) return null
+    if (kind !in THREAD_VIEW_KINDS) return null
+    return Route.Note(id)
+}
 
 fun routeFor(
     note: Note,

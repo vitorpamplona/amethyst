@@ -31,7 +31,7 @@ import java.io.File
  * `indexableContent()` is not an internal detail: the SQLite and filesystem stores index through
  * it, and `references/searchable-kinds.md` — which external engines mirror at version bumps — is a
  * transcription of it. A body that changes silently ships stale results downstream and needs a
- * `reindexFullTextSearch()` on every existing database. So the output of all 126 kinds is recorded
+ * `reindexFullTextSearch()` on every existing database. So the output of all 127 kinds is recorded
  * in `indexable-content.golden` and compared here.
  *
  * A deliberate change to what a kind indexes is fine — regenerate the golden file with

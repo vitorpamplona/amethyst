@@ -360,6 +360,18 @@ class GiftWrapEventHandler(
                 eventProcessor.consumeEvent(innerGift, innerGiftNote, publicNote)
             }
         }
+
+        // The wrap note already emitted once — from `consumeRegularEvent`, before any of this
+        // ran, when `innerEventId` was still null and the note said nothing about where it
+        // leads. Everything above is plain assignment, so without this the wrap's last word on
+        // itself is that first, useless emission: anything waiting on it (a `nostr:nevent…` for
+        // a wrap, a notification from a build that addressed DMs that way) waits forever while
+        // the message it wanted sits decrypted in the cache. Emitted last so an observer that
+        // wakes here can walk wrap → seal → rumor and find the whole chain linked.
+        //
+        // `flowSet?`, not `flow()`: a wrap nobody is watching — which is nearly all of them,
+        // a week's worth on every cold start — must not be given a flow set to hold.
+        eventNote.flowSet?.metadata?.invalidateData()
     }
 
     private suspend fun processExistingGiftWrap(
@@ -505,6 +517,11 @@ class SealedRumorEventHandler(
         } else {
             eventProcessor.consumeEvent(innerRumor, innerRumorNote, publicNote)
         }
+
+        // Same as the wrap above: the seal's only emission came before it was opened, so
+        // re-emit now that it points at its rumor. This runs inside the wrap's own unwrap, so
+        // the wrap's emission lands after it and sees a fully linked chain.
+        eventNote.flowSet?.metadata?.invalidateData()
     }
 
     private suspend fun processExistingSealedRumor(

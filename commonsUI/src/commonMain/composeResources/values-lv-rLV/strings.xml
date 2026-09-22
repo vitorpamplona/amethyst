@@ -436,8 +436,6 @@
     <string name="workout_hours">Stundas</string>
     <string name="workout_minutes">Minūtes</string>
     <string name="workout_seconds">Sekundes</string>
-    <string name="workout_suggestion_connect_title">Kopīgojiet savus treniņus</string>
-    <string name="workout_suggestion_connect_message">Ļaujiet Amethyst nolasīt pabeigtus treniņus no Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) un ieteikt ziņu.</string>
     <string name="workout_suggestion_connect_button">Savienot</string>
     <string name="workout_from_health_connect">No Health Connect</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

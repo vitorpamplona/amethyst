@@ -655,8 +655,6 @@
     <string name="workout_hours">Ur</string>
     <string name="workout_minutes">Minut</string>
     <string name="workout_seconds">Sekund</string>
-    <string name="workout_suggestion_connect_title">Deli svoje vadbe</string>
-    <string name="workout_suggestion_connect_message">Dovoli aplikaciji Amethyst branje zaključenih vadb iz Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) , da ti predlaga objavo</string>
     <string name="workout_suggestion_connect_button">Poveži</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Iz Health Connect</string>

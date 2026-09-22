@@ -2450,6 +2450,33 @@ class MarmotManager(
     suspend fun hasActiveKeyPackages(): Boolean = keyPackageRotationManager.hasActiveKeyPackages()
 
     /**
+     * True when this install holds the private bundle for [event], a published
+     * kind:30443 — i.e. whether an invite issued against it could be opened here.
+     *
+     * Two installs of the same account each mint their own random d-tag slot
+     * ([KeyPackageRotationManager.getOrCreateSlotDTag]), so their KeyPackages
+     * never replace one another and both sit on relays indefinitely. An
+     * inviter then takes whichever has the highest `created_at`, and only the
+     * install holding that bundle can open the resulting Welcome.
+     *
+     * Matched on the MLS KeyPackage reference, which is a hash over the
+     * KeyPackage itself, and only on the Nostr event id when an event carries
+     * no ref tag. The id route alone is not safe to answer this question:
+     * [KeyPackageRotationManager.findBundleByEventId] resolves an id to a
+     * *slot* and then returns whatever bundle occupies that slot now, so once
+     * a slot has been regenerated it reports a stale id as still ours and we
+     * would hide a warning about invites we can no longer open. The ref cannot
+     * alias that way, and it is what the Welcome path matches on first.
+     */
+    suspend fun ownsKeyPackage(event: KeyPackageEvent): Boolean {
+        val refHex = event.keyPackageRef()
+        if (refHex != null) {
+            return keyPackageRotationManager.findBundleByRef(refHex.hexToByteArray()) != null
+        }
+        return keyPackageRotationManager.findBundleByEventId(event.id) != null
+    }
+
+    /**
      * Check if a specific group membership exists.
      */
     fun isMember(nostrGroupId: HexKey): Boolean = groupManager.isMember(nostrGroupId)

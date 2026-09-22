@@ -37,6 +37,7 @@ import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
+import androidx.core.content.LocusIdCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
@@ -80,6 +81,7 @@ object NotificationUtils {
      * [KEY_TARGET_EVENT_ID], which is the note an inline reply is addressed to.
      */
     const val KEY_EVENT_ID = "key_event_id"
+
     const val KEY_ACCOUNT_NPUB = "key_account_npub"
     const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
     const val KEY_TARGET_EVENT_ID = "key_target_event_id"
@@ -165,6 +167,29 @@ object NotificationUtils {
             val replyToInnerAuthor: String?,
         ) : ReplyAction
     }
+
+    /**
+     * Identity of the chat a conversation notification belongs to, so the system can treat it
+     * as one — see [ConversationShortcuts] for what that buys and why it needs a shortcut.
+     *
+     * [id] must be stable for the life of the conversation and unique across accounts; [label]
+     * is what the conversation is called, which is not always the sender (a group message is
+     * from a person but belongs to the group).
+     *
+     * Callers pass this only when the account allows message content in notifications: the
+     * shortcut it publishes is readable from the launcher.
+     */
+    data class Conversation(
+        val id: String,
+        val label: String,
+        /**
+         * The chat's own picture, when it has one. Null falls back to the message sender's
+         * avatar, which is the right face for a one-to-one DM and the wrong one for a group —
+         * hence [isGroup], which suppresses that fallback along with the sender `Person`.
+         */
+        val iconUrl: String? = null,
+        val isGroup: Boolean = false,
+    )
 
     /** A prior message rendered above the main one in a MessagingStyle notification (thread context). */
     data class ParentMessage(
@@ -281,6 +306,7 @@ object NotificationUtils {
         replyAction: ReplyAction? = null,
         publicInlineReply: InlineReplyTarget? = null,
         addMarkRead: Boolean = true,
+        conversation: Conversation? = null,
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
     ) {
@@ -330,6 +356,17 @@ object NotificationUtils {
 
         val contentPendingIntent = contentIntent(applicationContext, notId, uri)
 
+        // Published before the notification that names it: a shortcutId the system cannot
+        // resolve is worse than none, so the id is only stamped below when this succeeded.
+        val shortcutId =
+            conversation?.let {
+                val conversationIcon =
+                    it.iconUrl?.let { url -> loadBitmap(url, applicationContext)?.let { bmp -> circleCrop(bmp) } }
+                        ?: avatar.takeUnless { _ -> it.isGroup }
+
+                ConversationShortcuts.push(applicationContext, it, uri, sender, conversationIcon)
+            }
+
         val builderPublic =
             NotificationCompat
                 .Builder(applicationContext, channelId)
@@ -359,6 +396,15 @@ object NotificationUtils {
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .setWhen(time * 1000)
+
+        // The three halves of the conversation contract: the shortcut the shade resolves, the
+        // locus that ties this notification to it, and the people it is with. All three have to
+        // be present or the notification is ranked as an ordinary alert.
+        if (shortcutId != null) {
+            builder.setShortcutId(shortcutId)
+            builder.setLocusId(LocusIdCompat(shortcutId))
+        }
+        builder.addPerson(sender)
 
         when (replyAction) {
             is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, id, replyAction))
