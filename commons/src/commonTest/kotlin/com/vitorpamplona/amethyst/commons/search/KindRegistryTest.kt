@@ -147,7 +147,7 @@ class KindRegistryTest {
         assertEquals(
             // 7516 is a found log: read inside a cache's thread, where `kind:geocache` already
             // leads, rather than looked up on its own.
-            listOf(24, 54, 1018, 1111, 1337, 1808, 7516, 10001, 10003, 30000, 30001, 30053, 30296, 30297, 30817, 31337),
+            listOf(24, 54, 1018, 1111, 1337, 1808, 7516, 10001, 10003, 30000, 30001, 30005, 30053, 30296, 30297, 30817, 31337),
             RenderableKinds.ALL.filter { KindRegistry.nameFor(it) == null }.sorted(),
         )
     }

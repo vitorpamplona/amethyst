@@ -70,6 +70,7 @@ class AccountSyncedSettings(
     val videoPlayer =
         AccountVideoPlayerPreferences(
             MutableStateFlow(mergeWithDefaultVideoPlayerButtons(internalSettings.videoPlayer.buttonItems).toImmutableList()),
+            MutableStateFlow(internalSettings.videoPlayer.captionsEnabled),
         )
     val media =
         AccountMediaPreferences(
@@ -118,7 +119,7 @@ class AccountSyncedSettings(
                     security.sendKind0EventsToLocalRelay.value,
                     security.addClientTag.value,
                 ),
-            videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
+            videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value, videoPlayer.captionsEnabled.value),
             media = AccountMediaPreferencesInternal(media.audioVisualizer.value.name),
             chats =
                 AccountChatPreferencesInternal(
@@ -208,6 +209,10 @@ class AccountSyncedSettings(
             videoPlayer.buttonItems.tryEmit(newVideoPlayerButtonItems)
         }
 
+        if (videoPlayer.captionsEnabled.value != syncedSettingsInternal.videoPlayer.captionsEnabled) {
+            videoPlayer.captionsEnabled.tryEmit(syncedSettingsInternal.videoPlayer.captionsEnabled)
+        }
+
         val newAudioVisualizer = VisualizerStyle.fromName(syncedSettingsInternal.media.audioVisualizer)
         if (media.audioVisualizer.value != newAudioVisualizer) {
             media.audioVisualizer.tryEmit(newAudioVisualizer)
@@ -254,6 +259,7 @@ class AccountReactionPreferences(
 @Stable
 class AccountVideoPlayerPreferences(
     var buttonItems: MutableStateFlow<ImmutableList<VideoPlayerButtonItem>>,
+    val captionsEnabled: MutableStateFlow<Boolean>,
 )
 
 @Stable

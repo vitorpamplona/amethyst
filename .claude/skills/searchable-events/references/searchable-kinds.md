@@ -138,6 +138,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 39000 | GroupMetadataEvent | nip29RelayGroups/metadata | `listOfNotNull(name(), about())` NL |
 | 39089 | FollowListEvent | nip51Lists/followList | `listOfNotNull(title(), description())` NL |
 | 39092 | MediaStarterPackEvent | nip51Lists/mediaStarterPack | `listOfNotNull(title(), description())` NL |
+| 39307 | TextTrackEvent | nip71Video/textTrack | `content` (the WebVTT cue text) |
 | 39701 | WebBookmarkEvent | nipB0WebBookmarks | `listOfNotNull(title(), description())` NL |
 | 40002 | StreamMessageV2Event | buzz/stream | `content` |
 | 40100 | CanvasEvent | buzz/stream | `content` |

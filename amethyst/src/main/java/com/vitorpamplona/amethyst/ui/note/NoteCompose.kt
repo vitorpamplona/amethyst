@@ -221,6 +221,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderThread
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
+import com.vitorpamplona.amethyst.ui.note.types.RenderVideoCollaboration
+import com.vitorpamplona.amethyst.ui.note.types.RenderVideoCurationSet
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiMergeAcceptance
@@ -229,6 +231,25 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiRedirect
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderAppCurationSet
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderArticleCurationSet
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderBookmarkList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderFavoriteAlgoFeedsList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGeohashList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGitAuthorList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGitRepositoryList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGoodWikiAuthorList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGoodWikiRelayList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderHashtagList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderInterestSet
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderKindMuteSet
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderLabeledBookmarkList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderMediaFollowList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderMediaStarterPack
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderMuteList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderOldBookmarkList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderPictureCurationSet
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderSimpleGroupList
 import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
@@ -291,6 +312,7 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -328,8 +350,26 @@ import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
+import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
+import com.vitorpamplona.quartz.nip51Lists.gitRepositoryList.GitRepositoryListEvent
+import com.vitorpamplona.quartz.nip51Lists.goodWikiAuthorList.GoodWikiAuthorListEvent
+import com.vitorpamplona.quartz.nip51Lists.goodWikiRelayList.GoodWikiRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
+import com.vitorpamplona.quartz.nip51Lists.kindMuteSet.KindMuteSetEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.mediaFollowList.MediaFollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
@@ -338,6 +378,8 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
+import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -1579,6 +1621,14 @@ private fun RenderNoteRow(
             VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         }
 
+        is VideoCollaborationEvent -> {
+            RenderVideoCollaboration(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is VideoCurationSetEvent -> {
+            RenderVideoCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
         is PictureEvent -> {
             PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
         }
@@ -1786,6 +1836,82 @@ private fun RenderNoteRow(
                 nav,
                 isBoostedNote = isBoostedNote,
             )
+        }
+
+        is MuteListEvent -> {
+            RenderMuteList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is BookmarkListEvent -> {
+            RenderBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is OldBookmarkListEvent -> {
+            RenderOldBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is LabeledBookmarkListEvent -> {
+            RenderLabeledBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is ArticleCurationSetEvent -> {
+            RenderArticleCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is PictureCurationSetEvent -> {
+            RenderPictureCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is AppCurationSetEvent -> {
+            RenderAppCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is GitRepositoryListEvent -> {
+            RenderGitRepositoryList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is FavoriteAlgoFeedsListEvent -> {
+            RenderFavoriteAlgoFeedsList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is GitAuthorListEvent -> {
+            RenderGitAuthorList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is MediaFollowListEvent -> {
+            RenderMediaFollowList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is GoodWikiAuthorListEvent -> {
+            RenderGoodWikiAuthorList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is KindMuteSetEvent -> {
+            RenderKindMuteSet(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is MediaStarterPackEvent -> {
+            RenderMediaStarterPack(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is HashtagListEvent -> {
+            RenderHashtagList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is InterestSetEvent -> {
+            RenderInterestSet(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is GeohashListEvent -> {
+            RenderGeohashList(baseNote, backgroundColor, accountViewModel)
+        }
+
+        is SimpleGroupListEvent -> {
+            RenderSimpleGroupList(baseNote, backgroundColor, accountViewModel)
+        }
+
+        is GoodWikiRelayListEvent -> {
+            RenderGoodWikiRelayList(baseNote, backgroundColor, accountViewModel)
         }
 
         else -> {

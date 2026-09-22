@@ -107,6 +107,7 @@ enum class VideoPlayerAction {
     Download,
     PictureInPicture,
     Cast,
+    Captions,
 }
 
 @Serializable
@@ -127,6 +128,7 @@ val DefaultVideoPlayerButtonItems =
         VideoPlayerButtonItem(VideoPlayerAction.Mute, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Quality, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Cast, VideoButtonLocation.TopBar),
+        VideoPlayerButtonItem(VideoPlayerAction.Captions, VideoButtonLocation.TopBar),
         VideoPlayerButtonItem(VideoPlayerAction.Share, VideoButtonLocation.OverflowMenu),
         VideoPlayerButtonItem(VideoPlayerAction.Download, VideoButtonLocation.OverflowMenu),
         VideoPlayerButtonItem(VideoPlayerAction.PictureInPicture, VideoButtonLocation.OverflowMenu),
@@ -184,6 +186,10 @@ class AccountNavigationPreferencesInternal(
 @Serializable
 class AccountVideoPlayerPreferencesInternal(
     var buttonItems: List<VideoPlayerButtonItem> = DefaultVideoPlayerButtonItems,
+    // Feed videos autoplay muted, so captions are what make them legible — on by default, and
+    // remembered once the viewer says otherwise. Defaulted rather than required so a blob written
+    // by a client that predates the field still decodes.
+    var captionsEnabled: Boolean = true,
 )
 
 @Serializable
