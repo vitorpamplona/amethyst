@@ -181,6 +181,12 @@ fun MarmotInviteDeviceBanner(
                                         owner = LatestKeyPackageOwner.OTHER_DEVICE
                                     }
                                 }
+                            } catch (e: CancellationException) {
+                                // Leaving the screen mid-publish is not a failure to
+                                // report, and swallowing it here would break the
+                                // scope's cancellation as well as pop a toast for a
+                                // banner that is already gone.
+                                throw e
                             } catch (e: Exception) {
                                 val failureMessage =
                                     stringRes(context, R.string.marmot_invite_device_failure, e.message ?: "")

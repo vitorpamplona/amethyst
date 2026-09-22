@@ -317,8 +317,13 @@ fun MarmotGroupListItem(
     //
     // Read through `observeUserInfo`, not `metadataOrNull()`: the latter is a
     // plain StateFlow.value read, so a kind:0 arriving after the row composed
-    // would never reach it — and nothing would have asked for that kind:0
-    // either. This both subscribes and recomposes when it lands.
+    // would never reach it.
+    //
+    // Deliberately `getUserIfExists` rather than the `LoadUser` idiom: this only
+    // subscribes for a sender the cache already knows, and a sender it does not
+    // simply goes unprefixed. Creating a User per unknown sender would put a
+    // metadata REQ behind every row of a list that is mostly strangers' names
+    // the reader never asked for — a preview line is not worth that.
     val senderUser =
         previewEvent
             ?.pubKey

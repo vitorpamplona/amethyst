@@ -39,6 +39,18 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
+ * How long a [LatestKeyPackageOwner.NONE] answer may be reused.
+ *
+ * Much shorter than a definite answer's life, because NONE is ambiguous:
+ * `fetchAll` returns an empty list for a device that reached no relay at all
+ * rather than throwing, so "nobody has published one" and "we are offline"
+ * arrive identically. Long enough to stop repeated entries from re-fanning the
+ * query, short enough that the banner is not suppressed for a quarter of an
+ * hour after the network comes back.
+ */
+private const val NONE_MAX_AGE_SECONDS = 60L
+
+/**
  * Which install owns the newest KeyPackage currently on the account's relays.
  *
  * An inviter picks the highest `created_at` kind:30443 and nothing else
@@ -356,6 +368,10 @@ class AccountMarmotActions(
                 }
                 account.client.publish(event, relays)
             }
+            // A rotation we just published makes this device the newest owner.
+            // Leaving the old answer in place would keep the banner warning for
+            // up to its full life about a state that no longer exists.
+            lastOwnerCheck = null
         }
     }
 
@@ -376,6 +392,9 @@ class AccountMarmotActions(
         }
         account.cache.justConsumeMyOwnEvent(event)
         account.client.publish(event, relays)
+        // Same as the rotation path: we have just changed who owns the newest
+        // KeyPackage, so any cached answer is stale by construction.
+        lastOwnerCheck = null
     }
 
     /**
@@ -450,8 +469,14 @@ class AccountMarmotActions(
         // whole write set — and the thing it asks about only changes when
         // another device publishes, which is rare enough to cache.
         val cached = lastOwnerCheck
-        if (maxAgeSeconds > 0 && cached != null && TimeUtils.now() - cached.first <= maxAgeSeconds) {
-            return cached.second
+        if (maxAgeSeconds > 0 && cached != null) {
+            val maxAge =
+                if (cached.second == LatestKeyPackageOwner.NONE) {
+                    minOf(maxAgeSeconds, NONE_MAX_AGE_SECONDS)
+                } else {
+                    maxAgeSeconds
+                }
+            if (TimeUtils.now() - cached.first <= maxAge) return cached.second
         }
 
         val latest = KeyPackageFetcher.fetchKeyPackage(account.client, account.signer.pubKey, relays)
