@@ -170,8 +170,6 @@ private fun VideoListMemberPoster(
             LoadNote(item.eventId, accountViewModel) { note ->
                 note?.let { VideoPoster(it, accountViewModel) { nav.nav(Route.Note(item.eventId)) } }
             }
-
-        else -> {}
     }
 }
 
