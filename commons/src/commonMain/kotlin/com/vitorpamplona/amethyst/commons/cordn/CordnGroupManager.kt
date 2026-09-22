@@ -156,7 +156,7 @@ class CordnGroupManager(
         store.listGroups().forEach { gid ->
             val blob = store.loadGroup(gid) ?: return@forEach
             groups[gid] = MlsGroup.restore(MlsGroupState.decodeTls(blob), CordnGroupPolicy)
-            store.loadCursor(gid)?.let { sync.restore(gid, it) }
+            store.loadCursor(gid)?.let { sync.restore(gid, it, store.loadEchoState(gid)) }
         }
         _gids.value = groups.keys.toSet()
     }
@@ -707,6 +707,11 @@ class CordnGroupManager(
         val group = groups[gid] ?: return
         store.saveGroup(gid, group.saveState().encodeTls())
         sync.cursors()[gid]?.let { store.saveCursor(gid, it) }
+        // On the same beat as the cursor, because the two are only meaningful
+        // together: a cursor that outlives the process while the record of
+        // what is ours does not leaves the next run re-reading its own
+        // traffic with no way to recognise it. See EchoState.
+        sync.echoes()[gid]?.let { store.saveEchoState(gid, it) }
     }
 
     private suspend fun persistAll() {

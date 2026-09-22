@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.quartz.cordn.sync.EchoState
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
+import com.vitorpamplona.quartz.cordn.sync.PendingEpochOperation
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 
@@ -61,6 +63,25 @@ interface CordnGroupStore {
     )
 
     suspend fun loadCursor(gid: String): GroupCursor?
+
+    /**
+     * Saves the record of which stream entries are this client's own.
+     *
+     * Beside the cursor because it is only meaningful with it, and durable for
+     * the same reason: posting does not advance the cursor (a lower one may
+     * still hold somebody else's unprocessed message), so the next run
+     * re-reads what this one posted. Without this it cannot tell that it is
+     * its own — a Commit sealed under an epoch key it has since left, a
+     * message from a ratchet generation already consumed — and reports a gap
+     * in its own conversation. See `EchoState`.
+     */
+    suspend fun saveEchoState(
+        gid: String,
+        state: EchoState,
+    )
+
+    /** The saved echo bookkeeping for [gid], or an empty one. */
+    suspend fun loadEchoState(gid: String): EchoState
 
     /**
      * Records that admission to [gid] went through `join_request_store`.
@@ -139,12 +160,74 @@ object CordnRoomStateCodec {
         }
 }
 
+/**
+ * The on-disk layout of an [EchoState].
+ *
+ * ```
+ * version:u16
+ * pending_commits: vector2 of { sealed:opaque2, applied:u8 }
+ * own_cursors: vector2 of u64
+ * ```
+ *
+ * Empty on anything unreadable, which is the safe direction: losing the record
+ * costs a client one run of reporting its own traffic as a gap, while
+ * accepting a half-decoded one could let it skip somebody else's message as
+ * though it were its own.
+ */
+object EchoStateCodec {
+    const val VERSION = 1
+
+    fun encode(state: EchoState): ByteArray {
+        val writer = TlsWriter()
+        writer.putUint16(VERSION)
+
+        val commits = TlsWriter()
+        state.pendingCommits.forEach {
+            commits.putOpaque2(it.sealedBase64.encodeToByteArray())
+            commits.putUint8(if (it.localStateApplied) 1 else 0)
+        }
+        writer.putOpaque2(commits.toByteArray())
+
+        val cursors = TlsWriter()
+        state.ownMessageCursors.forEach { cursors.putUint64(it) }
+        writer.putOpaque2(cursors.toByteArray())
+
+        return writer.toByteArray()
+    }
+
+    fun decode(bytes: ByteArray): EchoState =
+        try {
+            val reader = TlsReader(bytes)
+            if (reader.readUint16() != VERSION) {
+                EchoState()
+            } else {
+                val commits = TlsReader(reader.readOpaque2())
+                val pending = mutableListOf<PendingEpochOperation>()
+                while (commits.hasRemaining) {
+                    val sealed = commits.readOpaque2().decodeToString()
+                    pending += PendingEpochOperation(sealed, commits.readUint8() == 1)
+                }
+
+                val cursors = TlsReader(reader.readOpaque2())
+                val own = mutableListOf<Long>()
+                while (cursors.hasRemaining) {
+                    own += cursors.readUint64()
+                }
+
+                EchoState(pending, own)
+            }
+        } catch (e: Exception) {
+            EchoState()
+        }
+}
+
 /** A [CordnGroupStore] that keeps everything in memory. Tests, and nothing else. */
 class InMemoryCordnGroupStore : CordnGroupStore {
     private val groups = mutableMapOf<String, ByteArray>()
     private val cursors = mutableMapOf<String, GroupCursor>()
     private val viaRequest = mutableSetOf<String>()
     private val roomStates = mutableMapOf<String, CordnRoomState>()
+    private val echoStates = mutableMapOf<String, EchoState>()
 
     override suspend fun saveGroup(
         gid: String,
@@ -160,6 +243,7 @@ class InMemoryCordnGroupStore : CordnGroupStore {
         cursors.remove(gid)
         viaRequest.remove(gid)
         roomStates.remove(gid)
+        echoStates.remove(gid)
     }
 
     override suspend fun listGroups(): List<String> = groups.keys.toList()
@@ -178,6 +262,15 @@ class InMemoryCordnGroupStore : CordnGroupStore {
     }
 
     override suspend fun loadRoomState(gid: String): CordnRoomState = roomStates[gid] ?: CordnRoomState()
+
+    override suspend fun saveEchoState(
+        gid: String,
+        state: EchoState,
+    ) {
+        echoStates[gid] = state
+    }
+
+    override suspend fun loadEchoState(gid: String): EchoState = echoStates[gid] ?: EchoState()
 
     override suspend fun saveCursor(
         gid: String,

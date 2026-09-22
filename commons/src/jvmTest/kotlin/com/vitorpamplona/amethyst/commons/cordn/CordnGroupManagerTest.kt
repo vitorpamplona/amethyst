@@ -271,14 +271,59 @@ class CordnGroupManagerTest {
             assertEquals(setOf(gid), restarted.gids.value)
             assertEquals("Persisted", CordnGroupMetadata.fromExtensions(restarted.group(gid)!!.extensions)?.name)
 
-            // The cursor came back too, so our own message is not re-delivered
-            // as somebody else's on the next catch-up.
+            // Our own message comes back, because posting deliberately does
+            // not advance the cursor — a lower cursor may still hold somebody
+            // else's unprocessed message. So it must come back recognised.
+            //
+            // This assertion used to be `none { it is Message }`, and it
+            // passed while the delivery was `Undecryptable`: not a Message, so
+            // not a failure, so nobody noticed that a sender reported a gap in
+            // its own conversation. Only a run against a real coordinator
+            // made it visible. Assert what it IS, not what it is not.
             val delivered = mutableListOf<CordnGroupManager.Delivery>()
             restarted.catchUp { delivered += it }
-            assertTrue(
-                delivered.none { it is CordnGroupManager.Delivery.Message },
-                "a restored cursor must not replay our own history: ${delivered.map { it::class.simpleName }}",
+            assertEquals(
+                listOf("Echo"),
+                delivered.map { it::class.simpleName },
+                "our own message must come back as an echo, not as a gap",
             )
+        }
+
+    @Test
+    fun `a posted commit is still recognised as ours after a restart`() =
+        runTest {
+            // The same bug, one layer worse. A Commit is sealed under the
+            // PRE-commit epoch key (spec/03.md §5), which the poster no longer
+            // has once it has advanced — so when the echo arrives it cannot be
+            // opened at all, and without the record that it is ours it is
+            // indistinguishable from a payload from an epoch we never had.
+            //
+            // Feeding it back through the engine instead would be worse than a
+            // gap: it would advance the epoch twice and desynchronise us from
+            // every other member, with the failure surfacing epochs later.
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val store = InMemoryCordnGroupStore()
+            val (bundle, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+
+            val first = manager(alice, coordinator, store)
+            first.createGroup(gid, CordnGroupMetadata(name = "Restart"))
+            first.invite(gid, bob, stored.keyPackageRef)
+            assertEquals(1, first.group(gid)!!.epoch)
+
+            val restarted = manager(alice, coordinator, store)
+            restarted.restore()
+
+            val delivered = mutableListOf<CordnGroupManager.Delivery>()
+            restarted.catchUp { delivered += it }
+
+            assertEquals(
+                listOf("Echo"),
+                delivered.map { it::class.simpleName },
+                "a restarted client must recognise the Commit it posted: ${delivered.map { it::class.simpleName }}",
+            )
+            assertEquals(1, restarted.group(gid)!!.epoch, "and must not apply it a second time")
+            assertTrue(bundle.keyPackage.toTlsBytes().isNotEmpty())
         }
 
     @Test

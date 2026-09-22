@@ -54,12 +54,23 @@ class CordnGroupSync(
     fun restore(
         gid: String,
         cursor: GroupCursor,
+        echoes: EchoState = EchoState(),
     ) {
-        inbox(gid).cursor = cursor
+        inboxes[gid] = GroupInbox(cursor, echoes)
     }
 
     /** The cursors to persist. */
     fun cursors(): Map<String, GroupCursor> = inboxes.mapValues { it.value.cursor }
+
+    /**
+     * The echo bookkeeping to persist, per group.
+     *
+     * Saved on the same beat as [cursors] and for the same reason: a cursor
+     * that outlives the process while the record of what is ours does not
+     * leaves a client re-reading its own traffic with no way to recognise it.
+     * See [EchoState].
+     */
+    fun echoes(): Map<String, EchoState> = inboxes.mapValues { it.value.echoes() }
 
     /**
      * Drains history for [gids] until every group is current.

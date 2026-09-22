@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.quartz.cordn.sync.EchoState
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
@@ -162,6 +163,8 @@ class FileCordnGroupStore(
 
     private fun roomStateFile(gid: String) = File(groupDir(gid), "room")
 
+    private fun echoStateFile(gid: String) = File(groupDir(gid), "echoes")
+
     override suspend fun saveGroup(
         gid: String,
         state: ByteArray,
@@ -244,6 +247,30 @@ class FileCordnGroupStore(
                 CordnRoomStateCodec.decode(cipher.decrypt(file.readBytes()))
             } catch (e: Exception) {
                 CordnRoomState()
+            }
+        }
+
+    override suspend fun saveEchoState(
+        gid: String,
+        state: EchoState,
+    ) = withContext(Dispatchers.IO) {
+        // Deleted when there is nothing pending, so the common steady state is
+        // no file rather than an empty one.
+        if (state.isEmpty) {
+            echoStateFile(gid).delete()
+            return@withContext
+        }
+        atomicWrite(echoStateFile(gid), cipher.encrypt(EchoStateCodec.encode(state)))
+    }
+
+    override suspend fun loadEchoState(gid: String): EchoState =
+        withContext(Dispatchers.IO) {
+            val file = echoStateFile(gid)
+            if (!file.exists()) return@withContext EchoState()
+            try {
+                EchoStateCodec.decode(cipher.decrypt(file.readBytes()))
+            } catch (e: Exception) {
+                EchoState()
             }
         }
 }

@@ -127,9 +127,10 @@ data class PendingEpochOperation(
  */
 class GroupInbox(
     var cursor: GroupCursor = GroupCursor(),
+    echoes: EchoState = EchoState(),
 ) {
-    private val pendingOperations = mutableMapOf<String, PendingEpochOperation>()
-    private val ownMessageCursors = mutableSetOf<Long>()
+    private val pendingOperations = echoes.pendingCommits.associateByTo(mutableMapOf()) { it.sealedBase64 }
+    private val ownMessageCursors = echoes.ownMessageCursors.toMutableSet()
 
     /** Records a Commit we just posted, so its echo is recognised. */
     fun expectEcho(operation: PendingEpochOperation) {
@@ -184,4 +185,49 @@ class GroupInbox(
     fun skipUnprocessable(cursor: Long) {
         this.cursor = this.cursor.advancedTo(cursor)
     }
+
+    /**
+     * The bookkeeping to persist beside [cursor].
+     *
+     * Own-message cursors at or below the fetch cursor are dropped: the stream
+     * has already delivered them, so they can never come round again, and
+     * keeping them would grow the record for the life of the group.
+     *
+     * Pending Commits are kept until their echo matches, however long that
+     * takes, because the echo is the only copy that will ever be offered and
+     * [Ingestion.SelfEchoUnapplied] is how a client that died mid-post applies
+     * its own Commit.
+     */
+    fun echoes(): EchoState =
+        EchoState(
+            pendingCommits = pendingOperations.values.toList(),
+            ownMessageCursors = ownMessageCursors.filter { it > cursor.fetchCursor }.sorted(),
+        )
+}
+
+/**
+ * The part of a [GroupInbox] that has to outlive the process.
+ *
+ * Found by running against a real coordinator, not by reading. Posting
+ * deliberately does not advance the cursor — a lower cursor may still hold
+ * somebody else's unprocessed message — so a client that exits between
+ * posting and ingesting comes back with a cursor that will re-read its own
+ * traffic. Without this record it cannot tell that it is its own: its Commit
+ * was sealed under an epoch key it has since left, and its message came from a
+ * ratchet generation already consumed, so both arrive as
+ * [Ingestion.Process] and fail to open.
+ *
+ * The visible damage is a gap in the sender's own conversation. The worse,
+ * narrower damage is that [Ingestion.SelfEchoUnapplied] — the recovery path
+ * for a client that posted a Commit and died before adopting it — depends on
+ * exactly the record that dying used to destroy.
+ *
+ * Every client needs this, not only a process-per-command one: a phone killed
+ * between sending a message and syncing is the ordinary case, not a corner.
+ */
+data class EchoState(
+    val pendingCommits: List<PendingEpochOperation> = emptyList(),
+    val ownMessageCursors: List<Long> = emptyList(),
+) {
+    val isEmpty: Boolean get() = pendingCommits.isEmpty() && ownMessageCursors.isEmpty()
 }

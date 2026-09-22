@@ -658,7 +658,21 @@ visible damage is a gap in the sender's own conversation. The latent damage is w
 `Ingestion.SelfEchoUnapplied` is how a client that died mid-post applies its own Commit, and that
 recovery path depends on exactly the record that dying destroys.
 
-Fixed by persisting the bookkeeping next to the cursor — see the commit that follows this one.
+Fixed by persisting the bookkeeping next to the cursor: `EchoState` beside `GroupCursor`, saved on
+the same beat, deleted when there is nothing pending. Own-message cursors at or below the fetch
+cursor are pruned — the stream has delivered them and they can never come round again — while
+pending Commits are kept until their echo matches, because that echo is the only copy that will
+ever be offered.
+
+There was a test for this too, and it also passed: `a group survives a restart` asserted
+`delivered.none { it is Delivery.Message }`. An `Undecryptable` is not a `Message`, so a gap in
+the sender's own conversation satisfied it. Both restart tests now assert what the delivery **is**
+— `Echo` — and both fail if either half of the persistence is removed.
+
+With both fixed, `cli/tests/cordn/tier-b.sh` passes end to end: handshake, `kp_publish`, group
+create, invite, Welcome opened without joining, join, messages both ways with the sender's own
+traffic reported as echoes rather than gaps, and both sides agreeing on epoch 1 and the same two
+members.
 
 ### What Tier B is, and is not
 
