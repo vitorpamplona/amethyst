@@ -63,6 +63,14 @@ data class CoordinatorConfig(
         /** Read out of a `cordn1…` group ref someone shared. */
         GROUP_REF,
 
+        /**
+         * Picked off a CEP-6 announcement the coordinator published.
+         *
+         * Weaker than [MANUAL]: nobody vouched for it. The user saw a list, and
+         * everything in that list except the pubkey was self-asserted.
+         */
+        ANNOUNCEMENT,
+
         /** The application default. */
         DEFAULT,
     }

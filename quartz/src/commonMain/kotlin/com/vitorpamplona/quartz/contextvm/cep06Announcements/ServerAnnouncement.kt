@@ -57,9 +57,17 @@ data class ServerAnnouncement(
          * These kinds are replaceable, so an older event arriving late from a
          * lagging relay must not overwrite a newer one already held.
          */
-        fun latestPerKind(events: List<Event>): Map<Kind, ServerAnnouncement> =
-            events
-                .mapNotNull { parseOrNull(it) }
+        fun latestPerKind(events: List<Event>): Map<Kind, ServerAnnouncement> = latestOf(events.mapNotNull { parseOrNull(it) })
+
+        /**
+         * As [latestPerKind], for announcements already parsed.
+         *
+         * A caller that grouped announcements itself — by pubkey, say — would
+         * otherwise have to re-derive the newest-per-kind rule, which is the
+         * part that is easy to get wrong.
+         */
+        fun latestOf(announcements: List<ServerAnnouncement>): Map<Kind, ServerAnnouncement> =
+            announcements
                 .groupBy { it.kind }
                 .mapValues { (_, list) -> list.maxBy { it.createdAt } }
     }
