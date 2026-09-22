@@ -225,6 +225,7 @@
 
     <string name="public_chat">Public Chat</string>
     <string name="marmot_group">Marmot Group</string>
+    <string name="marmot_groups_title">Marmot Groups</string>
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
         can participate on them. They are great for open communities around specific topics.

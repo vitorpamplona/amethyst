@@ -73,6 +73,7 @@ enum class NavBarItem {
     PUBLIC_CHATS,
     RELAY_GROUPS,
     CONCORD,
+    MARMOT_GROUPS,
     GEOHASH_CHATS,
     FOLLOW_PACKS,
     LIVE_STREAMS,
@@ -387,6 +388,16 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Group,
                 resolveRoute = { Route.Concords },
             ),
+        NavBarItem.MARMOT_GROUPS to
+            NavBarItemDef(
+                id = NavBarItem.MARMOT_GROUPS,
+                labelRes = R.string.marmot_groups_title,
+                // Lock, not Group: the rooms list already labels a Marmot room
+                // with this symbol, so it is the signifier users have learned
+                // for these, and it keeps the row distinct from Concord's.
+                icon = MaterialSymbols.Lock,
+                resolveRoute = { Route.MarmotGroupList },
+            ),
         NavBarItem.GEOHASH_CHATS to
             NavBarItemDef(
                 id = NavBarItem.GEOHASH_CHATS,
@@ -522,6 +533,7 @@ val BottomBarCategories: List<NavBarCategory> =
                 NavBarItem.PUBLIC_CHATS,
                 NavBarItem.RELAY_GROUPS,
                 NavBarItem.CONCORD,
+                NavBarItem.MARMOT_GROUPS,
                 NavBarItem.GEOHASH_CHATS,
             ),
         ),
