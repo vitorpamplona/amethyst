@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcRequest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -102,14 +103,21 @@ class CvmGiftWrapCryptoTest {
         }
 
     @Test
-    fun `CVM-4-14 the wrap timestamp is shifted and must not be used for ordering`() =
+    fun `CVM-4-14 the wrap timestamp is the real send time, not NIP-59's shifted one`() =
         runTest {
+            // Found live, not by reading: this test used to assert the
+            // opposite, and it passed. The reference ContextVM server
+            // subscribes with `since = now` when it connects — the obvious
+            // filter for a live request stream — so a relay drops a wrap dated
+            // in the past and the request is never delivered. It does not
+            // fail; it times out, which is why a fixture server with no
+            // `since` filter could not catch it.
+            val before = TimeUtils.now()
             val wrap = crypto.wrap(innerMessage(), serverSigner.pubKey)
-            val now =
-                com.vitorpamplona.quartz.utils.TimeUtils
-                    .now()
-            assertTrue(wrap.createdAt <= now, "NIP-59 shifts the timestamp into the past")
-            assertTrue(wrap.createdAt > now - (3 * 24 * 60 * 60), "but only within a bounded window")
+            val after = TimeUtils.now()
+
+            assertTrue(wrap.createdAt >= before, "a backdated wrap is invisible to a `since = now` subscriber")
+            assertTrue(wrap.createdAt <= after, "and a future-dated one is invisible to an `until` filter")
         }
 
     @Test

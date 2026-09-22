@@ -334,7 +334,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
             FofCommand.dispatch(dataDir, tail)
         }
         "concord" -> ConcordCommands.dispatch(dataDir, tail)
-        "cordn" -> CordnCommands.dispatch(tail)
+        "cordn" -> CordnCommands.dispatch(dataDir, tail)
         else -> {
             Output.error("bad_args", "unknown subcommand: $head")
             printVerbList()
@@ -880,6 +880,21 @@ private fun printUsage() {
         |  concord revoke COMMUNITY TOKEN|URL         retire a link you minted (vsk=9 tombstone)
         |  concord join URL                           redeem an invite link and save the community
         |
+        |  cordn coordinator add --coordinator PK --relay URL[,URL]
+        |                                             remember one (it has no other address)
+        |  cordn coordinator list|info|forget         what we know; MCP initialize; drop it
+        |  cordn keypackage publish [--last-resort] [--count N]
+        |                                             attributable: names this npub (§8.4)
+        |  cordn keypackage list|withdraw             ours on the coordinator
+        |  cordn group create --name N [--gid GID] [--admin PK[,PK]]
+        |  cordn group list|info [--gid GID]          metadata, members, exposure
+        |  cordn invite --pubkey PK [--gid GID]       take their KeyPackage, commit, leave a Welcome
+        |  cordn request --gid GID | --ref cordn1…    ask to join (§8.1)
+        |  cordn requests list|accept|decline         answer askers (any member may, §5.3)
+        |  cordn welcomes                             open invitations without joining
+        |  cordn join|decline --gid GID | --all       accept or refuse one
+        |  cordn send --text "…" [--gid GID]          a kind-9 chat message
+        |  cordn fetch                                drain the stream and print it
         |  cordn ref encode --gid GID [--coordinator PK] [--relay URL[,URL]]
         |                                             build a cordn1… group reference
         |  cordn ref decode REF                       read one back

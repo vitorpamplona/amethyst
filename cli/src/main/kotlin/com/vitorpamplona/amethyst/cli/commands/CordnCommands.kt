@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.ExposureNote
@@ -31,45 +32,95 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 /**
  * `amy cordn …` — the cordn (MLS-over-an-MCP-coordinator) surface.
  *
- * What is here is what works without a coordinator: the `cordn1…` group ref
- * codec, and the §8 metadata-exposure model. Both are what an interop script
- * actually needs — a ref is the one cordn artifact a human copies by hand, and
- * `exposure` is how a script (or a person) checks what a coordinator would
- * learn before joining anything.
+ * Two halves. The offline half needs no coordinator: the `cordn1…` group-ref
+ * codec, and the §8 metadata-exposure model. A ref is the one cordn artifact a
+ * human copies by hand, and `exposure` is how a script or a person checks what
+ * a coordinator would learn *before* joining anything.
  *
- * The verbs that drive a coordinator (`publish`, `invite`, `send`, `sync`) are
- * not here yet, and the reason is worth stating: there is nothing to test them
- * against. The reference coordinator is unlicensed — see
- * `quartz/plans/2026-09-17-cordn-interop.md` §7 — so Tier B cannot be built on
- * it, and shipping unexercised coordinator verbs would be shipping a guess.
- * [com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager] holds that logic
- * and is covered against an in-memory coordinator in `commons`.
+ * The rest drives a live coordinator — `coordinator`, `keypackage`, `group`,
+ * `invite`, `request`, `requests`, `welcomes`, `join`, `decline`, `send`,
+ * `fetch` — and lives in [CordnCoordinatorCommands] and
+ * [CordnGroupCommands]. They exist so the binding can be run end to end
+ * against a real counterparty from a shell script, which is the only kind of
+ * interop test that proves anything.
+ *
+ * Two shapes to know before reading the verbs:
+ *
+ * - **A `gid` is unique only within one coordinator** (`spec/00.md` §4), so
+ *   `--coordinator` is part of a group's address and not a convenience.
+ *   Omitting it works only while exactly one coordinator is remembered.
+ * - **Delivery is pulled, not pushed.** A CLI invocation is a process and
+ *   cannot hold a subscription, so `fetch` drains what the cursor has not seen
+ *   and exits. The cursor on disk is the whole continuity mechanism between
+ *   runs.
  */
 object CordnCommands {
     val USAGE: String =
         """
         |cordn (MLS group chat over an MCP coordinator):
+        |  offline — no coordinator needed:
         |  cordn ref encode --gid GID [--coordinator PK]  build a cordn1… group reference
         |                   [--relay URL[,URL…]]
         |  cordn ref decode REF                           read one back
         |  cordn exposure --coordinator PK                what that coordinator would learn
         |                 [--groups N] [--published]      (spec/00.md §8)
         |
+        |  live — every verb below takes [--coordinator PK] [--relay URL[,URL…]],
+        |  optional while exactly one coordinator is remembered:
+        |  cordn coordinator add --coordinator PK --relay URL[,URL…] [--label L]
+        |  cordn coordinator list                         what this account knows
+        |  cordn coordinator info                         MCP initialize; every field a claim
+        |  cordn coordinator forget --coordinator PK      local only; state is kept
+        |  cordn keypackage publish [--last-resort]       attributable (§8.4)
+        |                           [--count N]
+        |  cordn keypackage list                          ours on the coordinator
+        |  cordn keypackage withdraw --kp-ref REF[,REF…] | --all
+        |  cordn group create --name N [--about A]        gid is ours to choose (§4)
+        |                     [--gid GID] [--admin PK[,PK…]]
+        |                     [--icon I] [--image URL]
+        |  cordn group list                               groups on this coordinator
+        |  cordn group info [--gid GID]                   metadata, members, exposure
+        |  cordn invite --pubkey PK [--gid GID] [--kp-ref REF]
+        |  cordn request --gid GID | --ref cordn1…        ask to join (§8.1)
+        |  cordn requests list                            who is asking
+        |  cordn requests accept --pubkey PK | --all      any member may answer (§5.3)
+        |  cordn requests decline --pubkey PK | --all
+        |  cordn welcomes                                 open invitations, joining none
+        |  cordn join --gid GID | --all                   accept one
+        |  cordn decline --gid GID | --all                refuse and retire it
+        |  cordn send --text "…" [--gid GID]              a kind-9 chat message
+        |             [--reply-to ID] [--react-to ID]
+        |  cordn fetch                                    drain the stream and print it
+        |
         |A group ref is a locator, not an invitation: holding one lets you ASK to
         |join, it does not make you a member. Relays say where to reach the
         |coordinator and are meaningless without --coordinator.
         """.trimMargin()
 
-    suspend fun dispatch(tail: Array<String>): Int =
+    suspend fun dispatch(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int =
         route(
             "cordn",
             tail,
-            "cordn <ref|exposure>",
+            "cordn <coordinator|keypackage|group|invite|request|requests|welcomes|join|decline|send|fetch|ref|exposure>",
             help = USAGE,
             routes =
                 mapOf(
                     "ref" to { rest -> ref(rest) },
                     "exposure" to { rest -> exposure(rest) },
+                    "coordinator" to { rest -> CordnCoordinatorCommands.coordinator(dataDir, rest) },
+                    "keypackage" to { rest -> CordnCoordinatorCommands.keyPackage(dataDir, rest) },
+                    "group" to { rest -> CordnGroupCommands.group(dataDir, rest) },
+                    "invite" to { rest -> CordnGroupCommands.invite(dataDir, rest) },
+                    "request" to { rest -> CordnGroupCommands.request(dataDir, rest) },
+                    "requests" to { rest -> CordnGroupCommands.requests(dataDir, rest) },
+                    "welcomes" to { rest -> CordnGroupCommands.welcomes(dataDir, rest) },
+                    "join" to { rest -> CordnGroupCommands.join(dataDir, rest) },
+                    "decline" to { rest -> CordnGroupCommands.decline(dataDir, rest) },
+                    "send" to { rest -> CordnGroupCommands.send(dataDir, rest) },
+                    "fetch" to { rest -> CordnGroupCommands.fetch(dataDir, rest) },
                 ),
         )
 

@@ -240,6 +240,26 @@ class DataDir(
     val ingestDedupFile = File(marmotDir, "ingested.ids")
 
     /**
+     * cordn state. `CordnStorageLayout` lays out `<account>/<coordinator>/`
+     * underneath, the same shape the Android app writes, so a directory can be
+     * read by either without a migration.
+     */
+    val cordnDir = File(root, "cordn")
+
+    /**
+     * The key `KeyedCordnBlobCipher` encrypts cordn blobs with.
+     *
+     * A random 32 bytes at 0600, generated on first use. Be clear about what
+     * that buys: the blobs are genuinely encrypted, and the key sits beside
+     * them, so this protects a copied directory or a stale backup and not a
+     * process running as this user — which is already the threat model of
+     * every other file under `~/.amy/`. Android's equivalent key lives in the
+     * KeyStore and does protect against a reader of the device's storage; a
+     * CLI has nowhere comparable to put one.
+     */
+    val cordnBlobKeyFile = File(cordnDir, "blob.key")
+
+    /**
      * SQLite event-store DB file, a sibling of [eventsDir] under
      * `<root>/shared/`. Used when the store backend is SQLite (the
      * default — see [StoreFactory]); the FS backend uses [eventsDir]
@@ -272,6 +292,7 @@ class DataDir(
             SecureFileIO.tighten(identityFile)
             SecureFileIO.tighten(stateFile)
             SecureFileIO.tighten(marmotDir)
+            SecureFileIO.tighten(cordnDir)
             SecureFileIO.tighten(keyPackageBundleFile)
         }
     }

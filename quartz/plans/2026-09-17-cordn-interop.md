@@ -6,8 +6,8 @@ implements the core spec plus all 12 CEPs on the client side, with the Tier C fi
 `quartz/…/cordn/` implements the MLS profile, the eleven coordinator tools, the seal, envelopes,
 group refs and the sync rules, verified against ts-mls in both directions **and against cordn's
 own wire contracts** (`quartz/tools/cordn-vector-gen` → `resources/cordn/`). Stage 4 (app
-integration) is open, as is Tier B — which turns out to be blocked on licensing, not on
-tooling (§7). §4.1 turned out not to gate the binding — see Stage 3 — and is now settled on our
+integration) is open. **Tier B has now been run** — on an explicit decision to proceed despite
+the licensing problem in §7 — and found two bugs no fixture could (§7.1). §4.1 turned out not to gate the binding — see Stage 3 — and is now settled on our
 side by implementing both encodings rather than waiting for an agreement (§4.1).
 
 Correction to an earlier gate in this plan: §4.1 does **not** block Stage 2. ContextVM is
@@ -583,11 +583,15 @@ rule in `.claude/CLAUDE.md` does not have an "obviously meant to be MIT" branch.
 
 Consequences, and they are the reason Stage 0 landed the way it did:
 
-- **Tier B is blocked, not merely awkward.** The plan's Tier B (run their coordinator locally with
-  `CORDN_STORAGE_BACKEND=memory`) rests entirely on unlicensed code. Not a shipping dependency,
-  but it would become a documented, committed part of our test process, which is exactly what the
-  dependency rule exists to stop happening quietly. Docker being unavailable in the build
-  container is the lesser problem.
+- **Tier B rests on unlicensed code, and was run anyway on an explicit decision.** The plan's
+  Tier B (run their coordinator locally with `CORDN_STORAGE_BACKEND=memory`) rests entirely on
+  unlicensed code. Nothing about that has changed and nothing here is a shipping dependency: the
+  image is pulled by hand, on a developer machine, and no build file, test task or CI job
+  references it. What changed is that a maintainer decided the verification was worth doing on
+  those terms — see §7.1 for what it found, which is the argument for the decision. The line the
+  dependency rule draws still holds: **do not commit it as a dependency, and do not wire it into
+  a build or CI.** If Tier B becomes a routine part of the test process, it needs the LICENSE
+  below first.
 - **`@cordn/core` is fine and is enough for the valuable half.** It is MIT, it ships a LICENSE,
   and it holds the authoritative zod contracts for all eleven tools plus the group-ref bech32
   codec — i.e. the wire surface. That is what `quartz/tools/cordn-vector-gen` uses.
@@ -596,6 +600,73 @@ Consequences, and they are the reason Stage 0 landed the way it did:
 
 The specs themselves (`spec/`, `design/`) are also unlicensed, so the existing rule stands: we
 implement from them, we do not paste their prose into KDoc.
+
+## 7.1 Tier B, run: what a live counterparty found that five tiers of our own tests could not
+
+Run on 2026-09-22 against `ghcr.io/cordn-msg/cordn:latest` (`v0.5.7`, digest
+`sha256:3e20391…`, `CORDN_STORAGE_BACKEND=memory`, `CORDN_ANNOUNCED=false`) over **geode** as the
+relay, driven by the new `amy cordn …` verbs. Two accounts, one process per command.
+
+**It works, end to end.** `kp_publish` → `group create` → `invite` (take KeyPackage, verify the
+publication payload, commit, store Welcome) → `welcome_take` → accept → messages in both
+directions → `group info` agreeing on both sides at epoch 1 with the same two members. The
+coordinator reports `name: cordn-server`, `version: 0.1.0`, `protocolVersion: 2025-11-25`,
+`capabilities: [tools]`.
+
+But it did not work at first, and neither reason was findable without a real peer.
+
+### Finding 1 — our CEP-4 gift wraps were invisible to any real ContextVM server
+
+`CvmGiftWrap.wrap` set `created_at` to NIP-59's randomized timestamp: the real time minus a
+random offset of up to two days. The reference server subscribes with **`since = now`** when it
+connects, which is the obvious filter for a live request stream, and a relay honours `since`. So
+every request we have ever sent to a real coordinator was dropped **by the relay**, before the
+coordinator saw it. The symptom is a 20-second timeout with nothing in any log, because from the
+server's side nothing happened.
+
+Why no test caught it: our fixture server (Tier C) reads whatever is addressed to it with no
+`since` filter, and so does every test double. A backdated wrap is indistinguishable from a
+fresh one unless something on the other end filters on time — and only a real server does.
+There was even a test, `CVM-4-14`, asserting the *broken* behaviour ("the wrap timestamp is
+shifted and must not be used for ordering"); it passed for the whole life of the transport. A
+test that pins what the code does is not evidence about what the protocol needs.
+
+The fix is to send the real time, and the reasoning is worth keeping because the NIP-59 rule is
+right in its own context: NIP-59 shifts the timestamp because a gift-wrapped DM is **stored** and
+fetched later, so its timestamp would otherwise reveal when a conversation happened. A ContextVM
+wrap carries an RPC request to a peer listening right now. The shift also protects nothing here —
+CEP-4 puts the recipient in a visible `p` tag, delivery is real time, and kind 21059 is ephemeral
+so no relay retains it — so it hid from an observer a fact that same observer reads off the
+socket, at the cost of the request never arriving. `CVM-4-14` now asserts the send time.
+
+### Finding 2 — self-echo bookkeeping does not survive a process boundary
+
+With delivery working, a client's own traffic came back to it as `undecryptable`: alice's
+`fetch` after her own invite and message reported `cursor 1: Authentication failed` (her Commit,
+sealed under the pre-commit epoch key she has since left) and `cursor 2: Generation 0 already
+consumed` (her own message, whose sender ratchet has moved on).
+
+The cause is that `GroupInbox` holds `pendingOperations` and `ownMessageCursors` in memory while
+the cursor beside them is persisted. Post advances neither cursor nor disk — correctly, since a
+lower cursor may still hold somebody else's unprocessed message — so a client that exits between
+posting and ingesting starts the next run with a cursor that will re-read its own traffic and no
+record that it is its own.
+
+`amy` exposes this on every run because each verb is a process. It is **not** an `amy` bug: the
+Android app hits it whenever the OS kills it between sending and syncing, which is ordinary. The
+visible damage is a gap in the sender's own conversation. The latent damage is worse and narrower:
+`Ingestion.SelfEchoUnapplied` is how a client that died mid-post applies its own Commit, and that
+recovery path depends on exactly the record that dying destroys.
+
+Fixed by persisting the bookkeeping next to the cursor — see the commit that follows this one.
+
+### What Tier B is, and is not
+
+These are both **transport and bookkeeping** bugs. Not one byte of the crypto surface moved: the
+MLS engine, the seal, the envelopes and the group refs were already verified against ts-mls and
+against cordn's own wire contracts, and Tier B found nothing wrong with any of them. That is the
+shape to expect from a live tier — it tests the things a fixture cannot model, which are the
+things a fixture was written by the same person who wrote the client.
 
 ## 8. What the coordinator can see
 

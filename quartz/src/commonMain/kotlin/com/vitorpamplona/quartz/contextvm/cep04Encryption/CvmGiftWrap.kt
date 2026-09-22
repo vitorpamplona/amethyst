@@ -130,8 +130,26 @@ class CvmGiftWrap(
      * Wraps an already-signed inner event for [recipient].
      *
      * The wrap is signed by a fresh throwaway key, so nothing links two wraps
-     * from the same sender. Its `created_at` is randomized per NIP-59 and must
-     * never be used for ordering.
+     * from the same sender.
+     *
+     * ## `created_at` is the real send time, NOT NIP-59's shifted timestamp
+     *
+     * This is the one place a ContextVM wrap deliberately parts from NIP-59,
+     * and it is not a shortcut. NIP-59 shifts a wrap's timestamp into the past
+     * because a gift-wrapped DM is **stored** and fetched later, so its
+     * timestamp would otherwise reveal when a conversation happened. A
+     * ContextVM wrap carries an RPC request that has to reach a peer
+     * **listening right now**: the reference server subscribes with
+     * `since = now` when it connects, which is the obvious filter for a live
+     * request stream, and a relay honours `since`. A wrap dated an hour ago is
+     * therefore dropped by the relay and the request is never delivered — it
+     * does not fail, it simply times out.
+     *
+     * The shift also protects nothing here. CEP-4 puts the recipient in a
+     * visible `p` tag, the request is delivered in real time, and kind 21059
+     * is ephemeral so no relay retains it to be read later. A shifted
+     * timestamp would hide from an observer a fact that same observer reads
+     * off the socket.
      */
     suspend fun wrap(
         inner: Event,
@@ -146,7 +164,7 @@ class CvmGiftWrap(
         val ciphertext = wrapSigner.nip44Encrypt(OptimizedJsonMapper.toJson(inner), recipient)
 
         return wrapSigner.sign(
-            createdAt = randomizedTimestamp(),
+            createdAt = TimeUtils.now(),
             kind = kind,
             tags = arrayOf(PTag.assemble(recipient, relayHint = null)),
             content = ciphertext,
@@ -205,19 +223,4 @@ class CvmGiftWrap(
                 }
             }
         }
-
-    /**
-     * A timestamp shifted randomly into the recent past, per NIP-59.
-     *
-     * Consumers must not order on it — it is deliberately not the real send
-     * time.
-     */
-    private fun randomizedTimestamp(): Long {
-        val now = TimeUtils.now()
-        return now - (0..TWO_DAYS_SECONDS).random()
-    }
-
-    companion object {
-        private const val TWO_DAYS_SECONDS = 2 * 24 * 60 * 60L
-    }
 }
