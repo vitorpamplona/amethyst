@@ -2059,6 +2059,8 @@
     <string name="chat_delivery_no_relay_info">No relay information for this message</string>
     <string name="chat_delivery_accepted">Accepted by at least one relay</string>
     <string name="chat_delivery_delivered_all">Delivered to all recipients\' relays</string>
+    <string name="chat_delivery_sending">Sending\u2026</string>
+    <string name="chat_delivery_failed">Could not be sent. Tap to try again.</string>
 
     <string name="expiration_date_label">Expiration Date</string>
     <string name="expiration_info_description">The author asked relays to delete this note after %1$s. It will disappear from feeds once it expires.</string>

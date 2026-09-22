@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.marmot.mls.messages.GroupContext
 import com.vitorpamplona.quartz.marmot.mls.messages.Proposal
 import com.vitorpamplona.quartz.marmot.mls.schedule.EpochSecrets
 import com.vitorpamplona.quartz.marmot.mls.schedule.SenderRatchetState
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Serializable snapshot of an MLS group's complete state.
@@ -352,5 +353,109 @@ data class RetainedEpochSecrets(
                 exporterSecret = exporterSecret,
             )
         }
+    }
+}
+
+/**
+ * Where our own sender ratchet has got to, on its own.
+ *
+ * Sending an application message advances exactly one thing in a group: this
+ * leaf's entry in the SecretTree (RFC 9420 §9). Everything else a
+ * [MlsGroupState] holds — the ratchet tree, the group context, the epoch
+ * secrets, the path keys — is identical before and after. Writing the whole
+ * state back to record that was costing a full re-encrypt of the group to
+ * persist a secret and a counter, on the send path, growing with the member
+ * count.
+ *
+ * So it is stored as its own record, the way OpenMLS keeps `message_secrets`
+ * separate from `group_state`. The full state is written when the epoch
+ * actually changes; this is written after every send.
+ *
+ * [epoch], [leafIndex] and [treeBinder] are what make the record safe to apply.
+ * A ratchet position only means anything within the exact SecretTree that
+ * derived it, so a record that does not match the state it is being applied to
+ * is ignored rather than guessed at. The epoch NUMBER is not enough on its own:
+ * convergence can swap one epoch-N state for a different epoch-N state after a
+ * fork (see `MlsGroupManager.installState`), so the binder is taken over the
+ * encryption secret the tree is actually built from. Applying one that does match can only move a chain FORWARD —
+ * see [MlsGroup.restoreOwnSenderRatchet] — which is the whole point: a
+ * restart that rewound the position would re-emit a generation that has
+ * already been used, reusing an AEAD key+nonce pair.
+ *
+ * Both chains are carried even though only the application one advances on a
+ * send. They are independent, the record is ~72 bytes either way, and a
+ * handshake message sent between two full persists would otherwise be the one
+ * case this silently failed to cover.
+ */
+data class OwnSenderRatchet(
+    val epoch: Long,
+    val leafIndex: Int,
+    /** Identifies the SecretTree this position belongs to; see the class doc. */
+    val treeBinder: ByteArray,
+    val handshakeSecret: ByteArray,
+    val handshakeGeneration: Int,
+    val applicationSecret: ByteArray,
+    val applicationGeneration: Int,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is OwnSenderRatchet) return false
+        return epoch == other.epoch &&
+            leafIndex == other.leafIndex &&
+            treeBinder.contentEquals(other.treeBinder) &&
+            handshakeGeneration == other.handshakeGeneration &&
+            applicationGeneration == other.applicationGeneration &&
+            handshakeSecret.contentEquals(other.handshakeSecret) &&
+            applicationSecret.contentEquals(other.applicationSecret)
+    }
+
+    override fun hashCode(): Int {
+        var result = epoch.hashCode()
+        result = 31 * result + leafIndex
+        result = 31 * result + handshakeGeneration
+        result = 31 * result + applicationGeneration
+        return result
+    }
+
+    fun encodeTls(): ByteArray {
+        val writer = TlsWriter()
+        writer.putUint64(epoch)
+        writer.putUint32(leafIndex.toLong())
+        writer.putOpaqueVarInt(treeBinder)
+        writer.putOpaqueVarInt(handshakeSecret)
+        writer.putUint32(handshakeGeneration.toLong())
+        writer.putOpaqueVarInt(applicationSecret)
+        writer.putUint32(applicationGeneration.toLong())
+        return writer.toByteArray()
+    }
+
+    companion object {
+        /** How a tree binder is derived from the epoch's encryption secret. */
+        fun binderFor(encryptionSecret: ByteArray): ByteArray = sha256(encryptionSecret).copyOfRange(0, BINDER_LENGTH)
+
+        private const val BINDER_LENGTH = 16
+
+        fun decodeTls(bytes: ByteArray): OwnSenderRatchet {
+            val reader = TlsReader(bytes)
+            return OwnSenderRatchet(
+                epoch = reader.readUint64(),
+                leafIndex = reader.readUint32().toInt(),
+                treeBinder = reader.readOpaqueVarInt(),
+                handshakeSecret = reader.readOpaqueVarInt(),
+                handshakeGeneration = reader.readUint32().toInt(),
+                applicationSecret = reader.readOpaqueVarInt(),
+                applicationGeneration = reader.readUint32().toInt(),
+            )
+        }
+
+        fun decodeTlsOrNull(bytes: ByteArray): OwnSenderRatchet? =
+            try {
+                decodeTls(bytes)
+            } catch (_: Exception) {
+                // A record we cannot read is one we must not trust to say where
+                // the ratchet is. Dropping it falls back to the full state's
+                // own position, which is behind but never ahead.
+                null
+            }
     }
 }

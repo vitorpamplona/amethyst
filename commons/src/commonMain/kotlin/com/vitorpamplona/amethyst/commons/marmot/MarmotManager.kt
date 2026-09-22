@@ -495,6 +495,28 @@ class MarmotManager(
         persistOwn: Boolean = true,
         mentions: List<PTag> = emptyList(),
     ): TextMessageBundle {
+        val innerEvent = buildTextRumor(text, replyToEventId, replyToAuthorPubKey, mentions)
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /**
+     * The inner kind:9 rumor alone, without touching MLS.
+     *
+     * This half costs nothing — no ratchet step, no group-state write, no disk
+     * — while [buildGroupMessage] costs everything. A front end that shows the
+     * message optimistically needs exactly this: the event the chat renders,
+     * and its id, before any of the expensive work starts. It then hands the
+     * rumor to its send path once, instead of building an outbound envelope it
+     * would throw away (which would ratchet and persist the group for nothing).
+     */
+    suspend fun buildTextRumor(
+        text: String,
+        replyToEventId: HexKey? = null,
+        replyToAuthorPubKey: HexKey? = null,
+        mentions: List<PTag> = emptyList(),
+    ): Event {
         val template =
             com.vitorpamplona.quartz.nip01Core.signers
                 .eventTemplate<Event>(kind = 9, description = text) {
@@ -516,11 +538,7 @@ class MarmotManager(
                         )
                     }
                 }
-        val innerEvent =
-            RumorAssembler.assembleRumor<Event>(signer.pubKey, template)
-        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
-        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
-        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+        return RumorAssembler.assembleRumor<Event>(signer.pubKey, template)
     }
 
     /**
@@ -535,6 +553,17 @@ class MarmotManager(
         reaction: String,
         persistOwn: Boolean = true,
     ): TextMessageBundle {
+        val innerEvent = buildReactionRumor(targetEvent, reaction)
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /** The inner kind:7 reaction rumor alone. See [buildTextRumor]. */
+    suspend fun buildReactionRumor(
+        targetEvent: Event,
+        reaction: String,
+    ): Event {
         val template =
             com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
                 .build(
@@ -542,15 +571,11 @@ class MarmotManager(
                     com.vitorpamplona.quartz.nip01Core.hints
                         .EventHintBundle(targetEvent),
                 )
-        val innerEvent =
-            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-                .assembleRumor<com.vitorpamplona.quartz.nip25Reactions.ReactionEvent>(
-                    signer.pubKey,
-                    template,
-                )
-        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
-        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
-        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+        return com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+            .assembleRumor<com.vitorpamplona.quartz.nip25Reactions.ReactionEvent>(
+                signer.pubKey,
+                template,
+            )
     }
 
     /**
@@ -2307,17 +2332,24 @@ class MarmotManager(
         caption: String = "",
         persistOwn: Boolean = true,
     ): TextMessageBundle {
+        val innerEvent = buildMediaRumor(reference, caption)
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /** The inner kind:9 media rumor alone. See [buildTextRumor]. */
+    suspend fun buildMediaRumor(
+        reference: EncryptedMediaReferenceV2,
+        caption: String = "",
+    ): Event {
         val template =
             com.vitorpamplona.quartz.nip01Core.signers
                 .eventTemplate<Event>(kind = 9, description = caption) {
                     addUnique(reference.toImetaTag())
                 }
-        val innerEvent =
-            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-                .assembleRumor<Event>(signer.pubKey, template)
-        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
-        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
-        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+        return com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+            .assembleRumor<Event>(signer.pubKey, template)
     }
 
     // --- KeyPackage Management ---

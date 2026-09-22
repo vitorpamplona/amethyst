@@ -108,8 +108,87 @@ class AccountMarmotActions(
     }
 
     /**
-     * Send a message to a Marmot MLS group.
-     * Encrypts the inner event and publishes the GroupEvent to group relays.
+     * Index an own outbound inner event into the cache and the group's
+     * chatroom right now, before any MLS work happens.
+     *
+     * The bubble the user sees is drawn from the inner rumor, and that rumor
+     * exists the moment the composer builds it — everything after this point
+     * (ratchet step, group-state write, outer wrap, relay hand-off) only
+     * decides *when it leaves*, not what is shown. Doing this first is what
+     * makes a send feel instant.
+     *
+     * Idempotent by construction: the self-decrypt of our own kind:445 runs
+     * these same two calls a moment later, and `LocalCache.justConsume` and
+     * `MarmotGroupChatroom.addMessageSync` both dedupe.
+     */
+    fun showOwnMessageLocally(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ) {
+        // wasVerified=true: MIP-03 inner events are unsigned rumors, so
+        // Schnorr verification would reject every one. This one we built
+        // ourselves, which is as authenticated as it gets.
+        val isNew = account.cache.justConsume(innerEvent, null, true)
+        val innerNote = account.cache.getOrCreateNote(innerEvent.id)
+        if (isNew) innerNote.event = innerEvent
+        account.marmotGroupList.addMessage(nostrGroupId, innerNote)
+        // Sending a message moves the group out of "New Requests" into
+        // "Known" — do this eagerly before the relay round-trip so the UI
+        // updates immediately.
+        account.marmotGroupList.markAsKnown(nostrGroupId)
+    }
+
+    /**
+     * Put an outgoing message on screen in its sending state, synchronously.
+     *
+     * Split out of [sendMarmotGroupMessage] so a UI caller can run it in the
+     * user's own interaction context and hand the rest to a scope that
+     * outlives the screen: the composer is then free to clear the input the
+     * moment this returns, with the bubble already visible and already
+     * pulsing. [sendMarmotGroupMessage] calls it too, so a headless caller
+     * gets the same behaviour without a second entry point, and calling both
+     * is harmless.
+     */
+    fun beginMarmotGroupMessage(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ) {
+        // The same two guards sendMarmotGroupMessage returns on. Checked here
+        // too, because marking a message as sending and then returning early
+        // would leave the bubble pulsing forever with no failure glyph and
+        // therefore no way to retry it.
+        if (account.marmotManager == null || !account.isWriteable()) {
+            Log.w("MarmotDbg") {
+                "beginMarmotGroupMessage: cannot send in ${nostrGroupId.take(8)}… (no manager, or a read-only account)"
+            }
+            showOwnMessageLocally(nostrGroupId, innerEvent)
+            account.chatDeliveryTracker.markFailed(innerEvent.id)
+            return
+        }
+
+        // Marked before the note is indexed, so the bubble never renders a
+        // frame without its state. Re-resolving the relay set on retry is the
+        // point of taking the id rather than the relays: the commonest reason
+        // a Marmot send fails is that the group had none, and that is exactly
+        // what the user may have just fixed.
+        account.chatDeliveryTracker.markSending(innerEvent.id) {
+            sendMarmotGroupMessage(nostrGroupId, innerEvent, marmotGroupRelays(nostrGroupId))
+        }
+        showOwnMessageLocally(nostrGroupId, innerEvent)
+    }
+
+    /**
+     * Send a message to a Marmot MLS group: show it, encrypt it, publish it.
+     *
+     * The message is on screen from the first line — see [showOwnMessageLocally]
+     * — and carries a sending state until the envelope reaches the relay pool.
+     * A failure leaves the bubble in place with a retry attached rather than
+     * making what the user typed disappear.
+     *
+     * Suspends until the send is done, so headless callers (the notification
+     * reply receiver, the push-token responder) still finish their work before
+     * returning. UI callers get their responsiveness from the optimistic insert
+     * plus running this on the account scope, not from it returning early.
      */
     suspend fun sendMarmotGroupMessage(
         nostrGroupId: HexKey,
@@ -123,7 +202,28 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val outbound = manager.buildGroupMessage(nostrGroupId, innerEvent)
+        beginMarmotGroupMessage(nostrGroupId, innerEvent)
+
+        if (groupRelays.isEmpty()) {
+            // Previously this only logged and the message was silently
+            // dropped. It now surfaces on the bubble as a failed send the
+            // user can retry once the group has relays.
+            Log.w("MarmotDbg") {
+                "sendMarmotGroupMessage: NO group relays for group=${nostrGroupId.take(8)}… — nothing to publish to"
+            }
+            account.chatDeliveryTracker.markFailed(innerEvent.id)
+            return
+        }
+
+        val outbound =
+            try {
+                manager.buildGroupMessage(nostrGroupId, innerEvent)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("MarmotDbg", "sendMarmotGroupMessage: could not build the envelope for $nostrGroupId", e)
+                account.chatDeliveryTracker.markFailed(innerEvent.id)
+                throw e
+            }
         Log.d("MarmotDbg") {
             "sendMarmotGroupMessage: built outer kind:${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
         }
@@ -132,16 +232,18 @@ class AccountMarmotActions(
         // LocalCache.addRelayToNoteAndInners).
         outbound.signedEvent.innerEventId = innerEvent.id
         account.cache.justConsumeMyOwnEvent(outbound.signedEvent)
-        // Sending a message moves the group out of "New Requests" into
-        // "Known" — do this eagerly before relay round-trip so the UI
-        // updates immediately.
-        account.marmotGroupList.markAsKnown(nostrGroupId)
-        if (groupRelays.isEmpty()) {
-            Log.w("MarmotDbg") {
-                "sendMarmotGroupMessage: NO group relays for group=${nostrGroupId.take(8)}… — message will be silently dropped"
-            }
-        }
+        // Relays OK the outer kind:445, but the feed shows the inner rumor, so
+        // the tick has to be keyed by the rumor id through the envelope id.
+        account.chatDeliveryTracker.trackWrappedPublic(innerEvent.id, outbound.signedEvent.id, groupRelays)
         account.client.publish(outbound.signedEvent, groupRelays)
+        account.chatDeliveryTracker.markSent(innerEvent.id)
+
+        // The decrypt of our own envelope only persists a message it decrypted
+        // for the first time, and the optimistic insert above has already put
+        // this one in the cache — so that path will skip it and the message
+        // would never reach the on-disk log. Write it here instead. Last,
+        // because it rewrites the whole log and nothing on screen waits for it.
+        manager.persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
     }
 
     /**

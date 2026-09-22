@@ -40,10 +40,24 @@ internal class KeyStoreEncryption {
         private const val KEY_ALIAS = "AMETHYST_AES_KEY"
     }
 
-    private val cipher = Cipher.getInstance(TRANSFORMATION)
+    // One Cipher per thread rather than one shared instance: a Cipher holds the
+    // state of the operation in progress, so two callers on different threads
+    // through the same object would corrupt each other's output.
+    private val ciphers = ThreadLocal.withInitial { Cipher.getInstance(TRANSFORMATION) }
+
     private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
-    private fun getKey(): SecretKey {
+    // The handle never changes for the life of the alias, but fetching it is a
+    // round trip to the keystore daemon — not something to pay per operation.
+    @Volatile
+    private var cachedKey: SecretKey? = null
+
+    private fun getKey(): SecretKey =
+        cachedKey ?: synchronized(this) {
+            cachedKey ?: loadOrCreateKey().also { cachedKey = it }
+        }
+
+    private fun loadOrCreateKey(): SecretKey {
         val existingKey = keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
         return existingKey?.secretKey ?: createKey()
     }
@@ -85,18 +99,32 @@ internal class KeyStoreEncryption {
     private fun createKey(): SecretKey = createKeyStrongBoxIfAvailable() ?: createKeyRegular()
 
     fun encrypt(bytes: ByteArray): ByteArray {
-        // Initializes the cipher in encrypt mode and encrypts data
-        cipher.init(Cipher.ENCRYPT_MODE, getKey())
-        val iv = cipher.iv
-        val encrypted = cipher.doFinal(bytes)
-        return iv + encrypted
+        try {
+            // Initializes the cipher in encrypt mode and encrypts data
+            val cipher = ciphers.get()
+            cipher.init(Cipher.ENCRYPT_MODE, getKey())
+            val iv = cipher.iv
+            val encrypted = cipher.doFinal(bytes)
+            return iv + encrypted
+        } catch (e: Exception) {
+            // A key the system has retired (a wipe, a credential reset) keeps
+            // failing until it is re-read, so the cached handle goes with it.
+            cachedKey = null
+            throw e
+        }
     }
 
     fun decrypt(bytes: ByteArray): ByteArray {
-        // Extracts IV and decrypts the data
-        val iv = bytes.copyOfRange(0, 12) // GCM mode uses 12-byte IV
-        val data = bytes.copyOfRange(12, bytes.size)
-        cipher.init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
-        return cipher.doFinal(data)
+        try {
+            // Extracts IV and decrypts the data
+            val iv = bytes.copyOfRange(0, 12) // GCM mode uses 12-byte IV
+            val data = bytes.copyOfRange(12, bytes.size)
+            val cipher = ciphers.get()
+            cipher.init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
+            return cipher.doFinal(data)
+        } catch (e: Exception) {
+            cachedKey = null
+            throw e
+        }
     }
 }
