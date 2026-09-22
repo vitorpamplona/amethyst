@@ -2938,4 +2938,9 @@
     <string name="block_hide_user"><![CDATA[Bloquear e ocultar usuário]]></string>
     <string name="rename">Renomear</string>
     <string name="save">Salvar</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Não foi possível resolver %1$s. Verifique se você está conectado, se o servidor está funcionando e se o endereço Lightning %2$s está correto.\n\nExceção foi: %3$s</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Erro ao analisar JSON da busca de fatura %1$s. Verifique a configuração de iluminação do usuário</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">O serviço Lightning do destinatário em %1$s não está disponível. Foi calculado a partir do endereço Lightning "%2$s". Erro: %3$s. Verifique se o servidor está funcionando e se o endereço Lightning está correto</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Não foi possível criar uma fatura lightning a partir de %1$s: Elemento pr não encontrado no JSON resultante.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Não foi possível criar uma fatura com raios. Mensagem do %1$s: %2$s</string>
 </resources>

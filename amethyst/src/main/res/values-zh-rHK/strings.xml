@@ -150,11 +150,6 @@
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
     <!-- Marmot (MLS) group chats -->
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s 的接收者闪电服务不可用。它是根据雷电地址\"%2$s\"计算的。 错误: %3$s。请检查服务器是否已经上线，闪电地址是否正确</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">无法解析 %1$s。请检查你是否已连接，服务器是否启动，以及闪电地址 %2$s 是否正确。\n\n异常为：%3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">从 %1$s 的闪电发票获取解析JSON 发生错误。请检查用户的闪电设置</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">无法创建闪电发票。来自 %1$s 的消息：%2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">无法从 %1$s 创建闪电发票：在生成的 JSON 中找不到付款要求元素。</string>
     <!-- Buzz workflow run board -->
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->

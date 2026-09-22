@@ -3166,4 +3166,9 @@
     <string name="block_hide_user"><![CDATA[Bloquer et cacher l'utilisateur]]></string>
     <string name="rename">Renommer</string>
     <string name="save">Sauvegarder</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Impossible de résoudre %1$s. Vérifiez si vous êtes connecté, si le serveur est actif et si l'adresse Lightning %2$s est correcte.\n\nL'erreur était : %3$s</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Erreur lors de l'analyse du JSON de la facture de %1$s. Vérifiez la configuration lightning de l'utilisateur</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Le service lightning du récepteur à %1$s n'est pas disponible. Il a été calculé à partir de l'adresse lightning "%2$s". Erreur: %3$s. Vérifiez si le serveur est en ligne et si l'adresse lightning est correcte</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Impossible de créer une facture lightning avec %1$s. Élément pr introuvable dans le JSON résultant.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Impossible de créer une facture lightning. Message de %1$s: %2$s</string>
 </resources>

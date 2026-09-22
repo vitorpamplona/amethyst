@@ -104,7 +104,6 @@ class CalendarReminderWorker(
             val minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt()
             val body =
                 loadPluralStringRes(
-                    applicationContext,
                     Res.plurals.calendar_reminder_body,
                     minutesAway,
                     minutesAway,

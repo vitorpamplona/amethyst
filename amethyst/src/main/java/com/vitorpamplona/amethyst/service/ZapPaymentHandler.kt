@@ -223,7 +223,6 @@ class ZapPaymentHandler(
                 val message =
                     if (it.user != null) {
                         loadStringRes(
-                            context,
                             Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                             it.user.toBestDisplayName(),
                         )
@@ -443,11 +442,9 @@ class ZapPaymentHandler(
                 if (e is CancellationException) throw e
                 onError(
                     loadStringRes(
-                        context,
                         Res.string.error_unable_to_fetch_invoice,
                     ),
                     loadStringRes(
-                        context,
                         Res.string.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error,
                         e.message,
                     ),

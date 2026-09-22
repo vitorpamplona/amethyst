@@ -2762,7 +2762,6 @@ class AccountViewModel(
                     onDone(
                         loadStringRes(Res.string.cashu_successful_redemption),
                         loadStringRes(
-                            context,
                             Res.string.cashu_successful_redemption_explainer,
                             token.totalAmount.toString(),
                             meltResult.fees.toString(),
@@ -2782,7 +2781,6 @@ class AccountViewModel(
             onDone(
                 loadStringRes(Res.string.no_lightning_address_set),
                 loadStringRes(
-                    context,
                     Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                     account.userProfile().toBestDisplayName(),
                 ),

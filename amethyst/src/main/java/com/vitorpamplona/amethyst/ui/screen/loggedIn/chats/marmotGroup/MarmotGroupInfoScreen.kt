@@ -365,7 +365,6 @@ fun MarmotGroupInfoScreen(
                                                     .makeText(
                                                         context,
                                                         loadStringRes(
-                                                            context,
                                                             Res.string.marmot_failed_to_enable_encrypted_media,
                                                             e.message,
                                                         ),
@@ -540,7 +539,6 @@ fun MarmotGroupInfoScreen(
                                 .makeText(
                                     context,
                                     loadStringRes(
-                                        context,
                                         if (ended) {
                                             Res.string.marmot_group_disbanded_toast
                                         } else {

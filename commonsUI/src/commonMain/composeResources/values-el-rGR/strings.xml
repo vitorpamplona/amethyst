@@ -2926,4 +2926,9 @@
     <string name="block_hide_user"><![CDATA[Αποκλεισμός & Απόκρυψη Χρήστη]]></string>
     <string name="rename">Μετονομασία</string>
     <string name="save">Αποθήκευση</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Δεν ήταν δυνατή η επίλυση %1$s. Ελέγξτε αν είστε συνδεδεμένοι, αν ο διακομιστής λειτουργεί και αν η διεύθυνση Lightning %2$s είναι σωστή.\n\nΗ εξαίρεση ήταν: %3$s</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Σφάλμα ανάλυσης JSON από την ανάκτηση τιμολογίου του %1$s. Ελέγξτε τη ρύθμιση Lightning του χρήστη</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Η υπηρεσία Lightning του αποδέκτη στο %1$s δεν είναι διαθέσιμη. Υπολογίστηκε από τη διεύθυνση Lightning "%2$s". Σφάλμα: %3$s. Ελέγξτε αν ο διακομιστής λειτουργεί και αν η διεύθυνση Lightning είναι σωστή</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Δεν είναι δυνατή η δημιουργία τιμολογίου Lightning από τον/την %1$s: Το στοιχείο pr δεν βρέθηκε στο αποτέλεσμα JSON.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Δεν είναι δυνατή η δημιουργία τιμολογίου Lightning. Μήνυμα από τον/την %1$s: %2$s</string>
 </resources>

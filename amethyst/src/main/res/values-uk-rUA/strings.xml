@@ -149,11 +149,6 @@
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
     <!-- Marmot (MLS) group chats -->
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Lightning-сервіс отримувача за адресою %1$s недоступний. Він був розрахований із lightning-адреси \"%2$s\". Помилка: %3$s. Перевірте, чи працює сервер і чи правильна lightning-адреса</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Не вдалося розв\'язати %1$s. Перевірте підключення до мережі, чи працює сервер і чи правильна lightning-адреса %2$s.\n\nВиключення: %3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Помилка розбору JSON із запиту рахунку від %1$s. Перевірте налаштування Lightning користувача</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Неможливо створити lightning-рахунок. Повідомлення від %1$s: %2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Неможливо створити lightning-рахунок від %1$s: Елемент pr не знайдено у відповідному JSON.</string>
     <!-- Buzz workflow run board -->
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->

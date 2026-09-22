@@ -13,11 +13,6 @@
     <string name="media_servers_blossom_section">Blossom servers</string>
     <string name="media_servers_blossom_explainer">Voeg zoveel servers toe als je wilt. Je kunt later kiezen welke zal worden gebruikt bij het uploaden van je afbeelding</string>
     <string name="torrent_download">Downloaden</string>
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">De Lightning service van de ontvanger bij %1$s is niet beschikbaar. Het werd berekend op basis van het Lightning Adress \"%2$s\". Fout: %3$s. Controleer of de server klaar is en of het Lightning Adress juist is</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Kon %1$s niet oplossen. Controleer of u verbonden bent, of de server online is en of het Lightning Adress %2$s juist is. \n\nUitzondering was: %3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Fout bij het verwerken van JSON uit de invoice van %1$s. Controleer de Lightning set-up van de gebruiker</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Kan geen Lightning invoice aanmaken. Bericht van %1$s: %2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Kan geen Lightning invoice aanmaken van %1$s: PR-element niet gevonden in de JSON.</string>
     
     
     

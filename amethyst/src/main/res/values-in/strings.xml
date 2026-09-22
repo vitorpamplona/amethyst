@@ -5,7 +5,6 @@
     <string name="save">Simpan</string>
     <string name="messages_create_public_chat">Publik</string>
     <string name="messages_new_message">Pribadi</string>
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Layanan lightning penerima pada %1$s tidak tersedia. Itu dihitung dari alamat petir \"%2$s\". Kesalahan: %3$s. Periksa apakah server aktif dan apakah alamat lightning sudah benar</string>
     
     
     
@@ -1986,13 +1985,9 @@
     
     
     
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Tidak dapat menyelesaikan %1$s. Periksa apakah Anda terhubung, apakah server aktif, dan apakah alamat Lightning %2$s sudah benar.\n\nPengecualian: %3$s</string>
     
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Kesalahan penguraian JSON dari pengambilan tagihan %1$s. Periksa pengaturan Lightning pengguna</string>
     
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Tidak dapat membuat tagihan Lightning. Pesan dari %1$s: %2$s</string>
     
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Tidak dapat membuat tagihan Lightning dari %1$s: Elemen pr tidak ditemukan dalam JSON yang dihasilkan.</string>
 
     
     

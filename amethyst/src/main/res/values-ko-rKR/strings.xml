@@ -150,11 +150,6 @@
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
     <!-- Marmot (MLS) group chats -->
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s의 수신자 Lightning 서비스를 사용할 수 없습니다. Lightning 주소 \"%2$s\"에서 계산된 결과입니다. 오류: %3$s. 서버가 작동 중인지, Lightning 주소가 올바른지 확인하세요</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">%1$s을(를) 확인할 수 없습니다. 연결 상태, 서버 작동 여부, Lightning 주소 %2$s가 올바른지 확인하세요.\n\n예외 내용: %3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">%1$s의 청구서 조회에서 JSON 파싱 오류가 발생했습니다. 사용자의 Lightning 설정을 확인하세요</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning 청구서를 생성할 수 없습니다. %1$s의 메시지: %2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s에서 Lightning 청구서를 생성할 수 없습니다: 결과 JSON에서 pr 요소를 찾을 수 없습니다.</string>
     <!-- Buzz workflow run board -->
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->

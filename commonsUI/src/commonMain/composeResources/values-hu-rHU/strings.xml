@@ -5026,4 +5026,9 @@
     <string name="block_hide_user"><![CDATA[Letiltás és a felhasználó elrejtése]]></string>
     <string name="rename">Átnevezés</string>
     <string name="save">Mentés</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nem sikerült megoldani a következőt: %1$s. Ellenőrizze, hogy kapcsolódik-e, vagy működik-e a kiszolgáló, és hogy a(z) %2$s lightning-cím helyes-e.\n\nKivéve: %3$s</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Hiba történt a JSON elemzésekor a(z) %1$s számlahívásából. Ellenőrizze a felhasználó lightning-beállításait</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">A kedvezményezett lightning-szolgáltatása ennél: %1$s nem érhető el. A(z) „%2$s” lightning-cím lett kiszámítva. Hiba: %3$s. Ellenőrizze, hogy a kiszolgáló működik-e, és hogy a lightning-cím helyes-e</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nem sikerült Lightning-számlát létrehozni a következőből: %1$s:  A „PR” elem nem található a kapott JSON-ban.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nem lehetett lightning-számlát létrehozni. Üzenet a következőtől: %1$s: %2$s</string>
 </resources>

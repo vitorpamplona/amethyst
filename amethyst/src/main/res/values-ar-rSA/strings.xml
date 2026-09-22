@@ -149,11 +149,6 @@
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
     <!-- Marmot (MLS) group chats -->
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">خدمة Lightning للمستلم على %1$s غير متاحة. تم احتسابها من عنوان Lightning \"%2$s\". الخطأ: %3$s. تحقق مما إذا كان الخادم يعمل وما إذا كان عنوان Lightning صحيحاً</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">تعذر حل %1$s. تحقق مما إذا كنت متصلاً، وما إذا كان الخادم يعمل وما إذا كان عنوان Lightning %2$s صحيحاً.\n\nالاستثناء: %3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">خطأ في تحليل JSON من جلب فاتورة %1$s. تحقق من إعداد Lightning للمستخدم</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">تعذر إنشاء فاتورة Lightning. رسالة من %1$s: %2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">تعذر إنشاء فاتورة Lightning من %1$s: العنصر pr غير موجود في JSON الناتج.</string>
     <!-- Buzz workflow run board -->
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->

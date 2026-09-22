@@ -2909,4 +2909,9 @@
     <string name="block_hide_user"><![CDATA[Chặn &amp; Ẩn người dùng]]></string>
     <string name="rename">Đổi tên</string>
     <string name="save">Lưu</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Không thể phân giải %1$s. Hãy kiểm tra xem bạn có kết nối mạng, máy chủ có hoạt động và địa chỉ Lightning %2$s có đúng không.\n\nNgoại lệ: %3$s</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Lỗi phân tích JSON từ lần lấy hóa đơn của %1$s. Hãy kiểm tra cài đặt Lightning của người dùng</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Dịch vụ Lightning của người nhận tại %1$s không khả dụng. Địa chỉ này được tính từ địa chỉ Lightning "%2$s". Lỗi: %3$s. Hãy kiểm tra xem máy chủ có hoạt động và địa chỉ Lightning có đúng không</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Không thể tạo hóa đơn Lightning từ %1$s: Không tìm thấy phần tử pr trong JSON kết quả.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Không thể tạo hóa đơn Lightning. Thông báo từ %1$s: %2$s</string>
 </resources>

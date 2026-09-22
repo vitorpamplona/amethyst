@@ -863,7 +863,6 @@ open class CommentPostViewModel :
                     results.errors
                         .map {
                             loadStringRes(
-                                context,
                                 it.errorResource,
                                 *it.params,
                             )

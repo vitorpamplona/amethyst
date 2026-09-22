@@ -26,9 +26,14 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user
 import com.vitorpamplona.amethyst.commons.resources.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup
 import com.vitorpamplona.amethyst.commons.resources.could_not_fetch_invoice_from_details
+import com.vitorpamplona.amethyst.commons.resources.could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception
 import com.vitorpamplona.amethyst.commons.resources.error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user
+import com.vitorpamplona.amethyst.commons.resources.error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user
 import com.vitorpamplona.amethyst.commons.resources.error_unable_to_fetch_invoice
 import com.vitorpamplona.amethyst.commons.resources.incorrect_invoice_amount_sats_from_it_should_have_been
+import com.vitorpamplona.amethyst.commons.resources.the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct
+import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user
+import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -96,9 +101,7 @@ class LightningAddressResolver {
                         throw LightningAddressError(
                             loadStringRes(Res.string.error_unable_to_fetch_invoice),
                             loadStringRes(
-                                context,
-                                R.string
-                                    .the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct,
+                                Res.string.the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct,
                                 url,
                                 lnAddress,
                                 errorMessage(response, context),
@@ -112,9 +115,7 @@ class LightningAddressResolver {
             throw LightningAddressError(
                 loadStringRes(Res.string.error_unable_to_fetch_invoice),
                 loadStringRes(
-                    context,
-                    R.string
-                        .could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception,
+                    Res.string.could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception,
                     url,
                     lnAddress,
                     e.suppressedExceptions.getOrNull(0)?.message ?: e.cause?.message ?: e.message,
@@ -245,7 +246,6 @@ class LightningAddressResolver {
                 throw LightningAddressError(
                     loadStringRes(Res.string.error_unable_to_fetch_invoice),
                     loadStringRes(
-                        context,
                         Res.string.error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user,
                         lnAddress,
                     ),
@@ -258,7 +258,6 @@ class LightningAddressResolver {
             throw LightningAddressError(
                 loadStringRes(Res.string.error_unable_to_fetch_invoice),
                 loadStringRes(
-                    context,
                     Res.string.callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user,
                     lnAddress,
                 ),
@@ -305,9 +304,7 @@ class LightningAddressResolver {
                 throw LightningAddressError(
                     loadStringRes(Res.string.error_unable_to_fetch_invoice),
                     loadStringRes(
-                        context,
-                        R.string
-                            .error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user,
+                        Res.string.error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user,
                         lnAddress,
                     ),
                 )
@@ -323,9 +320,7 @@ class LightningAddressResolver {
                 throw LightningAddressError(
                     loadStringRes(Res.string.error_unable_to_fetch_invoice),
                     loadStringRes(
-                        context,
-                        R.string
-                            .unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user,
+                        Res.string.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user,
                         lnAddress,
                         reason,
                     ),
@@ -334,9 +329,7 @@ class LightningAddressResolver {
                 throw LightningAddressError(
                     loadStringRes(Res.string.error_unable_to_fetch_invoice),
                     loadStringRes(
-                        context,
-                        R.string
-                            .unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user,
+                        Res.string.unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user,
                         lnAddress,
                     ),
                 )
@@ -354,7 +347,6 @@ class LightningAddressResolver {
             throw LightningAddressError(
                 loadStringRes(Res.string.error_unable_to_fetch_invoice),
                 loadStringRes(
-                    context,
                     Res.string.incorrect_invoice_amount_sats_from_it_should_have_been,
                     invoiceAmount.toLong().toString(),
                     lnAddress,

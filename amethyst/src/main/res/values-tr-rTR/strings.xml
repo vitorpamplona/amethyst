@@ -149,11 +149,6 @@
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
     <!-- Marmot (MLS) group chats -->
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s adresindeki alıcının Lightning hizmeti kullanılamıyor. Bu adres \"%2$s\" Lightning adresinden hesaplandı. Hata: %3$s. Sunucunun çalışıp çalışmadığını ve Lightning adresinin doğru olup olmadığını kontrol edin.</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">%1$s çözümlenemedi. Bağlı olup olmadığınızı, sunucunun çalışıp çalışmadığını ve %2$s Lightning adresinin doğru olup olmadığını kontrol edin.\n\nİstisna: %3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">%1$s adresinin fatura sorgulamasından gelen JSON ayrıştırılamadı. Kullanıcının Lightning kurulumunu kontrol edin.</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning faturası oluşturulamadı. %1$s\'den gelen mesaj: %2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s adresinden Lightning faturası oluşturulamadı: Sonuçtaki JSON\'da pr öğesi bulunamadı.</string>
     <!-- Buzz workflow run board -->
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->

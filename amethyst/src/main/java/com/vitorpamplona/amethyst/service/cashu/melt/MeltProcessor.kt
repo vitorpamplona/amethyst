@@ -91,7 +91,6 @@ class MeltProcessor {
                 throw LightningAddressResolver.LightningAddressError(
                     loadStringRes(Res.string.cashu_failed_redemption),
                     loadStringRes(
-                        context,
                         Res.string.cashu_failed_redemption_explainer_error_msg,
                         "Token value ${token.totalAmount} does not cover fees $fees",
                     ),

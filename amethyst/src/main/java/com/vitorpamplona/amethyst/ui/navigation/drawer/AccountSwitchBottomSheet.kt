@@ -330,7 +330,6 @@ private fun LogoutButton(
                         val toastMessage =
                             if (confirmedCount > 0) {
                                 loadPluralStringRes(
-                                    context,
                                     Res.plurals.scheduled_posts_logout_toast,
                                     confirmedCount,
                                     confirmedCount,

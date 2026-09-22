@@ -3034,4 +3034,9 @@
     <string name="block_hide_user">Bloquear y ocultar usuario</string>
     <string name="rename">Cambiar nombre</string>
     <string name="save">Guardar</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">No se pudo resolver %1$s. Comprueba si tienes conexión, si el servidor está activo y si la dirección de Lightning "%2$s" es correcta..\n\nLa excepción fue: %3$s</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Error al analizar JSON desde la recuperación de factura de %1$s. Comprueba la configuración de Lightning del usuario.</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">El servicio de Lightning del destinatario en %1$s no está disponible. Se calculó a partir de la dirección de Lightning "%2$s". Error: %3$s. Comprueba si el servidor está activo y si la dirección de Lightning es correcta.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">No se pudo crear una factura de Lightning desde %1$s: no se encontró el elemento pr en el JSON resultante.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">No se pudo crear una factura de Lightning. Mensaje de %1$s: %2$s.</string>
 </resources>

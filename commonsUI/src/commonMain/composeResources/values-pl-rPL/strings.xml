@@ -5247,4 +5247,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="block_hide_user"><![CDATA[Zablokuj i ukryj użytkownika]]></string>
     <string name="rename">Zmień nazwę</string>
     <string name="save">Zapisz</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nie można rozwiązać %1$s. Sprawdź, czy jesteś połączony, czy serwer jest gotowy i czy lightning adres %2$s jest poprawny.\n\nWyjątkiem było: %3$s</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania pliku JSON z pobierania faktury %1$s. Sprawdź konfigurację lightning użytkownika</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Usługa lightning odbiorcy w %1$s jest niedostępna. Została obliczona na podstawie adresu lightning "%2$s". Błąd: %3$s. Sprawdź, czy serwer jest gotowy i czy adres lightning jest poprawny</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nie można utworzyć faktury od %1$s: Element pr nie został znaleziony w powstałym JSON.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
 </resources>

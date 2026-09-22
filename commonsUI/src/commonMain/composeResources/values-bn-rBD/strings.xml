@@ -2977,4 +2977,9 @@
     <string name="block_hide_user"><![CDATA[ব্লক করুন এবং ব্যবহারকারীকে আড়ালে রাখুন]]></string>
     <string name="rename">নাম পরিবর্তন করুন</string>
     <string name="save">সংরক্ষণ করুন</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">%1$s সমাধান করতে পারেনি। আপনি সংযুক্ত কিনা, সার্ভার চালু আছে কিনা এবং Lightning ঠিকানা %2$s সঠিক কিনা পরীক্ষা করুন।\n\nব্যতিক্রম ছিল: %3$s</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">%1$s-এর ইনভয়েস ফেচ থেকে JSON পার্স করতে ত্রুটি। ব্যবহারকারীর Lightning সেটআপ পরীক্ষা করুন</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s-এ প্রাপকের Lightning সেবা পাওয়া যাচ্ছে না। এটি Lightning ঠিকানা "%2$s" থেকে গণনা করা হয়েছে। ত্রুটি: %3$s। সার্ভার চালু আছে কিনা এবং Lightning ঠিকানাটি সঠিক কিনা পরীক্ষা করুন</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s থেকে একটি Lightning ইনভয়েস তৈরি করতে অক্ষম: ফলাফলের JSON-এ উপাদান pr পাওয়া যায়নি।</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">একটি Lightning ইনভয়েস তৈরি করতে অক্ষম। %1$s থেকে বার্তা: %2$s</string>
 </resources>

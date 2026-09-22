@@ -50,10 +50,11 @@ import com.vitorpamplona.amethyst.commons.resources.http_status_506
 import com.vitorpamplona.amethyst.commons.resources.http_status_507
 import com.vitorpamplona.amethyst.commons.resources.http_status_508
 import com.vitorpamplona.amethyst.commons.resources.http_status_511
+import org.jetbrains.compose.resources.StringResource
 
 class HttpStatusMessages {
     companion object {
-        fun resourceIdFor(statusCode: Int = 0): Int? =
+        fun resourceIdFor(statusCode: Int = 0): StringResource? =
             when (statusCode) {
                 400 -> Res.string.http_status_400
                 401 -> Res.string.http_status_401

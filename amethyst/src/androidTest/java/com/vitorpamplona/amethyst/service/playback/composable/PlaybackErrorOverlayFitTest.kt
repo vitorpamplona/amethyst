@@ -142,7 +142,6 @@ class PlaybackErrorOverlayFitTest {
         rule
             .onNodeWithText(
                 stringRes(
-                    targetContext,
                     Res.string.error_video_playback_failed_description,
                     "ERROR_CODE_PARSING_MANIFEST_MALFORMED",
                 ),
