@@ -63,12 +63,13 @@ class SnoAvatarEvent(
     fun nameTag(): String? = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
 
     /**
-     * Whether this avatar has paid for the room it takes up (§8.10).
+     * Whether this avatar has paid for the room it takes up, and why not when
+     * it has not (§8.10).
      *
-     * Both conditions are required: the committed target must cover the work the
-     * payload owes, **and** the id must actually carry that many leading zero
-     * bits. Committing the target before mining is what stops a lucky id being
-     * claimed against a lower bar than it was mined for (NIP-13).
+     * Both conditions are required: the committed target must cover the work
+     * the payload owes, **and** the id must actually carry that many leading
+     * zero bits. Committing the target before mining is what stops a lucky id
+     * being claimed against a lower bar than it was mined for (NIP-13).
      *
      * Note that `Event.pow()` cannot stand in for this. It is
      * `PoWRankEvaluator.compute(id, commitedPoW)`, which returns
@@ -77,13 +78,32 @@ class SnoAvatarEvent(
      * committed 30 and an id carrying 20 gives 20, which clears 16 while
      * failing the second condition outright.
      */
-    fun isPaid(): Boolean {
-        if (isDefaultAvatar()) return true
-        val payload = sno().payloadOrNull() ?: return false
-        val committed = tags.firstNotNullOfOrNull { PoWTag.parseCommitment(it) } ?: return false
-        if (committed < SnoAvatarWork.required(payload)) return false
-        return PoWRankEvaluator.calculatePowRankOf(id) >= committed
+    fun payment(): SnoAvatarPayment {
+        val zeros = PoWRankEvaluator.calculatePowRankOf(id)
+        if (isDefaultAvatar()) {
+            return SnoAvatarPayment(true, 0, null, zeros, SnoAvatarPayment.Reason.DEFAULT_AVATAR)
+        }
+
+        val payload =
+            sno().payloadOrNull()
+                ?: return SnoAvatarPayment(false, 0, null, zeros, SnoAvatarPayment.Reason.NOT_AN_AVATAR)
+
+        val required = SnoAvatarWork.required(payload)
+        val committed =
+            tags.firstNotNullOfOrNull { PoWTag.parseCommitment(it) }
+                ?: return SnoAvatarPayment(false, required, null, zeros, SnoAvatarPayment.Reason.NO_NONCE)
+
+        if (committed < required) {
+            return SnoAvatarPayment(false, required, committed, zeros, SnoAvatarPayment.Reason.UNDER_COMMITTED)
+        }
+        if (zeros < committed) {
+            return SnoAvatarPayment(false, required, committed, zeros, SnoAvatarPayment.Reason.UNPAID)
+        }
+        return SnoAvatarPayment(true, required, committed, zeros, SnoAvatarPayment.Reason.OK)
     }
+
+    /** Whether a client may draw this avatar. See [payment] for why not. */
+    fun isPaid(): Boolean = payment().ok
 
     companion object {
         const val KIND = 11333

@@ -76,6 +76,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-78 app-specific data (settings sync) | 🆕 | |
 | Long-form (NIP-23) publish / read | 🆕 | |
 | Live activities / chess (NIP-53 / NIP-64) | 🆕 | |
+| Simple Nostr Objects (DECK-0003) | ✅ read-only | `SnoCommands` — `sno parse` (§1.9 verdict + the rule a refusal broke), `sno work` (the §8.10 proof of work an avatar owes), `sno verify` (whether a kind:11333 avatar has paid). Thin over quartz `cyberspace/deck0003Sno/`. Conformance harness at `cli/tests/sno/` diffs all three against the cyberspace project's own `sno-reference.py` and `cyberspace-cli`. Publishing/authoring 🆕. |
 | Blossom blobs (NIP-B7) | ✅ | `BlossomCommands` — upload/download/list/delete/check/mirror on shared `commons` `BlossomClient`; live-server harness at `cli/tests/blossom/`. |
 | NIP-60 / 61 Cashu wallet + nutzaps | ✅ | Full surface: `cashu wallet {create,show,export-key,destroy}`, `mint {ping,info}`, `sync`, `balance`, `receive {ln,complete,resume,token,nutzap-sweep}`, `send {ln,token,nutzap}`, `maintenance {scrub,restore,migrate-keysets}`, `mint-rec {show,add,remove}` — all on shared `commons` `CashuWalletOps` + `CashuWalletReader` (the exact path the Android wallet runs). Reads project the local store; `cashu sync` (or `--sync`) is what fills it, paging every relay to exhaustion so a cap can't truncate the proof set. Interop harness pending. Plan: [`cli/plans/2026-05-28-cashu-cli.md`](./plans/2026-05-28-cashu-cli.md). |
 | NIP-47 Wallet Connect | 🆕 | |
