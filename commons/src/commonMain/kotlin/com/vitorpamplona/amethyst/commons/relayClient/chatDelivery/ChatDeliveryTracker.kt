@@ -179,6 +179,11 @@ class ChatDeliveryTracker(
     /** The send reached the relay pool; relay acceptance takes over from here. */
     fun markSent(displayedNoteId: HexKey) {
         lock.withLock {
+            // The action captured whatever the send needed to repeat itself —
+            // for a DM, every gift wrap. Once the event is with the relay pool
+            // there is nothing to retry, and holding it would pin that graph
+            // for as long as the message stays in the window.
+            retries.remove(displayedNoteId)
             val flow = deliveries[displayedNoteId] ?: return
             flow.value = flow.value?.copy(sendState = ChatSendState.SENT)
         }
@@ -217,11 +222,27 @@ class ChatDeliveryTracker(
             val flow = flowForLocked(displayedNoteId)
             val current = flow.value
 
+            val existing = current?.recipients.orEmpty()
+            val known = existing.firstOrNull { it.recipient == recipient }
+            // Replace rather than append. A retry re-runs the same publish loop
+            // and would otherwise register every recipient twice, which shows up
+            // as a doubled k/n count ("0/2" on a 1:1 DM) and a detail dialog
+            // listing everyone twice. Acceptances already collected for this
+            // recipient are kept: the wraps are the same events, so relay OKs
+            // from the first attempt still count.
+            val updated =
+                RecipientDelivery(
+                    recipient = recipient,
+                    targetRelays = (known?.targetRelays ?: emptySet()) + targetRelays,
+                    acceptedRelays = known?.acceptedRelays ?: emptySet(),
+                    isSelf = isSelf,
+                )
+
             flow.value =
                 ChatDelivery(
                     targetRelays = (current?.targetRelays ?: emptySet()) + targetRelays,
                     acceptedRelays = current?.acceptedRelays ?: emptySet(),
-                    recipients = (current?.recipients ?: emptyList()) + RecipientDelivery(recipient, targetRelays, isSelf = isSelf),
+                    recipients = existing.filterNot { it.recipient == recipient } + updated,
                     // A DM registers one wrap at a time while the remaining
                     // recipients are still being sealed, so the send is not
                     // done just because the first wrap landed here. Only
@@ -325,7 +346,14 @@ class ChatDeliveryTracker(
         knownIds = knownIds + noteId
 
         while (deliveries.size > MAX_TRACKED) {
-            val evicted = deliveries.keys.first()
+            // Most entries here were created by the UI merely rendering a
+            // bubble, so plain insertion order would let scrolling a long chat
+            // evict a failed message's retry — leaving a tappable warning glyph
+            // that does nothing. Anything still holding a retry is spared until
+            // nothing else is left to drop.
+            val evicted =
+                deliveries.keys.firstOrNull { it !in retries }
+                    ?: deliveries.keys.first()
             deliveries.remove(evicted)
             retries.remove(evicted)
             knownIds = knownIds - evicted

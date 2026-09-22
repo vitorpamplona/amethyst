@@ -115,6 +115,19 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         innerEvent: Event,
     ) {
+        // The same two guards sendMarmotGroupMessage returns on. Checked here
+        // too, because marking a message as sending and then returning early
+        // would leave the bubble pulsing forever with no failure glyph and
+        // therefore no way to retry it.
+        if (account.marmotManager == null || !account.isWriteable()) {
+            Log.w("MarmotDbg") {
+                "beginMarmotGroupMessage: cannot send in ${nostrGroupId.take(8)}… (no manager, or a read-only account)"
+            }
+            showOwnMessageLocally(nostrGroupId, innerEvent)
+            account.chatDeliveryTracker.markFailed(innerEvent.id)
+            return
+        }
+
         // Marked before the note is indexed, so the bubble never renders a
         // frame without its state. Re-resolving the relay set on retry is the
         // point of taking the id rather than the relays: the commonest reason

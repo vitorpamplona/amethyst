@@ -323,7 +323,19 @@ class AndroidMarmotMessageStore(
     private val log =
         EncryptedAppendLog(
             encrypt = { encryption.encrypt(it) },
-            decrypt = { encryption.decrypt(it) },
+            // EncryptedAppendLog requires null, not a throw, for a segment it
+            // cannot open — KeyStoreEncryption.decrypt rethrows. Without this
+            // one bad segment would abort the whole read, and a caller that
+            // then sees an empty log can overwrite a history that was merely
+            // unreadable.
+            decrypt = {
+                try {
+                    encryption.decrypt(it)
+                } catch (e: Exception) {
+                    Log.w(TAG, "a log segment could not be decrypted and was skipped: ${e.message}", e)
+                    null
+                }
+            },
         )
 
     private fun readAll(nostrGroupId: String): List<String> = readAllFrom(messagesFile(nostrGroupId))

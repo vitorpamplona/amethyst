@@ -122,14 +122,18 @@ class EncryptedAppendLogTest {
         (1..4).forEach { log.append(file, "second-run-$it") }
         val afterSecondFold = file.readBytes()
 
-        // The bytes the first fold produced must survive verbatim. If they were
-        // re-encrypted they would differ, since the stand-in cipher — like
+        // The SEGMENTS the first fold produced must survive verbatim. If they
+        // were re-encrypted they would differ, since the stand-in cipher — like
         // AES-GCM — uses a fresh nonce per call. This is the property that keeps
         // a send from paying for the whole conversation.
+        //
+        // The header is excluded on purpose: a fold moves the boundary it
+        // records, so those eight bytes are expected to change and only the
+        // ciphertext after them is expected to be copied.
         assertContentEquals(
-            afterFirstFold.toList(),
-            afterSecondFold.copyOfRange(0, afterFirstFold.size).toList(),
-            "folding the tail must copy the already-folded prefix as ciphertext",
+            afterFirstFold.copyOfRange(HEADER_LEN, afterFirstFold.size).toList(),
+            afterSecondFold.copyOfRange(HEADER_LEN, afterFirstFold.size).toList(),
+            "folding the tail must copy the already-folded segments as ciphertext",
         )
         assertContentEquals((1..5).map { "first-run-$it" } + (1..4).map { "second-run-$it" }, cipher().readAll(file))
     }
@@ -155,7 +159,7 @@ class EncryptedAppendLogTest {
 
         assertContentEquals(listOf("old-one", "old-two", "new-one"), cipher().readAll(file))
         // and the upgraded file is in the new format, so the next append is cheap
-        assertTrue(file.readBytes().decodeToString().startsWith("MRMTLOG2"))
+        assertTrue(file.readBytes().decodeToString().startsWith("MRMTLOG3"))
     }
 
     @Test
@@ -183,10 +187,77 @@ class EncryptedAppendLogTest {
 
         // Corrupt the first segment's nonce marker so decrypt returns null for it.
         val bytes = file.readBytes()
-        bytes[MAGIC_LEN + 4] = 0
+        bytes[HEADER_LEN + 4] = 0
         file.writeBytes(bytes)
 
         assertContentEquals(listOf("after"), cipher().readAll(file))
+    }
+
+    @Test
+    fun `a torn tail does not stop the log accepting new entries`() {
+        // The bug this pins: decoding stopped at the torn record but the append
+        // position was left at the end of the file, so every later append landed
+        // behind a record that parsing always stops at. The log kept accepting
+        // writes and never read one back again — silently write-only, for good.
+        val file = tempFile()
+        val log = cipher()
+        log.append(file, "kept-one")
+        log.append(file, "kept-two")
+
+        val intact = file.readBytes()
+        log.append(file, "lost")
+        val torn = file.readBytes()
+        file.writeBytes(torn.copyOfRange(0, intact.size + 6))
+
+        val reopened = cipher()
+        assertContentEquals(listOf("kept-one", "kept-two"), reopened.readAll(file))
+
+        reopened.append(file, "three")
+        assertContentEquals(
+            listOf("kept-one", "kept-two", "three"),
+            cipher().readAll(file),
+            "an append after a torn tail must be readable by the next reader",
+        )
+    }
+
+    @Test
+    fun `the fold boundary survives a restart`() {
+        // Held only in memory, each session treated whatever it found as already
+        // folded and left its own run permanently unfoldable — segments crept
+        // back towards one per message, which is the per-message cipher round
+        // trip the fold exists to prevent.
+        val file = tempFile()
+        repeat(12) { session ->
+            // A fresh instance per session, as a cold process gets.
+            val log = cipher(compactAfter = 4)
+            repeat(3) { log.append(file, "s$session-m$it") }
+        }
+
+        val expected = (0 until 12).flatMap { session -> (0 until 3).map { "s$session-m$it" } }
+        assertContentEquals(expected, cipher().readAll(file))
+
+        // 36 entries at a fold every 4 appends: a handful of segments, not 36.
+        assertTrue(
+            file.length() < expected.size * SEGMENT_OVERHEAD_CEILING,
+            "segments should still be folding across restarts, file was ${file.length()} bytes",
+        )
+    }
+
+    @Test
+    fun `a failed write does not mark an entry as held`() {
+        // The duplicate check is what keeps a redelivered message from being
+        // written twice. If a failed append still registered the entry, the
+        // check would skip it forever and the only copy of that plaintext would
+        // be gone.
+        val file = tempFile()
+        val log =
+            EncryptedAppendLog(
+                encrypt = { throw IllegalStateException("cipher unavailable") },
+                decrypt = { null },
+            )
+
+        runCatching { log.append(file, "never-written") }
+        assertFalse(log.contains(file, "never-written"), "a write that failed must not count as persisted")
     }
 
     @Test
@@ -222,7 +293,9 @@ class EncryptedAppendLogTest {
 
     companion object {
         private const val NONCE_MARK: Byte = 0x7F
-        private const val MAGIC_LEN = 8
+
+        /** MAGIC plus the uint64 fold boundary. */
+        private const val HEADER_LEN = 16
         private const val SEGMENT_OVERHEAD_CEILING = 64
     }
 }

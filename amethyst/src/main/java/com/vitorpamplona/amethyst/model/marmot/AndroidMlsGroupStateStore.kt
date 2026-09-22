@@ -174,13 +174,15 @@ class AndroidMlsGroupStateStore(
      * The per-send ratchet position, written on its own so a message does not
      * re-encrypt the whole group state to record ~72 bytes.
      *
-     * Deliberately NOT the atomic temp-file-and-rename the state uses. That
-     * costs two file operations plus a directory sync for a record smaller than
-     * a block, and it is not what durability needs here: the record is written
-     * whole, and a half-written one fails to decrypt and is discarded, which
-     * falls back to the full state's position. What matters is that the bytes
-     * are on the device before the message they describe goes out, so the write
-     * is followed by an fsync.
+     * Written atomically, through a temp file and a rename. An in-place write
+     * looked adequate — the record is small and written whole — but the failure
+     * it allows is the one this record exists to prevent. A torn record is
+     * discarded on load, which falls back to the position in the full state:
+     * that is the position as of the last COMMIT, behind by every send since.
+     * The next send would then re-emit every generation in between, reusing
+     * AEAD key+nonce pairs. With a rename, a crash leaves the previous complete
+     * record instead, which is at worst one send behind — and that send's
+     * ciphertext was never published, because publishing waits for this write.
      */
     override suspend fun saveSenderRatchet(
         nostrGroupId: String,
@@ -191,9 +193,16 @@ class AndroidMlsGroupStateStore(
             try {
                 file.parentFile?.mkdirs()
                 val encrypted = encryption.encrypt(state)
-                FileOutputStream(file).use { out ->
+                val tempFile = File(file.parentFile, "${file.name}.tmp")
+                FileOutputStream(tempFile).use { out ->
                     out.write(encrypted)
                     out.fd.sync()
+                }
+                if (!tempFile.renameTo(file)) {
+                    tempFile.copyTo(file, overwrite = true)
+                    if (!tempFile.delete()) {
+                        Log.w(TAG) { "Failed to delete the temp ratchet file: ${tempFile.absolutePath}" }
+                    }
                 }
                 true
             } catch (e: Exception) {
@@ -212,10 +221,11 @@ class AndroidMlsGroupStateStore(
             try {
                 encryption.decrypt(file.readBytes())
             } catch (e: Exception) {
-                // A torn or unreadable record says nothing trustworthy about
-                // where the ratchet is. The full state's own position stands,
-                // which is behind but never ahead.
-                Log.w(TAG, "loadSenderRatchet($nostrGroupId) unreadable, ignoring: ${e.message}", e)
+                // Serious: the fallback is the full state's position, which is
+                // BEHIND, and a behind position re-emits used generations. The
+                // atomic write above is what should make this unreachable, so
+                // if it ever fires the group's key material is suspect.
+                Log.e(TAG, "loadSenderRatchet($nostrGroupId) unreadable — the ratchet may rewind: ${e.message}", e)
                 null
             }
         }
