@@ -55,7 +55,14 @@ only surviving copy of the user's data is gone.
    profile), muted threads (`LoadNote` + `NoteCompose`), communities and feeds
    (`LoadAddressableNote` + `NoteCompose`), public chats (`observeChannel`, tap → chat),
    ephemeral rooms (tap → room) and relays (tap → relay info). The dialog hides while the
-   review screen is open (`AccountSettings.reviewingBackupConflict`). Both offer:
+   review screen is open (`AccountSettings.reviewingBackupConflict`).
+
+   The list is laid out per event (`BackupConflictEventViews.kt`, `eventDiffItems`): a
+   profile compares each changed field saved vs new side by side, with picture and banner
+   shown as images and removed fields highlighted; a NIP-65 list is a relay table with the
+   saved and new read/write access and a count of unchanged relays; follow and mute lists
+   get a count header (on this device vs new version) above the linked people. Other
+   events use the generic removed / added / changed sections. Both offer:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
      `created_at = max(now, incoming + 1)`, dropping the old `client` tag (so the signer

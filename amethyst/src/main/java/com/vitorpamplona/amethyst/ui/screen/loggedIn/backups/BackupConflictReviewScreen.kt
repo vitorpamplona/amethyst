@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -43,7 +44,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,7 +72,7 @@ import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 
 /** A row of the review list, flattened so hundreds of entries scroll lazily. */
 @Immutable
-private sealed interface ReviewRow {
+internal sealed interface ReviewRow {
     class Section(
         val titleRes: Int,
         val count: Int,
@@ -92,9 +92,12 @@ private sealed interface ReviewRow {
     ) : ReviewRow
 }
 
-private enum class Tone { REMOVED, ADDED, CHANGED }
+internal enum class Tone { REMOVED, ADDED, CHANGED }
 
-private fun buildRows(presentation: DiffPresentation): List<ReviewRow> {
+internal fun buildRows(
+    presentation: DiffPresentation,
+    skipGroups: Set<Int> = emptySet(),
+): List<ReviewRow> {
     val rows = mutableListOf<ReviewRow>()
 
     fun section(
@@ -108,6 +111,7 @@ private fun buildRows(presentation: DiffPresentation): List<ReviewRow> {
         rows.add(ReviewRow.Section(titleRes, count, tone))
         contentNote?.let { rows.add(ReviewRow.Note(it)) }
         presentation.groups.forEach { group ->
+            if (group.label in skipGroups) return@forEach
             val entries = items(group)
             if (entries.isNotEmpty()) {
                 rows.add(ReviewRow.Group(group.label))
@@ -181,7 +185,6 @@ private fun BackupConflictReview(
     onDecideLater: () -> Unit,
 ) {
     val presentation = presentationOf(conflict.diff)
-    val rows = remember(conflict) { buildRows(presentation) }
 
     Scaffold(
         topBar = {
@@ -203,35 +206,48 @@ private fun BackupConflictReview(
                     )
                 }
             }
-            itemsIndexed(
-                rows,
-                contentType = { _, row ->
-                    when (row) {
-                        is ReviewRow.Section -> "section"
-                        is ReviewRow.Note -> "note"
-                        is ReviewRow.Group -> "group"
-                        is ReviewRow.Entry -> row.item::class.simpleName
-                    }
-                },
-            ) { _, row ->
-                when (row) {
-                    is ReviewRow.Section -> SectionRow(row)
-                    is ReviewRow.Note -> DetailText("• " + stringRes(row.textRes), Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
-                    is ReviewRow.Group ->
-                        Text(
-                            text = stringRes(row.labelRes),
-                            style = MaterialTheme.typography.labelLarge,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
-                        )
-                    is ReviewRow.Entry -> ReviewEntry(row.item, accountViewModel, nav)
-                }
+            eventDiffItems(conflict, presentation, accountViewModel, nav)
+        }
+    }
+}
+
+/** The default layout: removed / added / changed sections of labelled, typed entries. */
+internal fun LazyListScope.genericDiffItems(
+    rows: List<ReviewRow>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    itemsIndexed(
+        rows,
+        contentType = { _, row ->
+            when (row) {
+                is ReviewRow.Section -> "section"
+                is ReviewRow.Note -> "note"
+                is ReviewRow.Group -> "group"
+                is ReviewRow.Entry -> row.item::class.simpleName
             }
+        },
+    ) { _, row ->
+        when (row) {
+            is ReviewRow.Section -> SectionRow(row)
+            is ReviewRow.Note -> DetailText("• " + stringRes(row.textRes), Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
+            is ReviewRow.Group -> GroupLabel(row.labelRes)
+            is ReviewRow.Entry -> ReviewEntry(row.item, accountViewModel, nav)
         }
     }
 }
 
 @Composable
-private fun SectionRow(row: ReviewRow.Section) {
+internal fun GroupLabel(labelRes: Int) {
+    Text(
+        text = stringRes(labelRes),
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
+internal fun SectionRow(row: ReviewRow.Section) {
     val color =
         when (row.tone) {
             Tone.REMOVED -> MaterialTheme.colorScheme.error
@@ -273,10 +289,10 @@ private fun ReviewActions(
     }
 }
 
-private val EntryPadding = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+internal val EntryPadding = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
 
 @Composable
-private fun ReviewEntry(
+internal fun ReviewEntry(
     item: ReviewItem,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -353,7 +369,7 @@ private fun PublicChatEntry(
 }
 
 @Composable
-private fun TextEntry(
+internal fun TextEntry(
     text: String,
     detail: String?,
     onClick: (() -> Unit)? = null,
@@ -371,7 +387,7 @@ private fun TextEntry(
 }
 
 @Composable
-private fun DetailText(
+internal fun DetailText(
     text: String,
     modifier: Modifier = Modifier,
 ) {

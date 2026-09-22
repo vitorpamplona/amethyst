@@ -2840,6 +2840,15 @@
     <string name="backup_conflict_restore_explainer">Restoring brings back what was removed and drops what the other app added or changed.</string>
     <string name="backup_conflict_restore_mine">Restore saved version</string>
     <string name="backup_conflict_review">Review changes</string>
+    <string name="backup_review_saved">On this device</string>
+    <string name="backup_review_new">New version</string>
+    <string name="backup_review_not_set">Not set</string>
+    <string name="backup_review_follow_counts">Follows: %1$s on this device · %2$s in the new version</string>
+    <string name="backup_review_public_mute_counts">Public mutes: %1$s on this device · %2$s in the new version</string>
+    <string name="backup_review_unchanged_relays">%1$s other relays are unchanged</string>
+    <string name="backup_review_access_read_write">Read &amp; write</string>
+    <string name="backup_review_access_read">Read</string>
+    <string name="backup_review_access_write">Write</string>
     <string name="backup_conflict_keep_new">Use new version</string>
     <string name="backup_conflict_decide_later">Decide later</string>
     <string name="backup_conflict_relay_read_only">read only</string>
