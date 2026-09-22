@@ -220,4 +220,13 @@ class SearchTokenTransformationTest {
         assertEquals("hello world", transform("\"hello world"))
         assertAppliesCleanly("\"hello world")
     }
+
+    @Test
+    fun aBlankNameIsNotAName() {
+        // A profile whose name is blank must not erase its chip: it keeps the short npub instead.
+        val out = transform(NPUB, name = { "  " })
+        assertTrue(out.startsWith("npub1") && out.contains("…"), out)
+        assertEquals("group:abc123", transform("group:abc123", groupName = { "" }))
+        assertEquals("geo:9q8yy", transform("geo:9q8yy", scopeName = { _, _ -> " " }))
+    }
 }

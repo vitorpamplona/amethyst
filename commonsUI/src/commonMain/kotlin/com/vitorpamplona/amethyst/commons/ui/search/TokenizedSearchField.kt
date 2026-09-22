@@ -35,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -117,7 +118,10 @@ fun TokenizedSearchField(
     decorationBox: (@Composable (@Composable () -> Unit) -> Unit)? = null,
 ) {
     val styles = rememberSearchTokenStyles()
-    val picker = state.activePicker
+    // Derived, so typing that leaves the picker as it was (plain words, a caret moving through
+    // them) does not recompose the field and everything under it on every keystroke.
+    val pickerState = remember(state) { derivedStateOf { state.activePicker } }
+    val picker = pickerState.value
     var highlighted by rememberSaveable(picker?.token?.start) { mutableIntStateOf(0) }
 
     // The one picker whose rows this component fills in itself: the kind vocabulary is a
@@ -159,7 +163,7 @@ fun TokenizedSearchField(
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             // The caret is read inside the transformation, not keyed on here: the field re-runs it
             // whenever a state it read changes, so a new instance per caret move is not needed.
-            outputTransformation = remember(styles, displayName, groupName, scopeName) { SearchTokenTransformation(state::settleCaret, styles, displayName, groupName, scopeName) },
+            outputTransformation = remember(state, styles, displayName, groupName, scopeName) { SearchTokenTransformation(state::settleCaret, styles, displayName, groupName, scopeName) },
             decorator =
                 TextFieldDecorator { inner ->
                     if (decorationBox != null) {

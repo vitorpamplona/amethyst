@@ -58,7 +58,8 @@ internal fun TextFieldBuffer.replaceRuns(
 ) {
     for (i in runs.indices.reversed()) {
         val run = runs[i]
-        if (!run.drawn.contentEquals(typed.subSequence(run.start, run.end))) replace(run.start, run.end, run.drawn)
+        val unchanged = run.drawn.length == run.end - run.start && typed.regionMatches(run.start, run.drawn, 0, run.drawn.length)
+        if (!unchanged) replace(run.start, run.end, run.drawn)
     }
 }
 
@@ -129,7 +130,7 @@ class SearchTokenTransformation(
     ): String =
         when (seg) {
             is SearchSegment.Key -> {
-                val name = displayName(seg.pubkey)
+                val name = displayName(seg.pubkey)?.takeIf { it.isNotBlank() }
                 val shown = name?.let { clip(it, 32) } ?: shortBech32(rawKeyOf(raw))
                 seg.field?.let { "${it.token}:$shown" } ?: shown
             }
@@ -137,9 +138,9 @@ class SearchTokenTransformation(
             is SearchSegment.Pointer -> "to:${shortBech32(raw.substringAfter(':'))}"
             // A group id is a stranger's opaque string; its name is the only part a reader can
             // check against the room they meant. The id stays the value, so the query is unchanged.
-            is SearchSegment.Group -> "group:${groupName(seg.id)?.let { clip(it, 32) } ?: seg.id}"
+            is SearchSegment.Group -> "group:${groupName(seg.id)?.takeIf { it.isNotBlank() }?.let { clip(it, 32) } ?: seg.id}"
             // Likewise a geohash: "9q8yy" says nothing, "San Francisco" says what was filtered on.
-            is SearchSegment.Scope -> scopeName(seg.field, seg.value)?.let { "${seg.field}:${clip(it, 32)}" } ?: raw
+            is SearchSegment.Scope -> scopeName(seg.field, seg.value)?.takeIf { it.isNotBlank() }?.let { "${seg.field}:${clip(it, 32)}" } ?: raw
             // A kind typed as a number draws under the name the registry has for it, so a screen
             // that seeds `kind:20` shows "kind:picture" — the only form a reader can check. Only
             // an exact one-token match is used: `kind:30312` must not draw as the wider `live`.
