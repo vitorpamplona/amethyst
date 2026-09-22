@@ -425,8 +425,6 @@
     <string name="workout_hours">Tunnit</string>
     <string name="workout_minutes">Minuutit</string>
     <string name="workout_seconds">Sekunnit</string>
-    <string name="workout_suggestion_connect_title">Jaa harjoituksesi</string>
-    <string name="workout_suggestion_connect_message">Anna Amethystin lukea valmiit harjoitukset Health Connectista (Samsung Health, Google Fit, Fitbit, Garmin…) ja ehdottaa julkaisua.</string>
     <string name="workout_suggestion_connect_button">Yhdistä</string>
     <string name="workout_from_health_connect">Health Connectista</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

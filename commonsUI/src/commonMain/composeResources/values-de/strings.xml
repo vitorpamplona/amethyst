@@ -419,8 +419,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="workout_hours">Stunden</string>
     <string name="workout_minutes">Minuten</string>
     <string name="workout_seconds">Sekunden</string>
-    <string name="workout_suggestion_connect_title">Teile deine Workouts</string>
-    <string name="workout_suggestion_connect_message">Lass Amethyst abgeschlossene Workouts aus Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) lesen und einen Beitrag vorschlagen.</string>
     <string name="workout_suggestion_connect_button">Verbinden</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Aus Health Connect</string>

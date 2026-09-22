@@ -421,8 +421,6 @@
     <string name="workout_hours">மணிநேரங்கள்</string>
     <string name="workout_minutes">நிமிடங்கள்</string>
     <string name="workout_seconds">வினாடிகள்</string>
-    <string name="workout_suggestion_connect_title">உங்கள் உடற்பயிற்சிகளை பகிர்ந்து கொள்ளுங்கள்</string>
-    <string name="workout_suggestion_connect_message">Amethyst ஐ Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) இலிருந்து முடிந்த உடற்பயிற்சிகளை படிக்க அனுமதிக்கவும் மற்றும் ஒரு இடுகையை பரிந்துரைக்கட்டும்.</string>
     <string name="workout_suggestion_connect_button">இணைக்கவும்</string>
     <string name="workout_suggestion_distance_km">%1$s கி.மீ</string>
     <string name="workout_from_health_connect">Health Connect இலிருந்து</string>

@@ -419,8 +419,6 @@
     <string name="workout_hours">Jam</string>
     <string name="workout_minutes">Menit</string>
     <string name="workout_seconds">Detik</string>
-    <string name="workout_suggestion_connect_title">Bagikan latihan Anda</string>
-    <string name="workout_suggestion_connect_message">Biarkan Amethyst membaca latihan yang selesai dari Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) dan menyarankan postingan.</string>
     <string name="workout_suggestion_connect_button">Hubungkan</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Dari Health Connect</string>

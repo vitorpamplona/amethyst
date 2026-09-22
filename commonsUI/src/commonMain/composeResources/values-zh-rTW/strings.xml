@@ -429,8 +429,6 @@
     <string name="workout_hours">小時</string>
     <string name="workout_minutes">分鐘</string>
     <string name="workout_seconds">秒</string>
-    <string name="workout_suggestion_connect_title">分享您的運動記錄</string>
-    <string name="workout_suggestion_connect_message">讓 Amethyst 從 Health Connect（Samsung Health、Google Fit、Fitbit、Garmin…）讀取已完成的運動記錄並建議一則貼文。</string>
     <string name="workout_suggestion_connect_button">連接</string>
     <string name="workout_suggestion_distance_km">%1$s 公里</string>
     <string name="workout_from_health_connect">來自 Health Connect</string>

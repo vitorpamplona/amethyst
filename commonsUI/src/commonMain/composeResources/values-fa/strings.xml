@@ -418,8 +418,6 @@
     <string name="workout_hours">ساعت‌ها</string>
     <string name="workout_minutes">دقیقه‌ها</string>
     <string name="workout_seconds">ثانیه‌ها</string>
-    <string name="workout_suggestion_connect_title">تمرینات خود را به اشتراک بگذارید</string>
-    <string name="workout_suggestion_connect_message">اجازه دهید Amethyst تمرینات تمام شده را از Health Connect (Samsung Health، Google Fit، Fitbit، Garmin…) بخواند و پیشنهاد پست بدهد.</string>
     <string name="workout_suggestion_connect_button">اتصال</string>
     <string name="workout_suggestion_distance_km">%1$s کیلومتر</string>
     <string name="workout_from_health_connect">از Health Connect</string>

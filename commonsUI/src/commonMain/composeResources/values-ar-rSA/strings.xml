@@ -440,8 +440,6 @@
     <string name="workout_hours">ساعات</string>
     <string name="workout_minutes">دقائق</string>
     <string name="workout_seconds">ثوانٍ</string>
-    <string name="workout_suggestion_connect_title">شارك تمارينك</string>
-    <string name="workout_suggestion_connect_message">اسمح لـ Amethyst بقراءة التمارين المكتملة من Health Connect (Samsung Health أو Google Fit أو Fitbit أو Garmin…) واقتراح منشور.</string>
     <string name="workout_suggestion_connect_button">ربط</string>
     <string name="workout_suggestion_distance_km">%1$s كم</string>
     <string name="workout_from_health_connect">من Health Connect</string>

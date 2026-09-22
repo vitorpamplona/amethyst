@@ -429,8 +429,6 @@
     <string name="workout_hours">Saat</string>
     <string name="workout_minutes">Dakika</string>
     <string name="workout_seconds">Saniye</string>
-    <string name="workout_suggestion_connect_title">Antrenmanlarını paylaş</string>
-    <string name="workout_suggestion_connect_message">Amethyst'in Health Connect'ten (Samsung Health, Google Fit, Fitbit, Garmin…) tamamlanan antrenmanları okumasına ve gönderi önerisinde bulunmasına izin ver.</string>
     <string name="workout_suggestion_connect_button">Bağlan</string>
     <string name="workout_from_health_connect">Health Connect'ten</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate

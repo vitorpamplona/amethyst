@@ -553,8 +553,6 @@
     <string name="workout_hours">小时</string>
     <string name="workout_minutes">分钟</string>
     <string name="workout_seconds">秒</string>
-    <string name="workout_suggestion_connect_title">分享锻炼</string>
-    <string name="workout_suggestion_connect_message">让 Ameyst 从 Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) 读取完成的锻炼并建议一个帖子。</string>
     <string name="workout_suggestion_connect_button">连接</string>
     <string name="workout_suggestion_distance_km">%1$s 公里</string>
     <string name="workout_from_health_connect">来自 Health Connect</string>

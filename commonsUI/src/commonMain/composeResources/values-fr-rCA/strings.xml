@@ -415,8 +415,6 @@
     <string name="workout_exercises">Exercices</string>
     <string name="workout_hours">Heures</string>
     <string name="workout_seconds">Secondes</string>
-    <string name="workout_suggestion_connect_title">Partagez vos entraînements</string>
-    <string name="workout_suggestion_connect_message">Laissez Amethyst lire les entraînements terminés depuis Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) et suggérer une publication.</string>
     <string name="workout_suggestion_connect_button">Connecter</string>
     <string name="workout_from_health_connect">Depuis Health Connect</string>
     <!-- Workout duration totals. %1$d is hours, %2$d is minutes; reorder and re-abbreviate
