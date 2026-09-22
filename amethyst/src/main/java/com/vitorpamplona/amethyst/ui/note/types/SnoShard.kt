@@ -52,6 +52,12 @@ private val VIEWER_HEIGHT = 360.dp
 @Composable
 fun RenderSnoShard(baseNote: Note) {
     val noteEvent = baseNote.event as? SnoShardEvent ?: return
+
+    // A shard whose geometry is still inside its bag is not a broken payload
+    // and §7.6 says so outright, so there is nothing to report and nothing to
+    // draw. Both 3330s reachable on a relay today are this.
+    if (noteEvent.isSealed()) return
+
     val parsed = remember(noteEvent) { noteEvent.shard() }
 
     when (parsed) {

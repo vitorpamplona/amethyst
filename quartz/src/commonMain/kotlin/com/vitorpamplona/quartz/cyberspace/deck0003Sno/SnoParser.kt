@@ -32,7 +32,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** What [SnoParser] made of a payload. */
@@ -132,9 +131,16 @@ object SnoParser {
             if (triple.size != 3) return SnoResult.Invalid("6", "vertex $i is not three integers")
             for (axis in 0..2) {
                 val whole = triple[axis].asIntOrNull() ?: return SnoResult.Invalid("6", "vertex $i is not three integers")
-                if (abs(whole) > SnoPayload.MAX_EXTENT) return SnoResult.Invalid("bound", "vertex $i lies beyond ${SnoPayload.MAX_EXTENT} units from the origin")
+                // Range-checked rather than `abs`-checked, because abs(Int.MIN_VALUE)
+                // is itself negative: a vertex of -2147483648 would pass the bound,
+                // overflow `* 120` to 0, and parse as a silently rewritten coordinate.
+                if (whole > SnoPayload.MAX_EXTENT || whole < -SnoPayload.MAX_EXTENT) {
+                    return SnoResult.Invalid("bound", "vertex $i lies beyond ${SnoPayload.MAX_EXTENT} units from the origin")
+                }
                 val total = whole * SnoPayload.TICKS_PER_UNIT + ticks[i * 3 + axis]
-                if (abs(total) > SnoPayload.MAX_TICKS_FROM_ORIGIN) return SnoResult.Invalid("bound", "vertex $i lies beyond ${SnoPayload.MAX_EXTENT} units from the origin")
+                if (total > SnoPayload.MAX_TICKS_FROM_ORIGIN || total < -SnoPayload.MAX_TICKS_FROM_ORIGIN) {
+                    return SnoResult.Invalid("bound", "vertex $i lies beyond ${SnoPayload.MAX_EXTENT} units from the origin")
+                }
                 // §2: a `v: 1` payload has +Z away from the viewer, so its Z is
                 // negated on read, which renders the object exactly as its author
                 // built it. A `v: 2` payload is read as written.
@@ -234,7 +240,8 @@ object SnoParser {
     ): Int {
         var needed = declared
         for (tick in positions) {
-            val units = (abs(tick) + SnoPayload.TICKS_PER_UNIT - 1) / SnoPayload.TICKS_PER_UNIT
+            val magnitude = if (tick < 0) -tick.toLong() else tick.toLong()
+            val units = ((magnitude + SnoPayload.TICKS_PER_UNIT - 1) / SnoPayload.TICKS_PER_UNIT).toInt()
             if (units > needed) needed = units
         }
         return needed
@@ -272,7 +279,11 @@ object SnoParser {
                 }
                 is JsonPrimitive -> {
                     val run = entry.asIntOrNull() ?: return null
-                    if (run >= 0) return null
+                    // Bounded before it is negated. `-Int.MIN_VALUE` is itself
+                    // negative, which would drive `written` below zero and index
+                    // out of the buffer on the next triple; and a run longer than
+                    // the vertex list is invalid anyway, so one test does both.
+                    if (run >= 0 || run < -vertexCount) return null
                     val count = -run
                     if (written + count > vertexCount) return null
                     written += count
@@ -305,6 +316,10 @@ object SnoParser {
             val value = (entry as? JsonPrimitive).asIntOrNull() ?: return null
             if (value < 0) {
                 if (previous < 0) return null
+                // Bounded before it is negated, as in expandTicks: `-Int.MIN_VALUE`
+                // is negative, so an unguarded run would be swallowed rather than
+                // refused. A run longer than the face list is invalid regardless.
+                if (value < -faceCount) return null
                 val count = -value
                 if (written + count > faceCount) return null
                 repeat(count) { out[written++] = previous }

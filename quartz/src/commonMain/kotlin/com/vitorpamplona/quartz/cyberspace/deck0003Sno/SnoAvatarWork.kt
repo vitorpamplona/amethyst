@@ -54,9 +54,12 @@ object SnoAvatarWork {
 
     /** The leading zero bits [payload] must have been mined to, as an avatar. */
     fun required(payload: SnoPayload): Int {
-        var farthestTicks = 0
+        // Widened before negating: the parser bounds positions long before this
+        // runs, but a magnitude that is its own negative would price an avatar
+        // at nothing, and this is the one number that decides what gets drawn.
+        var farthestTicks = 0L
         for (tick in payload.positions) {
-            val magnitude = if (tick < 0) -tick else tick
+            val magnitude = if (tick < 0) -tick.toLong() else tick.toLong()
             if (magnitude > farthestTicks) farthestTicks = magnitude
         }
 

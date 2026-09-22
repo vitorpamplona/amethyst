@@ -61,6 +61,17 @@ class SnoShardEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    /**
+     * True when this shard carries no payload of its own.
+     *
+     * Almost every 3330 that reaches a client this way is one: a shard's
+     * geometry travels inside its bag's ciphertext, and what is left on a relay
+     * is the item without it. §7.6 is explicit that not being able to read a
+     * bag "MUST NOT be treated as an error in the bag", so this is a thing to
+     * be quiet about rather than a malformed payload to complain of.
+     */
+    fun isSealed(): Boolean = content.isBlank()
+
     fun shard(fetchedPalette: SnoPalette? = null): SnoResult = SnoParser.parse(content, fetchedPalette)
 
     fun shardOrNull(fetchedPalette: SnoPalette? = null): SnoPayload? = shard(fetchedPalette).payloadOrNull()

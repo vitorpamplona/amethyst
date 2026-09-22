@@ -200,9 +200,6 @@ avatar_event() {  # kind, id-bits, committed|none, content
   [[ "$committed" != "none" ]] && tags="[[\"nonce\",\"1\",\"$committed\"]]"
   jq -cn --arg id "$(id_with_bits "$bits")" --argjson kind "$kind" \
          --argjson tags "$tags" --arg content "$content" \
-    '{id:$id, pubkey:"11111111111111111111111111111111111111111111111111111111111111111", kind:$kind, created_at:0, tags:$tags, content:$content, sig:("22"*32)}' \
-    2>/dev/null || jq -cn --arg id "$(id_with_bits "$bits")" --argjson kind "$kind" \
-         --argjson tags "$tags" --arg content "$content" \
     '{id:$id, pubkey:("11"*32), kind:$kind, created_at:0, tags:$tags, content:$content, sig:("22"*32)}'
 }
 

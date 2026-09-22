@@ -64,6 +64,8 @@ def cmd_cases():
 
 def cmd_vectors():
     root = os.environ.get("CYBERSPACE_CLI_DIR")
+    if not root:
+        raise SystemExit("CYBERSPACE_CLI_DIR is not set")
     with open(os.path.join(root, "tests", "fixtures", "avatar_work.json")) as fh:
         for case in json.load(fh):
             emit({"name": case["name"], "required": case["required"], "payload": case["payload"]})

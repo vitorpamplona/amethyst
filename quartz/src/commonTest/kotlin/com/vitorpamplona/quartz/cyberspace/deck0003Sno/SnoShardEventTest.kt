@@ -60,7 +60,14 @@ class SnoShardEventTest {
     }
 
     @Test
-    fun anEmptyShardIsNotAShape() {
+    fun anEmptyShardIsSealedRatherThanBroken() {
+        // §7.6: a reader that cannot open a bag has learned nothing about the
+        // bag, so an item without its payload is not an error to report. A
+        // client draws nothing for one instead of complaining at its finder.
+        assertTrue(shard().isSealed())
+        assertTrue(!shard(content = payloadJson).isSealed())
+
+        // It still has no shape to hand back, which is a separate question.
         assertTrue(shard().shard() is SnoResult.Invalid)
     }
 
