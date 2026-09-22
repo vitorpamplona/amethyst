@@ -67,7 +67,8 @@ five test tiers. **Tier C — a Kotlin fixture server that misbehaves on demand 
 (`contextvm/…/fixture/`) and is what makes the negative half testable: no real server sends a
 non-monotonic `progress`, a stale `pong` nonce or a mismatched digest, yet those are MUST-fail
 requirements. **RFC 8785 JCS** is built too, in `quartz/…/utils/jcs/`, shared by CEP-8 and CEP-15.
-Tiers B (live coordinator), D (cross-implementation vectors) and E (a real wallet) remain open.
+**Tier B (live coordinator) has been run** — see §7.1 for the two bugs it found and §7 for the
+terms it was run on. Tiers D (cross-implementation vectors) and E (a real wallet) remain open.
 
 Sequencing, as revised in practice: **Stage 2 (the transport) was built first**, because
 ContextVM has no MLS dependency and so no dependency on the §4.1 decision. What that decision
@@ -759,7 +760,7 @@ looking like a group chat.
 
 ### Stage 0 — Ground truth and the upstream conversation — PARTLY LANDED
 
-The wire half landed on 2026-09-18; the live-coordinator half is blocked on §7.
+The wire half landed on 2026-09-18; the live-coordinator half ran on 2026-09-22 (§7.1).
 
 **Landed: contract vectors from cordn's own code.** `quartz/tools/cordn-vector-gen` generates
 `resources/cordn/coordinator-contracts.json` from **`@cordn/core`** (MIT) — the package their
@@ -782,8 +783,12 @@ Two findings from doing it:
    `{kp_ref, keyPackageBase64}`, so our `?? keyPackageBase64` fallback is correct for parsing old
    publication events and must never be used when sending.
 
-**Blocked: Tier B (live coordinator).** Not for want of tooling — the reference coordinator is
-unlicensed. See §7.
+**Landed: Tier B (live coordinator).** Run on 2026-09-22 against the reference coordinator in
+Docker, over geode as the relay, driven by `amy cordn …`; the harness is
+`cli/tests/cordn/tier-b.sh`. It found two bugs — backdated CEP-4 gift wraps that no real
+ContextVM server could see, and self-echo bookkeeping that did not survive a process boundary —
+both fixed. §7.1 has the detail; §7 has the licensing terms it was run on, which have not
+changed: not a dependency, not in CI.
 
 **Not done: the upstream conversation**, which is the maintainer's to have. §4.1 no longer waits
 on it (we implement both encodings); §4.2 and the missing LICENSE files are the asks worth making.
