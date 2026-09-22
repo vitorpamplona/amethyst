@@ -2709,6 +2709,10 @@
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
 
     <!-- Marmot (MLS) group chats -->
+    <plurals name="marmot_unread_messages">
+        <item quantity="one">%1$d new message</item>
+        <item quantity="other">%1$d new messages</item>
+    </plurals>
     <plurals name="marmot_message_count">
         <item quantity="one">%1$d msg</item>
         <item quantity="other">%1$d msgs</item>

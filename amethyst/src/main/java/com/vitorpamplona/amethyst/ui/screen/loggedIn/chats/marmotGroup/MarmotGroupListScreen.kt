@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,8 +30,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -52,13 +52,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -66,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_create_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_empty_create_action
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_groups_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_groups
@@ -73,6 +72,10 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_no_groups_desc
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_invitations
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_invitations_desc
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_messages_yet
+import com.vitorpamplona.amethyst.commons.resources.marmot_preview_group_updated
+import com.vitorpamplona.amethyst.commons.resources.marmot_preview_media
+import com.vitorpamplona.amethyst.commons.resources.marmot_preview_no_text
+import com.vitorpamplona.amethyst.commons.resources.marmot_preview_with_sender
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known_count
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests
@@ -81,9 +84,16 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.ChatUnreadBadge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -209,13 +219,25 @@ fun MarmotGroupListScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 4.dp),
                         )
+                        // Only the Known tab gets a button. There is no action
+                        // that fills the New Requests tab — you cannot make
+                        // someone invite you — so offering one there would be a
+                        // dead end dressed up as a next step.
+                        if (selectedTab == 0) {
+                            Button(
+                                onClick = { nav.nav(Route.CreateMarmotGroup) },
+                                modifier = Modifier.padding(top = 20.dp),
+                            ) {
+                                Text(stringRes(Res.string.marmot_empty_create_action))
+                            }
+                        }
                     }
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(visibleGroups, key = { it.first }) { (groupId, chatroom) ->
+                    itemsIndexed(visibleGroups, key = { _, it -> it.first }) { index, (groupId, chatroom) ->
                         MarmotGroupListItem(
                             groupId = groupId,
                             chatroom = chatroom,
@@ -224,7 +246,11 @@ fun MarmotGroupListScreen(
                                 nav.nav(Route.MarmotGroupChat(groupId))
                             },
                         )
-                        HorizontalDivider()
+                        // Between rows only: a divider under the last one draws a
+                        // line across empty space with nothing beneath it.
+                        if (index < visibleGroups.lastIndex) {
+                            HorizontalDivider()
+                        }
                     }
                 }
             }
@@ -269,6 +295,35 @@ fun MarmotGroupListItem(
     // to ~100 entries, so counting per recomposition is cheap.
     val unread = chatroom.messages.count { (it.createdAt() ?: Long.MIN_VALUE) > lastReadTime }
 
+    // A preview has to survive the messages that carry no text: a system row
+    // keeps its state in tags and MIP-04 media keeps its in imeta, so both used
+    // to render as a blank second line under the group name.
+    val myPubKey = accountViewModel.account.signer.pubKey
+    val previewEvent = newestMessage?.event
+    val previewBody =
+        when {
+            newestMessage == null -> stringRes(Res.string.marmot_no_messages_yet)
+            previewEvent == null -> stringRes(Res.string.marmot_preview_no_text)
+            previewEvent.kind == MarmotAppEvent.KIND_SYSTEM -> stringRes(Res.string.marmot_preview_group_updated)
+            hasMip04Media(previewEvent) || hasEncryptedMediaV2(previewEvent) -> stringRes(Res.string.marmot_preview_media)
+            previewEvent.content.isNotBlank() -> previewEvent.content
+            else -> stringRes(Res.string.marmot_preview_no_text)
+        }
+    // Only a genuinely known name earns the prefix: `toBestDisplayName` would
+    // fall back to a hex stub, and "a1b2c3d4: hi" is noise, not attribution.
+    val senderName =
+        previewEvent
+            ?.pubKey
+            ?.takeIf { it != myPubKey }
+            ?.let { accountViewModel.getUserIfExists(it)?.metadataOrNull()?.bestName() }
+    val previewText =
+        // A system caption already names its actor, so prefixing one would say it twice.
+        if (senderName != null && previewEvent?.kind != MarmotAppEvent.KIND_SYSTEM) {
+            stringRes(Res.string.marmot_preview_with_sender, senderName, previewBody)
+        } else {
+            previewBody
+        }
+
     Row(
         modifier =
             Modifier
@@ -281,7 +336,7 @@ fun MarmotGroupListItem(
         if (memberPubkeys.isNotEmpty()) {
             NonClickableUserPictures(
                 userHexList = memberPubkeys,
-                size = 55.dp,
+                size = Size55dp,
                 accountViewModel = accountViewModel,
             )
         }
@@ -309,47 +364,36 @@ fun MarmotGroupListItem(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (newestMessage != null) {
-                Text(
-                    text = newestMessage.event?.content ?: "",
-                    style = MaterialTheme.typography.bodySmall,
+            Text(
+                text = previewText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        // The list is sorted by newestMessage.createdAt(), so showing that time
+        // is what makes the ordering legible; the message count it replaced was
+        // a number no reader was asking for.
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            newestMessage?.createdAt()?.let { createdAt ->
+                ToggleableTimeAgoText(
+                    timestamp = createdAt,
+                    style = TimeAgoStyle.Short,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            } else {
-                Text(
-                    text = stringRes(Res.string.marmot_no_messages_yet),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp),
+                    // The row is the tap target. A toggleable timestamp would
+                    // swallow taps meant to open the group.
+                    toggleable = false,
                 )
             }
-        }
-        Column(horizontalAlignment = Alignment.End) {
             if (unread > 0) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(22.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = if (unread > 99) "99+" else unread.toString(),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            } else {
-                Text(
-                    text = pluralStringResource(R.plurals.marmot_message_count, chatroom.messages.size, chatroom.messages.size),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                ChatUnreadBadge(
+                    count = unread,
+                    contentDescription = pluralStringResource(R.plurals.marmot_unread_messages, unread, unread),
                 )
             }
         }

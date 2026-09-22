@@ -1621,6 +1621,11 @@
     <string name="user_preferences">User Preferences</string>
     <string name="settings_search_placeholder">Search settings</string>
     <string name="settings_search_no_results">No settings found for "%1$s"</string>
+    <string name="marmot_preview_group_updated">Group updated</string>
+    <string name="marmot_preview_media">Attachment</string>
+    <string name="marmot_preview_no_text">Message</string>
+    <string name="marmot_preview_with_sender">%1$s: %2$s</string>
+    <string name="marmot_empty_create_action">Create a group</string>
     <string name="marmot_invite_device_title">Marmot Invite Device</string>
     <string name="marmot_invite_device_banner">Marmot invites are going to another device and cannot be opened here.</string>
     <string name="marmot_invite_device_banner_dismiss">Dismiss</string>

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -97,66 +99,78 @@ fun MarmotInviteDeviceBanner(
     }
 
     AnimatedVisibility(visible = owner == LatestKeyPackageOwner.OTHER_DEVICE && !dismissed) {
-        Row(
+        // Message on its own line, actions under it. All three in one Row fit
+        // only on a wide screen with default font scale; at phone width with
+        // large fonts the label and the button fought for the same space.
+        //
+        // `surfaceVariant`, not `errorContainer`: this is an explanation, and
+        // most users will never see it. The error palette would make it the
+        // loudest thing on a screen whose actual subject is the group list.
+        Column(
             modifier =
                 modifier
                     .fillMaxWidth()
                     .padding(horizontal = 10.dp, vertical = 4.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.errorContainer)
-                    .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(start = 10.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
         ) {
-            Icon(
-                symbol = MaterialSymbols.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = stringRes(Res.string.marmot_invite_device_banner),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.padding(start = 8.dp).weight(1f),
-            )
-            TextButton(
-                onClick = {
-                    // Hidden optimistically: the publish makes this device the
-                    // newest KeyPackage, so re-asking the relays to learn what
-                    // we just did would only add a round trip.
-                    owner = LatestKeyPackageOwner.THIS_DEVICE
-                    scope.launch(Dispatchers.IO) {
-                        val successMessage = stringRes(context, R.string.marmot_invite_device_success)
-                        try {
-                            accountViewModel.publishMarmotKeyPackage()
-                            launch(Dispatchers.Main) {
-                                Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
-                            }
-                        } catch (e: Exception) {
-                            val failureMessage =
-                                stringRes(context, R.string.marmot_invite_device_failure, e.message ?: "")
-                            launch(Dispatchers.Main) {
-                                Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
-                                // The warning was right after all, so put it back.
-                                owner = LatestKeyPackageOwner.OTHER_DEVICE
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    symbol = MaterialSymbols.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringRes(Res.string.marmot_invite_device_banner),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp, end = 4.dp).weight(1f),
+                )
+                IconButton(onClick = { dismissed = true }, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        symbol = MaterialSymbols.Close,
+                        contentDescription = stringRes(Res.string.marmot_invite_device_banner_dismiss),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(
+                    onClick = {
+                        // Hidden optimistically: the publish makes this device the
+                        // newest KeyPackage, so re-asking the relays to learn what
+                        // we just did would only add a round trip.
+                        owner = LatestKeyPackageOwner.THIS_DEVICE
+                        scope.launch(Dispatchers.IO) {
+                            val successMessage = stringRes(context, R.string.marmot_invite_device_success)
+                            try {
+                                accountViewModel.publishMarmotKeyPackage()
+                                launch(Dispatchers.Main) {
+                                    Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                val failureMessage =
+                                    stringRes(context, R.string.marmot_invite_device_failure, e.message ?: "")
+                                launch(Dispatchers.Main) {
+                                    Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
+                                    // The warning was right after all, so put it back.
+                                    owner = LatestKeyPackageOwner.OTHER_DEVICE
+                                }
                             }
                         }
-                    }
-                },
-            ) {
-                Text(
-                    text = stringRes(Res.string.marmot_invite_device_publish),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
-            IconButton(onClick = { dismissed = true }, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(Res.string.marmot_invite_device_banner_dismiss),
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.size(18.dp),
-                )
+                    },
+                ) {
+                    Text(
+                        text = stringRes(Res.string.marmot_invite_device_publish),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
             }
         }
     }
