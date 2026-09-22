@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.KeyboardActionHandler
+import androidx.compose.foundation.text.input.TextFieldDecorator
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -140,8 +142,7 @@ fun TokenizedSearchField(
 
     Column(modifier) {
         BasicTextField(
-            value = state.value,
-            onValueChange = state::onValueChange,
+            state = state.textState,
             modifier =
                 fieldModifier
                     .fillMaxWidth()
@@ -151,28 +152,31 @@ fun TokenizedSearchField(
                         handleKey(event.key, state, picker, highlighted, rows, people, groups, kinds, onSubmit) { highlighted = it }
                     },
             textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
-            singleLine = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
             interactionSource = interactionSource,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { if (!takeEnter(state, picker, highlighted, people, groups, kinds)) onSubmit() }),
+            onKeyboardAction = KeyboardActionHandler { if (!takeEnter(state, picker, highlighted, people, groups, kinds)) onSubmit() },
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            visualTransformation = remember(state.settleCaret, state.value.composition, styles, displayName, groupName, scopeName) { SearchTokenTransformation(state.settleCaret, styles, displayName, groupName, scopeName, state.value.composition) },
-            decorationBox = { inner ->
-                if (decorationBox != null) {
-                    decorationBox(inner)
-                } else {
-                    Box {
-                        if (state.text.isEmpty()) {
-                            Text(
-                                placeholder,
-                                style = textStyle,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            )
+            // The caret is read inside the transformation, not keyed on here: the field re-runs it
+            // whenever a state it read changes, so a new instance per caret move is not needed.
+            outputTransformation = remember(styles, displayName, groupName, scopeName) { SearchTokenTransformation(state::settleCaret, styles, displayName, groupName, scopeName) },
+            decorator =
+                TextFieldDecorator { inner ->
+                    if (decorationBox != null) {
+                        decorationBox(inner)
+                    } else {
+                        Box {
+                            if (state.text.isEmpty()) {
+                                Text(
+                                    placeholder,
+                                    style = textStyle,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                )
+                            }
+                            inner()
                         }
-                        inner()
                     }
-                }
-            },
+                },
         )
 
         when (picker) {

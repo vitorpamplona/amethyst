@@ -20,73 +20,45 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.search
 
+import androidx.compose.foundation.text.input.OutputTransformation
+import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.SpanStyle
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import com.vitorpamplona.amethyst.commons.search.SearchSegment
 import com.vitorpamplona.amethyst.commons.search.SearchTokenizer
 import com.vitorpamplona.amethyst.commons.search.rawText
 
 /**
- * One rewrite of a stretch of the typed text into what is drawn over it.
+ * One stretch of the typed text and what is drawn over it.
  *
- * [original] is the span in the value the reader is actually editing; [replacement] is what the
+ * [start]..[end] is the span in the value the reader is actually editing; [drawn] is what the
  * field shows there. They are usually the same string — a hashtag draws as itself, in colour —
  * and differ only where the typed form is unreadable: a 63-character npub draws as its owner's
  * name, a NIP-19 pointer as a short form.
  */
 @Immutable
-private data class Rewrite(
+internal data class DrawnRun(
     val start: Int,
     val end: Int,
-    val replacement: String,
+    val drawn: String,
+    val style: SpanStyle?,
 )
 
-/**
- * Maps caret offsets across a list of non-overlapping replacements, in both directions.
- *
- * This is the whole reason a chip can shorten an npub without breaking the field. Compose asks
- * this mapping where the caret goes on every keystroke, every selection and every click, and an
- * answer outside the transformed string crashes the text field — so each direction clamps to the
- * span it lands in rather than interpolating inside a replacement, which would put the caret in
- * the middle of a name that has no middle in the underlying text.
- */
-private class RewriteOffsetMapping(
-    private val rewrites: List<Rewrite>,
-    private val originalLength: Int,
-    private val transformedLength: Int,
-) : OffsetMapping {
-    override fun originalToTransformed(offset: Int): Int {
-        val at = offset.coerceIn(0, originalLength)
-        var shift = 0
-        rewrites.forEach { r ->
-            when {
-                // Wholly before the caret: its full change in length applies.
-                r.end <= at -> shift += r.replacement.length - (r.end - r.start)
-                // Inside a rewrite: the caret goes to its far end, never into the middle of a
-                // name whose characters do not exist in the value.
-                r.start < at -> return (r.start + shift + r.replacement.length).coerceIn(0, transformedLength)
-            }
-        }
-        return (at + shift).coerceIn(0, transformedLength)
-    }
+/** The drawn text a list of runs adds up to. */
+internal fun List<DrawnRun>.drawnText(): String = joinToString("") { it.drawn }
 
-    override fun transformedToOriginal(offset: Int): Int {
-        val at = offset.coerceIn(0, transformedLength)
-        var shift = 0
-        rewrites.forEach { r ->
-            val drawnStart = r.start + shift
-            val drawnEnd = drawnStart + r.replacement.length
-            when {
-                drawnEnd <= at -> shift += r.replacement.length - (r.end - r.start)
-                drawnStart < at -> return r.end.coerceIn(0, originalLength)
-            }
-        }
-        return (at - shift).coerceIn(0, originalLength)
+/**
+ * Swaps each run's span for its drawn form. Back to front, so the offsets of the runs not yet
+ * visited still point at the untouched text.
+ */
+internal fun TextFieldBuffer.replaceRuns(
+    typed: CharSequence,
+    runs: List<DrawnRun>,
+) {
+    for (i in runs.indices.reversed()) {
+        val run = runs[i]
+        if (!run.drawn.contentEquals(typed.subSequence(run.start, run.end))) replace(run.start, run.end, run.drawn)
     }
 }
 
@@ -98,16 +70,16 @@ private class RewriteOffsetMapping(
  * selection and a paste all keep working on exactly what the reader typed, and copying the field
  * yields a query that can be pasted back.
  *
- * A token only settles into a chip once the caret has left it: [caret] is passed straight through
- * to [SearchTokenizer.drawable], so a half-typed `#bit` stays plain text under the cursor rather
- * than reflowing on every keystroke. Pass null for a field nobody is typing in.
+ * Mapping the caret, the selection and the IME's composing region across a chip that is shorter
+ * or longer than its text is left to the text field: an [OutputTransformation]'s replacements are
+ * mapped by the field itself, which keeps every one of those ranges inside the drawn text. (The
+ * legacy `VisualTransformation` this replaced asked a hand-written offset mapping instead, and
+ * Android's keyboard bridge crashed on it whenever the composing region sat inside a chip.)
  *
- * [composition] is the IME's composing region, and a token it touches is never rewritten either.
- * Android's keyboard bridge asks for the on-screen bounds of every composing character through the
- * offset mapping and assumes each one lands on a drawn character; a region inside a chip collapses
- * onto the chip's far end, and a chip at the end of the field then reads one past the text and
- * crashes the app. Drawing the touched token as typed keeps the mapping one-to-one under the
- * composition. Pass null when nothing is being composed.
+ * A token only settles into a chip once the caret has left it: [caret] is read on every run and
+ * passed straight through to [SearchTokenizer.drawable], so a half-typed `#bit` stays plain text
+ * under the cursor rather than reflowing on every keystroke. It is a snapshot read, so the field
+ * redraws when it changes; return null for a field nobody is typing in.
  *
  * [displayName] is asked for a key token's owner and [groupName] for a group's id; returning null
  * leaves the token short-formed rather than named, which is what something that has not arrived
@@ -115,7 +87,7 @@ private class RewriteOffsetMapping(
  */
 @Immutable
 class SearchTokenTransformation(
-    private val caret: Int?,
+    private val caret: () -> Int?,
     private val styles: SearchTokenStyles,
     private val displayName: (String) -> String?,
     private val groupName: (String) -> String? = { null },
@@ -125,39 +97,29 @@ class SearchTokenTransformation(
      * is already resolved and must return null rather than wait for anything.
      */
     private val scopeName: (String, String) -> String? = { _, _ -> null },
-    private val composition: TextRange? = null,
-) : VisualTransformation {
-    override fun filter(text: AnnotatedString): TransformedText {
-        val segments = SearchTokenizer.drawable(text.text, caret)
-        val rewrites = mutableListOf<Rewrite>()
-        val builder = AnnotatedString.Builder()
-        var at = 0
+) : OutputTransformation {
+    override fun TextFieldBuffer.transformOutput() {
+        val typed = asCharSequence().toString()
+        val runs = runs(typed)
+        replaceRuns(typed, runs)
 
-        segments.forEach { seg ->
+        // Styles go on after every replacement, in the drawn text's own coordinates.
+        var at = 0
+        runs.forEach { run ->
+            run.style?.let { addStyle(it, at, at + run.drawn.length) }
+            at += run.drawn.length
+        }
+    }
+
+    /** How [text] is drawn, run by run; the runs tile it end to end. */
+    internal fun runs(text: String): List<DrawnRun> {
+        var at = 0
+        return SearchTokenizer.drawable(text, caret()).map { seg ->
             val raw = seg.rawText
             val start = at
             at += raw.length
-            val replacement = if (composing(start, at)) raw else drawnForm(seg, raw)
-            // Only a length change needs a mapping entry; a same-length restyle leaves offsets alone.
-            if (replacement.length != raw.length) rewrites.add(Rewrite(start, at, replacement))
-            val from = builder.length
-            builder.append(replacement)
-            styles.styleFor(seg)?.let { builder.addStyle(it, from, builder.length) }
+            DrawnRun(start, at, drawnForm(seg, raw), styles.styleFor(seg))
         }
-
-        return TransformedText(
-            builder.toAnnotatedString(),
-            RewriteOffsetMapping(rewrites, originalLength = text.text.length, transformedLength = builder.length),
-        )
-    }
-
-    /** True when the IME's composing region shares at least one character with [start]..[end). */
-    private fun composing(
-        start: Int,
-        end: Int,
-    ): Boolean {
-        val c = composition ?: return false
-        return !c.collapsed && c.min < end && start < c.max
     }
 
     /** What a segment draws as. Everything but a key and a pointer draws as it was typed. */
