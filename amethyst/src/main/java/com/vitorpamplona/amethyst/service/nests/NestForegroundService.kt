@@ -416,7 +416,7 @@ class NestForegroundService : Service() {
                     stringRes(this, R.string.nest_notification_channel),
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = stringRes(this, R.string.nest_notification_channel_description)
+                    description = stringRes(this@NestForegroundService, R.string.nest_notification_channel_description)
                     setShowBadge(false)
                 },
             )

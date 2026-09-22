@@ -189,4 +189,18 @@
     <string name="nest_unmute">Ovozni yoqish</string>
     <string name="call_mute">Ovozni o'chirish</string>
     <string name="call_unmute">Ovozni yoqish</string>
+    <string name="napplet_cap_identity">Shaxsiyat</string>
+    <string name="napplet_cap_keys">Klaviatura amallari</string>
+    <string name="napplet_cap_relay">Relaylar</string>
+    <string name="napplet_cap_storage">Saqlash</string>
+    <string name="napplet_cap_value">To'lovlar</string>
+    <string name="napplet_cap_resource">Tarmoq</string>
+    <string name="napplet_cap_upload">Yuklamalar</string>
+    <string name="napplet_cap_theme">Mavzu</string>
+    <string name="napplet_cap_notify">Bildirishnomalar</string>
+    <string name="napplet_cap_inc">Xabar almashish</string>
+    <string name="muted_button">Ovozsiz. Ovozni yoqish uchun bosing</string>
+    <string name="mute_button">Ovoz yoqilgan. Ovozsiz qilish uchun bosing</string>
+    <string name="play">Ijro etish</string>
+    <string name="pause">Pauza</string>
 </resources>

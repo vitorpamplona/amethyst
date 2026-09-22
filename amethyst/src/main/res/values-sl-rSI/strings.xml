@@ -355,4 +355,18 @@
     <string name="nest_unmute">Vklopi zvok</string>
     <string name="call_mute">Utišaj</string>
     <string name="call_unmute">Vklopi zvok</string>
+    <string name="napplet_cap_identity">Identiteta</string>
+    <string name="napplet_cap_keys">Tipkovne bližnjice</string>
+    <string name="napplet_cap_relay">Releji</string>
+    <string name="napplet_cap_storage">Shramba</string>
+    <string name="napplet_cap_value">Plačila</string>
+    <string name="napplet_cap_resource">Mreža</string>
+    <string name="napplet_cap_upload">Prenosi</string>
+    <string name="napplet_cap_theme">Tema</string>
+    <string name="napplet_cap_notify">Obvestila</string>
+    <string name="napplet_cap_inc">Sporočanje</string>
+    <string name="muted_button">Utišano. Klikni za vklop zvoka</string>
+    <string name="mute_button">Zvok je prižgan. Klikni da ga utišaš</string>
+    <string name="play">Predvajaj</string>
+    <string name="pause">Premor</string>
 </resources>

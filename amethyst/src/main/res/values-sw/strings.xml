@@ -190,4 +190,18 @@
     <string name="nest_unmute">Washa sauti</string>
     <string name="call_mute">Kimya</string>
     <string name="call_unmute">Ondoa kimya</string>
+    <string name="napplet_cap_identity">Utambulisho</string>
+    <string name="napplet_cap_keys">Vitendo vya kibodi</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">Hifadhi</string>
+    <string name="napplet_cap_value">Malipo</string>
+    <string name="napplet_cap_resource">Mtandao</string>
+    <string name="napplet_cap_upload">Upakiaji</string>
+    <string name="napplet_cap_theme">Mandhari</string>
+    <string name="napplet_cap_notify">Arifa</string>
+    <string name="napplet_cap_inc">Ujumbe</string>
+    <string name="muted_button">Walemavu. Bonyeza kuwasha sauti</string>
+    <string name="mute_button">Sauti imewashwa. Bonyeza kulegeza</string>
+    <string name="play">Cheza</string>
+    <string name="pause">Simamisha</string>
 </resources>

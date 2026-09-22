@@ -189,4 +189,17 @@
     <string name="nest_unmute">ஒலியை மீட்டமை</string>
     <string name="call_mute">முடக்கு</string>
     <string name="call_unmute">முடக்கு நீக்கு</string>
+    <string name="napplet_cap_identity">அடையாளம்</string>
+    <string name="napplet_cap_keys">விசைப்பலகை செயல்கள்</string>
+    <string name="napplet_cap_storage">சேமிப்பு</string>
+    <string name="napplet_cap_value">கொடுப்பனவுகள்</string>
+    <string name="napplet_cap_resource">வலைப்பின்னல்</string>
+    <string name="napplet_cap_upload">பதிவேற்றங்கள்</string>
+    <string name="napplet_cap_theme">தீம்</string>
+    <string name="napplet_cap_notify">அறிவிப்புகள்</string>
+    <string name="napplet_cap_inc">செய்தியிடல்</string>
+    <string name="muted_button">முடக்கப்பட்டது. முடக்கத்தை நீக்க கிளிக் செய்யவும்</string>
+    <string name="mute_button">ஒலி இயக்கத்தில். முடக்க கிளிக் செய்யவும்</string>
+    <string name="play">இயக்கு</string>
+    <string name="pause">இடைநிறுத்து</string>
 </resources>

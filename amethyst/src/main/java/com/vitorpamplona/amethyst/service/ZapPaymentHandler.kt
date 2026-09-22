@@ -545,7 +545,7 @@ class ZapPaymentHandler(
         val progress = PaymentProgress(recipients.size, onProgress)
 
         mapNotNullAsync(recipients) { recipient: Bolt12Recipient ->
-            private suspend fun reportBolt12Error(
+            suspend fun reportBolt12Error(
                 msgRes: StringResource,
                 detail: String?,
             ) {
@@ -560,7 +560,7 @@ class ZapPaymentHandler(
                 amountMillisats = calculateZapValue(totalAmountMilliSats, recipient.weight, totalWeight),
                 message = message,
                 zapType = zapType,
-                onError = ::reportBolt12Error,
+                onError = { msgRes, detail -> account.scope.launch { reportBolt12Error(msgRes, detail) } },
                 onNotPaid = { code, detail ->
                     val lnAddress = recipient.lnAddress
                     if (lnAddress != null && Bolt12LightningFallback.shouldRetry(code)) {

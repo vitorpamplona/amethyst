@@ -187,4 +187,18 @@
     <string name="nest_unmute">取消靜音</string>
     <string name="call_mute">靜音</string>
     <string name="call_unmute">取消靜音</string>
+    <string name="napplet_cap_identity">身份識別</string>
+    <string name="napplet_cap_keys">鍵盤操作</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">儲存空間</string>
+    <string name="napplet_cap_value">付款</string>
+    <string name="napplet_cap_resource">網路</string>
+    <string name="napplet_cap_upload">上傳</string>
+    <string name="napplet_cap_theme">佈景主題</string>
+    <string name="napplet_cap_notify">通知</string>
+    <string name="napplet_cap_inc">訊息傳遞</string>
+    <string name="muted_button">靜音。點擊取消靜音</string>
+    <string name="mute_button">聲音開啟。點擊靜音</string>
+    <string name="play">播放</string>
+    <string name="pause">暫停</string>
 </resources>

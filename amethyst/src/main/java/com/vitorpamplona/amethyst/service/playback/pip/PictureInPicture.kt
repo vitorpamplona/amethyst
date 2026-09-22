@@ -48,7 +48,7 @@ fun makePipParams(
             ratio?.let { setAspectRatio(it.toPipRational()) }
         }.build()
 
-suspend fun Activity.makePipParams(
+fun Activity.makePipParams(
     isPlaying: Boolean,
     isMuted: Boolean,
     ratio: Float?,

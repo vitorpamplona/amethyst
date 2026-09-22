@@ -189,4 +189,18 @@
     <string name="nest_unmute">Άρση σίγασης</string>
     <string name="call_mute">Σίγαση</string>
     <string name="call_unmute">Άρση σίγασης</string>
+    <string name="napplet_cap_identity">Ταυτότητα</string>
+    <string name="napplet_cap_keys">Ενέργειες πληκτρολογίου</string>
+    <string name="napplet_cap_relay">relay</string>
+    <string name="napplet_cap_storage">Αποθήκευση</string>
+    <string name="napplet_cap_value">Πληρωμές</string>
+    <string name="napplet_cap_resource">Δίκτυο</string>
+    <string name="napplet_cap_upload">Μεταφορτώσεις</string>
+    <string name="napplet_cap_theme">Θέμα</string>
+    <string name="napplet_cap_notify">Ειδοποιήσεις</string>
+    <string name="napplet_cap_inc">Ανταλλαγή μηνυμάτων</string>
+    <string name="muted_button">Σε σίγαση. Κάντε κλικ για κατάργηση σίγασης</string>
+    <string name="mute_button">Ήχος ενεργός. Κάντε κλικ για σίγαση</string>
+    <string name="play">Αναπαραγωγή</string>
+    <string name="pause">Παύση</string>
 </resources>

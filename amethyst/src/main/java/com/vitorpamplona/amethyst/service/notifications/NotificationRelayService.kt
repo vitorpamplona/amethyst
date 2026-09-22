@@ -349,6 +349,22 @@ class NotificationRelayService : Service() {
     }
 
     private fun updateNotification(connectedRelays: Int) {
+        postNotification(connectedRelays)
+        // The breakdown names each job from the shared string catalog, whose only
+        // non-composable accessor suspends - so it is recomputed off this path and
+        // the card reposted once the text actually changes.
+        if (detailsExpanded) {
+            scope.launch {
+                val fresh = RelayPurposeSummary.lines()
+                if (fresh.isNotEmpty() && fresh != lastBreakdown) {
+                    lastBreakdown = fresh
+                    postNotification(connectedRelays)
+                }
+            }
+        }
+    }
+
+    private fun postNotification(connectedRelays: Int) {
         val notification = buildNotification(connectedRelays)
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
@@ -398,14 +414,7 @@ class NotificationRelayService : Service() {
         //
         // Computed only while expanded: walking every connected relay's active requests once a
         // second is wasted work when nobody has asked to see the result.
-        val breakdown =
-            if (detailsExpanded) {
-                val fresh = RelayPurposeSummary.lines(this)
-                if (fresh.isNotEmpty()) lastBreakdown = fresh
-                lastBreakdown.takeIf { it.isNotEmpty() }
-            } else {
-                null
-            }
+        val breakdown = if (detailsExpanded) lastBreakdown.takeIf { it.isNotEmpty() } else null
 
         val detailsIntent =
             Intent(this, NotificationRelayService::class.java).apply {

@@ -187,4 +187,18 @@
     <string name="nest_unmute">ミュート解除</string>
     <string name="call_mute">ミュート</string>
     <string name="call_unmute">ミュート解除</string>
+    <string name="napplet_cap_identity">ID</string>
+    <string name="napplet_cap_keys">キーボード操作</string>
+    <string name="napplet_cap_relay">relay</string>
+    <string name="napplet_cap_storage">ストレージ</string>
+    <string name="napplet_cap_value">支払い</string>
+    <string name="napplet_cap_resource">ネットワーク</string>
+    <string name="napplet_cap_upload">アップロード</string>
+    <string name="napplet_cap_theme">テーマ</string>
+    <string name="napplet_cap_notify">通知</string>
+    <string name="napplet_cap_inc">メッセージング</string>
+    <string name="muted_button">ミュート中。クリックしてミュート解除</string>
+    <string name="mute_button">音声オン。クリックしてミュート</string>
+    <string name="play">再生</string>
+    <string name="pause">一時停止</string>
 </resources>

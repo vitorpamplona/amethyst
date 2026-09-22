@@ -425,7 +425,7 @@ class NewMusicTrackViewModel : ViewModel() {
             .firstNotNullOfOrNull { it.result as? UploadOrchestrator.OrchestratorResult.ServerResult }
             ?.url
 
-    private fun formatUploadErrors(
+    private suspend fun formatUploadErrors(
         errors: List<com.vitorpamplona.amethyst.service.uploads.UploadingState.Error>,
         context: Context,
     ): String =

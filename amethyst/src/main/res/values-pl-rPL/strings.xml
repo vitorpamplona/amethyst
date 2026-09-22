@@ -361,4 +361,19 @@
     <string name="nest_unmute">Włącz dźwięk</string>
     <string name="call_mute">Wycisz</string>
     <string name="call_unmute">Włącz dźwięk</string>
+    <string name="napplet_cap_identity">Tożsamość</string>
+    <string name="napplet_cap_keys">Operacje klawiatury</string>
+    <string name="napplet_cap_relay">Transmitery</string>
+    <string name="napplet_cap_signer">Szyfrowanie</string>
+    <string name="napplet_cap_storage">Schowek</string>
+    <string name="napplet_cap_value">Płatności</string>
+    <string name="napplet_cap_resource">Sieć</string>
+    <string name="napplet_cap_upload">Wgrane</string>
+    <string name="napplet_cap_theme">Motyw</string>
+    <string name="napplet_cap_notify">Powiadomienia</string>
+    <string name="napplet_cap_inc">Wiadomości</string>
+    <string name="muted_button">Wyciszone. Kliknij, aby włączyć dźwięk</string>
+    <string name="mute_button">Dźwięk włączony. Kliknij, aby wyciszyć</string>
+    <string name="play">Odtwórz</string>
+    <string name="pause">Pauza</string>
 </resources>

@@ -662,4 +662,19 @@
     <string name="nest_unmute">Unmute</string>
     <string name="call_mute">Mute</string>
     <string name="call_unmute">Unmute</string>
+    <string name="napplet_cap_identity">Identity</string>
+    <string name="napplet_cap_keys">Keyboard actions</string>
+    <string name="napplet_cap_relay">Relays</string>
+    <string name="napplet_cap_signer">Encryption</string>
+    <string name="napplet_cap_storage">Storage</string>
+    <string name="napplet_cap_value">Payments</string>
+    <string name="napplet_cap_resource">Network</string>
+    <string name="napplet_cap_upload">Uploads</string>
+    <string name="napplet_cap_theme">Theme</string>
+    <string name="napplet_cap_notify">Notifications</string>
+    <string name="napplet_cap_inc">Messaging</string>
+    <string name="muted_button">Muted. Click to unmute</string>
+    <string name="mute_button">Sound on. Click to mute</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
 </resources>

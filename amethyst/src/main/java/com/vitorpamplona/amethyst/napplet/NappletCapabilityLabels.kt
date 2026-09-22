@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_identity
@@ -76,4 +77,26 @@ fun NappletCapability.descriptionRes(): StringResource =
         NappletCapability.THEME -> Res.string.napplet_cap_theme_desc
         NappletCapability.NOTIFY -> Res.string.napplet_cap_notify_desc
         NappletCapability.INC -> Res.string.napplet_cap_inc_desc
+    }
+
+/**
+ * Android-resource twin of [labelRes], for [NappletLauncher].
+ *
+ * Launch parameters are minted from a plain onClick, which can call neither the
+ * composable nor the suspend accessor, and the sandbox process has no resources
+ * of its own - so the labels have to be resolved here and passed across.
+ */
+fun NappletCapability.labelResId(): Int =
+    when (this) {
+        NappletCapability.IDENTITY -> R.string.napplet_cap_identity
+        NappletCapability.KEYS -> R.string.napplet_cap_keys
+        NappletCapability.RELAY -> R.string.napplet_cap_relay
+        NappletCapability.SIGNER -> R.string.napplet_cap_signer
+        NappletCapability.STORAGE -> R.string.napplet_cap_storage
+        NappletCapability.VALUE -> R.string.napplet_cap_value
+        NappletCapability.RESOURCE -> R.string.napplet_cap_resource
+        NappletCapability.UPLOAD -> R.string.napplet_cap_upload
+        NappletCapability.THEME -> R.string.napplet_cap_theme
+        NappletCapability.NOTIFY -> R.string.napplet_cap_notify
+        NappletCapability.INC -> R.string.napplet_cap_inc
     }

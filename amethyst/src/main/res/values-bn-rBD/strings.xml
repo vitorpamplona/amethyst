@@ -190,4 +190,18 @@
     <string name="nest_unmute">আনমিউট করুন</string>
     <string name="call_mute">মিউট করুন</string>
     <string name="call_unmute">আনমিউট করুন</string>
+    <string name="napplet_cap_identity">পরিচয়</string>
+    <string name="napplet_cap_keys">কীবোর্ড অ্যাকশন</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">স্টোরেজ</string>
+    <string name="napplet_cap_value">পেমেন্ট</string>
+    <string name="napplet_cap_resource">নেটওয়ার্ক</string>
+    <string name="napplet_cap_upload">আপলোড</string>
+    <string name="napplet_cap_theme">থিম</string>
+    <string name="napplet_cap_notify">বিজ্ঞপ্তি</string>
+    <string name="napplet_cap_inc">মেসেজিং</string>
+    <string name="muted_button">মৌন করে রাখা। এটি তুলে নিতে ক্লিক করুন</string>
+    <string name="mute_button">শব্দ চালু আছে। মৌন করতে ক্লিক করুন</string>
+    <string name="play">চালান</string>
+    <string name="pause">বিরতি</string>
 </resources>

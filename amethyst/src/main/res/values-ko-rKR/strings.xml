@@ -188,4 +188,18 @@
     <string name="nest_unmute">음소거 해제</string>
     <string name="call_mute">음소거</string>
     <string name="call_unmute">음소거 해제</string>
+    <string name="napplet_cap_identity">신원</string>
+    <string name="napplet_cap_keys">키보드 동작</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">저장소</string>
+    <string name="napplet_cap_value">결제</string>
+    <string name="napplet_cap_resource">네트워크</string>
+    <string name="napplet_cap_upload">업로드</string>
+    <string name="napplet_cap_theme">테마</string>
+    <string name="napplet_cap_notify">알림</string>
+    <string name="napplet_cap_inc">메시징</string>
+    <string name="muted_button">음소거됨. 클릭하여 음소거 해제</string>
+    <string name="mute_button">소리 켜짐. 클릭하여 음소거</string>
+    <string name="play">재생</string>
+    <string name="pause">일시 정지</string>
 </resources>

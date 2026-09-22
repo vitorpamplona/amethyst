@@ -358,4 +358,19 @@
     <string name="nest_unmute">Zrušit ztlumení</string>
     <string name="call_mute">Ztlumit</string>
     <string name="call_unmute">Zrušit ztlumení</string>
+    <string name="napplet_cap_identity">Identita</string>
+    <string name="napplet_cap_keys">Akce klávesnice</string>
+    <string name="napplet_cap_relay">Relaye</string>
+    <string name="napplet_cap_signer">Šifrování</string>
+    <string name="napplet_cap_storage">Úložiště</string>
+    <string name="napplet_cap_value">Platby</string>
+    <string name="napplet_cap_resource">Síť</string>
+    <string name="napplet_cap_upload">Nahrávání</string>
+    <string name="napplet_cap_theme">Téma</string>
+    <string name="napplet_cap_notify">Oznámení</string>
+    <string name="napplet_cap_inc">Zasílání zpráv</string>
+    <string name="muted_button">Ztlumené. Klikněte pro odztlumení</string>
+    <string name="mute_button">Zvuk zapnutý. Klikněte pro ztlumení</string>
+    <string name="play">Hrát</string>
+    <string name="pause">Pozastavit</string>
 </resources>

@@ -192,4 +192,18 @@
     <string name="nest_unmute">Увімкнути звук</string>
     <string name="call_mute">Вимкнути мікрофон</string>
     <string name="call_unmute">Увімкнути мікрофон</string>
+    <string name="napplet_cap_identity">Ідентичність</string>
+    <string name="napplet_cap_keys">Дії клавіатури</string>
+    <string name="napplet_cap_relay">relay</string>
+    <string name="napplet_cap_storage">Сховище</string>
+    <string name="napplet_cap_value">Платежі</string>
+    <string name="napplet_cap_resource">Мережа</string>
+    <string name="napplet_cap_upload">Завантаження</string>
+    <string name="napplet_cap_theme">Тема</string>
+    <string name="napplet_cap_notify">Сповіщення</string>
+    <string name="napplet_cap_inc">Обмін повідомленнями</string>
+    <string name="muted_button">Звук вимкнено. Натисніть, щоб увімкнути звук</string>
+    <string name="mute_button">Звук увімкнено. Натисніть, щоб вимкнути звук</string>
+    <string name="play">Відтворити</string>
+    <string name="pause">Пауза</string>
 </resources>

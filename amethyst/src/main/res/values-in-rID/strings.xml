@@ -184,4 +184,18 @@
     <string name="nest_unmute">Aktifkan suara</string>
     <string name="call_mute">Bisukan</string>
     <string name="call_unmute">Aktifkan suara</string>
+    <string name="napplet_cap_identity">Identitas</string>
+    <string name="napplet_cap_keys">Tindakan keyboard</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">Penyimpanan</string>
+    <string name="napplet_cap_value">Pembayaran</string>
+    <string name="napplet_cap_resource">Jaringan</string>
+    <string name="napplet_cap_upload">Unggahan</string>
+    <string name="napplet_cap_theme">Tema</string>
+    <string name="napplet_cap_notify">Notifikasi</string>
+    <string name="napplet_cap_inc">Pesan</string>
+    <string name="muted_button">Dibisukan. Ketuk untuk membunyikan</string>
+    <string name="mute_button">Suara aktif. Ketuk untuk bisukan</string>
+    <string name="play">Putar</string>
+    <string name="pause">Jeda</string>
 </resources>

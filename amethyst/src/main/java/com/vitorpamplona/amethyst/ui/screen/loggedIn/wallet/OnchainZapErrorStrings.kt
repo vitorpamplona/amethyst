@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
@@ -39,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_stage_publishing
 import com.vitorpamplona.amethyst.commons.resources.onchain_stage_signing
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.ui.pluralStringRes
+import com.vitorpamplona.amethyst.ui.stringRes
 import org.jetbrains.compose.resources.StringResource
 
 /**
@@ -85,3 +88,19 @@ fun OnchainZapSendStage.labelRes(): StringResource =
         OnchainZapSendStage.BROADCASTING -> Res.string.onchain_stage_broadcasting
         OnchainZapSendStage.PUBLISHING -> Res.string.onchain_stage_publishing
     }
+
+/** Composition-side twin of [userMessage], for the failure card. */
+@Composable
+fun OnchainZapSendResult.Failure.userMessageText(): String {
+    val total = totalReceipts
+    return if (error == OnchainZapSendError.RECEIPT_PUBLISH_FAILED && total != null) {
+        pluralStringRes(
+            Res.plurals.onchain_send_error_publish_receipt_partial,
+            total,
+            publishedReceiptEventIds.size,
+            total,
+        )
+    } else {
+        stringRes(error.messageRes())
+    }
+}

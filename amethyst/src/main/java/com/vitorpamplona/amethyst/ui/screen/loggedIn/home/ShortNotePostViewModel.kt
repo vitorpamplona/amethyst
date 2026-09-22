@@ -294,8 +294,9 @@ open class ShortNotePostViewModel :
             logTag = "ShortNotePostViewModel",
             onError = { error ->
                 accountViewModel.toastManager.toast(
-                    loadStringRes(Res.string.error),
+                    Res.string.error,
                     error.message ?: "Voice anonymization failed",
+                    error,
                 )
             },
         )
@@ -1914,9 +1915,6 @@ open class ShortNotePostViewModel :
         val uploadErrorTitle = loadStringRes(Res.string.upload_error_title)
         val uploadVoiceNip95NotSupported = loadStringRes(Res.string.upload_error_voice_message_nip95_not_supported)
         val uploadVoiceFailed = loadStringRes(Res.string.upload_error_voice_message_failed)
-        val uploadVoiceExceptionMessage: (String) -> String = { detail ->
-            loadStringRes(Res.string.upload_error_voice_message_exception, detail)
-        }
 
         isUploadingVoice = true
 
@@ -1972,7 +1970,10 @@ open class ShortNotePostViewModel :
                 }
             }
         } catch (e: Exception) {
-            onError(uploadErrorTitle, uploadVoiceExceptionMessage(e.message ?: e.javaClass.simpleName))
+            onError(
+                uploadErrorTitle,
+                loadStringRes(Res.string.upload_error_voice_message_exception, e.message ?: e.javaClass.simpleName),
+            )
             voiceRecording = null
         } finally {
             isUploadingVoice = false

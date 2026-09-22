@@ -40,6 +40,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
@@ -80,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
 /**
@@ -140,6 +143,7 @@ private fun EmbeddedNostrAppTab(
     val profile = HostProfile.fromName(params.getString(NappletHostContract.EXTRA_HOST_PROFILE))
     val useTor = params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
 
+    val scope = rememberCoroutineScope()
     var canGoBack by remember { mutableStateOf(false) }
     var showAccess by remember { mutableStateOf(false) }
 
@@ -155,7 +159,9 @@ private fun EmbeddedNostrAppTab(
     SideEffect {
         controller.onStateChanged = { canGoBack = it }
         controller.onNotice = { notice ->
-            noticeResId(notice)?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+            noticeResId(notice)?.let { res ->
+                scope.launch { Toast.makeText(context, loadStringRes(res), Toast.LENGTH_SHORT).show() }
+            }
         }
     }
 

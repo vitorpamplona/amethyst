@@ -185,4 +185,18 @@
     <string name="nest_unmute">Attiva audio</string>
     <string name="call_mute">Disattiva microfono</string>
     <string name="call_unmute">Attiva microfono</string>
+    <string name="napplet_cap_identity">Identità</string>
+    <string name="napplet_cap_keys">Azioni tastiera</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">Archiviazione</string>
+    <string name="napplet_cap_value">Pagamenti</string>
+    <string name="napplet_cap_resource">Rete</string>
+    <string name="napplet_cap_upload">Caricamenti</string>
+    <string name="napplet_cap_theme">Tema</string>
+    <string name="napplet_cap_notify">Notifiche</string>
+    <string name="napplet_cap_inc">Messaggistica</string>
+    <string name="muted_button">Mutato. Clicca per riattivare l'audio</string>
+    <string name="mute_button">Audio acceso. Clicca per disattivarlo</string>
+    <string name="play">Riproduci</string>
+    <string name="pause">Pausa</string>
 </resources>

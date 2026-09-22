@@ -77,6 +77,12 @@ fun stringRes(
     @StringRes id: Int,
 ): String = resourceCache.get(id) ?: stringResource(id).also { resourceCache.put(id, it) }
 
+@Composable
+fun stringRes(
+    @StringRes id: Int,
+    vararg args: Any?,
+): String = stringResource(id, *Array<Any>(args.size) { args[it] ?: "" })
+
 fun stringRes(
     ctx: Context,
     @StringRes id: Int,

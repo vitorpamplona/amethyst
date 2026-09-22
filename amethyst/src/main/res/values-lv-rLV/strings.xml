@@ -193,4 +193,17 @@
     <string name="nest_unmute">Ieslēgt skaņu</string>
     <string name="call_mute">Izslēgt mikrofonu</string>
     <string name="call_unmute">Ieslēgt mikrofonu</string>
+    <string name="napplet_cap_identity">Identitāte</string>
+    <string name="napplet_cap_keys">Tastatūras darbības</string>
+    <string name="napplet_cap_storage">Krātuve</string>
+    <string name="napplet_cap_value">Maksājumi</string>
+    <string name="napplet_cap_resource">Tīkls</string>
+    <string name="napplet_cap_upload">Augšupielādes</string>
+    <string name="napplet_cap_theme">Motīvs</string>
+    <string name="napplet_cap_notify">Paziņojumi</string>
+    <string name="napplet_cap_inc">Ziņapmaiņa</string>
+    <string name="muted_button">Skaņa izslēgta. Noklikšķiniet, lai ieslēgtu skaņu</string>
+    <string name="mute_button">Skaņa ieslēgta. Noklikšķiniet, lai izslēgtu skaņu</string>
+    <string name="play">Atskaņot</string>
+    <string name="pause">Pauzēt</string>
 </resources>

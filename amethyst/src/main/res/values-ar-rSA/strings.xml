@@ -197,4 +197,17 @@
     <string name="nest_unmute">إلغاء كتم الصوت</string>
     <string name="call_mute">كتم الصوت</string>
     <string name="call_unmute">إلغاء كتم الصوت</string>
+    <string name="napplet_cap_identity">الهوية</string>
+    <string name="napplet_cap_keys">إجراءات لوحة المفاتيح</string>
+    <string name="napplet_cap_storage">التخزين</string>
+    <string name="napplet_cap_value">المدفوعات</string>
+    <string name="napplet_cap_resource">الشبكة</string>
+    <string name="napplet_cap_upload">الرفع</string>
+    <string name="napplet_cap_theme">المظهر</string>
+    <string name="napplet_cap_notify">الإشعارات</string>
+    <string name="napplet_cap_inc">المراسلة</string>
+    <string name="muted_button">الصوت مكتوم. انقر لإلغاء كتم الصوت</string>
+    <string name="mute_button">الصوت مفعل. انقر لكتم الصوت</string>
+    <string name="play">تشغيل</string>
+    <string name="pause">إيقاف مؤقت</string>
 </resources>

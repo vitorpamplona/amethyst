@@ -327,4 +327,18 @@
     <string name="nest_unmute">Dempen opheffen</string>
     <string name="call_mute">Dempen</string>
     <string name="call_unmute">Dempen opheffen</string>
+    <string name="napplet_cap_identity">Identiteit</string>
+    <string name="napplet_cap_keys">Toetsenbordacties</string>
+    <string name="napplet_cap_relay">Relays</string>
+    <string name="napplet_cap_storage">Opslag</string>
+    <string name="napplet_cap_value">Betalingen</string>
+    <string name="napplet_cap_resource">Netwerk</string>
+    <string name="napplet_cap_upload">Uploads</string>
+    <string name="napplet_cap_theme">Thema</string>
+    <string name="napplet_cap_notify">Meldingen</string>
+    <string name="napplet_cap_inc">Berichten</string>
+    <string name="muted_button">Gedempt. Tik voor geluid</string>
+    <string name="mute_button">Geluid aan. Tik voor dempen</string>
+    <string name="play">Afspelen</string>
+    <string name="pause">Pauzeren</string>
 </resources>

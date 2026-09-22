@@ -330,4 +330,19 @@
     <string name="nest_unmute">Stummschaltung aufheben</string>
     <string name="call_mute">Stummschalten</string>
     <string name="call_unmute">Stummschaltung aufheben</string>
+    <string name="napplet_cap_identity">Identität</string>
+    <string name="napplet_cap_keys">Tastaturaktionen</string>
+    <string name="napplet_cap_relay">Relays</string>
+    <string name="napplet_cap_signer">Verschlüsselung</string>
+    <string name="napplet_cap_storage">Speicher</string>
+    <string name="napplet_cap_value">Zahlungen</string>
+    <string name="napplet_cap_resource">Netzwerk</string>
+    <string name="napplet_cap_upload">Uploads</string>
+    <string name="napplet_cap_theme">Design</string>
+    <string name="napplet_cap_notify">Benachrichtigungen</string>
+    <string name="napplet_cap_inc">Nachrichten</string>
+    <string name="muted_button">Stummgeschaltet. Drücken, um Ton einzuschalten</string>
+    <string name="mute_button">Ton ein. Zur Stummschaltung drücken</string>
+    <string name="play">Abspielen</string>
+    <string name="pause">Pausen</string>
 </resources>

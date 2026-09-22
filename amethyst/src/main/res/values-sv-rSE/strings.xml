@@ -330,4 +330,19 @@
     <string name="nest_unmute">Slå på ljud</string>
     <string name="call_mute">Ljud av</string>
     <string name="call_unmute">Ljud på</string>
+    <string name="napplet_cap_identity">Identitet</string>
+    <string name="napplet_cap_keys">Tangentbordsåtgärder</string>
+    <string name="napplet_cap_relay">Reläer</string>
+    <string name="napplet_cap_signer">Kryptering</string>
+    <string name="napplet_cap_storage">Lagring</string>
+    <string name="napplet_cap_value">Betalningar</string>
+    <string name="napplet_cap_resource">Nätverk</string>
+    <string name="napplet_cap_upload">Uppladdningar</string>
+    <string name="napplet_cap_theme">Tema</string>
+    <string name="napplet_cap_notify">Aviseringar</string>
+    <string name="napplet_cap_inc">Meddelanden</string>
+    <string name="muted_button">Ljud avstängt. Klicka för att ta bort ljudlöst</string>
+    <string name="mute_button">Ljud på. Klicka för att stänga av ljudet</string>
+    <string name="play">Spela</string>
+    <string name="pause">Pausa</string>
 </resources>

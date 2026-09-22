@@ -27,12 +27,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.drawable.Icon
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.mute_button
-import com.vitorpamplona.amethyst.commons.resources.muted_button
-import com.vitorpamplona.amethyst.commons.resources.pause
-import com.vitorpamplona.amethyst.commons.resources.play
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 
 const val ACTION_MUTE = "com.vitorpamplona.amethyst.MUTE"
 const val ACTION_PLAY_PAUSE = "com.vitorpamplona.amethyst.PLAY_PAUSE"
@@ -55,7 +51,7 @@ class ActionReceiver(
     }
 }
 
-suspend fun createMuteAction(
+fun createMuteAction(
     context: Context,
     isMuted: Boolean,
 ): RemoteAction {
@@ -65,7 +61,7 @@ suspend fun createMuteAction(
         } else {
             Icon.createWithResource(context, androidx.media3.session.R.drawable.media3_icon_volume_off)
         }
-    val title = if (isMuted) loadStringRes(Res.string.muted_button) else loadStringRes(Res.string.mute_button)
+    val title = stringRes(context, if (isMuted) R.string.muted_button else R.string.mute_button)
 
     val intent =
         PendingIntent.getBroadcast(
@@ -77,7 +73,7 @@ suspend fun createMuteAction(
     return RemoteAction(icon, title, title, intent)
 }
 
-suspend fun createPlayPauseAction(
+fun createPlayPauseAction(
     context: Context,
     isPlaying: Boolean,
 ): RemoteAction {
@@ -87,7 +83,7 @@ suspend fun createPlayPauseAction(
         } else {
             Icon.createWithResource(context, androidx.media3.session.R.drawable.media3_icon_pause)
         }
-    val title = if (!isPlaying) loadStringRes(Res.string.play) else loadStringRes(Res.string.pause)
+    val title = stringRes(context, if (!isPlaying) R.string.play else R.string.pause)
     val intent =
         PendingIntent.getBroadcast(
             context,

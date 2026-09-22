@@ -188,4 +188,18 @@
     <string name="nest_unmute">Uključi zvuk</string>
     <string name="call_mute">Isključi mikrofon</string>
     <string name="call_unmute">Uključi mikrofon</string>
+    <string name="napplet_cap_identity">Identitet</string>
+    <string name="napplet_cap_keys">Akcije tastature</string>
+    <string name="napplet_cap_relay">Relay-i</string>
+    <string name="napplet_cap_storage">Skladište</string>
+    <string name="napplet_cap_value">Plaćanja</string>
+    <string name="napplet_cap_resource">Mreža</string>
+    <string name="napplet_cap_upload">Otpremanje</string>
+    <string name="napplet_cap_theme">Tema</string>
+    <string name="napplet_cap_notify">Obaveštenja</string>
+    <string name="napplet_cap_inc">Poruke</string>
+    <string name="muted_button">Utišano. Kliknite za uključivanje zvuka</string>
+    <string name="mute_button">Zvuk uključen. Kliknite za utišavanje</string>
+    <string name="play">Reprodukuj</string>
+    <string name="pause">Pauziraj</string>
 </resources>

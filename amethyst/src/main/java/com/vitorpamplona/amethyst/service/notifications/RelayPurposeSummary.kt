@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import android.content.Context
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposes
@@ -54,7 +53,7 @@ object RelayPurposeSummary {
      * Lines for the expanded notification, busiest first. Empty when nothing is attributed yet —
      * the caller must then fall back to the bare count rather than render an empty section.
      */
-    suspend fun lines(ctx: Context): List<String> {
+    suspend fun lines(): List<String> {
         val client = Amethyst.instance.client
         val named = mutableMapOf<SubPurpose, MutableSet<NormalizedRelayUrl>>()
         val browsing = mutableSetOf<NormalizedRelayUrl>()

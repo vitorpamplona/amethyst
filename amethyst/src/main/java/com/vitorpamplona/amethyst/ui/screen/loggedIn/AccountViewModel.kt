@@ -1228,7 +1228,7 @@ class AccountViewModel(
             .isNotEmpty()
 
     /** True when a BOLT12 offer can be paid in-app: an NWC wallet is set and advertises `pay` (nwc#2). */
-    suspend fun canPayBolt12ViaNwc(): Boolean = account.zaps.canZapViaBolt12()
+    fun canPayBolt12ViaNwc(): Boolean = account.zaps.canZapViaBolt12()
 
     /**
      * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
@@ -1236,7 +1236,7 @@ class AccountViewModel(
      * plain payment, not a NIP-B1 zap (no Nostr receipt); the outcome is surfaced as
      * a toast. Callers should gate on [hasNwcWallet].
      */
-    suspend fun payBolt12OfferViaNwc(
+    fun payBolt12OfferViaNwc(
         offer: String,
         amountMillisats: Long,
     ) = launchSigner {
@@ -2737,7 +2737,7 @@ class AccountViewModel(
         }
     }
 
-    suspend fun meltCashu(
+    fun meltCashu(
         token: CashuToken,
         context: Context,
         onDone: (String, String) -> Unit,
@@ -2784,13 +2784,15 @@ class AccountViewModel(
                 }
             }
         } else {
-            onDone(
-                loadStringRes(Res.string.no_lightning_address_set),
-                loadStringRes(
-                    Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                    account.userProfile().toBestDisplayName(),
-                ),
-            )
+            viewModelScope.launch {
+                onDone(
+                    loadStringRes(Res.string.no_lightning_address_set),
+                    loadStringRes(
+                        Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
+                        account.userProfile().toBestDisplayName(),
+                    ),
+                )
+            }
         }
     }
 
@@ -3033,6 +3035,8 @@ class AccountViewModel(
         localContext: Context,
     ) {
         viewModelScope.launch {
+            // onSuccess is a plain callback, so the text is resolved here first.
+            val savedText = loadStringRes(Res.string.video_saved_to_the_gallery)
             MediaSaverToDisk.saveDownloadingIfNeeded(
                 videoUri = videoUri,
                 okHttpClient = httpClientBuilder::okHttpClientForVideo,
@@ -3046,7 +3050,7 @@ class AccountViewModel(
                 onSuccess = {
                     Handler(Looper.getMainLooper()).post {
                         Toast
-                            .makeText(localContext.applicationContext, Res.string.video_saved_to_the_gallery, Toast.LENGTH_SHORT)
+                            .makeText(localContext.applicationContext, savedText, Toast.LENGTH_SHORT)
                             .show()
                     }
                 },

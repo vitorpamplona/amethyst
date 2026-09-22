@@ -300,7 +300,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
             .firstNotNullOfOrNull { it.result as? UploadOrchestrator.OrchestratorResult.ServerResult }
             ?.url
 
-    private fun formatUploadErrors(
+    private suspend fun formatUploadErrors(
         errors: List<UploadingState.Error>,
         context: Context,
     ): String =

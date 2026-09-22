@@ -83,4 +83,18 @@
     <string name="nest_unmute">Malsilentigi</string>
     <string name="call_mute">Silentigi</string>
     <string name="call_unmute">Malsilentigi</string>
+    <string name="napplet_cap_identity">Identeco</string>
+    <string name="napplet_cap_keys">Klavarago</string>
+    <string name="napplet_cap_relay">Relay-oj</string>
+    <string name="napplet_cap_storage">Stokado</string>
+    <string name="napplet_cap_value">Pagoj</string>
+    <string name="napplet_cap_resource">Reto</string>
+    <string name="napplet_cap_upload">Alŝutoj</string>
+    <string name="napplet_cap_theme">Temo</string>
+    <string name="napplet_cap_notify">Sciigoj</string>
+    <string name="napplet_cap_inc">Mesaĝado</string>
+    <string name="muted_button">Silentigita. Alklaki por malsilentigi</string>
+    <string name="mute_button">Ŝalta sono. Alklaki por silentigi</string>
+    <string name="play">Ludi</string>
+    <string name="pause">Paŭzi</string>
 </resources>

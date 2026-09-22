@@ -333,4 +333,19 @@
     <string name="nest_unmute">मौन हटाएँ</string>
     <string name="call_mute">मौन</string>
     <string name="call_unmute">मौन हटाएँ</string>
+    <string name="napplet_cap_identity">परिचय</string>
+    <string name="napplet_cap_keys">अक्षरफलक कार्य</string>
+    <string name="napplet_cap_relay">पुनःप्रसारक</string>
+    <string name="napplet_cap_signer">रहस्यीकरण</string>
+    <string name="napplet_cap_storage">भण्डार</string>
+    <string name="napplet_cap_value">भुगतान</string>
+    <string name="napplet_cap_resource">जाल</string>
+    <string name="napplet_cap_upload">आरोहण</string>
+    <string name="napplet_cap_theme">प्रदर्शनशैली</string>
+    <string name="napplet_cap_notify">सूचनाएँ</string>
+    <string name="napplet_cap_inc">सन्देश प्रेषण</string>
+    <string name="muted_button">मौन किया गया। अमौन करने के लिए टाँकें</string>
+    <string name="mute_button">ध्वनि सक्रिय। मौन करने के लिए टाँकें</string>
+    <string name="play">चलाएँ</string>
+    <string name="pause">विराम</string>
 </resources>

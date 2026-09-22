@@ -225,6 +225,7 @@ fun ShareNoteAsImageScreen(
     val account = accountViewModel.account
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val shareUrlTitle = stringRes(Res.string.share_as_image_url)
 
     val graphicsLayer = rememberGraphicsLayer()
     val orchestrator = remember { UploadOrchestrator() }

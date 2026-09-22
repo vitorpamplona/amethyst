@@ -310,15 +310,20 @@ enum class NotificationCategory(
     suspend fun ensureChannel(context: Context): String {
         val id = channelId(context)
         if (channelEnsured) return id
+        // Resolved before the monitor: reading the catalog suspends, and a suspension
+        // point inside a synchronized block would park the thread holding the lock.
+        val groupName = loadStringRes(channelGroup.nameRes)
+        val channelName = loadStringRes(channelNameRes)
+        val channelDescription = loadStringRes(channelDescriptionRes)
         synchronized(this) {
             if (!channelEnsured) {
                 val nm = context.getSystemService(NotificationManager::class.java)
                 nm.createNotificationChannelGroup(
-                    NotificationChannelGroup(channelGroup.id, loadStringRes(channelGroup.nameRes)),
+                    NotificationChannelGroup(channelGroup.id, groupName),
                 )
                 val channel =
-                    NotificationChannel(id, loadStringRes(channelNameRes), importance).apply {
-                        description = loadStringRes(channelDescriptionRes)
+                    NotificationChannel(id, channelName, importance).apply {
+                        description = channelDescription
                         group = channelGroup.id
                     }
                 nm.createNotificationChannel(channel)

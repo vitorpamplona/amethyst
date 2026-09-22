@@ -982,7 +982,7 @@ private fun SuccessBody(result: OnchainZapSendResult.Success) {
 private fun FailureBody(result: OnchainZapSendResult.Failure) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = result.userMessage(),
+            text = result.userMessageText(),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.error,
         )

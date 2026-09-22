@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_to_confirm_payme
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.nwc_payment_request
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -92,6 +94,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import kotlinx.coroutines.launch
 
 @Composable
 fun DvmContentDiscoveryScreen(
@@ -378,6 +381,9 @@ fun DvmPaymentActions(
 ) {
     val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
+    // The NIP-47 callbacks below are invoked by the relay dispatcher, not by
+    // composition, so their bodies run in this scope to read their messages.
+    val scope = rememberCoroutineScope()
     val status = latestStatus.status() ?: return
 
     if (status.code != "payment-required") return
@@ -414,13 +420,15 @@ fun DvmPaymentActions(
                         onSent = {
                             onStatusUpdate(nwcPaymentRequest)
                         },
-                        onTimeout = { onStatusUpdate(nwcTimeoutMessage()) },
+                        onTimeout = { scope.launch { onStatusUpdate(nwcTimeoutMessage()) } },
                         onResponse = { response ->
-                            onStatusUpdate(
-                                response.nwcFailureDetail()?.let { detail ->
-                                    stringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
-                                } ?: thankYou,
-                            )
+                            scope.launch {
+                                onStatusUpdate(
+                                    response.nwcFailureDetail()?.let { detail ->
+                                        loadStringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
+                                    } ?: thankYou,
+                                )
+                            }
                         },
                     )
                 }

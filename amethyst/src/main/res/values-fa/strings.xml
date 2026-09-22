@@ -2312,4 +2312,18 @@
     <string name="nest_unmute">باصدا</string>
     <string name="call_mute">بی‌صدا</string>
     <string name="call_unmute">با صدا</string>
+    <string name="napplet_cap_identity">هویت</string>
+    <string name="napplet_cap_keys">اقدامات صفحه‌کلید</string>
+    <string name="napplet_cap_relay">relay‌ها</string>
+    <string name="napplet_cap_storage">ذخیره‌سازی</string>
+    <string name="napplet_cap_value">پرداخت‌ها</string>
+    <string name="napplet_cap_resource">شبکه</string>
+    <string name="napplet_cap_upload">بارگذاری‌ها</string>
+    <string name="napplet_cap_theme">تم</string>
+    <string name="napplet_cap_notify">اعلان‌ها</string>
+    <string name="napplet_cap_inc">پیام‌رسانی</string>
+    <string name="muted_button">بیصدا شده. برای لغو کلیک کنید</string>
+    <string name="mute_button">باصدا. برای بیصدا کردن کلیک کنید</string>
+    <string name="play">پخش</string>
+    <string name="pause">مکث</string>
 </resources>

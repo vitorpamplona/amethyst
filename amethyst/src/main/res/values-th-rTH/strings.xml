@@ -185,4 +185,16 @@
     <string name="nest_unmute">เปิดเสียง</string>
     <string name="call_mute">ปิดเสียง</string>
     <string name="call_unmute">เปิดเสียง</string>
+    <string name="napplet_cap_keys">การกระทำบนแป้นพิมพ์</string>
+    <string name="napplet_cap_storage">พื้นที่จัดเก็บ</string>
+    <string name="napplet_cap_value">การชำระเงิน</string>
+    <string name="napplet_cap_resource">เครือข่าย</string>
+    <string name="napplet_cap_upload">การอัปโหลด</string>
+    <string name="napplet_cap_theme">ธีม</string>
+    <string name="napplet_cap_notify">การแจ้งเตือน</string>
+    <string name="napplet_cap_inc">การส่งข้อความ</string>
+    <string name="muted_button">ปิดการมองเห็น คลิกเพื่อปลดออก</string>
+    <string name="mute_button">เปิดการมองเห็นอยู่ คลิกเพื่อปิด</string>
+    <string name="play">เล่น</string>
+    <string name="pause">หยุดชั่วคราว</string>
 </resources>

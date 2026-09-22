@@ -185,4 +185,18 @@
     <string name="nest_unmute">Bật tiếng</string>
     <string name="call_mute">Tắt tiếng</string>
     <string name="call_unmute">Bật tiếng</string>
+    <string name="napplet_cap_identity">Danh tính</string>
+    <string name="napplet_cap_keys">Thao tác bàn phím</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">Bộ nhớ</string>
+    <string name="napplet_cap_value">Thanh toán</string>
+    <string name="napplet_cap_resource">Mạng</string>
+    <string name="napplet_cap_upload">Tải lên</string>
+    <string name="napplet_cap_theme">Giao diện</string>
+    <string name="napplet_cap_notify">Thông báo</string>
+    <string name="napplet_cap_inc">Nhắn tin</string>
+    <string name="muted_button">Đã tắt tiếng. Nhấn để bật tiếng</string>
+    <string name="mute_button">Đang bật tiếng. Nhấn để tắt tiếng</string>
+    <string name="play">Phát</string>
+    <string name="pause">Tạm dừng</string>
 </resources>

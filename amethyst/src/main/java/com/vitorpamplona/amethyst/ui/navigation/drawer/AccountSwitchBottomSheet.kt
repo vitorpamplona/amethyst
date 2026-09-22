@@ -43,6 +43,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -278,6 +279,7 @@ private fun LogoutButton(
     val scheduledPostsLogoutToastZeroStr = stringRes(Res.string.scheduled_posts_logout_toast_zero)
     var logoutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     if (logoutDialog) {
         val accountHex = remember(acc) { decodePublicKeyAsHexOrNull(acc.npub) }
         val allPosts by Amethyst.instance.scheduledPostStore.flow
@@ -327,19 +329,23 @@ private fun LogoutButton(
                         // claim "Logged out" when logOff's coroutine bails early.
                         if (accountHex == null) return@TextButton
                         accountSessionManager.logOff(acc)
-                        val toastMessage =
-                            if (confirmedCount > 0) {
-                                loadPluralStringRes(
-                                    Res.plurals.scheduled_posts_logout_toast,
-                                    confirmedCount,
-                                    confirmedCount,
-                                )
-                            } else {
-                                scheduledPostsLogoutToastZeroStr
-                            }
-                        android.widget.Toast
-                            .makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT)
-                            .show()
+                        // The plural depends on the snapshot taken above, so it cannot be
+                        // read in composition; this onClick borrows the screen's scope.
+                        scope.launch {
+                            val toastMessage =
+                                if (confirmedCount > 0) {
+                                    loadPluralStringRes(
+                                        Res.plurals.scheduled_posts_logout_toast,
+                                        confirmedCount,
+                                        confirmedCount,
+                                    )
+                                } else {
+                                    scheduledPostsLogoutToastZeroStr
+                                }
+                            android.widget.Toast
+                                .makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT)
+                                .show()
+                        }
                     },
                 ) {
                     Text(text = stringRes(Res.string.log_out))

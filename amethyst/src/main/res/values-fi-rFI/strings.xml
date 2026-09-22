@@ -189,4 +189,18 @@
     <string name="nest_unmute">Poista mykistys</string>
     <string name="call_mute">Mykistä</string>
     <string name="call_unmute">Poista mykistys</string>
+    <string name="napplet_cap_identity">Henkilöllisyys</string>
+    <string name="napplet_cap_keys">Näppäimistötoiminnot</string>
+    <string name="napplet_cap_relay">Relayt</string>
+    <string name="napplet_cap_storage">Tallennus</string>
+    <string name="napplet_cap_value">Maksut</string>
+    <string name="napplet_cap_resource">Verkko</string>
+    <string name="napplet_cap_upload">Lataukset</string>
+    <string name="napplet_cap_theme">Teema</string>
+    <string name="napplet_cap_notify">Ilmoitukset</string>
+    <string name="napplet_cap_inc">Viestintä</string>
+    <string name="muted_button">Ääni pois päältä. Napsauta palauttaaksesi äänet</string>
+    <string name="mute_button">Ääni päällä. Napsauta vaimentaaksesi</string>
+    <string name="play">Toista</string>
+    <string name="pause">Keskeytä</string>
 </resources>

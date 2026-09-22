@@ -27,6 +27,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -44,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import kotlinx.coroutines.launch
 
 /**
  * Pays a single BOLT-11 from an in-post card (offer card, invoice card) through the
@@ -68,6 +70,9 @@ fun InvoicePaymentDispatcher(
     val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
     if (bolt11 == null) return
     val context = LocalContext.current
+    // The NIP-47 callbacks below are invoked by the relay dispatcher, not by
+    // composition, so their bodies run in this scope to read their messages.
+    val scope = rememberCoroutineScope()
 
     val source = remember(bolt11) { accountViewModel.account.settings.defaultPaymentSource() }
 
@@ -98,10 +103,12 @@ fun InvoicePaymentDispatcher(
                     accountViewModel.sendZapPaymentRequestFor(
                         bolt11 = bolt11,
                         zappedNote = null,
-                        onTimeout = { onError(nwcTimeoutMessage()) },
+                        onTimeout = { scope.launch { onError(nwcTimeoutMessage()) } },
                         onResponse = { response ->
-                            val failure = response.nwcFailureDetail()
-                            if (failure == null) onSuccess() else onError(failure)
+                            scope.launch {
+                                val failure = response.nwcFailureDetail()
+                                if (failure == null) onSuccess() else onError(failure)
+                            }
                         },
                     )
 

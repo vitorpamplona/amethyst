@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
@@ -95,7 +96,6 @@ import kotlinx.coroutines.flow.first
 import net.engawapg.lib.zoomable.ZoomState
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
-import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun ZoomableImageDialog(
@@ -364,12 +364,14 @@ private fun DialogContent(
     }
 }
 
+// Takes the resolved text, not the catalog entry: MediaSaverToDisk's onSuccess is a
+// plain callback, and the catalog's only non-composable accessor suspends.
 private fun showToastOnMain(
     context: Context,
-    resId: StringResource,
+    text: String,
 ) {
     Handler(Looper.getMainLooper()).post {
-        Toast.makeText(context.applicationContext, resId, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context.applicationContext, text, Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -393,6 +395,7 @@ internal suspend fun saveMediaToGallery(
             isPdf -> Res.string.failed_to_save_the_pdf
             else -> Res.string.failed_to_save_the_video
         }
+    val successText = loadStringRes(success)
 
     if (content is MediaUrlContent) {
         MediaSaverToDisk.downloadAndSave(
@@ -412,7 +415,7 @@ internal suspend fun saveMediaToGallery(
                     ?.serverUrl
             },
             onSuccess = {
-                showToastOnMain(localContext, success)
+                showToastOnMain(localContext, successText)
             },
             onError = {
                 accountViewModel.toastManager.toast(failure, null, it)
@@ -425,7 +428,7 @@ internal suspend fun saveMediaToGallery(
                 content.mimeType,
                 localContext,
                 onSuccess = {
-                    showToastOnMain(localContext, success)
+                    showToastOnMain(localContext, successText)
                 },
                 onError = { innerIt ->
                     accountViewModel.toastManager.toast(failure, null, innerIt)

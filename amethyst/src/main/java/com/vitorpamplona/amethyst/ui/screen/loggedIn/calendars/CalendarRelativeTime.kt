@@ -20,13 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
-import android.content.Context
 import android.text.format.DateUtils
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarAppointmentView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_relative_ongoing
 import com.vitorpamplona.amethyst.commons.resources.calendar_relative_ongoing_with_end
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Localised "starts in 2 hours" / "started 5 minutes ago" / "Happening now · ends in 2 hours"
@@ -43,7 +46,6 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
  * DateUtils would produce on its own.
  */
 suspend fun relativeTimeLabel(
-    context: Context,
     view: CalendarAppointmentView,
     nowSeconds: Long,
 ): String? {
@@ -77,4 +79,21 @@ suspend fun relativeTimeLabel(
             minResolution,
             DateUtils.FORMAT_ABBREV_RELATIVE,
         ).toString()
+}
+
+/**
+ * Composition-side wrapper for [relativeTimeLabel].
+ *
+ * The label is assembled from the string catalog, whose only non-composable
+ * accessor suspends, so it is produced off composition and lands as state.
+ */
+@Composable
+fun rememberRelativeTimeLabel(
+    view: CalendarAppointmentView,
+    key: Any?,
+): String? {
+    val label by produceState<String?>(initialValue = null, key, view.startSeconds) {
+        value = relativeTimeLabel(view, TimeUtils.now())
+    }
+    return label
 }

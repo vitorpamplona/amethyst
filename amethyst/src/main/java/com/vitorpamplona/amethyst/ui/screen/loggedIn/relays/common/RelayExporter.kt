@@ -61,7 +61,7 @@ class RelayExporter(
         return builder.toString().trimEnd()
     }
 
-    private fun formatSection(
+    private suspend fun formatSection(
         section: RelaySection,
         builder: StringBuilder,
     ) {

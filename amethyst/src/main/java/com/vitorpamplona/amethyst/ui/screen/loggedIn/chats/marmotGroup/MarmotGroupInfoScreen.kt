@@ -466,10 +466,10 @@ fun MarmotGroupInfoScreen(
                 onAdd = { user ->
                     isAdding = true
                     isAddError = false
-                    addStatus = stringRes(Res.string.marmot_adding_user, user.toBestDisplayName())
                     val targetPubkey = user.pubkeyHex
                     val targetName = user.toBestDisplayName()
                     scope.launch(Dispatchers.IO) {
+                        addStatus = loadStringRes(Res.string.marmot_adding_user, targetName)
                         try {
                             val result = accountViewModel.addMarmotGroupMember(nostrGroupId, targetPubkey)
                             if (result.startsWith("Success")) {

@@ -30,7 +30,7 @@ data class RelayCountResult(
 ) {
     @Immutable
     data class CountEntry(
-        val label: Int,
+        val label: StringResource,
         val count: Int,
         val approximate: Boolean = false,
     )

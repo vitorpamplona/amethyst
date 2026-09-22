@@ -103,7 +103,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.addToPhoneCalenda
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatCalendarRange
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatLongDate
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.relativeTimeLabel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.shareIcs
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -354,10 +354,7 @@ private fun EventBody(
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        val relative =
-            remember(note.idHex, view.startSeconds) {
-                relativeTimeLabel(context, view, TimeUtils.now())
-            }
+        val relative = rememberRelativeTimeLabel(view, note.idHex)
         relative?.let {
             Text(
                 text = it,

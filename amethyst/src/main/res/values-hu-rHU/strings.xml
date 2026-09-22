@@ -333,4 +333,19 @@
     <string name="nest_unmute">Némítás megszüntetése</string>
     <string name="call_mute">Némítás</string>
     <string name="call_unmute">Némítás megszüntetése</string>
+    <string name="napplet_cap_identity">Azonosság</string>
+    <string name="napplet_cap_keys">Billentyűzetműveletek</string>
+    <string name="napplet_cap_relay">Átjátszók</string>
+    <string name="napplet_cap_signer">Titkosítás</string>
+    <string name="napplet_cap_storage">Tárhely</string>
+    <string name="napplet_cap_value">Fizetések</string>
+    <string name="napplet_cap_resource">Hálózat</string>
+    <string name="napplet_cap_upload">Feltöltések</string>
+    <string name="napplet_cap_theme">Téma</string>
+    <string name="napplet_cap_notify">Értesítések</string>
+    <string name="napplet_cap_inc">Üzenetváltás</string>
+    <string name="muted_button">Némítva. Koppintson a némitás megszüntetéséhez</string>
+    <string name="mute_button">Hang bekapcsolva. Koppintson a némításhoz</string>
+    <string name="play">Lejátszás</string>
+    <string name="pause">Szüneteltetés</string>
 </resources>

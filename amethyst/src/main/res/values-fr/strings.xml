@@ -2336,4 +2336,18 @@
     <string name="nest_unmute">Activer le son</string>
     <string name="call_mute">Couper le son</string>
     <string name="call_unmute">Réactiver le son</string>
+    <string name="napplet_cap_identity">Identité</string>
+    <string name="napplet_cap_keys">Actions clavier</string>
+    <string name="napplet_cap_relay">Relais</string>
+    <string name="napplet_cap_storage">Stockage</string>
+    <string name="napplet_cap_value">Paiements</string>
+    <string name="napplet_cap_resource">Réseau</string>
+    <string name="napplet_cap_upload">Téléversements</string>
+    <string name="napplet_cap_theme">Thème</string>
+    <string name="napplet_cap_notify">Notifications</string>
+    <string name="napplet_cap_inc">Messagerie</string>
+    <string name="muted_button">Silencieux. Cliquer pour réactiver le son</string>
+    <string name="mute_button">Son activé. Cliquer pour mettre en silencieux</string>
+    <string name="play">Lecture</string>
+    <string name="pause">Pause</string>
 </resources>

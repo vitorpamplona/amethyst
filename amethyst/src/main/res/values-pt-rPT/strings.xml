@@ -189,4 +189,16 @@
     <string name="nest_unmute">Ativar som</string>
     <string name="call_mute">Silenciar</string>
     <string name="call_unmute">Ativar som</string>
+    <string name="napplet_cap_identity">Identidade</string>
+    <string name="napplet_cap_keys">Ações de teclado</string>
+    <string name="napplet_cap_storage">Armazenamento</string>
+    <string name="napplet_cap_value">Pagamentos</string>
+    <string name="napplet_cap_resource">Rede</string>
+    <string name="napplet_cap_theme">Tema</string>
+    <string name="napplet_cap_notify">Notificações</string>
+    <string name="napplet_cap_inc">Mensagens</string>
+    <string name="muted_button">Silenciado. Clique para ativar o som</string>
+    <string name="mute_button">Som ligado. Clique para silenciar</string>
+    <string name="play">Reproduzir</string>
+    <string name="pause">Pausar</string>
 </resources>
