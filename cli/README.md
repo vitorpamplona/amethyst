@@ -727,9 +727,16 @@ Two things shape every verb:
 > A group ref is a **locator, not an invitation**: holding one lets you ask to
 > join, it does not make you a member, and nothing obliges anyone to answer.
 
-Live verification against the reference coordinator is
-[`cli/tests/cordn/tier-b.sh`](tests/cordn/tier-b.sh) — read its header first,
-it is deliberately not wired into any build.
+Two live harnesses, neither wired into any build — read
+[`tests/cordn/stack.sh`](tests/cordn/stack.sh) first, it boots an unlicensed
+reference coordinator:
+
+- [`tests/cordn/tier-b.sh`](tests/cordn/tier-b.sh) — amy against amy through
+  the reference coordinator. Proves the transport and the coordinator client.
+- [`tests/cordn/interop-client.sh`](tests/cordn/interop-client.sh) — amy and
+  the reference client (`@cordn/cli`, MIT) in one group. Proves the MLS layer
+  against a second implementation, in both directions, including a
+  public-framed Commit of ours that their engine has to apply.
 
 ### Geochat (Bitchat geohash channels)
 

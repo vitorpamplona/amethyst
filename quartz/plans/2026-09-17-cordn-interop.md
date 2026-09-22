@@ -675,13 +675,60 @@ create, invite, Welcome opened without joining, join, messages both ways with th
 traffic reported as echoes rather than gaps, and both sides agreeing on epoch 1 and the same two
 members.
 
+### 7.2 The other half: our MLS against theirs
+
+Tier B above runs amy against amy through their coordinator. Both MLS
+endpoints are ours, so the ratchet tree, the Welcome and the Commit only ever
+agree with themselves — it proves the transport and the coordinator client,
+and nothing about RFC 9420 interop.
+
+`cli/tests/cordn/interop-client.sh` closes that. It puts **`@cordn/cli`
+(ts-mls)** on one end and **amy (quartz)** on the other, in one group, over the
+live wire. That half carries no licensing problem — `@cordn/cli` is MIT and
+comes from npm — though the coordinator underneath it still does.
+
+Three directions, and they are not redundant:
+
+1. **Their group, our joiner.** Our engine opens a ts-mls Welcome and reads
+   their GroupContext extensions, their metadata and their credentials out of
+   it, then decrypts their application messages.
+2. **Our group, their joiner.** Their engine opens **our** Welcome. This is
+   the direction no fixture can test: a fixture we wrote accepts what we emit
+   by construction, so only a foreign implementation can say our Welcome is
+   well formed.
+3. **Our later Commit.** The sharpest, and the one worth having built the
+   harness for. Until direction 3 their epoch came from a Welcome, which
+   carries the group state ready-made; this is the first time they must apply
+   one of our handshake messages. Ours are **public-framed**
+   (`MlsMessage(PublicMessage)`, wireformat 2) where theirs are private-framed,
+   and `CordnGroupManager.invite` has always asserted in its KDoc that their
+   `processMessageBase64` admits both — a claim read off their source and never
+   executed. It holds: they apply our Commit, advance to epoch 2, and seal a
+   message we then open.
+
+All of it passes. Mutation-checked rather than trusted: sealing
+`result.commitBytes` (the bare RFC 9420 struct) instead of
+`result.framedCommitBytes` fails directions 3 and the third-member join and
+**leaves direction 2 green**, because a peer that joined by Welcome never
+parses that Commit and only stalls once it has to. That is the whole reason
+direction 3 exists as its own case, and it is now demonstrated rather than
+argued.
+
+One asymmetry this surfaced and did not resolve: **the reference client sends
+kind 25910 in the clear**, unwrapped, where we pin `EncryptionMode.REQUIRED`
+and always gift-wrap (§8.6). Both work against the coordinator, so nothing is
+broken — but the two clients exercise different halves of CEP-4 against the
+same server, and our encrypted path is the one with no second implementation
+behind it. Worth a Tier D vector exchange.
+
 ### What Tier B is, and is not
 
 These are both **transport and bookkeeping** bugs. Not one byte of the crypto surface moved: the
 MLS engine, the seal, the envelopes and the group refs were already verified against ts-mls and
 against cordn's own wire contracts, and Tier B found nothing wrong with any of them. That is the
 shape to expect from a live tier — it tests the things a fixture cannot model, which are the
-things a fixture was written by the same person who wrote the client.
+things a fixture was written by the same person who wrote the client. §7.2 then covers the
+crypto surface against a foreign implementation, and finds it sound.
 
 ## 8. What the coordinator can see
 

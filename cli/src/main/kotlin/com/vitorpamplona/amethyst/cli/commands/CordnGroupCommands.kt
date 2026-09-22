@@ -226,6 +226,10 @@ internal object CordnGroupCommands {
                 mapOf(
                     "gid" to result.gid,
                     "invited" to result.invited,
+                    // Which of their one-time packages this spent. Their
+                    // client needs it to find the Welcome; nobody else can
+                    // use it again.
+                    "kp_ref" to result.keyPackageRef,
                     "commit_cursor" to result.commitCursor,
                     "welcome_at" to result.welcomeAt,
                     "epoch" to scope.manager.group(gid)?.epoch,

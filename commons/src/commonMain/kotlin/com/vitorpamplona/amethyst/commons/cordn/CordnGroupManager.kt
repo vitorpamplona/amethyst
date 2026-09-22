@@ -257,7 +257,7 @@ class CordnGroupManager(
             }
 
         persist(gid)
-        return InviteResult(gid, targetPubKey, posted.cursor, welcomeAt)
+        return InviteResult(gid, targetPubKey, taken.keyPackageRef, posted.cursor, welcomeAt)
     }
 
     /**
@@ -828,6 +828,15 @@ data class SkippedWelcome(
 data class InviteResult(
     val gid: String,
     val invited: HexKey,
+    /**
+     * The KeyPackage this invite consumed.
+     *
+     * Worth reporting rather than swallowing: a KeyPackage is one-time, so
+     * this names something the invitee can no longer be invited with by
+     * anyone else. It is also the handle their client needs to find the
+     * Welcome we just left them.
+     */
+    val keyPackageRef: String,
     val commitCursor: Long,
     val welcomeAt: Long,
 )
