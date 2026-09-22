@@ -2845,7 +2845,6 @@
     <string name="backup_conflict_count_added">%1$s added</string>
     <string name="backup_conflict_count_changed">%1$s changed</string>
     <string name="backup_card_follows_shrank">Your follow list shrank</string>
-    <string name="backup_card_mutes_visible">%1$s muted things are visible again</string>
     <string name="backup_review_changed_by_other_app">Changed by another app · %1$s</string>
     <string name="backup_action_keep_count">Keep %1$s</string>
     <string name="backup_action_restore_count">Restore %1$s</string>
@@ -2950,6 +2949,100 @@
     <string name="backup_review_encrypted_changed">It was rewritten</string>
     <string name="backup_review_wallet_body">Your wallet\'s mints and keys are encrypted to you, so they can\'t be compared item by item here. Restoring puts back exactly what this device saved.</string>
     <string name="backup_review_concord_body">Your Concord communities are encrypted to you, so they can\'t be compared here. Restoring puts back exactly what this device saved.</string>
+    <plurals name="backup_card_mutes_visible">
+        <item quantity="one">%1$d muted thing is visible again</item>
+        <item quantity="other">%1$d muted things are visible again</item>
+    </plurals>
+    <plurals name="backup_card_profile_lost_fields">
+        <item quantity="one">Your profile lost %1$d field</item>
+        <item quantity="other">Your profile lost %1$d fields</item>
+    </plurals>
+    <plurals name="backup_card_nip65_lost">
+        <item quantity="one">Your posts lost %1$d relay</item>
+        <item quantity="other">Your posts lost %1$d relays</item>
+    </plurals>
+    <plurals name="backup_card_dm_relays_lost">
+        <item quantity="one">DMs may miss you: %1$d inbox relay dropped</item>
+        <item quantity="other">DMs may miss you: %1$d inbox relays dropped</item>
+    </plurals>
+    <plurals name="backup_card_key_package_relays_lost">
+        <item quantity="one">%1$d group-chat key relay dropped</item>
+        <item quantity="other">%1$d group-chat key relays dropped</item>
+    </plurals>
+    <plurals name="backup_card_search_relays_lost">
+        <item quantity="one">%1$d search relay dropped</item>
+        <item quantity="other">%1$d search relays dropped</item>
+    </plurals>
+    <plurals name="backup_card_indexer_relays_lost">
+        <item quantity="one">%1$d indexer relay dropped</item>
+        <item quantity="other">%1$d indexer relays dropped</item>
+    </plurals>
+    <plurals name="backup_card_relay_feeds_lost">
+        <item quantity="one">%1$d relay feed removed</item>
+        <item quantity="other">%1$d relay feeds removed</item>
+    </plurals>
+    <plurals name="backup_card_private_outbox_lost">
+        <item quantity="one">Your drafts lost %1$d storage relay</item>
+        <item quantity="other">Your drafts lost %1$d storage relays</item>
+    </plurals>
+    <plurals name="backup_card_trusted_lost">
+        <item quantity="one">%1$d relay is no longer trusted</item>
+        <item quantity="other">%1$d relays are no longer trusted</item>
+    </plurals>
+    <plurals name="backup_card_unblocked">
+        <item quantity="one">%1$d relay was unblocked</item>
+        <item quantity="other">%1$d relays were unblocked</item>
+    </plurals>
+    <plurals name="backup_card_leave_chats">
+        <item quantity="one">You\'d leave %1$d public chat</item>
+        <item quantity="other">You\'d leave %1$d public chats</item>
+    </plurals>
+    <plurals name="backup_card_leave_communities">
+        <item quantity="one">You\'d leave %1$d community</item>
+        <item quantity="other">You\'d leave %1$d communities</item>
+    </plurals>
+    <plurals name="backup_card_leave_rooms">
+        <item quantity="one">You\'d leave %1$d chat room</item>
+        <item quantity="other">You\'d leave %1$d chat rooms</item>
+    </plurals>
+    <plurals name="backup_card_leave_groups">
+        <item quantity="one">You\'d leave %1$d group</item>
+        <item quantity="other">You\'d leave %1$d groups</item>
+    </plurals>
+    <plurals name="backup_card_feeds_removed">
+        <item quantity="one">%1$d favorite feed removed</item>
+        <item quantity="other">%1$d favorite feeds removed</item>
+    </plurals>
+    <plurals name="backup_card_hashtags_unfollowed">
+        <item quantity="one">%1$d hashtag unfollowed</item>
+        <item quantity="other">%1$d hashtags unfollowed</item>
+    </plurals>
+    <plurals name="backup_card_places_unfollowed">
+        <item quantity="one">%1$d place unfollowed</item>
+        <item quantity="other">%1$d places unfollowed</item>
+    </plurals>
+    <plurals name="backup_card_trust_services_changed">
+        <item quantity="one">%1$d trust service changed provider</item>
+        <item quantity="other">%1$d trust services changed provider</item>
+    </plurals>
+    <plurals name="backup_card_nutzap_mints_removed">
+        <item quantity="one">%1$d nutzap mint removed</item>
+        <item quantity="other">%1$d nutzap mints removed</item>
+    </plurals>
+    <plurals name="backup_card_payment_targets_removed">
+        <item quantity="one">%1$d way to pay you was removed</item>
+        <item quantity="other">%1$d ways to pay you were removed</item>
+    </plurals>
+    <plurals name="backup_card_offers_removed">
+        <item quantity="one">%1$d BOLT12 offer removed</item>
+        <item quantity="other">%1$d BOLT12 offers removed</item>
+    </plurals>
+    <string name="backup_card_nutzap_key_replaced">Your nutzap key was replaced</string>
+    <string name="backup_card_nutzap_key_removed">Your nutzap key was removed</string>
+    <string name="backup_card_wallet_emptied">Your Cashu wallet was emptied</string>
+    <string name="backup_card_wallet_rewritten">Your Cashu wallet was rewritten</string>
+    <string name="backup_card_concord_emptied">Your Concord list was emptied</string>
+    <string name="backup_card_concord_rewritten">Your Concord list was rewritten</string>
     <string name="backup_conflict_keep_new">Use new version</string>
     <string name="backup_conflict_relay_read_only">read only</string>
     <string name="backup_conflict_relay_write_only">write only</string>
