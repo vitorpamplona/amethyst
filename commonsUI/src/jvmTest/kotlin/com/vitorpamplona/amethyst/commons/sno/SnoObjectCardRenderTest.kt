@@ -22,15 +22,18 @@ package com.vitorpamplona.amethyst.commons.sno
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.compose.setSingletonImageLoaderFactory
+import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectCard
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoParser
 import org.jetbrains.skia.EncodedImageFormat
@@ -99,6 +102,43 @@ class SnoObjectCardRenderTest {
                 goldPixels > 200,
                 "the object should have reached the card through Coil and the image bridge; found $goldPixels gold pixels",
             )
+        } finally {
+            scene.close()
+        }
+    }
+
+    @Test
+    fun theViewerDrawsTheObject() {
+        // The viewer has its own composition path — BoxWithConstraints sizing,
+        // an off-thread raster held across angles, and a graphicsLayer for zoom
+        // and pan. None of that is exercised by the card's path.
+        val payload = SnoParser.parse(gold).payloadOrNull()
+        assertTrue(payload != null, "fixture did not parse")
+
+        val side = 400
+        val scene = ImageComposeScene(width = side, height = side, density = Density(2f))
+        try {
+            scene.setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    Surface(color = MaterialTheme.colorScheme.surface) {
+                        SnoObjectViewer(
+                            payload = payload!!,
+                            eventId = "viewer-test",
+                            modifier = Modifier.size(200.dp),
+                        )
+                    }
+                }
+            }
+
+            var goldPixels = 0
+            for (poll in 0 until POLLS) {
+                val pixels = scene.render().toPixels(side, side)
+                goldPixels = pixels.count { it.isGold() }
+                if (goldPixels > 0) break
+                Thread.sleep(POLL_MILLIS)
+            }
+
+            assertTrue(goldPixels > 200, "the viewer should have drawn the object; found $goldPixels gold pixels")
         } finally {
             scene.close()
         }

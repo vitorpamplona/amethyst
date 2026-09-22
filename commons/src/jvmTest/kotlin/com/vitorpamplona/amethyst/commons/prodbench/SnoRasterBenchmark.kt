@@ -77,7 +77,10 @@ class SnoRasterBenchmark {
     fun aRealObjectIsCheapToDraw() {
         val thumbnail = millisPerFrame(real, THUMBNAIL_PX)
         val viewer = millisPerFrame(real, VIEWER_PX)
-        println("real (118v/94f): ${THUMBNAIL_PX}px ${fmt(thumbnail)} ms, ${VIEWER_PX}px ${fmt(viewer)} ms")
+        val full = millisPerFrame(real, 1080)
+        val adversarialFull = millisPerFrame(adversarial, 1080)
+        println("real (118v/94f): ${THUMBNAIL_PX}px ${fmt(thumbnail)} ms, ${VIEWER_PX}px ${fmt(viewer)} ms, 1080px ${fmt(full)} ms")
+        println("adversarial at 1080px: ${fmt(adversarialFull)} ms")
 
         assertTrue(thumbnail < 5.0, "a feed thumbnail of a real object should be far under a frame, was ${fmt(thumbnail)} ms")
         assertTrue(viewer < 50.0, "a viewer frame of a real object should be well under a drag's budget, was ${fmt(viewer)} ms")
