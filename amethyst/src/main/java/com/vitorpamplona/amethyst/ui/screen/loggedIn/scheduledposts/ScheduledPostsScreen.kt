@@ -82,7 +82,6 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -131,6 +130,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarSize
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
@@ -187,14 +187,14 @@ fun ScheduledPostsScreen(
                         Text(stringRes(Res.string.scheduled_posts))
                         if (totalActive > 0) {
                             val queuedText =
-                                pluralStringResource(
+                                pluralStringRes(
                                     id = Res.plurals.scheduled_posts_subtitle_queued,
                                     count = totalActive,
                                     totalActive,
                                 )
                             val dueText =
                                 if (dueSoonCount > 0) {
-                                    pluralStringResource(
+                                    pluralStringRes(
                                         id = Res.plurals.scheduled_posts_subtitle_due_suffix,
                                         count = dueSoonCount,
                                         dueSoonCount,
@@ -331,7 +331,7 @@ private fun ScheduledPostCardCollapsed(
     val preview = remember(post.id) { extractContentPreview(post, 200) }
     val media = remember(post.id) { extractFirstMediaUrl(post) }
     val relayCountText =
-        pluralStringResource(
+        pluralStringRes(
             id = Res.plurals.scheduled_posts_relay_count,
             count = post.relayUrls.size,
             post.relayUrls.size,

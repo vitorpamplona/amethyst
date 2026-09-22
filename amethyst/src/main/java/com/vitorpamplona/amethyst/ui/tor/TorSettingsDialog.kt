@@ -336,7 +336,7 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
 @Composable
 fun SwitchSettingsRow(
     name: StringResource,
-    desc: Int,
+    desc: StringResource,
     checked: MutableState<Boolean>,
 ) {
     SettingsRow(

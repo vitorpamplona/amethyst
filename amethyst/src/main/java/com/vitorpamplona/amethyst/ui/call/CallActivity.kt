@@ -75,7 +75,7 @@ class CallActivity : AppCompatActivity() {
 
     private val pipActionReceiver =
         object : BroadcastReceiver() {
-            override fun onReceive(
+            override suspend fun onReceive(
                 context: Context,
                 intent: Intent,
             ) {
@@ -220,7 +220,7 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    override fun onUserLeaveHint() {
+    override suspend fun onUserLeaveHint() {
         super.onUserLeaveHint()
         enterPipIfActive()
     }
@@ -366,8 +366,8 @@ class CallActivity : AppCompatActivity() {
                     this,
                     if (isMuted) R.drawable.ic_mic_off else R.drawable.ic_mic_on,
                 ),
-                getString(if (isMuted) Res.string.call_unmute else Res.string.call_mute),
-                getString(if (isMuted) Res.string.call_unmute else Res.string.call_mute),
+                loadStringRes(if (isMuted) Res.string.call_unmute else Res.string.call_mute),
+                loadStringRes(if (isMuted) Res.string.call_unmute else Res.string.call_mute),
                 muteIntent,
             )
         actions.add(muteAction)

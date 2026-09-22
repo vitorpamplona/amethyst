@@ -125,7 +125,7 @@ class NestActivity : AppCompatActivity() {
      */
     val toggleMuteSignal: SharedFlow<Unit> get() = _toggleMuteSignal.asSharedFlow()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override suspend fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val accountViewModel = NestBridge.accountViewModel
@@ -217,7 +217,7 @@ class NestActivity : AppCompatActivity() {
         }
     }
 
-    override fun onUserLeaveHint() {
+    override suspend fun onUserLeaveHint() {
         super.onUserLeaveHint()
         enterPip()
     }
@@ -308,7 +308,7 @@ class NestActivity : AppCompatActivity() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         val muteIconRes = if (isMuted.value) R.drawable.ic_mic_off else R.drawable.ic_mic_on
-        val muteLabel = getString(if (isMuted.value) Res.string.nest_unmute else Res.string.nest_mute)
+        val muteLabel = loadStringRes(if (isMuted.value) Res.string.nest_unmute else Res.string.nest_mute)
         return listOf(
             RemoteAction(Icon.createWithResource(this, muteIconRes), muteLabel, muteLabel, muteIntent),
             RemoteAction(

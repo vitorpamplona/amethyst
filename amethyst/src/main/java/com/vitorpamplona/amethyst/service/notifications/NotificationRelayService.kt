@@ -429,7 +429,7 @@ class NotificationRelayService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         val detailsLabel =
-            getString(
+            loadStringRes(
                 if (detailsExpanded) {
                     Res.string.always_on_notif_hide_details
                 } else {

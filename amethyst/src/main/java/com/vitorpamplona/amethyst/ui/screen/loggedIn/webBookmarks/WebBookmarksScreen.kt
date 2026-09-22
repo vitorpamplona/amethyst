@@ -57,7 +57,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -433,7 +432,7 @@ fun WebBookmarkEditDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                stringResource(
+                stringRes(
                     if (isEditing) Res.string.web_bookmark_edit_title else Res.string.web_bookmark_add_title,
                 ),
             )

@@ -62,7 +62,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -293,7 +292,7 @@ private fun MiningContent(
                 Spacer(Modifier.width(26.dp))
 
                 val base =
-                    pluralStringResource(
+                    pluralStringRes(
                         if (job.isMining) Res.plurals.pow_mining_job else Res.plurals.pow_queued_job,
                         job.difficulty,
                         kindToName(job.kind),

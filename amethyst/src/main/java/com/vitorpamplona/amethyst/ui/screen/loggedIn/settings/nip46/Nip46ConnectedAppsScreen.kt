@@ -57,7 +57,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -321,7 +320,7 @@ internal fun Nip46LiveStatus(online: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Nip46StatusDot(online)
         Text(
-            stringResource(if (online) Res.string.nip46_signer_app_online else Res.string.nip46_signer_app_offline),
+            stringRes(if (online) Res.string.nip46_signer_app_online else Res.string.nip46_signer_app_offline),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

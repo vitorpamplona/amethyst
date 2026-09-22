@@ -27,12 +27,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_tor_off
 import com.vitorpamplona.amethyst.commons.resources.browser_tor_on
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * The Tor routing toggle for an embedded web surface, drawn with the app's standard Tor onion
@@ -47,7 +47,7 @@ fun TorToggleButton(
     IconButton(onClick = onToggle) {
         Icon(
             painter = painterResource(R.drawable.ic_tor),
-            contentDescription = stringResource(if (torOn) Res.string.browser_tor_on else Res.string.browser_tor_off),
+            contentDescription = stringRes(if (torOn) Res.string.browser_tor_on else Res.string.browser_tor_off),
             // A vector painter renders at its intrinsic size unless constrained; pin to the standard
             // 24dp icon size so it matches the reload icon next to it.
             modifier = Modifier.size(24.dp),

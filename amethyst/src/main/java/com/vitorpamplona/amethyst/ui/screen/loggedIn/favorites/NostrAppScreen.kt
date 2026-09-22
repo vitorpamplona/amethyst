@@ -281,7 +281,7 @@ private fun AccessDialog(
         }
     val networkBody =
         if (showsNetwork) {
-            "\n\n" + stringResource(if (useTor) Res.string.favorite_app_network_tor else Res.string.favorite_app_network_open)
+            "\n\n" + stringRes(if (useTor) Res.string.favorite_app_network_tor else Res.string.favorite_app_network_open)
         } else {
             ""
         }

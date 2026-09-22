@@ -159,7 +159,7 @@ class VoiceReplyViewModel : ViewModel() {
         uploadJob = null
     }
 
-    private fun deleteVoiceLocalFile() {
+    private suspend fun deleteVoiceLocalFile() {
         voiceLocalFile?.let { file ->
             try {
                 if (file.deleteOrWarn("VoiceReplyViewModel", "voice file")) {

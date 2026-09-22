@@ -220,7 +220,7 @@ fun UploadPlaceholder(
  * primary feedback that something IS happening.
  */
 @Composable
-fun UploadInProgressBanner(messageRes: Int) {
+fun UploadInProgressBanner(messageRes: StringResource) {
     Row(
         modifier =
             Modifier

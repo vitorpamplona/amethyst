@@ -554,7 +554,7 @@ private fun ExceptionRow(
         subtitle = {
             Text(
                 text =
-                    stringResource(
+                    stringRes(
                         if (decision == RelayAuthDecision.ALLOW) Res.string.relay_auth_exception_always else Res.string.relay_auth_exception_never,
                     ),
                 fontSize = 13.sp,

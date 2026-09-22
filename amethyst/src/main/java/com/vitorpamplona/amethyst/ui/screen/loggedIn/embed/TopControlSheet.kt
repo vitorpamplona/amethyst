@@ -128,7 +128,7 @@ fun TopControlSheet(
                     chrome.torOn?.let { torOn ->
                         SheetSwitchItem(
                             symbol = MaterialSymbols.Lock,
-                            label = stringResource(if (torOn) Res.string.favorite_app_network_tor else Res.string.favorite_app_network_open),
+                            label = stringRes(if (torOn) Res.string.favorite_app_network_tor else Res.string.favorite_app_network_open),
                             checked = torOn,
                             onToggle = { chrome.onToggleTor() },
                         )
@@ -156,7 +156,7 @@ fun TopControlSheet(
                     chrome.onFavorite?.let { toggleFavorite ->
                         SheetItem(
                             if (chrome.isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
-                            stringResource(if (chrome.isFavorite) Res.string.favorite_app_remove else Res.string.favorite_app_add),
+                            stringRes(if (chrome.isFavorite) Res.string.favorite_app_remove else Res.string.favorite_app_add),
                         ) {
                             onExpandedChange(false)
                             toggleFavorite()

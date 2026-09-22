@@ -1866,7 +1866,7 @@ open class ShortNotePostViewModel :
         voiceMetadata = null
     }
 
-    fun getVoicePreviewMetadata(): AudioMeta? =
+    suspend fun getVoicePreviewMetadata(): AudioMeta? =
         voiceRecording?.let { recording ->
             AudioMeta(
                 url = "", // Empty URL for preview (local file will be used)

@@ -1222,7 +1222,7 @@ class AccountViewModel(
     }
 
     /** True when the account has at least one NIP-47 wallet configured. */
-    fun hasNwcWallet(): Boolean =
+    suspend fun hasNwcWallet(): Boolean =
         account.settings.nwcWallets.value
             .isNotEmpty()
 

@@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -506,7 +505,7 @@ private fun BatchedConsentDialog(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 2.dp),
                 ) {
                     Text(
-                        stringResource(
+                        stringRes(
                             if (selected.size == pending.size) Res.string.nip46_signer_batch_select_none else Res.string.nip46_signer_batch_select_all,
                         ),
                         style = MaterialTheme.typography.labelLarge,

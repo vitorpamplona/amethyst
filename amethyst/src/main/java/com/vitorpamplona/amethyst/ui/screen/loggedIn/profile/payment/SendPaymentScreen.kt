@@ -515,7 +515,7 @@ private fun SendPaymentLoaded(
         }
     }
 
-    fun sendClink(amount: Long) {
+    suspend fun sendClink(amount: Long) {
         val offer = activeOffer ?: return
         stage = PaymentFlowStage.InProgress(requestingInvoiceNostrLabel)
         val requestAmount = if (offer.priceType == OfferPriceType.FIXED) offer.price else amount
@@ -534,7 +534,7 @@ private fun SendPaymentLoaded(
         )
     }
 
-    fun sendOnchain(amount: Long) {
+    suspend fun sendOnchain(amount: Long) {
         val feeRate = fees?.rateFor(feeTier) ?: return
         stage = PaymentFlowStage.InProgress(buildingTxLabel)
         scope.launch {

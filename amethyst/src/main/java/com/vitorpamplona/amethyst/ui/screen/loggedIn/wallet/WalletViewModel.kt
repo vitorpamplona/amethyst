@@ -418,7 +418,7 @@ class WalletViewModel : ViewModel() {
         allTransactions.value = emptyList()
     }
 
-    private fun getWalletUri(walletId: String?): Nip47WalletConnect.Nip47URINorm? = _wallets.value.firstOrNull { it.id == walletId }?.uri
+    private suspend fun getWalletUri(walletId: String?): Nip47WalletConnect.Nip47URINorm? = _wallets.value.firstOrNull { it.id == walletId }?.uri
 
     private suspend fun getSelectedWalletUri(): Nip47WalletConnect.Nip47URINorm? = getWalletUri(_selectedWalletId.value)
 

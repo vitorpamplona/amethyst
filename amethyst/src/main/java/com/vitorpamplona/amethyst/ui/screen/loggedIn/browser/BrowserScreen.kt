@@ -469,7 +469,7 @@ private fun SuggestionRow(
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(if (suggestion.isFavorite) Res.string.favorite_app_remove else Res.string.favorite_app_add)) },
+                    text = { Text(stringRes(if (suggestion.isFavorite) Res.string.favorite_app_remove else Res.string.favorite_app_add)) },
                     leadingIcon = {
                         Icon(if (suggestion.isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null)
                     },
@@ -757,7 +757,7 @@ private fun RecentRow(
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(if (isFavorited) Res.string.favorite_app_remove else Res.string.favorite_app_add)) },
+                    text = { Text(stringRes(if (isFavorited) Res.string.favorite_app_remove else Res.string.favorite_app_add)) },
                     leadingIcon = {
                         Icon(if (isFavorited) MaterialSymbols.Star else MaterialSymbols.StarBorder, contentDescription = null)
                     },
