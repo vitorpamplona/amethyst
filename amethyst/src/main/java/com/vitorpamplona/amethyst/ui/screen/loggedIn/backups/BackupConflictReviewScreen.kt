@@ -25,8 +25,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -38,14 +40,15 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.timeAbsolute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -130,7 +134,9 @@ internal fun buildRows(
 /**
  * Every entry of a backup conflict, removed / added / changed, in a lazy list: people,
  * notes, communities, feeds, chats and relays are loaded from relays and open their own
- * screens when tapped. Offers the same three choices as [BackupConflictDialog].
+ * screens when tapped, so the user can investigate the change before deciding. Opened from
+ * the Home cards ([BackupConflictCards]); deciding resolves the conflict and removes its card.
+ * Leaving without deciding keeps the card and the frozen backup.
  */
 @Composable
 fun BackupConflictReviewScreen(
@@ -141,14 +147,6 @@ fun BackupConflictReviewScreen(
     val settings = accountViewModel.account.settings
     val conflicts by settings.backupConflicts.collectAsStateWithLifecycle()
     val conflict = conflicts[slot]
-
-    // Keeps the dialog from covering this screen while it is open.
-    DisposableEffect(slot) {
-        settings.reviewingBackupConflict.value = slot
-        onDispose {
-            if (settings.reviewingBackupConflict.value == slot) settings.reviewingBackupConflict.value = null
-        }
-    }
 
     // Resolved from here or elsewhere: nothing left to review.
     if (conflict == null) {
@@ -168,10 +166,6 @@ fun BackupConflictReviewScreen(
             accountViewModel.account.acceptExternalVersion(conflict)
             nav.popBack()
         },
-        onDecideLater = {
-            settings.snoozeBackupConflict(conflict)
-            nav.popBack()
-        },
     )
 }
 
@@ -182,7 +176,6 @@ private fun BackupConflictReview(
     nav: INav,
     onRestore: () -> Unit,
     onKeepNew: () -> Unit,
-    onDecideLater: () -> Unit,
 ) {
     val presentation = presentationOf(conflict.diff)
 
@@ -190,7 +183,7 @@ private fun BackupConflictReview(
         topBar = {
             TopBarWithBackButton(stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(conflict.eventType))), nav)
         },
-        bottomBar = { ReviewActions(onRestore, onKeepNew, onDecideLater) },
+        bottomBar = { ReviewActions(onRestore, onKeepNew) },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -267,26 +260,33 @@ internal fun SectionRow(row: ReviewRow.Section) {
 private fun ReviewActions(
     onRestore: () -> Unit,
     onKeepNew: () -> Unit,
-    onDecideLater: () -> Unit,
 ) {
     Surface(tonalElevation = 3.dp) {
-        Column(
+        Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
-                Text(stringRes(R.string.backup_conflict_restore_mine))
+            OutlinedButton(onClick = onKeepNew, modifier = Modifier.weight(1f)) {
+                Text(stringRes(R.string.backup_conflict_keep_new), textAlign = TextAlign.Center)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onKeepNew, modifier = Modifier.weight(1f)) {
-                    Text(stringRes(R.string.backup_conflict_keep_new))
-                }
-                TextButton(onClick = onDecideLater, modifier = Modifier.weight(1f)) {
-                    Text(stringRes(R.string.backup_conflict_decide_later))
-                }
+            Button(onClick = onRestore, modifier = Modifier.weight(1f)) {
+                Text(stringRes(R.string.backup_conflict_restore_mine), textAlign = TextAlign.Center)
             }
         }
     }
+}
+
+/** What the event is for and when the other app changed it. */
+@Composable
+private fun BackupConflictIntro(conflict: ReplaceableBackupConflict) {
+    val context = LocalContext.current
+    Text(
+        text = stringRes(eventTypeExplainer(conflict.eventType)),
+        style = MaterialTheme.typography.bodySmall,
+        fontStyle = FontStyle.Italic,
+    )
+    Spacer(Modifier.height(12.dp))
+    Text(stringRes(R.string.backup_conflict_intro, timeAbsolute(conflict.cause.createdAt, context)))
 }
 
 internal val EntryPadding = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)

@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictCards
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
@@ -300,6 +301,11 @@ private fun HomePages(
                         .align(Alignment.TopCenter)
                         .padding(top = paddingValues.calculateTopPadding()),
             ) {
+                BackupConflictCards(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+
                 BackupKeysNudge(
                     accountViewModel = accountViewModel,
                     nav = nav,

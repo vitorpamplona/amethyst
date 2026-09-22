@@ -2849,8 +2849,11 @@
     <string name="backup_review_access_read_write">Read &amp; write</string>
     <string name="backup_review_access_read">Read</string>
     <string name="backup_review_access_write">Write</string>
+    <string name="backup_conflict_many_title">%1$s of your lists changed in other apps</string>
+    <string name="backup_conflict_count_removed">%1$s removed</string>
+    <string name="backup_conflict_count_added">%1$s added</string>
+    <string name="backup_conflict_count_changed">%1$s changed</string>
     <string name="backup_conflict_keep_new">Use new version</string>
-    <string name="backup_conflict_decide_later">Decide later</string>
     <string name="backup_conflict_relay_read_only">read only</string>
     <string name="backup_conflict_relay_write_only">write only</string>
     <string name="backup_conflict_relay_read_write">read and write</string>

@@ -91,7 +91,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictReviewScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award.AwardBadgeScreen
@@ -404,8 +403,6 @@ fun AppNavigation(
 
         DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
         DisplayNotifyMessages(accountViewModel, nav)
-        // Asks before another client's lossy rewrite of a backed-up list/profile becomes permanent.
-        BackupConflictDialog(accountViewModel, nav)
         DisplayCrashMessages(accountViewModel, nav)
         DisplayResourceUsageAlert(accountViewModel, nav)
         DisplayBroadcastProgress(accountViewModel)

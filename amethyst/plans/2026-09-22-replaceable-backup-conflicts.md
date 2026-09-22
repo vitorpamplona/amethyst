@@ -44,25 +44,26 @@ only surviving copy of the user's data is gone.
    backup is updated silently as before.
 4. **Freeze and ask.** On a loss, the backup keeps the saved version and a
    `ReplaceableBackupConflict` is published on `AccountSettings.backupConflicts`.
-   `BackupConflictDialog` (shown from `AppNavigation`, so it can navigate) is a short
-   summary specific to the event: it names it ("Your mute list changed in another app"),
-   says what that event is for, and counts what was removed, added and changed per entry
-   type. **Review changes** opens `Route.BackupConflictReview(slot)`
+   Home shows a card per open conflict at the top of the feed (`BackupConflictCards`,
+   next to the key-backup nudge): "Your mute list changed in another app" with a
+   "12 removed · 3 added" summary. Cards can't be dismissed; they stay until the user
+   decides, and with more than two conflicts they fold into one card with a row per
+   conflict. Tapping one opens `Route.BackupConflictReview(slot)`
    (`BackupConflictReviewScreen`): a `LazyColumn` of every entry, so lists with hundreds of
    items scroll lazily. Entries are typed (`ReviewItem`, built per diff class in
    `BackupConflictPresentation.kt`) and rendered with the app's loaders, which subscribe to
    relays and recompose when data arrives: people (`LoadUser` + `UsernameDisplay`, tap →
    profile), muted threads (`LoadNote` + `NoteCompose`), communities and feeds
    (`LoadAddressableNote` + `NoteCompose`), public chats (`observeChannel`, tap → chat),
-   ephemeral rooms (tap → room) and relays (tap → relay info). The dialog hides while the
-   review screen is open (`AccountSettings.reviewingBackupConflict`).
+   ephemeral rooms (tap → room) and relays (tap → relay info). Leaving the screen without
+   deciding keeps the card and the frozen backup.
 
    The list is laid out per event (`BackupConflictEventViews.kt`, `eventDiffItems`): a
    profile compares each changed field saved vs new side by side, with picture and banner
    shown as images and removed fields highlighted; a NIP-65 list is a relay table with the
    saved and new read/write access and a count of unchanged relays; follow and mute lists
    get a count header (on this device vs new version) above the linked people. Other
-   events use the generic removed / added / changed sections. Both offer:
+   events use the generic removed / added / changed sections. The screen offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
      `created_at = max(now, incoming + 1)`, dropping the old `client` tag (so the signer
@@ -73,12 +74,9 @@ only surviving copy of the user's data is gone.
      list names, since the lossy version may have dropped them from the outbox set.
    - **Use new version** — `Account.acceptExternalVersion` whitelists that id and re-runs
      the original update, so the backup moves forward.
-   - **Decide later** — snoozes the slot in `AccountSettings.snoozedBackupConflicts` while
-     the account is loaded (survives rotation) and until another app changes it again; the
-     backup stays frozen.
 
    Both resolutions first *claim* the conflict: they act only if it is still the open
-   conflict of its slot, so a stale dialog, a double tap, or a conflict dropped because the
+   conflict of its slot, so a stale screen, a double tap, or a conflict dropped because the
    wallet/nutzap info was deleted does nothing. While a restore is signing, its incoming
    version can't re-raise the conflict; a failed restore reopens it. The same incoming
    version re-emitted by the cache is ignored without re-diffing.
@@ -89,7 +87,7 @@ only surviving copy of the user's data is gone.
    While a conflict is open, edits made in Amethyst are compared against the frozen
    saved version too (they are built on top of the external one), so they cannot
    silently clear the conflict. They move the conflict's `incoming` forward but keep the
-   external version as its `cause` (the dialog shows that date) and keep it snoozed.
+   external version as its `cause` (the screen shows that date).
 
 Conflicts are not persisted: the frozen backup is reloaded on start, the newer relay
 version replaces it in `LocalCache`, and the same conflict is detected again.
@@ -104,4 +102,4 @@ version replaces it in `LocalCache`, and the same conflict is detected again.
   our own event. Harmless (either answer keeps the data the user chose).
 - Edits from the same user on another Amethyst install count as "external" when they
   remove items. That's intended: the device can't tell them apart from a careless app.
-- Desktop marks its own events too but has no backup store or dialog yet.
+- Desktop marks its own events too but has no backup store or conflict UI yet.

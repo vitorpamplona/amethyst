@@ -1171,18 +1171,9 @@ class AccountSettings(
      * backup still has, keyed by [ReplaceableBackupConflict.slot]. While a slot is in here its
      * backup is frozen on the saved version, so the user can still restore it. Not persisted:
      * after a restart the same newer event is detected again against the same frozen backup.
+     * Home shows a card for each until the user keeps the new version or restores the saved one.
      */
     val backupConflicts = MutableStateFlow<Map<String, ReplaceableBackupConflict>>(emptyMap())
-
-    /**
-     * Slots whose conflict the user chose to decide later. Lives as long as the account is
-     * loaded, so it survives activity recreation, and is cleared when another app changes
-     * the slot again (a new external change deserves a new question).
-     */
-    val snoozedBackupConflicts = MutableStateFlow<Set<String>>(emptySet())
-
-    /** The slot whose review screen is open, so the conflict dialog doesn't cover it. */
-    val reviewingBackupConflict = MutableStateFlow<String?>(null)
 
     // Re-runs the update that raised each open conflict, once the user keeps the new version.
     private val backupConflictRetries = ConcurrentHashMap<String, () -> Unit>()
@@ -1223,13 +1214,11 @@ class AccountSettings(
         if (reference != null && !acceptedExternalVersions.contains(incoming.id)) {
             val diff = ReplaceableBackupDiff.detectLoss(reference, incoming)
             if (diff != null) {
-                // A local edit keeps the external change as the conflict's cause, and keeps
-                // it snoozed; a new external change is a new question.
+                // A local edit keeps the external change as the conflict's cause.
                 val cause = if (isLocal && pending != null) pending.cause else incoming
                 val conflict = ReplaceableBackupConflict(reference, incoming, cause, diff)
                 backupConflictRetries[slot] = retry
                 backupConflicts.update { it + (slot to conflict) }
-                if (!isLocal) snoozedBackupConflicts.update { it - slot }
                 return false
             }
         }
@@ -1243,7 +1232,6 @@ class AccountSettings(
             backupConflicts.update { it - slot }
         }
         backupConflictRetries.remove(slot)
-        snoozedBackupConflicts.update { it - slot }
     }
 
     /**
@@ -1257,7 +1245,6 @@ class AccountSettings(
             if (claimed) current - conflict.slot else current
         }
         if (!claimed) return null
-        snoozedBackupConflicts.update { it - conflict.slot }
         return backupConflictRetries.remove(conflict.slot) ?: {}
     }
 
@@ -1297,10 +1284,6 @@ class AccountSettings(
             if (reopened) current + (conflict.slot to conflict) else current
         }
         if (reopened) backupConflictRetries[conflict.slot] = token
-    }
-
-    fun snoozeBackupConflict(conflict: ReplaceableBackupConflict) {
-        snoozedBackupConflicts.update { it + conflict.slot }
     }
 
     fun updateLocalRelayServers(servers: Set<String>) {
