@@ -42,6 +42,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -94,6 +96,23 @@ class CordnRuntimeTest {
 
     private val scopes = mutableListOf<CoroutineScope>()
 
+    /**
+     * Anything a runtime coroutine threw and nobody caught.
+     *
+     * A bare `CoroutineScope(Dispatchers.Default + Job())` has no handler, so
+     * an exception escaping a `launch` goes to the THREAD's uncaught handler —
+     * out of this test entirely and into the JVM the whole module shares. The
+     * next test to call `runTest` then fails with
+     * `UncaughtExceptionsBeforeTest`, blaming a test that did nothing wrong.
+     * That is a miserable failure to chase: it is a race between a coroutine
+     * outliving its test and the next one starting, so it moves between
+     * classes and build variants and vanishes when run in isolation.
+     *
+     * Collecting them here keeps them inside this suite, and [cleanup] fails
+     * this test rather than a stranger's.
+     */
+    private val leaked = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+
     private fun configFor(pubKey: HexKey) =
         CoordinatorConfig(
             pubKey = pubKey,
@@ -123,7 +142,11 @@ class CordnRuntimeTest {
      * Its own `Job`, so nothing waits on `CordnSyncLoop`, whose design is
      * never to return; cancelled in [cleanup].
      */
-    private fun runtimeScope() = CoroutineScope(Dispatchers.Default + Job()).also { scopes += it }
+    private fun runtimeScope() =
+        CoroutineScope(
+            Dispatchers.Default + Job() +
+                CoroutineExceptionHandler { _, throwable -> leaked += throwable },
+        ).also { scopes += it }
 
     private fun runtime(scope: CoroutineScope) =
         CordnRuntime(
@@ -164,6 +187,11 @@ class CordnRuntimeTest {
     fun cleanup() {
         scopes.forEach { it.cancel() }
         root.deleteRecursively()
+
+        // Cancellation is not a leak; anything else is, and it would otherwise
+        // have surfaced as an unrelated test failing somewhere else entirely.
+        val real = leaked.filterNot { it is CancellationException }
+        check(real.isEmpty()) { "a runtime coroutine leaked: ${real.joinToString { it.toString() }}" }
     }
 
     @Test
