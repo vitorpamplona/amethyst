@@ -142,6 +142,11 @@ fun MarmotGroupListScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // Above the tabs, because the state it reports is the reason both
+            // tabs can be empty: invites landing on another install look
+            // exactly like no invites at all.
+            MarmotInviteDeviceBanner(accountViewModel)
+
             PrimaryTabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,

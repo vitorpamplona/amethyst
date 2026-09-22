@@ -1622,6 +1622,8 @@
     <string name="settings_search_placeholder">Search settings</string>
     <string name="settings_search_no_results">No settings found for "%1$s"</string>
     <string name="marmot_invite_device_title">Marmot Invite Device</string>
+    <string name="marmot_invite_device_banner">Marmot invites are going to another device and cannot be opened here.</string>
+    <string name="marmot_invite_device_banner_dismiss">Dismiss</string>
     <string name="marmot_invite_device_checking">Asking your relays which device currently receives your Marmot invites\u2026</string>
     <string name="marmot_invite_device_this">This device already receives your Marmot invites. Nothing to do \u2014 publishing again is harmless but unnecessary.</string>
     <string name="marmot_invite_device_other">Another device signed in to this account published a newer KeyPackage, so Marmot invites are going there and cannot be opened here. Publishing from this device takes over future invites; the other device keeps the groups it already joined.</string>
