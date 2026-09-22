@@ -37,7 +37,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,19 +55,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_checking
-import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_error
-import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_none
-import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_other
-import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_publish
-import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_read_only
-import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_this
-import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_title
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_action
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
-import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -80,8 +70,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.cancellation.CancellationException
 
 @Preview
 @Composable
@@ -104,7 +92,6 @@ fun AllSettingsScreen(
     val scope = rememberCoroutineScope()
     var showResetMarmotDialog by remember { mutableStateOf(false) }
     var isResettingMarmot by remember { mutableStateOf(false) }
-    var showInviteDeviceDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val hasPrivateKey = accountViewModel.account.settings.keyPair.privKey != null
 
@@ -114,7 +101,6 @@ fun AllSettingsScreen(
     // an input actually changes — not on every keystroke. `onResetMarmot` reads the volatile
     // `isResettingMarmot` through `rememberUpdatedState` so the memoized closure never goes stale.
     val onResetMarmot by rememberUpdatedState(newValue = { if (!isResettingMarmot) showResetMarmotDialog = true })
-    val onMarmotInviteDevice by rememberUpdatedState(newValue = { showInviteDeviceDialog = true })
     val catalog =
         remember(hasPrivateKey, nav, uriHandler) {
             buildSettingsCatalog(
@@ -122,7 +108,6 @@ fun AllSettingsScreen(
                 uriHandler = uriHandler,
                 hasPrivateKey = hasPrivateKey,
                 onResetMarmot = { onResetMarmot() },
-                onMarmotInviteDevice = { onMarmotInviteDevice() },
             )
         }
 
@@ -174,39 +159,6 @@ fun AllSettingsScreen(
                 }
             }
         }
-    }
-
-    if (showInviteDeviceDialog) {
-        MarmotInviteDeviceDialog(
-            accountViewModel = accountViewModel,
-            // Published from the screen's scope, not the dialog's: confirming
-            // closes the dialog, and a publish launched in the dialog's own
-            // scope would be cancelled the moment it left composition.
-            onConfirm = {
-                showInviteDeviceDialog = false
-                scope.launch(Dispatchers.IO) {
-                    val successMessage = stringRes(context, R.string.marmot_invite_device_success)
-                    val rejectedMessage = stringRes(context, R.string.marmot_invite_device_rejected)
-                    try {
-                        // Waits for a relay OK. The fire-and-forget publish this
-                        // replaced reported success for a read-only account, an
-                        // empty relay set and an outright rejection alike.
-                        val accepted = accountViewModel.republishKeyPackage()
-                        launch(Dispatchers.Main) {
-                            val message = if (accepted) successMessage else rejectedMessage
-                            Toast.makeText(context, message, if (accepted) Toast.LENGTH_SHORT else Toast.LENGTH_LONG).show()
-                        }
-                    } catch (e: Exception) {
-                        val failureMessage =
-                            stringRes(context, R.string.marmot_invite_device_failure, e.message ?: "")
-                        launch(Dispatchers.Main) {
-                            Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-            },
-            onDismiss = { showInviteDeviceDialog = false },
-        )
     }
 
     if (showResetMarmotDialog) {
@@ -317,89 +269,6 @@ private fun ResetMarmotStateDialog(
                     ),
             ) {
                 Text(stringRes(Res.string.reset_marmot_confirm_action))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
-            }
-        },
-    )
-}
-
-/**
- * Reports which install currently receives this account's Marmot invites, and
- * offers to move them to this one.
- *
- * The check is this dialog's *content*, never a trigger. An inviter always
- * takes the newest kind:30443 and nothing else, so a device that silently
- * republished itself back to the front whenever it lost would deadlock against
- * the other install — each device's correction is the other's trigger, and
- * neither ever settles. Surfacing the answer and letting the user decide is
- * what keeps two signed-in devices from fighting over the account's invites.
- */
-@Composable
-private fun MarmotInviteDeviceDialog(
-    accountViewModel: AccountViewModel,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var owner by remember { mutableStateOf<LatestKeyPackageOwner?>(null) }
-    var checkFailed by remember { mutableStateOf(false) }
-    // A read-only login cannot publish at all. Without this the dialog would
-    // offer the button and then blame the relays for a refusal that happened at
-    // the isWriteable() check, before any relay was contacted.
-    val canPublish = accountViewModel.canPublish()
-
-    LaunchedEffect(Unit) {
-        if (!canPublish) return@LaunchedEffect
-        try {
-            owner = withContext(Dispatchers.IO) { accountViewModel.latestKeyPackageOwner() }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            // A relay we cannot reach only costs us the diagnosis, not the
-            // action: publishing from here is still a valid thing to want.
-            checkFailed = true
-        }
-    }
-
-    val resolved = owner
-    val body =
-        when {
-            !canPublish -> stringRes(Res.string.marmot_invite_device_read_only)
-            checkFailed -> stringRes(Res.string.marmot_invite_device_error)
-            resolved == null -> stringRes(Res.string.marmot_invite_device_checking)
-            resolved == LatestKeyPackageOwner.THIS_DEVICE -> stringRes(Res.string.marmot_invite_device_this)
-            resolved == LatestKeyPackageOwner.OTHER_DEVICE -> stringRes(Res.string.marmot_invite_device_other)
-            else -> stringRes(Res.string.marmot_invite_device_none)
-        }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                symbol = MaterialSymbols.Key,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-            )
-        },
-        title = {
-            Text(
-                text = stringRes(Res.string.marmot_invite_device_title),
-                textAlign = TextAlign.Center,
-            )
-        },
-        text = { Text(text = body) },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                // Held until the check resolves so the user is never asked to
-                // act on an answer that has not arrived, and never offered at
-                // all to an account that cannot publish.
-                enabled = canPublish && (checkFailed || resolved != null),
-            ) {
-                Text(stringRes(Res.string.marmot_invite_device_publish))
             }
         },
         dismissButton = {
