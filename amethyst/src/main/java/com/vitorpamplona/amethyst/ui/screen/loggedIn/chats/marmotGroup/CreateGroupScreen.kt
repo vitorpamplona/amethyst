@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -166,6 +168,11 @@ fun CreateGroupScreen(
                     .padding(padding)
                     .consumeWindowInsets(padding)
                     .imePaddingSafe()
+                    // The form is taller than the window once the IME is up, so
+                    // `imePaddingSafe` alone just clips the retention picker and
+                    // the footer off the bottom. Scrolling is what makes them
+                    // reachable while the keyboard covers half the screen.
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
         ) {
             Text(
@@ -219,7 +226,7 @@ fun CreateGroupScreen(
 
             Text(
                 stringRes(Res.string.marmot_create_group_footer),
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier.padding(top = 12.dp, bottom = 16.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

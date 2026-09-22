@@ -225,6 +225,7 @@
 
     <string name="public_chat">Public Chat</string>
     <string name="marmot_group">Marmot Group</string>
+    <string name="marmot_groups_title">Marmot Groups</string>
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
         can participate on them. They are great for open communities around specific topics.
@@ -1353,6 +1354,9 @@
     <string name="child_safety_search_keywords" translatable="false">legal, safety, abuse, csae, child protection</string>
 
     <string name="danger_zone">Danger Zone</string>
+    <string name="marmot_invite_device_success">This device now receives your Marmot invites.</string>
+    <string name="marmot_invite_device_failure">Failed to publish KeyPackage: %1$s</string>
+    <string name="marmot_invite_device_rejected">No relay accepted the KeyPackage. Check your relay settings and try again.</string>
     <string name="reset_marmot_state">Reset Marmot State</string>
     <string name="reset_marmot_success">Marmot state reset.</string>
     <string name="reset_marmot_failure">Failed to reset Marmot state: %1$s</string>
@@ -2710,6 +2714,10 @@
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
 
     <!-- Marmot (MLS) group chats -->
+    <plurals name="marmot_unread_messages">
+        <item quantity="one">%1$d new message</item>
+        <item quantity="other">%1$d new messages</item>
+    </plurals>
     <plurals name="marmot_message_count">
         <item quantity="one">%1$d msg</item>
         <item quantity="other">%1$d msgs</item>
