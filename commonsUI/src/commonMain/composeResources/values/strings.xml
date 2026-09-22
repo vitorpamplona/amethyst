@@ -3083,7 +3083,6 @@
     <string name="sno_object_title">3D object</string>
     <string name="sno_object_details">%1$d vertices · %2$d faces</string>
     <string name="sno_object_unreadable">This 3D object could not be read (rule %1$s)</string>
-    <string name="sno_object_turn_hint">Drag to turn</string>
     <string name="sno_avatar_title">Cyberspace avatar</string>
     <string name="sno_avatar_unpaid">This avatar has not paid for its size, so it is not drawn</string>
 </resources>

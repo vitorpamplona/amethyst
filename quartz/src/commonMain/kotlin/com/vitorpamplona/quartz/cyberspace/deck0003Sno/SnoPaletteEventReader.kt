@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.cyberspace.deck0003Sno
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 
@@ -93,7 +94,7 @@ object SnoPaletteEventReader {
         return SnoPalette(colors)
     }
 
-    private fun channel(element: kotlinx.serialization.json.JsonElement): Int? {
+    private fun channel(element: JsonElement): Int? {
         val primitive = element as? JsonPrimitive ?: return null
         if (primitive.isString) return null
         val value = primitive.intOrNull ?: return null

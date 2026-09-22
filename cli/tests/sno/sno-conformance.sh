@@ -157,9 +157,16 @@ else
          mode:(if (($p.faces // []) | length) > 0 then "solid" else "points" end),
          vertices:$p.vertices,
          colors:[range($nv) | 225],
-         faces:[range(($p.faces // []) | length) | [(. % $nv), ((.+1) % $nv), ((.+2) % $nv)]]}
+         faces:(if $nv >= 3 then [range(($p.faces // []) | length) | [(. % $nv), ((.+1) % $nv), ((.+2) % $nv)]] else [] end)}
       + (if $p.ticks then {ticks:$p.ticks} else {} end)')"
 
+    NV="$(jq -r '.vertices | length' <<<"$PAYLOAD")"
+    NF="$(jq -r '(.faces // []) | length' <<<"$PAYLOAD")"
+    if [[ "$NV" -lt 3 && "$NF" -gt 0 ]]; then
+      fail_msg "$NAME: $NF faces over $NV vertices cannot be expressed as a §1.9 payload"
+      DISAGREE=$((DISAGREE+1))
+      continue
+    fi
     OURS="$(printf '%s' "$FULL" | amy sno work | jq -r .required)"
 
     if [[ "$OURS" == "$THEIRS" && "$OURS" == "$EXPECTED" ]]; then

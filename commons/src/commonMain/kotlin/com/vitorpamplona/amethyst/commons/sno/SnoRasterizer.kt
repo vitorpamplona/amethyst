@@ -73,6 +73,9 @@ object SnoRasterizer {
 
     private const val TRANSPARENT = 0
 
+    /** Below this a triangle has no area to fill and its reciprocal is noise. */
+    private const val MIN_AREA = 1e-6f
+
     /**
      * @param background an opaque ARGB fill, or 0 for a transparent buffer.
      * @return `width * height` ARGB pixels, row-major.
@@ -248,7 +251,7 @@ object SnoRasterizer {
         val cy = screen.ys[ic]
 
         val area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
-        if (abs(area) < 1e-6f) return
+        if (area > -MIN_AREA && area < MIN_AREA) return
 
         val left = max(0, floorToInt(min(ax, min(bx, cx))))
         val right = min(width - 1, ceilToInt(max(ax, max(bx, cx))))
@@ -256,39 +259,55 @@ object SnoRasterizer {
         val bottom = min(height - 1, ceilToInt(max(ay, max(by, cy))))
         if (left > right || top > bottom) return
 
+        // Each edge function is linear in x and y, so it is evaluated once at
+        // the corner of the span and then stepped: three adds a pixel instead
+        // of six multiplies and four subtractions. The weights still come out
+        // barycentric, they are just not recomputed from scratch every time.
+        //
+        // The sign of the signed area is folded into the coefficients rather
+        // than tested per pixel, which is also what draws both sides of a face
+        // (§1.4): a triangle wound the other way has its edge functions
+        // negated along with its area, so the inside test is the same one.
+        val flip = if (area < 0f) -1f else 1f
+        val constA = (bx * cy - by * cx) * flip
+        val stepAx = (by - cy) * flip
+        val stepAy = (cx - bx) * flip
+        val constB = (cx * ay - cy * ax) * flip
+        val stepBx = (cy - ay) * flip
+        val stepBy = (ax - cx) * flip
+        val total = area * flip
+        val inverseTotal = 1f / total
+
         val az = screen.zs[ia]
         val bz = screen.zs[ib]
         val cz = screen.zs[ic]
-        val inverseArea = 1f / area
+
+        val startX = left + 0.5f
+        var rowA = constA + startX * stepAx + (top + 0.5f) * stepAy
+        var rowB = constB + startX * stepBx + (top + 0.5f) * stepBy
 
         for (py in top..bottom) {
-            val y = py + 0.5f
-            val rowBase = py * width
+            var edgeA = rowA
+            var edgeB = rowB
+            var at = py * width + left
             for (px in left..right) {
-                val x = px + 0.5f
-                var wA = ((bx - x) * (cy - y) - (by - y) * (cx - x)) * inverseArea
-                var wB = ((cx - x) * (ay - y) - (cy - y) * (ax - x)) * inverseArea
-                var wC = 1f - wA - wB
-                if (wA < 0f || wB < 0f || wC < 0f) {
-                    if (wA > 0f || wB > 0f || wC > 0f) continue
-                    // Wound the other way: the weights are all non-positive, so
-                    // flip them rather than dropping the face.
-                    wA = -wA
-                    wB = -wB
-                    wC = -wC
-                    val sum = wA + wB + wC
-                    if (sum <= 0f) continue
-                    wA /= sum
-                    wB /= sum
-                    wC /= sum
+                val edgeC = total - edgeA - edgeB
+                if (edgeA >= 0f && edgeB >= 0f && edgeC >= 0f) {
+                    val wA = edgeA * inverseTotal
+                    val wB = edgeB * inverseTotal
+                    val wC = edgeC * inverseTotal
+                    val z = wA * az + wB * bz + wC * cz
+                    if (z > depth[at]) {
+                        depth[at] = z
+                        pixels[at] = blend(colorA, colorB, colorC, wA, wB, wC)
+                    }
                 }
-
-                val z = wA * az + wB * bz + wC * cz
-                val at = rowBase + px
-                if (z <= depth[at]) continue
-                depth[at] = z
-                pixels[at] = blend(colorA, colorB, colorC, wA, wB, wC)
+                edgeA += stepAx
+                edgeB += stepBx
+                at++
             }
+            rowA += stepAy
+            rowB += stepBy
         }
     }
 

@@ -52,7 +52,9 @@ fun RenderSnoAvatar(baseNote: Note) {
     val noteEvent = baseNote.event as? SnoAvatarEvent ?: return
     if (noteEvent.isDefaultAvatar()) return
 
-    val shape: SnoPayload? = remember(noteEvent) { if (noteEvent.isPaid()) noteEvent.sno().payloadOrNull() else null }
+    // One parse: pricing an avatar reads its payload, and payment() hands that
+    // back, so nothing here parses the same content twice on the way to a frame.
+    val shape: SnoPayload? = remember(noteEvent) { noteEvent.payment().let { if (it.ok) it.payload else null } }
 
     if (shape == null) {
         SnoAvatarUnpaidCard()

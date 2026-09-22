@@ -40,6 +40,15 @@ data class SnoAvatarPayment(
     /** The leading zero bits the event id actually carries. */
     val zeros: Int,
     val reason: Reason,
+    /**
+     * The shape this verdict is about, when it could be read at all.
+     *
+     * Pricing an avatar means parsing it, so the parse is handed back rather
+     * than thrown away: a caller that draws a paid avatar would otherwise parse
+     * the same content a second time, and on Android that second parse lands on
+     * the composition thread.
+     */
+    val payload: SnoPayload? = null,
 ) {
     enum class Reason(
         val code: String,
@@ -62,6 +71,14 @@ data class SnoAvatarPayment(
 
         /** No `nonce` tag, so nothing was committed to before mining (NIP-13). */
         NO_NONCE("no-nonce"),
+
+        /**
+         * A `nonce` tag that names no target. NIP-13 allows the bare two-element
+         * form, which mines without committing — and §8.10 needs the commitment,
+         * so this is unpaid for the same reason [NO_NONCE] is, by a different
+         * route worth telling apart when reading a verdict.
+         */
+        UNCOMMITTED_NONCE("uncommitted-nonce"),
 
         /** The committed target does not cover the work the shape owes. */
         UNDER_COMMITTED("under-committed"),

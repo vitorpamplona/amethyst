@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.cyberspace.deck0003Sno
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip13Pow.hasPoWTag
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 
@@ -89,17 +90,27 @@ class SnoAvatarEvent(
                 ?: return SnoAvatarPayment(false, 0, null, zeros, SnoAvatarPayment.Reason.NOT_AN_AVATAR)
 
         val required = SnoAvatarWork.required(payload)
+        // `parseCommitment` answers null both for "no nonce tag" and for "a
+        // nonce tag that committed to nothing". The verdict is the same either
+        // way, but the reason is what a caller reads, so tell them apart.
         val committed =
             tags.firstNotNullOfOrNull { PoWTag.parseCommitment(it) }
-                ?: return SnoAvatarPayment(false, required, null, zeros, SnoAvatarPayment.Reason.NO_NONCE)
+                ?: return SnoAvatarPayment(
+                    ok = false,
+                    required = required,
+                    committed = null,
+                    zeros = zeros,
+                    reason = if (hasPoWTag()) SnoAvatarPayment.Reason.UNCOMMITTED_NONCE else SnoAvatarPayment.Reason.NO_NONCE,
+                    payload = payload,
+                )
 
         if (committed < required) {
-            return SnoAvatarPayment(false, required, committed, zeros, SnoAvatarPayment.Reason.UNDER_COMMITTED)
+            return SnoAvatarPayment(false, required, committed, zeros, SnoAvatarPayment.Reason.UNDER_COMMITTED, payload)
         }
         if (zeros < committed) {
-            return SnoAvatarPayment(false, required, committed, zeros, SnoAvatarPayment.Reason.UNPAID)
+            return SnoAvatarPayment(false, required, committed, zeros, SnoAvatarPayment.Reason.UNPAID, payload)
         }
-        return SnoAvatarPayment(true, required, committed, zeros, SnoAvatarPayment.Reason.OK)
+        return SnoAvatarPayment(true, required, committed, zeros, SnoAvatarPayment.Reason.OK, payload)
     }
 
     /** Whether a client may draw this avatar. See [payment] for why not. */

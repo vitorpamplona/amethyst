@@ -34,6 +34,7 @@ import coil3.compose.setSingletonImageLoaderFactory
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectCard
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoParser
 import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skia.Image
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 import kotlin.test.Test
@@ -84,11 +85,13 @@ class SnoObjectCardRenderTest {
 
             // Coil resolves off the composition, so the first frames are the
             // placeholder. Poll rather than sleeping a fixed amount.
+            // `return@repeat` would be a continue, not a break, and the
+            // assertion would then read whatever the last frame happened to be.
             var goldPixels = 0
-            repeat(POLLS) {
+            for (poll in 0 until POLLS) {
                 val pixels = scene.render().toPixels(width, height)
                 goldPixels = pixels.count { it.isGold() }
-                if (goldPixels > 0) return@repeat
+                if (goldPixels > 0) break
                 Thread.sleep(POLL_MILLIS)
             }
 
@@ -110,7 +113,7 @@ class SnoObjectCardRenderTest {
     }
 
     /** The rendered frame as ARGB, through PNG so no Skia pixel layout is assumed. */
-    private fun org.jetbrains.skia.Image.toPixels(
+    private fun Image.toPixels(
         width: Int,
         height: Int,
     ): IntArray {
