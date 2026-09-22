@@ -104,6 +104,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -1417,7 +1418,16 @@ suspend fun voteOnPoll(
 ) {
     if (responses.isEmpty()) return
     withContext(Dispatchers.IO) {
-        val template = PollResponseEvent.build(EventHintBundle(poll), responses)
+        // The poll decides how its answers are counted, so it decides which builder applies:
+        // a single-choice answer is the first tag only, and sending several would record
+        // whichever one the reader saw first.
+        val hint = EventHintBundle(poll)
+        val template =
+            when (poll.pollType()) {
+                PollType.SINGLE_CHOICE ->
+                    responses.firstOrNull()?.let { PollResponseEvent.buildSingleChoice(hint, it) } ?: return@withContext
+                PollType.MULTI_CHOICE -> PollResponseEvent.buildMultipleChoice(hint, responses)
+            }
         val signed = account.signer.sign(template)
         localCache.consume(signed, null, wasVerified = true)
         // Publish to the poll's OWN declared relays (NIP-88 `relay` tags) as well as our

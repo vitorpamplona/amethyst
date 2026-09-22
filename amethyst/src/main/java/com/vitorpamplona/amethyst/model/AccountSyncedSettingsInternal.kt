@@ -186,6 +186,10 @@ class AccountNavigationPreferencesInternal(
 @Serializable
 class AccountVideoPlayerPreferencesInternal(
     var buttonItems: List<VideoPlayerButtonItem> = DefaultVideoPlayerButtonItems,
+    // Feed videos autoplay muted, so captions are what make them legible — on by default, and
+    // remembered once the viewer says otherwise. Defaulted rather than required so a blob written
+    // by a client that predates the field still decodes.
+    var captionsEnabled: Boolean = true,
 )
 
 @Serializable

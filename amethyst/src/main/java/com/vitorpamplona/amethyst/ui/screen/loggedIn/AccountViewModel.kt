@@ -2012,6 +2012,12 @@ class AccountViewModel(
 
     fun videoPlayerButtonItemsFlow() = account.settings.syncedSettings.videoPlayer.buttonItems
 
+    fun captionsEnabledFlow() = account.settings.syncedSettings.videoPlayer.captionsEnabled
+
+    fun setCaptionsEnabled(enabled: Boolean) {
+        viewModelScope.launch { account.changeCaptionsEnabled(enabled) }
+    }
+
     fun changeVideoPlayerButtonItems(items: List<com.vitorpamplona.amethyst.model.VideoPlayerButtonItem>) =
         launchSigner {
             account.changeVideoPlayerButtonItems(items)

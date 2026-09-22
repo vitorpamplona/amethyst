@@ -34,11 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextColor
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip71Video.credits.CreditTarget
 import com.vitorpamplona.quartz.nip71Video.credits.VideoCredit
@@ -108,9 +109,9 @@ private fun RenderVideoCredit(
                         name = "@" + it.toBestDisplayName(),
                         confirmed = {
                             // Only a role-marked credit is an invite someone can accept, and each
-                            // lookup costs a LocalCache note plus a relay REQ per credit per
-                            // rendered card. Asking for every `mention` and `inspired-by` would
-                            // spend a subscription per feed item on an event that cannot exist.
+                            // lookup registers a cache observer per credit per rendered card.
+                            // Watching every `mention` and `inspired-by` too would spend one per
+                            // feed item on an event that cannot exist.
                             if (credit.label.isCollaborationRole()) {
                                 AcceptedCollaboration(target.pubKey, videoAddress, accountViewModel)
                             }
@@ -141,11 +142,15 @@ private fun RenderVideoCredit(
 /**
  * Draws a check when [pubKey] has published an accepted [VideoCollaborationEvent] for this video.
  *
- * The response is addressed by its own coordinate — `34238:<collaborator>:<video coordinate>` —
- * so it can be asked for directly instead of scanning every 34238 on the network for one that
- * `a`-tags this video. A publisher that keys the response by something else (divine-web uses a
- * random `d`) simply never resolves here, and the credit renders without the check rather than
- * with a wrong one.
+ * The response is matched by what both shapes in the wild agree on — the `a` tag naming the video
+ * — rather than by the response's own coordinate. divine-mobile keys the event by the video
+ * coordinate (so `34238:<collaborator>:<video coordinate>` would resolve it) but divine-web writes
+ * a random `d`, and asking for a coordinate nobody can predict found nothing for the client that
+ * publishes most of these. The relay side is covered by the `a` engagement filter every rendered
+ * addressable note already opens (see PostsAndChatMessagesToAddresses), so this reads the cache
+ * and costs no subscription of its own.
+ *
+ * Newest-first, so a collaborator who accepted and later withdrew reads as withdrawn.
  */
 @Composable
 private fun AcceptedCollaboration(
@@ -155,12 +160,19 @@ private fun AcceptedCollaboration(
 ) {
     if (videoAddress == null) return
 
-    val responseAddress =
+    val responseFlow =
         remember(pubKey, videoAddress) {
-            Address(VideoCollaborationEvent.KIND, pubKey, videoAddress.toValue())
+            accountViewModel.account.cache.observeLatestEvent<VideoCollaborationEvent>(
+                Filter(
+                    kinds = listOf(VideoCollaborationEvent.KIND),
+                    authors = listOf(pubKey),
+                    tags = mapOf("a" to listOf(videoAddress.toValue())),
+                    limit = 1,
+                ),
+            )
         }
-    val note = remember(responseAddress) { accountViewModel.getOrCreateAddressableNote(responseAddress) }
-    val response by observeNoteEvent<VideoCollaborationEvent>(note, accountViewModel)
+
+    val response by responseFlow.collectAsStateWithLifecycle(null)
 
     if (response?.isAccepted() == true) {
         Icon(

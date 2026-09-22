@@ -29,6 +29,6 @@ import com.vitorpamplona.quartz.nip88Polls.response.tags.ResponseTag
 
 fun TagArrayBuilder<PollResponseEvent>.poll(pollHint: EventHintBundle<PollEvent>) = addUnique(PollTag.assemble(pollHint))
 
-fun TagArrayBuilder<PollResponseEvent>.responses(responses: Set<String>) = addAll(ResponseTag.assemble(responses))
+fun TagArrayBuilder<PollResponseEvent>.responses(responses: List<String>) = addAll(ResponseTag.assemble(responses))
 
 fun TagArrayBuilder<PollResponseEvent>.notifyAuthor(pollHint: EventHintBundle<PollEvent>) = add(pollHint.toPTag().toTagArray())

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip71Video.credits.CreditTarget
 import com.vitorpamplona.quartz.nip71Video.credits.VideoCredit
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -291,9 +293,52 @@ class DivineVideoInteropTest {
         )
         assertEquals("Collaborator", response.role())
         assertTrue(response.isAccepted())
-        // Keyed by the video coordinate, so the credited person's answer can be addressed directly
-        // instead of scanning every 34238 for one that points back here.
+        // divine-mobile happens to key this one by the video coordinate, but the `a` tag is what
+        // the lookup matches on — see [bothCollaborationShapesAreFoundByTheirATag].
         assertEquals(response.video()?.toValue(), response.dTag())
+    }
+
+    @Test
+    fun bothCollaborationShapesAreFoundByTheirATag() {
+        // The `d` tag is the one thing the two publishers disagree on: divine-mobile writes the
+        // video coordinate, divine-web writes `crypto.randomUUID()`
+        // (divine-web/src/hooks/useApproveCollab.ts). Matching on `a` + author is what makes the
+        // credit's check mark appear for both — and is the same filter divine-web itself uses in
+        // useVideoCollaboratorStatus.ts.
+        val mobile = Event.fromJson(collabResponse) as VideoCollaborationEvent
+        val coord = mobile.video()!!.toValue()
+
+        val web =
+            VideoCollaborationEvent(
+                id = "a".repeat(64),
+                pubKey = mobile.pubKey,
+                createdAt = mobile.createdAt,
+                tags = arrayOf(arrayOf("a", coord), arrayOf("d", "0e1cbb2c-1b5a-4f1f-9f0e-2c6b2c8a9f11")),
+                content = "",
+                sig = "",
+            )
+
+        val byATag =
+            Filter(
+                kinds = listOf(VideoCollaborationEvent.KIND),
+                authors = listOf(mobile.pubKey),
+                tags = mapOf("a" to listOf(coord)),
+            )
+
+        assertTrue(byATag.match(mobile))
+        assertTrue(byATag.match(web))
+
+        // What the coordinate-addressed lookup used to do: it can only ever name one `d`, so the
+        // other publisher's answer was invisible however long you waited for it.
+        val byCoordinate =
+            Filter(
+                kinds = listOf(VideoCollaborationEvent.KIND),
+                authors = listOf(mobile.pubKey),
+                tags = mapOf("d" to listOf(coord)),
+            )
+
+        assertTrue(byCoordinate.match(mobile))
+        assertFalse(byCoordinate.match(web))
     }
 
     @Test

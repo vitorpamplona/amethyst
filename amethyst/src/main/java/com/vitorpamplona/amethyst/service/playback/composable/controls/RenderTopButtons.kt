@@ -147,25 +147,39 @@ fun RenderTopButtons(
     val hasMultipleQualities = videoGroup != null && videoGroup.length > 1
 
     // Captions are side-loaded from the event's `text-track` tags (MediaItemCache flags the first
-    // one default), so the button reflects whether the player currently has the text track on.
-    // Toggling disables the whole track type rather than deselecting one group: with a single
-    // side-loaded track those are the same thing, and the type-level switch survives the player
-    // picking a different track later.
-    //
-    // The choice lives on the player instance, so it holds for as long as that player does —
-    // including the next video the warm pool hands it to — and resets when it is released. Making
-    // it stick across sessions would mean another synced setting; this is the scope of a button.
-    var captionsEnabled by remember(player) { mutableStateOf(!player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)) }
+    // one default). The account setting is the source of truth, not the player: a player comes
+    // out of the warm pool carrying whatever track selection the previous video left on it, so
+    // reading the preference off the instance would make the button's state depend on which
+    // player this video happened to be handed.
+    val captionsEnabled by accountViewModel.captionsEnabledFlow().collectAsStateWithLifecycle()
+
+    // Push the preference onto whichever player is attached, and re-push when either changes.
+    // Disabling the whole track type rather than deselecting one group: the type-level switch
+    // survives the player later picking a different track.
+    LaunchedEffect(player, captionsEnabled) {
+        val alreadyDisabled = player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
+        if (alreadyDisabled == captionsEnabled) {
+            player.trackSelectionParameters =
+                player.trackSelectionParameters
+                    .buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !captionsEnabled)
+                    .build()
+        }
+    }
+
+    // A video with one track has nothing to choose between, so the button stays a toggle. Only a
+    // multi-language video opens a menu — paying a popup for a single "English" row would be a
+    // worse answer to the same tap.
+    val captionChoices = remember(tracks) { getTextTrackChoices(tracks) }
+    val captionsPopupOpen = remember { mutableStateOf(false) }
     val onCaptionsClick =
-        remember(player) {
+        remember(captionsEnabled, captionChoices) {
             {
-                val enabled = player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
-                player.trackSelectionParameters =
-                    player.trackSelectionParameters
-                        .buildUpon()
-                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
-                        .build()
-                captionsEnabled = enabled
+                if (captionChoices.size > 1) {
+                    captionsPopupOpen.value = true
+                } else {
+                    accountViewModel.setCaptionsEnabled(!captionsEnabled)
+                }
             }
         }
 
@@ -241,6 +255,25 @@ fun RenderTopButtons(
         modifier = modifier,
         accountViewModel = accountViewModel,
     )
+
+    if (captionsPopupOpen.value) {
+        CaptionLanguagePopup(
+            choices = captionChoices,
+            captionsEnabled = captionsEnabled,
+            onSelectOff = {
+                accountViewModel.setCaptionsEnabled(false)
+                captionsPopupOpen.value = false
+            },
+            onSelectTrack = { choice ->
+                // The override goes straight onto the player (it is per-video), while the
+                // preference is what persists the fact that captions are wanted at all.
+                selectTextTrack(player, choice)
+                accountViewModel.setCaptionsEnabled(true)
+                captionsPopupOpen.value = false
+            },
+            onDismiss = { captionsPopupOpen.value = false },
+        )
+    }
 
     if (overflowQualityOpen.value && videoGroup != null) {
         VideoQualityPopup(

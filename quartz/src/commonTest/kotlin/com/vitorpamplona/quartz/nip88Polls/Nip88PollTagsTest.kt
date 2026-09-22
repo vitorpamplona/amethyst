@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip88Polls
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.endsAt
@@ -173,6 +174,29 @@ class Nip88PollTagsTest {
             listOf(listOf("option", "qj518h583", "Yay"), listOf("option", "gga6cdnqj", "Nay")),
             template.tags.filter { it[0] == "option" }.map { it.toList() },
         )
+    }
+
+    @Test
+    fun aSingleChoiceAnswerCanOnlyBeOneTag() {
+        val poll = EventHintBundle(Event.fromJson(specPoll) as PollEvent, null)
+
+        val template = PollResponseEvent.buildSingleChoice(poll, "gga6cdnqj")
+        val responses = template.tags.filter { it[0] == "response" }
+
+        // The spec reads the FIRST response tag as the answer, so a single-choice event that
+        // carries more than one is ambiguous by construction. The typed builder cannot emit one.
+        assertEquals(listOf(listOf("response", "gga6cdnqj")), responses.map { it.toList() })
+        assertEquals(PollResponseEvent.KIND, template.kind)
+    }
+
+    @Test
+    fun aMultipleChoiceAnswerWritesEveryCodeItWasGiven() {
+        val poll = EventHintBundle(Event.fromJson(specPoll) as PollEvent, null)
+
+        val template = PollResponseEvent.buildMultipleChoice(poll, setOf("qj518h583", "gga6cdnqj"))
+        val codes = template.tags.filter { it[0] == "response" }.map { it[1] }
+
+        assertEquals(setOf("qj518h583", "gga6cdnqj"), codes.toSet())
     }
 
     @Test
