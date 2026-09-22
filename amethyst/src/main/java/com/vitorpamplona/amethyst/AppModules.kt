@@ -1349,6 +1349,10 @@ class AppModules(
         applicationIOScope.launch {
             delay(1_500)
             videoCache
+            // Then the player pool, which reads that cache as it builds. Sequenced behind it on
+            // purpose: warming the pool first would pull the cache in on the main thread, which is
+            // exactly what the delay above exists to avoid.
+            videoPlayerPools.warmUp()
         }
     }
 

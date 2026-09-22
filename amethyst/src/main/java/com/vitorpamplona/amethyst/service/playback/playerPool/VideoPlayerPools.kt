@@ -34,7 +34,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.vitorpamplona.amethyst.commons.service.http.DynamicCallFactory
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 /**
  * Process-wide owner of the video [ExoPlayerPool]s.
@@ -133,6 +135,26 @@ class VideoPlayerPools(
         player.volume = 0f
 
         return PooledPlayer(player, pool)
+    }
+
+    /**
+     * Builds the direct pool and its cold players before the first video asks for one.
+     *
+     * Without this the warmup is kicked off by the very first [acquire], which then loses the race
+     * to its own coroutine and builds an ExoPlayer inline on the main thread — during composition,
+     * on the first frame a feed video appears.
+     *
+     * Only the direct pool: which route a video takes is decided per URL from the account's Tor
+     * settings, which are not loaded yet at this point, and direct is what the large majority use.
+     * A proxied-video user pays one inline build and the proxied pool then warms itself exactly as
+     * it does today.
+     *
+     * Call after the video cache is materialised — building a pool reads it, and doing that cold
+     * would put SimpleCache's index walk on the main thread, which is the whole reason the cache
+     * has a warmup of its own.
+     */
+    suspend fun warmUp() {
+        withContext(Dispatchers.Main) { pool(null) }
     }
 
     /** Releases the warm (paused-with-buffer) half of both pools under memory pressure. Any thread. */

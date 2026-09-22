@@ -59,7 +59,13 @@ class ExoPlayerPool(
     // Idle players that have been stop()'d and clearMediaItems()'d — ready to be re-prepared
     // with any URI. Maintained as a FIFO so the oldest cleared instance is reused first.
     private val coldPool = ConcurrentLinkedQueue<ExoPlayer>()
-    private val poolStartingSize = 3
+
+    // How many cold players to build before the first video asks for one. Sized to the device's own
+    // decoder budget rather than a flat 3, because every visible post gets a player: a screen with
+    // four or five video posts used to build the extras with builder.build() inline on the main
+    // thread, mid-scroll. Capped, because a device advertising 32 instances will still never show
+    // that many videos at once, and each pre-built player costs an idle playback thread.
+    private val poolStartingSize = poolSize.coerceAtMost(MAX_WARMUP_SIZE)
 
     // Most-recent paused players, indexed by the mediaId of the MediaItem they still hold.
     // ArrayDeque is used as an LRU: head = oldest, tail = newest. Access is guarded by
@@ -103,8 +109,8 @@ class ExoPlayerPool(
         scope.launch {
             while (coldPool.size < poolStartingSize) {
                 coldPool.offer(builder.build(context))
-                // Hand the frame back so an in-flight onGetSession / acquirePlayer / layout
-                // pass isn't blocked behind the next build.
+                // Hand the frame back so an in-flight acquirePlayer or layout pass isn't
+                // blocked behind the next build.
                 yield()
             }
         }
@@ -374,6 +380,10 @@ class ExoPlayerPool(
 
     companion object {
         private const val DEFAULT_WARM_SLOTS = 3
+
+        // Ceiling on the pre-built cold players. Five covers a tall screen of short video posts
+        // without pre-building for a decoder budget no feed will ever fill.
+        private const val MAX_WARMUP_SIZE = 5
 
         // MediaCodec instances are a per-process resource, but PlaybackService builds one pool for
         // direct traffic and another for Tor-proxied traffic, so a per-pool budget would let the
